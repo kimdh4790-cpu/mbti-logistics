@@ -11,7 +11,7 @@ const DID  = '9XD2K3W1tIhIs6XM74YT0xfRFEP2';
 const BASE = 'https://filo.ai.kr';
 const DINE = 'https://dine.ne.kr';
 const EMAIL = 'soungkyekim@naver.com';
-const PW    = 'khw3103!!!';
+const PW    = process.env.TEST_PW || '';
 const TEST_PHONE = '01012345678';
 
 const PASS = '✅';

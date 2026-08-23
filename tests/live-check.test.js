@@ -7,7 +7,7 @@ const path = require('path');
 const fs   = require('fs');
 
 const EMAIL = 'soungkyekim@naver.com';
-const PW    = 'khw3103!!!';
+const PW    = process.env.TEST_PW || '';
 
 const SS = path.join(__dirname, '..', 'test-screenshots');
 if (!fs.existsSync(SS)) fs.mkdirSync(SS, { recursive: true });

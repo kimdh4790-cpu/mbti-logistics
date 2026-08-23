@@ -304,51 +304,88 @@ function _dinePayslipList(did){
  ]).then(function(results){
   var attSnap=results[0],memSnap=results[1];
   var attMap={};
-  attSnap.forEach(function(doc){var d=doc.data();if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[]};if(d.type==='in')attMap[d.memberId].ins.push(d);else attMap[d.memberId].outs.push(d);});
-  var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-   '<thead><tr style="border-bottom:2px solid var(--bd);background:var(--bg3)">'+
-   '<th style="padding:10px 8px;text-align:left">직원</th>'+
-   '<th style="padding:10px 8px;text-align:center">파트</th>'+
-   '<th style="padding:10px 8px;text-align:center">출근일</th>'+
-   '<th style="padding:10px 8px;text-align:center">총근무</th>'+
-   '<th style="padding:10px 8px;text-align:right">기본급</th>'+
-   '<th style="padding:10px 8px;text-align:right">주휴</th>'+
-   '<th style="padding:10px 8px;text-align:right">공제</th>'+
-   '<th style="padding:10px 8px;text-align:right;color:#22c55e">실수령</th>'+
-   '<th style="padding:10px 8px;text-align:center">명세서</th>'+
-   '</tr></thead><tbody>';
+  attSnap.forEach(function(doc){
+   var d=doc.data();
+   if(!attMap[d.memberId])attMap[d.memberId]={ins:[],outs:[]};
+   if(d.type==='in')attMap[d.memberId].ins.push(d);
+   else if(d.type==='out')attMap[d.memberId].outs.push(d);
+  });
+
+  var isStaff=(_CU&&_CU.role==='staff');
+  var myStaffId=(_CU&&_CU.staffId)||'';
+
+  var cards=[];
   var totalNet=0;
   memSnap.forEach(function(doc){
    var m=doc.data();
    if((m.status||'active')==='resigned')return;
+   /* 직원은 본인 카드만 */
+   if(isStaff&&doc.id!==myStaffId)return;
    var att=attMap[doc.id]||{ins:[],outs:[]};
    var r=_calcPayFull(m,att,memSnap.size,ym);
-   var days=att.ins.length;
-   var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
    totalNet+=r.netSalary;
-   html+='<tr style="border-bottom:1px solid var(--bd)">'+
-    '<td style="padding:10px 8px;font-weight:700">'+m.name+'</td>'+
-    '<td style="padding:10px 8px;text-align:center"><span style="font-size:10px;font-weight:700;color:'+partColor+'">'+({'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||'-')+'</span></td>'+
-    '<td style="padding:10px 8px;text-align:center">'+days+'일</td>'+
-    '<td style="padding:10px 8px;text-align:center;font-weight:700;color:var(--br)">'+r.monthlyHours+'h</td>'+
-    '<td style="padding:10px 8px;text-align:right">₩'+r.basePay.toLocaleString()+'</td>'+
-    '<td style="padding:10px 8px;text-align:right;color:#22c55e">'+(r.weeklyHoliday?'₩'+r.weeklyHoliday.toLocaleString():'-')+'</td>'+
-    '<td style="padding:10px 8px;text-align:right;color:#ef4444">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</td>'+
-    '<td style="padding:10px 8px;text-align:right;font-weight:900;color:#22c55e">₩'+r.netSalary.toLocaleString()+'</td>'+
-    '<td style="padding:10px 8px;text-align:center">'+
-    '<div style="display:flex;gap:4px;justify-content:center">'+
-    '<button data-mid="'+doc.id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="font-size:9px;padding:3px 7px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--t2);cursor:pointer">보기</button>'+
-    '<button data-mid="'+doc.id+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="font-size:9px;padding:3px 7px;border:1px solid rgba(8,145,178,.3);border-radius:5px;background:rgba(8,145,178,.08);color:#38bdf8;cursor:pointer">발송</button>'+
-    '</div></td>'+
-    '</tr>';
+   cards.push({m:m,r:r,mid:doc.id,days:att.ins.length});
   });
-  html+='</tbody><tfoot><tr style="border-top:2px solid var(--bd);background:var(--bg3);font-weight:800">'+
-   '<td colspan="7" style="padding:10px 8px">합계</td>'+
-   '<td style="padding:10px 8px;text-align:right;font-size:14px;color:#22c55e">₩'+totalNet.toLocaleString()+'</td>'+
-   '<td style="padding:10px 8px;text-align:center">'+
-   '<button data-did="'+did+'" data-ym="'+ym+'" onclick="_dinePayslipBulkSend(this.dataset.did,this.dataset.ym)" style="font-size:10px;padding:4px 10px;background:var(--br);border:none;border-radius:6px;color:#fff;cursor:pointer;font-weight:700">일괄발송</button>'+
-   '</td></tr></tfoot></table></div>';
-  list.innerHTML=html;
+
+  if(!cards.length){list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">'+(isStaff?'이번 달 급여 데이터가 없습니다':'직원 데이터가 없습니다')+'</div>';return;}
+
+  /* ── 합계 + 일괄발송 (관리자만) ── */
+  var sumHtml=isStaff?
+   '<div style="font-size:12px;color:var(--t3);margin-bottom:10px">'+ym+' 내 급여명세서 · 실수령 <b style="color:#22c55e">₩'+totalNet.toLocaleString()+'</b></div>':
+   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+   '<div style="font-size:12px;color:var(--t3)">'+ym+' 명세서 <b style="color:var(--tx)">총 '+cards.length+'명</b> · 실수령 합계 <b style="color:#22c55e">₩'+totalNet.toLocaleString()+'</b></div>'+
+   '<button data-did="'+did+'" data-ym="'+ym+'" onclick="_dinePayslipBulkSend(this.dataset.did,this.dataset.ym)" style="font-size:11px;padding:5px 12px;background:var(--br);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:700">일괄발송</button>'+
+   '</div>';
+
+  /* ── 5명 페이지네이션 ── */
+  var PAGE=5, curPage=0, pages=Math.ceil(cards.length/PAGE);
+
+  function renderPage(pg){
+   var slice=cards.slice(pg*PAGE,(pg+1)*PAGE);
+   var rows=slice.map(function(c){
+    var m=c.m,r=c.r;
+    var partLabel={'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||(m.part||'-');
+    var partColor={'kitchen':'#ef4444','hall':'#38bdf8','management':'#a78bfa'}[m.part]||'#a78bfa';
+    return '<div style="border-bottom:1px solid var(--bd);padding:10px 0">'+
+     /* 1행: 이름 + 파트 + 실수령 + 버튼 */
+     '<div style="display:flex;align-items:center;gap:8px">'+
+     '<div style="font-size:13px;font-weight:800;flex:1">'+m.name+'</div>'+
+     '<span style="font-size:10px;font-weight:700;color:'+partColor+';background:'+partColor+'22;padding:2px 7px;border-radius:10px">'+partLabel+'</span>'+
+     '<div style="font-size:14px;font-weight:900;color:#22c55e">₩'+r.netSalary.toLocaleString()+'</div>'+
+     '<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t2);cursor:pointer">보기</button>'+
+     (isStaff?'':'<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid rgba(8,145,178,.3);border-radius:6px;background:rgba(8,145,178,.08);color:#38bdf8;cursor:pointer">발송</button>')+
+     '</div>'+
+     /* 2행: 출근일·근무·기본급·공제 인라인 */
+     '<div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--t3)">'+
+     '<span>출근 <b style="color:var(--tx)">'+c.days+'일</b></span>'+
+     '<span>근무 <b style="color:var(--br)">'+r.monthlyHours+'h</b></span>'+
+     '<span>기본 <b style="color:var(--tx)">₩'+r.basePay.toLocaleString()+'</b></span>'+
+     '<span>공제 <b style="color:#ef4444">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</b></span>'+
+     '</div>'+
+     '</div>';
+   }).join('');
+
+   var nav='';
+   if(pages>1){
+    nav='<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:12px;font-size:12px">'+
+     '<button onclick="window._dinePayslipPage('+(pg-1)+')" '+(pg<=0?'disabled style="opacity:.3"':'')+
+     ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);cursor:pointer;font-size:12px">이전</button>'+
+     '<span style="color:var(--t3)">'+(pg+1)+' / '+pages+'</span>'+
+     '<button onclick="window._dinePayslipPage('+(pg+1)+')" '+(pg>=pages-1?'disabled style="opacity:.3"':'')+
+     ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--tx);cursor:pointer;font-size:12px">다음</button>'+
+     '</div>';
+   }
+   return rows+nav;
+  }
+
+  window._dinePayslipPage=function(pg){
+   if(pg<0||pg>=pages)return;
+   curPage=pg;
+   var el2=document.getElementById('ps-cards');
+   if(el2) el2.innerHTML=renderPage(pg);
+  };
+
+  list.innerHTML=sumHtml+'<div id="ps-cards">'+renderPage(0)+'</div>';
  });
 }
 

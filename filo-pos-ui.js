@@ -74,8 +74,8 @@ function _filoPageKiosk(el){
  '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
  '</div>'+
  '<div class="pos-wrap">'+
- '<div style="display:flex;flex-direction:column">'+
- '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
+ '<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0">'+
+ '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0" id="kiosk-cats"></div>'+
  '<div class="menu-grid" id="kiosk-menu">'+
  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3);display:flex;align-items:center;justify-content:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>메뉴 로딩 중...</div>'+
  '</div></div>'+
@@ -87,7 +87,7 @@ function _filoPageKiosk(el){
  '<span style="font-size:13px;font-weight:700">합계</span>'+
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
  '<button class="pay-btn" onclick="_filoPay()">결제하기</button>'+
- '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px">초기화</button>'+
+ '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
  '</div></div></div>';
 
  // 테이블 현황 바 실시간 로드 (5개씩)
@@ -255,13 +255,13 @@ function _filoRenderKiosk(menus){
  var _c=_colors[_ci];
  var _init=esc((m.name||'?').slice(0,1));
  var _emIcon=m.imageUrl
-  ?'<div style="width:100%;height:72px;border-radius:10px;overflow:hidden;margin-bottom:8px;background:'+_c+'1a"><img src="'+esc(m.imageUrl)+'" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.opacity=0"></div>'
-  :'<div style="width:44px;height:44px;border-radius:12px;background:'+_c+'1a;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:20px;font-weight:900;color:'+_c+'">'+_init+'</div>';
- return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)">'+
+  ?'<div style="width:100%;height:65px;border-radius:10px;overflow:hidden;margin-bottom:6px;background:'+_c+'1a;flex-shrink:0"><img src="'+esc(m.imageUrl)+'" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" onerror="this.style.opacity=0"></div>'
+  :'<div style="width:40px;height:40px;border-radius:12px;background:'+_c+'1a;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:18px;font-weight:900;color:'+_c+';flex-shrink:0">'+_init+'</div>';
+ return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="display:flex;flex-direction:column;align-items:stretch">'+
  _emIcon+
- '<div style="font-size:12.5px;font-weight:800;margin-bottom:5px;letter-spacing:-.2px;line-height:1.3">'+esc(m.name)+'</div>'+
- '<div style="font-size:15px;font-weight:900;color:#10b981;letter-spacing:-.4px">₩'+m.price.toLocaleString()+'</div>'+
- (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:4px;font-weight:700">재고 '+m.stock+'</div>':'')+'</div>';
+ '<div style="font-size:12px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word;color:#1a1a2e">'+esc(m.name)+'</div>'+
+ '<div style="font-size:13px;font-weight:900;color:#059669;letter-spacing:-.3px;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
+ (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+'</div>';
  }).join('');
  }
  window._kioskMenus=menus;
@@ -276,7 +276,7 @@ function _filoFilterKiosk(cat,btn){
  b.style.fontWeight=b===btn?'800':'700';
  });
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
- el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
+ el.style.display=(cat==='전체'||el.dataset.cat===cat)?'flex':'none';
  });
 }
 
@@ -467,7 +467,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  items.forEach(function(it){
   var row=document.createElement('div');
   row.style.cssText='display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;align-items:center';
-  row.innerHTML='<span style="color:var(--t2)">'+it.name+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
+  row.innerHTML='<span style="color:var(--t2)">'+esc(it.name)+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
    '<span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span>';
   body.appendChild(row);
  });

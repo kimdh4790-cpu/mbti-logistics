@@ -11,7 +11,7 @@ const { test, expect, chromium } = require('@playwright/test');
 const FILO_URL = 'https://filo.ai.kr';
 const DINE_URL = 'https://dine.ne.kr/mbti';
 const EMAIL = 'soungkyekim@naver.com';
-const PW = 'khw3103!!!';
+const PW = process.env.TEST_PW || '';
 const MEMBER_ID = 'Fdk3AZACB6dcbKMg1wKm';
 
 const bugs = [];

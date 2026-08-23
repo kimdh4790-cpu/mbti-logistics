@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>백화점 배송</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  <style>
+    :root{
+      --bg:#08101f;--bg2:#0f1e35;--bg3:#162840;--border:#1e3a5a;
+      --gold:#c9a84c;--gold-dim:rgba(201,168,76,.12);
+      --text:#e8f0f8;--text2:#8aafc8;--text3:#4d6e87;
+      --green:#34d399;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      background:var(--bg);color:var(--text);
+      font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;
+      font-size:14px;line-height:1.5;
+      -webkit-font-smoothing:antialiased;
+      -webkit-tap-highlight-color:transparent;
+    }
+    button{font-family:inherit;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+    input,select,textarea{font-family:inherit;font-size:14px;outline:none;-webkit-appearance:none;}
+
+    /* ── Top Bar ── */
+    .top-bar{
+      position:fixed;top:0;left:0;right:0;height:56px;
+      background:var(--bg2);border-bottom:1px solid var(--border);
+      display:flex;align-items:center;padding:0 16px;gap:10px;z-index:100;
+    }
+    .top-logo{font-size:16px;font-weight:800;color:var(--gold);flex:1;}
+    .top-sub{color:var(--text3);font-size:12px;}
+    .top-btn{
+      background:transparent;border:1px solid var(--border);
+      color:var(--text2);padding:6px 12px;border-radius:8px;font-size:12px;
+    }
+
+    /* ── Screens ── */
+    .screen{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+
+    /* ── Login ── */
+    #login-screen{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:40px 24px;min-height:100vh;
+    }
+    .login-badge{
+      font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--gold);background:var(--gold-dim);border:1px solid rgba(201,168,76,.2);
+      padding:4px 14px;border-radius:20px;margin-bottom:20px;
+    }
+    .login-title{font-size:28px;font-weight:900;text-align:center;margin-bottom:6px;}
+    .login-sub{color:var(--text3);font-size:13px;text-align:center;margin-bottom:36px;}
+    .login-card{
+      width:100%;max-width:360px;background:var(--bg2);
+      border:1px solid var(--border);border-radius:16px;padding:28px 24px;
+    }
+    .ltab-row{
+      display:flex;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:24px;
+    }
+    .ltab{flex:1;padding:10px;font-size:13px;font-weight:700;border:none;transition:background .15s,color .15s;}
+    .ltab.active{background:var(--gold);color:#000;}
+    .ltab:not(.active){background:transparent;color:var(--text2);}
+    .form-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:7px;display:block;}
+    .form-input{
+      width:100%;background:var(--bg3);border:1px solid var(--border);
+      border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;margin-bottom:20px;
+    }
+    .form-input:focus{border-color:var(--gold);}
+    .dept-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
+    .dept-btn{
+      padding:9px 16px;border-radius:10px;border:1px solid var(--border);
+      background:var(--bg3);color:var(--text2);font-size:13px;font-weight:600;
+    }
+    .dept-btn.sel{border-color:var(--gold);background:var(--gold-dim);color:var(--gold);}
+    .btn-primary{
+      width:100%;padding:16px;border-radius:12px;background:var(--gold);
+      color:#000;font-size:16px;font-weight:800;letter-spacing:.02em;
+    }
+    .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Main screen ── */
+    #main-screen{display:none;padding-top:56px;padding-bottom:88px;}
+
+    /* Stats bar */
+    .stats-bar{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+      background:var(--border);border-bottom:1px solid var(--border);
+    }
+    .stat-cell{background:var(--bg2);padding:14px;text-align:center;}
+    .stat-num{font-size:24px;font-weight:900;color:var(--gold);display:block;font-variant-numeric:tabular-nums;}
+    .stat-lbl{font-size:11px;color:var(--text3);}
+
+    /* Delivery list */
+    .list-section{padding:0 14px;}
+    .list-header{padding:16px 0 10px;display:flex;align-items:center;gap:8px;}
+    .list-header-title{font-size:14px;font-weight:700;flex:1;}
+    .refresh-btn{
+      background:transparent;border:1px solid var(--border);color:var(--text2);
+      width:30px;height:30px;border-radius:8px;font-size:16px;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .del-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
+    .del-card-head{padding:12px 14px;display:flex;align-items:flex-start;gap:10px;}
+    .del-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+    .dot-wait{background:var(--amber);}
+    .dot-done{background:var(--green);}
+    .dot-cancel{background:var(--red);}
+    .del-card-body{flex:1;min-width:0;}
+    .del-card-title{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .del-card-sub{font-size:12px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .del-card-tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
+    .chip{font-size:10px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:6px;}
+    .chip-type{background:rgba(96,165,250,.15);color:var(--blue);}
+    .chip-cat{background:rgba(201,168,76,.13);color:var(--gold);}
+    .chip-done{background:rgba(52,211,153,.15);color:var(--green);}
+    .chip-wait{background:rgba(251,191,36,.13);color:var(--amber);}
+    .chip-cancel{background:rgba(248,113,113,.13);color:var(--red);}
+    .chip-time{background:rgba(255,255,255,.06);color:var(--text3);}
+    .del-card-actions{border-top:1px solid var(--border);padding:8px 14px;display:flex;gap:8px;}
+    .act-btn{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;text-align:center;}
+    .act-complete{background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.2);}
+    .act-cancel{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.15);}
+    .act-detail{background:var(--bg3);color:var(--text2);border:1px solid var(--border);}
+
+    /* FAB */
+    .fab{
+      position:fixed;bottom:24px;right:20px;width:56px;height:56px;border-radius:28px;
+      background:var(--gold);color:#000;font-size:26px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 20px rgba(201,168,76,.4);z-index:99;
+    }
+
+    /* ── Modal ── */
+    .mo-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;
+      display:none;align-items:flex-end;justify-content:center;
+    }
+    .mo-overlay.open{display:flex;}
+    .mo-sheet{
+      background:var(--bg2);border-radius:20px 20px 0 0;width:100%;max-width:480px;
+      padding-bottom:env(safe-area-inset-bottom,16px);max-height:93vh;
+      overflow-y:auto;-webkit-overflow-scrolling:touch;
+    }
+    .mo-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;}
+    .mo-title{font-size:17px;font-weight:800;flex:1;}
+    .mo-close{
+      background:transparent;color:var(--text2);width:32px;height:32px;
+      border-radius:8px;font-size:20px;display:flex;align-items:center;justify-content:center;
+    }
+    .mo-body{padding:20px;}
+    .mo-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:7px;display:block;}
+    .mo-input{
+      width:100%;background:var(--bg3);border:1px solid var(--border);
+      border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;margin-bottom:16px;
+    }
+    .mo-input:focus{border-color:var(--gold);}
+    .mo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+    .mo-row .mo-input{margin-bottom:0;}
+    .choice-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+    .choice-btn{
+      padding:7px 14px;border-radius:8px;border:1px solid var(--border);
+      background:var(--bg3);color:var(--text2);font-size:13px;font-weight:600;
+    }
+    .choice-btn.sel{border-color:var(--gold);background:var(--gold-dim);color:var(--gold);}
+    .mo-footer{padding:12px 20px 20px;border-top:1px solid var(--border);}
+    .btn-save{width:100%;padding:16px;border-radius:12px;background:var(--gold);color:#000;font-size:16px;font-weight:800;}
+    .btn-save:disabled{opacity:.4;cursor:not-allowed;}
+    .btn-complete{background:var(--green);color:#000;}
+
+    /* Photo */
+    .photo-upload-area{
+      border:2px dashed var(--border);border-radius:12px;padding:24px;
+      text-align:center;color:var(--text3);margin-bottom:16px;cursor:pointer;position:relative;
+    }
+    .photo-upload-area:hover{border-color:var(--gold);color:var(--gold);}
+    .photo-upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+    .photo-preview{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+    .photo-thumb{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);}
+
+    /* ── Admin screen ── */
+    #admin-screen{display:none;padding-top:56px;padding-bottom:56px;}
+    .admin-tab-bar{
+      position:fixed;bottom:0;left:0;right:0;height:56px;display:flex;
+      background:var(--bg2);border-top:1px solid var(--border);z-index:99;
+    }
+    .admin-tab{
+      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      color:var(--text3);background:transparent;font-size:10px;font-weight:700;letter-spacing:.06em;
+    }
+    .admin-tab.active{color:var(--gold);}
+    .admin-tab-icon{font-size:18px;}
+    .tab-pane{display:none;}
+    .tab-pane.active{display:block;}
+
+    /* Date tabs */
+    .date-tabs{
+      display:flex;gap:6px;overflow-x:auto;padding:12px 16px 8px;
+      scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    }
+    .date-tabs::-webkit-scrollbar{display:none;}
+    .dtab{
+      flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
+      border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text3);white-space:nowrap;
+    }
+    .dtab.active{border-color:var(--gold);background:var(--gold-dim);color:var(--gold);}
+
+    /* Monitor cards */
+    .mon-section{padding:0 16px;}
+    .mon-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+    .mon-name{font-size:15px;font-weight:700;margin-bottom:3px;}
+    .mon-meta{font-size:12px;color:var(--text2);}
+    .mon-prog{display:flex;gap:14px;margin-top:10px;}
+    .mon-item{display:flex;align-items:center;gap:5px;font-size:12px;}
+    .mon-item b{font-weight:800;}
+
+    /* Settle */
+    .settle-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 16px 16px;}
+    .settle-table{width:100%;border-collapse:collapse;font-size:12px;min-width:420px;}
+    .settle-table th{
+      padding:8px 10px;background:var(--bg2);color:var(--text3);
+      font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+      border-bottom:1px solid var(--border);text-align:left;
+    }
+    .settle-table td{padding:9px 10px;border-bottom:1px solid rgba(30,58,90,.4);color:var(--text2);}
+    .settle-sub td{background:rgba(201,168,76,.05);}
+    .settle-grand td{background:rgba(201,168,76,.08);color:var(--gold);font-weight:800;}
+    .tr{font-variant-numeric:tabular-nums;}
+
+    /* Toast */
+    .toast{
+      position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:rgba(10,22,42,.96);border:1px solid var(--border);border-radius:12px;
+      padding:12px 20px;color:var(--text);font-size:14px;font-weight:600;
+      white-space:nowrap;z-index:9999;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    /* Empty */
+    .empty{text-align:center;padding:60px 20px;color:var(--text3);}
+    .empty-icon{font-size:48px;margin-bottom:12px;}
+    .empty-text{font-size:14px;}
+
+    /* Complete info box */
+    .info-box{
+      background:var(--bg3);border-radius:10px;padding:14px;
+      margin-bottom:20px;font-size:13px;color:var(--text2);line-height:1.8;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toast -->
+<div id="dept-toast" class="toast"></div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- LOGIN SCREEN                                    -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="login-screen" class="screen">
+  <div class="login-badge">MBTICO 백화점 배송</div>
+  <div class="login-title" id="dept-co-name">배송앱</div>
+  <div class="login-sub" id="dept-co-sub">백화점 배송 기사 전용</div>
+
+  <div class="login-card">
+    <!-- 기사 / 관리자 탭 -->
+    <div class="ltab-row">
+      <button class="ltab active" id="ltab-driver" onclick="_deptSwitchTab('driver')">기사 로그인</button>
+      <button class="ltab" id="ltab-admin" onclick="_deptSwitchTab('admin')">관리자</button>
+    </div>
+
+    <!-- 기사 폼 -->
+    <div id="lform-driver">
+      <label class="form-label">기사 이름</label>
+      <input id="dept-driver-name" class="form-input" type="text" placeholder="이름 입력" oninput="_deptCheckLogin()">
+
+      <label class="form-label">백화점 선택</label>
+      <div class="dept-row" id="dept-dept-row">
+        <button class="dept-btn" onclick="_deptSelDeptBtn(this,'롯데백화점')">롯데</button>
+        <button class="dept-btn" onclick="_deptSelDeptBtn(this,'현대백화점')">현대</button>
+        <button class="dept-btn" onclick="_deptSelDeptBtn(this,'신세계백화점')">신세계</button>
+        <button class="dept-btn" onclick="_deptSelDeptBtn(this,'갤러리아')">갤러리아</button>
+        <button class="dept-btn" onclick="_deptSelDeptBtn(this,'AK플라자')">AK플라자</button>
+        <button class="dept-btn" onclick="_deptSelDeptBtn(this,'기타')">기타</button>
+      </div>
+
+      <button id="dept-login-btn" class="btn-primary" disabled onclick="_deptDoLogin()">배송 시작 →</button>
+    </div>
+
+    <!-- 관리자 폼 -->
+    <div id="lform-admin" style="display:none">
+      <label class="form-label">관리자 이메일</label>
+      <input id="adm-email" class="form-input" type="email" placeholder="이메일">
+      <label class="form-label">비밀번호</label>
+      <input id="adm-pw" class="form-input" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')_deptAdminLogin()">
+      <button class="btn-primary" onclick="_deptAdminLogin()">관리자 로그인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- MAIN SCREEN (기사)                              -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="main-screen" class="screen">
+  <div class="top-bar">
+    <div class="top-logo" id="main-co-name">배송앱</div>
+    <span class="top-sub" id="main-driver-lbl"></span>
+    <button class="top-btn" onclick="_deptLogout()">로그아웃</button>
+  </div>
+
+  <!-- 통계 바 -->
+  <div class="stats-bar">
+    <div class="stat-cell">
+      <span class="stat-num" id="stat-total">0</span>
+      <span class="stat-lbl">전체</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num" id="stat-done" style="color:var(--green)">0</span>
+      <span class="stat-lbl">완료</span>
+    </div>
+    <div class="stat-cell">
+      <span class="stat-num" id="stat-wait" style="color:var(--amber)">0</span>
+      <span class="stat-lbl">미완료</span>
+    </div>
+  </div>
+
+  <!-- 배송 목록 -->
+  <div class="list-section">
+    <div class="list-header">
+      <span class="list-header-title" id="list-hd-title">오늘 배송 목록</span>
+      <button class="refresh-btn" onclick="_deptLoadList()">↻</button>
+    </div>
+    <div id="dept-list">
+      <div class="empty"><div class="empty-text">불러오는 중...</div></div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" onclick="_deptOpenAdd()">＋</button>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ADMIN SCREEN                                    -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="admin-screen" class="screen">
+  <div class="top-bar">
+    <div class="top-logo" id="adm-co-name">관제 센터</div>
+    <button class="top-btn" onclick="_deptAdminLogout()">로그아웃</button>
+  </div>
+
+  <!-- 기사 현황 탭 -->
+  <div id="adm-pane-mon" class="tab-pane active">
+    <div class="date-tabs" id="adm-mon-dtabs"></div>
+    <div class="mon-section" id="adm-mon-content"><div class="empty"><div class="empty-text">불러오는 중...</div></div></div>
+  </div>
+
+  <!-- 정산 탭 -->
+  <div id="adm-pane-set" class="tab-pane">
+    <div class="date-tabs" id="adm-set-dtabs"></div>
+    <div id="adm-set-content"><div class="empty"><div class="empty-text">날짜를 선택하세요</div></div></div>
+  </div>
+
+  <!-- 하단 탭바 -->
+  <div class="admin-tab-bar">
+    <button class="admin-tab active" id="atab-mon" onclick="_deptAdminTab('mon')">
+      <span class="admin-tab-icon">📋</span>기사현황
+    </button>
+    <button class="admin-tab" id="atab-set" onclick="_deptAdminTab('set')">
+      <span class="admin-tab-icon">💰</span>정산
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- 배송 등록 모달                                  -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="mo-add" class="mo-overlay">
+  <div class="mo-sheet">
+    <div class="mo-header">
+      <span class="mo-title">배송 등록</span>
+      <button class="mo-close" onclick="_deptCloseAdd()">✕</button>
+    </div>
+    <div class="mo-body">
+
+      <label class="mo-label">주문번호</label>
+      <input id="a-ordernum" class="mo-input" type="text" placeholder="주문번호 (선택)">
+
+      <label class="mo-label">고객명 *</label>
+      <input id="a-customer" class="mo-input" type="text" placeholder="고객 이름">
+
+      <label class="mo-label">연락처</label>
+      <input id="a-phone" class="mo-input" type="tel" placeholder="010-0000-0000">
+
+      <label class="mo-label">배송 주소 *</label>
+      <input id="a-addr" class="mo-input" type="text" placeholder="배송지 주소">
+
+      <div class="mo-row">
+        <div>
+          <label class="mo-label">픽업 층수</label>
+          <input id="a-floor" class="mo-input" type="text" placeholder="예) 5층">
+        </div>
+        <div>
+          <label class="mo-label">픽업 코너</label>
+          <input id="a-corner" class="mo-input" type="text" placeholder="예) 여성의류">
+        </div>
+      </div>
+
+      <label class="mo-label">상품 종류</label>
+      <div class="choice-row" id="a-cat-row">
+        <button class="choice-btn" onclick="_choice(this,'cat','의류')">의류</button>
+        <button class="choice-btn" onclick="_choice(this,'cat','가구')">가구</button>
+        <button class="choice-btn" onclick="_choice(this,'cat','가전')">가전</button>
+        <button class="choice-btn" onclick="_choice(this,'cat','식품')">식품</button>
+        <button class="choice-btn" onclick="_choice(this,'cat','잡화')">잡화</button>
+        <button class="choice-btn" onclick="_choice(this,'cat','기타')">기타</button>
+      </div>
+
+      <label class="mo-label">배송 종류</label>
+      <div class="choice-row" id="a-type-row">
+        <button class="choice-btn" onclick="_choice(this,'type','일반배달')">일반배달</button>
+        <button class="choice-btn" onclick="_choice(this,'type','설치배달')">설치배달</button>
+        <button class="choice-btn" onclick="_choice(this,'type','수거')">수거</button>
+        <button class="choice-btn" onclick="_choice(this,'type','교환')">교환</button>
+      </div>
+
+      <div class="mo-row">
+        <div>
+          <label class="mo-label">예약 시작</label>
+          <input id="a-tfrom" class="mo-input" type="time">
+        </div>
+        <div>
+          <label class="mo-label">예약 종료</label>
+          <input id="a-tto" class="mo-input" type="time">
+        </div>
+      </div>
+
+      <label class="mo-label">상품명</label>
+      <input id="a-product" class="mo-input" type="text" placeholder="상품명 (선택)">
+
+      <label class="mo-label">메모</label>
+      <textarea id="a-memo" class="mo-input" rows="2" placeholder="특이사항" style="resize:none"></textarea>
+
+    </div>
+    <div class="mo-footer">
+      <button id="add-save-btn" class="btn-save" onclick="_deptSave()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- 완료 처리 모달                                  -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="mo-complete" class="mo-overlay">
+  <div class="mo-sheet">
+    <div class="mo-header">
+      <span class="mo-title">배송 완료 처리</span>
+      <button class="mo-close" onclick="_deptCloseComplete()">✕</button>
+    </div>
+    <div class="mo-body">
+      <div class="info-box" id="complete-info"></div>
+
+      <label class="mo-label">완료 사진</label>
+      <div class="photo-upload-area">
+        <input type="file" accept="image/*" capture="environment" id="complete-photo-inp" onchange="_photoChange(this)">
+        <div style="font-size:28px;margin-bottom:6px">📷</div>
+        <div style="font-size:13px">사진 촬영 / 선택 (선택)</div>
+      </div>
+      <div class="photo-preview" id="complete-photo-prev"></div>
+
+      <label class="mo-label">완료 메모</label>
+      <textarea id="complete-memo" class="mo-input" rows="2" placeholder="완료 메모 (선택)" style="resize:none"></textarea>
+    </div>
+    <div class="mo-footer">
+      <button id="complete-btn" class="btn-save btn-complete" onclick="_deptComplete()">완료 처리</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// Firebase 초기화
+// ══════════════════════════════════════════════
+firebase.initializeApp({
+  apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
+  authDomain:'mbti-logistics.firebaseapp.com',
+  projectId:'mbti-logistics',
+  storageBucket:'mbti-logistics.appspot.com',
+  messagingSenderId:'40761160761',
+  appId:'1:40761160761:web:20545b610f03f534e949e8'
+});
+var _db=firebase.firestore(), _auth=firebase.auth(), _storage=firebase.storage();
+
+// ══════════════════════════════════════════════
+// 전역 상태
+// ══════════════════════════════════════════════
+var _DCU = null;                                     // 현재 로그인 정보
+var _deptName = localStorage.getItem('dept_dept')||''; // 선택된 백화점
+var _choices = {};                                   // choice-btn 선택값 { cat, type }
+var _completeDocId = null;
+var _completePhotoFile = null;
+var _deptDocs = [];
+var _admMonDate = '';
+var _admSetDate = '';
+
+// ══════════════════════════════════════════════
+// 유틸
+// ══════════════════════════════════════════════
+function _toast(msg, dur) {
+  var el = document.getElementById('dept-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.remove('show'); }, dur||2500);
+}
+function _esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _today(){ return new Date().toISOString().slice(0,10); }
+function _getDid(){ return (_DCU&&_DCU.dealerId) || localStorage.getItem('mbti_emer_dealerId')||''; }
+
+// ══════════════════════════════════════════════
+// 로그인 탭
+// ══════════════════════════════════════════════
+function _deptSwitchTab(role) {
+  var isDrv = role==='driver';
+  document.getElementById('lform-driver').style.display = isDrv?'':'none';
+  document.getElementById('lform-admin').style.display = isDrv?'none':'';
+  document.getElementById('ltab-driver').classList.toggle('active', isDrv);
+  document.getElementById('ltab-admin').classList.toggle('active', !isDrv);
+}
+
+// ══════════════════════════════════════════════
+// 백화점 선택
+// ══════════════════════════════════════════════
+function _deptSelDeptBtn(btn, name) {
+  _deptName = name;
+  localStorage.setItem('dept_dept', name);
+  document.querySelectorAll('#dept-dept-row .dept-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel');
+  _deptCheckLogin();
+}
+
+function _deptCheckLogin() {
+  var name = (document.getElementById('dept-driver-name').value||'').trim();
+  document.getElementById('dept-login-btn').disabled = !(name && _deptName);
+}
+
+// ══════════════════════════════════════════════
+// 기사 로그인
+// ══════════════════════════════════════════════
+function _deptDoLogin() {
+  var name = (document.getElementById('dept-driver-name').value||'').trim();
+  if(!name||!_deptName){ _toast('이름과 백화점을 선택하세요'); return; }
+  var did = _getDid();
+  if(!did){ _toast('회사 정보를 찾을 수 없습니다'); return; }
+  localStorage.setItem('dept_driver', name);
+  localStorage.setItem('dept_dept', _deptName);
+  _DCU = { driver:name, department:_deptName, dealerId:did };
+  _auth.signInAnonymously().catch(function(){});
+  _deptGoMain();
+}
+
+// ══════════════════════════════════════════════
+// 화면 전환
+// ══════════════════════════════════════════════
+function _deptGoMain() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'block';
+  document.getElementById('admin-screen').style.display = 'none';
+  var coName = localStorage.getItem('mbti_emer_coname')||'백화점 배송';
+  document.getElementById('main-co-name').textContent = coName;
+  document.getElementById('main-driver-lbl').textContent = (_DCU&&_DCU.driver||'') + ' · ' + (_DCU&&_DCU.department||'');
+  _deptLoadList();
+}
+
+function _deptLogout() {
+  _DCU = null;
+  localStorage.removeItem('dept_driver');
+  document.getElementById('main-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════
+// 배송 목록 로드
+// ══════════════════════════════════════════════
+function _deptLoadList(dateStr) {
+  if(!dateStr) dateStr = _today();
+  var did = _getDid();
+  var drv = (_DCU&&_DCU.driver)||localStorage.getItem('dept_driver')||'';
+  document.getElementById('dept-list').innerHTML = '<div class="empty"><div class="empty-text">불러오는 중...</div></div>';
+  fetch('/api/dept-list?dealerId='+encodeURIComponent(did)+'&driver='+encodeURIComponent(drv)+'&date='+dateStr)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      _deptDocs = d.docs||[];
+      _deptRenderList(_deptDocs, dateStr);
+    })
+    .catch(function(){
+      document.getElementById('dept-list').innerHTML = '<div class="empty"><div class="empty-text">불러오기 실패</div></div>';
+    });
+}
+
+function _deptRenderList(docs, dateStr) {
+  var total = docs.length;
+  var done = 0, wait = 0;
+  docs.forEach(function(d){ if(d.status==='완료') done++; else if(d.status!=='취소') wait++; });
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-wait').textContent = wait;
+  var hd = document.getElementById('list-hd-title');
+  if(hd) hd.textContent = (dateStr===_today()?'오늘':'') + ' 배송 목록 (' + total + '건)';
+
+  if(!docs.length){
+    document.getElementById('dept-list').innerHTML = '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">배송 건이 없습니다</div></div>';
+    return;
+  }
+  var html = '';
+  docs.forEach(function(d) {
+    var dotCls = d.status==='완료'?'dot-done': d.status==='취소'?'dot-cancel':'dot-wait';
+    var chipCls = d.status==='완료'?'chip-done': d.status==='취소'?'chip-cancel':'chip-wait';
+    var time = (d.timeFrom&&d.timeTo) ? d.timeFrom+'~'+d.timeTo : '';
+    html += '<div class="del-card">'
+      +'<div class="del-card-head">'
+        +'<div class="del-status-dot '+dotCls+'"></div>'
+        +'<div class="del-card-body">'
+          +'<div class="del-card-title">'+(d.orderNum?'#'+_esc(d.orderNum)+' · ':'')+_esc(d.customerName||'고객')+(d.productName?' — '+_esc(d.productName):'')+'</div>'
+          +'<div class="del-card-sub">'+_esc(d.addr||'주소 없음')+'</div>'
+          +'<div class="del-card-tags">'
+            +(d.deliveryType?'<span class="chip chip-type">'+_esc(d.deliveryType)+'</span>':'')
+            +(d.productCategory?'<span class="chip chip-cat">'+_esc(d.productCategory)+'</span>':'')
+            +(d.floor||d.corner?'<span class="chip chip-time">'+_esc((d.floor||'')+(d.corner?' / '+d.corner:''))+'</span>':'')
+            +(time?'<span class="chip chip-time">'+_esc(time)+'</span>':'')
+            +'<span class="chip '+chipCls+'">'+_esc(d.status||'대기')+'</span>'
+          +'</div>'
+        +'</div>'
+      +'</div>';
+    if(d.status!=='완료'&&d.status!=='취소'){
+      var eid = _esc(d.id||'');
+      html += '<div class="del-card-actions">'
+        +'<button class="act-btn act-complete" onclick="_deptOpenComplete(\''+eid+'\')">완료 처리</button>'
+        +'<button class="act-btn act-cancel" onclick="_deptCancel(\''+eid+'\')">취소</button>'
+      +'</div>';
+    }
+    html += '</div>';
+  });
+  document.getElementById('dept-list').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// 배송 등록 모달
+// ══════════════════════════════════════════════
+function _deptOpenAdd() {
+  _choices = {};
+  ['a-ordernum','a-customer','a-phone','a-addr','a-floor','a-corner','a-product','a-memo','a-tfrom','a-tto'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value='';
+  });
+  document.querySelectorAll('#mo-add .choice-btn').forEach(function(b){ b.classList.remove('sel'); });
+  document.getElementById('mo-add').classList.add('open');
+}
+function _deptCloseAdd(){ document.getElementById('mo-add').classList.remove('open'); }
+
+function _choice(btn, key, val) {
+  _choices[key] = val;
+  btn.closest('.choice-row').querySelectorAll('.choice-btn').forEach(function(b){ b.classList.remove('sel'); });
+  btn.classList.add('sel');
+}
+
+// ══════════════════════════════════════════════
+// 배송 저장
+// ══════════════════════════════════════════════
+function _deptSave() {
+  var customer = (document.getElementById('a-customer').value||'').trim();
+  var addr = (document.getElementById('a-addr').value||'').trim();
+  if(!customer||!addr){ _toast('고객명과 주소는 필수입니다'); return; }
+  var did = _getDid();
+  var payload = {
+    dealerId: did,
+    driver: (_DCU&&_DCU.driver)||'',
+    department: (_DCU&&_DCU.department)||_deptName||'',
+    orderNum: (document.getElementById('a-ordernum').value||'').trim(),
+    customerName: customer,
+    customerPhone: (document.getElementById('a-phone').value||'').trim(),
+    addr: addr,
+    floor: (document.getElementById('a-floor').value||'').trim(),
+    corner: (document.getElementById('a-corner').value||'').trim(),
+    productName: (document.getElementById('a-product').value||'').trim(),
+    productCategory: _choices.cat||'',
+    deliveryType: _choices.type||'일반배달',
+    timeFrom: document.getElementById('a-tfrom').value||'',
+    timeTo: document.getElementById('a-tto').value||'',
+    memo: (document.getElementById('a-memo').value||'').trim(),
+    date: _today(),
+    status: '대기'
+  };
+  var btn = document.getElementById('add-save-btn');
+  btn.disabled=true; btn.textContent='저장 중...';
+  fetch('/api/dept-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      btn.disabled=false; btn.textContent='저장';
+      if(d.ok){ _toast('배송이 등록되었습니다'); _deptCloseAdd(); _deptLoadList(); }
+      else _toast('저장 실패: '+(d.error||''));
+    })
+    .catch(function(){ btn.disabled=false; btn.textContent='저장'; _toast('저장 중 오류가 발생했습니다'); });
+}
+
+// ══════════════════════════════════════════════
+// 완료 처리 모달
+// ══════════════════════════════════════════════
+function _deptOpenComplete(docId) {
+  _completeDocId = docId;
+  _completePhotoFile = null;
+  var doc = _deptDocs.find(function(d){ return d.id===docId; });
+  if(doc){
+    var info = '<b>'+_esc(doc.customerName)+'</b>';
+    if(doc.customerPhone) info += ' · '+_esc(doc.customerPhone);
+    info += '<br>'+_esc(doc.addr||'');
+    if(doc.deliveryType) info += '<br><span style="color:var(--gold)">'+_esc(doc.deliveryType)+'</span>';
+    if(doc.floor||doc.corner) info += ' · '+_esc((doc.floor||'')+(doc.corner?' / '+doc.corner:''));
+    document.getElementById('complete-info').innerHTML = info;
+  }
+  document.getElementById('complete-memo').value='';
+  document.getElementById('complete-photo-prev').innerHTML='';
+  document.getElementById('mo-complete').classList.add('open');
+}
+function _deptCloseComplete(){
+  document.getElementById('mo-complete').classList.remove('open');
+  _completeDocId=null; _completePhotoFile=null;
+}
+
+function _photoChange(inp) {
+  var file = inp.files&&inp.files[0];
+  if(!file) return;
+  _completePhotoFile = file;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    document.getElementById('complete-photo-prev').innerHTML = '<img class="photo-thumb" src="'+e.target.result+'">';
+  };
+  reader.readAsDataURL(file);
+}
+
+function _deptComplete() {
+  if(!_completeDocId){ _toast('오류: 문서 ID 없음'); return; }
+  var btn = document.getElementById('complete-btn');
+  btn.disabled=true; btn.textContent='처리 중...';
+  var memo = (document.getElementById('complete-memo').value||'').trim();
+
+  function doComplete(photoUrl) {
+    fetch('/api/dept-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      dealerId: _getDid(),
+      docId: _completeDocId,
+      status:'완료',
+      completedMemo: memo,
+      photoUrl: photoUrl||'',
+      completedAt: new Date().toISOString()
+    })}).then(function(r){ return r.json(); }).then(function(d){
+      btn.disabled=false; btn.textContent='완료 처리';
+      if(d.ok){ _toast('완료 처리되었습니다'); _deptCloseComplete(); _deptLoadList(); }
+      else _toast('처리 실패: '+(d.error||''));
+    }).catch(function(){ btn.disabled=false; btn.textContent='완료 처리'; _toast('오류가 발생했습니다'); });
+  }
+
+  if(_completePhotoFile) {
+    var path = 'dept_complete/'+(_DCU&&_DCU.driver||'unknown')+'/'+Date.now()+'.jpg';
+    _storage.ref().child(path).put(_completePhotoFile)
+      .then(function(snap){ return snap.ref.getDownloadURL(); })
+      .then(function(url){ doComplete(url); })
+      .catch(function(){ doComplete(''); });
+  } else {
+    doComplete('');
+  }
+}
+
+// ══════════════════════════════════════════════
+// 취소 처리
+// ══════════════════════════════════════════════
+function _deptCancel(docId) {
+  if(!confirm('이 배송을 취소하시겠습니까?')) return;
+  fetch('/api/dept-update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    dealerId:_getDid(), docId:docId, status:'취소'
+  })}).then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok){ _toast('취소되었습니다'); _deptLoadList(); }
+    else _toast('오류: '+(d.error||''));
+  }).catch(function(){ _toast('오류가 발생했습니다'); });
+}
+
+// ══════════════════════════════════════════════
+// 관리자 로그인 / 로그아웃
+// ══════════════════════════════════════════════
+function _deptAdminLogin() {
+  var email = (document.getElementById('adm-email').value||'').trim();
+  var pw = document.getElementById('adm-pw').value;
+  if(!email||!pw){ _toast('이메일과 비밀번호를 입력하세요'); return; }
+  _auth.signInWithEmailAndPassword(email, pw).then(function(uc){
+    return _db.collection('users').doc(uc.user.uid).get();
+  }).then(function(snap){
+    var did = (snap.exists&&(snap.data().dealerId||snap.data().parentDealerId))||'';
+    if(!did) throw new Error('관리자 권한이 없습니다');
+    localStorage.setItem('mbti_emer_dealerId', did);
+    _DCU = { uid:did, email:email, dealerId:did, role:'admin' };
+    var coName = localStorage.getItem('mbti_emer_coname')||'관제 센터';
+    document.getElementById('adm-co-name').textContent = coName+' / 백화점';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-screen').style.display = 'block';
+    _admMonDate = _today();
+    _admSetDate = _today();
+    _deptLoadAdmMonitor(_admMonDate);
+    _deptLoadAdmSettle(_admSetDate);
+  }).catch(function(e){ _toast(e.message||'로그인 실패'); });
+}
+
+function _deptAdminLogout() {
+  _auth.signOut().catch(function(){});
+  _DCU = null;
+  document.getElementById('admin-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ══════════════════════════════════════════════
+// 관리자 탭 전환
+// ══════════════════════════════════════════════
+function _deptAdminTab(which) {
+  ['mon','set'].forEach(function(k){
+    document.getElementById('adm-pane-'+k).classList.toggle('active', k===which);
+    document.getElementById('atab-'+k).classList.toggle('active', k===which);
+  });
+}
+
+// ══════════════════════════════════════════════
+// 날짜 탭 HTML 생성
+// ══════════════════════════════════════════════
+function _makeDateTabs(selDate, fnName) {
+  var today = new Date(), html='';
+  for(var i=0;i<7;i++){
+    var d=new Date(today); d.setDate(d.getDate()-i);
+    var ds=d.toISOString().slice(0,10);
+    var lbl=i===0?'오늘':i===1?'어제':(d.getMonth()+1)+'/'+(d.getDate());
+    html+='<button class="dtab'+(ds===selDate?' active':'')+'" onclick="'+fnName+'(\''+ds+'\')">'+lbl+'</button>';
+  }
+  return html;
+}
+
+// ══════════════════════════════════════════════
+// 관리자 기사 현황
+// ══════════════════════════════════════════════
+function _deptLoadAdmMonitor(dateStr) {
+  if(!dateStr) dateStr = _admMonDate||_today();
+  _admMonDate = dateStr;
+  document.getElementById('adm-mon-dtabs').innerHTML = _makeDateTabs(dateStr,'_deptLoadAdmMonitor');
+  var content = document.getElementById('adm-mon-content');
+  content.innerHTML = '<div class="empty"><div class="empty-text">불러오는 중...</div></div>';
+  var did = _getDid();
+  fetch('/api/dept-list?dealerId='+encodeURIComponent(did)+'&date='+dateStr)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var docs = d.docs||[];
+      if(!docs.length){ content.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">배송 데이터가 없습니다</div></div>'; return; }
+      var grouped={};
+      docs.forEach(function(doc){
+        var drv=doc.driver||'미상';
+        if(!grouped[drv]) grouped[drv]={dept:doc.department||'',total:0,done:0,wait:0};
+        grouped[drv].total++;
+        if(doc.status==='완료') grouped[drv].done++;
+        else if(doc.status!=='취소') grouped[drv].wait++;
+      });
+      var html='';
+      Object.keys(grouped).forEach(function(drv){
+        var g=grouped[drv];
+        html+='<div class="mon-card">'
+          +'<div class="mon-name">'+_esc(drv)+'</div>'
+          +'<div class="mon-meta">'+_esc(g.dept)+'</div>'
+          +'<div class="mon-prog">'
+            +'<div class="mon-item"><span style="color:var(--text3)">전체</span>&nbsp;<b>'+g.total+'건</b></div>'
+            +'<div class="mon-item"><span style="color:var(--green)">완료</span>&nbsp;<b>'+g.done+'건</b></div>'
+            +'<div class="mon-item"><span style="color:var(--amber)">미완료</span>&nbsp;<b>'+g.wait+'건</b></div>'
+          +'</div>'
+        +'</div>';
+      });
+      content.innerHTML=html;
+    }).catch(function(){ content.innerHTML='<div class="empty"><div class="empty-text">불러오기 실패</div></div>'; });
+}
+
+// ══════════════════════════════════════════════
+// 관리자 정산
+// ══════════════════════════════════════════════
+function _deptLoadAdmSettle(dateStr) {
+  if(!dateStr) dateStr = _admSetDate||_today();
+  _admSetDate = dateStr;
+  document.getElementById('adm-set-dtabs').innerHTML = _makeDateTabs(dateStr,'_deptLoadAdmSettle');
+  var content = document.getElementById('adm-set-content');
+  content.innerHTML='<div class="empty"><div class="empty-text">불러오는 중...</div></div>';
+  var did = _getDid();
+  Promise.all([
+    fetch('/api/dept-list?dealerId='+encodeURIComponent(did)+'&date='+dateStr).then(function(r){return r.json();}),
+    fetch('/api/emergency-prices?dealerId='+encodeURIComponent(did)).then(function(r){return r.json();})
+  ]).then(function(res){
+    var docs = (res[0].docs||[]).filter(function(d){return d.status==='완료';});
+    var prices = res[1].prices||{};
+    if(!docs.length){ content.innerHTML='<div class="empty"><div class="empty-icon">💰</div><div class="empty-text">완료된 배송이 없습니다</div></div>'; return; }
+
+    // 기사 → 배송종류 → 백화점 그룹화
+    var grouped={};
+    docs.forEach(function(d){
+      var drv=d.driver||'미상', type=d.deliveryType||'일반배달', dept=d.department||'기타';
+      if(!grouped[drv]) grouped[drv]={};
+      if(!grouped[drv][type]) grouped[drv][type]={};
+      grouped[drv][type][dept]=(grouped[drv][type][dept]||0)+1;
+    });
+
+    var grandTotal=0;
+    var html='<div class="settle-wrap"><table class="settle-table"><thead><tr>'
+      +'<th>기사</th><th>배송종류</th><th>백화점</th><th style="text-align:center">건수</th><th style="text-align:right">합계</th>'
+      +'</tr></thead><tbody>';
+
+    Object.keys(grouped).forEach(function(drv){
+      var drvTotal=0, first=true;
+      Object.keys(grouped[drv]).forEach(function(type){
+        Object.keys(grouped[drv][type]).forEach(function(dept){
+          var cnt=grouped[drv][type][dept];
+          var price=prices[dept]||0;
+          var amt=cnt*price;
+          drvTotal+=amt;
+          html+='<tr>'
+            +'<td>'+(first?_esc(drv):'')+'</td>'
+            +'<td>'+_esc(type)+'</td>'
+            +'<td>'+_esc(dept)+'</td>'
+            +'<td style="text-align:center;font-variant-numeric:tabular-nums" class="tr">'+cnt+'건</td>'
+            +'<td style="text-align:right;font-variant-numeric:tabular-nums" class="tr settle-total">'+(price?amt.toLocaleString()+'원':'단가 미설정')+'</td>'
+            +'</tr>';
+          first=false;
+        });
+      });
+      grandTotal+=drvTotal;
+      html+='<tr class="settle-sub">'
+        +'<td colspan="4" style="color:var(--text2);font-size:12px">'+_esc(drv)+' 소계</td>'
+        +'<td style="text-align:right;color:var(--gold);font-weight:800;font-variant-numeric:tabular-nums">'+drvTotal.toLocaleString()+'원</td>'
+        +'</tr>';
+    });
+    html+='</tbody><tfoot><tr class="settle-grand">'
+      +'<td colspan="4" style="font-size:13px">총 합계 (완료 '+docs.length+'건)</td>'
+      +'<td style="text-align:right;font-size:15px;font-variant-numeric:tabular-nums">'+grandTotal.toLocaleString()+'원</td>'
+      +'</tr></tfoot></table></div>';
+    content.innerHTML=html;
+  }).catch(function(){ content.innerHTML='<div class="empty"><div class="empty-text">불러오기 실패</div></div>'; });
+}
+
+// ══════════════════════════════════════════════
+// 초기화
+// ══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function(){
+  // 저장된 백화점 선택 복원
+  if(_deptName){
+    document.querySelectorAll('#dept-dept-row .dept-btn').forEach(function(b){
+      if(b.onclick&&b.onclick.toString().indexOf("'"+_deptName+"'")>-1) b.classList.add('sel');
+    });
+    _deptCheckLogin();
+  }
+  // 저장된 이름 복원
+  var savedName = localStorage.getItem('dept_driver');
+  if(savedName){ var inp=document.getElementById('dept-driver-name'); if(inp) inp.value=savedName; _deptCheckLogin(); }
+
+  // Firebase Auth + 회사명 로드
+  _auth.onAuthStateChanged(function(user){
+    var did = localStorage.getItem('mbti_emer_dealerId')||'';
+    if(!did && user) {
+      _db.collection('users').doc(user.uid).get().then(function(snap){
+        if(snap.exists){
+          var data=snap.data();
+          did=(data.parentDealerId||data.dealerId)||user.uid;
+          localStorage.setItem('mbti_emer_dealerId', did);
+          _loadCoName(did);
+        }
+      }).catch(function(){});
+    } else if(did) {
+      _loadCoName(did);
+    }
+
+    // 저장된 기사 로그인 자동 복원
+    if(savedName && _deptName && did) {
+      _DCU = { driver:savedName, department:_deptName, dealerId:did };
+      _deptGoMain();
+    }
+  });
+});
+
+function _loadCoName(did) {
+  var saved = localStorage.getItem('mbti_emer_coname');
+  if(saved){
+    document.getElementById('dept-co-name').textContent = saved;
+    document.getElementById('dept-co-sub').textContent = saved+' 백화점 배송';
+    return;
+  }
+  _db.collection('companies').doc(did).get().then(function(snap){
+    if(!snap.exists) return;
+    var name = snap.data().companyName||snap.data().company||'배송앱';
+    localStorage.setItem('mbti_emer_coname', name);
+    document.getElementById('dept-co-name').textContent = name;
+    document.getElementById('dept-co-sub').textContent = name+' 백화점 배송';
+  }).catch(function(){});
+}
+</script>
+</body>
+</html>

@@ -6021,6 +6021,18 @@ if(window.location.hash==='#join'){
           }
           if(cSnap.exists){
             var cd=cSnap.data();
+            // ★ 플랫폼 분리: mbtico.kr 가입 계정은 donway.ai.kr 접근 차단
+            if(cd.platform==='mbtico'&&!isSuperAdmin()){
+              (document.getElementById('login-box')||document.getElementById('form-login')||{innerHTML:''}).innerHTML=
+                '<div style="text-align:center;padding:30px 20px">'
+                +'<div style="font-size:36px;margin-bottom:12px">🚫</div>'
+                +'<div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:8px">잘못된 앱입니다</div>'
+                +'<div style="font-size:13px;color:var(--text3);line-height:1.6">이 계정은 배송앱(mbtico.kr)에서 가입한 계정입니다.<br>배송 서비스는 mbtico.kr을 이용해주세요.<br><br>문의: 051-711-3103</div>'
+                +'<button onclick="_auth.signOut()" style="margin-top:16px;padding:10px 24px;background:var(--bg3);border:none;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text)">로그아웃</button>'
+                +'</div>';
+              setTimeout(function(){_auth.signOut();},5000);
+              return;
+            }
             _CU.plan=cd.plan||'';
             _CU.trialEnd=cd.trialEnd||'';
             _CU.settlePaid=cd.settlePaid||false;
@@ -6083,7 +6095,7 @@ if(window.location.hash==='#join'){
               window._cachedHasPaid=false;
               window._trialActive=false;
               window._trialExpired=true;
-              setTimeout(function(){_showTrialExpiredPopup();},1500);
+              if(!isSuperAdmin()) setTimeout(function(){_showTrialExpiredPopup();},1500);
             } else if(cd.subscriptions&&cd.subscriptions.donway&&cd.subscriptions.donway.active){
               var subExp=cd.subscriptions.donway.expiry||'';
               if(!subExp||subExp>=_today){window._cachedHasPaid=true;}
@@ -29053,18 +29065,9 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
     {key:'settle',   ic:'📦',nm:'AI 정산',       up:4725,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'qr_payroll',ic:'🔐💼',nm:'QR+급여 통합',up:3500,g:1,color:'#7c3aed',badge:'추천',ptype:'per',
-     tl:'출퇴근부터 급여까지 원스톱 — 인당 3,500원/월',
-     ft:['동적 QR 출퇴근 (위변조 방지)','GPS 출근 검증','시급·일급·월급 자동 계산','4대보험 자동 공제','연장수당 자동 산출','급여 명세서 앱 발송']},
     {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4725,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서','기사 앱 명세서·푸시 발송']},
-    {key:'universal',ic:'📋',nm:'범용 정산',         up:4725,g:1,color:'#7c3aed',badge:'NEW',
-     tl:'쿠팡 외 타업종 / 복합업종 정산',
-     ft:['엑셀·텍스트 파일 자동 파싱','청소·파견·보험·주류 등 모든 업종','2개 이상 업종 운영 업체 적합','컬럼명 자동 감지·매핑','세무사 연동·직원관리 포함']},
-    {key:'filo_combo',ic:'📦🖥️',nm:'재고+키오스크 콤보',up:110000,g:1,color:'#059669',badge:'FILO',ptype:'fixed',
-     tl:'재고·무인주문·매출·발주 올인원 — DONWAY 연동 할인',
-     ft:['POS·키오스크 판매 시 실시간 재고 자동 차감','재고 부족 감지 → 거래처 자동 발주 알림톡','QR·태블릿 무인주문 (테이블·포장·출장)','실시간 매출 대시보드','DONWAY 정산·급여 연동','단독 이용 시 165,000원/월']},
   ];
   var html='<div class="md" style="max-width:660px;max-height:92vh;overflow-y:auto">'
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
@@ -34969,6 +34972,8 @@ function openAdminPanel(){
     var items=[];
     compSnap.forEach(function(doc){
       var d=doc.data();
+      // mbtico.kr/register 전용 등록 제외 (DONWAY 패널과 분리)
+      if(d.registeredFrom==='register.html') return;
       items.push({
         id:doc.id,
         name:d.companyName||d.name||doc.id,

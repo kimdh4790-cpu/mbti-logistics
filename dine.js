@@ -343,6 +343,8 @@ function _dineLogin(){
   }
   err.textContent='';
   _dineToken = d.idToken;
+  /* Firebase SDK 인증 동기화 — _db.* 콜렉션 읽기 권한 부여 */
+  _auth.signInWithEmailAndPassword(email, pw).catch(function(){});
   var _lid = d.localId; var _lemail = d.email;
   /* Firestore REST API로 companies 조회 */
   fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{
@@ -413,6 +415,7 @@ function _dineGoFilo(){
 
 function _dineLogout(){
  if(!confirm('로그아웃하시겠습니까?'))return;
+ _auth.signOut().catch(function(){});
  _dineToken=null; _CU={};
  document.getElementById('login-wrap').style.display='flex';
  document.getElementById('app-wrap').style.display='none';
@@ -669,40 +672,24 @@ function _dineWatchAttend(){
    var se=document.getElementById('kpi-staff');
    if(se)se.textContent=working+'명';
   },function(e){console.warn('attend:',e);});
- // 폴링은 fallback으로만
- function loadAttend(){
-  var today=_today();
-  _firestoreQuery('attendance',[{field:'dealerId',value:_CU.dealerId},{field:'date',value:today}])
-  .then(function(docs){
-   var ins={},outs={};
-   docs.forEach(function(d){if(d.type==='in')ins[d.memberId]=d;else outs[d.memberId]=d;});
-   var working=Object.keys(ins).filter(function(id){return !outs[id];}).length;
-   var el=document.getElementById('tb-attend-cnt');
-   if(el)el.textContent=working+'명 출근중';
-  }).catch(function(){});
- }
- loadAttend();
- _attendInterval=setInterval(loadAttend,60000);
+ // onSnapshot이 실시간 업데이트 담당 — 폴링 불필요
 }
 
 function _dineLoadDashboard(did,today){
  if(window._dineSalesUnsub)window._dineSalesUnsub();
- var costMap={};
- _db.collection('menu_costs').where('dealerId','==',did).get()
-  .then(function(cs){cs.forEach(function(doc){var d=doc.data();if(d.name)costMap[d.name]=+d.cost||0;});})
-  .catch(function(){});
- // filo_sales 실시간 onSnapshot
- window._dineSalesUnsub=_db.collection('filo_sales')
-  .where('dealerId','==',did).where('date','==',today)
-  .onSnapshot(function(salesSnap){
-  Promise.all([
-   _db.collection('attendance').where('dealerId','==',did).where('date','==',today).get(),
-   _db.collection('members').where('dealerId','==',did).get()
-  ]).then(function(results){
-  var attSnap=results[0],memSnap=results[1];
-  var atts=[],mems=[];
-  attSnap.forEach(function(doc){atts.push(Object.assign({_id:doc.id},doc.data()));});
-  memSnap.forEach(function(doc){mems.push(Object.assign({_id:doc.id},doc.data()));});
+ var costMap={},atts=[],mems=[];
+ // menu_costs·attendance·members 1회 로드 후 filo_sales onSnapshot 시작
+ Promise.all([
+  _db.collection('menu_costs').where('dealerId','==',did).get(),
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',today).get(),
+  _db.collection('members').where('dealerId','==',did).get()
+ ]).catch(function(){return [null,null,null];}).then(function(results){
+  if(results[0])results[0].forEach(function(doc){var d=doc.data();if(d.name)costMap[d.name]=+d.cost||0;});
+  if(results[1])results[1].forEach(function(doc){atts.push(Object.assign({_id:doc.id},doc.data()));});
+  if(results[2])results[2].forEach(function(doc){mems.push(Object.assign({_id:doc.id},doc.data()));});
+  window._dineSalesUnsub=_db.collection('filo_sales')
+   .where('dealerId','==',did).where('date','==',today)
+   .onSnapshot(function(salesSnap){
   var sales=[];
   salesSnap.forEach(function(doc){sales.push(Object.assign({_id:doc.id},doc.data()));});
 
@@ -789,8 +776,8 @@ function _dineLoadDashboard(did,today){
   sales.forEach(function(s){(s.items||[]).forEach(function(it){menuMap[it.name]=(menuMap[it.name]||0)+(it.qty||1);});});
   Object.keys(menuMap).forEach(function(k){if(menuMap[k]>bestCnt){bestCnt=menuMap[k];bestMenu=k;}});
   _dineGenAiAdvice({totalSales:totalSales,orderCnt:orderCnt,marginRate:marginRate,laborRate:laborRate,bestMenu:bestMenu,working:working.length,estLabor:estLabor});
-  }).catch(function(e){console.warn('dashboard:',e);});
- },function(e){console.warn('sales:',e);});
+  },function(e){console.warn('sales:',e);});
+ }).catch(function(){});
 }
 
 function _dineGenAiAdvice(d){

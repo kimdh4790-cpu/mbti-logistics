@@ -41,12 +41,12 @@ function _filoLoadMembers(did){
  var d=doc.data();
  var roleLabel={'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원';
  var roleColor={'admin':'#c9a84c','staff':'#0891b2','part':'#f59e0b'}[d.role]||'#94a3b8';
- var initials=(d.name||'?').slice(0,1);
+ var initials=esc((d.name||'?').slice(0,1));
  return '<div class="member-card slide-up stagger-'+Math.min(idx+1,4)+'" data-id="'+doc.id+'" style="cursor:pointer">'+
  '<div class="avatar">'+initials+'</div>'+
  '<div style="flex:1">'+
  '<div style="font-size:14px;font-weight:800">'+esc(d.name||'')+'</div>'+
- '<div style="font-size:11px;color:var(--t3)">'+(d.phone||'')+(d.dept?' · '+d.dept:'')+'</div>'+
+ '<div style="font-size:11px;color:var(--t3)">'+esc(d.phone||'')+(d.dept?' · '+esc(d.dept):'')+'</div>'+
  '</div>'+
  '<div style="text-align:right">'+
  '<div style="font-size:11px;font-weight:700;color:'+roleColor+';background:'+roleColor+'22;padding:2px 8px;border-radius:100px">'+roleLabel+'</div>'+
@@ -98,12 +98,12 @@ function _filoShowMemberDetail(docId){
  var did=_CU.dealerId||_CU.uid;
  var html='<div style="padding:20px;max-width:400px;margin:0 auto">'+
  '<div style="text-align:center;margin-bottom:16px">'+
- '<div class="avatar" style="width:60px;height:60px;font-size:24px;margin:0 auto 8px">'+d.name.slice(0,1)+'</div>'+
+ '<div class="avatar" style="width:60px;height:60px;font-size:24px;margin:0 auto 8px">'+esc(d.name.slice(0,1))+'</div>'+
  '<div style="font-size:17px;font-weight:900">'+esc(d.name)+'</div>'+
- '<div style="font-size:12px;color:var(--t3)">'+(d.dept||'')+'</div></div>'+
+ '<div style="font-size:12px;color:var(--t3)">'+esc(d.dept||'')+'</div></div>'+
  '<div style="background:var(--b3);border-radius:12px;padding:14px;margin-bottom:14px">'+
  '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)">'+
- '<span style="font-size:12px;color:var(--t3)">전화번호</span><span style="font-size:13px;font-weight:700">'+(d.phone||'-')+'</span></div>'+
+ '<span style="font-size:12px;color:var(--t3)">전화번호</span><span style="font-size:13px;font-weight:700">'+esc(d.phone||'-')+'</span></div>'+
  '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bd)">'+
  '<span style="font-size:12px;color:var(--t3)">역할</span><span style="font-size:13px;font-weight:700">'+({'admin':'관리자','staff':'직원','part':'알바'}[d.role]||'직원')+'</span></div>'+
  '<div style="display:flex;justify-content:space-between;padding:6px 0">'+

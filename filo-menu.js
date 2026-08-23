@@ -647,7 +647,7 @@ function _filoLoadMenuMgmt(did){
     var _mc=_mg!=null?(_mg>=60?'#22c55e':_mg>=40?'#eab308':'#ef4444'):'';
     var _mb=_mg!=null?(_mg>=60?'rgba(34,197,94,.15)':_mg>=40?'rgba(234,179,8,.15)':'rgba(239,68,68,.15)'):'';
     var _mH=_mg!=null?'<div style="margin-top:3px;display:flex;gap:4px;align-items:center"><span style="font-size:10px;color:var(--t3)">원가 ₩'+Number(_c).toLocaleString()+'</span><span style="padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px;background:'+_mb+';color:'+_mc+'">'+_mg+'%</span></div>':'';
-    info.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#0f172a">'+esc(m.name)+'</div>'+
+    info.innerHTML='<div style="font-size:13px;font-weight:800;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1e293b">'+esc(m.name)+'</div>'+
      '<div style="font-size:13px;font-weight:900;color:#22c55e">₩'+Number(m.price||0).toLocaleString()+'</div>'+
      _mH+
      (m.stock!=null?'<div style="font-size:10px;color:var(--t3);margin-top:2px">재고: '+m.stock+'개</div>':'');
@@ -882,13 +882,13 @@ function _filoMenuAddModal(did, menu, cat){
     langs.forEach(function(lang){
      fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,lang:lang})})
      .then(function(r){return r.json();})
-     .then(function(d){translations[lang]=d.translated||name;done();})
-     .catch(function(){translations[lang]=name;done();});
+     .then(function(d){if(d.translated&&d.translated!==name)translations[lang]=d.translated;done();})
+     .catch(function(){done();});
      if(description){
       fetch('/api/translate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:description,lang:lang})})
       .then(function(r){return r.json();})
-      .then(function(d){descTranslations[lang]=d.translated||description;done();})
-      .catch(function(){descTranslations[lang]=description;done();});
+      .then(function(d){if(d.translated&&d.translated!==description)descTranslations[lang]=d.translated;done();})
+      .catch(function(){done();});
      }
     });
    } else {

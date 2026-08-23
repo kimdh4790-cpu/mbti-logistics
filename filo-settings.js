@@ -69,8 +69,28 @@ function _filoPageSettings(el){
  '</div>'+
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">※ 테마는 이 매장에만 적용되며 주문·매장·주방 화면에도 함께 반영됩니다</div>'+
  '</div>'+
+ /* 🗑️ 데이터 관리 */
+ '<div class="card" style="margin-top:12px;border:1px solid rgba(220,38,38,.25)">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:8px;color:#ef4444">데이터 관리</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">주방화면·주문대기 중복 표시 문제가 있을 때 실행하세요. filo_sales의 테이블 임시 주문 데이터를 삭제합니다.</div>'+
+ '<button class="btn btn-sm" style="background:rgba(220,38,38,.1);color:#ef4444;border:1px solid rgba(220,38,38,.3)" onclick="_filoCleanupDupOrders()">중복 주문 데이터 정리</button>'+
+ '</div>'+
+ /* 📱 NFC 태그 기록 */
+ '<div class="card" style="margin-top:12px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:4px">NFC 태그 기록</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">NTAG213 NFC 스티커를 폰에 대고 버튼을 누르면 URL이 기록됩니다. 안드로이드 크롬 전용. 아이폰은 URL 복사 후 NFC Tools 앱 사용.</div>'+
+ '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--t2)">테이블 NFC</div>'+
+ '<div id="nfc-tables-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"><div style="font-size:12px;color:var(--t3)">테이블 정보 로딩 중...</div></div>'+
+ '<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--t2)">메뉴 NFC <span style="font-weight:400;color:var(--t3)">(특정 메뉴 바로 담기)</span></div>'+
+ '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">'+
+ '<span style="font-size:11px;color:var(--t3);white-space:nowrap">테이블 번호:</span>'+
+ '<input id="nfc-table-num" class="inp" type="number" min="0" placeholder="1" style="width:70px;font-size:12px;padding:6px 8px">'+
+ '</div>'+
+ '<div id="nfc-menus-list" style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:var(--t3)">메뉴 정보 로딩 중...</div></div>'+
+ '</div>'+
  '</div></div>';
  _filoThemePreview();
+ _filoLoadNFCSection(did);
 }
 
 /* 업종 select 옵션 — 코드값은 filo.html #fr-industry / _FILO_THEMES 와 동일 */
@@ -119,6 +139,124 @@ function _filoSaveTheme(){
   if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:key,primaryColor:primary,bgColor:bg});
   _filoToast('테마가 적용됐습니다');
  }).catch(function(e){_filoToast(e.message);});
+}
+function _filoNFCWrite(url, btn){
+ var origText=btn?btn.textContent:'';
+ if(!('NDEFReader' in window)){
+  // 아이폰/PC: 클립보드 복사
+  if(navigator.clipboard){
+   navigator.clipboard.writeText(url).then(function(){
+    _filoToast('URL 복사됨 — NFC Tools 앱에 붙여넣기 하세요');
+   }).catch(function(){_filoToast('URL: '+url);});
+  } else { _filoToast('URL: '+url); }
+  return;
+ }
+ if(btn) btn.textContent='태그에 대세요...';
+ var ndef=new NDEFReader();
+ ndef.write({records:[{recordType:'url',data:url}]}).then(function(){
+  _filoToast('NFC 태그 기록 완료!');
+  if(btn) btn.textContent=origText;
+ }).catch(function(e){
+  _filoToast('NFC 기록 실패: '+e.message);
+  if(btn) btn.textContent=origText;
+ });
+}
+
+function _filoNFCCopy(url){
+ if(navigator.clipboard){
+  navigator.clipboard.writeText(url).then(function(){_filoToast('URL 복사됨');}).catch(function(){});
+ }
+}
+
+function _filoLoadNFCSection(did){
+ var baseUrl='https://filo.ai.kr/order?d='+encodeURIComponent(did);
+
+ // 테이블 목록 로드
+ _db.collection('filo_tables').where('dealerId','==',did).orderBy('tableNum').get().then(function(snap){
+  var el=document.getElementById('nfc-tables-list');
+  if(!el) return;
+  if(snap.empty){el.innerHTML='<div style="font-size:12px;color:var(--t3)">등록된 테이블 없음 — 테이블 관리에서 먼저 추가하세요</div>';return;}
+  var rows='';
+  snap.forEach(function(doc){
+   var d=doc.data();
+   var num=d.tableNum||doc.id;
+   var name=d.tableName||d.name||('테이블 '+num);
+   var url=baseUrl+'&t='+encodeURIComponent(num)+'&name='+encodeURIComponent(name);
+   rows+='<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--b3);border-radius:10px">'+
+    '<div style="flex:1;min-width:0">'+
+    '<div style="font-size:12px;font-weight:700">'+name+'</div>'+
+    '<div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+url+'</div>'+
+    '</div>'+
+    '<button class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 10px" onclick="_filoNFCWrite(\''+url.replace(/'/g,"\\'")+"',this)\">NFC 기록</button>"+
+    '<button class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 10px;background:var(--b3);color:var(--t2);border:1px solid var(--bd)" onclick="_filoNFCCopy(\''+url.replace(/'/g,"\\'")+'\')">복사</button>'+
+    '</div>';
+  });
+  el.innerHTML=rows;
+ }).catch(function(){
+  var el=document.getElementById('nfc-tables-list');
+  if(el) el.innerHTML='<div style="font-size:12px;color:var(--t3)">테이블 로드 실패</div>';
+ });
+
+ // 메뉴 목록 로드
+ _db.collection('filo_menus').where('dealerId','==',did).orderBy('category').get().then(function(snap){
+  var el=document.getElementById('nfc-menus-list');
+  if(!el) return;
+  if(snap.empty){el.innerHTML='<div style="font-size:12px;color:var(--t3)">등록된 메뉴 없음</div>';return;}
+  var rows='';
+  snap.forEach(function(doc){
+   var d=doc.data();
+   if(d.forSale===false) return;
+   var name=d.name||'';
+   var emoji=d.emoji||'🍽';
+   var price=(d.price||0).toLocaleString();
+   var safeId='nfc-m-'+doc.id;
+   rows+='<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--b3);border-radius:10px">'+
+    '<div style="font-size:20px;width:28px;text-align:center">'+emoji+'</div>'+
+    '<div style="flex:1;min-width:0">'+
+    '<div style="font-size:12px;font-weight:700">'+name+'</div>'+
+    '<div style="font-size:11px;color:var(--t3)">₩'+price+'</div>'+
+    '</div>'+
+    '<button id="'+safeId+'" class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 10px" onclick="_filoNFCWriteMenu(\''+name.replace(/'/g,"\\'")+"',this)\">NFC 기록</button>"+
+    '<button class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 10px;background:var(--b3);color:var(--t2);border:1px solid var(--bd)" onclick="_filoNFCCopyMenu(\''+name.replace(/'/g,"\\'")+'\')">복사</button>'+
+    '</div>';
+  });
+  el.innerHTML=rows||'<div style="font-size:12px;color:var(--t3)">메뉴 없음</div>';
+ }).catch(function(){
+  var el=document.getElementById('nfc-menus-list');
+  if(el) el.innerHTML='<div style="font-size:12px;color:var(--t3)">메뉴 로드 실패</div>';
+ });
+}
+
+function _filoNFCMenuUrl(menuName){
+ var did=_CU.dealerId||_CU.uid;
+ var tNum=(document.getElementById('nfc-table-num')||{}).value||'1';
+ return 'https://filo.ai.kr/order?d='+encodeURIComponent(did)+'&t='+encodeURIComponent(tNum)+'&item='+encodeURIComponent(menuName);
+}
+
+function _filoNFCWriteMenu(menuName, btn){
+ _filoNFCWrite(_filoNFCMenuUrl(menuName), btn);
+}
+
+function _filoNFCCopyMenu(menuName){
+ _filoNFCCopy(_filoNFCMenuUrl(menuName));
+}
+
+function _filoCleanupDupOrders(){
+ var did=_CU.dealerId||_CU.uid;
+ if(!did){_filoToast('매장 정보를 불러오는 중입니다');return;}
+ _filoToast('중복 데이터 정리 중...');
+ fetch('/admin/cleanup-dup-orders',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({did:did})
+ }).then(function(r){return r.json();})
+ .then(function(data){
+  if(data.ok){
+   _filoToast('정리 완료 — '+data.deleted+'건 삭제됨');
+  }else{
+   _filoToast('오류: '+(data.error||'알 수 없음'));
+  }
+ }).catch(function(e){_filoToast('네트워크 오류: '+e.message);});
 }
 function _filoSaveReviewUrls(){
  var did=_CU.dealerId||_CU.uid;

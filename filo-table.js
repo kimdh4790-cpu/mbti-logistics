@@ -41,40 +41,116 @@ function _filoTableLoad(did){
  if(window._callUnsub)window._callUnsub();
  if(window._orderUnsub)window._orderUnsub();
 
- /* 직원 호출 실시간 감지 */
+ /* 직원 호출 + 테이블 이동 요청 실시간 감지 */
  window._callUnsub=_db.collection('staff_calls')
   .where('dealerId','==',did).where('status','==','pending')
   .onSnapshot(function(snap){
    var banner=document.getElementById('staff-call-banner');
    var grid=document.getElementById('filo-table-grid');
    if(!banner)return;
-   // 호출 중인 테이블 번호 수집
-   var callMap={};
+   // 유형 분리: 일반 호출 vs 테이블 이동 요청
+   var callMap={}, xferDocs=[];
    snap.forEach(function(doc){
     var d=doc.data();
-    var tNum=d.tableNum||d.tableInfo||'?';
-    if(!callMap[tNum])callMap[tNum]={count:0,ids:[]};
-    callMap[tNum].count++;
-    callMap[tNum].ids.push(doc.id);
+    if(d.type==='table_transfer'){
+     xferDocs.push({id:doc.id,d:d});
+    } else {
+     var tNum=d.tableNum||d.tableInfo||'?';
+     if(!callMap[tNum])callMap[tNum]={count:0,ids:[]};
+     callMap[tNum].count++;
+     callMap[tNum].ids.push(doc.id);
+    }
    });
-   // 배너 업데이트
-   if(snap.size>0){
+   var regularCount=Object.keys(callMap).length;
+   var hasAny=regularCount>0||xferDocs.length>0;
+   if(hasAny){
     banner.innerHTML='';
-    var title=document.createElement('div');
-    title.style.cssText='font-size:12px;font-weight:800;color:#ef4444;margin-bottom:6px';
-    title.textContent='직원 호출 ('+snap.size+'건)';
-    banner.appendChild(title);
-    Object.keys(callMap).forEach(function(k){
-     var span=document.createElement('span');
-     span.style.cssText='display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:20px;margin:2px';
-     span.textContent='테이블 '+k+' ';
-     var btn=document.createElement('button');
-     btn.textContent='OK';
-     btn.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px';
-     (function(ids,num){btn.onclick=function(){_filoConfirmCall(ids.join(','),num);};})(callMap[k].ids,k);
-     span.appendChild(btn);
-     banner.appendChild(span);
-    });
+    // ── 일반 호출 영역 ──
+    if(regularCount>0){
+     var ct=document.createElement('div');
+     ct.style.cssText='font-size:12px;font-weight:800;color:#ef4444;margin-bottom:6px';
+     ct.textContent='직원 호출 ('+regularCount+'건)';
+     banner.appendChild(ct);
+     Object.keys(callMap).forEach(function(k){
+      var span=document.createElement('span');
+      span.style.cssText='display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,.2);padding:4px 10px;border-radius:20px;margin:2px';
+      span.textContent='테이블 '+k+' ';
+      var btn=document.createElement('button');
+      btn.textContent='OK';
+      btn.style.cssText='background:#ef4444;color:#fff;border:none;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;margin-left:4px';
+      (function(ids,num){btn.onclick=function(){_filoConfirmCall(ids.join(','),num);};})(callMap[k].ids,k);
+      span.appendChild(btn);
+      banner.appendChild(span);
+     });
+    }
+    // ── 테이블 이동 요청 영역 ──
+    if(xferDocs.length>0){
+     if(regularCount>0){var sep=document.createElement('div');sep.style.cssText='border-top:1px solid rgba(255,255,255,.08);margin:8px 0';banner.appendChild(sep);}
+     var xt=document.createElement('div');
+     xt.style.cssText='font-size:12px;font-weight:800;color:#0891b2;margin-bottom:6px';
+     xt.textContent='테이블 이동 요청 ('+xferDocs.length+'건)';
+     banner.appendChild(xt);
+     xferDocs.forEach(function(item){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex;align-items:center;justify-content:space-between;background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.25);border-radius:10px;padding:8px 10px;margin-bottom:4px';
+      var info=document.createElement('span');
+      info.style.cssText='font-size:12px;font-weight:700;color:var(--tx)';
+      info.textContent=(item.d.fromTableName||('테이블 '+item.d.fromTable))+' → '+(item.d.toTableName||('테이블 '+item.d.toTable));
+      var btns=document.createElement('div');
+      btns.style.cssText='display:flex;gap:5px;flex-shrink:0;margin-left:8px';
+      var ok=document.createElement('button');
+      ok.textContent='승인';
+      ok.style.cssText='padding:3px 10px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
+      var no=document.createElement('button');
+      no.textContent='거절';
+      no.style.cssText='padding:3px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
+      (function(docId,xd){
+       ok.onclick=function(){
+        ok.disabled=true;ok.textContent='...';
+        var db=_db;var now=new Date().toISOString();
+        var toName=xd.toTableName||('테이블 '+xd.toTable);
+        var fromInt=parseInt(xd.fromTable)||xd.fromTable;
+        // filo_orders: fromTable의 모든 활성 주문을 toTable로 이동
+        Promise.all([
+         db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(xd.fromTable)).get(),
+         db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',fromInt).get()
+        ]).then(function(results){
+         var batch=db.batch();var seen={};
+         results.forEach(function(snap){
+          snap.forEach(function(doc){
+           if(seen[doc.id])return;seen[doc.id]=true;
+           if(doc.data().status==='cancel'||doc.data().status==='cleared')return;
+           batch.update(doc.ref,{tableNum:xd.toTable,tableName:toName,movedFrom:xd.fromTable,movedAt:now});
+          });
+         });
+         return batch.commit();
+        }).then(function(){
+         return db.collection('staff_calls').doc(docId).update({status:'approved',approvedAt:now});
+        }).then(function(){
+         // filo_tables: 원래 테이블 비움 (이동 기록 표시)
+         return db.collection('filo_tables').where('dealerId','==',did).where('tableNum','==',fromInt).get()
+          .then(function(snap){
+           if(snap.empty)return;
+           var b=db.batch();
+           snap.forEach(function(d){b.update(d.ref,{status:'empty',occupiedSince:'',updatedAt:now});});
+           return b.commit();
+          });
+        }).then(function(){
+         _filoToast((xd.fromTableName||xd.fromTable)+' → '+toName+' 이동 승인');
+         _filoTableLoad(did);
+        }).catch(function(e){_filoToast('승인 실패: '+e.message);ok.disabled=false;ok.textContent='승인';});
+       };
+       no.onclick=function(){
+        _db.collection('staff_calls').doc(docId).update({status:'rejected'})
+         .then(function(){_filoToast('이동 거절');})
+         .catch(function(){});
+       };
+      })(item.id,item.d);
+      btns.appendChild(ok);btns.appendChild(no);
+      row.appendChild(info);row.appendChild(btns);
+      banner.appendChild(row);
+     });
+    }
     banner.style.display='block';
    } else {
     banner.style.display='none';
@@ -102,14 +178,16 @@ function _filoTableLoad(did){
    }
   });
  var tableSnap=null,bookingSnap=null,orderMap={};
- // 실시간 주문 감지 (테이블별 주문금액)
+ // 실시간 주문 감지 (테이블별 주문금액) — 오늘 날짜 DB 필터
  var today=_today();
- window._orderUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+ if(window._tableOrderUnsub){window._tableOrderUnsub();window._tableOrderUnsub=null;}
+ window._tableOrderUnsub=_db.collection('filo_orders')
+  .where('dealerId','==',did).where('type','==','table').where('date','==',today)
   .onSnapshot(function(snap){
    orderMap={};
    snap.forEach(function(doc){
     var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today&&d.status!=='cancel'){
+    if(d.status!=='cancel'){
      // tableNum 우선, 없으면 tableName에서 숫자 추출
      var tNum=String(d.tableNum||'');
      if(!tNum&&d.tableName)tNum=d.tableName.replace(/[^0-9]/g,'')||d.tableName;
@@ -461,16 +539,18 @@ function _filoTableOrderModal(did,table,order){
     readyBtn.textContent='준비완료';
     (function(d,tNum){readyBtn.onclick=function(){
      var db=firebase.firestore();
+     // pending/cooking/done 모두 포함 — 주방이 먼저 완료해도 FCM 발송
+     var activeStatuses=['pending','cooking','done'];
      Promise.all([
-      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','==','pending').get(),
-      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','==','pending').get()
+      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',String(tNum)).where('status','in',activeStatuses).get(),
+      db.collection('filo_orders').where('dealerId','==',d).where('tableNum','==',parseInt(tNum)).where('status','in',activeStatuses).get()
      ]).then(function(results){
       var batch=db.batch();var tokens=[];var seen={};
       results.forEach(function(snap){
        snap.forEach(function(doc){
         if(seen[doc.id])return;seen[doc.id]=true;
         batch.update(doc.ref,{status:'ready',readyAt:_nowISO()});
-        var tk=doc.data().fcmToken;
+        var tk=doc.data().fcmToken||doc.data().guestFcmToken;
         if(tk&&tokens.indexOf(tk)<0)tokens.push(tk);
        });
       });
@@ -482,7 +562,7 @@ function _filoTableOrderModal(did,table,order){
          data:{type:'pickup',tableNum:String(tNum),url:'https://filo.ai.kr/order?d='+d+'&t='+tNum}})
        }).catch(function(){});
        _filoToast('테이블 '+tNum+' 픽업 알림 전송!');
-      } else { _filoToast('Firestore 상태 ready 변경 완료'); }
+      } else { _filoToast('준비완료 처리됐습니다'); }
       mo.remove();
      }).catch(function(e){_filoToast(e.message);});
     };})(did,table.num);

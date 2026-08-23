@@ -84,23 +84,25 @@ function _filoMarginLoad(){
 }
 
 function _filoStartMarginLive(did,ym){
- /* 기존 리스너 해제 */
  if(_marginUnsub){_marginUnsub();_marginUnsub=null;}
  var start=ym+'-01',end=ym+'-31';
  var today=_today();
 
- /* filo_sales(POS) 실시간 onSnapshot */
- _marginUnsub=_db.collection('filo_sales')
-  .where('dealerId','==',did)
-  .where('date','>=',start)
-  .where('date','<=',end)
-  .onSnapshot(function(posSnap){
-   /* 수동 매출도 같이 조회 */
-   _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get()
-   .then(function(manSnap){
+ /* mbetco_sales 1회 로드 — filo_sales 변경마다 재조회 방지 */
+ _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get()
+ .then(function(manSnap){
+  _marginUnsub=_db.collection('filo_sales')
+   .where('dealerId','==',did).where('date','>=',start).where('date','<=',end)
+   .onSnapshot(function(posSnap){
     _filoCalcAndRender(posSnap,manSnap,today,ym,did);
-   });
-  },function(e){console.error('margin listener:',e);});
+   },function(e){console.error('margin listener:',e);});
+ }).catch(function(){
+  _marginUnsub=_db.collection('filo_sales')
+   .where('dealerId','==',did).where('date','>=',start).where('date','<=',end)
+   .onSnapshot(function(posSnap){
+    _filoCalcAndRender(posSnap,{forEach:function(){}},today,ym,did);
+   },function(e){console.error('margin listener:',e);});
+ });
 }
 
 function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
@@ -178,7 +180,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   var kpiCards='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'+
   [{label:'오늘 매출',val:'₩'+todayRev.toLocaleString(),color:'#a78bfa',sub:todayCnt+'건'},
    {label:'오늘 원가',val:'₩'+todayCost.toLocaleString(),color:'#f97316',sub:'식재료'},
-   {label:'오늘 순이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:todayMargin+'%'},
+   {label:'공제이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:todayMargin+'%'},
    {label:'평균 객단가',val:'₩'+avgOrder.toLocaleString(),color:'#f59e0b',sub:'건당 평균'}
   ].map(function(s){
    return '<div class="kpi-card card-hover" style="text-align:center;padding:14px 10px">'+
@@ -419,12 +421,16 @@ function _filoRenderMarginAnalysis(did,ym){
   }
 
   /* 인건비 vs 매출 비율 */
+  var noCostWarn=Object.keys(costMap).length===0&&totalRev>0?
+  '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;font-size:12px;color:#b45309;font-weight:600">'+
+  '원가 미등록 — 원가 등록 탭에서 메뉴별 원가를 입력해야 마진율이 정확히 계산됩니다</div>':'';
+  html+=noCostWarn;
   html+='<div class="card">'+
   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">원가 구조 분석</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">'+
   [
    {label:'식재료 원가',val:'₩'+totalCost.toLocaleString(),sub:totalRev>0?Math.round(totalCost/totalRev*100)+'%':'—',c:'#f97316'},
-   {label:'순이익',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
+   {label:'공제이익(식재료)',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
    {label:'손익분기',val:totalRev>0&&totalProfit<0?'미달':'달성',sub:totalProfit>=0?'달성':'주의',c:totalProfit>=0?'#22c55e':'#ef4444'}
   ].map(function(s){
    return '<div style="background:var(--b3);border-radius:12px;padding:14px 10px">'+
@@ -432,7 +438,9 @@ function _filoRenderMarginAnalysis(did,ym){
    '<div style="font-size:16px;font-weight:900;color:'+s.c+'">'+s.val+'</div>'+
    '<div style="font-size:11px;color:var(--t3);margin-top:4px">'+s.sub+'</div></div>';
   }).join('')+
-  '</div></div>';
+  '</div>'+
+  '<div style="margin-top:10px;font-size:10px;color:var(--t3)">※ 식재료 원가만 공제 기준. 인건비·임차료 미포함</div>'+
+  '</div>';
 
   content.innerHTML=html;
  }).catch(function(e){
@@ -441,36 +449,241 @@ function _filoRenderMarginAnalysis(did,ym){
  });
 }
 
-/* ── 원가 등록 탭 ── */
+/* ── AI 인사이트 탭 (메뉴 엔지니어링 + 원가율 벤치마크 + AI 분석) ── */
+window._filoMarginBizType = window._filoMarginBizType || 'general';
+
+var _MARGIN_BENCH = {
+  cafe:     {name:'카페/베이커리',    low:25,high:35,prime:60},
+  korean:   {name:'한식당',           low:35,high:45,prime:65},
+  japanese: {name:'일식/횟집',        low:40,high:55,prime:65},
+  chinese:  {name:'중식당',           low:32,high:42,prime:65},
+  fastfood: {name:'패스트푸드/분식',  low:30,high:40,prime:62},
+  izakaya:  {name:'이자카야/술집',    low:25,high:35,prime:60},
+  general:  {name:'일반 외식업',      low:30,high:45,prime:65}
+};
+
 function _filoRenderInsights(did,ym){
  var content=document.getElementById('mg-content');
  if(!content)return;
- var start=ym+'-01',end=ym+'-31';
- Promise.all([
-  _db.collection('mbetco_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
-  _db.collection('filo_sales').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get(),
-  _db.collection('menu_costs').where('dealerId','==',did).get()
- ]).then(function(res){
-  var rev=0,cost=0,posRev=0;
-  res[0].forEach(function(d){rev+=d.data().revenue||0;cost+=d.data().cost||0;});
-  res[1].forEach(function(d){posRev+=d.data().total||0;});
-  var costMap={};res[2].forEach(function(doc){var d=doc.data();costMap[d.name]=d;});
-  var margin=rev>0?Math.round((rev-cost)/rev*100):0;
-  var insights=[];
-  if(margin<40)insights.push({icon:'[!]',title:'마진율 위험',desc:'현재 마진율 '+margin+'%는 일반적인 카페 권장 마진율(60% 이상)보다 낮습니다. 원가가 높은 메뉴를 점검하세요.',color:'rgba(239,68,68,.1)',border:'rgba(239,68,68,.3)'});
-  else if(margin>=60)insights.push({icon:'↑',title:'마진율 우수',desc:'마진율 '+margin+'%로 양호한 수준입니다. 이 수익 구조를 유지하면서 매출 확대에 집중하세요.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
-  if(posRev>0&&rev===0)insights.push({icon:'[i]',title:'매출 수동 입력 필요',desc:'POS 매출(₩'+posRev.toLocaleString()+')은 있지만 수동 매출 입력이 없습니다. 매출 입력 탭에서 정확한 데이터를 입력하면 마진 분석이 더 정확해집니다.',color:'rgba(245,158,11,.08)',border:'rgba(245,158,11,.25)'});
-  if(Object.keys(costMap).length===0)insights.push({icon:'[설정]',title:'원가 등록 필요',desc:'메뉴 원가가 등록되지 않아 정확한 마진 계산이 불가능합니다. 원가 등록 탭에서 메뉴별 원가를 입력해 주세요.',color:'rgba(201,168,76,.08)',border:'rgba(201,168,76,.25)'});
-  if(!insights.length)insights.push({icon:'[목표]',title:'데이터 분석 완료',desc:'모든 지표가 정상 범위입니다. 매일 매출을 입력하면 더 정확한 인사이트를 제공합니다.',color:'rgba(34,197,94,.08)',border:'rgba(34,197,94,.25)'});
-  content.innerHTML='<div style="max-width:700px">'+
-  insights.map(function(ins){
-   return '<div class="insight-card" style="background:'+ins.color+';border-color:'+ins.border+'">'+
-   '<div class="insight-icon">'+ins.icon+'</div>'+
-   '<div><div style="font-size:13px;font-weight:800;margin-bottom:4px">'+ins.title+'</div>'+
-   '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+ins.desc+'</div></div></div>';
-  }).join('')+'</div>';
+ var biz=window._filoMarginBizType||'general';
+ var bench=_MARGIN_BENCH[biz]||_MARGIN_BENCH.general;
+
+ /* 스켈레톤 */
+ content.innerHTML=
+  '<div style="padding:8px 0 16px">'
+  +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px">업종 선택 (벤치마크 기준)</div>'
+  +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">'
+  +Object.keys(_MARGIN_BENCH).map(function(k){
+   var act=k===biz;
+   return '<button onclick="window._filoMarginBizType=\''+k+'\';_filoRenderInsights(\''+did+'\',\''+ym+'\')" '
+    +'style="padding:5px 12px;border-radius:20px;border:1.5px solid '+(act?'#6366f1':'rgba(0,0,0,.12)')+';background:'+(act?'#6366f1':'transparent')+';color:'+(act?'#fff':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+esc(_MARGIN_BENCH[k].name)+'</button>';
+  }).join('')
+  +'</div>'
+  +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:20px;padding:10px 14px;background:rgba(99,102,241,.05);border:1px solid rgba(99,102,241,.15);border-radius:12px">'
+  +'<div style="width:8px;height:8px;border-radius:50%;background:#6366f1;animation:pulse 2s infinite"></div>'
+  +'<span style="font-size:12px;color:#6366f1;font-weight:600">AI 마진 분석 중...</span>'
+  +'</div>'
+  +'</div>';
+
+ _aiPost('/api/ai-margin-analysis',{did:did,ym:ym,businessType:biz}).then(function(r){
+  if(!content.isConnected)return;
+  var b=r.ok?r.bench:bench;
+  var foodCostPct=r.ok?r.foodCostPct:0;
+  var primeCost=r.ok?r.primeCost:0;
+  var laborCostPct=r.ok?r.laborCostPct:0;
+  var menuEngineering=r.ok?(r.menuEngineering||[]):[];
+  var unregistered=r.ok?(r.unregistered||[]):[];
+  var hasCostData=r.ok?r.hasCostData:false;
+  var totalRev=r.ok?r.totalRev:0;
+  var aiNarrative=r.ok?r.aiNarrative:'';
+  var aiPowered=r.ok?r.aiPowered:false;
+
+  var html='<div style="padding:4px 0">';
+
+  /* 업종 선택 버튼 */
+  html+='<div style="font-size:11px;color:var(--t3);margin-bottom:8px">업종 선택 (벤치마크 기준)</div>'
+   +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">'
+   +Object.keys(_MARGIN_BENCH).map(function(k){
+    var act=k===biz;
+    return '<button onclick="window._filoMarginBizType=\''+k+'\';_filoRenderInsights(\''+esc(did)+'\',\''+esc(ym)+'\')" '
+     +'style="padding:5px 12px;border-radius:20px;border:1.5px solid '+(act?'#6366f1':'rgba(0,0,0,.12)')+';background:'+(act?'#6366f1':'transparent')+';color:'+(act?'#fff':'var(--t2)')+';font-size:11px;font-weight:700;cursor:pointer">'+esc(_MARGIN_BENCH[k].name)+'</button>';
+   }).join('')
+   +'</div>';
+
+  /* ① 식재료 원가율 게이지 */
+  var gaugeColor=foodCostPct>b.high?'#ef4444':foodCostPct<b.low?'#3b82f6':'#22c55e';
+  var gaugeStatus=foodCostPct>b.high?'위험':foodCostPct<b.low?'양호':'정상';
+  var gaugePct=Math.min(foodCostPct,100);
+  html+='<div class="card" style="margin-bottom:12px">'
+   +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+   +'<div style="font-size:13px;font-weight:800">식재료 원가율</div>'
+   +'<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:'+gaugeColor+'22;color:'+gaugeColor+'">'+gaugeStatus+'</span>'
+   +'</div>'
+   +'<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:12px">'
+   +'<div style="font-size:40px;font-weight:900;color:'+gaugeColor+';letter-spacing:-2px">'+(hasCostData?foodCostPct:'—')+'<span style="font-size:18px">%</span></div>'
+   +'<div style="flex:1">'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">업종 기준: '+b.low+'~'+b.high+'% ('+esc(b.name)+')</div>'
+   +'<div style="height:10px;background:var(--b3);border-radius:5px;position:relative;overflow:visible">'
+   +'<div style="position:absolute;left:0;top:0;height:100%;width:'+gaugePct+'%;background:'+gaugeColor+';border-radius:5px;transition:.6s"></div>'
+   +'<div style="position:absolute;top:-4px;height:18px;width:2px;background:#3b82f6;border-radius:1px;left:'+b.low+'%"></div>'
+   +'<div style="position:absolute;top:-4px;height:18px;width:2px;background:#ef4444;border-radius:1px;left:'+Math.min(b.high,100)+'%"></div>'
+   +'</div>'
+   +'<div style="display:flex;justify-content:space-between;margin-top:5px">'
+   +'<span style="font-size:9px;color:#3b82f6">하한 '+b.low+'%</span>'
+   +'<span style="font-size:9px;color:#ef4444">상한 '+b.high+'%</span>'
+   +'</div>'
+   +'</div>'
+   +'</div>';
+
+  /* Prime Cost 섹션 */
+  var primeColor=primeCost>b.prime?'#ef4444':'#22c55e';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px">'
+   +'<div style="background:var(--b3);border-radius:12px;padding:12px;text-align:center">'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">인건비율</div>'
+   +'<div style="font-size:20px;font-weight:900;color:#a78bfa">'+(laborCostPct||'—')+'<span style="font-size:12px">%</span></div>'
+   +'</div>'
+   +'<div style="background:var(--b3);border-radius:12px;padding:12px;text-align:center">'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:4px">프라임코스트 (목표 '+b.prime+'% 이하)</div>'
+   +'<div style="font-size:20px;font-weight:900;color:'+primeColor+'">'+(hasCostData?primeCost:'—')+'<span style="font-size:12px">%</span></div>'
+   +'</div>'
+   +'</div>'
+   +'<div style="font-size:10px;color:var(--t3);margin-top:6px">※ 프라임코스트 = 식재료원가율 + 인건비율. '+b.prime+'% 초과 시 수익성 악화 위험</div>'
+   +'</div>';
+
+  /* ② 원가 미등록 메뉴 경고 */
+  if(unregistered.length){
+   html+='<div class="card" style="margin-bottom:12px;border-left:3px solid #f59e0b">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    +'<div style="font-size:13px;font-weight:800;color:#b45309">원가 미등록 메뉴 ('+unregistered.length+'개)</div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--t3);margin-bottom:10px">아래 메뉴는 판매 중이나 원가가 없어 마진율이 과다 계상됩니다</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+    +unregistered.slice(0,10).map(function(nm){
+     return '<span style="padding:4px 10px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:20px;font-size:11px;font-weight:700;color:#b45309">'+esc(nm)+'</span>';
+    }).join('')
+    +(unregistered.length>10?'<span style="font-size:10px;color:var(--t3);align-self:center">외 '+(unregistered.length-10)+'개</span>':'')
+    +'</div>'
+    +'<button onclick="_filoMgTab(1)" style="margin-top:12px;padding:7px 16px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">원가 등록 탭으로 이동</button>'
+    +'</div>';
+  }
+
+  /* ③ 메뉴 엔지니어링 매트릭스 */
+  if(menuEngineering.length){
+   var cats={star:[],plowhorse:[],puzzle:[],dog:[]};
+   menuEngineering.forEach(function(m){cats[m.category]&&cats[m.category].push(m);});
+   var CAT_DEF=[
+    {key:'star',      label:'Star',       sub:'고공헌·고인기',  color:'#22c55e', bg:'rgba(34,197,94,.08)',  desc:'판매 확대·홍보 집중'},
+    {key:'plowhorse', label:'Plow Horse', sub:'저공헌·고인기',  color:'#3b82f6', bg:'rgba(59,130,246,.08)', desc:'원가 절감 또는 가격 인상'},
+    {key:'puzzle',    label:'Puzzle',     sub:'고공헌·저인기',  color:'#a78bfa', bg:'rgba(167,139,250,.08)',desc:'홍보·배치로 판매 자극'},
+    {key:'dog',       label:'Dog',        sub:'저공헌·저인기',  color:'#ef4444', bg:'rgba(239,68,68,.08)',  desc:'가격 조정 또는 메뉴 정리'},
+   ];
+   html+='<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">메뉴 엔지니어링 매트릭스</div>'
+    +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px">Kasavana &amp; Smith 기준 — 공헌이익(단가-원가) × 판매량으로 분류</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +CAT_DEF.map(function(cat){
+     var items=cats[cat.key]||[];
+     return '<div style="background:'+cat.bg+';border:1.5px solid '+cat.color+'33;border-radius:14px;padding:12px">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:'+cat.color+'"></div>'
+      +'<span style="font-size:12px;font-weight:900;color:'+cat.color+'">'+cat.label+'</span>'
+      +'<span style="font-size:10px;color:var(--t3)">'+cat.sub+'</span>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--t3);margin-bottom:8px">'+cat.desc+'</div>'
+      +(items.length
+       ?items.slice(0,4).map(function(m){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid '+cat.color+'22">'
+         +'<span style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">'+esc(m.name)+'</span>'
+         +'<span style="font-size:10px;color:'+cat.color+';font-weight:800;white-space:nowrap">+₩'+m.cmPer.toLocaleString()+'</span>'
+         +'</div>';
+       }).join('')+(items.length>4?'<div style="font-size:10px;color:var(--t3);margin-top:4px">외 '+(items.length-4)+'개</div>':'')
+       :'<div style="font-size:11px;color:var(--t3);padding:8px 0">해당 메뉴 없음</div>'
+      )
+      +'</div>';
+    }).join('')
+    +'</div></div>';
+  }
+
+  /* ④ 메뉴별 원가율 테이블 */
+  if(menuEngineering.length){
+   var topMenus=menuEngineering.slice(0,10);
+   html+='<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:12px">메뉴별 원가율 상세</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 50px 60px 54px;gap:4px;padding-bottom:8px;border-bottom:1px solid var(--bd)">'
+    +['메뉴','판매','공헌이익','원가율'].map(function(h){return '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h+'</div>';}).join('')
+    +'</div>'
+    +topMenus.map(function(m){
+     var tl=m.costPct<=35?'#22c55e':m.costPct<=50?'#f59e0b':'#ef4444';
+     var cat=m.category;
+     var catLabel={star:'★',plowhorse:'➔',puzzle:'?',dog:'✕'}[cat]||'';
+     return '<div style="display:grid;grid-template-columns:1fr 50px 60px 54px;gap:4px;padding:8px 0;border-bottom:1px solid var(--bd);align-items:center">'
+      +'<div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      +'<span style="color:'+{star:'#22c55e',plowhorse:'#3b82f6',puzzle:'#a78bfa',dog:'#ef4444'}[cat]+';margin-right:3px">'+catLabel+'</span>'
+      +esc(m.name)+'</div>'
+      +'<div style="font-size:11px;font-weight:700;text-align:right">'+m.qty+'개</div>'
+      +'<div style="font-size:11px;font-weight:800;text-align:right;color:'+(m.cm>=0?'#22c55e':'#ef4444')+'">₩'+m.cm.toLocaleString()+'</div>'
+      +'<div style="text-align:right"><span style="font-size:11px;font-weight:800;padding:2px 6px;border-radius:6px;background:'+tl+'22;color:'+tl+'">'+m.costPct+'%</span></div>'
+      +'</div>';
+    }).join('')
+    +(menuEngineering.length>10?'<div style="font-size:10px;color:var(--t3);padding:8px 0">외 '+(menuEngineering.length-10)+'개</div>':'')
+    +'<div style="display:flex;gap:10px;margin-top:8px">'
+    +[['#22c55e','원가율 35% 이하 (우수)'],['#f59e0b','35~50% (보통)'],['#ef4444','50% 초과 (위험)']].map(function(l){
+     return '<div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:'+l[0]+'"></div><span style="font-size:9px;color:var(--t3)">'+l[1]+'</span></div>';
+    }).join('')
+    +'</div></div>';
+  }
+
+  /* ⑤ BEP 계산기 */
+  html+='<div class="card" style="margin-bottom:12px">'
+   +'<div style="font-size:13px;font-weight:800;margin-bottom:4px">손익분기점(BEP) 계산기</div>'
+   +'<div style="font-size:10px;color:var(--t3);margin-bottom:12px">월 고정비 입력 시 최소 매출 목표 자동 계산</div>'
+   +'<div style="display:flex;gap:8px;align-items:center">'
+   +'<input id="bep-fixed" type="number" placeholder="월 고정비 (원)" '
+   +'style="flex:1;padding:9px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;font-size:13px;color:var(--tx)" '
+   +'oninput="_filoCalcBEP('+foodCostPct+')">'
+   +'<span style="font-size:12px;color:var(--t3)">원</span>'
+   +'</div>'
+   +'<div id="bep-result" style="margin-top:10px;font-size:13px;color:var(--t3)">고정비를 입력하면 BEP가 계산됩니다</div>'
+   +'</div>';
+
+  /* ⑥ AI 분석 카드 */
+  html+='<div class="card" style="background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(167,139,250,.06));border:1.5px solid rgba(99,102,241,.2)">'
+   +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+   +'<div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#a78bfa);display:flex;align-items:center;justify-content:center">'
+   +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>'
+   +'</div>'
+   +'<div>'
+   +'<div style="font-size:13px;font-weight:800">AI 마진 분석</div>'
+   +'<div style="font-size:10px;color:var(--t3)">'+(aiPowered?'Claude Haiku 분석':'자동 분석')+'</div>'
+   +'</div>'
+   +'</div>'
+   +'<div style="font-size:13px;line-height:1.8;color:var(--t2)">'+esc(aiNarrative||'원가 데이터를 등록하면 AI 분석이 활성화됩니다.')+'</div>'
+   +'<button onclick="_filoRenderInsights(\''+esc(did)+'\',\''+esc(ym)+'\')" '
+   +'style="margin-top:12px;padding:7px 16px;background:linear-gradient(135deg,#6366f1,#a78bfa);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">다시 분석</button>'
+   +'</div>';
+
+  html+='</div>';
+  content.innerHTML=html;
+ }).catch(function(e){
+  content.innerHTML='<div style="padding:20px;color:var(--red)">분석 오류: '+esc(e.message)+'</div>';
  });
 }
+
+/* BEP 계산 헬퍼 */
+function _filoCalcBEP(foodCostPct){
+ var fixedEl=document.getElementById('bep-fixed');
+ var resultEl=document.getElementById('bep-result');
+ if(!fixedEl||!resultEl)return;
+ var fixed=parseFloat(fixedEl.value)||0;
+ if(!fixed){resultEl.textContent='고정비를 입력하면 BEP가 계산됩니다';return;}
+ var pct=foodCostPct>0?foodCostPct:40;
+ var bep=Math.round(fixed/(1-pct/100));
+ var color=bep>0?'#6366f1':'#ef4444';
+ resultEl.innerHTML='<span style="font-weight:800;color:'+color+'">BEP: ₩'+bep.toLocaleString()+'</span>'
+  +' <span style="color:var(--t3);font-size:11px">/ 월 (식재료원가율 '+pct+'% 기준)</span>';
+}
+window._filoCalcBEP=_filoCalcBEP;
 
 /* ══════════════════════════════════════════════════════
  * AI 어시스턴트 모듈 (구 filo-ai.js 통합 — 2026-08-04)
@@ -517,12 +730,16 @@ function _aiSkeleton(lines) {
 
 /* POST 헬퍼 — 실패해도 화면이 죽지 않도록 항상 객체를 반환한다 */
 function _aiPost(path, payload) {
-  return fetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload || {})
-  }).then(function (r) { return r.json(); })
-    .catch(function (e) { return { ok: false, error: e.message }; });
+  var user = firebase.auth ? firebase.auth().currentUser : null;
+  var tokenP = user ? user.getIdToken() : Promise.resolve('');
+  return tokenP.then(function(token) {
+    return fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(payload || {})
+    }).then(function (r) { return r.json(); })
+      .catch(function (e) { return { ok: false, error: e.message }; });
+  });
 }
 
 /* 카드 안에 오류를 그린다 */
@@ -579,37 +796,6 @@ function _filoPageAI(el) {
         '<div class="bento-body" id="ai-menu-body">' + _aiSkeleton(5) + '</div>' +
       '</section>' +
 
-      /* ③ 음성 주문 — 1×1 */
-      '<section class="bento-item fade-up-3" id="ai-card-voice">' +
-        '<header class="bento-head"><div><h3>음성 주문</h3></div></header>' +
-        '<div class="bento-body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center">' +
-          '<button class="ai-mic" onclick="_filoVoiceOrderOpen()" aria-label="음성 주문 시작">' +
-            '<span class="ai-mic-ring"></span>' +
-          '</button>' +
-          '<div style="font-size:11px;color:var(--t3);line-height:1.6">말로 주문을 받아<br>바로 장바구니에 담습니다</div>' +
-        '</div>' +
-      '</section>' +
-
-      /* ④ 스케줄 최적화 — 2×1 */
-      '<section class="bento-item bento-wide fade-up-3" id="ai-card-sched">' +
-        '<header class="bento-head">' +
-          '<div><h3>AI 스케줄 최적화</h3></div>' +
-          '<button class="ai-chip" onclick="_filoAiSchedule()">다시 계산</button>' +
-        '</header>' +
-        '<div class="bento-body" id="ai-sched-body">' + _aiSkeleton(3) + '</div>' +
-      '</section>' +
-
-      /* ⑤ CS봇 — 1×1 */
-      '<section class="bento-item fade-up-4" id="ai-card-cs">' +
-        '<header class="bento-head"><div><h3>AI CS봇</h3></div></header>' +
-        '<div class="bento-body" style="display:flex;flex-direction:column;gap:10px">' +
-          '<div style="font-size:11px;color:var(--t3);line-height:1.7">' +
-            '메뉴·영업시간·실시간 웨이팅까지 학습한 매장 전용 상담봇입니다.' +
-          '</div>' +
-          '<button class="ai-btn-primary" onclick="_filoAiChatToggle()">상담봇 열기</button>' +
-          '<button class="ai-chip" onclick="_filoAiChatTest()">응답 테스트</button>' +
-        '</div>' +
-      '</section>' +
 
     '</div>' +
   '</div>';
@@ -617,7 +803,6 @@ function _filoPageAI(el) {
   _filoAiBriefing('ai-briefing');
   _filoAiForecast();
   _filoAiMenuRec();
-  _filoAiSchedule();
 }
 
 /* ═════════════════════════════════════════════════════════════
@@ -758,346 +943,6 @@ function _filoAiMenuRec() {
 }
 
 /* ═════════════════════════════════════════════════════════════
-   4. AI 스케줄 최적화
-   ═════════════════════════════════════════════════════════════ */
-function _filoAiSchedule() {
-  var body = document.getElementById('ai-sched-body');
-  if (!body) return;
-  var did = _aiDid();
-  if (!did) { _aiErr(body, '매장 정보를 불러오지 못했습니다.'); return; }
-
-  body.innerHTML = _aiSkeleton(3);
-  _aiPost('/api/ai-schedule', { did: did }).then(function (r) {
-    if (!r.ok) { _aiErr(body, r.error || '스케줄을 계산하지 못했습니다.', '_filoAiSchedule()'); return; }
-    if (r.insufficient) {
-      body.innerHTML = '<div class="ai-empty">' +
-        '<div style="font-size:12px;color:var(--t2);line-height:1.6">' + _aiEsc(r.message) + '</div></div>';
-      return;
-    }
-
-    /* 요일 × 시간 히트맵 */
-    var maxNeed = 1;
-    r.days.forEach(function (d) { d.blocks.forEach(function (b) { if (b.need > maxNeed) maxNeed = b.need; }); });
-
-    var heat = '<div class="ai-heat"><div class="ai-heat-hours"><span></span>' +
-      r.days[0].blocks.map(function (b) { return '<span>' + b.hour + '</span>'; }).join('') + '</div>' +
-      r.days.map(function (d) {
-        return '<div class="ai-heat-row"><span class="ai-heat-dow">' + _aiEsc(d.dow) + '</span>' +
-          d.blocks.map(function (b) {
-            var lvl = b.need === 0 ? 0 : Math.ceil(b.need / maxNeed * 4);
-            return '<i class="ai-heat-cell lv' + lvl + '" title="' + _aiEsc(d.dow) + '요일 ' + b.hour + '시 · ' + b.need + '명 · ' + _aiWon(b.revenue) + '">' +
-              (b.need || '') + '</i>';
-          }).join('') + '</div>';
-      }).join('') + '</div>';
-
-    var savingPositive = r.saving > 0;
-    body.innerHTML =
-      '<div class="ai-stat-grid" style="margin-bottom:14px">' +
-        '<div class="ai-stat"><span>주간 필요 인시</span><strong>' + r.totalHeadHours + '시간</strong></div>' +
-        '<div class="ai-stat"><span>예상 인건비</span><strong>' + _aiWon(r.laborCost) + '</strong></div>' +
-        '<div class="ai-stat"><span>현재 추정</span><strong>' + _aiWon(r.actualCost) + '</strong></div>' +
-        '<div class="ai-stat"><span>' + (savingPositive ? '절감 여지' : '추가 필요') + '</span>' +
-          '<strong class="' + (savingPositive ? 'up' : 'down') + '">' + _aiWon(Math.abs(r.saving)) + '</strong></div>' +
-      '</div>' +
-      heat +
-      '<div class="ai-legend"><span>필요 인력</span>' +
-        '<i class="ai-heat-cell lv0"></i><i class="ai-heat-cell lv1"></i><i class="ai-heat-cell lv2"></i>' +
-        '<i class="ai-heat-cell lv3"></i><i class="ai-heat-cell lv4"></i><span>많음</span></div>' +
-
-      /* 직원별 배치 */
-      '<div class="ai-assign">' +
-        r.assignments.map(function (a) {
-          return '<div class="ai-assign-row">' +
-            '<div class="ai-assign-name">' + _aiEsc(a.name) +
-              '<small>' + _aiEsc(a.role) + ' · ' + _aiWon(a.hourlyRate) + '/h</small></div>' +
-            '<div class="ai-assign-hours">주 ' + a.weeklyHours + '시간</div>' +
-            '<div class="ai-assign-pay">' + _aiWon(a.weeklyPay) +
-              (a.holidayPay > 0 ? '<small class="ai-holiday">주휴 +' + _aiWon(a.holidayPay) + '</small>' : '') +
-            '</div></div>';
-        }).join('') +
-      '</div>' +
-
-      '<div class="ai-note"><span class="ai-note-tag">' + (r.aiPowered ? 'AI 분석' : '통계 분석') + '</span>' + _aiEsc(r.advice) + '</div>' +
-      '<div class="ai-foot">영업시간 ' + r.openFrom + '시~' + (r.openTo + 1) + '시 · 최근 ' + r.sampleDays + '일 매출 곡선 기준 · 주휴수당 합계 ' + _aiWon(r.holidayTotal) + '</div>';
-  });
-}
-
-/* ═════════════════════════════════════════════════════════════
-   5. 음성 주문 인식 (Web Speech API + 서버 파싱)
-   ═════════════════════════════════════════════════════════════ */
-/* ── 핸즈프리 음성 POS (상시 청취 · 자동 실행) ────────────────────────────── */
-var _aiRecog = null, _aiRecogActive = false;
-var _aiHFActive = false;
-
-function _filoVoiceOrderOpen() { _aiHFToggle(); }
-function _filoVoiceOrderClose() { _aiHFStop(); }
-
-function _aiHFToggle() {
-  if (_aiHFActive) { _aiHFStop(); return; }
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { _aiToast('Chrome 브라우저가 필요합니다'); return; }
-  _aiHFStart();
-}
-
-function _aiHFStart() {
-  _aiHFActive = true;
-  /* FAB 초록으로 */
-  var fab = document.getElementById('filo-voice-fab');
-  if (fab) { fab.style.background = 'linear-gradient(135deg,#22c55e,#16a34a)'; fab.title = '음성 POS 켜짐 (클릭=종료)'; }
-  _aiHFShowUI();
-  _aiHFRecogLoop();
-}
-
-function _aiHFStop() {
-  _aiHFActive = false;
-  if (_aiRecog) { try { _aiRecog.stop(); } catch(e){} _aiRecog = null; }
-  var ui = document.getElementById('ai-hf-ui'); if (ui) ui.remove();
-  var fab = document.getElementById('filo-voice-fab');
-  if (fab) { fab.style.background = ''; fab.title = '음성 주문'; }
-}
-
-function _aiHFShowUI() {
-  var old = document.getElementById('ai-hf-ui'); if (old) old.remove();
-  var d = document.createElement('div');
-  d.id = 'ai-hf-ui';
-  d.style.cssText = 'position:fixed;bottom:150px;right:18px;background:rgba(8,16,31,.93);backdrop-filter:blur(14px);border:1px solid rgba(201,168,76,.35);border-radius:16px;padding:13px 16px;z-index:4500;width:240px;font-family:Pretendard,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.45)';
-  d.innerHTML =
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
-      '<div id="ai-hf-dot" style="width:8px;height:8px;border-radius:50%;background:#22c55e;animation:aiBreathe 1.5s ease infinite;flex-shrink:0"></div>' +
-      '<span style="font-size:11px;font-weight:800;color:#c9a84c;letter-spacing:.5px;flex:1">음성 POS 작동중</span>' +
-      '<button onclick="_aiHFStop()" style="background:none;border:none;color:rgba(255,255,255,.35);font-size:18px;cursor:pointer;line-height:1;padding:0">×</button>' +
-    '</div>' +
-    '<div id="ai-hf-heard" style="font-size:12px;color:rgba(255,255,255,.45);min-height:15px;margin-bottom:4px;font-style:italic"></div>' +
-    '<div id="ai-hf-result" style="font-size:13px;color:#fff;font-weight:700;min-height:18px;word-break:keep-all"></div>' +
-    '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.07);font-size:10px;color:rgba(255,255,255,.3);line-height:1.8">' +
-      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 해물밥상 둘<br>' +
-      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 카드 결제<br>' +
-      '<span style="color:rgba(201,168,76,.7);font-weight:700">필로야</span>, 3번 테이블 비움' +
-    '</div>';
-  document.body.appendChild(d);
-}
-
-function _aiHFRecogLoop() {
-  if (!_aiHFActive) return;
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return;
-  var r = new SR();
-  r.lang = 'ko-KR';
-  r.continuous = false;
-  r.interimResults = true;
-  r.maxAlternatives = 1;
-  _aiRecog = r;
-
-  r.onstart = function() { _aiRecogActive = true; _aiHFSet('heard', '듣는 중…'); };
-  r.onresult = function(ev) {
-    var interim = '', fin = '', confidence = 0;
-    for (var i = ev.resultIndex; i < ev.results.length; i++) {
-      if (ev.results[i].isFinal) {
-        fin += ev.results[i][0].transcript;
-        confidence = ev.results[i][0].confidence || 0;
-      } else { interim += ev.results[i][0].transcript; }
-    }
-    _aiHFSet('heard', fin || interim);
-    if (!fin) return;
-    /* 신뢰도 0.85 미만 무시 */
-    if (confidence > 0 && confidence < 0.85) { _aiHFSet('heard', ''); return; }
-    /* 웨이크워드 "필로야" 필수 */
-    var clean = fin.trim().replace(/\s+/g,' ');
-    if (!clean.match(/필로야|피로야|필로 야/)) { _aiHFSet('heard', ''); return; }
-    var cmd = clean.replace(/^.*?(필로야|피로야|필로 야)\s*/,'').trim();
-    if (!cmd) return;
-    _aiHFProcess(cmd);
-  };
-  r.onerror = function(ev) {
-    _aiRecogActive = false;
-    if (ev.error === 'not-allowed') { _aiHFSet('result', '마이크 권한 필요'); _aiHFStop(); return; }
-    if (_aiHFActive) setTimeout(_aiHFRecogLoop, 800);
-  };
-  r.onend = function() {
-    _aiRecogActive = false;
-    _aiHFSet('heard', '');
-    if (_aiHFActive) setTimeout(_aiHFRecogLoop, 300);
-  };
-  try { r.start(); } catch(e) { if (_aiHFActive) setTimeout(_aiHFRecogLoop, 1000); }
-}
-
-function _aiHFSet(id, txt) {
-  var el = document.getElementById('ai-hf-' + id); if (el) el.textContent = txt;
-}
-
-function _aiHFProcess(text) {
-  _aiHFSet('result', '분석 중…');
-  /* 테이블 번호 추출 */
-  var tM = text.match(/(\d+)\s*번?\s*테이블/);
-  var tableNum = tM ? parseInt(tM[1]) : null;
-  var tableName = tableNum ? (tableNum + '번 테이블') : null;
-
-  /* 비움 / 정리 */
-  if (text.match(/비움|비워|정리|퇴장|클리어|비어|나갔/)) {
-    if (!tableNum) { _aiHFDone('테이블 번호를 말씀해 주세요'); return; }
-    _aiHFClear(tableNum, tableName); return;
-  }
-
-  /* 결제 */
-  var pM = text.match(/(카드|현금|카카오)\s*결제/);
-  if (pM || (tableNum && text.match(/결제/))) {
-    if (!tableNum) { _aiHFDone('테이블 번호를 말씀해 주세요'); return; }
-    var method = pM ? (pM[1] === '카드' ? 'card' : pM[1] === '현금' ? 'cash' : 'kakao') : 'card';
-    var mLabel = method === 'card' ? '카드' : method === 'cash' ? '현금' : '카카오페이';
-    _aiHFPay(tableNum, tableName, method, mLabel); return;
-  }
-
-  /* 주문 → AI 파싱 */
-  _aiPost('/api/ai-voice-order', { did: _aiDid(), text: text }).then(function(r) {
-    if (!r.ok || !r.items || !r.items.length) { _aiHFDone('메뉴를 인식하지 못했습니다'); return; }
-    if (tableNum) {
-      _aiHFRegister(tableNum, tableName, r.items, r.total);
-    } else {
-      /* 테이블 미지정 → POS 카트에 담기 */
-      if (typeof _cartAdd === 'function') {
-        r.items.forEach(function(it){ for(var i=0;i<it.qty;i++) _cartAdd(it.id||it.name,it.name,it.price); });
-        _aiHFDone(r.items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 담음');
-        _aiSpeak(r.items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 담았습니다');
-      } else { _aiHFDone('POS 화면에서 말씀해 주세요'); }
-    }
-  });
-}
-
-function _aiHFRegister(tableNum, tableName, items, total) {
-  var did = _aiDid(), now = new Date(), today = now.toISOString().slice(0,10);
-  _db.collection('filo_orders').add({
-    dealerId: did, tableNum: String(tableNum), tableName: tableName,
-    items: items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
-    total: total, type: 'table', source: 'voice', status: 'pending',
-    date: today, createdAt: now.toISOString()
-  }).then(function() {
-    var msg = tableName+' '+items.map(function(it){return it.name+' '+it.qty+'개';}).join(', ')+' 등록';
-    _aiHFDone(msg); _aiSpeak(msg+'했습니다');
-  }).catch(function(e){ _aiHFDone('오류: '+e.message); });
-}
-
-function _aiHFClear(tableNum, tableName) {
-  var did = _aiDid(), today = new Date().toISOString().slice(0,10);
-  _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).where('date','==',today)
-    .get().then(function(snap) {
-      if (snap.empty) { _aiHFDone(tableName+' 주문 없음'); return; }
-      var batch = _db.batch();
-      snap.forEach(function(doc){ batch.update(doc.ref,{status:'cleared',clearedAt:new Date().toISOString()}); });
-      return batch.commit().then(function(){
-        _aiHFDone(tableName+' 비움 완료'); _aiSpeak(tableName+' 비웠습니다');
-      });
-    }).catch(function(e){ _aiHFDone('오류: '+e.message); });
-}
-
-function _aiHFPay(tableNum, tableName, method, mLabel) {
-  var did = _aiDid(), today = new Date().toISOString().slice(0,10);
-  _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum))
-    .where('date','==',today).where('status','==','pending')
-    .get().then(function(snap) {
-      if (snap.empty) { _aiHFDone(tableName+' 결제할 주문 없음'); return; }
-      var items=[], total=0, orderIds=[];
-      snap.forEach(function(doc){ var d=doc.data(); orderIds.push(doc.id); (d.items||[]).forEach(function(it){items.push(it);}); total+=d.total||0; });
-      if (typeof _filoTablePay==='function') {
-        _filoTablePay(did,items,total,tableNum,tableName,method,orderIds);
-        var msg = tableName+' '+mLabel+' '+total.toLocaleString()+'원 결제 완료';
-        _aiHFDone(msg); _aiSpeak(msg);
-      }
-    }).catch(function(e){ _aiHFDone('오류: '+e.message); });
-}
-
-function _aiHFDone(msg) { _aiHFSet('heard',''); _aiHFSet('result', msg); }
-
-function _aiSpeak(text) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  var u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ko-KR'; u.rate = 1.05;
-  window.speechSynthesis.speak(u);
-}
-
-/* 구버전 호환 */
-function _aiVoiceToggle(){}
-function _aiVoiceStart(){}
-function _aiVoiceStop(){ _aiHFStop(); }
-function _aiVoiceToCart(){}
-function _aiFlushPendingCart(){}
-
-/* ═════════════════════════════════════════════════════════════
-   6. AI CS봇 — 플로팅 위젯 (대화 맥락 유지)
-   ═════════════════════════════════════════════════════════════ */
-var _aiChatHistory = [];
-
-function _filoAiChatToggle() {
-  var w = document.getElementById('ai-chat');
-  if (w) { w.classList.toggle('on'); if (w.classList.contains('on')) _aiChatFocus(); return; }
-
-  var d = document.createElement('div');
-  d.id = 'ai-chat';
-  d.className = 'ai-chat on';
-  d.innerHTML =
-    '<div class="ai-chat-head">' +
-      '<div><strong>AI 상담봇</strong><small>메뉴·영업시간·웨이팅 실시간 응답</small></div>' +
-      '<button class="ai-x" onclick="_filoAiChatToggle()" aria-label="닫기">×</button>' +
-    '</div>' +
-    '<div class="ai-chat-body" id="ai-chat-body">' +
-      '<div class="ai-msg bot">안녕하세요! 무엇을 도와드릴까요?</div>' +
-      '<div class="ai-chips" id="ai-chat-chips">' +
-        ['영업시간 알려주세요', '지금 대기 얼마나 되나요?', '추천 메뉴가 뭔가요?', '주차 되나요?']
-          .map(function (c) { return '<button class="ai-chip" onclick="_aiChatSend(\'' + c + '\')">' + c + '</button>'; }).join('') +
-      '</div>' +
-    '</div>' +
-    '<div class="ai-chat-input">' +
-      '<input id="ai-chat-inp" placeholder="궁금한 점을 입력하세요" onkeydown="if(event.key===\'Enter\')_aiChatSend()">' +
-      '<button onclick="_aiChatSend()" aria-label="보내기">↑</button>' +
-    '</div>';
-  document.body.appendChild(d);
-  _aiChatFocus();
-}
-
-function _aiChatFocus() {
-  setTimeout(function () { var i = document.getElementById('ai-chat-inp'); if (i) i.focus(); }, 120);
-}
-
-function _aiChatSend(preset) {
-  var inp = document.getElementById('ai-chat-inp');
-  var body = document.getElementById('ai-chat-body');
-  var q = (preset || (inp ? inp.value : '')).trim();
-  if (!q || !body) return;
-  if (inp && !preset) inp.value = '';
-
-  var chips = document.getElementById('ai-chat-chips');
-  if (chips) chips.remove();
-
-  body.insertAdjacentHTML('beforeend', '<div class="ai-msg me">' + _aiEsc(q) + '</div>');
-  body.insertAdjacentHTML('beforeend', '<div class="ai-msg bot" id="ai-msg-wait"><span class="ai-dots"><i></i><i></i><i></i></span></div>');
-  body.scrollTop = body.scrollHeight;
-
-  _aiChatHistory.push({ role: 'user', text: q });
-
-  _aiPost('/api/cs-bot', { did: _aiDid(), question: q, history: _aiChatHistory.slice(0, -1), lang: 'ko' })
-    .then(function (r) {
-      var wait = document.getElementById('ai-msg-wait');
-      var answer = r.ok ? r.answer : ('죄송합니다. 답변을 가져오지 못했습니다.' + (r.error ? ' (' + r.error + ')' : ''));
-      if (wait) { wait.id = ''; wait.innerHTML = _aiEsc(answer); }
-      _aiChatHistory.push({ role: 'bot', text: answer });
-      if (_aiChatHistory.length > 12) _aiChatHistory = _aiChatHistory.slice(-12);
-      if (r.ok && r.chips && r.chips.length) {
-        body.insertAdjacentHTML('beforeend',
-          '<div class="ai-chips">' + r.chips.slice(0, 3).map(function (c) {
-            return '<button class="ai-chip" onclick="_aiChatSend(\'' + _aiEsc(c).replace(/'/g, '') + '\')">' + _aiEsc(c) + '</button>';
-          }).join('') + '</div>');
-      }
-      body.scrollTop = body.scrollHeight;
-    });
-}
-
-/* 관리자용 응답 테스트 */
-function _filoAiChatTest() {
-  _filoAiChatToggle();
-  setTimeout(function () { _aiChatSend('오늘 영업시간이랑 추천 메뉴 알려주세요'); }, 400);
-}
-
-/* ═════════════════════════════════════════════════════════════
    7. 대시보드 한줄 브리핑
    ═════════════════════════════════════════════════════════════ */
 function _filoAiBriefing(targetId) {
@@ -1118,20 +963,7 @@ function _filoAiBriefing(targetId) {
 window._filoPageAI         = _filoPageAI;
 window._filoAiForecast     = _filoAiForecast;
 window._filoAiMenuRec      = _filoAiMenuRec;
-window._filoAiSchedule     = _filoAiSchedule;
-window._filoVoiceOrderOpen = _filoVoiceOrderOpen;
-window._filoVoiceOrderClose= _filoVoiceOrderClose;
-window._aiHFToggle         = _aiHFToggle;
-window._aiHFStop           = _aiHFStop;
-window._aiSpeak            = _aiSpeak;
-window._filoAiChatToggle   = _filoAiChatToggle;
-window._filoAiChatTest     = _filoAiChatTest;
 window._filoAiBriefing     = _filoAiBriefing;
-window._aiVoiceToggle      = _aiVoiceToggle;
-window._aiVoiceStart       = _aiVoiceStart;
-window._aiVoiceToCart      = _aiVoiceToCart;
-window._aiChatSend         = _aiChatSend;
-window._aiFlushPendingCart = _aiFlushPendingCart;
 
 /* ══════════════════════════════════════════════════════
  * AIVO 마진 분석 페이지 — 프리미엄 대시보드
@@ -1149,9 +981,9 @@ function _filoPageMargin(el){
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>'},
   {id:'kpi-cost',label:'이번달 원가',color:'#f59e0b',
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>'},
-  {id:'kpi-profit',label:'순이익',color:'#10b981',
+  {id:'kpi-profit',label:'공제이익(식재료)',color:'#10b981',
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>'},
-  {id:'kpi-margin',label:'마진율',color:'#0ea5e9',
+  {id:'kpi-margin',label:'식재료 마진율',color:'#0ea5e9',
    ic:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>'},
  ];
 

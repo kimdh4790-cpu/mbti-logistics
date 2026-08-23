@@ -59,7 +59,7 @@
  *
  * ── 마지막 수정: 2026-07-14 ──────────────────────────────────
  */
-var _did='', _tNum='', _tName='', _storeName='매장';
+var _did='', _tNum='', _tName='', _storeName='매장', _takeout=false;
 var _cart={}; // _menus/_lang/_tlCache/_curMdlMenu/_tlQtyVal 는 filo-order-common.js 공유
 var _db=null, _orderListener=null;
 var _fcmToken=null, _messaging=null;
@@ -159,9 +159,10 @@ window.onload=function(){
   appId:'1:40761160761:web:20545b610f03f534e949e8'
  });
  _db=firebase.firestore();
+ try{_db.settings({experimentalAutoDetectLongPolling:true});}catch(e){}
  _did=_p('d')||'';
  _tNum=_p('t')||'';
- var _takeout=_p('takeout')==='1';
+ _takeout=_p('takeout')==='1';
  if(_takeout){_tNum='0';_tName='포장';}
  else{_tName=_p('name')||('테이블 '+_tNum);}
  if(!_did){
@@ -182,7 +183,13 @@ window.onload=function(){
  var tn=document.getElementById('table-name');if(tn)tn.textContent=_tName;
  document.getElementById('ld').style.display='none';
  document.getElementById('app').style.display='flex';
- _loadMenus();
+ _loadMenus(function(){
+  // NFC 메뉴 태그: ?item= 파라미터로 특정 메뉴 자동 장바구니 추가
+  var itemName=decodeURIComponent(_p('item')||'');
+  if(!itemName) return;
+  var m=(_menus||[]).filter(function(x){return x.name===itemName;})[0];
+  if(m){_addToCart(m);_filoToast((m.emoji||'🍽')+' '+m.name+' 담겼습니다!');}
+ });
  _listenOrders(); // 픽업 알림
  _checkExistingOrder();
  _loadBakeryCart(); // 빵 진열대 QR 스캔 카트 자동 로드 // 기존 주문 테이블 이동 감지
@@ -217,50 +224,46 @@ function _checkExistingOrder(){
  // localStorage에 이전 주문 ID 있는지 확인
  var lastId=localStorage.getItem('filo_order_'+_did);
  if(!lastId)return;
- // 현재 스캔한 테이블이 비어있으면 localStorage 초기화 후 종료
- var tDocId=_did+'_t'+_tNum;
- _db.collection('filo_tables').doc(tDocId).get().then(function(tDoc){
-  if(tDoc.exists&&tDoc.data().status==='empty'){
-   try{localStorage.removeItem('filo_order_'+_did);}catch(e){}
-   return;
-  }
-  // 해당 주문이 아직 pending/ready 상태인지 확인
-  _db.collection('filo_orders').doc(lastId).get().then(function(doc){
+ // 기존 주문이 아직 활성 상태인지 확인 (테이블 상태와 무관하게)
+ _db.collection('filo_orders').doc(lastId).get().then(function(doc){
   if(!doc.exists){try{localStorage.removeItem('filo_order_'+_did);}catch(e){}return;}
   var d=doc.data();
   if(d.status!=='pending'&&d.status!=='ready'){try{localStorage.removeItem('filo_order_'+_did);}catch(e){}return;}
   if(String(d.tableNum)===String(_tNum))return; // 같은 테이블이면 무시
-  // 다른 테이블 QR 스캔 → 이동 확인 팝업
+  // 다른 테이블 QR 스캔 → 즉시 이동 확인 팝업 (직원 승인 없이 바로 처리)
   var pop=document.createElement('div');
   pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+  var fromNum=String(d.tableNum);
+  var fromName=d.tableName||('테이블 '+d.tableNum);
   pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:100%">'+
-   '<div style="font-size:40px;margin-bottom:12px"></div>'+
+   '<div style="font-size:40px;margin-bottom:12px">&#128682;</div>'+
    '<div style="font-size:17px;font-weight:900;margin-bottom:8px">테이블 이동</div>'+
    '<div style="font-size:14px;color:#475569;margin-bottom:20px">'+
-   '기존 주문을 <b style="color:#0891b2">테이블 '+_tNum+'</b>번으로<br>이동할까요?</div>'+
+   fromName+'에서 <b style="color:#0891b2">'+_tName+'</b>으로<br>이동하시겠어요?</div>'+
    '<div style="display:flex;gap:10px">'+
    '<button id="_mv_ok" style="flex:1;padding:14px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이동</button>'+
    '<button id="_mv_no" style="flex:1;padding:14px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">새 주문</button>'+
    '</div></div>';
+  pop.className='xfer-pop';
   document.body.appendChild(pop);
   document.getElementById('_mv_ok').onclick=function(){
-   _db.collection('filo_orders').doc(lastId).update({
-    tableNum:_tNum,tableName:'테이블 '+_tNum,
-    movedFrom:d.tableNum,movedAt:_nowISO()
-   }).then(function(){
+   var okBtn=document.getElementById('_mv_ok');
+   okBtn.disabled=true;okBtn.textContent='이동 중...';
+   fetch('/order/move-table',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:_did,orderId:lastId,fromTable:fromNum,toTable:String(_tNum),toTableName:_tName})
+   }).then(function(r){return r.json();}).then(function(res){
+    if(!res.ok){_filoToast('이동 실패: '+(res.error||''));okBtn.disabled=false;okBtn.textContent='이동';return;}
+    pop.remove();
     _lastOrderId=lastId;
     _listenPickup(lastId);
-    pop.remove();
-    // 완료 화면 표시
-    var dn=document.getElementById('done');
-    var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+_tNum+'번으로 이동됐습니다';
-    var ditems=document.getElementById('done-items');
-    if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
-    if(dn)dn.style.display='flex';
-   }).catch(function(e){_filoToast('이동 실패: '+e.message);pop.remove();});
+    // 손님 화면 갱신
+    var dnum=document.getElementById('done-num');
+    if(dnum)dnum.textContent=_tName+' · 주문번호 #'+lastId.slice(-6).toUpperCase();
+    var dn=document.getElementById('done');if(dn)dn.style.display='flex';
+    _filoToast(_tName+'으로 이동됐습니다!');
+   }).catch(function(e){_filoToast('이동 실패: '+e.message);okBtn.disabled=false;okBtn.textContent='이동';});
   };
   document.getElementById('_mv_no').onclick=function(){pop.remove();};
-  }).catch(function(){});
  }).catch(function(){});
 }
 
@@ -338,33 +341,37 @@ function _doOrder(payType){
   date:_today()
  };
  if(_fcmToken)orderData.fcmToken=_fcmToken;
- _db.collection('filo_orders').add(orderData).then(function(ref){
+ // Worker API 경유 — 비로그인 고객도 안전하게 Firestore 쓰기 (12s 타임아웃)
+ var _ctrl=new AbortController();
+ var _tim=setTimeout(function(){_ctrl.abort();},12000);
+ fetch('/api/filo-order',{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(orderData),
+  signal:_ctrl.signal
+ }).then(function(r){return r.json();}).then(function(data){
+  clearTimeout(_tim);
+  if(!data.ok||!data.id){throw new Error(data.error||'주문 실패');}
+  var orderId=data.id;
   _closeCart();_cart={};_updFab();
-  // 완료 화면
   var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
   var dn=document.getElementById('done');
-  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+ref.id.slice(-6).toUpperCase();
+  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+orderId.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
-  // payType별 영수증 UI
-  _lastOrderItems=items; _lastOrderTotal=total; _lastPayType=payType;
+  _lastOrderItems=items;_lastOrderTotal=total;_lastPayType=payType;
   var rcChoice=document.getElementById('receipt-choice');
   var postNotice=document.getElementById('postpay-notice');
   if(payType==='postpay'){
-   // 후불: 카운터 안내 + 영수증 선택 (주문 영수증)
    if(postNotice)postNotice.style.display='block';
    if(rcChoice)rcChoice.style.display='block';
   } else {
-   // 선불: 영수증 선택만 (결제 영수증은 선불 완료 시 따로 표시)
    if(rcChoice)rcChoice.style.display='block';
   }
-  // 픽업 감지 시작
-  _lastOrderId=ref.id;
-  _listenPickup(ref.id);
-  // localStorage에 주문 ID 저장 (QR 재스캔 이동용)
-  try{localStorage.setItem('filo_order_'+_did,ref.id);}catch(e){}
-  // 사장님 FCM 신규주문 알림
+  _lastOrderId=orderId;
+  _listenPickup(orderId);
+  try{localStorage.setItem('filo_order_'+_did,orderId);}catch(e){}
   if(_did){
    fetch('/api/filo-push',{
     method:'POST',
@@ -372,11 +379,19 @@ function _doOrder(payType){
     body:JSON.stringify({did:_did,title:_storeName+' 신규 주문',body:'테이블 '+_tNum+' · ₩'+total.toLocaleString()+' 주문 접수'})
    }).catch(function(){});
   }
-  // 고객 영수증 FCM 자동 발송 (이미 토큰 있으면 즉시, 없으면 토큰 발급 후)
-  _autoReceiptFCM(ref.id, total, items);
+  /* 포인트 적립 — FCM 토큰 기반, 가입 불필요 */
+  if(_fcmToken&&_did){
+   fetch('/api/point-earn',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({did:_did,fcmToken:_fcmToken,orderId:orderId,total:total,tableNum:_tNum,storeName:_storeName})
+   }).catch(function(){});
+  }
+  _autoReceiptFCM(orderId, total, items);
  }).catch(function(e){
-  _filoToast('주문 실패: '+e.message);
+  clearTimeout(_tim);
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
+  _filoToast(e.name==='AbortError'?'주문 시간 초과 — 다시 시도해주세요':'주문 실패 — 다시 시도해주세요');
  });
 }
 
@@ -462,29 +477,60 @@ function _speakPickup(count){
 var _lastOrderId = null;
 
 function _changeTable(){
- var newNum=prompt('이동한 테이블 번호를 입력해주세요:');
- if(!newNum||!newNum.trim())return;
- newNum=newNum.trim();
  if(!_lastOrderId){_filoToast('주문 정보를 찾을 수 없습니다');return;}
- _db.collection('filo_orders').doc(_lastOrderId).update({
-  tableNum:newNum,
-  tableName:'테이블 '+newNum,
-  movedFrom:_tNum,
-  movedAt:_nowISO()
- }).then(function(){
-  _tNum=newNum;
-  var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
-  // 영수증 표시 중이면 헤더 테이블 번호도 갱신
-  var hdr=document.getElementById('order-receipt-header');
-  if(hdr&&hdr.querySelector('div')){
-   var now=new Date();
-   var timeStr=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
-   hdr.innerHTML='주문 영수증'+
-    '<div style="font-size:11px;font-weight:600;color:#94a3b8;margin-top:4px">'+
-    '테이블 '+newNum+'번 &nbsp;|&nbsp; '+timeStr+'</div>';
-  }
-  _filoToast('테이블 '+newNum+'번으로 변경됐습니다!');
- }).catch(function(e){_filoToast('변경 실패: '+e.message);});
+ // 커스텀 모달 — prompt() 대신 사용
+ var mo=document.createElement('div');
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+ mo.innerHTML='<div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:320px;text-align:center">'+
+  '<div style="font-size:36px;margin-bottom:10px">&#128682;</div>'+
+  '<div style="font-size:17px;font-weight:900;margin-bottom:8px">테이블 번호 변경</div>'+
+  '<div style="font-size:13px;color:#64748b;margin-bottom:16px">이동할 테이블 번호를 입력하면<br>직원이 확인 후 이동 처리합니다</div>'+
+  '<input id="_ct_input" type="number" min="1" placeholder="테이블 번호 입력" style="width:100%;padding:13px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:18px;margin-bottom:14px;box-sizing:border-box;text-align:center;font-weight:700">'+
+  '<div style="display:flex;gap:8px">'+
+  '<button id="_ct_cancel" style="flex:1;padding:13px;background:#f1f5f9;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;color:#475569">취소</button>'+
+  '<button id="_ct_ok" style="flex:1;padding:13px;background:#0891b2;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이동 요청</button>'+
+  '</div></div>';
+ document.body.appendChild(mo);
+ document.getElementById('_ct_cancel').onclick=function(){mo.remove();};
+ document.getElementById('_ct_input').focus();
+ document.getElementById('_ct_ok').onclick=function(){
+  var newNum=(document.getElementById('_ct_input').value||'').trim();
+  if(!newNum){_filoToast('테이블 번호를 입력해주세요');return;}
+  if(String(newNum)===String(_tNum)){_filoToast('현재 테이블과 같습니다');return;}
+  var btn=document.getElementById('_ct_ok');btn.disabled=true;btn.textContent='요청 중...';
+  // staff_calls를 통해 직원 승인 요청 (직접 Firestore 쓰기 권한 없음)
+  _db.collection('staff_calls').add({
+   dealerId:_did,
+   type:'table_transfer',
+   orderId:_lastOrderId,
+   fromTable:String(_tNum),
+   fromTableName:_tName||('테이블 '+_tNum),
+   toTable:newNum,
+   toTableName:'테이블 '+newNum,
+   tableNum:newNum,
+   tableName:'테이블 '+newNum,
+   status:'pending',
+   createdAt:_nowISO()
+  }).then(function(ref){
+   mo.remove();
+   _filoToast('직원에게 이동 요청을 전송했습니다');
+   // 승인/거절 onSnapshot 대기
+   var unsub=_db.collection('staff_calls').doc(ref.id).onSnapshot(function(snap){
+    if(!snap.exists)return;
+    var xd=snap.data();
+    if(xd.status==='approved'){
+     unsub();
+     _tNum=newNum;
+     var tn=document.getElementById('table-name');if(tn)tn.textContent='테이블 '+newNum;
+     var dnum=document.getElementById('done-num');if(dnum)dnum.textContent='테이블 '+newNum+'번으로 이동됐습니다';
+     _filoToast('테이블 '+newNum+'번으로 이동됐습니다!');
+    } else if(xd.status==='rejected'){
+     unsub();
+     _filoToast('직원이 이동 요청을 거절했습니다');
+    }
+   });
+  }).catch(function(e){_filoToast('요청 실패: '+e.message);});
+ };
 }
 
 // ── FCM 알림 허용 게이트 ──────────────────────────────────────────────────────

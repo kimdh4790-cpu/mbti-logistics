@@ -82,7 +82,13 @@ function _filoPageOrders(el){
  var today=new Date().toISOString().slice(0,10);
  var _oSales=[], _oQR=[];
  function _renderOrders(){
-  var orders=_oSales.concat(_oQR);
+  // filo_sales에서 테이블 주문(type=table/qr)은 제외 — 테이블 주문은 filo_orders(_oQR)만 표시
+  // filo_sales는 배달 주문(type=delivery)만 표시
+  var salesDeduped=_oSales.filter(function(o){
+   var t=o.type||'';
+   return t==='delivery'||t===''; // table/qr/staff 타입은 제외
+  });
+  var orders=salesDeduped.concat(_oQR);
   orders.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
   var listEl=document.getElementById('orders-list');
   if(!listEl)return;
@@ -132,14 +138,10 @@ function _filoPageOrders(el){
    _renderOrders();
   });
  var _u2=_db.collection('filo_orders')
-  .where('dealerId','==',did).where('type','==','table')
+  .where('dealerId','==',did).where('type','==','table').where('date','==',today)
   .onSnapshot(function(snap){
    _oQR=[];
-   snap.forEach(function(doc){
-    var d=doc.data();
-    if(d.createdAt&&d.createdAt.slice(0,10)===today)
-     _oQR.push(Object.assign({_id:doc.id,_src:'qr'},d));
-   });
+   snap.forEach(function(doc){_oQR.push(Object.assign({_id:doc.id,_src:'qr'},doc.data()));});
    _renderOrders();
   });
  _ordersUnsub=function(){_u1();_u2();};
@@ -233,14 +235,8 @@ function _filoLoadDelivery(did){
    snap.forEach(function(doc){salesOrders.push(Object.assign({_id:doc.id,_src:'sales'},doc.data()));});
    renderAll();
   },function(e){console.error('delivery sales err:',e);renderAll();});
- var u2=_db.collection('filo_orders')
-  .where('dealerId','==',did)
-  .onSnapshot(function(snap){
-   qrOrders=[];
-   // 테이블QR 주문은 배달 탭에 표시하지 않음 (테이블 현황 탭에서 관리)
-   renderAll();
-  },function(e){console.error('delivery orders err:',e);renderAll();});
- window._deliveryUnsub=function(){u1();u2();};
+ // filo_orders 배달탭에서 미사용 (테이블 현황 탭 관리) — 리스너 불필요
+ window._deliveryUnsub=function(){u1();callUnsub();};
 }
 
 function _filoRenderDelivery(did,orders){
@@ -650,8 +646,9 @@ function _toSubmitOrder(did){
  if(!items.length){_filoToast('메뉴를 선택하세요');return;}
  var total=items.reduce(function(s,it){return s+it.price*it.qty;},0);
  var now=new Date();
- _db.collection('filo_sales').add({
-  dealerId:did,tableId:_toTable.tableId,
+ // filo_orders에 저장 (filo_sales 아님) — 주방/주문대기 중복 방지
+ _db.collection('filo_orders').add({
+  dealerId:did,tableId:_toTable.tableId,tableNum:_toTable.tableId,
   tableName:_toTable.tableId+'번 테이블',
   items:items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
   total:total,status:'pending',type:'table',source:'staff',

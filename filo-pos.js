@@ -54,24 +54,26 @@ function _filoPageKiosk(el){
  '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
  '</div>'+
  '<div class="pos-wrap" style="flex:1;min-height:0;height:auto">'+
- '<div style="display:flex;flex-direction:column">'+
- '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap" id="kiosk-cats"></div>'+
+ '<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0">'+
+ '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0" id="kiosk-cats"></div>'+
  '<div class="menu-grid" id="kiosk-menu">'+
  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3)">메뉴 로딩 중...</div>'+
  '</div></div>'+
  '<div class="cart-panel">'+
  '<div style="padding:12px 16px;border-bottom:1px solid var(--bd)">'+
  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
- '<span style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">'+_svgIcon('list')+' 주문 내역</span>'+
+ '<span id="cart-title-span" style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">'+_svgIcon('list')+' 주문 내역</span>'+
  '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
  '<button class="pay-btn" style="display:flex;align-items:center;justify-content:center;gap:8px" onclick="_filoPay()">'+_svgIcon('credit-card')+' 결제하기</button>'+
- '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:var(--b3);font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
+ '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
  '</div>'+
  '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
  '</div></div></div>';
 
  // 테이블 현황 바 실시간 로드 (5개씩)
  var _kioskTableUnsub=null;
+ /* 테이블 목록 캐시 — 주문 변경마다 재조회 방지 */
+ var _kioskTablesCache=null;
  function _loadKioskTableBar(){
   var bar=document.getElementById('kiosk-table-bar');
   if(!bar)return;
@@ -108,10 +110,19 @@ function _filoPageKiosk(el){
        if(!oMap[k2].hasPending&&oMap[k2].paidTotal>0)oMap[k2].paid=true;
       }
      }
-    });
-    // 테이블 목록 로드
-    _db.collection('filo_tables').where('dealerId','==',did).get().then(function(tSnap){
-     var tables=tSnap.empty?
+     if(k2&&k2!==k){
+      if(!oMap[k2])oMap[k2]={total:0,paidTotal:0,pendingTotal:0,paid:false,hasPending:false,orders:[],hasCleared:false};
+      oMap[k2].total+=(d.total||0);
+      oMap[k2].orders.push(Object.assign({_id:doc.id},d));
+      if(isCleared){oMap[k2].paidTotal+=(d.total||0);oMap[k2].hasCleared=true;}
+      else if(isPd){oMap[k2].paidTotal+=(d.total||0);}
+      else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
+      if(!oMap[k2].hasPending&&oMap[k2].paidTotal>0)oMap[k2].paid=true;
+     }
+    }
+   });
+   var tSnap=_kioskTablesCache;
+   var tables=(!tSnap||tSnap.empty)?
       Array.from({length:10},function(_,i){return {num:i+1,name:'테이블 '+(i+1),status:'empty'};})
       :tSnap.docs.map(function(d){var f=d.data();return {num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty'};})
        .sort(function(a,b){return a.num-b.num;})
@@ -168,9 +179,9 @@ function _filoPageKiosk(el){
        });
        btn.setAttribute('data-selected','1');
        btn.style.outline='2px solid #0891b2';
-       // 주문 내역 헤더 업데이트
-       var cartTitle=document.querySelector('.cart-panel div:first-child');
-       if(cartTitle)cartTitle.innerHTML=_svgIcon('list')+' '+table.name+' 주문';
+       // 주문 내역 헤더 업데이트 (버튼은 유지, 제목 span만 교체)
+       var cartTitleSpan=document.querySelector('.cart-panel #cart-title-span');
+       if(cartTitleSpan)cartTitleSpan.innerHTML=_svgIcon('list')+' '+esc(table.name)+' 주문';
        _filoToast(table.name+' 선택됨');
        // 주문 있으면 주문 내역 모달 표시
        if(order&&order.orders&&order.orders.length){
@@ -187,8 +198,20 @@ function _filoPageKiosk(el){
       nextBtn.onclick=function(){window._kioskTablePage=Math.min(Math.ceil(tables.length/5)-1,page+1);_loadKioskTableBar();};
       bar.appendChild(nextBtn);
      }
-    });
-   });
+  }; /* _renderBar 끝 */
+  /* 테이블 목록 1회 로드 → onSnapshot 콜백에서 캐시 재사용 */
+  var _startOrderWatch=function(){
+   if(_kioskTableUnsub){try{_kioskTableUnsub();}catch(e){}}
+   _kioskTableUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+    .onSnapshot(function(oSnap){_renderBar(oSnap);},function(){});
+  };
+  if(_kioskTablesCache){_startOrderWatch();}
+  else{
+   _db.collection('filo_tables').where('dealerId','==',did).get().then(function(tSnap){
+    _kioskTablesCache=tSnap;
+    _startOrderWatch();
+   }).catch(function(){_kioskTablesCache={empty:true,docs:[]};_startOrderWatch();});
+  }
  }
  _loadKioskTableBar();
 
@@ -232,13 +255,13 @@ function _filoRenderKiosk(menus){
  var _kc=_kColors[(m.name||'').charCodeAt(0)%_kColors.length];
  var _ki=(m.name||'?')[0];
  var imgHtml=m.imageUrl?
-  '<div style="height:72px;border-radius:8px;overflow:hidden;margin-bottom:8px;background:'+_kc+'1a"><img src="'+m.imageUrl+'" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.opacity=0"></div>':
-  '<div style="height:44px;display:flex;align-items:center;justify-content:center;margin-bottom:8px"><div style="width:44px;height:44px;border-radius:12px;background:'+_kc+'22;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:'+_kc+';font-family:Pretendard,sans-serif">'+_ki+'</div></div>';
- return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)">'+
+  '<div style="height:65px;border-radius:10px;overflow:hidden;margin-bottom:6px;background:'+_kc+'1a;flex-shrink:0"><img src="'+m.imageUrl+'" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" onerror="this.style.opacity=0"></div>':
+  '<div style="height:44px;display:flex;align-items:center;justify-content:center;margin-bottom:6px;flex-shrink:0"><div style="width:40px;height:40px;border-radius:12px;background:'+_kc+'22;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:'+_kc+';font-family:Pretendard,sans-serif">'+_ki+'</div></div>';
+ return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="display:flex;flex-direction:column;align-items:stretch">'+
  imgHtml+
- '<div style="font-size:13px;font-weight:800;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
- '<div style="font-size:14px;font-weight:900;color:#22c55e">₩'+m.price.toLocaleString()+'</div>'+
- (m.stock!=null?'<div style="font-size:10px;color:var(--t3);margin-top:3px">재고 '+m.stock+'개</div>':'')+'</div>';
+ '<div style="font-size:12px;font-weight:800;margin-bottom:4px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word;color:#1a1a2e">'+esc(m.name)+'</div>'+
+ '<div style="font-size:13px;font-weight:900;color:#059669;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
+ (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:3px">재고 '+m.stock+'개</div>':'')+'</div>';
  }).join('');
  }
  window._kioskMenus=menus;
@@ -252,7 +275,7 @@ function _filoFilterKiosk(cat,btn){
  b.style.fontWeight=b===btn?'800':'700';
  });
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
- el.style.display=(cat==='전체'||el.dataset.cat===cat)?'':'none';
+ el.style.display=(cat==='전체'||el.dataset.cat===cat)?'flex':'none';
  });
 }
 
@@ -482,7 +505,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
  items.forEach(function(it){
   var row=document.createElement('div');
   row.style.cssText='display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;align-items:center';
-  row.innerHTML='<span style="color:var(--t2)">'+it.name+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
+  row.innerHTML='<span style="color:var(--t2)">'+esc(it.name)+' <span style="color:var(--t3)">x'+it.qty+'</span></span>'+
    '<span style="font-weight:700">₩'+(it.price*it.qty).toLocaleString()+'</span>';
   body.appendChild(row);
  });
@@ -566,66 +589,26 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
    date:today, createdAt:now.toISOString(), paidAt:now.toISOString()
   }).catch(function(e){console.warn('[filo_sales]',e.message);});
 
-  // 3. 전체 결제 완료 확인 → filo_orders cleared
+  // 3. filo_orders cleared — orderIds 직접 업데이트 (쿼리 없이)
+  var batch=_db.batch();
   if(orderIds&&orderIds.length){
-   _db.collection('filo_payments')
-    .where('dealerId','==',did).where('tableNum','==',tableNum).where('date','==',today)
-    .get().then(function(snap){
-     var paidTotal=0;
-     snap.forEach(function(doc){paidTotal+=doc.data().amount||0;});
-     // 해당 테이블 filo_orders 합계
-     _db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
-      .get().then(function(oSnap){
-       var orderTotal=0;
-       var pendingIds=[];
-       oSnap.forEach(function(doc){
-        var d=doc.data();
-        if((String(d.tableNum)===String(tableNum)||d.tableName===tableName)&&d.status!=='cleared'){
-         orderTotal+=(d.total||0);
-         pendingIds.push(doc.id);
-        }
-       });
-       if(orderTotal>0&&paidTotal>=orderTotal&&pendingIds.length){
-        var batch=_db.batch();
-        pendingIds.forEach(function(id){
-         batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
-        });
-        batch.commit().then(function(){
-          // batch 완료 후 filo_orders에서 fcmToken 수집 → FCM 영수증 자동 발송
-          Promise.all([
-            _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',String(tableNum)).get(),
-            _db.collection('filo_orders').where('dealerId','==',did).where('tableNum','==',parseInt(tableNum)||0).get()
-          ]).then(function(results){
-            var tokens=[]; var seen={};
-            results.forEach(function(snap){
-              snap.forEach(function(doc){
-                if(seen[doc.id])return; seen[doc.id]=true;
-                var tk=doc.data().fcmToken;
-                if(tk&&tk.length>20&&tokens.indexOf(tk)<0)tokens.push(tk);
-              });
-            });
-            if(!tokens.length)return;
-            var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
-            if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
-            fetch('/fcm/notify-drivers',{
-              method:'POST',
-              headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({
-                tokens:tokens,
-                title:methodLabel+' 완료 · ₩'+total.toLocaleString(),
-                body:iNames,
-                type:'receipt',
-                url:'https://filo.ai.kr/order?d='+did+'&t='+tableNum+'#done'
-              })
-            }).then(function(r){return r.json();}).then(function(d){
-              if(d.sent>0)_filoToast('손님 영수증 발송 완료');
-            }).catch(function(){});
-          }).catch(function(){});
-        }).catch(function(){});
-       }
-      }).catch(function(){});
-    }).catch(function(){});
+   orderIds.forEach(function(id){
+    batch.update(_db.collection('filo_orders').doc(id),{status:'cleared',paidAt:now.toISOString()});
+   });
   }
+  // filo_sales pending 테이블 주문도 함께 정리
+  _db.collection('filo_sales')
+   .where('dealerId','==',did).where('status','==','pending').where('type','==','table').get()
+   .then(function(sSnap){
+    sSnap.forEach(function(doc){
+     var sd=doc.data();
+     if(String(sd.tableNum)===String(tableNum)||String(sd.tableId)===String(tableNum)){
+      batch.update(_db.collection('filo_sales').doc(doc.id),{status:'done',paidAt:now.toISOString()});
+     }
+    });
+   }).catch(function(){}).finally(function(){
+   batch.commit().catch(function(e){console.warn('[batch]',e.message);});
+  });
   // 결제완료 알림 + 영수증 발송 버튼
   _filoReceiptNotify(did, tableNum, items, total, methodLabel);
 
