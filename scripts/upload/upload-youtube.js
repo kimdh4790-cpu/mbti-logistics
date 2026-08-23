@@ -76,6 +76,14 @@ async function uploadYouTube() {
   await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
   await page.waitForTimeout(3000);
 
+  // "지원되지 않는 브라우저" 페이지 → 건너뛰기 링크 클릭
+  const skipLink = page.locator('a:has-text("건너뛰기"), a:has-text("Skip"), [href*="studio.youtube.com"]:has-text("스튜디오")');
+  if (await skipLink.count() > 0) {
+    console.log('[YouTube] 브라우저 경고 페이지 → 건너뛰기 클릭');
+    await skipLink.first().click();
+    await page.waitForTimeout(3000);
+  }
+
   if (dryRun) {
     console.log('[YouTube][DRY-RUN] YouTube Studio 접속 성공.');
     console.log(`  제목: ${meta.youtube.title}`);
