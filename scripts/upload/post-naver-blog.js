@@ -10,8 +10,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => { try { return require('/opt/node22/lib/node_modules/playwright'); } catch(e) { return require('playwright'); } })();
-const { CHROMIUM_PATH, PROFILES_DIR } = require('./session-manager');
+const { chromium, getLaunchOpts, PROFILES_DIR } = require('./session-manager');
 
 const args = process.argv.slice(2);
 const product = (args.find(a => a.startsWith('--product=')) || '--product=filo').split('=')[1]
@@ -54,13 +53,7 @@ async function postNaverBlog() {
 
   console.log(`[네이버 블로그] ${loginOnly ? '[LOGIN-ONLY] ' : dryRun ? '[DRY-RUN] ' : ''}시작: ${product}`);
 
-  const launchOpts = {
-    headless,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    viewport: { width: 1280, height: 800 },
-    timeout: 60000,
-  };
-  if (CHROMIUM_PATH) launchOpts.executablePath = CHROMIUM_PATH;
+  const launchOpts = { ...getLaunchOpts(headless), timeout: 60000 };
   const ctx = await chromium.launchPersistentContext(profileDir, launchOpts);
 
   const page = await ctx.newPage();

@@ -8,8 +8,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { chromium } = (() => { try { return require('/opt/node22/lib/node_modules/playwright'); } catch(e) { return require('playwright'); } })();
-const { CHROMIUM_PATH, PROFILES_DIR } = require('./session-manager');
+const { chromium, getLaunchOpts, PROFILES_DIR } = require('./session-manager');
 
 const args = process.argv.slice(2);
 const product = (args.find(a => a.startsWith('--product=')) || '--product=filo').split('=')[1]
@@ -36,13 +35,11 @@ async function uploadInstagram() {
   console.log(`[Instagram] ${loginOnly ? '[LOGIN-ONLY] ' : dryRun ? '[DRY-RUN] ' : ''}시작: ${product} (${type})`);
 
   const launchOpts = {
-    headless,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    ...getLaunchOpts(headless),
     viewport: { width: 375, height: 812 },
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
     timeout: 60000,
   };
-  if (CHROMIUM_PATH) launchOpts.executablePath = CHROMIUM_PATH;
   const ctx = await chromium.launchPersistentContext(profileDir, launchOpts);
 
   const page = await ctx.newPage();

@@ -7,7 +7,11 @@ let chromium;
 try { chromium = require('/opt/node22/lib/node_modules/playwright').chromium; }
 catch(e) { chromium = require('playwright').chromium; }
 
-// Chromium: 원격 Linux 고정 경로 / 로컬은 Playwright 기본값
+// 업로드(YouTube·Instagram·Naver): Google 차단 우회를 위해 시스템 Chrome 사용
+// 녹화(record-all.js): Playwright 번들 Chromium 사용 (별도 처리)
+const USE_SYSTEM_CHROME = process.platform !== 'linux';
+
+// Linux 원격 환경용 Chromium 경로
 const _linuxPath = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH
   || (process.platform === 'linux' && fs.existsSync(_linuxPath) ? _linuxPath : undefined);
@@ -17,16 +21,35 @@ const PROFILES_DIR = process.env.PROFILES_DIR || path.join(os.homedir(), '.mbtic
 async function getContext(platform) {
   const profileDir = path.join(PROFILES_DIR, platform);
   fs.mkdirSync(profileDir, { recursive: true });
+
   const opts = {
     headless: process.env.HEADLESS !== 'false',
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
     viewport: platform === 'instagram' ? { width: 375, height: 812 } : { width: 1280, height: 800 },
     userAgent: platform === 'instagram'
       ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
       : undefined,
   };
-  if (CHROMIUM_PATH) opts.executablePath = CHROMIUM_PATH;
+
+  if (USE_SYSTEM_CHROME) {
+    // Windows/Mac: 시스템 Chrome 사용 (Google 로그인 차단 우회)
+    opts.channel = 'chrome';
+  } else {
+    // Linux(원격): 번들 Chromium 사용
+    opts.args = ['--no-sandbox', '--disable-setuid-sandbox'];
+    if (CHROMIUM_PATH) opts.executablePath = CHROMIUM_PATH;
+  }
+
   return chromium.launchPersistentContext(profileDir, opts);
 }
 
-module.exports = { getContext, CHROMIUM_PATH, PROFILES_DIR };
+// 개별 스크립트에서 직접 launchPersistentContext 사용 시 참고용
+function getLaunchOpts(headless) {
+  if (USE_SYSTEM_CHROME) {
+    return { channel: 'chrome', headless, viewport: { width: 1280, height: 800 } };
+  }
+  const opts = { headless, args: ['--no-sandbox', '--disable-setuid-sandbox'], viewport: { width: 1280, height: 800 } };
+  if (CHROMIUM_PATH) opts.executablePath = CHROMIUM_PATH;
+  return opts;
+}
+
+module.exports = { getContext, getLaunchOpts, chromium, CHROMIUM_PATH, PROFILES_DIR, USE_SYSTEM_CHROME };
