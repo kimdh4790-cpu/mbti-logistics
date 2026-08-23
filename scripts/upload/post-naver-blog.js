@@ -13,8 +13,13 @@ const fs = require('fs');
 const { chromium, getLaunchOpts, PROFILES_DIR } = require('./session-manager');
 
 const args = process.argv.slice(2);
-const product = (args.find(a => a.startsWith('--product=')) || '--product=filo').split('=')[1]
-  || (args[args.indexOf('--product') + 1] || 'filo');
+function getArg(name) {
+  const eq = args.find(a => a.startsWith(`--${name}=`));
+  if (eq) return eq.split('=')[1];
+  const idx = args.indexOf(`--${name}`);
+  return idx !== -1 ? args[idx + 1] : null;
+}
+const product = getArg('product') || 'filo';
 const dryRun = args.includes('--dry-run');
 const loginOnly = args.includes('--login-only');
 const headless = process.env.HEADLESS !== 'false' && !loginOnly;
