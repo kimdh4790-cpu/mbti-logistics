@@ -11,6 +11,7 @@
 
 const { execSync, spawnSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const args = process.argv.slice(2);
 const getArg = (flag) => {
@@ -27,6 +28,20 @@ const PRODUCTS = ['filo', 'dine', 'donway', 'yongcha', 'mbtico'];
 const targets = product === 'all' ? PRODUCTS : [product];
 
 const ROOT = path.join(__dirname, '..');
+
+function getBash() {
+  if (process.platform !== 'win32') return 'bash';
+  // Git for Windows bash 탐색
+  try {
+    const found = execSync('where bash', { encoding: 'utf8' }).trim().split('\n')[0].trim();
+    if (found && fs.existsSync(found)) return `"${found}"`;
+  } catch {}
+  // Git Bash 기본 경로
+  const gitBash = 'C:\\Program Files\\Git\\bin\\bash.exe';
+  if (fs.existsSync(gitBash)) return `"${gitBash}"`;
+  // WSL 폴백
+  return 'wsl bash';
+}
 
 function run(cmd, opts = {}) {
   console.log(`\n> ${cmd}`);
@@ -52,8 +67,9 @@ async function runPipeline() {
 
     if (steps.includes('compose')) {
       console.log(`[${prod}] Step 2: FFmpeg 편집`);
-      run(`bash scripts/compose/compose-video.sh ${prod}`);
-      run(`bash scripts/compose/make-thumbnail.sh ${prod}`);
+      const bash = getBash();
+      run(`${bash} scripts/compose/compose-video.sh ${prod}`);
+      run(`${bash} scripts/compose/make-thumbnail.sh ${prod}`);
     }
 
     if (steps.includes('youtube')) {

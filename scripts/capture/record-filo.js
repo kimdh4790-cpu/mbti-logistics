@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium';
+const { chromiumExec } = require('../utils/launch-options');
 const ROOT = path.join(__dirname, '../..');
 const PROFILES_DIR = process.env.PROFILES_DIR || path.join(require('os').homedir(), '.mbtico-profiles');
 const scenario = require('../content/filo-scenario.json');
@@ -29,7 +29,7 @@ async function record() {
   fs.mkdirSync(profileDir, { recursive: true });
 
   const ctx = await chromium.launchPersistentContext(profileDir, {
-    executablePath: CHROMIUM_PATH,
+    ...chromiumExec(),
     headless,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     viewport: scenario.viewport,

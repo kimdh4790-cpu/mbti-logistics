@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium';
+const { getChromiumLaunchOpts } = require('../utils/launch-options');
 const ROOT = path.join(__dirname, '../..');
 const scenario = require('../content/yongcha-scenario.json');
 const headless = process.env.HEADLESS !== 'false';
@@ -20,11 +20,7 @@ async function record() {
   const outputDir = path.join(ROOT, 'output');
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const browser = await chromium.launch({
-    executablePath: CHROMIUM_PATH,
-    headless,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const browser = await chromium.launch(getChromiumLaunchOpts(headless));
 
   // 용차 랜딩은 모바일 기준
   const ctx = await browser.newContext({
