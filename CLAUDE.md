@@ -3,6 +3,31 @@
 
 ---
 
+## 🧪 파일 수정 → 스모크 테스트 (무한 테스트 루프 방지)
+
+파일 수정 후 push 전에 반드시 실행:
+
+```bash
+npm run smoke          # 변경된 파일 자동 감지 → 영향 앱만 테스트 (~1분)
+npm run smoke:all      # 전체 5개 앱 테스트 (~3분)
+npm run smoke:filo     # FILO만
+```
+
+### 파일 수정 시 영향 범위 (꼭 확인)
+| 수정 파일 | 테스트 대상 |
+|---|---|
+| `_worker.js` | **전체 5개 앱** (filo, dine, donway, yongcha, mbtico) |
+| `filo-common.js` | FILO + DINE |
+| `filo-order-common.js` | FILO (order·table-order·store·kitchen) |
+| `filo-staff.js` | FILO + DINE (members·attendance 공유) |
+| `filo-*.js`, `filo.html` | FILO만 |
+| `dine-*.js`, `dine.html` | DINE만 |
+| `donway*.js` | DONWAY만 |
+| `yongcha*.js` | 용차앱만 |
+| `mbtico*.js`, `mbtico-pages/` | MBTICO만 |
+
+---
+
 ## 🏢 회사 기본 정보
 - 대표: 김형우 / 유한회사 엠비티아이 (사업자번호 373-86-02536)
 - 로컬 경로: C:\Users\82104\Desktop\mbti-logistics

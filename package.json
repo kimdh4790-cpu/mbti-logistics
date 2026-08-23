@@ -31,7 +31,15 @@
     "pipeline:donway": "node scripts/run-pipeline.js --product donway --steps record,compose",
     "pipeline:yongcha": "node scripts/run-pipeline.js --product yongcha --steps record,compose",
     "pipeline:mbtico": "node scripts/run-pipeline.js --product mbtico --steps record,compose",
-    "pipeline:all": "node scripts/run-pipeline.js --product all --steps record,compose"
+    "pipeline:all": "node scripts/run-pipeline.js --product all --steps record,compose",
+    "smoke": "node scripts/test/run-smoke.js",
+    "smoke:all": "node scripts/test/run-smoke.js --all",
+    "smoke:filo": "node scripts/test/run-smoke.js --app filo",
+    "smoke:dine": "node scripts/test/run-smoke.js --app dine",
+    "smoke:donway": "node scripts/test/run-smoke.js --app donway",
+    "smoke:yongcha": "node scripts/test/run-smoke.js --app yongcha",
+    "smoke:mbtico": "node scripts/test/run-smoke.js --app mbtico",
+    "smoke:shared": "node scripts/test/run-smoke.js --all"
   },
   "repository": {
     "type": "git",
