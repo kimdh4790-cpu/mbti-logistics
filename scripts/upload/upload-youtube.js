@@ -136,13 +136,13 @@ async function uploadYouTube() {
   const titleSel = '#title-textarea, ytcp-mention-textbox[label="제목"], ytcp-mention-textbox[label="Title"]';
   await page.waitForSelector(titleSel, { timeout: 60000 });
   await page.click(titleSel);
-  await page.keyboard.selectAll();
+  await page.keyboard.press('Control+a');
   await page.keyboard.type(meta.youtube.title);
 
   // 설명 입력
   const descSel = '#description-textarea, ytcp-mention-textbox[label="설명"], ytcp-mention-textbox[label="Description"]';
   await page.click(descSel);
-  await page.keyboard.selectAll();
+  await page.keyboard.press('Control+a');
   await page.keyboard.type(meta.youtube.description);
 
   // 다음 버튼 3회 (세부정보 → 최종화면 → 공개설정)
