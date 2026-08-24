@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="theme-color" content="#1a1a2e">
-<title>용차 — 택배 노선 매칭</title>
+<title>용차 — 택배 노선 정보 서비스</title>
 <style>
 /* ═══════════════════════════════════════════════════════════
    용차 디자인 시스템 v3 — 모바일 퍼스트 / 최소 터치 48px
@@ -855,7 +855,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
 <div id="ld">
   <div class="ld-mark">🚚</div>
   <div class="ld-title">용차</div>
-  <div class="ld-sub">택배 노선 매칭 플랫폼</div>
+  <div class="ld-sub">택배 노선 정보 서비스</div>
   <div class="ld-bar"><i></i></div>
 </div>
 
@@ -865,7 +865,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
   <div class="login-logo">
     <div class="login-ico">🚚</div>
     <div class="login-name">용차<span style="color:var(--ac)">.app</span></div>
-    <div class="login-sub">대리점과 기사를 잇는<br>택배 노선 매칭 플랫폼</div>
+    <div class="login-sub">대리점 공고를 기사가 직접 선택하는<br>택배 노선 정보 서비스</div>
   </div>
   <div class="tabs">
     <button type="button" class="tab on" id="tab-login" onclick="_yTab('login')">로그인</button>
@@ -3377,9 +3377,8 @@ function _showPostDetail(d){
 
   // ── AI 수익 예측 ──
   var gross=Math.round((d.unitPrice||0)*(d.volume||0));
-  var netDay=Math.round(gross*0.97);
-  var netMon=netDay*22;
-  var fee=gross-netDay;
+  var netDay=gross;
+  var netMon=gross*22;
 
   // ── AI 매칭 점수 ──
   var _aiScore=0;
@@ -3446,22 +3445,22 @@ function _showPostDetail(d){
   // ── AI 수익 예측 스트립 ──
   (netDay>0?
   '<div class="ai-predict-strip">'+
-    '<div class="ai-predict-label">AI 수익 예측 (수수료 3% 기준)</div>'+
+    '<div class="ai-predict-label">AI 수익 예측</div>'+
     '<div class="ai-predict-cols">'+
       '<div class="ai-predict-col">'+
         '<div class="ai-predict-t">예상 일수입</div>'+
-        '<div class="ai-predict-n" style="color:var(--tx)">'+Math.round(netDay/10000)+'<span style="font-size:13px">만</span></div>'+
-        '<div class="ai-predict-u">'+Number(netDay).toLocaleString()+'원</div>'+
+        '<div class="ai-predict-n" style="color:var(--tx)">'+Math.round(gross/10000)+'<span style="font-size:13px">만</span></div>'+
+        '<div class="ai-predict-u">'+Number(gross).toLocaleString()+'원</div>'+
       '</div>'+
       '<div class="ai-predict-col">'+
         '<div class="ai-predict-t">예상 월수입</div>'+
-        '<div class="ai-predict-n" style="color:var(--gn)">'+Math.round(netMon/10000)+'<span style="font-size:13px">만</span></div>'+
+        '<div class="ai-predict-n" style="color:var(--gn)">'+Math.round(gross*22/10000)+'<span style="font-size:13px">만</span></div>'+
         '<div class="ai-predict-u">22일 기준</div>'+
       '</div>'+
       '<div class="ai-predict-col">'+
-        '<div class="ai-predict-t">플랫폼 수수료</div>'+
-        '<div class="ai-predict-n" style="color:var(--t2)">'+Math.round(fee/10000*10)/10+'<span style="font-size:13px">만</span></div>'+
-        '<div class="ai-predict-u">일 기준 3%</div>'+
+        '<div class="ai-predict-t">최소보장</div>'+
+        '<div class="ai-predict-n" style="color:var(--ac)">'+Math.round(gross*0.85/10000)+'<span style="font-size:13px">만</span></div>'+
+        '<div class="ai-predict-u">단가 × 85%</div>'+
       '</div>'+
     '</div>'+
     (isDriver?
@@ -7361,11 +7360,10 @@ function _pgDashboardAgency(el){
       var k=date.getFullYear()+'-'+('0'+(date.getMonth()+1)).slice(-2);
       if(!months[k])return;
       var gross=(a.unitPrice||0)*(a.volume||0);
-      var fee=Math.round(gross*0.03);
       months[k].cnt++;
       months[k].amt+=gross;
-      months[k].fee+=fee;
-      months[k].net+=gross-fee;
+      months[k].fee+=0;
+      months[k].net+=gross;
     });
     var cur=months[order[order.length-1]];
     var prev=months[order[order.length-2]]||{cnt:0,amt:0,net:0};
@@ -7405,7 +7403,7 @@ function _pgDashboardAgency(el){
           var m=months[k];
           return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--bd)">'+
             '<div style="font-size:13.5px;font-weight:800;min-width:52px">'+k.slice(5)+'월</div>'+
-            '<div style="flex:1;font-size:12px;color:var(--t2)">'+_won(m.cnt)+'건 · 수수료 '+_won(Math.round(m.fee/1000))+'천원</div>'+
+            '<div style="flex:1;font-size:12px;color:var(--t2)">'+_won(m.cnt)+'건</div>'+
             '<div style="font-size:14px;font-weight:900;color:var(--gn);font-variant-numeric:tabular-nums">'+_won(Math.round(m.net/10000))+'만</div>'+
           '</div>';
         }).join('')+
@@ -8919,8 +8917,7 @@ function _yShowSettlementDone(a){
   var unitPrice=a.unitPrice||0;
   var volume=a.volume||0;
   var gross=unitPrice*volume;
-  var fee=Math.round(gross*0.03);
-  var net=gross-fee;
+  var net=gross;
   var settleDt=new Date();settleDt.setDate(settleDt.getDate()+2);
   var sdStr=settleDt.getFullYear()+'년 '+(settleDt.getMonth()+1)+'월 '+settleDt.getDate()+'일';
   var body=document.getElementById('modal-body');
@@ -8937,10 +8934,6 @@ function _yShowSettlementDone(a){
       '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'+
         '<span style="font-size:13px;color:var(--t2);font-weight:600">운임 ('+_won(unitPrice)+'원 × '+volume+'건)</span>'+
         '<span style="font-size:14.5px;font-weight:800">'+_won(gross)+'원</span>'+
-      '</div>'+
-      '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'+
-        '<span style="font-size:13px;color:var(--t2);font-weight:600">플랫폼 수수료 (3%)</span>'+
-        '<span style="font-size:14.5px;font-weight:800;color:var(--rd)">- '+_won(fee)+'원</span>'+
       '</div>'+
       '<div style="padding:16px;background:var(--acl);display:flex;justify-content:space-between;align-items:center">'+
         '<span style="font-size:15px;font-weight:900;color:var(--ac)">입금 예정액</span>'+
