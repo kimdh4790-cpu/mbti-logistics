@@ -42,7 +42,7 @@ KV NS_ID:            7f0e90efaea64f3ab08ff00f8970b28b
 슈퍼어드민:          kimdh4790@gmail.com / soungkyekim@naver.com
 테스트 dealerId:     3lqP7HNSgVP18eZbMn6DnQxRXCA2
 매장 dealerId:       9XD2K3W1tIhIs6XM74YT0xfRFEP2
-Oracle Cloud IP:     155.248.187.99 (4코어/24GB, opc 계정)
+Oracle Cloud IP:     161.33.136.154 (2코어/12GB, opc 계정, filo-a1-2c12g)
 
 ---
 
@@ -351,8 +351,9 @@ cd mbtico-pages && npx wrangler deploy
 ## ☁️ Oracle Cloud 로그인
 이메일: kimdh4790@gmail.com
 비밀번호: khw3103!!
-인스턴스: instance-20260802-1554
-IP: 155.248.187.99
+인스턴스: filo-a1-2c12g
+IP: 161.33.136.154
 리전: Tokyo AD-1
-스펙: A1.Flex 4코어/24GB Always Free
+스펙: A1.Flex 2코어/12GB Always Free
 SSH 키: ssh-key-2026-08-02
+(구 인스턴스 instance-20260802-1554 / 155.248.187.99 — 삭제 여부 확인 필요)
