@@ -6,7 +6,7 @@
 set -e
 
 ORACLE_USER="opc"
-ORACLE_IP="155.248.187.99"
+ORACLE_IP="161.33.136.154"
 REPO_DIR="/home/opc/mbti-logistics"
 LOG_DIR="/home/opc/mbtico-logs"
 
@@ -21,18 +21,18 @@ set -e
 
 # Node.js 확인
 if ! command -v node &>/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-  sudo apt-get install -y nodejs
+  curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+  sudo dnf install -y nodejs
 fi
 
 # FFmpeg 확인
 if ! command -v ffmpeg &>/dev/null; then
-  sudo apt-get update -qq && sudo apt-get install -y ffmpeg fonts-noto-cjk
+  sudo dnf install -y epel-release && sudo dnf install -y ffmpeg google-noto-cjk-fonts
 fi
 
 # Chromium 확인
 if ! command -v chromium-browser &>/dev/null && ! command -v chromium &>/dev/null; then
-  sudo apt-get install -y chromium-browser || sudo snap install chromium
+  sudo dnf install -y chromium || true
 fi
 
 # 프로파일 디렉토리
