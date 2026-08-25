@@ -8,7 +8,7 @@
 
 const path = require('path');
 const fs = require('fs');
-const { chromium, getLaunchOpts, PROFILES_DIR } = require('./session-manager');
+const { chromium, getLaunchOpts, PROFILES_DIR, waitForEnter } = require('./session-manager');
 
 const args = process.argv.slice(2);
 function getArg(name) {
@@ -72,7 +72,8 @@ async function uploadInstagram() {
   }
 
   if (loginOnly) {
-    console.log('[Instagram] 로그인 완료. 세션 저장됨.');
+    await waitForEnter('[Instagram] 브라우저에서 Instagram 계정으로 로그인하세요.\n           로그인 완료 후 이 터미널에서 Enter를 누르세요.');
+    console.log('[Instagram] 세션 저장됨.');
     await ctx.close();
     return;
   }
