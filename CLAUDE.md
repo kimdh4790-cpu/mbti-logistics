@@ -236,6 +236,13 @@ cd mbtico-pages && npx wrangler deploy
 - _tierLabel 함수 및 toast 메시지 2000명+ → 1000명+ 수정
 - 모달 내 "카드 등록 불필요" → "계좌이체 월 갱신" 변경
 
+### DONWAY 랜딩 + Worker 요금 동기화
+- donway_landing.html: 개인/단체 탭 제거, 가격 카드 2,500원/인 기준으로 수정 (125만/25만/125만/문의)
+- donway_landing.html: "카드 등록 없이" 문구 3곳 → "7일 무료체험·계좌이체 월 갱신" 으로 변경
+- _worker.js: /join 경로 _fixJoin 패치에서 구 가격 override 제거 → 새 가격으로 수정
+- _worker.js: slug 경로 _fixPrices 패치에서 동일하게 새 가격으로 수정
+- _worker.js: 개인/단체 svc-settle-card 텍스트 교체 로직 제거 (데드코드)
+
 ---
 
 ## ✅ 완료 작업 (2026-08-16)
