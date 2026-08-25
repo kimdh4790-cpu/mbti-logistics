@@ -170,6 +170,17 @@ async function uploadYouTube() {
   // 스튜디오 로딩 대기 + 현재 상태 스크린샷
   await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
+
+  // "본인 인증" 팝업 처리 (Google 보안 확인 모달)
+  try {
+    const verifyNext = page.locator('button:has-text("다음"), button:has-text("Next"), [aria-label="다음"], [aria-label="Next"]');
+    if (await verifyNext.count() > 0) {
+      console.log('[YouTube] 본인 인증 팝업 → 다음 클릭');
+      await verifyNext.first().click();
+      await page.waitForTimeout(3000);
+      await page.screenshot({ path: path.join(ROOT, 'output', 'yt-after-verify.png') });
+    }
+  } catch(e) { /* 팝업 없으면 무시 */ }
   const currentUrl = page.url();
   console.log(`[YouTube] 현재 URL: ${currentUrl}`);
 
