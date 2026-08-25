@@ -107,13 +107,13 @@ function _dwOpenModal(key){
   var hdr=document.getElementById('dw-modal-hdr');
   var bdy=document.getElementById('dw-modal-body');
   hdr.innerHTML='<div class="dw-modal-ic" style="background:'+d.color+';border:1px solid '+d.border+'">'+d.ic+'</div>'+
-    '<div style="flex:1"><div style="font-size:18px;font-weight:900;letter-spacing:-.5px;margin-bottom:3px;color:#F0F4FF">'+d.title+'</div>'+
-    '<div style="font-size:12px;color:#8B949E">'+d.tagline+'</div></div>'+
+    '<div style="flex:1"><div style="font-size:18px;font-weight:900;letter-spacing:-.5px;margin-bottom:3px;color:#0d1117">'+d.title+'</div>'+
+    '<div style="font-size:12px;color:#5a6473">'+d.tagline+'</div></div>'+
     '<button class="dw-modal-close" onclick="_dwCloseModal()">✕</button>';
   bdy.innerHTML=d.body+
     '<div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:10px;flex-wrap:wrap">'+
     '<button onclick="location.href=\'https://donway.ai.kr/join\'" style="flex:1;min-width:140px;padding:12px;background:linear-gradient(135deg,#0066FF,#7C3AED);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🚀 무료 체험 시작</button>'+
-    '<button onclick="_dwCloseModal()" style="padding:12px 20px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#8B949E;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">닫기</button></div>';
+    '<button onclick="_dwCloseModal()" style="padding:12px 20px;background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.1);color:#5a6473;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">닫기</button></div>';
   document.getElementById('dw-modal-overlay').classList.add('open');
   document.getElementById('dw-modal-box').scrollTop=0;
 }
