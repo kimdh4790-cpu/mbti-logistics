@@ -21,11 +21,20 @@ const product = getArg('product') || 'filo';
 const type = getArg('type') || 'reels';
 const dryRun = args.includes('--dry-run');
 const loginOnly = args.includes('--login-only');
-const headless = process.env.HEADLESS !== 'false' && !loginOnly;
+const setProfile = args.includes('--set-profile');
+const headless = process.env.HEADLESS !== 'false' && !loginOnly && !setProfile;
 
 const ROOT = path.join(__dirname, '../..');
 const meta = require(`../content/${product}-meta.json`);
 const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
+
+const PROFILE_ICONS = {
+  filo:    path.join(ROOT, 'filo-icon-512.png'),
+  dine:    path.join(ROOT, 'dine-icon-512.png'),
+  donway:  path.join(ROOT, 'donway-icon-512.png'),
+  yongcha: path.join(ROOT, 'yongcha-icon-512.png'),
+  mbtico:  path.join(ROOT, 'mbtico-512.png'),
+};
 
 async function uploadInstagram() {
   if (!loginOnly && !dryRun && !fs.existsSync(videoPath)) {
@@ -64,6 +73,44 @@ async function uploadInstagram() {
 
   if (loginOnly) {
     console.log('[Instagram] 로그인 완료. 세션 저장됨.');
+    await ctx.close();
+    return;
+  }
+
+  // 프로필 이미지 설정
+  if (setProfile) {
+    const iconPath = PROFILE_ICONS[product];
+    if (!iconPath || !fs.existsSync(iconPath)) {
+      console.error(`[Instagram] 프로필 이미지 없음: ${iconPath}`);
+      await ctx.close();
+      process.exit(1);
+    }
+    console.log(`[Instagram] 프로필 이미지 설정: ${iconPath}`);
+    // 프로필 페이지 → 사진 변경
+    await page.goto('https://www.instagram.com/accounts/edit/', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(2000);
+    try {
+      // 프로필 사진 클릭 또는 "사진 변경" 링크
+      const photoChange = page.locator('text=사진 변경, text=Change photo, [aria-label="프로필 사진 변경"]');
+      if (await photoChange.count() > 0) {
+        await photoChange.first().click();
+        await page.waitForTimeout(1000);
+      }
+      const [chooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 8000 }),
+        page.locator('input[type=file]').first().evaluate(el => el.click()),
+      ]);
+      await chooser.setFiles(iconPath);
+      await page.waitForTimeout(3000);
+      // 확인 버튼
+      const confirm = page.locator('button:has-text("확인"), button:has-text("Apply"), button:has-text("저장")');
+      if (await confirm.count() > 0) await confirm.first().click();
+      console.log('[Instagram] 프로필 이미지 업로드 완료!');
+    } catch(e) {
+      const shotPath = path.join(ROOT, 'output', 'ig-profile-debug.png');
+      await page.screenshot({ path: shotPath, fullPage: true });
+      console.error(`[Instagram] 프로필 설정 실패. 스크린샷: ${shotPath}`, e.message);
+    }
     await ctx.close();
     return;
   }

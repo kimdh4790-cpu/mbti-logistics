@@ -348,6 +348,37 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
+## 📢 소셜미디어 홍보 메타 (scripts/content/*-meta.json)
+
+> 수정 시 반드시 이 섹션도 업데이트할 것. 마케팅 메시지 기준.
+
+### 핵심 마케팅 포인트 (2026-08-25 기준)
+| 제품 | 핵심 메시지 | 요금 |
+|---|---|---|
+| FILO | 전업종 매장 관리 프로그램 · POS 하드웨어 연동 개발 중 | 요금 문의 |
+| DINE | 전업종 분석 프로그램 · FILO+DINE 한 묶음 판매 | 요금 문의 |
+| DONWAY | 엑셀 올리면 정산 끝 · AI정산(쿠팡)/배달대행 정산 | ~50명 ₩125,000 / ~100명 ₩250,000 / ~500명 ₩1,250,000 / 1000명+ 문의 |
+| 용차앱 | 주선사업자 없는 직접 매칭 · AI 루트코치 | 기사 ₩150,000/월 · 소장 ₩50,000/월 · DONWAY 구독 소장 무료 |
+
+### 서버 기반 AI 기능 (홍보 포인트)
+- **FILO**: AI 매출예측(7일)·메뉴추천(날씨/시간대/재고)·마진분석·스케줄최적화·리뷰답글·음성주문·다국어번역
+- **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
+- **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
+
+### 소셜미디어 업로드 스케줄 (Oracle Cloud cron)
+- 화요일 09:00 — FILO YouTube
+- 화요일 10:00 — FILO Instagram Reels
+- 목요일 09:00 — DONWAY YouTube
+- 목요일 10:00 — DONWAY Instagram Reels
+- 월요일 09:00 — 용차앱 YouTube
+
+### 프로필 이미지 (회사 로고)
+- 파일: `assets/logo.png`
+- YouTube/Instagram 프로필에 로고 설정 필요 (Playwright upload 스크립트로 처리)
+- upload-youtube.js / upload-instagram.js 에 `--set-profile` 옵션 추가 예정
+
+---
+
 ## ☁️ Oracle Cloud 로그인
 이메일: kimdh4790@gmail.com
 비밀번호: khw3103!!
