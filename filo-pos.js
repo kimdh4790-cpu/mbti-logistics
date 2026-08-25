@@ -80,8 +80,7 @@ function _filoPageKiosk(el){
   if(_kioskTableUnsub){_kioskTableUnsub();_kioskTableUnsub=null;}
   var today=_today();
   // 주문 맵 로드
-  _kioskTableUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
-   .onSnapshot(function(oSnap){
+  var _renderBar=function(oSnap){
     var oMap={};
     oSnap.forEach(function(doc){
      var d=doc.data();
@@ -119,7 +118,6 @@ function _filoPageKiosk(el){
       else{oMap[k2].pendingTotal+=(d.total||0);oMap[k2].hasPending=true;}
       if(!oMap[k2].hasPending&&oMap[k2].paidTotal>0)oMap[k2].paid=true;
      }
-    }
    });
    var tSnap=_kioskTablesCache;
    var tables=(!tSnap||tSnap.empty)?
