@@ -207,7 +207,9 @@ cd mbtico-pages && npx wrangler deploy
 - 이모지 금지  Lucide SVG 사용
 - 폰트: Pretendard 전용
 - alert() 금지  _filoToast()/_dineToast() 사용
-- 클라우드 원격 환경: 코드 수정+배포 가능. Playwright 테스트/wrangler login은 로컬에서만
+- Claude Code 원격 컨테이너: 코드 수정+배포 가능. Playwright 브라우저가 외부 URL 접근 불가 → 녹화/업로드 불가
+- Oracle Cloud (161.33.136.154): Playwright + Chromium + Node.js 완전 실행 가능. 녹화·편집·업로드 모두 가능
+- wrangler login은 로컬 또는 Oracle Cloud에서만
 - Playwright 테스트  반드시 로컬에서 실행
 - 배포 확인 필수: push 후 GitHub Actions 워크플로우 완료(success) 확인 → KV 업로드 + Worker 배포 + 캐시 퍼지 3단계 모두 success 여야 배포 완료
 - deploy.yml 수정 금지: GitHub App이 워크플로우 파일 수정 권한 없어서 auto-merge 실패 발생함

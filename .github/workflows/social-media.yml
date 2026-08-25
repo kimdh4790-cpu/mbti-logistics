@@ -13,6 +13,7 @@ on:
           - donway
           - yongcha
           - mbtico
+          - dine
           - all
       steps:
         description: '실행 단계 (콤마 구분)'
@@ -25,122 +26,47 @@ on:
           - 'compose'
           - 'record,compose,youtube'
           - 'record,compose,instagram'
+          - 'record,compose,youtube,instagram'
           - 'record,compose,youtube,instagram,blog'
+          - 'youtube'
+          - 'instagram'
+          - 'youtube,instagram'
       dry_run:
         description: '업로드 없이 테스트만'
         type: boolean
         default: false
 
 jobs:
-  produce-video:
-    name: 영상 제작 (${{ inputs.product }})
+  run-on-oracle:
+    name: Oracle Cloud 실행 (${{ inputs.product }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
-      - name: 코드 체크아웃
-        uses: actions/checkout@v4
-
-      - name: Node.js 설정
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: 의존성 설치
-        run: npm ci
-
-      - name: FFmpeg + 한글 폰트 설치
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg fonts-noto-cjk
-
-      - name: Playwright Chromium 설치
-        run: npx playwright install chromium
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 0
-
-      - name: output 디렉토리 생성
-        run: mkdir -p output assets/bgm
-
-      - name: 파이프라인 실행 (녹화+편집)
-        run: |
-          node scripts/run-pipeline.js \
-            --product ${{ inputs.product }} \
-            --steps "${{ inputs.steps }}" \
-            ${{ inputs.dry_run == 'true' && '--dry-run' || '' }}
-        env:
-          CHROMIUM_PATH: ''
-          HEADLESS: 'true'
-
-      - name: 결과물 저장 (Artifacts)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mbtico-videos-${{ inputs.product }}-${{ github.run_number }}
-          path: |
-            output/*.mp4
-            output/*.webm
-            output/*.jpg
-            output/*.png
-          retention-days: 7
-
-      # Oracle Cloud(155.248.187.99)로 영상 전송 후 업로드 실행
-      # 사전 준비: GitHub Secrets에 ORACLE_SSH_KEY 등록 필요
-      #   Settings → Secrets → ORACLE_SSH_KEY: Oracle Cloud SSH 개인키 내용
-      - name: Oracle Cloud로 영상 전송
-        if: ${{ (contains(inputs.steps, 'youtube') || contains(inputs.steps, 'instagram') || contains(inputs.steps, 'blog')) && inputs.dry_run == 'false' }}
+      - name: SSH 키 설정
         env:
           ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
-          ORACLE_IP: '155.248.187.99'
-          ORACLE_USER: 'opc'
         run: |
-          # SSH 키 설정
           mkdir -p ~/.ssh
           echo "$ORACLE_SSH_KEY" > ~/.ssh/oracle_key
           chmod 600 ~/.ssh/oracle_key
 
-          # output/ 파일을 Oracle Cloud로 전송
-          rsync -avz -e "ssh -i ~/.ssh/oracle_key -o StrictHostKeyChecking=no" \
-            output/ ${ORACLE_USER}@${ORACLE_IP}:/home/opc/mbtico-output/
-
-          echo "전송 완료: /home/opc/mbtico-output/"
-
-      - name: Oracle Cloud에서 업로드 실행
-        if: ${{ (contains(inputs.steps, 'youtube') || contains(inputs.steps, 'instagram') || contains(inputs.steps, 'blog')) && inputs.dry_run == 'false' }}
+      - name: Oracle Cloud에서 파이프라인 실행
         env:
           ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
-          ORACLE_IP: '155.248.187.99'
+          ORACLE_IP: '161.33.136.154'
           ORACLE_USER: 'opc'
+          PRODUCT: ${{ inputs.product }}
+          STEPS: ${{ inputs.steps }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          PRODUCT="${{ inputs.product }}"
-          STEPS="${{ inputs.steps }}"
+          DRY_FLAG=""
+          if [ "$DRY_RUN" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
 
-          ssh -i ~/.ssh/oracle_key -o StrictHostKeyChecking=no \
-            ${ORACLE_USER}@${ORACLE_IP} << REMOTE
-            set -e
-            cd /home/opc/mbti-logistics
-
-            # output 디렉토리를 전송받은 파일로 교체
-            cp -r /home/opc/mbtico-output/* output/ 2>/dev/null || true
-
-            # YouTube 업로드
-            if echo "$STEPS" | grep -q "youtube"; then
-              echo "YouTube 업로드: $PRODUCT"
-              node scripts/upload/upload-youtube.js --product $PRODUCT
-            fi
-
-            # Instagram 업로드
-            if echo "$STEPS" | grep -q "instagram"; then
-              echo "Instagram 업로드: $PRODUCT"
-              node scripts/upload/upload-instagram.js --product $PRODUCT --type reels
-            fi
-
-            # 블로그 포스팅
-            if echo "$STEPS" | grep -q "blog"; then
-              echo "블로그 포스팅: $PRODUCT"
-              node scripts/upload/post-naver-blog.js --product $PRODUCT
-            fi
-          REMOTE
-
-          echo "Oracle Cloud 업로드 완료"
+          ssh -i ~/.ssh/oracle_key \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            ${ORACLE_USER}@${ORACLE_IP} \
+            "cd ~/mbti-logistics && git pull origin main && node scripts/run-pipeline.js --product ${PRODUCT} --steps \"${STEPS}\" ${DRY_FLAG} 2>&1"
