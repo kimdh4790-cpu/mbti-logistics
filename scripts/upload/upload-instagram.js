@@ -59,23 +59,18 @@ async function uploadInstagram() {
   await page.goto('https://www.instagram.com', { waitUntil: 'networkidle', timeout: 30000 });
   await page.waitForTimeout(3000);
 
-  const url = page.url();
-  if (url.includes('/accounts/login') || url.includes('/login')) {
-    if (loginOnly || !headless) {
-      console.log('[Instagram] 수동 로그인 필요. 로그인 후 Enter를 누르세요...');
-      await page.waitForURL('https://www.instagram.com/', { timeout: 300000 });
-    } else {
-      console.error('[Instagram] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
-      await ctx.close();
-      process.exit(1);
-    }
-  }
-
   if (loginOnly) {
-    await waitForEnter('[Instagram] 브라우저에서 Instagram 계정으로 로그인하세요.\n           로그인 완료 후 이 터미널에서 Enter를 누르세요.');
+    await waitForEnter('[Instagram] 브라우저에서 Instagram 로그인 후 Enter를 누르세요.');
     console.log('[Instagram] 세션 저장됨.');
     await ctx.close();
     return;
+  }
+
+  const url = page.url();
+  if (url.includes('/accounts/login') || url.includes('/login')) {
+    console.error('[Instagram] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
+    await ctx.close();
+    process.exit(1);
   }
 
   // 프로필 이미지 설정
