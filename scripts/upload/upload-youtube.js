@@ -213,19 +213,24 @@ async function uploadYouTube() {
     await ctx.close();
     process.exit(1);
   }
-  await page.waitForTimeout(2000);
+  // 드롭다운 열릴 때까지 대기 후 스크린샷
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-dropdown.png') });
 
   // 드롭다운 메뉴에서 "동영상 업로드" 항목 클릭
   const uploadMenuSelectors = [
     'tp-yt-paper-item:has-text("동영상 업로드")',
     'tp-yt-paper-item:has-text("Upload video")',
+    'tp-yt-paper-item:has-text("Upload")',
     'ytcp-ve tp-yt-paper-item:first-child',
     '[test-id="upload-beta"]',
+    'paper-item:has-text("동영상")',
+    '#items tp-yt-paper-item:first-child',
   ];
   let menuClicked = false;
   for (const sel of uploadMenuSelectors) {
     try {
-      await page.waitForSelector(sel, { timeout: 4000 });
+      await page.waitForSelector(sel, { timeout: 3000 });
       await page.click(sel);
       menuClicked = true;
       console.log(`[YouTube] 동영상 업로드 메뉴 클릭 (${sel})`);
@@ -233,8 +238,16 @@ async function uploadYouTube() {
     } catch(e) {}
   }
   if (!menuClicked) {
-    // 드롭다운 없이 파일 선택창이 바로 열리는 경우 (구형 업로드 버튼)
-    console.log('[YouTube] 드롭다운 없음 — 파일 선택창 직접 시도');
+    // 드롭다운이 안 열리면 업로드 URL 직접 이동 (fallback)
+    console.log('[YouTube] 드롭다운 없음 — 업로드 URL 직접 이동');
+    const channelMatch = page.url().match(/channel\/(UC[^/]+)/);
+    const channelId = channelMatch ? channelMatch[1] : '';
+    const uploadUrl = channelId
+      ? `https://studio.youtube.com/channel/${channelId}/videos/upload`
+      : 'https://www.youtube.com/upload';
+    await page.goto(uploadUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(3000);
+    await page.screenshot({ path: path.join(ROOT, 'output', 'yt-upload-page.png') });
   }
   await page.waitForTimeout(2000);
 
