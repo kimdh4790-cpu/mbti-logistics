@@ -91,7 +91,11 @@ PROFILES_DIR=${PROFILES_DIR}
 #  KST = UTC+9  →  KST 09:00 = UTC 00:00
 # ════════════════════════════════════════════
 
-# ── 소셜미디어 홍보 ─────────────────────────
+# ── 소셜미디어 홍보 (월화수 / 목금토 2사이클) ──
+#    각 제품이 주 2회씩 업로드됨
+#    월/목=용차앱  화/금=FILO  수/토=DONWAY
+
+# ── 1사이클: 월화수 ─────────────────────────
 
 # [월요일] 09:00 용차앱 YouTube
 0 0 * * 1 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product yongcha >> ${LOG_DIR}/yt-yongcha.log 2>&1
@@ -107,12 +111,35 @@ PROFILES_DIR=${PROFILES_DIR}
 # [화요일] 11:00 FILO 네이버 블로그
 0 2 * * 2 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product filo >> ${LOG_DIR}/blog-filo.log 2>&1
 
-# [목요일] 09:00 DONWAY YouTube
-0 0 * * 4 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product donway >> ${LOG_DIR}/yt-donway.log 2>&1
-# [목요일] 10:00 DONWAY Instagram Reels
-0 1 * * 4 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product donway --type reels >> ${LOG_DIR}/ig-donway.log 2>&1
-# [목요일] 11:00 DONWAY 네이버 블로그
-0 2 * * 4 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product donway >> ${LOG_DIR}/blog-donway.log 2>&1
+# [수요일] 09:00 DONWAY YouTube
+0 0 * * 3 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product donway >> ${LOG_DIR}/yt-donway.log 2>&1
+# [수요일] 10:00 DONWAY Instagram Reels
+0 1 * * 3 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product donway --type reels >> ${LOG_DIR}/ig-donway.log 2>&1
+# [수요일] 11:00 DONWAY 네이버 블로그
+0 2 * * 3 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product donway >> ${LOG_DIR}/blog-donway.log 2>&1
+
+# ── 2사이클: 목금토 ─────────────────────────
+
+# [목요일] 09:00 용차앱 YouTube
+0 0 * * 4 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product yongcha >> ${LOG_DIR}/yt-yongcha.log 2>&1
+# [목요일] 10:00 용차앱 Instagram Reels
+0 1 * * 4 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product yongcha --type reels >> ${LOG_DIR}/ig-yongcha.log 2>&1
+# [목요일] 11:00 용차앱 네이버 블로그
+0 2 * * 4 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product yongcha >> ${LOG_DIR}/blog-yongcha.log 2>&1
+
+# [금요일] 09:00 FILO YouTube
+0 0 * * 5 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product filo >> ${LOG_DIR}/yt-filo.log 2>&1
+# [금요일] 10:00 FILO Instagram Reels
+0 1 * * 5 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product filo --type reels >> ${LOG_DIR}/ig-filo.log 2>&1
+# [금요일] 11:00 FILO 네이버 블로그
+0 2 * * 5 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product filo >> ${LOG_DIR}/blog-filo.log 2>&1
+
+# [토요일] 09:00 DONWAY YouTube
+0 0 * * 6 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product donway >> ${LOG_DIR}/yt-donway.log 2>&1
+# [토요일] 10:00 DONWAY Instagram Reels
+0 1 * * 6 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product donway --type reels >> ${LOG_DIR}/ig-donway.log 2>&1
+# [토요일] 11:00 DONWAY 네이버 블로그
+0 2 * * 6 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product donway >> ${LOG_DIR}/blog-donway.log 2>&1
 
 # ── 앱 자동화 ───────────────────────────────
 
@@ -129,7 +156,10 @@ PROFILES_DIR=${PROFILES_DIR}
 0 14 * * 0 find ${LOG_DIR} -name '*.log' -size +10M -exec truncate -s 5M {} \\;
 
 # 매주 일요일 23:30 KST(14:30 UTC) — 30일 이상 된 로그 삭제
-30 14 * * 0 find ${LOG_DIR} -name '*.log' -mtime +30 -delete"
+30 14 * * 0 find ${LOG_DIR} -name '*.log' -mtime +30 -delete
+
+# 매주 일요일 00:00 KST(15:00 UTC 토요일) — output/ 영상 파일 7일 이상 된 것 삭제 (디스크 절약)
+0 15 * * 0 find ${REPO_DIR}/output -name '*.mp4' -o -name '*.webm' -o -name '*.jpg' | xargs -I{} find {} -mtime +7 -delete 2>/dev/null || true"
 
 echo "$CRON_CONTENT" | crontab -
 echo "  Cron 등록 완료"
