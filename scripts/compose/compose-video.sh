@@ -14,6 +14,10 @@ INPUT="$OUTPUT_DIR/${PRODUCT}-raw.webm"
 FINAL="$OUTPUT_DIR/${PRODUCT}-final.mp4"
 REELS="$OUTPUT_DIR/${PRODUCT}-reels.mp4"
 
+# ffmpeg-static 우선, 없으면 시스템 ffmpeg
+FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
+echo "[ffmpeg] 사용: $FFMPEG"
+
 if [ ! -f "$INPUT" ]; then
   echo "[오류] 입력 파일 없음: $INPUT"
   echo "먼저 node scripts/capture/record-${PRODUCT}.js 를 실행하세요."
@@ -29,26 +33,18 @@ INTRO="$ASSETS_DIR/intro.mp4"
 OUTRO="$ASSETS_DIR/outro.mp4"
 
 # 자막 필터 (SRT → ASS 변환 후 overlay)
-# Windows(Git Bash)에서 ass= 필터에 드라이브 문자가 포함된 절대경로를 넘기면
-# FFmpeg가 ':' 를 옵션 구분자로 오인 → OUTPUT_DIR로 이동 후 파일명만 사용
 SUBTITLE_FILTER=""
 if [ -f "$SUBTITLES" ]; then
   ASS_FNAME="${PRODUCT}-subtitles.ass"
   ASS_FILE="$OUTPUT_DIR/${ASS_FNAME}"
-  (cd "$OUTPUT_DIR" && ffmpeg -y -i "$SUBTITLES" "$ASS_FNAME" 2>/dev/null) || true
+  (cd "$OUTPUT_DIR" && "$FFMPEG" -y -i "$SUBTITLES" "$ASS_FNAME" 2>/dev/null) || true
   if [ -f "$ASS_FILE" ]; then
     SUBTITLE_FILTER=",ass=${ASS_FNAME}"
   fi
 fi
 
-# 자막 필터 사용 시 OUTPUT_DIR 기준으로 ffmpeg 실행
+# 자막 필터 사용 시 OUTPUT_DIR 기준으로 실행
 cd "$OUTPUT_DIR"
-
-# 로고 오버레이 필터
-LOGO_FILTER=""
-if [ -f "$LOGO" ]; then
-  LOGO_FILTER="[1:v]scale=120:-1[logo];[base][logo]overlay=W-130:10[out]"
-fi
 
 # BGM 처리
 BGM_ARGS=()
@@ -65,9 +61,9 @@ file '${INTRO}'
 file '${INPUT}'
 file '${OUTRO}'
 EOF
-  ffmpeg -y \
+  "$FFMPEG" -y \
     -f concat -safe 0 -i "$LIST_FILE" \
-    ${BGM_ARGS[@]} \
+    "${BGM_ARGS[@]}" \
     -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
     -c:v libx264 -preset medium -crf 23 \
     -c:a aac -b:a 128k \
@@ -76,7 +72,7 @@ EOF
 else
   echo "  본영상 편집 중 (인트로/아웃로 없음)..."
   if [ -f "$BGM" ]; then
-    ffmpeg -y \
+    "$FFMPEG" -y \
       -i "$INPUT" \
       -i "$BGM" \
       -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
@@ -86,7 +82,7 @@ else
       -shortest \
       "$FINAL"
   else
-    ffmpeg -y \
+    "$FFMPEG" -y \
       -i "$INPUT" \
       -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
       -c:v libx264 -preset medium -crf 23 \

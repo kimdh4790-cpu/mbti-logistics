@@ -27,8 +27,10 @@ fi
 
 echo "[Reels] 세로형 클립 생성: ${CLIP_START} ~ +${CLIP_DUR}초"
 
+FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
+
 # 16:9 → 9:16 변환 (중앙 크롭 + 패딩)
-ffmpeg -y \
+"$FFMPEG" -y \
   -ss "$CLIP_START" -t "$CLIP_DUR" \
   -i "$INPUT" \
   -vf "
