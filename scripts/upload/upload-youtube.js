@@ -184,96 +184,59 @@ async function uploadYouTube() {
   const currentUrl = page.url();
   console.log(`[YouTube] 현재 URL: ${currentUrl}`);
 
-  // 만들기 버튼(#create-icon) 클릭 → 드롭다운 → 동영상 업로드 선택
-  // 스크린샷 확인: 상단 우측 "만들기" 버튼이 #create-icon
-  const createSelectors = [
-    '#create-icon',
-    '[id="create-icon"]',
-    'ytcp-button#create-icon',
-    '[aria-label="만들기"]',
-    '[aria-label="Create"]',
+  // 업로드 버튼 — #upload-icon 우선 (직접 파일선택창 오픈), 없으면 만들기 드롭다운
+  const uploadSelectors = [
     '#upload-icon',
     'ytcp-button#upload-icon',
+    'ytcp-icon-button#upload-icon',
+    '[aria-label="동영상 업로드"]',
+    '[aria-label="Upload videos"]',
     'yt-icon-button.ytcp-upload-icon',
   ];
   let clicked = false;
-  for (const sel of createSelectors) {
+  for (const sel of uploadSelectors) {
     try {
       const el = await page.waitForSelector(sel, { timeout: 4000 });
       await el.click({ force: true });
       clicked = true;
-      console.log(`[YouTube] 만들기 버튼 클릭 (${sel})`);
+      console.log(`[YouTube] 업로드 버튼 클릭 (${sel})`);
       break;
+    } catch(e) {}
+  }
+  if (!clicked) {
+    // 만들기 버튼 → 드롭다운 → 동영상 업로드
+    try {
+      const createEl = await page.waitForSelector('#create-icon, [aria-label="만들기"], [aria-label="Create"]', { timeout: 4000 });
+      await createEl.click({ force: true });
+      console.log('[YouTube] 만들기 버튼 클릭 → 드롭다운 대기');
+      await page.waitForTimeout(2000);
+      const menuItem = await page.waitForSelector(
+        'tp-yt-paper-item:has-text("동영상 업로드"), tp-yt-paper-item:has-text("Upload video")',
+        { timeout: 5000 }
+      );
+      await menuItem.click();
+      clicked = true;
+      console.log('[YouTube] 드롭다운 동영상 업로드 클릭');
     } catch(e) {}
   }
   if (!clicked) {
     const shotPath = path.join(ROOT, 'output', 'yt-debug.png');
     await page.screenshot({ path: shotPath, fullPage: true });
-    console.error(`[YouTube] 만들기 버튼을 찾을 수 없음. 스크린샷: ${shotPath}`);
+    console.error(`[YouTube] 업로드 버튼 찾기 실패. 스크린샷: ${shotPath}`);
     await ctx.close();
     process.exit(1);
   }
-  // 드롭다운 열릴 때까지 대기 후 스크린샷
-  await page.waitForTimeout(3000);
-  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-dropdown.png') });
-
-  // 드롭다운 메뉴에서 "동영상 업로드" 항목 클릭
-  const uploadMenuSelectors = [
-    'tp-yt-paper-item:has-text("동영상 업로드")',
-    'tp-yt-paper-item:has-text("Upload video")',
-    'tp-yt-paper-item:has-text("Upload")',
-    'ytcp-ve tp-yt-paper-item:first-child',
-    '[test-id="upload-beta"]',
-    'paper-item:has-text("동영상")',
-    '#items tp-yt-paper-item:first-child',
-  ];
-  let menuClicked = false;
-  for (const sel of uploadMenuSelectors) {
-    try {
-      await page.waitForSelector(sel, { timeout: 3000 });
-      await page.click(sel);
-      menuClicked = true;
-      console.log(`[YouTube] 동영상 업로드 메뉴 클릭 (${sel})`);
-      break;
-    } catch(e) {}
-  }
-  if (!menuClicked) {
-    // 드롭다운이 안 열리면 업로드 URL 직접 이동 (fallback)
-    console.log('[YouTube] 드롭다운 없음 — 업로드 URL 직접 이동');
-    const channelMatch = page.url().match(/channel\/(UC[^/]+)/);
-    const channelId = channelMatch ? channelMatch[1] : '';
-    const uploadUrl = channelId
-      ? `https://studio.youtube.com/channel/${channelId}/videos/upload`
-      : 'https://www.youtube.com/upload';
-    await page.goto(uploadUrl, { waitUntil: 'networkidle', timeout: 30000 });
-    await page.waitForTimeout(3000);
-    await page.screenshot({ path: path.join(ROOT, 'output', 'yt-upload-page.png') });
-  }
   await page.waitForTimeout(2000);
 
-  // 파일 설정 — setInputFiles로 직접 주입 (filechooser 이벤트 불필요)
-  let fileSet = false;
-  // 방법 1: hidden input[type=file]에 직접 주입
-  try {
-    const fileInput = page.locator('input[type=file]').first();
-    await fileInput.waitFor({ state: 'attached', timeout: 10000 });
-    await fileInput.setInputFiles(videoPath);
-    fileSet = true;
-    console.log('[YouTube] 파일 설정 완료 (setInputFiles 직접)');
-  } catch(e) {}
-
-  // 방법 2: "파일 선택" 버튼 클릭 후 filechooser
-  if (!fileSet) {
-    try {
-      const [fileChooser] = await Promise.all([
-        page.waitForEvent('filechooser', { timeout: 10000 }),
-        page.locator('[aria-label="파일 선택"], [aria-label="SELECT FILES"], button:has-text("파일 선택"), button:has-text("SELECT FILES")').first().click(),
-      ]);
-      await fileChooser.setFiles(videoPath);
-      fileSet = true;
-      console.log('[YouTube] 파일 설정 완료 (파일 선택 버튼)');
-    } catch(e) {}
-  }
+  // 파일 선택 (원본 방식 — #upload-icon 클릭 후 직접 파일선택창 오픈)
+  const [fileChooser] = await Promise.all([
+    page.waitForEvent('filechooser', { timeout: 15000 }),
+    page.locator('input[type=file]').first().evaluate(el => el.click()).catch(() =>
+      page.locator('[aria-label="파일 선택"], [aria-label="SELECT FILES"]').first().click()
+    ),
+  ]);
+  await fileChooser.setFiles(videoPath);
+  const fileSet = true;
 
   if (!fileSet) {
     const shotPath = path.join(ROOT, 'output', 'yt-upload-debug.png');
