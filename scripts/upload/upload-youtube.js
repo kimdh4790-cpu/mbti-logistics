@@ -25,8 +25,18 @@ const setProfile = args.includes('--set-profile');
 const headless = !loginOnly && !setProfile;
 
 const ROOT = path.join(__dirname, '../..');
-const meta = require(`../content/${product}-meta.json`);
+let meta = require(`../content/${product}-meta.json`);
 const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
+
+// 주차 기반 variant 선택 (매주 다른 콘텐츠 각도로 홍보)
+if (meta.variants && meta.variants.length > 0) {
+  const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % meta.variants.length;
+  const variant = meta.variants[weekIdx];
+  if (variant.youtube) meta = { ...meta, youtube: { ...meta.youtube, ...variant.youtube } };
+  if (variant.instagram) meta = { ...meta, instagram: { ...meta.instagram, ...variant.instagram } };
+  if (variant.blog) meta = { ...meta, blog: { ...meta.blog, ...variant.blog } };
+  console.log(`[YouTube] 콘텐츠 변형: ${variant.label} (${weekIdx + 1}/${meta.variants.length}주차 순환)`);
+}
 
 // 제품별 프로필 이미지 (512px 아이콘 사용)
 const PROFILE_ICONS = {
@@ -157,31 +167,51 @@ async function uploadYouTube() {
     return;
   }
 
+  // 스튜디오 로딩 대기 + 현재 상태 스크린샷
+  await page.waitForTimeout(5000);
+  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
+  const currentUrl = page.url();
+  console.log(`[YouTube] 현재 URL: ${currentUrl}`);
+
   // 업로드 버튼 — 여러 셀렉터 시도
   const uploadSelectors = [
-    'ytcp-button#upload-icon',
     '#upload-icon',
+    'ytcp-button#upload-icon',
+    'ytcp-icon-button#upload-icon',
     '[aria-label="동영상 업로드"]',
     '[aria-label="Upload videos"]',
     '[aria-label="Create"]',
-    'ytcp-icon-button[id="upload-icon"]',
+    '[aria-label="만들기"]',
     'button:has-text("업로드")',
+    'button:has-text("Upload")',
+    // 최신 YouTube Studio: 카메라+플러스 아이콘
+    'yt-icon-button.ytcp-upload-icon',
+    '#create-icon',
+    '[id="create-icon"]',
   ];
   let clicked = false;
   for (const sel of uploadSelectors) {
     try {
-      await page.waitForSelector(sel, { timeout: 5000 });
-      await page.click(sel);
+      const el = await page.waitForSelector(sel, { timeout: 4000 });
+      await el.click({ force: true });
       clicked = true;
       console.log(`[YouTube] 업로드 버튼 클릭 (${sel})`);
       break;
     } catch(e) { /* 다음 셀렉터 시도 */ }
   }
   if (!clicked) {
-    // 스크린샷 저장 후 종료
+    // 텍스트 기반 최후 시도
+    try {
+      await page.getByText('동영상 업로드').first().click({ force: true });
+      clicked = true;
+      console.log('[YouTube] 업로드 버튼 클릭 (텍스트 매칭)');
+    } catch(e) {}
+  }
+  if (!clicked) {
     const shotPath = path.join(ROOT, 'output', 'yt-debug.png');
-    await page.screenshot({ path: shotPath });
+    await page.screenshot({ path: shotPath, fullPage: true });
     console.error(`[YouTube] 업로드 버튼을 찾을 수 없음. 스크린샷: ${shotPath}`);
+    console.error(`[YouTube] 현재 URL: ${page.url()}`);
     await ctx.close();
     process.exit(1);
   }
