@@ -71,12 +71,23 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 
 ## 미완료 / 확인 필요 항목
 
-### OCI A1.Flex 인스턴스
-- 상태: 아직 생성 안 됨 (도쿄 용량 부족)
-- 워크플로우 `*/10 * * * *` 로 자동 재시도 중
-- **확인 필요**: Osaka/Seoul/Singapore 리전에 VCN/서브넷 있는지
-  - OCI 콘솔 → Networking → Virtual Cloud Networks → 리전 변경 후 확인
-  - 없으면 "Start VCN Wizard"로 생성 후 워크플로우 자동으로 찾음
+### Oracle Cloud 자동화 (2026-08-25 업데이트)
+- **IP**: 161.33.136.154 (4코어/24GB, opc, filo-a1-2c12g) — Always Free 영구
+- **초기 설정**: `bash ~/mbti-logistics/scripts/oracle-init.sh` (1회만)
+- **추가된 스크립트**:
+  - `scripts/health-check.js` — 5개 앱 핑 (매일 22:00 KST)
+  - `scripts/admin-tasks.js` — 재고알림·AI예측 (매일 07:00 KST, MBTICO_ADMIN_PW 필요)
+  - `scripts/oracle-init.sh` — cron 자동 설정 (월화수/목금토 2사이클)
+- **소셜미디어 cron 스케줄** (UTC 기준):
+  - 월/목 00:00 → 용차앱 YouTube
+  - 월/목 01:00 → 용차앱 Instagram
+  - 월/목 02:00 → 용차앱 블로그
+  - 화/금 → FILO (동일 시각)
+  - 수/토 → DONWAY (동일 시각)
+- **사용자가 직접 해야 할 것**:
+  - SSH 접속 후 `bash ~/mbti-logistics/scripts/oracle-init.sh` 실행
+  - `echo 'export MBTICO_ADMIN_PW=khw3103!!!' >> ~/.bashrc`
+  - 로컬 PC에서 로그인 후 `scp -r ~/.mbtico-profiles/ opc@161.33.136.154:~/.mbtico-profiles/`
 
 ### FCM 영수증 알림 테스트 (미확인)
 - QR 스캔 → 메뉴 선택 → 주문 완료 → 손님 폰에 영수증 알림 오는지 실폰 테스트 필요
@@ -114,7 +125,7 @@ Firebase: mbti-logistics
 KV NS_ID: 7f0e90efaea64f3ab08ff00f8970b28b
 테스트 dealerId: 3lqP7HNSgVP18eZbMn6DnQxRXCA2
 매장 dealerId:   9XD2K3W1tIhIs6XM74YT0xfRFEP2
-OCI IP: 155.248.187.99 (4코어/24GB, opc)
+OCI IP: 161.33.136.154 (4코어/24GB, opc, Always Free 영구)
 VAPID: BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c
 DINE 로그인 셀렉터: #li-email, #li-pw, button[onclick="_dineLogin()"], #app-wrap
 ```
