@@ -11,10 +11,25 @@ catch(e) { chromium = require('playwright').chromium; }
 // 녹화(record-all.js): Playwright 번들 Chromium 사용 (별도 처리)
 const USE_SYSTEM_CHROME = process.platform !== 'linux';
 
-// Linux 원격 환경용 Chromium 경로
-const _linuxPath = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+// Linux 원격 환경용 Chromium 경로 (우선순위: env > /opt > ~/.cache/ms-playwright)
+function _findLinuxChromium() {
+  const candidates = [
+    '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+  ];
+  // ~/.cache/ms-playwright/chromium-XXXX/chrome-linux/chrome 동적 탐색
+  try {
+    const msDir = path.join(os.homedir(), '.cache', 'ms-playwright');
+    if (fs.existsSync(msDir)) {
+      for (const d of fs.readdirSync(msDir)) {
+        const p = path.join(msDir, d, 'chrome-linux', 'chrome');
+        if (fs.existsSync(p)) candidates.push(p);
+      }
+    }
+  } catch(_) {}
+  return candidates.find(p => fs.existsSync(p));
+}
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH
-  || (process.platform === 'linux' && fs.existsSync(_linuxPath) ? _linuxPath : undefined);
+  || (process.platform === 'linux' ? _findLinuxChromium() : undefined);
 
 const PROFILES_DIR = process.env.PROFILES_DIR || path.join(os.homedir(), '.mbtico-profiles');
 
