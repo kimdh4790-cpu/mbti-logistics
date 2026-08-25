@@ -58,6 +58,19 @@ async function postNaverBlog() {
 
   console.log(`[네이버 블로그] ${loginOnly ? '[LOGIN-ONLY] ' : dryRun ? '[DRY-RUN] ' : ''}시작: ${product}`);
 
+  // dry-run: 프로필 파일 존재 여부로만 세션 확인 (headless Naver 차단 우회)
+  if (dryRun) {
+    const hasCookies = fs.existsSync(path.join(profileDir, 'Default', 'Cookies'))
+      || fs.readdirSync(profileDir).length > 0;
+    if (!hasCookies) {
+      console.error('[네이버] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
+      process.exit(1);
+    }
+    console.log('[네이버][DRY-RUN] 로그인 세션 확인 완료.');
+    console.log(`  제목: ${meta.blog.title}`);
+    return;
+  }
+
   const launchOpts = { ...getLaunchOpts(headless), timeout: 60000 };
   const ctx = await chromium.launchPersistentContext(profileDir, launchOpts);
 
@@ -78,13 +91,6 @@ async function postNaverBlog() {
     console.error('[네이버] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
     await ctx.close();
     process.exit(1);
-  }
-
-  if (dryRun) {
-    console.log('[네이버][DRY-RUN] 로그인 세션 확인 완료.');
-    console.log(`  제목: ${meta.blog.title}`);
-    await ctx.close();
-    return;
   }
 
   // 블로그 글쓰기 페이지 접속
