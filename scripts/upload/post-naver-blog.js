@@ -65,25 +65,19 @@ async function postNaverBlog() {
   await page.goto('https://www.naver.com', { waitUntil: 'networkidle', timeout: 30000 });
   await page.waitForTimeout(2000);
 
-  // 로그인 확인
-  const loginBtn = await page.locator('a.link_login, a[href*="nid.naver.com/nidlogin"]').count();
-  if (loginBtn > 0) {
-    if (loginOnly || !headless) {
-      console.log('[네이버] 수동 로그인 필요. 로그인 후 Enter를 누르세요...');
-      await page.goto('https://nid.naver.com/nidlogin.login', { waitUntil: 'networkidle' });
-      await page.waitForURL('https://www.naver.com/**', { timeout: 300000 });
-    } else {
-      console.error('[네이버] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
-      await ctx.close();
-      process.exit(1);
-    }
-  }
-
   if (loginOnly) {
-    await waitForEnter('[네이버] 브라우저에서 네이버 계정으로 로그인하세요.\n         로그인 완료 후 이 터미널에서 Enter를 누르세요.');
+    await waitForEnter('[네이버] 브라우저에서 네이버 로그인 후 Enter를 누르세요.');
     console.log('[네이버] 세션 저장됨.');
     await ctx.close();
     return;
+  }
+
+  // 로그인 확인
+  const loginBtn = await page.locator('a.link_login, a[href*="nid.naver.com/nidlogin"]').count();
+  if (loginBtn > 0) {
+    console.error('[네이버] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
+    await ctx.close();
+    process.exit(1);
   }
 
   if (dryRun) {
