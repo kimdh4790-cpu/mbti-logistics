@@ -226,24 +226,50 @@ async function uploadYouTube() {
     await ctx.close();
     process.exit(1);
   }
-  await page.waitForTimeout(2000);
+  // 업로드 다이얼로그 로딩 대기 + 스크린샷
+  await page.waitForTimeout(3000);
+  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-after-upload-click.png') });
+  console.log('[YouTube] 업로드 다이얼로그 스크린샷 저장: yt-after-upload-click.png');
 
-  // 파일 선택 (원본 방식 — #upload-icon 클릭 후 직접 파일선택창 오픈)
-  const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser', { timeout: 15000 }),
-    page.locator('input[type=file]').first().evaluate(el => el.click()).catch(() =>
-      page.locator('[aria-label="파일 선택"], [aria-label="SELECT FILES"]').first().click()
-    ),
-  ]);
-  await fileChooser.setFiles(videoPath);
-  const fileSet = true;
-
-  if (!fileSet) {
-    const shotPath = path.join(ROOT, 'output', 'yt-upload-debug.png');
-    await page.screenshot({ path: shotPath, fullPage: true });
-    console.error(`[YouTube] 파일 설정 실패. 스크린샷: ${shotPath}`);
-    await ctx.close();
-    process.exit(1);
+  // 파일 선택: setInputFiles 직접 우선 (Playwright shadow DOM 자동 피어싱)
+  // → filechooser 이벤트 대기 불필요, 업로드 다이얼로그 내 hidden input에 직접 주입
+  let fileSet = false;
+  try {
+    const fileInput = page.locator('input[type=file]').first();
+    await fileInput.setInputFiles(videoPath, { timeout: 10000 });
+    fileSet = true;
+    console.log('[YouTube] 파일 설정 완료 (setInputFiles 직접)');
+  } catch (e1) {
+    console.log(`[YouTube] setInputFiles 직접 실패: ${e1.message} — filechooser 방식 시도`);
+    // Fallback: SELECT FILES 버튼 클릭 → filechooser 이벤트
+    try {
+      const [fileChooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 15000 }),
+        (async () => {
+          const selectBtn = page.locator(
+            '[aria-label="파일 선택"], [aria-label="SELECT FILES"], [aria-label="파일 선택하기"],' +
+            'ytcp-button:has-text("파일 선택"), button:has-text("SELECT FILES"),' +
+            '.ytcp-upload-dialog button'
+          );
+          if (await selectBtn.count() > 0) {
+            await selectBtn.first().click();
+          } else {
+            await page.locator('input[type=file]').first().evaluate(el => el.click());
+          }
+        })(),
+      ]);
+      await fileChooser.setFiles(videoPath);
+      fileSet = true;
+      console.log('[YouTube] 파일 설정 완료 (filechooser 이벤트)');
+    } catch (e2) {
+      const shotPath = path.join(ROOT, 'output', 'yt-upload-debug.png');
+      await page.screenshot({ path: shotPath, fullPage: true });
+      console.error(`[YouTube] 파일 선택 완전 실패. 스크린샷: ${shotPath}`);
+      console.error(`  1차 오류: ${e1.message}`);
+      console.error(`  2차 오류: ${e2.message}`);
+      await ctx.close();
+      process.exit(1);
+    }
   }
   console.log('[YouTube] 파일 업로드 중...');
 
