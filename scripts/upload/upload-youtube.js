@@ -21,11 +21,21 @@ function getArg(name) {
 const product = getArg('product') || 'filo';
 const dryRun = args.includes('--dry-run');
 const loginOnly = args.includes('--login-only');
-const headless = !loginOnly;
+const setProfile = args.includes('--set-profile');
+const headless = !loginOnly && !setProfile;
 
 const ROOT = path.join(__dirname, '../..');
 const meta = require(`../content/${product}-meta.json`);
 const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
+
+// 제품별 프로필 이미지 (512px 아이콘 사용)
+const PROFILE_ICONS = {
+  filo:    path.join(ROOT, 'filo-icon-512.png'),
+  dine:    path.join(ROOT, 'dine-icon-512.png'),
+  donway:  path.join(ROOT, 'donway-icon-512.png'),
+  yongcha: path.join(ROOT, 'yongcha-icon-512.png'),
+  mbtico:  path.join(ROOT, 'mbtico-512.png'),
+};
 
 async function uploadYouTube() {
   if (!loginOnly && !dryRun && !fs.existsSync(videoPath)) {
@@ -62,6 +72,61 @@ async function uploadYouTube() {
       await waitForEnter();
     }
     console.log('[YouTube] 세션 저장됨.');
+    await ctx.close();
+    return;
+  }
+
+  // 채널 프로필 이미지 설정
+  if (setProfile) {
+    const iconPath = PROFILE_ICONS[product];
+    if (!iconPath || !fs.existsSync(iconPath)) {
+      console.error(`[YouTube] 프로필 이미지 없음: ${iconPath}`);
+      await ctx.close();
+      process.exit(1);
+    }
+    console.log(`[YouTube] 프로필 이미지 설정: ${iconPath}`);
+    await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(3000);
+    // 채널 아이콘 클릭 (좌측 상단)
+    const iconSelectors = [
+      '#account-photo img',
+      'yt-img-shadow#avatar img',
+      '.ytd-topbar-logo-renderer img',
+      '[id="avatar-btn"] img',
+    ];
+    for (const sel of iconSelectors) {
+      try {
+        await page.waitForSelector(sel, { timeout: 3000 });
+        await page.click(sel);
+        console.log(`[YouTube] 채널 아이콘 클릭 (${sel})`);
+        break;
+      } catch(e) {}
+    }
+    await page.waitForTimeout(1000);
+    // 채널 설정으로 이동
+    await page.goto('https://myaccount.google.com/personal-info', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.waitForTimeout(2000);
+    // 프로필 사진 변경 버튼
+    try {
+      const photoBtn = page.locator('[data-accountphotobuttontype], [aria-label*="프로필"], button:has-text("사진 변경")');
+      await photoBtn.first().click({ timeout: 5000 });
+      await page.waitForTimeout(1000);
+      const [chooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 8000 }),
+        page.locator('input[type=file]').first().evaluate(el => el.click()).catch(() =>
+          page.locator('[aria-label="사진 업로드"], button:has-text("업로드")').first().click()
+        ),
+      ]);
+      await chooser.setFiles(iconPath);
+      await page.waitForTimeout(3000);
+      const saveBtn = page.locator('button:has-text("저장"), button:has-text("Save"), [aria-label="저장"]');
+      if (await saveBtn.count() > 0) await saveBtn.first().click();
+      console.log('[YouTube] 프로필 이미지 업로드 완료!');
+    } catch(e) {
+      const shotPath = path.join(ROOT, 'output', 'yt-profile-debug.png');
+      await page.screenshot({ path: shotPath, fullPage: true });
+      console.error(`[YouTube] 프로필 설정 실패. 스크린샷: ${shotPath}`, e.message);
+    }
     await ctx.close();
     return;
   }
