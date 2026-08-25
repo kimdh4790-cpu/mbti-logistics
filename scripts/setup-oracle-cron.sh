@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Oracle Cloud (155.248.187.99) 서버에 자동 업로드 cron 설정
-# 실행: bash scripts/setup-oracle-cron.sh
-# 전제: Oracle Cloud에 Node.js, npm, FFmpeg, Chromium이 설치되어 있어야 함
+# Oracle Cloud (161.33.136.154) 서버에 전체 환경 설정 + cron 자동 업로드
+# 로컬 PC에서 실행: bash scripts/setup-oracle-cron.sh
+# 전제: 로컬에 ssh-key-2026-08-02 파일이 있어야 함
 
 set -e
 
@@ -9,33 +9,46 @@ ORACLE_USER="opc"
 ORACLE_IP="161.33.136.154"
 REPO_DIR="/home/opc/mbti-logistics"
 LOG_DIR="/home/opc/mbtico-logs"
+PROFILES_DIR="/home/opc/.mbtico-profiles"
 
-echo "=== Oracle Cloud 자동화 설정 ==="
+echo "=== Oracle Cloud 환경 설정 ==="
 echo "대상: ${ORACLE_USER}@${ORACLE_IP}"
 echo ""
 
-# 원격 환경 설정 스크립트
-ssh "${ORACLE_USER}@${ORACLE_IP}" << 'REMOTE_SETUP'
-#!/usr/bin/env bash
+# SSH 키 경로 (로컬 PC 기준)
+SSH_KEY="$HOME/.ssh/ssh-key-2026-08-02"
+if [ ! -f "$SSH_KEY" ]; then
+  SSH_KEY="$(dirname "$0")/../../ssh-key-2026-08-02"
+fi
+SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
+
+echo "[1/4] 패키지 및 런타임 설치 중..."
+ssh $SSH_OPTS "${ORACLE_USER}@${ORACLE_IP}" << 'REMOTE_SETUP'
 set -e
 
-# Node.js 확인
+# Node.js 20
 if ! command -v node &>/dev/null; then
   curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
   sudo dnf install -y nodejs
 fi
+echo "Node.js: $(node -v)"
 
-# FFmpeg 확인
+# FFmpeg + 한글 폰트
 if ! command -v ffmpeg &>/dev/null; then
-  sudo dnf install -y epel-release && sudo dnf install -y ffmpeg google-noto-cjk-fonts
+  sudo dnf install -y epel-release
+  sudo dnf install -y ffmpeg google-noto-cjk-fonts
 fi
+echo "FFmpeg: $(ffmpeg -version 2>&1 | head -1)"
 
-# Chromium 확인
-if ! command -v chromium-browser &>/dev/null && ! command -v chromium &>/dev/null; then
-  sudo dnf install -y chromium || true
+# Chromium (Oracle Linux용)
+CHROMIUM_BIN=$(command -v chromium || command -v chromium-browser || echo "")
+if [ -z "$CHROMIUM_BIN" ]; then
+  sudo dnf install -y chromium || sudo dnf install -y chromium-browser || true
+  CHROMIUM_BIN=$(command -v chromium || command -v chromium-browser || echo "/usr/bin/chromium")
 fi
+echo "Chromium: $CHROMIUM_BIN"
 
-# 프로파일 디렉토리
+# 디렉토리 준비
 mkdir -p /home/opc/.mbtico-profiles/{youtube,instagram,naver}
 mkdir -p /home/opc/mbtico-logs
 mkdir -p /home/opc/mbtico-output
@@ -44,48 +57,84 @@ echo "환경 준비 완료"
 REMOTE_SETUP
 
 echo ""
-echo "=== Cron 설정 ==="
+echo "[2/4] 저장소 클론/업데이트 중..."
+ssh $SSH_OPTS "${ORACLE_USER}@${ORACLE_IP}" << 'REMOTE_GIT'
+set -e
+if [ -d "/home/opc/mbti-logistics/.git" ]; then
+  cd /home/opc/mbti-logistics
+  git pull origin main
+  echo "저장소 업데이트 완료"
+else
+  git clone https://github.com/kimdh4790-cpu/mbti-logistics.git /home/opc/mbti-logistics
+  echo "저장소 클론 완료"
+fi
 
-# cron 내용 준비
-CRON_CONTENT=$(cat << 'CRON'
-# MBTICO 소셜미디어 자동 업로드 (매주 화/목)
-# 형식: 분 시 일 월 요일 명령어
+cd /home/opc/mbti-logistics
+npm ci
+echo "npm 설치 완료"
+mkdir -p output assets/bgm
+REMOTE_GIT
 
-# 화요일 09:00 - FILO YouTube 업로드
-0 9 * * 2 cd /home/opc/mbti-logistics && node scripts/upload/upload-youtube.js --product filo >> /home/opc/mbtico-logs/youtube-filo.log 2>&1
+echo ""
+echo "[3/4] Chromium 경로 환경변수 설정 중..."
+ssh $SSH_OPTS "${ORACLE_USER}@${ORACLE_IP}" << 'REMOTE_ENV'
+set -e
+CHROMIUM_BIN=$(command -v chromium || command -v chromium-browser || echo "/usr/bin/chromium")
 
-# 화요일 10:00 - FILO Instagram Reels 업로드
-0 10 * * 2 cd /home/opc/mbti-logistics && node scripts/upload/upload-instagram.js --product filo --type reels >> /home/opc/mbtico-logs/instagram-filo.log 2>&1
+# .bashrc에 환경변수 등록 (중복 방지)
+if ! grep -q "CHROMIUM_PATH" /home/opc/.bashrc; then
+  echo "" >> /home/opc/.bashrc
+  echo "# MBTICO 소셜미디어 자동화" >> /home/opc/.bashrc
+  echo "export CHROMIUM_PATH=$CHROMIUM_BIN" >> /home/opc/.bashrc
+  echo "export PROFILES_DIR=/home/opc/.mbtico-profiles" >> /home/opc/.bashrc
+fi
+echo "환경변수 등록 완료: CHROMIUM_PATH=$CHROMIUM_BIN"
+REMOTE_ENV
 
-# 목요일 09:00 - DONWAY YouTube 업로드
-0 9 * * 4 cd /home/opc/mbti-logistics && node scripts/upload/upload-youtube.js --product donway >> /home/opc/mbtico-logs/youtube-donway.log 2>&1
+echo ""
+echo "[4/4] Cron 설정 중..."
 
-# 목요일 10:00 - DONWAY Instagram 업로드
-0 10 * * 4 cd /home/opc/mbti-logistics && node scripts/upload/upload-instagram.js --product donway --type reels >> /home/opc/mbtico-logs/instagram-donway.log 2>&1
+# cron 내용 (CHROMIUM_PATH, PROFILES_DIR 포함)
+CHROMIUM_BIN=$(ssh $SSH_OPTS "${ORACLE_USER}@${ORACLE_IP}" "command -v chromium || command -v chromium-browser || echo /usr/bin/chromium" 2>/dev/null)
 
-# 월요일 09:00 - 용차앱 YouTube 업로드 (박람회 D-2)
-0 9 * * 1 cd /home/opc/mbti-logistics && node scripts/upload/upload-youtube.js --product yongcha >> /home/opc/mbtico-logs/youtube-yongcha.log 2>&1
-CRON
-)
+CRON_CONTENT="CHROMIUM_PATH=${CHROMIUM_BIN}
+PROFILES_DIR=/home/opc/.mbtico-profiles
 
-ssh "${ORACLE_USER}@${ORACLE_IP}" "echo '${CRON_CONTENT}' | crontab -"
+# MBTICO 소셜미디어 자동 업로드
+# 화요일 09:00 - FILO YouTube
+0 9 * * 2 cd /home/opc/mbti-logistics && git pull origin main -q && node scripts/upload/upload-youtube.js --product filo >> /home/opc/mbtico-logs/yt-filo.log 2>&1
+
+# 화요일 10:00 - FILO Instagram Reels
+0 10 * * 2 cd /home/opc/mbti-logistics && node scripts/upload/upload-instagram.js --product filo --type reels >> /home/opc/mbtico-logs/ig-filo.log 2>&1
+
+# 목요일 09:00 - DONWAY YouTube
+0 9 * * 4 cd /home/opc/mbti-logistics && git pull origin main -q && node scripts/upload/upload-youtube.js --product donway >> /home/opc/mbtico-logs/yt-donway.log 2>&1
+
+# 목요일 10:00 - DONWAY Instagram
+0 10 * * 4 cd /home/opc/mbti-logistics && node scripts/upload/upload-instagram.js --product donway --type reels >> /home/opc/mbtico-logs/ig-donway.log 2>&1
+
+# 월요일 09:00 - 용차앱 YouTube
+0 9 * * 1 cd /home/opc/mbti-logistics && git pull origin main -q && node scripts/upload/upload-youtube.js --product yongcha >> /home/opc/mbtico-logs/yt-yongcha.log 2>&1"
+
+ssh $SSH_OPTS "${ORACLE_USER}@${ORACLE_IP}" "echo '${CRON_CONTENT}' | crontab -"
 echo "Cron 설정 완료"
 
 echo ""
-echo "=== 최초 로그인 절차 안내 ==="
-echo "각 플랫폼은 한 번씩 수동 로그인이 필요합니다:"
+echo "==================================================================="
+echo "설정 완료! 다음 단계: 각 플랫폼 최초 로그인 (Oracle Cloud에서 실행)"
+echo "==================================================================="
 echo ""
-echo "1. YouTube:"
-echo "   ssh -L 5900:localhost:5900 opc@${ORACLE_IP}"
-echo "   HEADLESS=false PROFILES_DIR=/home/opc/.mbtico-profiles \\"
-echo "     node scripts/upload/upload-youtube.js --login-only"
+echo "Oracle Cloud에 SSH 접속 후:"
+echo "  ssh -i ~/ssh-key-2026-08-02 opc@${ORACLE_IP}"
 echo ""
-echo "2. Instagram:"
-echo "   HEADLESS=false PROFILES_DIR=/home/opc/.mbtico-profiles \\"
-echo "     node scripts/upload/upload-instagram.js --login-only"
+echo "그 다음 로그인 명령 실행:"
+echo "  cd ~/mbti-logistics"
+echo "  HEADLESS=false CHROMIUM_PATH=\$(which chromium) node scripts/upload/upload-youtube.js --login-only"
+echo "  HEADLESS=false CHROMIUM_PATH=\$(which chromium) node scripts/upload/upload-instagram.js --login-only"
 echo ""
-echo "3. 네이버 블로그:"
-echo "   HEADLESS=false PROFILES_DIR=/home/opc/.mbtico-profiles \\"
-echo "     node scripts/upload/post-naver-blog.js --login-only"
+echo "녹화+편집+업로드 전체 파이프라인 테스트:"
+echo "  node scripts/run-pipeline.js --product yongcha --steps record,compose,youtube --dry-run"
 echo ""
-echo "로그인 완료 후 세션이 /home/opc/.mbtico-profiles/ 에 저장됩니다."
+echo "GitHub Actions로 원격 실행:"
+echo "  1. GitHub Secrets에 ORACLE_SSH_KEY 등록"
+echo "  2. Actions → 소셜미디어 홍보 영상 제작 → Run workflow"
