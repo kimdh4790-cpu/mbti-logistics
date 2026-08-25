@@ -86,21 +86,50 @@ echo "[5/6] Cron 설정..."
 CRON_CONTENT="CHROMIUM_PATH=${CHROMIUM_BIN}
 PROFILES_DIR=${PROFILES_DIR}
 
-# MBTICO 소셜미디어 자동화 (oracle-init.sh 설정)
-# ─ 화요일 09:00 FILO YouTube ─
+# ════════════════════════════════════════════
+#  MBTICO 전체 자동화 스케줄 (oracle-init.sh)
+#  KST = UTC+9  →  KST 09:00 = UTC 00:00
+# ════════════════════════════════════════════
+
+# ── 소셜미디어 홍보 ─────────────────────────
+
+# [월요일] 09:00 용차앱 YouTube
+0 0 * * 1 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product yongcha >> ${LOG_DIR}/yt-yongcha.log 2>&1
+# [월요일] 10:00 용차앱 Instagram Reels
+0 1 * * 1 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product yongcha --type reels >> ${LOG_DIR}/ig-yongcha.log 2>&1
+# [월요일] 11:00 용차앱 네이버 블로그
+0 2 * * 1 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product yongcha >> ${LOG_DIR}/blog-yongcha.log 2>&1
+
+# [화요일] 09:00 FILO YouTube
 0 0 * * 2 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product filo >> ${LOG_DIR}/yt-filo.log 2>&1
-
-# ─ 화요일 10:00 FILO Instagram ─
+# [화요일] 10:00 FILO Instagram Reels
 0 1 * * 2 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product filo --type reels >> ${LOG_DIR}/ig-filo.log 2>&1
+# [화요일] 11:00 FILO 네이버 블로그
+0 2 * * 2 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product filo >> ${LOG_DIR}/blog-filo.log 2>&1
 
-# ─ 목요일 09:00 DONWAY YouTube ─
+# [목요일] 09:00 DONWAY YouTube
 0 0 * * 4 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product donway >> ${LOG_DIR}/yt-donway.log 2>&1
-
-# ─ 목요일 10:00 DONWAY Instagram ─
+# [목요일] 10:00 DONWAY Instagram Reels
 0 1 * * 4 cd ${REPO_DIR} && node scripts/upload/upload-instagram.js --product donway --type reels >> ${LOG_DIR}/ig-donway.log 2>&1
+# [목요일] 11:00 DONWAY 네이버 블로그
+0 2 * * 4 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product donway >> ${LOG_DIR}/blog-donway.log 2>&1
 
-# ─ 월요일 09:00 용차앱 YouTube ─
-0 0 * * 1 cd ${REPO_DIR} && git pull origin main -q && node scripts/upload/upload-youtube.js --product yongcha >> ${LOG_DIR}/yt-yongcha.log 2>&1"
+# ── 앱 자동화 ───────────────────────────────
+
+# 매일 22:00 KST(13:00 UTC) — 5개 앱 헬스체크
+0 13 * * * cd ${REPO_DIR} && node scripts/health-check.js >> ${LOG_DIR}/health.log 2>&1
+
+# 매일 07:00 KST(22:00 UTC 전날) — 재고 부족 알림 + AI 예측 사전계산
+# (MBTICO_ADMIN_PW 환경변수 설정 필요: export MBTICO_ADMIN_PW=... >> ~/.bashrc)
+0 22 * * * cd ${REPO_DIR} && [ -n \"\$MBTICO_ADMIN_PW\" ] && node scripts/admin-tasks.js --task all >> ${LOG_DIR}/admin-tasks.log 2>&1 || true
+
+# ── 유지보수 ────────────────────────────────
+
+# 매주 일요일 23:00 KST(14:00 UTC) — 10MB 초과 로그 5MB로 truncate
+0 14 * * 0 find ${LOG_DIR} -name '*.log' -size +10M -exec truncate -s 5M {} \\;
+
+# 매주 일요일 23:30 KST(14:30 UTC) — 30일 이상 된 로그 삭제
+30 14 * * 0 find ${LOG_DIR} -name '*.log' -mtime +30 -delete"
 
 echo "$CRON_CONTENT" | crontab -
 echo "  Cron 등록 완료"
@@ -126,6 +155,19 @@ echo ""
 echo "  전체 파이프라인 dry-run 테스트:"
 echo "  cd ${REPO_DIR} && node scripts/run-pipeline.js --product yongcha --steps record,compose --dry-run"
 echo ""
-echo "  영상 녹화+편집+YouTube 업로드:"
-echo "  cd ${REPO_DIR} && node scripts/run-pipeline.js --product yongcha --steps record,compose,youtube"
+echo "  영상 녹화+편집+YouTube+Instagram+블로그 전체:"
+echo "  cd ${REPO_DIR} && node scripts/run-pipeline.js --product yongcha --steps record,compose,youtube,instagram,blog"
+echo ""
+echo "================================================="
+echo "  앱 자동화 추가 설정"
+echo "================================================="
+echo ""
+echo "  재고알림·AI예측 자동화 (admin 비밀번호 등록):"
+echo "  echo 'export MBTICO_ADMIN_PW=YOUR_PW' >> ~/.bashrc && source ~/.bashrc"
+echo ""
+echo "  헬스체크 즉시 실행:"
+echo "  cd ${REPO_DIR} && node scripts/health-check.js"
+echo ""
+echo "  admin 태스크 테스트 (비밀번호 설정 후):"
+echo "  cd ${REPO_DIR} && MBTICO_ADMIN_PW=YOUR_PW node scripts/admin-tasks.js --task inv-check"
 echo ""
