@@ -228,9 +228,33 @@ async function uploadYouTube() {
   }
   await page.waitForTimeout(2000);
 
+  // 드롭다운 메뉴에서 "동영상 업로드" 항목 클릭 (만들기 버튼 클릭 후 메뉴가 열림)
+  const uploadMenuSelectors = [
+    'tp-yt-paper-item:has-text("동영상 업로드")',
+    'tp-yt-paper-item:has-text("Upload video")',
+    '[aria-label="동영상 업로드"]',
+    '[aria-label="Upload video"]',
+    'ytcp-ve tp-yt-paper-item:first-child',
+  ];
+  let menuClicked = false;
+  for (const sel of uploadMenuSelectors) {
+    try {
+      await page.waitForSelector(sel, { timeout: 3000 });
+      await page.click(sel);
+      menuClicked = true;
+      console.log(`[YouTube] 드롭다운 메뉴 클릭 (${sel})`);
+      break;
+    } catch(e) {}
+  }
+  if (!menuClicked) {
+    // 드롭다운이 없으면 이미 파일 선택창이 열렸거나 업로드 페이지로 이동한 것
+    console.log('[YouTube] 드롭다운 메뉴 없음 — 직접 파일 선택창 시도');
+  }
+  await page.waitForTimeout(2000);
+
   // 파일 선택 (drag-drop 영역 또는 input)
   const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser', { timeout: 10000 }),
+    page.waitForEvent('filechooser', { timeout: 15000 }),
     page.locator('input[type=file]').first().evaluate(el => el.click()).catch(() =>
       page.locator('[aria-label="파일 선택"], [aria-label="SELECT FILES"], text=파일 선택, text=SELECT FILES').first().click()
     ),
