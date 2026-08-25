@@ -36,7 +36,8 @@ async function getContext(platform) {
     opts.args = ['--disable-blink-features=AutomationControlled'];
   } else {
     // Linux(원격): 번들 Chromium 사용
-    opts.args = ['--no-sandbox', '--disable-setuid-sandbox'];
+    opts.args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'];
+    opts.userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
     if (CHROMIUM_PATH) opts.executablePath = CHROMIUM_PATH;
   }
 
@@ -53,7 +54,12 @@ function getLaunchOpts(headless) {
       viewport: { width: 1280, height: 800 },
     };
   }
-  const opts = { headless, args: ['--no-sandbox', '--disable-setuid-sandbox'], viewport: { width: 1280, height: 800 } };
+  const opts = {
+    headless,
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'],
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    viewport: { width: 1280, height: 800 },
+  };
   if (CHROMIUM_PATH) opts.executablePath = CHROMIUM_PATH;
   return opts;
 }
