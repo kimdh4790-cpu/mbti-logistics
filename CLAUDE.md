@@ -401,6 +401,72 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
+## ☁️ Oracle Cloud 자동화 파이프라인
+
+### 전체 흐름 (Oracle Cloud에서 모두 실행 가능)
+```
+녹화(Playwright) → 편집(ffmpeg-static) → 업로드(YouTube/Instagram/Naver)
+```
+
+### 최초 1회 초기 설정 (Oracle Cloud에서 실행)
+```bash
+# Oracle Cloud SSH 접속
+ssh -i ~/ssh-key-2026-08-02 opc@161.33.136.154
+
+# 초기화 스크립트 실행 (Node.js·Chromium·npm·cron 전부 설정)
+curl -fsSL https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/scripts/oracle-init.sh | bash
+# 또는 repo 클론 후:
+bash ~/mbti-logistics/scripts/oracle-init.sh
+```
+
+### 최초 1회 로그인 (Oracle Cloud 또는 로컬 → 복사)
+```bash
+# 방법 A: Oracle Cloud에서 직접 (X11 포워딩 필요)
+HEADLESS=false CHROMIUM_PATH=$(which chromium) node scripts/upload/upload-youtube.js --login-only
+HEADLESS=false CHROMIUM_PATH=$(which chromium) node scripts/upload/upload-instagram.js --login-only
+
+# 방법 B: 로컬 PC에서 로그인 후 세션 복사 (권장)
+# 로컬에서 로그인 완료 후:
+scp -r ~/.mbtico-profiles/ opc@161.33.136.154:~/.mbtico-profiles/
+```
+
+### 영상 제작+업로드 실행
+```bash
+cd ~/mbti-logistics
+
+# 특정 제품 전체 (녹화→편집→YouTube→Instagram)
+node scripts/run-pipeline.js --product yongcha --steps record,compose,youtube,instagram
+
+# 전체 4개 제품
+node scripts/run-pipeline.js --product all --steps record,compose
+
+# 업로드만 (영상 이미 있을 때)
+node scripts/run-pipeline.js --product filo --steps youtube,instagram
+```
+
+### GitHub Actions로 원격 실행 (ORACLE_SSH_KEY Secret 등록 필요)
+```
+GitHub → Settings → Secrets → ORACLE_SSH_KEY: SSH 개인키 내용 붙여넣기
+Actions → 소셜미디어 홍보 영상 제작 → Run workflow
+```
+
+### Cron 자동 스케줄 (oracle-init.sh 실행 후 자동 설정)
+| 시각(UTC) | KST | 제품 | 플랫폼 |
+|---|---|---|---|
+| 월 00:00 | 월 09:00 | 용차앱 | YouTube |
+| 화 00:00 | 화 09:00 | FILO | YouTube |
+| 화 01:00 | 화 10:00 | FILO | Instagram |
+| 목 00:00 | 목 09:00 | DONWAY | YouTube |
+| 목 01:00 | 목 10:00 | DONWAY | Instagram |
+
+### 중요: 업로드 파일 이름 규칙
+- 녹화: `output/<product>-raw.webm`
+- 편집 후: `output/<product>-final.mp4` + `output/<product>-promo.mp4` (업로드용 동일 파일)
+- Reels: `output/<product>-reels.mp4`
+- 썸네일: `output/<product>-thumbnail.jpg`
+
+---
+
 ## ☁️ Oracle Cloud 로그인
 이메일: kimdh4790@gmail.com
 비밀번호: khw3103!!

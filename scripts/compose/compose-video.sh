@@ -93,5 +93,10 @@ fi
 
 echo "[${PRODUCT}] 최종 영상 완료: $FINAL"
 
+# 업로드 스크립트가 찾는 -promo.mp4 복사
+PROMO="$OUTPUT_DIR/${PRODUCT}-promo.mp4"
+cp "$FINAL" "$PROMO"
+echo "[${PRODUCT}] 업로드용 복사 완료: $PROMO"
+
 # Instagram Reels용 세로형 클립 추출
 bash "$SCRIPT_DIR/make-reels.sh" "$PRODUCT"

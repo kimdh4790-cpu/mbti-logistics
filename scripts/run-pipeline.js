@@ -12,7 +12,6 @@
 const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-
 const args = process.argv.slice(2);
 const getArg = (flag) => {
   const a = args.find(a => a.startsWith(`${flag}=`));
@@ -52,10 +51,21 @@ function run(cmd, opts = {}) {
 }
 
 async function runPipeline() {
+  // Oracle Cloud: CHROMIUM_PATH 자동 감지
+  if (process.platform === 'linux' && !process.env.CHROMIUM_PATH) {
+    const { execSync: es } = require('child_process');
+    const detected = ['chromium', 'chromium-browser', '/usr/bin/chromium', '/usr/bin/chromium-browser']
+      .map(p => { try { return es(`command -v ${p} 2>/dev/null`, { encoding: 'utf8' }).trim(); } catch { return ''; } })
+      .filter(Boolean)[0];
+    if (detected) process.env.CHROMIUM_PATH = detected;
+  }
+
   console.log(`\n=== MBTICO 소셜미디어 파이프라인 ===`);
   console.log(`제품: ${targets.join(', ')}`);
   console.log(`단계: ${steps.join(' → ')}`);
-  console.log(`Dry-run: ${dryRun}\n`);
+  console.log(`Dry-run: ${dryRun}`);
+  if (process.env.CHROMIUM_PATH) console.log(`Chromium: ${process.env.CHROMIUM_PATH}`);
+  console.log('');
 
   for (const prod of targets) {
     console.log(`\n--- [${prod.toUpperCase()}] 시작 ---`);
@@ -69,7 +79,11 @@ async function runPipeline() {
       console.log(`[${prod}] Step 2: FFmpeg 편집`);
       const bash = getBash();
       run(`${bash} scripts/compose/compose-video.sh ${prod}`);
-      run(`${bash} scripts/compose/make-thumbnail.sh ${prod}`);
+      // 썸네일은 final.mp4 있을 때만
+      const finalMp4 = path.join(ROOT, 'output', `${prod}-final.mp4`);
+      if (fs.existsSync(finalMp4)) {
+        run(`${bash} scripts/compose/make-thumbnail.sh ${prod}`);
+      }
     }
 
     if (steps.includes('youtube')) {
