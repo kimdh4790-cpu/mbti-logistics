@@ -924,18 +924,10 @@ export default {
             'function _fixJoin(){' +
             'var sel=document.getElementById("settle-tier-select");' +
             'if(sel&&!sel.dataset.fixed){sel.dataset.fixed="1";' +
-            '[["50","~50명 — 20만원/월"],["100","~100명 — 40만원/월"],["200","~200명 — 80만원/월"],' +
-            '["300","~300명 — 120만원/월"],["500","~500명 — 200만원/월"],["700","~700명 — 280만원/월"],' +
-            '["1000","~1000명 — 400만원/월"],["1500","~1500명 — 600만원/월"],["2000","~2000명 — 800만원/월"],' +
-            '["9999","2000명+ — 별도 문의"]].forEach(function(r){' +
+            '[["50","~50명 — 12.5만원/월"],["100","~100명 — 25만원/월"],["200","~200명 — 50만원/월"],' +
+            '["300","~300명 — 75만원/월"],["400","~400명 — 100만원/월"],["500","~500명 — 125만원/월"],' +
+            '["1000","~1000명 — 250만원/월"],["9999","1000명+ — 별도 문의"]].forEach(function(r){' +
             'var o=sel.querySelector("option[value=\""+r[0]+"\"]");if(o)o.textContent=r[1];});}' +
-            'var card=document.getElementById("svc-settle-card");if(card){' +
-            'card.querySelectorAll("div").forEach(function(d){' +
-            'if((d.children.length===0)&&d.textContent.indexOf("32.5만")>-1)' +
-            'd.textContent="개인: 50명 20만 · 100명 40만 · 200명 80만 · 300명 120만 · 500명 200만 (VAT별도)";' +
-            'if((d.children.length===0)&&d.textContent.indexOf("26.5만")>-1)' +
-            'd.textContent="단체(20개사+): 50명 15만 · 100명 30만 · 200명 60만 · 300명 90만 · 500명 150만 (VAT별도)";' +
-            '});}' +
             '}' +
             'document.addEventListener("DOMContentLoaded",_fixJoin);' +
             'var obs=new MutationObserver(_fixJoin);obs.observe(document.body,{childList:true,subtree:true});' +
@@ -8517,15 +8509,9 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           // 요금 옵션 실제값으로 교체
           'function _fixPrices(){' +
           'var sel=document.getElementById("settle-tier-select");if(!sel||sel.dataset.fixed)return;sel.dataset.fixed="1";' +
-          '[["50","~50명 — 20만원/월"],["100","~100명 — 40만원/월"],["200","~200명 — 80만원/월"],' +
-          '["300","~300명 — 120만원/월"],["500","~500명 — 200만원/월"],["700","~700명 — 280만원/월"],' +
-          '["1000","~1000명 — 400만원/월"],["1500","~1500명 — 600만원/월"],["2000","~2000명 — 800만원/월"],' +
-          '["9999","2000명+ — 별도 문의"]].forEach(function(r){var o=sel.querySelector("option[value=\""+r[0]+"\"]");if(o)o.textContent=r[1];});' +
-          'var card=document.getElementById("svc-settle-card");if(card){' +
-          'card.querySelectorAll("div").forEach(function(d){' +
-          'if(d.textContent.indexOf("32.5만")>-1)d.textContent="개인: 50명 20만 · 100명 40만 · 200명 80만 · 300명 120만 · 500명 200만 (VAT별도)";' +
-          'if(d.textContent.indexOf("26.5만")>-1)d.textContent="단체(20개사+): 50명 15만 · 100명 30만 · 200명 60만 · 300명 90만 · 500명 150만 (VAT별도)";' +
-          '});}' +
+          '[["50","~50명 — 12.5만원/월"],["100","~100명 — 25만원/월"],["200","~200명 — 50만원/월"],' +
+          '["300","~300명 — 75만원/월"],["400","~400명 — 100만원/월"],["500","~500명 — 125만원/월"],' +
+          '["1000","~1000명 — 250만원/월"],["9999","1000명+ — 별도 문의"]].forEach(function(r){var o=sel.querySelector("option[value=\""+r[0]+"\"]");if(o)o.textContent=r[1];});' +
           '}' +
           'var obs2=new MutationObserver(_fixPrices);obs2.observe(document.body,{childList:true,subtree:true});_fixPrices();' +
           '})();</script>';
