@@ -303,11 +303,6 @@ window.onBizDocSelected=onBizDocSelected;</script>
 
       <!-- ★ STEP 2: 서비스 선택 -->
       <div id="reg-step2" style="display:none">
-        <!-- 개인/단체 -->
-        <div style="display:flex;gap:6px;margin-bottom:12px">
-          <button id="btn-plan-personal" onclick="event.stopPropagation();_setPlanType('personal')" style="flex:1;padding:8px;border:2px solid var(--brand);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff">👤 개인</button>
-          <button id="btn-plan-group" onclick="event.stopPropagation();_setPlanType('group')" style="flex:1;padding:8px;border:2px solid var(--border);border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">🏢 단체 (20개사+, 20%↓)</button>
-        </div>
         <input type="hidden" id="r-plan-type" value="personal">
 
         <!-- AI 정산 -->
@@ -317,8 +312,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
               <span style="font-size:20px">🤖</span>
               <div>
                 <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
-                <div style="font-size:10px;color:var(--text3);margin-top:2px">개인: 50명 20만 · 100명 40만 · 200명 80만 · 300명 120만 · 500명 200만 · 700명+ 280만/월</div>
-                <div style="font-size:10px;color:var(--text3)">단체(20개사+): 50명 15만 · 100명 30만 · 200명 60만 · 300명 90만 · 500명 150만 (VAT별도)</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px">50명 12.5만 · 100명 25만 · 200명 50만 · 300명 75만 · 500명 125만/월 (VAT별도)</div>
               </div>
             </div>
             <div id="svc-settle-check" style="width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff">✓</div>
@@ -28943,32 +28937,27 @@ function addRpCamp(cid){
 // ══ 구독 플랜 선택 모달 ══
 
 // ── 구간별 정액 요금 계산 ──
-// 그룹1: 35,000원/인 | 그룹2: 25,000원/인
-// 구간: 50/100/200/300/500/700명 (AI정산 확정 요금제 2026-07-02 개정, VAT별도)
-// 개인: 인당 4,000원 고정 / 단체: 인당 3,000원 고정 (2026-07-12 개정)
+// 인당 2,500원 통합 단일 요금 (2026-08-25 개정, VAT별도)
+// 구간: 50/100/200/300/400/500/1000명
 var DW_TIERS_IND=[
-  {cap:50,  amt:200000, label:'~50명'},
-  {cap:100,  amt:400000, label:'~100명'},
-  {cap:200,  amt:800000, label:'~200명'},
-  {cap:300,  amt:1200000, label:'~300명'},
-  {cap:500,  amt:2000000, label:'~500명'},
-  {cap:700,  amt:2800000, label:'~700명'},
-  {cap:1000,  amt:4000000, label:'~1000명'},
-  {cap:1500,  amt:6000000, label:'~1500명'},
-  {cap:2000,  amt:8000000, label:'~2000명'},
-  {cap:9999,  amt:0, label:'2000명+'},
+  {cap:50,   amt:125000,  label:'~50명'},
+  {cap:100,  amt:250000,  label:'~100명'},
+  {cap:200,  amt:500000,  label:'~200명'},
+  {cap:300,  amt:750000,  label:'~300명'},
+  {cap:400,  amt:1000000, label:'~400명'},
+  {cap:500,  amt:1250000, label:'~500명'},
+  {cap:1000, amt:2500000, label:'~1000명'},
+  {cap:9999, amt:0,       label:'1000명+'},
 ];
 var DW_TIERS_GRP=[
-  {cap:50,  amt:150000, label:'~50명'},
-  {cap:100,  amt:300000, label:'~100명'},
-  {cap:200,  amt:600000, label:'~200명'},
-  {cap:300,  amt:900000, label:'~300명'},
-  {cap:500,  amt:1500000, label:'~500명'},
-  {cap:700,  amt:2100000, label:'~700명'},
-  {cap:1000,  amt:3000000, label:'~1000명'},
-  {cap:1500,  amt:4500000, label:'~1500명'},
-  {cap:2000,  amt:6000000, label:'~2000명'},
-  {cap:9999,  amt:0, label:'2000명+'},
+  {cap:50,   amt:125000,  label:'~50명'},
+  {cap:100,  amt:250000,  label:'~100명'},
+  {cap:200,  amt:500000,  label:'~200명'},
+  {cap:300,  amt:750000,  label:'~300명'},
+  {cap:400,  amt:1000000, label:'~400명'},
+  {cap:500,  amt:1250000, label:'~500명'},
+  {cap:1000, amt:2500000, label:'~1000명'},
+  {cap:9999, amt:0,       label:'1000명+'},
 ];
 function _tierCap(hc){
   var tiers=DW_TIERS_IND;
@@ -29064,10 +29053,10 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
   // ★ QR+급여: 인당 3,500원, 배달대행: AI정산 동일 구간
   // 재고/키오스크: filo.ai.kr 연동 (90,000원/월)
   var plans=[
-    {key:'settle',   ic:'📦',nm:'AI 정산',       up:4725,g:1,color:'#0891b2',badge:'가장 인기',
+    {key:'settle',   ic:'📦',nm:'AI 정산',       up:2500,g:1,color:'#0891b2',badge:'가장 인기',
      tl:'쿠팡 대리점 전용 — 엑셀 올리면 끝',
      ft:['쿠팡 정산 엑셀 자동 파싱','세금계산서·고용산재 자동 계산','주민번호·입사일 자동 등록','세무사 자동 연동','아이디 지원 자동 분배','기사 앱 명세서·푸시 발송','근무표 실시간 연동','TTS 음성·진동 알림']},
-    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:4725,g:1,color:'#dc2626',
+    {key:'delivery', ic:'🛵',nm:'배달대행 정산',   up:2500,g:1,color:'#dc2626',
      tl:'배민·쿠팡이츠 전용 차액 자동 보전',
      ft:['배민·이츠 엑셀 자동 인식','구간 단가 소급 적용','보전·환수 자동 판정','직원 명세서','기사 앱 명세서·푸시 발송']},
   ];
@@ -29075,11 +29064,11 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
     +'<div class="mdt" style="position:sticky;top:0;background:var(--bg2);border-radius:12px 12px 0 0;z-index:2;display:flex;align-items:center">💳 구독 플랜 선택'
     +'<button onclick="_closeSubModal()" style="background:none;border:none;cursor:pointer;font-size:20px;margin-left:auto">✕</button></div>'
     +'<div style="background:var(--bg3);border-radius:10px;padding:10px 14px;margin:10px 0">'
-    +'<div style="display:flex;gap:8px;margin-bottom:10px">'+'<button id="sub-tab-ind" onclick="window._subGrp=false;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">개인</button>'+'<button id="sub-tab-grp" onclick="window._subGrp=true;_showSubModal()" style="padding:5px 14px;border:none;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text2)">단체 (20개사+)</button>'+'</div>'+'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">👥 기사/직원 수 구간 선택</div>'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-    +[50,100,200,300,500,700,1000,1500,2000,9999].map(function(n,i){
+    +[50,100,200,300,400,500,1000,9999].map(function(n,i){
       var active=i===0;
-      var lbl=n===9999?'2000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
+      var lbl=n===9999?'1000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
     }).join('')
     +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 · 카드 등록 불필요</div>'
     +'</div>'
