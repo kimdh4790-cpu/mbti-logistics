@@ -200,13 +200,19 @@ async function uploadYouTube() {
   // 제목 입력 (업로드 후 메타 패널 열릴 때까지 대기)
   const titleSel = '#title-textarea, ytcp-mention-textbox[label="제목"], ytcp-mention-textbox[label="Title"]';
   await page.waitForSelector(titleSel, { timeout: 60000 });
-  await page.click(titleSel);
+  // 오버레이/백드롭 사라질 때까지 대기 (최대 15초)
+  await page.waitForFunction(() => {
+    const bd = document.querySelector('tp-yt-iron-overlay-backdrop');
+    return !bd || !bd.hasAttribute('opened');
+  }, { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(1000);
+  await page.locator(titleSel).click({ force: true });
   await page.keyboard.press('Control+a');
   await page.keyboard.type(meta.youtube.title);
 
   // 설명 입력
   const descSel = '#description-textarea, ytcp-mention-textbox[label="설명"], ytcp-mention-textbox[label="Description"]';
-  await page.click(descSel);
+  await page.locator(descSel).click({ force: true });
   await page.keyboard.press('Control+a');
   await page.keyboard.type(meta.youtube.description);
 
