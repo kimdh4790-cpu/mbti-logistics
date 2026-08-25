@@ -25,8 +25,18 @@ const setProfile = args.includes('--set-profile');
 const headless = process.env.HEADLESS !== 'false' && !loginOnly && !setProfile;
 
 const ROOT = path.join(__dirname, '../..');
-const meta = require(`../content/${product}-meta.json`);
+let meta = require(`../content/${product}-meta.json`);
 const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
+
+// 주차 기반 variant 선택 (매주 다른 콘텐츠 각도로 홍보)
+if (meta.variants && meta.variants.length > 0) {
+  const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % meta.variants.length;
+  const variant = meta.variants[weekIdx];
+  if (variant.youtube) meta = { ...meta, youtube: { ...meta.youtube, ...variant.youtube } };
+  if (variant.instagram) meta = { ...meta, instagram: { ...meta.instagram, ...variant.instagram } };
+  if (variant.blog) meta = { ...meta, blog: { ...meta.blog, ...variant.blog } };
+  console.log(`[Instagram] 콘텐츠 변형: ${variant.label} (${weekIdx + 1}/${meta.variants.length}주차 순환)`);
+}
 
 const PROFILE_ICONS = {
   filo:    path.join(ROOT, 'filo-icon-512.png'),
