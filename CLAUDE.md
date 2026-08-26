@@ -308,25 +308,34 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
-## 🚨 절대 금지 — API 키/OAuth 요청 금지
-- YouTube API 키 요청 금지
-- OAuth JSON 요청 금지
-- Google Cloud 키 요청 금지
-- 어떤 외부 API 키도 사용자에게 요청 금지
+## 📹 소셜미디어 업로드 방법 (API 우선)
 
-## 📹 유튜브 업로드 방법 (키 없이)
-반드시 Playwright 브라우저 직접 로그인 방식 사용:
-1. chromium.launchPersistentContext 또는 channel:chrome 사용
-2. https://studio.youtube.com 접속
-3. 기존 크롬 로그인 세션 그대로 사용
-4. 파일 업로드 → 제목 입력 → 게시
-키, OAuth, API 절대 요청 금지. 브라우저 로그인으로만 진행.
+### YouTube (Data API v3 — 권장)
+- 방식: YouTube Data API v3 (무료, 10,000 유닛/일, 영상 업로드 1,600 유닛)
+- n8n 또는 node.js에서 googleapis 라이브러리 사용
+- API 키/OAuth 자격증명은 사용자가 Google Cloud Console에서 직접 발급·등록
+- Claude는 API 키를 요청하지 않음. 단, 환경변수나 n8n 내에 등록된 키를 사용하는 코드는 작성 가능
+- Fallback: API 설정 전까지 Playwright 브라우저 방식 사용 가능
 
-## 📹 영상 제작 방법 (키 없이)
-1. Playwright로 FILO 앱 화면 직접 녹화
-2. FFmpeg으로 자막+BGM 합성
-3. Kling AI는 Playwright 자동화 차단됨 — 사용 금지
-4. 외부 AI 영상 API 키 요청 금지
+### Instagram (Graph API — 권장)
+- 방식: Meta/Instagram Graph API (Reels, 이미지 업로드)
+- Facebook Business + Meta Developer 계정 필요
+- Fallback: Playwright
+
+### 네이버 블로그 (Playwright — 공식 API 없음)
+- 네이버 블로그 공식 포스팅 API 없음 → Playwright만 가능
+- `scripts/upload/post-naver-blog.js` 사용
+
+### n8n 자동화 허브 (Oracle Cloud 161.33.136.154 설치 권장)
+- YouTube API + Instagram API + Claude API + FFmpeg 워크플로우 통합
+- 설치: `bash scripts/setup-n8n.sh`
+- 포트: 5678 (Oracle Cloud 방화벽 오픈 필요)
+
+## 📹 영상 제작 방법
+1. Playwright로 앱 화면 직접 녹화 (scripts/capture/)
+2. FFmpeg으로 자막+BGM 합성 (scripts/compose/)
+3. 타입캐스트 API: AI 나레이션 생성 (사용자가 키 등록 시 활용 가능)
+4. Kling AI: Playwright 자동화 차단됨 — 사용 금지
 
 ---
 
