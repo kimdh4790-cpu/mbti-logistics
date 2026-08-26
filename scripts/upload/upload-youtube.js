@@ -174,10 +174,13 @@ async function uploadYouTube() {
   // 팝업 완전 제거 루프 (본인 인증 등 — 최대 10회, 다단계 wizard 처리)
   // 중요: ytcp-dialog/[role=dialog] 내 버튼으로 스코프 한정
   //       → ytcpAppHeaderSkipNavigation(헤더 skip-nav, viewport 밖)을 자동 제외
-  for (let popupTry = 0; popupTry < 10; popupTry++) {
-    // 방법 1: CSS 스코프 셀렉터 (다이얼로그 내부만)
+  for (let popupTry = 0; popupTry < 15; popupTry++) {
+    // 방법 1: CSS 스코프 셀렉터
+    // - native button:has-text("다음") — 본인 인증 팝업 (native <button> 사용)
+    // - ytcp-dialog ytcp-button — 업로드 wizard (ytcp-button은 skip-nav가 아님)
+    // - skip-nav(ytcpAppHeaderSkipNavigation)는 ytcp-button + 텍스트 "건너뛰기" → 아래 셀렉터에 미포함
     const popupBtn = page.locator(
-      'ytcp-dialog button:has-text("다음"), ytcp-dialog button:has-text("Next"), ' +
+      'button:has-text("다음"), button:has-text("Next"), ' +        // 본인 인증 등 native 팝업
       'ytcp-dialog button:has-text("건너뛰기"), ytcp-dialog button:has-text("Skip"), ' +
       'ytcp-dialog ytcp-button:has-text("다음"), ytcp-dialog ytcp-button:has-text("건너뛰기"), ' +
       '[role="dialog"] button:has-text("다음"), [role="dialog"] button:has-text("Next"), ' +
