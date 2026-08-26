@@ -171,14 +171,13 @@ async function uploadYouTube() {
   await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
 
-  // 팝업 완전 제거 루프 (본인 인증 등 모든 모달 — 최대 5회)
+  // 팝업 완전 제거 루프 (본인 인증 등 모든 모달 — 최대 5회, 보이는 버튼만)
   for (let popupTry = 0; popupTry < 5; popupTry++) {
     const popupBtn = page.locator(
       'button:has-text("다음"), button:has-text("Next"), ' +
       'button:has-text("건너뛰기"), button:has-text("Skip"), ' +
-      'button:has-text("닫기"), button:has-text("Close"), ' +
       'ytcp-button:has-text("다음"), ytcp-button:has-text("건너뛰기")'
-    );
+    ).filter({ visible: true });
     const cnt = await popupBtn.count();
     if (cnt === 0) break;
     console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 클릭`);
