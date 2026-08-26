@@ -177,12 +177,14 @@ async function uploadYouTube() {
     if (await verifyNext.count() > 0) {
       console.log('[YouTube] 본인 인증 팝업 → 다음 클릭');
       await verifyNext.first().click();
-      await page.waitForTimeout(3000);
-      await page.screenshot({ path: path.join(ROOT, 'output', 'yt-after-verify.png') });
+      await page.waitForTimeout(5000);
+      // 본인 인증 후 페이지 상태 불안정 → Studio 재이동으로 리셋
+      console.log('[YouTube] 본인 인증 후 Studio 재이동 (상태 리셋)');
+      await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
+      await page.waitForTimeout(4000);
     }
   } catch(e) { /* 팝업 없으면 무시 */ }
-  const currentUrl = page.url();
-  console.log(`[YouTube] 현재 URL: ${currentUrl}`);
+  console.log(`[YouTube] 현재 URL: ${page.url()}`);
 
   // Step 1: 업로드/만들기 버튼 클릭
   const uploadSelectors = [
@@ -199,7 +201,7 @@ async function uploadYouTube() {
   for (const sel of uploadSelectors) {
     try {
       const el = await page.waitForSelector(sel, { timeout: 4000 });
-      await el.click({ force: true });
+      await el.click(); // force 없이 — Polymer 컴포넌트 이벤트 핸들러 정상 트리거
       clicked = true;
       console.log(`[YouTube] 버튼 클릭 (${sel})`);
       break;
