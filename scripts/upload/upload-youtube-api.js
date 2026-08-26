@@ -75,19 +75,25 @@ async function uploadYouTube() {
     return;
   }
 
-  // OAuth2 설정 (refresh_token만 사용 — access_token을 직접 넘기면 만료 감지 안 됨)
+  // OAuth2 설정
+  const ACCESS_TOKEN = process.env.YOUTUBE_ACCESS_TOKEN;
   const auth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
-  auth.setCredentials({ refresh_token: REFRESH_TOKEN });
 
-  // 업로드 전 토큰 교환 확인
-  try {
-    const { token } = await auth.getAccessToken();
-    console.log(`[YouTube API] 액세스 토큰 확인: ${token ? token.substring(0, 20) + '...' : '없음'}`);
-  } catch (e) {
-    console.error('[YouTube API] 토큰 교환 실패:', e.message);
-    console.error('  → OAuth Playground에서 새 refresh_token을 발급하세요');
-    console.error('  → developers.google.com/oauthplayground');
-    process.exit(1);
+  if (ACCESS_TOKEN) {
+    // access_token이 있으면 직접 사용 (refresh_token 교환 불필요)
+    auth.setCredentials({ access_token: ACCESS_TOKEN });
+    console.log(`[YouTube API] access_token 사용: ${ACCESS_TOKEN.substring(0, 20)}...`);
+  } else {
+    // refresh_token으로 자동 교환
+    auth.setCredentials({ refresh_token: REFRESH_TOKEN });
+    try {
+      const { token } = await auth.getAccessToken();
+      console.log(`[YouTube API] 액세스 토큰 발급: ${token ? token.substring(0, 20) + '...' : '없음'}`);
+    } catch (e) {
+      console.error('[YouTube API] 토큰 교환 실패:', e.message);
+      console.error('  → YOUTUBE_REFRESH_TOKEN이 만료됨. OAuth Playground에서 새 토큰 발급 필요');
+      process.exit(1);
+    }
   }
 
   // refresh_token rotation 자동 저장 (2024-07 이후 클라이언트 정책)
