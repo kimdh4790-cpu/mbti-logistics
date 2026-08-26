@@ -316,8 +316,12 @@ async function uploadYouTube() {
 
   // 다음 버튼 3회 (세부정보 → 동영상요소 → 검토 → 공개설정)
   for (let i = 0; i < 3; i++) {
-    await page.waitForSelector('ytcp-button#next-button', { timeout: 10000 });
-    await page.click('ytcp-button#next-button');
+    await page.waitForSelector('ytcp-button#next-button', { timeout: 30000 });
+    // tp-yt-iron-overlay-backdrop이 포인터 이벤트 차단 → JS로 제거 후 force 클릭
+    await page.evaluate(() => {
+      document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
+    });
+    await page.click('ytcp-button#next-button', { force: true });
     console.log(`[YouTube] 다음 버튼 ${i + 1}/3`);
     await page.waitForTimeout(2000);
   }
@@ -333,11 +337,15 @@ async function uploadYouTube() {
     'input[value="PUBLIC"]',
     'ytcp-privacy-dropdown #privacy-radios tp-yt-paper-radio-button',
   ];
+  // 공개 설정 전에도 backdrop 제거
+  await page.evaluate(() => {
+    document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
+  });
   let publicClicked = false;
   for (const sel of publicSelectors) {
     try {
       await page.waitForSelector(sel, { timeout: 3000 });
-      await page.click(sel);
+      await page.click(sel, { force: true });
       publicClicked = true;
       console.log(`[YouTube] 공개 설정 클릭 (${sel})`);
       break;
@@ -364,7 +372,7 @@ async function uploadYouTube() {
   for (const sel of doneSelectors) {
     try {
       await page.waitForSelector(sel, { timeout: 5000 });
-      await page.click(sel);
+      await page.click(sel, { force: true });
       doneClicked = true;
       console.log(`[YouTube] 게시 버튼 클릭 (${sel})`);
       break;
