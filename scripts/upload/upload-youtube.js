@@ -68,12 +68,12 @@ async function uploadYouTube() {
 
   const page = await ctx.newPage();
 
-  // 로그인 확인
-  await page.goto('https://accounts.google.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForTimeout(2000);
+  // 로그인 확인 (studio.youtube.com으로 확인 — accounts.google.com은 IP 변경 시 /signin 리다이렉트)
+  await page.goto('https://studio.youtube.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await page.waitForTimeout(3000);
 
   const url = page.url();
-  const isLoggedIn = !url.includes('/signin') && !url.includes('/rejected');
+  const isLoggedIn = url.includes('studio.youtube.com') && !url.includes('/oops') && !url.includes('/signin');
 
   if (loginOnly) {
     if (!isLoggedIn) {
