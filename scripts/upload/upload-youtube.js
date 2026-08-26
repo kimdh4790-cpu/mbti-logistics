@@ -459,9 +459,41 @@ async function uploadYouTube() {
     await ctx.close();
     process.exit(1);
   }
-  console.log('[YouTube] 업로드 완료!');
 
-  await page.waitForTimeout(5000);
+  // 게시 완료 확인 — YouTube Studio가 "게시된 동영상" 확인 모달 또는 URL 변경으로 성공 알림
+  // 최대 60초 대기
+  let publishConfirmed = false;
+  try {
+    await Promise.race([
+      // 1) "게시된 동영상" 또는 "동영상이 게시되었습니다" 텍스트 포함 모달
+      page.waitForSelector(
+        'ytcp-video-upload-progress:has-text("게시"), ' +
+        '[class*="success"]:has-text("게시"), ' +
+        'ytcp-uploads-still-processing-dialog, ' +
+        'ytcp-dialog:has-text("게시된"), ' +
+        'ytcp-dialog:has-text("업로드"), ' +
+        '[class*="upload-complete"]',
+        { timeout: 30000 }
+      ).then(() => { publishConfirmed = true; console.log('[YouTube] 게시 완료 모달 확인'); }),
+      // 2) URL이 동영상 편집 페이지로 바뀌면 성공
+      page.waitForURL('**/video/**', { timeout: 30000 })
+        .then(() => { publishConfirmed = true; console.log(`[YouTube] 게시 완료 — URL: ${page.url()}`); }),
+      // 3) 30초 타임아웃 fallback
+      new Promise(r => setTimeout(r, 30000)),
+    ]);
+  } catch(e) {}
+
+  // 최종 스크린샷
+  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-publish-result.png'), fullPage: true });
+
+  if (publishConfirmed) {
+    console.log('[YouTube] 업로드 완료! (게시 확인됨)');
+  } else {
+    console.error('[YouTube] 경고: 게시 버튼 클릭했지만 완료 확인 안됨. yt-publish-result.png 확인 필요');
+    process.exit(1);
+  }
+
+  await page.waitForTimeout(3000);
   await ctx.close();
 }
 
