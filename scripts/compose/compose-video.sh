@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # 사용법: ./compose-video.sh <product>
 # product: filo | donway | yongcha | mbtico
+#
+# 나레이션 포함 버전: output/<product>-narration.mp3 가 있으면 자동 믹싱
+#   나레이션 생성: node scripts/audio/generate-narration.js --product <product>
 
 set -e
 
@@ -12,7 +15,6 @@ ASSETS_DIR="$ROOT/assets"
 SUBTITLES="$ROOT/scripts/content/${PRODUCT}-subtitles.srt"
 INPUT="$OUTPUT_DIR/${PRODUCT}-raw.webm"
 FINAL="$OUTPUT_DIR/${PRODUCT}-final.mp4"
-REELS="$OUTPUT_DIR/${PRODUCT}-reels.mp4"
 
 # ffmpeg-static 우선, 없으면 시스템 ffmpeg
 FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
@@ -26,8 +28,8 @@ fi
 
 echo "[${PRODUCT}] FFmpeg 영상 편집 시작..."
 
-# 로고/BGM 경로 (없으면 오버레이 스킵)
-LOGO="$ASSETS_DIR/logo.png"
+# 오디오 파일 우선순위: 나레이션 > BGM > 무음
+NARRATION="$OUTPUT_DIR/${PRODUCT}-narration.mp3"
 BGM="$ASSETS_DIR/bgm/background.mp3"
 INTRO="$ASSETS_DIR/intro.mp4"
 OUTRO="$ASSETS_DIR/outro.mp4"
@@ -39,20 +41,54 @@ if [ -f "$SUBTITLES" ]; then
   ASS_FILE="$OUTPUT_DIR/${ASS_FNAME}"
   (cd "$OUTPUT_DIR" && "$FFMPEG" -y -i "$SUBTITLES" "$ASS_FNAME" 2>/dev/null) || true
   if [ -f "$ASS_FILE" ]; then
+    # ASS 스타일: 크고 굵게, 하단 중앙, 흰색 + 검은 테두리
+    # 스타일은 ffmpeg가 SRT→ASS 변환 시 기본 스타일 사용. 커스텀은 ASS 직접 편집 필요.
     SUBTITLE_FILTER=",ass=${ASS_FNAME}"
   fi
 fi
 
-# 자막 필터 사용 시 OUTPUT_DIR 기준으로 실행
 cd "$OUTPUT_DIR"
 
-# BGM 처리
-BGM_ARGS=()
-if [ -f "$BGM" ]; then
-  BGM_ARGS=(-i "$BGM")
-fi
+# ─── 오디오 필터 구성 ────────────────────────────────────────────
+# 나레이션 있음: 나레이션(0dB) + BGM(-18dB 덕킹)
+# BGM만 있음: BGM 단독
+# 없음: 무음
 
-# 인트로/아웃로가 있는 경우 concat, 없으면 메인 영상만
+HAS_NAR=0
+HAS_BGM=0
+[ -f "$NARRATION" ] && HAS_NAR=1
+[ -f "$BGM" ] && HAS_BGM=1
+
+build_audio_args() {
+  # 리턴: ffmpeg -i 추가 인자들 (공백으로 이어지는 배열)
+  if [ "$HAS_NAR" = "1" ] && [ "$HAS_BGM" = "1" ]; then
+    echo "-i ${NARRATION} -i ${BGM}"
+  elif [ "$HAS_NAR" = "1" ]; then
+    echo "-i ${NARRATION}"
+  elif [ "$HAS_BGM" = "1" ]; then
+    echo "-i ${BGM}"
+  fi
+}
+
+build_audio_filter() {
+  if [ "$HAS_NAR" = "1" ] && [ "$HAS_BGM" = "1" ]; then
+    # 나레이션 + BGM 덕킹 믹싱 (나레이션 1:audio stream, BGM 2:audio stream)
+    echo "[1:a]volume=1.0[nar];[2:a]volume=0.15[bgm];[nar][bgm]amix=inputs=2:duration=first[audio]"
+  elif [ "$HAS_NAR" = "1" ]; then
+    echo "[1:a]volume=1.0[audio]"
+  elif [ "$HAS_BGM" = "1" ]; then
+    echo "[1:a]volume=1.0[audio]"
+  fi
+}
+
+AUDIO_ARGS=$(build_audio_args)
+AUDIO_FILTER=$(build_audio_filter)
+
+# ─── 비디오 필터 ────────────────────────────────────────────────
+# 블러 배경 채우기: 세로형(390x844) → 1280x720 자연스럽게
+BLUR_VF="split[main][bg];[bg]scale=1280:720,boxblur=25:5[blurred];[main]scale=1280:720:force_original_aspect_ratio=decrease[fg];[blurred][fg]overlay=(W-w)/2:(H-h)/2${SUBTITLE_FILTER}"
+
+# ─── 인트로/아웃로 있는 경우 ─────────────────────────────────────
 if [ -f "$INTRO" ] && [ -f "$OUTRO" ]; then
   echo "  인트로+본영상+아웃로 합성 중..."
   LIST_FILE="$OUTPUT_DIR/${PRODUCT}-concat.txt"
@@ -61,26 +97,35 @@ file '${INTRO}'
 file '${INPUT}'
 file '${OUTRO}'
 EOF
-  "$FFMPEG" -y \
-    -f concat -safe 0 -i "$LIST_FILE" \
-    "${BGM_ARGS[@]}" \
-    -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
-    -c:v libx264 -preset medium -crf 23 \
-    -c:a aac -b:a 128k \
-    -shortest \
-    "$FINAL"
-else
-  echo "  본영상 편집 중 (인트로/아웃로 없음)..."
-  # 블러 채우기: 세로형 녹화도 블랙바 없이 전체 프레임 채움
-  BLUR_VF="split[main][bg];[bg]scale=1280:720,boxblur=25:5[blurred];[main]scale=1280:720:force_original_aspect_ratio=decrease[fg];[blurred][fg]overlay=(W-w)/2:(H-h)/2${SUBTITLE_FILTER}"
-  if [ -f "$BGM" ]; then
+  if [ -n "$AUDIO_FILTER" ]; then
     "$FFMPEG" -y \
-      -i "$INPUT" \
-      -i "$BGM" \
-      -vf "$BLUR_VF" \
+      -f concat -safe 0 -i "$LIST_FILE" \
+      $AUDIO_ARGS \
+      -filter_complex "${AUDIO_FILTER}" \
+      -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
+      -map 0:v -map "[audio]" \
       -c:v libx264 -preset medium -crf 23 \
       -c:a aac -b:a 128k \
-      -map 0:v -map 1:a \
+      -shortest \
+      "$FINAL"
+  else
+    "$FFMPEG" -y \
+      -f concat -safe 0 -i "$LIST_FILE" \
+      -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
+      -c:v libx264 -preset medium -crf 23 -an \
+      "$FINAL"
+  fi
+else
+  echo "  본영상 편집 중..."
+  if [ -n "$AUDIO_FILTER" ]; then
+    "$FFMPEG" -y \
+      -i "$INPUT" \
+      $AUDIO_ARGS \
+      -filter_complex "${AUDIO_FILTER}" \
+      -vf "$BLUR_VF" \
+      -map 0:v -map "[audio]" \
+      -c:v libx264 -preset medium -crf 23 \
+      -c:a aac -b:a 128k \
       -shortest \
       "$FINAL"
   else
