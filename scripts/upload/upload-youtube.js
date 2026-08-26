@@ -404,15 +404,15 @@ async function uploadYouTube() {
   await page.waitForTimeout(1000);
 
   // 다음 버튼 — 공개설정 페이지 나올 때까지 최대 6회 클릭 (동적)
-  const isOnVisibilityPage = async () => page.evaluate(() => !!(
-    document.querySelector('ytcp-video-visibility-select') ||
-    document.querySelector('ytcp-privacy-dropdown') ||
-    document.querySelector('tp-yt-paper-radio-button[name="PUBLIC"]') ||
-    document.querySelector('[name="PUBLIC"]') ||
-    // done-button이 활성화된 경우 = 공개설정 페이지
-    (document.querySelector('ytcp-button#done-button') &&
-     !document.querySelector('ytcp-button#done-button[disabled]'))
-  ));
+  // Playwright 네이티브 셀렉터는 shadow DOM 자동 관통 → evaluate 대신 사용
+  const isOnVisibilityPage = async () => {
+    try {
+      const count = await page.locator(
+        'ytcp-video-visibility-select, ytcp-privacy-dropdown, #privacy-radios'
+      ).count();
+      return count > 0;
+    } catch(e) { return false; }
+  };
 
   for (let i = 0; i < 6; i++) {
     if (await isOnVisibilityPage()) {
@@ -436,73 +436,59 @@ async function uploadYouTube() {
     await page.waitForTimeout(3000);
   }
 
-  // 공개설정 페이지 렌더링 대기
+  // 공개설정 페이지 렌더링 대기 + 스크린샷
   await page.waitForTimeout(2000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-visibility-page.png'), fullPage: true });
-
-  // 드롭다운이 collapsed 상태이면 클릭해서 확장
-  const ddExpanded = await page.evaluate(() => {
-    const dd = document.querySelector('ytcp-privacy-dropdown');
-    if (!dd) return 'no-dropdown';
-    if (document.querySelector('tp-yt-paper-radio-button[name="PUBLIC"]')) return 'already-open';
-    // 여러 트리거 셀렉터 시도
-    const trigger =
-      dd.querySelector('ytcp-text-dropdown-trigger') ||
-      dd.querySelector('[role="button"]') ||
-      dd.querySelector('ytcp-select') ||
-      dd.querySelector('.ytcp-privacy-dropdown');
-    if (trigger) { trigger.click(); return 'trigger-clicked'; }
-    dd.click();
-    return 'dd-clicked';
-  });
-  console.log(`[YouTube] 드롭다운 상태: ${ddExpanded}`);
-  if (ddExpanded !== 'already-open' && ddExpanded !== 'no-dropdown') {
-    await page.waitForTimeout(1500);
-  }
 
   // backdrop 제거
   await page.evaluate(() => {
     document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
   });
-  await page.waitForTimeout(500);
 
-  // 공개 설정 선택 — 다단계 시도
-  const publicClicked = await page.evaluate(() => {
-    // 1) name="PUBLIC" radio button (가장 정확)
-    const byName = document.querySelector('tp-yt-paper-radio-button[name="PUBLIC"]');
-    if (byName) { byName.click(); return 'byName'; }
-    // 2) 텍스트로 찾기
-    const allRadios = Array.from(document.querySelectorAll('tp-yt-paper-radio-button'));
-    const byText = allRadios.find(el => {
-      const t = el.textContent.trim();
-      return t === '공개' || t === 'Public' || t.startsWith('공개\n') || t.startsWith('Public\n');
-    });
-    if (byText) { byText.click(); return 'byText'; }
-    // 3) privacy-dropdown 내 첫번째 라디오 (공개가 최상단)
-    const inDropdown = document.querySelector('ytcp-privacy-dropdown tp-yt-paper-radio-button');
-    if (inDropdown) { inDropdown.click(); return 'inDropdown-first'; }
-    // 4) listbox item (드롭다운 열린 상태)
-    const listItem = document.querySelector('tp-yt-paper-listbox tp-yt-paper-item');
-    if (listItem) { listItem.click(); return 'listbox-item'; }
-    // 5) select 요소
-    const sel = document.querySelector('ytcp-privacy-dropdown select, select[name="PRIVACY"]');
-    if (sel) {
-      sel.value = 'PUBLIC';
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      return 'select-change';
-    }
-    return null;
-  });
+  // 공개 설정 선택
+  // 핵심: name 속성이 소문자 "public" (대문자 PUBLIC 아님)
+  // Playwright 네이티브 셀렉터 → shadow DOM 자동 관통 (page.evaluate의 querySelector는 shadow DOM 불가)
+  let publicClicked = false;
+  const pubSelectors = [
+    '#privacy-radios *[name="public"]',          // fawazahmed0/youtube-uploader 검증된 셀렉터
+    'tp-yt-paper-radio-button[name="public"]',   // 소문자
+    'tp-yt-paper-radio-button[name="PUBLIC"]',   // 대문자 (구버전)
+    '[name="public"]',
+    '[name="PUBLIC"]',
+  ];
+  for (const sel of pubSelectors) {
+    try {
+      await page.waitForSelector(sel, { visible: true, timeout: 5000 });
+      await page.click(sel, { force: true });
+      publicClicked = true;
+      console.log(`[YouTube] 공개 설정 완료 (${sel})`);
+      break;
+    } catch(e) {}
+  }
 
-  if (publicClicked) {
-    console.log(`[YouTube] 공개 설정 완료 (${publicClicked})`);
-  } else {
+  // 셀렉터 모두 실패 시 텍스트로 시도
+  if (!publicClicked) {
+    try {
+      await page.locator('text=공개').first().click({ timeout: 5000 });
+      publicClicked = true;
+      console.log('[YouTube] 공개 설정 완료 (text=공개)');
+    } catch(e) {}
+  }
+  if (!publicClicked) {
+    try {
+      await page.locator('text=Public').first().click({ timeout: 3000 });
+      publicClicked = true;
+      console.log('[YouTube] 공개 설정 완료 (text=Public)');
+    } catch(e) {}
+  }
+
+  if (!publicClicked) {
     const shotPath = path.join(ROOT, 'output', 'yt-public-debug.png');
     await page.screenshot({ path: shotPath, fullPage: true });
     // DOM 스냅샷으로 현재 상태 기록
     const domSnap = await page.evaluate(() => {
       const els = ['ytcp-video-visibility-select', 'ytcp-privacy-dropdown',
-        'tp-yt-paper-radio-button', 'ytcp-button#done-button', 'ytcp-button#next-button'];
+        '#privacy-radios', 'tp-yt-paper-radio-button', 'ytcp-button#done-button', 'ytcp-button#next-button'];
       return els.map(s => `${s}: ${document.querySelectorAll(s).length}`).join(', ');
     });
     console.error(`[YouTube] 공개 설정 버튼 못 찾음. DOM: {${domSnap}}`);
