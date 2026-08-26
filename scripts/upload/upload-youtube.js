@@ -271,19 +271,37 @@ async function uploadYouTube() {
     }
   } catch(e) {}
 
-  // Step 3: 업로드 다이얼로그 내 input[type=file] 대기 + 스크린샷
+  // Step 3: 업로드 다이얼로그 완전 로딩 대기
+  // 스크린샷 (업로드 클릭 직후 상태 확인용)
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-after-upload-click.png') });
   console.log('[YouTube] 업로드 다이얼로그 스크린샷 저장: yt-after-upload-click.png');
 
-  // input[type=file]이 렌더링될 때까지 최대 15초 대기
-  await page.waitForSelector('input[type=file]', { timeout: 15000 }).catch(() => {
-    console.log('[YouTube] input[type=file] 대기 타임아웃 — 강제 시도');
+  // 업로드 다이얼로그 파일 선택 영역 대기 (30초)
+  const uploadDialogReady = await page.waitForSelector(
+    'ytcp-upload-dialog input[type=file], ytcp-uploads-file-picker, input[type=file]',
+    { timeout: 30000 }
+  ).then(() => true).catch(() => {
+    console.log('[YouTube] input[type=file] 30초 대기 타임아웃 — 강제 시도');
+    return false;
   });
+  console.log(`[YouTube] 업로드 다이얼로그 준비: ${uploadDialogReady}`);
 
-  // Step 4: 파일 주입 — setInputFiles 직접 우선, filechooser fallback
+  // 현재 file input 개수 출력 (진단용)
+  const fileInputCount = await page.locator('input[type=file]').count();
+  console.log(`[YouTube] input[type=file] 개수: ${fileInputCount}`);
+
+  // Step 4: 파일 주입 — ytcp-upload-dialog 내 file input 우선, fallback
   let fileSet = false;
   try {
-    await page.locator('input[type=file]').first().setInputFiles(videoPath, { timeout: 15000 });
+    // 업로드 다이얼로그 내 file input 우선 시도
+    const dialogInput = page.locator('ytcp-upload-dialog input[type=file]');
+    const dialogInputCount = await dialogInput.count();
+    console.log(`[YouTube] 다이얼로그 내 input[type=file] 개수: ${dialogInputCount}`);
+    if (dialogInputCount > 0) {
+      await dialogInput.first().setInputFiles(videoPath, { timeout: 30000 });
+    } else {
+      await page.locator('input[type=file]').first().setInputFiles(videoPath, { timeout: 30000 });
+    }
     fileSet = true;
     console.log('[YouTube] 파일 설정 완료 (setInputFiles 직접)');
   } catch (e1) {
