@@ -404,19 +404,41 @@ async function uploadYouTube() {
   await page.waitForTimeout(1000);
 
   // 다음 버튼 정확히 3회 (세부정보→동영상요소→검토→공개설정)
-  // YouTube Studio 업로드 위저드는 항상 3번 클릭 = 공개설정 페이지
-  // 동적 감지 불가: SPA로 done-button/next-button 모두 모든 스텝에서 DOM 상주
+  // 핵심: disabled 상태의 next-button에 force:true 클릭 → wizard 안 넘어감
+  // → enabled 될 때까지 폴링 후 정상 클릭
   for (let i = 0; i < 3; i++) {
-    try {
-      await page.waitForSelector('ytcp-button#next-button', { visible: true, timeout: 15000 });
-    } catch(e) {
-      console.log(`[YouTube] 다음 버튼 없음 (${i+1}/3) — 조기 종료`);
-      break;
+    // next-button enabled 될 때까지 최대 30초 대기
+    let nextReady = false;
+    for (let ni = 0; ni < 15; ni++) {
+      const state = await page.evaluate(() => {
+        const btn = document.querySelector('ytcp-button#next-button');
+        if (!btn) return { exists: false, disabled: false };
+        const disabled = btn.hasAttribute('disabled') ||
+          btn.classList.contains('disabled') ||
+          (btn.shadowRoot && btn.shadowRoot.querySelector('[disabled]') !== null);
+        return { exists: true, disabled };
+      });
+      if (!state.exists) {
+        console.log(`[YouTube] next-button 없음 (${i+1}번째, ${ni}초) — 조기 종료`);
+        nextReady = false;
+        break;
+      }
+      if (!state.disabled) { nextReady = true; break; }
+      console.log(`[YouTube] next-button 활성화 대기 ${i+1}/3 ... (${ni*2}s)`);
+      await page.waitForTimeout(2000);
     }
+    if (!nextReady) break;
+
     await page.evaluate(() => {
       document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
     });
-    await page.click('ytcp-button#next-button', { force: true });
+    // force 없이 정상 클릭 (disabled이면 Playwright가 오류 발생)
+    try {
+      await page.click('ytcp-button#next-button');
+    } catch(e) {
+      // 비활성 상태면 force로 재시도
+      await page.click('ytcp-button#next-button', { force: true });
+    }
     console.log(`[YouTube] 다음 버튼 ${i + 1}/3`);
     await page.waitForTimeout(3000);
   }
@@ -446,39 +468,47 @@ async function uploadYouTube() {
   // → 텍스트로 "공개"/"Public" 시작하는 것만 선택 (아동용/비공개/일부공개 제외)
   let publicClicked = false;
 
-  // 1단계: 텍스트가 "공개" 또는 "Public"으로 시작하는 visible radio
-  // "비공개"는 "비"로 시작, "일부 공개"는 "일"로 시작 → /^공개/ 로 정확히 구분
-  for (const pattern of [/^공개/, /^Public/]) {
-    try {
-      const loc = page.locator('tp-yt-paper-radio-button').filter({ hasText: pattern });
-      const cnt = await loc.count();
-      console.log(`[YouTube] "${pattern}" 매칭 radio 개수: ${cnt}`);
-      if (cnt > 0) {
-        // visible 한 것만
-        for (let ri = 0; ri < cnt; ri++) {
-          const r = loc.nth(ri);
-          if (await r.isVisible()) {
-            const t = await r.textContent();
-            await r.click({ force: true });
-            publicClicked = true;
-            console.log(`[YouTube] 공개 설정 완료 (hasText+visible: "${t?.trim().slice(0,15)}")`);
-            break;
-          }
+  // 1단계: name="PUBLIC" (YouTube Studio 표준 속성 — visibility 페이지 도달 시 존재)
+  if (!publicClicked) {
+    for (const sel of [
+      'tp-yt-paper-radio-button[name="PUBLIC"]',
+      'tp-yt-paper-radio-button[name="public"]',
+      '[name="PUBLIC"]',
+      '[name="public"]',
+    ]) {
+      try {
+        const el = await page.waitForSelector(sel, { timeout: 4000 });
+        if (el) {
+          await page.click(sel, { force: true });
+          publicClicked = true;
+          console.log(`[YouTube] 공개 설정 완료 (name 속성: ${sel})`);
+          break;
         }
-        if (publicClicked) break;
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
   }
 
-  // 2단계: name 속성 (소문자/대문자 시도)
+  // 2단계: 텍스트가 "공개" 또는 "Public"으로 시작하는 visible radio
+  // "비공개"는 "비"로 시작, "일부 공개"는 "일"로 시작 → /^공개/ 로 정확히 구분
   if (!publicClicked) {
-    for (const sel of ['[name="public"]', '[name="PUBLIC"]']) {
+    for (const pattern of [/^공개/, /^Public/]) {
       try {
-        await page.waitForSelector(sel, { visible: true, timeout: 3000 });
-        await page.click(sel, { force: true });
-        publicClicked = true;
-        console.log(`[YouTube] 공개 설정 완료 (${sel})`);
-        break;
+        const loc = page.locator('tp-yt-paper-radio-button').filter({ hasText: pattern });
+        const cnt = await loc.count();
+        console.log(`[YouTube] "${pattern}" 매칭 radio 개수: ${cnt}`);
+        if (cnt > 0) {
+          for (let ri = 0; ri < cnt; ri++) {
+            const r = loc.nth(ri);
+            if (await r.isVisible()) {
+              const t = await r.textContent();
+              await r.click({ force: true });
+              publicClicked = true;
+              console.log(`[YouTube] 공개 설정 완료 (hasText+visible: "${t?.trim().slice(0,15)}")`);
+              break;
+            }
+          }
+          if (publicClicked) break;
+        }
       } catch(e) {}
     }
   }
