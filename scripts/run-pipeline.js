@@ -88,7 +88,15 @@ async function runPipeline() {
 
     if (steps.includes('youtube')) {
       console.log(`[${prod}] Step 3a: YouTube 업로드`);
-      run(`node scripts/upload/upload-youtube.js --product ${prod}${dryRun ? ' --dry-run' : ''}`);
+      // API 방식 우선 (YOUTUBE_REFRESH_TOKEN 있으면), 없으면 Playwright fallback
+      const hasApiToken = process.env.YOUTUBE_REFRESH_TOKEN ||
+        (() => { try { return require('fs').readFileSync(require('path').join(__dirname, '../.env'), 'utf8').includes('YOUTUBE_REFRESH_TOKEN'); } catch(e) { return false; } })();
+      if (hasApiToken) {
+        run(`node scripts/upload/upload-youtube-api.js --product ${prod}${dryRun ? ' --dry-run' : ''}`);
+      } else {
+        console.log(`[${prod}] YOUTUBE_REFRESH_TOKEN 없음 → Playwright fallback`);
+        run(`node scripts/upload/upload-youtube.js --product ${prod}${dryRun ? ' --dry-run' : ''}`);
+      }
     }
 
     if (steps.includes('instagram')) {
