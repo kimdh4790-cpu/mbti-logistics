@@ -171,10 +171,10 @@ async function uploadYouTube() {
   await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
 
-  // 팝업 완전 제거 루프 (본인 인증 등 — 최대 5회)
+  // 팝업 완전 제거 루프 (본인 인증 등 — 최대 10회, 다단계 wizard 처리)
   // 중요: ytcp-dialog/[role=dialog] 내 버튼으로 스코프 한정
   //       → ytcpAppHeaderSkipNavigation(헤더 skip-nav, viewport 밖)을 자동 제외
-  for (let popupTry = 0; popupTry < 5; popupTry++) {
+  for (let popupTry = 0; popupTry < 10; popupTry++) {
     // 방법 1: CSS 스코프 셀렉터 (다이얼로그 내부만)
     const popupBtn = page.locator(
       'ytcp-dialog button:has-text("다음"), ytcp-dialog button:has-text("Next"), ' +
@@ -211,25 +211,34 @@ async function uploadYouTube() {
     }
     break;
   }
-  await page.waitForTimeout(1000);
-  console.log(`[YouTube] 현재 URL: ${page.url()}`);
+  // 팝업 처리 후 안정화 대기 + 잔여 overlay 강제 제거
+  await page.waitForTimeout(3000);
+  await page.evaluate(() => {
+    document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
+    document.querySelectorAll('ytcp-dialog[opened]').forEach(el => el.removeAttribute('opened'));
+  });
+  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-after-popup.png') });
+  console.log(`[YouTube] 팝업 처리 후 URL: ${page.url()}`);
 
   // Step 1: 업로드/만들기 버튼 클릭
-  // 스크린샷 확인: 상단 우측 "[+] 만들기" 버튼이 드롭다운 → 동영상 업로드로 연결
   const uploadSelectors = [
-    '#create-icon',                    // 만들기 버튼 (최우선 — 스크린샷 확인)
+    '#create-icon',                    // 만들기 버튼 (최우선)
+    'ytcp-button#create-icon',
     '[aria-label="만들기"]',
     '[aria-label="Create"]',
     '#upload-icon',                    // 직접 업로드 아이콘 (구버전)
     'ytcp-button#upload-icon',
     '[aria-label="동영상 업로드"]',
     '[aria-label="Upload videos"]',
+    '[aria-label="Upload"]',
+    'ytcp-button:has-text("만들기")',
+    'button:has-text("만들기")',
   ];
   let clicked = false;
   for (const sel of uploadSelectors) {
     try {
-      const el = await page.waitForSelector(sel, { timeout: 4000 });
-      await el.click(); // force 없이 — Polymer 컴포넌트 이벤트 핸들러 정상 트리거
+      const el = await page.waitForSelector(sel, { timeout: 8000 });
+      await el.click();
       clicked = true;
       console.log(`[YouTube] 버튼 클릭 (${sel})`);
       break;
