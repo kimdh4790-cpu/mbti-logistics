@@ -341,21 +341,29 @@ async function uploadYouTube() {
   await page.evaluate(() => {
     document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
   });
-  let publicClicked = false;
-  for (const sel of publicSelectors) {
-    try {
-      await page.waitForSelector(sel, { timeout: 3000 });
-      await page.click(sel, { force: true });
-      publicClicked = true;
-      console.log(`[YouTube] 공개 설정 클릭 (${sel})`);
-      break;
-    } catch(e) { /* 다음 시도 */ }
-  }
-  if (!publicClicked) {
+  await page.waitForTimeout(1000);
+
+  // 공개 설정 — JS로 shadow DOM 포함 전체 탐색
+  const publicClicked = await page.evaluate(() => {
+    // 1) name="PUBLIC" 속성을 가진 radio button
+    const byName = document.querySelector('tp-yt-paper-radio-button[name="PUBLIC"]');
+    if (byName) { byName.click(); return 'byName'; }
+    // 2) 텍스트로 찾기 (공개 / Public)
+    const all = Array.from(document.querySelectorAll('tp-yt-paper-radio-button'));
+    const byText = all.find(el => el.textContent.trim() === '공개' || el.textContent.trim() === 'Public');
+    if (byText) { byText.click(); return 'byText'; }
+    // 3) ytcp-privacy-dropdown 내 첫번째 라디오 (공개가 첫 항목)
+    const inDropdown = document.querySelector('ytcp-privacy-dropdown tp-yt-paper-radio-button');
+    if (inDropdown) { inDropdown.click(); return 'inDropdown'; }
+    return null;
+  });
+
+  if (publicClicked) {
+    console.log(`[YouTube] 공개 설정 완료 (${publicClicked})`);
+  } else {
     const shotPath = path.join(ROOT, 'output', 'yt-public-debug.png');
     await page.screenshot({ path: shotPath, fullPage: true });
     console.error(`[YouTube] 공개 설정 버튼 못 찾음. 스크린샷: ${shotPath}`);
-    console.log('[YouTube] 그래도 게시 버튼 클릭 시도 (이미 공개 기본값일 수 있음)...');
   }
   await page.waitForTimeout(1000);
 
