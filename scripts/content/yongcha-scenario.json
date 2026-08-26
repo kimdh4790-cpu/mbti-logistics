@@ -1,21 +1,26 @@
 {
   "product": "yongcha",
-  "title": "용차앱 - 택배 노선 매칭 플랫폼",
+  "title": "용차앱 - 수수료 없는 직접 매칭, AI 루트코치",
   "outputFile": "output/yongcha-raw.webm",
   "viewport": { "width": 390, "height": 844 },
+  "_note": "훅: 경쟁사 수수료 20%+ vs 용차앱 월정액 고정. AI 루트코치 차별화.",
   "steps": [
     { "action": "goto", "url": "https://yongcha.app", "wait": 3000 },
+    { "action": "screenshot", "label": "landing-hero" },
+    { "action": "wait", "ms": 2000 },
     { "action": "scroll", "y": 300, "wait": 2000 },
+    { "action": "screenshot", "label": "landing-match" },
     { "action": "scroll", "y": 600, "wait": 2000 },
-    { "action": "scroll", "y": 900, "wait": 2000 },
     { "action": "screenshot", "label": "landing-features" },
+    { "action": "scroll", "y": 900, "wait": 2000 },
+    { "action": "screenshot", "label": "landing-ai-coach" },
     { "action": "scroll", "y": 1200, "wait": 2000 },
-    { "action": "screenshot", "label": "landing-commission" },
-    { "action": "scroll", "y": 1500, "wait": 2000 },
     { "action": "screenshot", "label": "landing-pricing" },
-    { "action": "scroll", "y": 1800, "wait": 2000 },
+    { "action": "wait", "ms": 2000 },
+    { "action": "scroll", "y": 1500, "wait": 2000 },
     { "action": "screenshot", "label": "landing-reviews" },
-    { "action": "scroll", "y": 0, "wait": 1500 },
-    { "action": "wait", "ms": 2000 }
+    { "action": "scroll", "y": 1800, "wait": 2000 },
+    { "action": "scroll", "y": 0, "wait": 2000 },
+    { "action": "wait", "ms": 3000 }
   ]
 }
