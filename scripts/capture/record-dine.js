@@ -56,6 +56,12 @@ async function record() {
       const shot = path.join(outputDir, `dine-${step.label}.png`);
       await page.screenshot({ path: shot, fullPage: false });
       console.log(`  [스크린샷] dine-${step.label}.png`);
+    } else if (step.action === 'evaluate') {
+      await page.evaluate(step.expression).catch(() => {});
+      await page.waitForTimeout(step.wait || 2000);
+    } else if (step.action === 'click') {
+      await page.click(step.selector).catch(() => {});
+      await page.waitForTimeout(step.wait || 1500);
     } else if (step.action === 'wait') {
       await page.waitForTimeout(step.ms);
     }
