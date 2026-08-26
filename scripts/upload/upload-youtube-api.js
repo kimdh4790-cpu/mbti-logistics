@@ -76,8 +76,27 @@ async function uploadYouTube() {
   }
 
   // OAuth2 설정
+  const ACCESS_TOKEN = process.env.YOUTUBE_ACCESS_TOKEN;
   const auth = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
-  auth.setCredentials({ refresh_token: REFRESH_TOKEN });
+  auth.setCredentials({
+    refresh_token: REFRESH_TOKEN,
+    ...(ACCESS_TOKEN ? { access_token: ACCESS_TOKEN } : {}),
+  });
+
+  // refresh_token rotation 자동 저장 (2024-07 이후 클라이언트 정책)
+  auth.on('tokens', (tokens) => {
+    if (tokens.refresh_token) {
+      try {
+        const cur = fs.readFileSync(envPath, 'utf8');
+        const next = cur.replace(/YOUTUBE_REFRESH_TOKEN="[^"]*"/, `YOUTUBE_REFRESH_TOKEN="${tokens.refresh_token}"`);
+        fs.writeFileSync(envPath, next);
+        process.env.YOUTUBE_REFRESH_TOKEN = tokens.refresh_token;
+        console.log('[YouTube API] refresh_token 자동 갱신 저장됨');
+      } catch (e) {
+        console.log('[YouTube API] 새 refresh_token (수동 저장):', tokens.refresh_token);
+      }
+    }
+  });
   const youtube = google.youtube({ version: 'v3', auth });
 
   console.log(`[YouTube API] 업로드 시작: ${product}`);
