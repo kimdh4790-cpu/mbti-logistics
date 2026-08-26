@@ -43,9 +43,10 @@ async function record() {
 
   // 로그인 전용 모드: 수동으로 로그인 후 세션 저장
   if (loginOnly) {
-    await page.goto('https://filo.ai.kr/app', { waitUntil: 'networkidle', timeout: 30000 });
-    console.log('[FILO] 브라우저에서 soungkyekim@naver.com 으로 로그인하세요.');
-    console.log('[FILO] 로그인 완료 후 이 창을 닫으면 세션이 저장됩니다.');
+    // /app 에서 시작하면 URL이 이미 /app 이라 waitForURL이 즉시 충족됨 → 랜딩에서 시작
+    await page.goto('https://filo.ai.kr', { waitUntil: 'networkidle', timeout: 30000 });
+    console.log('[FILO] 브라우저에서 "시작하기" 버튼 클릭 후 soungkyekim@naver.com 으로 로그인하세요.');
+    console.log('[FILO] 대시보드(/app)로 넘어가면 자동으로 세션이 저장됩니다.');
     await page.waitForURL('**/app**', { timeout: 300000 });
     console.log('[FILO] 세션 저장 완료: ' + profileDir);
     await ctx.close();
