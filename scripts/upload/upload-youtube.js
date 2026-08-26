@@ -171,51 +171,74 @@ async function uploadYouTube() {
   await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
 
-  // 팝업 완전 제거 루프 (본인 인증 등 — 최대 10회, 다단계 wizard 처리)
-  // 중요: ytcp-dialog/[role=dialog] 내 버튼으로 스코프 한정
-  //       → ytcpAppHeaderSkipNavigation(헤더 skip-nav, viewport 밖)을 자동 제외
-  for (let popupTry = 0; popupTry < 15; popupTry++) {
-    // 방법 1: CSS 스코프 셀렉터
-    // - native button:has-text("다음") — 본인 인증 팝업 (native <button> 사용)
-    // - ytcp-dialog ytcp-button — 업로드 wizard (ytcp-button은 skip-nav가 아님)
-    // - skip-nav(ytcpAppHeaderSkipNavigation)는 ytcp-button + 텍스트 "건너뛰기" → 아래 셀렉터에 미포함
-    const popupBtn = page.locator(
-      'button:has-text("다음"), button:has-text("Next"), ' +        // 본인 인증 등 native 팝업
-      'ytcp-dialog button:has-text("건너뛰기"), ytcp-dialog button:has-text("Skip"), ' +
-      'ytcp-dialog ytcp-button:has-text("다음"), ytcp-dialog ytcp-button:has-text("건너뛰기"), ' +
-      '[role="dialog"] button:has-text("다음"), [role="dialog"] button:has-text("Next"), ' +
-      '[role="dialog"] button:has-text("건너뛰기"), [role="dialog"] button:has-text("Skip")'
-    ).filter({ visible: true });
-    const cnt = await popupBtn.count();
-    if (cnt > 0) {
-      console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 (CSS)`);
-      await popupBtn.first().click({ force: true });
-      await page.waitForTimeout(2000);
-      continue;
-    }
-    // 방법 2: JS evaluate — ytcp-dialog[opened] 내 버튼 직접 탐색 (shadow DOM 우회)
-    const dismissed = await page.evaluate(() => {
-      const targets = ['다음', 'Next', '건너뛰기', 'Skip', '확인', 'OK'];
-      const dialogs = document.querySelectorAll('ytcp-dialog[opened], [role="dialog"]');
-      for (const dlg of dialogs) {
-        for (const btn of dlg.querySelectorAll('button, ytcp-button')) {
-          if (targets.includes(btn.textContent?.trim())) {
-            btn.click();
-            return btn.textContent.trim();
+  // 팝업 완전 제거 함수
+  // 우선순위: ①닫기/X/나중에(dismiss) → ②ESC → ③YouTube wizard 전진
+  async function dismissPopups(label, maxRounds) {
+    for (let i = 0; i < maxRounds; i++) {
+      await page.waitForTimeout(800);
+
+      // ① dismiss: 닫기/X/나중에/건너뛰기/취소 — 팝업 자체를 닫음
+      const dismissed = await page.evaluate(() => {
+        const dismissTexts = ['나중에', 'Later', '지금 아님', 'Not now',
+          '닫기', 'Close', '취소', 'Cancel', '아니요', 'No'];
+        // Google Material 닫기 아이콘 버튼 (aria-label 기반)
+        const closeBtns = document.querySelectorAll(
+          '[aria-label="닫기"], [aria-label="Close"], [aria-label="Dismiss"],' +
+          '[jsname="tygKHd"], .VfPpkd-dgl2Hf-ppHlrf-sM5MNb button,' +
+          '[data-dismiss="modal"]'
+        );
+        for (const btn of closeBtns) {
+          if (btn.offsetParent !== null) { btn.click(); return `X:${btn.ariaLabel||btn.className}`; }
+        }
+        // 텍스트 기반 dismiss 버튼 (모든 button 요소)
+        const allBtns = document.querySelectorAll('button, tp-yt-paper-button');
+        for (const btn of allBtns) {
+          const txt = btn.textContent?.trim();
+          if (dismissTexts.includes(txt) && btn.offsetParent !== null) {
+            btn.click(); return `dismiss:${txt}`;
           }
         }
+        return null;
+      });
+      if (dismissed) {
+        console.log(`[YouTube][${label}] 팝업 dismiss ${i+1}회 (${dismissed})`);
+        await page.waitForTimeout(1500);
+        continue;
       }
-      return null;
-    });
-    if (dismissed) {
-      console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 (JS: ${dismissed})`);
-      await page.waitForTimeout(2000);
-      continue;
+
+      // ② 보이는 dialog가 있으면 ESC
+      const hasDialog = await page.evaluate(() => {
+        const dlgs = document.querySelectorAll('[role="dialog"], ytcp-dialog[opened], .VfPpkd-xl07Ob-XxIAqe');
+        return [...dlgs].some(d => d.offsetParent !== null && !d.hidden);
+      });
+      if (hasDialog) {
+        await page.keyboard.press('Escape');
+        console.log(`[YouTube][${label}] ESC ${i+1}회`);
+        await page.waitForTimeout(1200);
+        continue;
+      }
+
+      // ③ YouTube Studio wizard 전진 (건너뛰기 / 다음) — ytcp-dialog 스코프만
+      const wizardBtn = page.locator(
+        'ytcp-dialog ytcp-button:has-text("건너뛰기"), ytcp-dialog ytcp-button:has-text("Skip"), ' +
+        'ytcp-dialog ytcp-button:has-text("다음"), ytcp-dialog ytcp-button:has-text("Next"), ' +
+        '[role="dialog"] ytcp-button:has-text("건너뛰기"), [role="dialog"] ytcp-button:has-text("Skip")'
+      ).filter({ visible: true });
+      if (await wizardBtn.count() > 0) {
+        await wizardBtn.first().click({ force: true });
+        console.log(`[YouTube][${label}] wizard 전진 ${i+1}회`);
+        await page.waitForTimeout(1500);
+        continue;
+      }
+
+      console.log(`[YouTube][${label}] 팝업 없음 → 완료 (${i+1}회)`);
+      break;
     }
-    break;
   }
-  // 팝업 처리 후 안정화 대기 + 잔여 overlay 강제 제거
-  await page.waitForTimeout(3000);
+
+  await dismissPopups('init', 20);
+
+  // 팝업 처리 후 잔여 overlay 강제 제거
   await page.evaluate(() => {
     document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
     document.querySelectorAll('ytcp-dialog[opened]').forEach(el => el.removeAttribute('opened'));
@@ -460,17 +483,46 @@ async function uploadYouTube() {
     process.exit(1);
   }
 
-  // 게시 완료 확인 — 업로드 다이얼로그가 DOM에서 제거되면 성공 (게시 클릭 시 항상 닫힘)
+  // 게시 완료 확인 — 업로드 다이얼로그가 DOM에서 제거되면 성공
+  // 최대 2회 재시도: 게시 클릭 후 팝업이 다시 뜨는 경우 dismiss 후 재게시
   let publishConfirmed = false;
-  try {
-    await page.waitForSelector('ytcp-upload-dialog', { state: 'detached', timeout: 60000 });
-    publishConfirmed = true;
-    console.log(`[YouTube] 업로드 다이얼로그 닫힘 → 게시 완료. URL: ${page.url()}`);
-  } catch(e) {
-    // 다이얼로그 detach 못 잡은 경우 URL 변경 확인
+  for (let pubTry = 0; pubTry < 2; pubTry++) {
+    try {
+      await page.waitForSelector('ytcp-upload-dialog', { state: 'detached', timeout: 15000 });
+      publishConfirmed = true;
+      console.log(`[YouTube] 업로드 다이얼로그 닫힘 → 게시 완료. URL: ${page.url()}`);
+      break;
+    } catch(e) {
+      // 15초 내 dialog detach 안 됨 → 팝업 새로 뜬 것 처리 후 재게시
+      await page.screenshot({ path: path.join(ROOT, 'output', `yt-publish-wait-${pubTry}.png`) });
+      console.log(`[YouTube] 게시 대기 ${pubTry+1}회 타임아웃 → 팝업 처리 후 재게시`);
+      await dismissPopups(`publish-${pubTry}`, 10);
+      // backdrop 강제 제거
+      await page.evaluate(() => {
+        document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
+      });
+      await page.waitForTimeout(1000);
+      // done-button 재클릭
+      for (const sel of doneSelectors) {
+        try {
+          const el = page.locator(sel).filter({ visible: true });
+          if (await el.count() > 0) {
+            await el.first().click({ force: true });
+            console.log(`[YouTube] 게시 버튼 재클릭 ${pubTry+1}회 (${sel})`);
+            break;
+          }
+        } catch(e2) {}
+      }
+      await page.waitForTimeout(3000);
+    }
+  }
+
+  if (!publishConfirmed) {
+    // 최종: URL 또는 dialog 부재로 성공 여부 판단
     const finalUrl = page.url();
     console.log(`[YouTube] 게시 후 URL: ${finalUrl}`);
-    if (finalUrl.includes('/video/') || !finalUrl.includes('channel')) {
+    const dialogGone = await page.locator('ytcp-upload-dialog').count() === 0;
+    if (dialogGone || finalUrl.includes('/video/') || !finalUrl.includes('channel')) {
       publishConfirmed = true;
     }
   }
