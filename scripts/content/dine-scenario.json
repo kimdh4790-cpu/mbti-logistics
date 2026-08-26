@@ -3,7 +3,8 @@
   "title": "DINE - 외식업 전문 운영 플랫폼",
   "outputFile": "output/dine-raw.webm",
   "viewport": { "width": 390, "height": 844 },
-  "track": "landing",
+  "track": "landing+app",
+  "_note": "Track B 앱 내부 촬영: 먼저 --login-only로 soungkyekim@naver.com 세션 저장 필요",
   "steps": [
     { "action": "goto", "url": "https://dine.ne.kr", "wait": 3000 },
     { "action": "screenshot", "label": "landing-slide0" },
@@ -15,6 +16,15 @@
     { "action": "screenshot", "label": "landing-slide3" },
     { "action": "evaluate", "expression": "_setSlide(4)", "wait": 2500 },
     { "action": "screenshot", "label": "landing-slide4" },
+    { "action": "goto", "url": "https://dine.ne.kr/app", "wait": 5000 },
+    { "action": "screenshot", "label": "app-dashboard" },
+    { "action": "scroll", "y": 300, "wait": 2000 },
+    { "action": "scroll", "y": 0, "wait": 1500 },
+    { "action": "goto", "url": "https://dine.ne.kr/schedule", "wait": 4000 },
+    { "action": "screenshot", "label": "schedule" },
+    { "action": "scroll", "y": 300, "wait": 2000 },
+    { "action": "goto", "url": "https://dine.ne.kr/payroll", "wait": 4000 },
+    { "action": "screenshot", "label": "payroll" },
     { "action": "wait", "ms": 3000 }
   ]
 }
