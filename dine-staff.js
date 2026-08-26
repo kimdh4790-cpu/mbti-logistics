@@ -432,6 +432,10 @@ function _dineLoadAttend(did){
  _db.collection('members').where('dealerId','==',did).get().then(function(memSnap){
   var memMap={};memSnap.forEach(function(doc){memMap[doc.id]=doc.data();});
   var allMem=[];memSnap.forEach(function(doc){allMem.push({id:doc.id,data:doc.data()});});
+  // 이름+전화번호 기준 중복 직원 제거
+  var _seenK={};
+  allMem=allMem.filter(function(m){var k=(m.data.phone||'')+'|'+(m.data.name||'');if(_seenK[k])return false;_seenK[k]=true;return true;});
+  allMem=allMem.filter(function(m){return (m.data.status||'active')!=='resigned';});
   _dineAttUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','==',date)
    .onSnapshot(function(attSnap){
     var ins={},outs={};
@@ -559,13 +563,15 @@ function _dineLoadAttendMonth(did){
   _db.collection('members').where('dealerId','==',did).get()
  ]).then(function(results){
   var attSnap=results[0],memSnap=results[1];
-  // 직원 목록 (퇴직자 제외, 파트별 정렬)
+  // 직원 목록 (퇴직자 제외, 중복 제거, 파트별 정렬)
   var memList=[];
   memSnap.forEach(function(doc){
    var d=doc.data();
    if((d.status||'active')==='resigned')return;
    memList.push({id:doc.id,data:d});
   });
+  var _seenK={};
+  memList=memList.filter(function(m){var k=(m.data.phone||'')+'|'+(m.data.name||'');if(_seenK[k])return false;_seenK[k]=true;return true;});
   var pOrd={kitchen:0,hall:1,management:2};
   memList.sort(function(a,b){return (pOrd[a.data.part]||9)-(pOrd[b.data.part]||9)||(a.data.name||'').localeCompare(b.data.name||'');});
 
@@ -597,15 +603,15 @@ function _dineLoadAttendMonth(did){
   var pLabels={kitchen:'주방',hall:'홀',management:'관리'};
 
   // 헤더 행
-  var thd='<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:88px;padding:6px 8px;font-size:11px;font-weight:700;border-right:2px solid var(--bd);white-space:nowrap">이름</th>';
+  var thd='<th style="position:sticky;left:0;z-index:10;background:var(--bg3);min-width:72px;max-width:72px;padding:6px 6px;font-size:11px;font-weight:700;border-right:2px solid var(--bd)">이름</th>';
   days.forEach(function(day){
    var isToday=day.ds===today;
    var isSun=day.dow===0,isSat=day.dow===6;
-   thd+='<th style="min-width:42px;padding:4px 2px;text-align:center;font-size:10px;font-weight:700;'+
+   thd+='<th style="min-width:48px;width:48px;padding:4px 2px;text-align:center;font-size:10px;font-weight:700;'+
     (isToday?'background:rgba(201,168,76,.18);color:#c9a84c;':isSun?'color:#ef4444;':isSat?'color:#38bdf8;':'color:var(--t2);')+'">'+
     '<div>'+day.d+'</div><div style="font-size:9px;font-weight:400">'+DN[day.dow]+'</div></th>';
   });
-  thd+='<th style="min-width:46px;padding:4px 6px;text-align:center;font-size:10px;font-weight:700;color:#c9a84c;border-left:2px solid var(--bd);white-space:nowrap">합계</th>';
+  thd+='<th style="min-width:44px;padding:4px 4px;text-align:center;font-size:10px;font-weight:700;color:#c9a84c;border-left:2px solid var(--bd)">합계</th>';
 
   // 직원 행
   var tbody='';
@@ -617,8 +623,8 @@ function _dineLoadAttendMonth(did){
     tbody+='<tr><td colspan="'+(daysInMonth+2)+'" style="padding:3px 10px;font-size:9px;font-weight:800;letter-spacing:.8px;color:var(--t3);background:var(--bg3);border-bottom:1px solid var(--bd)">'+(pLabels[m.part]||m.part||'기타').toUpperCase()+'</td></tr>';
    }
    var pc=pColors[m.part]||'#a78bfa';
-   var nameTd='<td style="position:sticky;left:0;z-index:5;background:var(--bg);padding:6px 8px;border-right:2px solid var(--bd);white-space:nowrap">'+
-    '<div style="font-size:12px;font-weight:700;color:var(--tx)">'+m.name+'</div>'+
+   var nameTd='<td style="position:sticky;left:0;z-index:5;background:var(--bg);padding:6px 6px;border-right:2px solid var(--bd);min-width:72px;max-width:72px;overflow:hidden">'+
+    '<div style="font-size:11px;font-weight:700;color:var(--tx);word-break:keep-all;line-height:1.3">'+m.name+'</div>'+
     '<div style="font-size:9px;font-weight:700;color:'+pc+';margin-top:1px">'+(pLabels[m.part]||'-')+'</div></td>';
    var cells='';var totalH=0;
    days.forEach(function(day){
@@ -633,14 +639,14 @@ function _dineLoadAttendMonth(did){
      var dh=(me-ms)/3600000;totalH+=Math.max(0,dh-(dh>=8?1:dh>=4?0.5:0));
     }
     var bg=isToday?'rgba(201,168,76,.08)':(isSun||isSat)?'var(--bg3)':'';
-    cells+='<td style="padding:3px 1px;text-align:center;'+(bg?'background:'+bg:'')+'">';
+    cells+='<td style="padding:3px 2px;text-align:center;width:48px;'+(bg?'background:'+bg:'')+'">';
     if(rec.in||rec.out){
-     cells+='<div style="font-size:10px;font-weight:700;line-height:1.4;color:'+(isLate?'#ef4444':'var(--t2)')+'">'+
+     cells+='<div style="font-size:10px;font-weight:700;line-height:1.5;color:'+(isLate?'#ef4444':'var(--t2)')+'">'+
       (rec.in||'<span style="color:var(--bd)">-</span>')+'</div>'+
-      '<div style="font-size:10px;line-height:1.4;color:'+(isEarlyOut?'#f59e0b':'var(--t3)')+'">'+
-      (rec.out||'<span style="color:#22c55e;font-size:8px">●근무</span>')+'</div>';
+      '<div style="font-size:10px;line-height:1.5;color:'+(isEarlyOut?'#f59e0b':'var(--t3)')+'">'+
+      (rec.out||'<span style="color:#22c55e;font-size:9px">●</span>')+'</div>';
     } else {
-     cells+='<div style="color:var(--bd);font-size:10px">'+(isSun||isSat?'':'-')+'</div>';
+     cells+='<div style="color:var(--bd);font-size:11px">'+(isSun||isSat?'':'-')+'</div>';
     }
     cells+='</td>';
    });
