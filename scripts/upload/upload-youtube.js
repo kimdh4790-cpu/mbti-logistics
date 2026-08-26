@@ -171,29 +171,31 @@ async function uploadYouTube() {
   await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
 
-  // "본인 인증" 팝업 처리 (Google 보안 확인 모달)
-  try {
-    const verifyNext = page.locator('button:has-text("다음"), button:has-text("Next"), [aria-label="다음"], [aria-label="Next"]');
-    if (await verifyNext.count() > 0) {
-      console.log('[YouTube] 본인 인증 팝업 → 다음 클릭');
-      await verifyNext.first().click();
-      await page.waitForTimeout(5000);
-      // 본인 인증 후 페이지 상태 불안정 → Studio 재이동으로 리셋
-      console.log('[YouTube] 본인 인증 후 Studio 재이동 (상태 리셋)');
-      await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
-      await page.waitForTimeout(4000);
-    }
-  } catch(e) { /* 팝업 없으면 무시 */ }
+  // 팝업 완전 제거 루프 (본인 인증 등 모든 모달 — 최대 5회)
+  for (let popupTry = 0; popupTry < 5; popupTry++) {
+    const popupBtn = page.locator(
+      'button:has-text("다음"), button:has-text("Next"), ' +
+      'button:has-text("건너뛰기"), button:has-text("Skip"), ' +
+      'button:has-text("닫기"), button:has-text("Close"), ' +
+      'ytcp-button:has-text("다음"), ytcp-button:has-text("건너뛰기")'
+    );
+    const cnt = await popupBtn.count();
+    if (cnt === 0) break;
+    console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 클릭`);
+    await popupBtn.first().click();
+    await page.waitForTimeout(2000);
+  }
+  await page.waitForTimeout(2000);
   console.log(`[YouTube] 현재 URL: ${page.url()}`);
 
   // Step 1: 업로드/만들기 버튼 클릭
+  // 스크린샷 확인: 상단 우측 "[+] 만들기" 버튼이 드롭다운 → 동영상 업로드로 연결
   const uploadSelectors = [
-    '#upload-icon',
-    'ytcp-button#upload-icon',
-    'ytcp-icon-button#upload-icon',
-    '#create-icon',
+    '#create-icon',                    // 만들기 버튼 (최우선 — 스크린샷 확인)
     '[aria-label="만들기"]',
     '[aria-label="Create"]',
+    '#upload-icon',                    // 직접 업로드 아이콘 (구버전)
+    'ytcp-button#upload-icon',
     '[aria-label="동영상 업로드"]',
     '[aria-label="Upload videos"]',
   ];
