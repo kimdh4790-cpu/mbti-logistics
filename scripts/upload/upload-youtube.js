@@ -95,7 +95,7 @@ async function uploadYouTube() {
       process.exit(1);
     }
     console.log(`[YouTube] 프로필 이미지 설정: ${iconPath}`);
-    await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('https://studio.youtube.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(3000);
     // 채널 아이콘 클릭 (좌측 상단)
     const iconSelectors = [
@@ -114,7 +114,7 @@ async function uploadYouTube() {
     }
     await page.waitForTimeout(1000);
     // 채널 설정으로 이동
-    await page.goto('https://myaccount.google.com/personal-info', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto('https://myaccount.google.com/personal-info', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(2000);
     // 프로필 사진 변경 버튼
     try {
@@ -148,7 +148,7 @@ async function uploadYouTube() {
   }
 
   // YouTube Studio로 이동
-  await page.goto('https://studio.youtube.com', { waitUntil: 'networkidle', timeout: 30000 });
+  await page.goto('https://studio.youtube.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForTimeout(3000);
 
   // "지원되지 않는 브라우저" 페이지 → 건너뛰기 링크 클릭
