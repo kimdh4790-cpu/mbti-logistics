@@ -171,20 +171,47 @@ async function uploadYouTube() {
   await page.waitForTimeout(5000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-init.png') });
 
-  // 팝업 완전 제거 루프 (본인 인증 등 모든 모달 — 최대 5회, 보이는 버튼만)
+  // 팝업 완전 제거 루프 (본인 인증 등 — 최대 5회)
+  // 중요: ytcp-dialog/[role=dialog] 내 버튼으로 스코프 한정
+  //       → ytcpAppHeaderSkipNavigation(헤더 skip-nav, viewport 밖)을 자동 제외
   for (let popupTry = 0; popupTry < 5; popupTry++) {
+    // 방법 1: CSS 스코프 셀렉터 (다이얼로그 내부만)
     const popupBtn = page.locator(
-      'button:has-text("다음"), button:has-text("Next"), ' +
-      'button:has-text("건너뛰기"), button:has-text("Skip"), ' +
-      'ytcp-button:has-text("다음"), ytcp-button:has-text("건너뛰기")'
+      'ytcp-dialog button:has-text("다음"), ytcp-dialog button:has-text("Next"), ' +
+      'ytcp-dialog button:has-text("건너뛰기"), ytcp-dialog button:has-text("Skip"), ' +
+      'ytcp-dialog ytcp-button:has-text("다음"), ytcp-dialog ytcp-button:has-text("건너뛰기"), ' +
+      '[role="dialog"] button:has-text("다음"), [role="dialog"] button:has-text("Next"), ' +
+      '[role="dialog"] button:has-text("건너뛰기"), [role="dialog"] button:has-text("Skip")'
     ).filter({ visible: true });
     const cnt = await popupBtn.count();
-    if (cnt === 0) break;
-    console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 클릭`);
-    await popupBtn.first().click();
-    await page.waitForTimeout(2000);
+    if (cnt > 0) {
+      console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 (CSS)`);
+      await popupBtn.first().click({ force: true });
+      await page.waitForTimeout(2000);
+      continue;
+    }
+    // 방법 2: JS evaluate — ytcp-dialog[opened] 내 버튼 직접 탐색 (shadow DOM 우회)
+    const dismissed = await page.evaluate(() => {
+      const targets = ['다음', 'Next', '건너뛰기', 'Skip', '확인', 'OK'];
+      const dialogs = document.querySelectorAll('ytcp-dialog[opened], [role="dialog"]');
+      for (const dlg of dialogs) {
+        for (const btn of dlg.querySelectorAll('button, ytcp-button')) {
+          if (targets.includes(btn.textContent?.trim())) {
+            btn.click();
+            return btn.textContent.trim();
+          }
+        }
+      }
+      return null;
+    });
+    if (dismissed) {
+      console.log(`[YouTube] 팝업 닫기 ${popupTry + 1}회 (JS: ${dismissed})`);
+      await page.waitForTimeout(2000);
+      continue;
+    }
+    break;
   }
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
   console.log(`[YouTube] 현재 URL: ${page.url()}`);
 
   // Step 1: 업로드/만들기 버튼 클릭
