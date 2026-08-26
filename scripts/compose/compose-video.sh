@@ -71,11 +71,13 @@ EOF
     "$FINAL"
 else
   echo "  본영상 편집 중 (인트로/아웃로 없음)..."
+  # 블러 채우기: 세로형 녹화도 블랙바 없이 전체 프레임 채움
+  BLUR_VF="split[main][bg];[bg]scale=1280:720,boxblur=25:5[blurred];[main]scale=1280:720:force_original_aspect_ratio=decrease[fg];[blurred][fg]overlay=(W-w)/2:(H-h)/2${SUBTITLE_FILTER}"
   if [ -f "$BGM" ]; then
     "$FFMPEG" -y \
       -i "$INPUT" \
       -i "$BGM" \
-      -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
+      -vf "$BLUR_VF" \
       -c:v libx264 -preset medium -crf 23 \
       -c:a aac -b:a 128k \
       -map 0:v -map 1:a \
@@ -84,7 +86,7 @@ else
   else
     "$FFMPEG" -y \
       -i "$INPUT" \
-      -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2${SUBTITLE_FILTER}" \
+      -vf "$BLUR_VF" \
       -c:v libx264 -preset medium -crf 23 \
       -an \
       "$FINAL"
