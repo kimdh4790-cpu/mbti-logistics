@@ -610,8 +610,10 @@ async function uploadYouTube() {
     const disabled = await page.evaluate(() => {
       const btn = document.querySelector('ytcp-button#done-button');
       if (!btn) return true;
-      return btn.hasAttribute('disabled') || btn.getAttribute('disabled') === '' ||
-             btn.shadowRoot?.querySelector('[disabled]') !== null;
+      // shadow root의 <button> 요소만 체크 (iron-icon 등 내부 요소의 disabled 오감지 방지)
+      const innerBtn = btn.shadowRoot?.querySelector('button');
+      if (innerBtn) return innerBtn.hasAttribute('disabled') || innerBtn.disabled;
+      return btn.hasAttribute('disabled') || btn.getAttribute('disabled') === '';
     });
     if (!disabled) { doneEnabled = true; break; }
     if (di % 5 === 0) console.log(`[YouTube] done-button 활성화 대기... (${di * 2}s / 120s)`);
