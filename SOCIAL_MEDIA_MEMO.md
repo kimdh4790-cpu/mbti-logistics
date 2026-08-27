@@ -69,12 +69,21 @@
 |---|---|---|
 | **BGM 파일 없음** | YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` | 사용자 |
 | **FILO·YONGCHA 영상 미생성** | Oracle VM에서 record + compose 실행 필요 | 사용자 |
+| **DONWAY 재업로드 필요** | compose→upload 순서로 재실행 (나레이션 누락된 버전 삭제 필요) | 사용자 |
+
+### 업로드 필수 순서 (반드시 지킬 것)
+```
+1. node scripts/capture/record-<product>.js       # 녹화 → output/<product>-raw.webm
+2. bash scripts/compose/compose-video.sh <product> # 나레이션+자막 합성 → output/<product>-promo.mp4
+3. node scripts/upload/upload-youtube-api.js --product <product>  # YouTube 업로드
+```
+compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 
 ### 영상 제작 현황
 | 제품 | 나레이션 MP3 | 녹화 WebM | 편집 MP4 | YouTube |
 |---|---|---|---|---|
 | FILO | output/filo-narration.mp3 | 미생성 | 미생성 | 미완 |
-| DONWAY | output/donway-narration.mp3 | 생성됨 | output/donway-promo.mp4 | **완료** https://youtu.be/AKvxliFvraY |
+| DONWAY | output/donway-narration.mp3 | output/donway-raw.webm | 재합성 필요 | 재업로드 필요 (기존 AKvxliFvraY 삭제) |
 | YONGCHA | output/yongcha-narration.mp3 | 미생성 | 미생성 | 미완 |
 
 ---
