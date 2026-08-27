@@ -182,11 +182,16 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ## 다음 작업 우선순위
 
-1. **Oracle VM SSH 접속** → `node scripts/run-pipeline.js --product yongcha --steps record,compose`
-2. **BGM 파일 추가** → YouTube 오디오 라이브러리 → `assets/bgm/background.mp3`
-3. **yongcha dry-run 업로드 테스트** → `node scripts/upload/upload-youtube.js --product yongcha --dry-run`
-4. **FILO/DONWAY 앱 내부 화면 녹화** → 세션 이미 있음, Oracle VM에서 실행
-5. **Instagram 업로드 dry-run** → `node scripts/upload/upload-instagram.js --product yongcha --dry-run`
+1. **DONWAY YouTube 숏츠 업로드** → `node scripts/upload/upload-youtube-api.js --product donway --reels`
+2. **DONWAY Instagram Reels 업로드** → `node scripts/upload/upload-instagram.js --product donway` (음성 포함 세로형)
+3. **YONGCHA 영상 제작** → 녹화→나레이션→합성→YouTube 숏츠→Instagram Reels
+4. **FILO 영상 제작** → 동일 순서
+5. **BGM 파일 추가 (선택)** → YouTube 오디오 라이브러리 → `assets/bgm/background.mp3`
+
+### 업로드 방향 (확정)
+- YouTube: **숏츠(--reels) 우선** — 구독자 적을 때 알고리즘 노출 유리
+- Instagram: **Reels 우선** — 음성(나레이션) 포함 세로형 영상
+- **음성 없이 올리지 말 것** — 반드시 나레이션 생성 후 합성 → 업로드
 
 ---
 
