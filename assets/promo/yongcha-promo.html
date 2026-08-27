@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390,initial-scale=1">
+<title>용차앱 프로모션</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif; }
+  html,body { width:390px; height:844px; overflow:hidden; background:#08101f; }
+
+  /* ── 슬라이드 컨테이너 ── */
+  .reel { position:absolute; top:0; left:0; width:390px; height:844px; display:flex; flex-direction:column; justify-content:center; align-items:center; opacity:0; transform:translateY(30px); transition:opacity 0.5s ease, transform 0.5s ease; pointer-events:none; }
+  .reel.active { opacity:1; transform:translateY(0); pointer-events:auto; }
+  .reel.exit { opacity:0; transform:translateY(-30px); }
+
+  /* ── 색상 팔레트 ── */
+  .bg-dark { background:#08101f; }
+  .bg-navy { background:#0d1b33; }
+  .bg-card { background:#111c35; border:1px solid #1e3060; border-radius:20px; }
+  .gold { color:#c9a84c; }
+  .white { color:#ffffff; }
+  .muted { color:#7a8aaa; }
+  .green { color:#22c55e; }
+  .blue { color:#60a5fa; }
+  .orange { color:#fb923c; }
+
+  /* ── 타이포 ── */
+  .tag { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:4px 12px; border-radius:20px; display:inline-block; }
+  .tag-gold { background:rgba(201,168,76,0.15); color:#c9a84c; border:1px solid rgba(201,168,76,0.4); }
+  .tag-blue { background:rgba(96,165,250,0.15); color:#60a5fa; border:1px solid rgba(96,165,250,0.4); }
+  .tag-green { background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.4); }
+  .h1 { font-size:36px; font-weight:800; line-height:1.2; text-align:center; color:#fff; }
+  .h2 { font-size:26px; font-weight:800; line-height:1.3; color:#fff; }
+  .h3 { font-size:18px; font-weight:700; color:#fff; }
+  .body { font-size:14px; line-height:1.6; color:#b0c0e0; }
+  .caption { font-size:12px; color:#7a8aaa; }
+
+  /* ── 공통 레이아웃 ── */
+  .pad { padding:32px 24px; }
+  .gap8 { gap:8px; }
+  .gap12 { gap:12px; }
+  .gap16 { gap:16px; }
+  .flex-col { display:flex; flex-direction:column; }
+  .flex-row { display:flex; flex-direction:row; align-items:center; }
+  .center { text-align:center; align-items:center; }
+
+  /* ════════════════════════════════════════
+     SLIDE 1 — 히어로
+  ════════════════════════════════════════ */
+  #s1 { background:linear-gradient(160deg,#08101f 40%,#0d2050 100%); }
+  .hero-logo { width:80px; height:80px; background:linear-gradient(135deg,#c9a84c,#f0d070); border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:38px; margin-bottom:24px; box-shadow:0 0 40px rgba(201,168,76,0.4); }
+  .hero-sub { font-size:14px; color:#7a8aaa; margin-top:8px; }
+  .hero-hook { font-size:18px; color:#c9a84c; font-weight:700; margin-top:20px; background:rgba(201,168,76,0.08); padding:12px 20px; border-radius:12px; border-left:3px solid #c9a84c; }
+  .hero-badges { display:flex; gap:8px; margin-top:24px; flex-wrap:wrap; justify-content:center; }
+  .badge { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:6px 14px; font-size:12px; color:#c0d0f0; }
+
+  /* ════════════════════════════════════════
+     SLIDE 2 — 구조 비교
+  ════════════════════════════════════════ */
+  #s2 { background:#08101f; padding:32px 24px; }
+  .compare { width:100%; display:flex; flex-direction:column; gap:12px; }
+  .cmp-row { background:#111c35; border-radius:16px; padding:16px 20px; border:1px solid #1e3060; }
+  .cmp-bad { border-left:3px solid #ef4444; }
+  .cmp-good { border-left:3px solid #22c55e; }
+  .cmp-label { font-size:11px; font-weight:700; letter-spacing:1px; }
+  .cmp-label-red { color:#ef4444; }
+  .cmp-label-green { color:#22c55e; }
+  .cmp-title { font-size:16px; font-weight:700; color:#fff; margin:4px 0 2px; }
+  .cmp-desc { font-size:13px; color:#7a8aaa; }
+  .arrow-down { font-size:24px; text-align:center; color:#374060; }
+
+  /* ════════════════════════════════════════
+     SLIDE 3 — 기사 화면 목업
+  ════════════════════════════════════════ */
+  #s3 { background:linear-gradient(160deg,#08101f 30%,#061830 100%); padding:24px; }
+  .phone-mockup { width:280px; background:#0a1628; border-radius:28px; border:2px solid #1e3060; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+  .phone-top { background:#0d1f40; padding:12px 16px 8px; }
+  .phone-status { display:flex; justify-content:space-between; font-size:10px; color:#7a8aaa; margin-bottom:8px; }
+  .phone-title { font-size:15px; font-weight:700; color:#fff; }
+  .phone-body { padding:12px; }
+  .post-card { background:#111c35; border-radius:14px; padding:14px; margin-bottom:10px; border:1px solid #1e3060; }
+  .post-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .post-region { font-size:14px; font-weight:700; color:#fff; }
+  .post-price { font-size:18px; font-weight:800; color:#c9a84c; }
+  .post-price-unit { font-size:11px; color:#7a8aaa; }
+  .post-tags { display:flex; gap:6px; margin-bottom:8px; }
+  .ptag { font-size:10px; padding:2px 8px; border-radius:10px; }
+  .ptag-cj { background:rgba(239,68,68,0.15); color:#f87171; }
+  .ptag-vol { background:rgba(96,165,250,0.15); color:#60a5fa; }
+  .ptag-guar { background:rgba(34,197,94,0.15); color:#4ade80; }
+  .post-info { font-size:11px; color:#7a8aaa; margin-bottom:10px; }
+  .slide-btn { background:linear-gradient(90deg,#c9a84c,#f0d070); color:#08101f; font-size:13px; font-weight:800; border-radius:12px; padding:10px 0; text-align:center; }
+
+  /* AI 루트코치 */
+  .ai-card { background:linear-gradient(135deg,#0d2050,#142a60); border-radius:14px; padding:14px; margin-bottom:10px; border:1px solid #2040a0; }
+  .ai-title { font-size:12px; color:#60a5fa; font-weight:700; margin-bottom:8px; }
+  .ai-route { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .ai-rank { width:20px; height:20px; border-radius:50%; background:#c9a84c; color:#08101f; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .ai-route-name { font-size:13px; color:#fff; font-weight:600; }
+  .ai-route-earn { font-size:12px; color:#c9a84c; margin-left:auto; }
+
+  /* ════════════════════════════════════════
+     SLIDE 4 — 대리점 화면 목업
+  ════════════════════════════════════════ */
+  #s4 { background:linear-gradient(160deg,#08101f 30%,#0d1f00 100%); padding:24px; }
+  .dealer-card { background:#111c35; border-radius:14px; padding:14px; margin-bottom:10px; border:1px solid #1e3060; }
+  .applicant { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .appl-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#c9a84c,#f0d070); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .appl-name { font-size:14px; font-weight:700; color:#fff; }
+  .appl-rating { font-size:12px; color:#f59e0b; }
+  .appl-routes { font-size:11px; color:#7a8aaa; }
+  .appl-actions { display:flex; gap:8px; }
+  .btn-accept { flex:1; background:#22c55e; color:#fff; font-size:12px; font-weight:700; border-radius:10px; padding:8px 0; text-align:center; }
+  .btn-reject { flex:1; background:#374060; color:#9aa0b0; font-size:12px; font-weight:700; border-radius:10px; padding:8px 0; text-align:center; }
+  .trust-score { display:flex; align-items:center; justify-content:space-between; background:#0d2a10; border:1px solid #1a5020; border-radius:12px; padding:10px 14px; margin-bottom:8px; }
+  .trust-label { font-size:12px; color:#4ade80; font-weight:700; }
+  .trust-stars { font-size:16px; color:#f59e0b; }
+  .settle-info { background:#1a2040; border-radius:10px; padding:10px 14px; font-size:12px; color:#7a8aaa; }
+  .settle-info span { color:#c9a84c; font-weight:700; }
+
+  /* ════════════════════════════════════════
+     SLIDE 5 — 보장·정산 시스템
+  ════════════════════════════════════════ */
+  #s5 { background:#08101f; padding:28px 24px; }
+  .feature-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; }
+  .feat { background:#111c35; border-radius:16px; padding:16px; border:1px solid #1e3060; }
+  .feat-icon { font-size:28px; margin-bottom:8px; }
+  .feat-title { font-size:13px; font-weight:700; color:#fff; margin-bottom:4px; }
+  .feat-desc { font-size:11px; color:#7a8aaa; line-height:1.5; }
+  .feat-value { font-size:16px; font-weight:800; color:#c9a84c; margin-top:6px; }
+
+  /* ════════════════════════════════════════
+     SLIDE 6 — 택배사 단가 비교
+  ════════════════════════════════════════ */
+  #s6 { background:#08101f; padding:28px 24px; }
+  .price-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:12px; margin-bottom:8px; }
+  .price-row-1 { background:linear-gradient(90deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05)); border:1px solid rgba(201,168,76,0.3); }
+  .price-row-2 { background:#111c35; border:1px solid #1e3060; }
+  .carrier-name { font-size:14px; font-weight:700; color:#fff; }
+  .carrier-price { font-size:16px; font-weight:800; }
+  .carrier-price-top { color:#c9a84c; }
+  .carrier-price-reg { color:#7a8aaa; }
+  .crown { font-size:14px; margin-right:4px; }
+
+  /* ════════════════════════════════════════
+     SLIDE 7 — 가격·CTA
+  ════════════════════════════════════════ */
+  #s7 { background:linear-gradient(160deg,#08101f 0%,#0d2050 100%); padding:28px 24px; }
+  .plan-box { background:#111c35; border-radius:20px; padding:20px; border:1px solid #1e3060; margin-bottom:12px; width:100%; }
+  .plan-type { font-size:12px; color:#7a8aaa; font-weight:700; letter-spacing:1px; }
+  .plan-price { font-size:32px; font-weight:900; color:#c9a84c; margin:6px 0; }
+  .plan-price small { font-size:14px; color:#7a8aaa; }
+  .plan-features { font-size:12px; color:#b0c0e0; line-height:1.8; }
+  .cta-btn { background:linear-gradient(90deg,#c9a84c,#f0d070); color:#08101f; font-size:18px; font-weight:900; border-radius:16px; padding:18px 0; text-align:center; width:100%; margin-top:16px; box-shadow:0 8px 24px rgba(201,168,76,0.4); }
+  .cta-domain { font-size:13px; color:#7a8aaa; text-align:center; margin-top:8px; }
+
+  /* ── 섹션 헤더 ── */
+  .section-head { text-align:center; margin-bottom:20px; width:100%; }
+  .section-head .tag { margin-bottom:10px; }
+
+  /* ── 진행 바 ── */
+  .progress-bar { position:fixed; bottom:0; left:0; width:0%; height:3px; background:linear-gradient(90deg,#c9a84c,#f0d070); transition:width linear; z-index:100; }
+
+  /* ── 텍스트 애니메이션 ── */
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+  .anim-1 { animation:fadeUp 0.6s 0.1s both; }
+  .anim-2 { animation:fadeUp 0.6s 0.3s both; }
+  .anim-3 { animation:fadeUp 0.6s 0.5s both; }
+  .anim-4 { animation:fadeUp 0.6s 0.7s both; }
+  .anim-5 { animation:fadeUp 0.6s 0.9s both; }
+
+  /* ── 슬라이드 카운터 ── */
+  .slide-counter { position:fixed; top:20px; right:20px; font-size:11px; color:#374060; z-index:200; }
+  .dots { position:fixed; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:200; }
+  .dot { width:6px; height:6px; border-radius:50%; background:#374060; transition:background 0.3s,width 0.3s; }
+  .dot.active { background:#c9a84c; width:20px; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<div class="slide-counter" id="counter">1 / 7</div>
+<div class="dots" id="dots"></div>
+<div class="progress-bar" id="progress"></div>
+
+<!-- ══════════════════════════════════
+     SLIDE 1 — 히어로
+══════════════════════════════════ -->
+<div class="reel active" id="s1">
+  <div class="flex-col center pad" style="height:100%;justify-content:center;gap:0">
+    <div class="hero-logo anim-1">🚚</div>
+    <div class="h1 anim-2" style="font-size:38px;">용차앱</div>
+    <div class="hero-sub anim-2">주선사업자 없는 직접 매칭</div>
+    <div class="hero-hook anim-3">
+      원콜·혼적콜 수수료 20%+<br>
+      <span style="color:#fff">이제 그만 뜯기세요</span>
+    </div>
+    <div class="hero-badges anim-4">
+      <span class="badge">🚛 기사</span>
+      <span class="badge">🏪 대리점</span>
+      <span class="badge">🤖 AI 루트코치</span>
+      <span class="badge">💰 월정액 고정</span>
+    </div>
+    <div class="anim-5" style="margin-top:20px;font-size:13px;color:#374060">
+      yongcha.app
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SLIDE 2 — 구조 비교
+══════════════════════════════════ -->
+<div class="reel" id="s2">
+  <div class="flex-col center" style="width:100%;padding:32px 24px;">
+    <div class="section-head">
+      <div class="tag tag-gold anim-1">구조 비교</div>
+      <div class="h2 anim-2" style="margin-top:10px;">기존 vs 용차앱</div>
+    </div>
+    <div class="compare anim-3">
+      <div class="cmp-row cmp-bad">
+        <div class="cmp-label cmp-label-red">❌ 기존 방식</div>
+        <div class="cmp-title">기사 → 주선사 → 대리점</div>
+        <div class="cmp-desc">수수료 20%+ · 단가 불투명 · 브로커 의존</div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div class="cmp-row cmp-good">
+        <div class="cmp-label cmp-label-green">✅ 용차앱</div>
+        <div class="cmp-title">기사 ↔ 대리점 직접 연결</div>
+        <div class="cmp-desc">월정액 고정 · 단가 100% 공개 · 수수료 없음</div>
+      </div>
+    </div>
+    <div class="anim-4" style="margin-top:16px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);border-radius:14px;padding:14px 18px;width:100%;">
+      <div style="font-size:13px;color:#c9a84c;font-weight:700;margin-bottom:6px;">💡 월정액 구조</div>
+      <div style="font-size:12px;color:#b0c0e0;line-height:1.8;">
+        기사: ₩150,000/월 (공고 무제한 지원)<br>
+        소장: ₩50,000/월 (DONWAY 구독 소장은 무료)<br>
+        <span style="color:#22c55e;">→ 건당 수수료 없음</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SLIDE 3 — 기사 화면 목업
+══════════════════════════════════ -->
+<div class="reel" id="s3">
+  <div class="flex-col center" style="width:100%;padding:20px 24px;">
+    <div class="section-head">
+      <div class="tag tag-blue anim-1">🚛 기사 화면</div>
+      <div class="h2 anim-2" style="margin-top:8px;font-size:22px;">슬라이드 1번으로<br>즉시 지원</div>
+    </div>
+    <div class="phone-mockup anim-3">
+      <div class="phone-top">
+        <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+        <div class="phone-title">📦 공고 목록</div>
+      </div>
+      <div class="phone-body">
+        <div class="post-card">
+          <div class="post-header">
+            <div>
+              <div class="post-region">부산 → 서울</div>
+              <div style="font-size:11px;color:#7a8aaa;">CJ대한통운 · 150박스</div>
+            </div>
+            <div style="text-align:right">
+              <div class="post-price">880<span class="post-price-unit">원/박스</span></div>
+              <div style="font-size:10px;color:#22c55e;">최소보장 748원</div>
+            </div>
+          </div>
+          <div class="post-tags">
+            <span class="ptag ptag-cj">CJ대한통운</span>
+            <span class="ptag ptag-vol">150박스</span>
+            <span class="ptag ptag-guar">최소보장</span>
+          </div>
+          <div class="post-info">정산 D+7 · 대리점 ★4.8 (127건)</div>
+          <div class="slide-btn">← 슬라이드해서 지원 →</div>
+        </div>
+        <div class="ai-card">
+          <div class="ai-title">🤖 AI 루트코치 추천</div>
+          <div class="ai-route">
+            <div class="ai-rank">1</div>
+            <div class="ai-route-name">부산→서울 (CJ)</div>
+            <div class="ai-route-earn">+₩132K/월</div>
+          </div>
+          <div class="ai-route">
+            <div class="ai-rank" style="background:#7a8aaa;">2</div>
+            <div class="ai-route-name">부산→대구 (한진)</div>
+            <div class="ai-route-earn" style="color:#7a8aaa;">+₩98K/월</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SLIDE 4 — 대리점 화면 목업
+══════════════════════════════════ -->
+<div class="reel" id="s4">
+  <div class="flex-col center" style="width:100%;padding:20px 24px;">
+    <div class="section-head">
+      <div class="tag tag-green anim-1">🏪 대리점 화면</div>
+      <div class="h2 anim-2" style="margin-top:8px;font-size:22px;">지원자 관리·<br>신뢰도 공개</div>
+    </div>
+    <div class="phone-mockup anim-3">
+      <div class="phone-top">
+        <div class="phone-status"><span>9:41</span><span>●●●</span></div>
+        <div class="phone-title">📋 지원자 관리</div>
+      </div>
+      <div class="phone-body">
+        <div class="dealer-card">
+          <div class="applicant">
+            <div class="appl-avatar">🧑</div>
+            <div>
+              <div class="appl-name">김○○ 기사</div>
+              <div class="appl-rating">★★★★★ 4.9 (86건)</div>
+              <div class="appl-routes">부산-서울 노선 경력 3년</div>
+            </div>
+          </div>
+          <div class="appl-actions">
+            <div class="btn-accept">✓ 수락</div>
+            <div class="btn-reject">✕ 거절</div>
+          </div>
+        </div>
+        <div class="trust-score">
+          <div>
+            <div class="trust-label">우리 대리점 신뢰도</div>
+            <div style="font-size:11px;color:#4ade80;margin-top:2px;">미지급 이력 없음 ✓</div>
+          </div>
+          <div style="text-align:right">
+            <div class="trust-stars">★★★★★</div>
+            <div style="font-size:12px;color:#4ade80;font-weight:700;">4.9점</div>
+          </div>
+        </div>
+        <div class="settle-info">
+          정산 완료 즉시 <span>세금계산서 자동 발행</span> (팝빌 연동)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SLIDE 5 — 보장·정산 4대 기능
+══════════════════════════════════ -->
+<div class="reel" id="s5">
+  <div class="flex-col center" style="width:100%;padding:28px 24px;">
+    <div class="section-head">
+      <div class="tag tag-gold anim-1">보장·정산 시스템</div>
+      <div class="h2 anim-2" style="margin-top:10px;font-size:22px;">떼먹힐 걱정 없이<br>안전하게</div>
+    </div>
+    <div class="feature-grid anim-3">
+      <div class="feat">
+        <div class="feat-icon">🛡️</div>
+        <div class="feat-title">최소보장</div>
+        <div class="feat-desc">등록 단가의</div>
+        <div class="feat-value">× 85%</div>
+        <div class="feat-desc" style="margin-top:4px">공고마다 자동 표시</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⚡</div>
+        <div class="feat-title">빠른 정산</div>
+        <div class="feat-desc">운송 완료 후</div>
+        <div class="feat-value">7일 이내</div>
+        <div class="feat-desc" style="margin-top:4px">지급 보장</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🌟</div>
+        <div class="feat-title">신뢰도 평점</div>
+        <div class="feat-desc">미지급·지연 이력</div>
+        <div class="feat-value">전체 공개</div>
+        <div class="feat-desc" style="margin-top:4px">숨길 수 없음</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📄</div>
+        <div class="feat-title">세금계산서</div>
+        <div class="feat-desc">정산 완료 즉시</div>
+        <div class="feat-value">자동 발행</div>
+        <div class="feat-desc" style="margin-top:4px">팝빌 API 연동</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SLIDE 6 — 택배사 단가 실시간
+══════════════════════════════════ -->
+<div class="reel" id="s6">
+  <div class="flex-col center" style="width:100%;padding:28px 24px;">
+    <div class="section-head">
+      <div class="tag tag-blue anim-1">🤖 AI 단가 추천</div>
+      <div class="h2 anim-2" style="margin-top:10px;font-size:22px;">택배사별 시세<br>실시간 비교</div>
+    </div>
+    <div style="width:100%;anim-3" class="anim-3">
+      <div class="price-row price-row-1">
+        <div><span class="crown">👑</span><span class="carrier-name">쿠팡로지스틱스</span></div>
+        <div class="carrier-price carrier-price-top">960원/박스</div>
+      </div>
+      <div class="price-row price-row-2">
+        <div><span class="carrier-name">우체국택배</span></div>
+        <div class="carrier-price carrier-price-reg">900원/박스</div>
+      </div>
+      <div class="price-row price-row-2">
+        <div><span class="carrier-name">CJ대한통운</span></div>
+        <div class="carrier-price carrier-price-reg">880원/박스</div>
+      </div>
+      <div class="price-row price-row-2">
+        <div><span class="carrier-name">롯데택배</span></div>
+        <div class="carrier-price carrier-price-reg">860원/박스</div>
+      </div>
+      <div class="price-row price-row-2">
+        <div><span class="carrier-name">한진택배</span></div>
+        <div class="carrier-price carrier-price-reg">855원/박스</div>
+      </div>
+      <div class="price-row price-row-2">
+        <div><span class="carrier-name">로젠택배</span></div>
+        <div class="carrier-price carrier-price-reg">840원/박스</div>
+      </div>
+    </div>
+    <div class="anim-4" style="margin-top:14px;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.3);border-radius:12px;padding:12px 16px;width:100%;text-align:left">
+      <div style="font-size:12px;color:#60a5fa;font-weight:700;margin-bottom:4px;">🤖 AI 단가 추천 (대리점용)</div>
+      <div style="font-size:12px;color:#b0c0e0">지역·물량·시세 기반으로 적정 단가를 자동 산출해드립니다</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SLIDE 7 — 가격·CTA
+══════════════════════════════════ -->
+<div class="reel" id="s7">
+  <div class="flex-col center" style="width:100%;padding:28px 24px;">
+    <div class="section-head">
+      <div class="tag tag-gold anim-1">요금제</div>
+      <div class="h2 anim-2" style="margin-top:10px;font-size:24px;">지금 시작하세요</div>
+    </div>
+    <div class="anim-3" style="width:100%">
+      <div class="plan-box">
+        <div class="plan-type">🚛 기사 플랜</div>
+        <div class="plan-price">₩150,000<small>/월</small></div>
+        <div class="plan-features">
+          ✅ 공고 무제한 지원<br>
+          ✅ AI 루트코치 이용<br>
+          ✅ 실시간 공고 알림<br>
+          ✅ 최소보장 자동 확인
+        </div>
+      </div>
+      <div class="plan-box">
+        <div class="plan-type">🏪 소장 플랜</div>
+        <div class="plan-price" style="font-size:24px;">₩50,000<small>/월</small></div>
+        <div class="plan-features">
+          ✅ 공고 무제한 등록<br>
+          ✅ 지원자 관리 대시보드<br>
+          ✅ AI 단가 추천<br>
+          ✅ <span style="color:#22c55e">DONWAY 구독 소장 무료</span>
+        </div>
+      </div>
+    </div>
+    <div class="cta-btn anim-4">지금 무료 시작 →</div>
+    <div class="cta-domain anim-5">yongcha.app</div>
+  </div>
+</div>
+
+<script>
+const SLIDES = ['s1','s2','s3','s4','s5','s6','s7'];
+const DURATIONS = [5000, 5000, 6000, 6000, 5000, 5000, 6000]; // ms per slide
+let current = 0;
+let timer = null;
+
+const dotsEl = document.getElementById('dots');
+const counterEl = document.getElementById('counter');
+const progressEl = document.getElementById('progress');
+
+// build dots
+SLIDES.forEach((id, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  dotsEl.appendChild(d);
+});
+
+function goTo(idx) {
+  const prev = SLIDES[current];
+  const next = SLIDES[idx];
+  document.getElementById(prev).classList.remove('active');
+  document.getElementById(prev).classList.add('exit');
+  setTimeout(() => document.getElementById(prev).classList.remove('exit'), 600);
+  current = idx;
+  document.getElementById(next).classList.add('active');
+  counterEl.textContent = (idx+1) + ' / ' + SLIDES.length;
+  document.querySelectorAll('.dot').forEach((d,i) => d.className = 'dot'+(i===idx?' active':''));
+  // progress bar
+  progressEl.style.transition = 'none';
+  progressEl.style.width = '0%';
+  requestAnimationFrame(() => {
+    progressEl.style.transition = 'width '+DURATIONS[idx]+'ms linear';
+    progressEl.style.width = '100%';
+  });
+}
+
+function next() {
+  const nxt = (current + 1) % SLIDES.length;
+  goTo(nxt);
+  schedule();
+}
+
+function schedule() {
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(next, DURATIONS[current]);
+}
+
+// start
+progressEl.style.transition = 'width '+DURATIONS[0]+'ms linear';
+progressEl.style.width = '100%';
+schedule();
+</script>
+</body>
+</html>
