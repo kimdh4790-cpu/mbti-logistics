@@ -61,7 +61,17 @@
 - [x] Chromium 경로 동적 탐색으로 수정 (`scripts/utils/launch-options.js`)
 - [x] **YouTube Data API v3 업로드 스크립트** (`scripts/upload/upload-youtube-api.js`) — Playwright 대체
 - [x] **YOUTUBE_REFRESH_TOKEN 발급·등록** (Oracle Cloud `~/.env`)
-- [x] **DONWAY 영상 YouTube 업로드 완료** (https://www.youtube.com/watch?v=AKvxliFvraY)
+- [x] **GOOGLE_TTS_API_KEY 등록** (Oracle Cloud `~/.env` — 재등록 완료 2026-08-27)
+- [x] **--reels 옵션 추가** (`upload-youtube-api.js`) — 숏츠 업로드 지원
+- [ ] **DONWAY 숏츠 업로드** — 나레이션 생성→합성→업로드 진행 중
+
+### Oracle VM ~/.env 등록 항목 (2026-08-27 기준)
+```
+GOOGLE_TTS_API_KEY=등록완료
+YOUTUBE_CLIENT_ID=40761160761-3v5h03e9r974vfq2io4oa08nqhn6r5o8.apps.googleusercontent.com
+YOUTUBE_CLIENT_SECRET=등록완료
+YOUTUBE_REFRESH_TOKEN=등록완료
+```
 
 ### 막혀있는 것
 
@@ -69,22 +79,22 @@
 |---|---|---|
 | **BGM 파일 없음** | YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` | 사용자 |
 | **FILO·YONGCHA 영상 미생성** | Oracle VM에서 record + compose 실행 필요 | 사용자 |
-| **DONWAY 재업로드 필요** | compose→upload 순서로 재실행 (나레이션 누락된 버전 삭제 필요) | 사용자 |
 
 ### 업로드 필수 순서 (반드시 지킬 것)
 ```
-1. node scripts/capture/record-<product>.js       # 녹화 → output/<product>-raw.webm
-2. bash scripts/compose/compose-video.sh <product> # 나레이션+자막 합성 → output/<product>-promo.mp4
-3. node scripts/upload/upload-youtube-api.js --product <product>  # YouTube 업로드
+1. node scripts/audio/generate-narration.js --product <product>  # 나레이션 MP3 생성
+2. bash scripts/compose/compose-video.sh <product>               # 나레이션+자막 합성
+3. node scripts/upload/upload-youtube-api.js --product <product> --reels  # 숏츠 업로드
+   또는 --reels 없이 일반 영상 업로드
 ```
 compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 
 ### 영상 제작 현황
 | 제품 | 나레이션 MP3 | 녹화 WebM | 편집 MP4 | YouTube |
 |---|---|---|---|---|
-| FILO | output/filo-narration.mp3 | 미생성 | 미생성 | 미완 |
-| DONWAY | output/donway-narration.mp3 | output/donway-raw.webm | 재합성 필요 | 재업로드 필요 (기존 AKvxliFvraY 삭제) |
-| YONGCHA | output/yongcha-narration.mp3 | 미생성 | 미생성 | 미완 |
+| FILO | 미생성 | 미생성 | 미생성 | 미완 |
+| DONWAY | 생성 중 | output/donway-raw.webm | 합성 중 | 숏츠 업로드 진행 중 |
+| YONGCHA | 미생성 | 미생성 | 미생성 | 미완 |
 
 ---
 
@@ -176,6 +186,7 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-27 | GOOGLE_TTS_API_KEY Oracle VM 재등록, --reels 옵션 추가, 업로드 순서 명시 |
 | 2026-08-27 | DONWAY YouTube 업로드 완료 (Data API v3), REFRESH_TOKEN 발급, 현황 업데이트 |
 | 2026-08-27 | SOCIAL_MEDIA_MEMO.md 전면 업데이트 (Google TTS 전환, 세션 이전 완료 반영) |
 | 2026-08-27 | 나레이션 JSON voice 필드 Google TTS로 통일, 자막 요금 정보 수정 |
