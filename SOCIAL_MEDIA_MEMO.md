@@ -43,6 +43,49 @@
 
 ---
 
+## GitHub Actions 워크플로우 (Oracle SSH 없이 실행 가능)
+
+### 필요한 GitHub Secrets (4개)
+```
+Settings → Secrets and variables → Actions → New repository secret
+```
+| Secret 이름 | 값 위치 |
+|---|---|
+| `YOUTUBE_CLIENT_ID` | Oracle VM `~/.env` → YOUTUBE_CLIENT_ID |
+| `YOUTUBE_CLIENT_SECRET` | Oracle VM `~/.env` → YOUTUBE_CLIENT_SECRET |
+| `YOUTUBE_REFRESH_TOKEN` | Oracle VM `~/.env` → YOUTUBE_REFRESH_TOKEN |
+| `GOOGLE_TTS_API_KEY` | Oracle VM `~/.env` → GOOGLE_TTS_API_KEY |
+
+**Oracle VM에서 값 확인 방법 (SSH 불필요):**
+1. Oracle Cloud Console 브라우저 로그인 (kimdh4790@gmail.com)
+2. Compute → Instances → filo-a1-2c12g → Console connection (직렬 콘솔)
+3. 브라우저 터미널에서: `cat ~/.env`
+
+**또는: Oracle Cloud Console → Cloud Shell** (OCI API용이지만 환경변수 확인 가능)
+
+### 워크플로우 실행 방법 (Oracle SSH 없이)
+```
+GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
+- product: yongcha (또는 filo, donway)
+- steps: record,compose,youtube
+→ GitHub Actions runner에서 녹화+편집+YouTube 업로드 자동 실행
+→ 결과 MP4는 Artifacts에서 다운로드 가능
+```
+
+**Instagram 업로드**: Oracle SSH 복구 후에만 가능 (세션이 Oracle에 저장됨)
+
+### Oracle SSH 키 문제 해결 방법
+현재 `ssh-key-2026-08-02.key`가 Oracle VM에서 Permission denied 발생.
+
+**해결 방법 (Oracle Cloud Console에서):**
+1. Oracle Cloud Console → Compute → Instances → filo-a1-2c12g
+2. 오른쪽 메뉴 → Console connection → Create console connection
+3. 브라우저 VNC/SSH 터미널에서 접속
+4. `cat ~/.ssh/authorized_keys` 확인
+5. 새 공개키 추가: `echo "새_공개키" >> ~/.ssh/authorized_keys`
+
+---
+
 ## 현재 상태 (2026-08-27 기준)
 
 ### 완료된 것
@@ -251,6 +294,7 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 | 2026-08-27 | GOOGLE_TTS_API_KEY Oracle VM 재등록, --reels 옵션 추가, 업로드 순서 명시 |
 | 2026-08-27 | DONWAY YouTube 업로드 완료 (Data API v3), REFRESH_TOKEN 발급, 현황 업데이트 |
 | 2026-08-27 | SOCIAL_MEDIA_MEMO.md 전면 업데이트 (Google TTS 전환, 세션 이전 완료 반영) |
+| 2026-08-27 | social-media.yml 재작성: Oracle SSH 없이 GitHub Actions runner에서 직접 실행 (record+compose+youtube). Instagram은 Oracle SSH 복구 후 별도 job으로 실행. YouTube OAuth를 GitHub Secrets에서 읽도록 변경. |
 | 2026-08-27 | 나레이션 JSON voice 필드 Google TTS로 통일, 자막 요금 정보 수정 |
 | 2026-08-27 | launch-options.js Chromium 동적 탐색 추가 |
 | 2026-08-26 | 경쟁사 분석, 자막·제목·시나리오 전면 재설계, 나레이션 TTS 파이프라인 추가 |
