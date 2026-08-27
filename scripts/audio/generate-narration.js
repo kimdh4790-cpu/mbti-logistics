@@ -2,9 +2,10 @@
  * AI 나레이션 생성기
  * 실행: node scripts/audio/generate-narration.js --product filo
  *
- * 지원 TTS:
- *   CLOVA (기본): NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET 환경변수
- *   ElevenLabs:   ELEVENLABS_API_KEY 환경변수
+ * 지원 TTS (우선순위 순):
+ *   Google TTS (권장): GOOGLE_TTS_API_KEY 환경변수 — 무료 월 100만자
+ *   CLOVA:             NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET
+ *   ElevenLabs:        ELEVENLABS_API_KEY
  *
  * 출력: output/<product>-narration.mp3 (전체 나레이션)
  *       output/<product>-narration-<n>.mp3 (구간별)
@@ -29,6 +30,46 @@ if (!fs.existsSync(scriptFile)) {
 const script = require(scriptFile);
 const OUTPUT_DIR = path.join(ROOT, 'output');
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+// ─── Google Cloud TTS ──────────────────────────────────────────────
+async function googleTTS(text, outFile) {
+  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_TTS_API_KEY 환경변수 필요');
+
+  const bodyStr = JSON.stringify({
+    input: { text },
+    voice: { languageCode: 'ko-KR', name: 'ko-KR-Wavenet-A', ssmlGender: 'FEMALE' },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: 0.95, pitch: 0 },
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: 'texttospeech.googleapis.com',
+        path: `/v1/text:synthesize?key=${apiKey}`,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) },
+      },
+      (res) => {
+        let data = '';
+        res.on('data', d => (data += d));
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Google TTS 오류 ${res.statusCode}: ${data}`));
+          }
+          try {
+            const { audioContent } = JSON.parse(data);
+            fs.writeFileSync(outFile, Buffer.from(audioContent, 'base64'));
+            resolve();
+          } catch (e) { reject(e); }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.write(bodyStr);
+    req.end();
+  });
+}
 
 // ─── CLOVA Voice TTS ───────────────────────────────────────────────
 async function clovaVoice(text, voice, speed, outFile) {
@@ -187,17 +228,20 @@ async function main() {
   const lines = script.lines;
   const voice = script.voice || 'nara';
   const speed = script.speedRate ?? 0;
-  const useElevenLabs = !!process.env.ELEVENLABS_API_KEY;
+  const useGoogle = !!process.env.GOOGLE_TTS_API_KEY;
   const useClova = !!(process.env.NAVER_TTS_CLIENT_ID && process.env.NAVER_TTS_CLIENT_SECRET);
+  const useElevenLabs = !!process.env.ELEVENLABS_API_KEY;
 
-  if (!useClova && !useElevenLabs) {
+  if (!useGoogle && !useClova && !useElevenLabs) {
     console.error('[TTS] API 키 없음. 다음 중 하나 설정:');
-    console.error('  NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET (네이버 CLOVA, 권장)');
-    console.error('  ELEVENLABS_API_KEY (ElevenLabs)');
+    console.error('  GOOGLE_TTS_API_KEY       (Google Cloud TTS, 권장 — 무료 월 100만자)');
+    console.error('  NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET');
+    console.error('  ELEVENLABS_API_KEY');
     process.exit(1);
   }
 
-  console.log(`[TTS] ${PRODUCT} 나레이션 생성 중... (${useClova ? 'CLOVA' : 'ElevenLabs'})`);
+  const engine = useGoogle ? 'Google TTS' : useClova ? 'CLOVA' : 'ElevenLabs';
+  console.log(`[TTS] ${PRODUCT} 나레이션 생성 중... (${engine})`);
 
   const segments = [];
   for (let i = 0; i < lines.length; i++) {
@@ -205,7 +249,9 @@ async function main() {
     const segFile = path.join(OUTPUT_DIR, `${PRODUCT}-nar-${i}.mp3`);
     console.log(`  [${i + 1}/${lines.length}] "${line.text.slice(0, 30)}..."`);
 
-    if (useClova) {
+    if (useGoogle) {
+      await googleTTS(line.text, segFile);
+    } else if (useClova) {
       await clovaVoice(line.text, voice, speed, segFile);
     } else {
       await elevenLabs(line.text, null, segFile);
