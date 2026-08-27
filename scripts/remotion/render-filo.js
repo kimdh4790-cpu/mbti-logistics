@@ -119,6 +119,7 @@ async function main() {
     codec: 'h264',
     outputLocation: outFile,
     inputProps: { hasNarration, hasBgm },
+    videoBitrate: '8M',
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
     onProgress: ({ renderedFrames, totalFrames }) => {
       if (renderedFrames % 60 === 0 || renderedFrames === totalFrames) {
