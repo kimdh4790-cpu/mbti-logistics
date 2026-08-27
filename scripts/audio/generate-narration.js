@@ -17,6 +17,25 @@ const https = require('https');
 const http = require('http');
 
 const ROOT = path.join(__dirname, '../..');
+
+// ~/.env 로드
+(function loadEnv() {
+  const envPaths = [
+    path.join(process.env.HOME || '', '.env'),
+    path.join(ROOT, '.env.local'),
+    path.join(ROOT, '.env'),
+  ];
+  for (const p of envPaths) {
+    if (fs.existsSync(p)) {
+      fs.readFileSync(p, 'utf8').split('\n').forEach(line => {
+        const m = line.match(/^([^#=]+)=(.*)$/);
+        if (m) process.env[m[1].trim()] = m[2].trim().replace(/^['"]|['"]$/g, '');
+      });
+      console.log(`[TTS] 환경변수 로드: ${p}`);
+      return;
+    }
+  }
+})();
 const args = process.argv.slice(2);
 const productArg = args.indexOf('--product');
 const PRODUCT = productArg !== -1 ? args[productArg + 1] : 'filo';
