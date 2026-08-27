@@ -63,11 +63,16 @@
 - [x] **YOUTUBE_REFRESH_TOKEN 발급·등록** (Oracle Cloud `~/.env`)
 - [x] **GOOGLE_TTS_API_KEY 등록** (Oracle Cloud `~/.env` — 재등록 완료 2026-08-27)
 - [x] **--reels 옵션 추가** (`upload-youtube-api.js`) — 숏츠 업로드 지원
-- [ ] **DONWAY 숏츠 업로드** — 나레이션 생성→합성→업로드 진행 중
+- [x] **DONWAY 나레이션 MP3 생성** (Google TTS, output/donway-narration.mp3)
+- [x] **DONWAY 영상 합성** (나레이션+자막, audio:103KiB 확인) → output/donway-reels.mp4
+- [x] **DONWAY YouTube 숏츠 업로드** — https://www.youtube.com/watch?v=3HRSPE2bNDM (음성 포함, 2026-08-27)
+- [ ] **DONWAY Instagram Reels 업로드** — 진행 예정
+- [ ] **YONGCHA 영상 제작** — 나레이션 미생성
+- [ ] **FILO 영상 제작** — 나레이션 미생성
 
 ### Oracle VM ~/.env 등록 항목 (2026-08-27 기준)
 ```
-GOOGLE_TTS_API_KEY=등록필요  ← Google Cloud Console → "API 키 3개" → 키 표시 (Cloud Text-to-Speech API 전용, 2026-08-27 생성)
+GOOGLE_TTS_API_KEY=등록완료  ← "API 키 3개" (Cloud Text-to-Speech API 전용, 2026-08-27 생성)
 YOUTUBE_CLIENT_ID=40761160761-3v5h03e9r974vfq2io4oa08nqhn6r5o8.apps.googleusercontent.com
 YOUTUBE_CLIENT_SECRET=등록완료  ← Google Cloud Console → OAuth 2.0 → mbtico-youtube (데스크톱)
 YOUTUBE_REFRESH_TOKEN=등록완료
@@ -100,7 +105,7 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 | 제품 | 나레이션 MP3 | 녹화 WebM | 편집 MP4 | YouTube |
 |---|---|---|---|---|
 | FILO | 미생성 | 미생성 | 미생성 | 미완 |
-| DONWAY | 생성 중 | output/donway-raw.webm | 합성 중 | 숏츠 업로드 진행 중 |
+| DONWAY | ✅ 완료 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) / Instagram 예정 |
 | YONGCHA | 미생성 | 미생성 | 미생성 | 미완 |
 
 ---
@@ -182,7 +187,7 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ## 다음 작업 우선순위
 
-1. **DONWAY YouTube 숏츠 업로드** → `node scripts/upload/upload-youtube-api.js --product donway --reels`
+1. ~~**DONWAY YouTube 숏츠 업로드**~~ ✅ 완료 (https://youtu.be/3HRSPE2bNDM, 2026-08-27)
 2. **DONWAY Instagram Reels 업로드** → `node scripts/upload/upload-instagram.js --product donway` (음성 포함 세로형)
 3. **YONGCHA 영상 제작** → 녹화→나레이션→합성→YouTube 숏츠→Instagram Reels
 4. **FILO 영상 제작** → 동일 순서
