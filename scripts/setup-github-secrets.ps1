@@ -14,7 +14,7 @@ Write-Host ""
 Write-Host "[1/3] Scanning for SSH key files..." -ForegroundColor Yellow
 
 $allKeys = @()
-$searchDirs = @("$env:USERPROFILE\Desktop", "$env:USERPROFILE\Downloads", "$env:USERPROFILE\.ssh")
+$searchDirs = @("$env:USERPROFILE\.ssh", "$env:USERPROFILE\Desktop", "$env:USERPROFILE\Downloads")
 foreach ($dir in $searchDirs) {
     if (Test-Path $dir) {
         $files = Get-ChildItem $dir -File | Where-Object { $_.Name -match "ssh|key|\.key$|\.pem$" } | Sort-Object LastWriteTime -Descending
@@ -43,7 +43,7 @@ foreach ($keyPath in $allKeys) {
     try { icacls $keyPath /inheritance:r /grant:r "${env:USERNAME}:(R)" 2>&1 | Out-Null } catch {}
 
     $result = & ssh -i $keyPath `
-        -o ConnectTimeout=6 `
+        -o ConnectTimeout=15 `
         -o BatchMode=yes `
         -o StrictHostKeyChecking=no `
         "${ORACLE_USER}@${ORACLE_IP}" "echo __OK__" 2>&1
