@@ -33,6 +33,26 @@ function hasKey(name) {
   return !!(process.env[name] && process.env[name].length > 4);
 }
 
+async function testGoogleTTS() {
+  if (!hasKey('GOOGLE_TTS_API_KEY')) return null;
+  return new Promise(resolve => {
+    const body = JSON.stringify({ input: { text: '테스트' }, voice: { languageCode: 'ko-KR', name: 'ko-KR-Wavenet-A' }, audioConfig: { audioEncoding: 'MP3' } });
+    const req = https.request({
+      hostname: 'texttospeech.googleapis.com',
+      path: `/v1/text:synthesize?key=${process.env.GOOGLE_TTS_API_KEY}`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, res => {
+      let d = '';
+      res.on('data', x => d += x);
+      res.on('end', () => { try { resolve(!!JSON.parse(d).audioContent); } catch { resolve(false); } });
+    });
+    req.on('error', () => resolve(false));
+    req.write(body);
+    req.end();
+  });
+}
+
 async function testNaverTTS() {
   if (!hasKey('NAVER_TTS_CLIENT_ID') || !hasKey('NAVER_TTS_CLIENT_SECRET')) return null;
   return new Promise(resolve => {
