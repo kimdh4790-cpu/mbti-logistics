@@ -37,9 +37,13 @@ async function record() {
 
   for (const step of scenario.steps) {
     if (step.action === 'goto') {
-      console.log(`  → ${step.url}`);
-      await page.goto(step.url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() =>
-        page.goto(step.url, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      // 로컬 HTML 파일이면 file:// URL로 변환
+      const url = step.url.startsWith('local:')
+        ? `file://${path.join(ROOT, step.url.replace('local:', ''))}`
+        : step.url;
+      console.log(`  → ${url}`);
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() =>
+        page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
       );
       await page.waitForTimeout(step.wait || 2000);
     } else if (step.action === 'scroll') {

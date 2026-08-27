@@ -5,7 +5,7 @@
   "viewport": { "width": 390, "height": 844 },
   "_note": "훅: 경쟁사 수수료 20%+ vs 용차앱 월정액 고정. AI 루트코치 차별화.",
   "steps": [
-    { "action": "goto", "url": "https://yongcha.app/landing", "wait": 3000 },
+    { "action": "goto", "url": "local:yongcha-landing.html", "wait": 3000 },
     { "action": "screenshot", "label": "landing-hero" },
     { "action": "wait", "ms": 2000 },
     { "action": "scroll", "y": 300, "wait": 2000 },
