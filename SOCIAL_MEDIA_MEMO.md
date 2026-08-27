@@ -66,9 +66,15 @@
 - [x] **DONWAY 나레이션 MP3 생성** (Google TTS, output/donway-narration.mp3)
 - [x] **DONWAY 영상 합성** (나레이션+자막, audio:103KiB 확인) → output/donway-reels.mp4
 - [x] **DONWAY YouTube 숏츠 업로드** — https://www.youtube.com/watch?v=3HRSPE2bNDM (음성 포함, 2026-08-27)
+- [x] **전체 앱 기능 분석 완료** (FILO 7모듈 + DONWAY 전업종 + 용차앱 기사/대리점 + MBTICO AI OCR)
+- [x] **콘텐츠 캘린더 16개 항목** (`scripts/content/calendar.json` — 2026-08 ~ 09)
+- [x] **프로모션 HTML 자동 생성기** (`scripts/generate-promo.js`)
+- [x] **프로모션 HTML 16개 생성** (`assets/promo/` — 기능별 슬라이드쇼)
+- [x] **용차앱 기사·대리점 양면 프로모션 HTML** (`assets/promo/yongcha-promo.html` — 7슬라이드)
+- [x] **record-yongcha.js** — 로컬 프로모션 HTML 녹화 방식으로 교체
 - [ ] **DONWAY Instagram Reels 업로드** — 진행 예정
-- [ ] **YONGCHA 영상 제작** — 나레이션 미생성
-- [ ] **FILO 영상 제작** — 나레이션 미생성
+- [ ] **YONGCHA 영상 제작** — Oracle VM에서 실행 필요
+- [ ] **FILO 영상 제작** — Oracle VM에서 실행 필요
 
 ### Oracle VM ~/.env 등록 항목 (2026-08-27 기준)
 ```
@@ -84,6 +90,40 @@ YOUTUBE_REFRESH_TOKEN=등록완료
 | API 키 3개 | **GOOGLE_TTS_API_KEY** (Google TTS 나레이션 생성) | Cloud Text-to-Speech API 전용 |
 | mbti | 범용 API 키 (6개 API) | Firebase 등 |
 | Browser key | Firebase 자동 생성 | 수정 금지 |
+
+---
+
+## 콘텐츠 캘린더 (자동화 기반, 2026-08 ~ 09)
+
+> `scripts/content/calendar.json` 에 전체 항목 관리. 아래는 요약.
+
+| 날짜 | 제품 | 기능 | 플랫폼 | 상태 |
+|---|---|---|---|---|
+| 2026-08-11 (월) | 용차앱 | 기사·대리점 직접 매칭 | YouTube | ⏳ |
+| 2026-08-11 (화) | FILO | QR 테이블 주문 | YouTube | ⏳ |
+| 2026-08-14 (목) | DONWAY | 쿠팡 엑셀 자동 정산 | YouTube | ✅ https://youtu.be/zC4n7B3bIv8 |
+| 2026-08-18 (월) | 용차앱 | AI 루트코치 | YouTube | ⏳ |
+| 2026-08-18 (화) | FILO | POS 분할결제 | YouTube | ⏳ |
+| 2026-08-21 (목) | DONWAY | 카카오 알림톡 자동 발송 | YouTube | ⏳ |
+| 2026-08-25 (월) | 용차앱 | 최소보장·신뢰도 평점 | YouTube | ⏳ |
+| 2026-08-25 (화) | FILO | AI 메뉴 사진·번역 | YouTube | ⏳ |
+| 2026-08-28 (목) | DONWAY | 팝빌 세금계산서 자동발행 | YouTube | ⏳ |
+| 2026-09-01 (월) | 용차앱 | 7일 정산·팝빌 연동 | YouTube | ⏳ |
+| 2026-09-01 (화) | FILO | 재고 자동발주 | YouTube | ⏳ |
+| 2026-09-04 (목) | DONWAY | 배달대행 라이더 정산 | YouTube | ⏳ |
+| 2026-09-08 (화) | FILO | 급여 자동계산·알림톡 | YouTube | ⏳ |
+| 2026-09-08 (수) | MBTICO | AI OCR 오배송 방지 | YouTube | ⏳ |
+| 2026-09-11 (목) | DONWAY | QR 출퇴근·급여 연동 | YouTube | ⏳ |
+| 2026-09-15 (월) | 용차앱 | 주유소 최저가 GPS | YouTube | ⏳ |
+| 2026-09-15 (화) | FILO | AIVO AI 매출예측 | YouTube | ⏳ |
+
+### 새 기능 영상 추가 방법
+```bash
+# calendar.json에 새 항목 추가 후:
+node scripts/generate-promo.js <product> <feature>   # 프로모션 HTML 생성
+# Oracle VM에서:
+node scripts/run-pipeline.js --product <product> --steps record,compose,youtube
+```
 
 ### 막혀있는 것
 
@@ -102,11 +142,12 @@ YOUTUBE_REFRESH_TOKEN=등록완료
 compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 
 ### 영상 제작 현황
-| 제품 | 나레이션 MP3 | 녹화 WebM | 편집 MP4 | YouTube |
-|---|---|---|---|---|
-| FILO | 미생성 | 미생성 | 미생성 | 미완 |
-| DONWAY | ✅ 완료 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) / Instagram 예정 |
-| YONGCHA | 미생성 | 미생성 | 미생성 | 미완 |
+| 제품 | 나레이션 MP3 | 프로모 HTML | 녹화 WebM | 편집 MP4 | YouTube |
+|---|---|---|---|---|---|
+| FILO | 미생성 | ✅ 6종 생성 | 미생성 | 미생성 | 미완 |
+| DONWAY | ✅ 완료 | ✅ 4종 생성 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) |
+| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | 미생성 | 미생성 | 미완 |
+| MBTICO | 미생성 | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
 
 ---
 
