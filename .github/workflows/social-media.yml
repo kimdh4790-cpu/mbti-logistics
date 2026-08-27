@@ -138,25 +138,38 @@ jobs:
             fi
           fi
 
-      - name: Instagram Reels 업로드 (Playwright)
+      - name: Instagram Reels 업로드
         if: ${{ contains(inputs.steps, 'instagram') }}
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
         run: |
           PRODUCT="${{ inputs.product }}"
           DRY_FLAG=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
 
+          upload_one() {
+            local p=$1
+            MP4="output/${p}-reels.mp4"
+            if [ ! -f "$MP4" ] && [ "${{ inputs.dry_run }}" != "true" ]; then
+              echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
+              return
+            fi
+            if [ -n "$INSTAGRAM_ACCESS_TOKEN" ] && [ -n "$INSTAGRAM_ACCOUNT_ID" ]; then
+              echo "[$p] Instagram Graph API 방식으로 업로드..."
+              node scripts/upload/upload-instagram-api.js --product $p $DRY_FLAG || echo "[$p] Graph API 업로드 실패"
+            else
+              echo "[$p] Playwright 방식으로 업로드 (토큰 미설정)..."
+              timeout 120 node scripts/upload/upload-instagram.js --product $p --type reels $DRY_FLAG || echo "[$p] Playwright 업로드 실패 또는 타임아웃"
+            fi
+          }
+
           if [ "$PRODUCT" = "all" ]; then
             for p in filo donway yongcha mbtico; do
-              MP4="output/${p}-reels.mp4"
-              if [ -f "$MP4" ]; then
-                echo "[$p] Instagram Reels 업로드..."
-                timeout 120 node scripts/upload/upload-instagram.js --product $p --type reels $DRY_FLAG || echo "[$p] Instagram 업로드 실패 또는 타임아웃 (계속 진행)"
-              else
-                echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
-              fi
+              upload_one $p
             done
           else
-            timeout 120 node scripts/upload/upload-instagram.js --product $PRODUCT --type reels $DRY_FLAG || echo "[${PRODUCT}] Instagram 업로드 실패 또는 타임아웃"
+            upload_one $PRODUCT
           fi
 
       - name: 영상 아티팩트 업로드
