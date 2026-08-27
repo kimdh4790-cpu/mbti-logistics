@@ -78,9 +78,34 @@ async function uploadInstagram() {
 
   const url = page.url();
   if (url.includes('/accounts/login') || url.includes('/login')) {
-    console.error('[Instagram] 로그인 세션 없음. HEADLESS=false --login-only 로 먼저 로그인하세요.');
-    await ctx.close();
-    process.exit(1);
+    const igUser = process.env.INSTAGRAM_USERNAME;
+    const igPass = process.env.INSTAGRAM_PASSWORD;
+    if (igUser && igPass) {
+      console.log('[Instagram] 자동 로그인 시도...');
+      await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'networkidle', timeout: 30000 });
+      await page.waitForTimeout(2000);
+      await page.fill('input[name="username"]', igUser);
+      await page.fill('input[name="password"]', igPass);
+      await page.click('button[type="submit"]');
+      await page.waitForTimeout(6000);
+      // "로그인 정보 저장" 다이얼로그 처리
+      const notNow = page.locator('text=나중에 하기, text=Not Now, text=나중에');
+      if (await notNow.count() > 0) await notNow.first().click().catch(() => {});
+      await page.waitForTimeout(2000);
+      const afterUrl = page.url();
+      if (afterUrl.includes('/login') || afterUrl.includes('/challenge') || afterUrl.includes('/accounts/login')) {
+        const shotPath = require('path').join(ROOT, 'output', 'ig-login-debug.png');
+        await page.screenshot({ path: shotPath, fullPage: true });
+        console.error(`[Instagram] 로그인 실패. 스크린샷: ${shotPath}`);
+        await ctx.close();
+        process.exit(1);
+      }
+      console.log('[Instagram] 자동 로그인 성공!');
+    } else {
+      console.error('[Instagram] 로그인 세션 없음. INSTAGRAM_USERNAME/PASSWORD 설정 또는 --login-only 로 먼저 로그인하세요.');
+      await ctx.close();
+      process.exit(1);
+    }
   }
 
   // 프로필 이미지 설정
