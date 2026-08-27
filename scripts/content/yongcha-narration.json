@@ -1,7 +1,7 @@
 {
   "product": "yongcha",
-  "voice": "nara",
-  "speedRate": 0,
+  "voice": "ko-KR-Wavenet-A",
+  "speedRate": 0.95,
   "lines": [
     {
       "startSec": 0.0,
