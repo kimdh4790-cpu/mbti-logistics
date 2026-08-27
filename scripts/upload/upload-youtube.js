@@ -635,60 +635,88 @@ async function uploadYouTube() {
   }
   await page.waitForTimeout(1000);
 
-  // 게시 — done-button shadow DOM 내부 <button>이 enabled 될 때까지 대기
-  // disabled done-button을 force 클릭하면 YouTube가 다이얼로그를 dismiss(닫기)만 하고 게시 안 함
-  await page.waitForTimeout(1000);
+  // 게시 — done-button 활성화 대기 (90초) → 안 되면 draft 저장 후 edit page에서 공개 변경
+  await page.waitForTimeout(2000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-before-publish.png'), fullPage: true });
 
-  // 저장 중... 사라질 때까지 대기 (radio 선택 후 YouTube가 자동저장)
-  await page.waitForTimeout(3000);
-  for (let si = 0; si < 20; si++) {
-    const saving = await page.evaluate(() => document.body.innerText.includes('저장 중'));
-    if (!saving) break;
-    if (si === 0) console.log('[YouTube] 자동 저장 대기 중...');
-    await page.waitForTimeout(1500);
-  }
-  console.log('[YouTube] 자동 저장 완료 (또는 타임아웃 — 계속 진행)');
-
-  await page.screenshot({ path: path.join(ROOT, 'output', 'yt-before-publish.png'), fullPage: true });
-
-  // done-button 활성화 대기: outer element의 disabled 속성이 제거될 때까지 대기 (최대 10분)
-  // 진단: outer-disabled:true / inner-disabled:null(closed shadow root) / saving:true 가 수 분간 지속됨
-  // 원인: YouTube 서버 처리(저작권·인코딩 검사) — 파일 크기 무관, 완료 시 disabled 제거됨
+  // "저장 중..." 체크 제거: Oracle VM(data center IP)에서 YouTube bot detection으로 영구 표시될 수 있음
+  // done-button disabled 속성만 확인 (90초 대기)
   let doneEnabled = false;
-  console.log('[YouTube] done-button 활성화 대기 (최대 10분, YouTube 서버 처리 중)...');
-  try {
-    await page.waitForFunction(() => {
+  console.log('[YouTube] done-button 활성화 대기 (최대 90초)...');
+  for (let di = 0; di < 18; di++) {
+    await page.waitForTimeout(5000);
+    const state = await page.evaluate(() => {
       const btn = document.querySelector('ytcp-button#done-button');
-      return btn && !btn.hasAttribute('disabled');
-    }, { timeout: 600000 }); // 10분
-    doneEnabled = true;
-    const elapsed = await page.evaluate(() => {
-      const btn = document.querySelector('ytcp-button#done-button');
-      return btn ? `outer-disabled:${btn.hasAttribute('disabled')}` : 'btn없음';
+      if (!btn) return { found: false };
+      return {
+        found: true,
+        disabled: btn.hasAttribute('disabled'),
+        linkGen: document.body.innerText.includes('링크 생성'),
+        saving: document.body.innerText.includes('저장 중'),
+      };
     });
-    console.log(`[YouTube] done-button 활성화 확인 — ${elapsed}`);
-  } catch(e) {
-    // 10분 타임아웃: 현재 상태 스크린샷 + 종료
-    await page.screenshot({ path: path.join(ROOT, 'output', 'yt-done-timeout.png'), fullPage: true });
-    const domState = await page.evaluate(() => {
-      const btn = document.querySelector('ytcp-button#done-button');
-      if (!btn) return 'done-button 없음';
-      return `outer-disabled:${btn.hasAttribute('disabled')} saving:${document.body.innerText.includes('저장 중')}`;
-    });
-    console.error(`[YouTube] 오류: done-button 10분 후에도 활성화 안 됨. 상태: ${domState}`);
-    console.error('[YouTube] 스크린샷: yt-done-timeout.png');
-    await ctx.close();
-    process.exit(1);
+    if (!state.found) {
+      console.log(`[YouTube] done-button 미발견 (${(di+1)*5}s)`);
+      continue;
+    }
+    if (di % 3 === 0) console.log(`[YouTube] [${(di+1)*5}s] disabled:${state.disabled} 링크생성:${state.linkGen} 저장중:${state.saving}`);
+    if (!state.disabled) { doneEnabled = true; break; }
   }
 
-  // 게시 클릭 — outer element 클릭 (Polymer의 이벤트 핸들러는 outer에 있음)
-  try {
-    await page.click('ytcp-button#done-button', { timeout: 5000 });
-    console.log('[YouTube] 게시 버튼 클릭 (outer ytcp-button)');
-  } catch(e) {
-    await page.evaluate(() => document.querySelector('ytcp-button#done-button')?.click());
-    console.log('[YouTube] 게시 버튼 클릭 (evaluate fallback)');
+  if (doneEnabled) {
+    // 정상 경로: done-button 클릭
+    try {
+      await page.click('ytcp-button#done-button', { timeout: 5000 });
+      console.log('[YouTube] 게시 버튼 클릭 (outer ytcp-button)');
+    } catch(e) {
+      await page.evaluate(() => document.querySelector('ytcp-button#done-button')?.click());
+      console.log('[YouTube] 게시 버튼 클릭 (evaluate fallback)');
+    }
+  } else {
+    // fallback: 90초 후에도 done-button disabled → dialog 닫고 edit page에서 공개 변경
+    await page.screenshot({ path: path.join(ROOT, 'output', 'yt-done-timeout.png'), fullPage: true });
+    console.log('[YouTube] done-button 90초 후에도 disabled → draft 저장 후 edit page 공개 변경 시도');
+
+    // Escape으로 dialog 닫기 (draft로 저장됨)
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(4000);
+
+    // Studio 콘텐츠 목록으로 이동 (비공개 draft 영상 찾기)
+    await page.goto('https://studio.youtube.com', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.waitForTimeout(6000);
+    await page.screenshot({ path: path.join(ROOT, 'output', 'yt-studio-after-escape.png'), fullPage: true });
+
+    // 첫 번째 영상(가장 최근)이 초안이면 클릭 → edit page로 이동
+    const firstVideoSel = 'ytcp-video-list-cell-title a[href*="/video/"]';
+    const firstVideo = page.locator(firstVideoSel).first();
+    const firstHref = await firstVideo.getAttribute('href').catch(() => null);
+    console.log(`[YouTube] 최근 영상 href: ${firstHref}`);
+
+    if (firstHref) {
+      const editUrl = firstHref.includes('/edit') ? `https://studio.youtube.com${firstHref}` :
+                      `https://studio.youtube.com${firstHref.replace('/video/', '/video/').replace(/\/?$/, '/edit')}`;
+      await page.goto(editUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      await page.waitForTimeout(5000);
+      await page.screenshot({ path: path.join(ROOT, 'output', 'yt-edit-page.png'), fullPage: true });
+
+      // Visibility dropdown 찾아서 공개로 변경
+      try {
+        await page.click('ytcp-video-visibility-select, [data-a-target*="privacy"], #privacy-radios', { timeout: 8000 });
+        await page.waitForTimeout(1000);
+        await page.click('tp-yt-paper-item:has-text("공개"), tp-yt-paper-item:has-text("Public"), tp-yt-paper-radio-button[name="PUBLIC"]', { timeout: 5000 });
+        await page.waitForTimeout(1000);
+        // Save 버튼 클릭
+        await page.click('#save-button, ytcp-button#save-button, ytcp-button:has-text("저장"), ytcp-button:has-text("Save")', { timeout: 8000 });
+        await page.waitForTimeout(3000);
+        console.log('[YouTube] edit page에서 공개 설정 + 저장 완료');
+      } catch(editErr) {
+        console.error('[YouTube] edit page 공개 변경 실패:', editErr.message);
+        console.error('[YouTube] 수동으로 Studio → 콘텐츠 → 비공개 영상 → 공개 변경 필요');
+        await page.screenshot({ path: path.join(ROOT, 'output', 'yt-edit-failed.png'), fullPage: true });
+      }
+    } else {
+      console.error('[YouTube] 최근 영상을 Studio 목록에서 못 찾음. 수동 확인 필요.');
+    }
   }
 
   // 게시 완료 확인 — dialog 닫힘 + "처리 시작됨"은 오탐이므로 제외
