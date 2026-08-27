@@ -128,15 +128,39 @@ async function uploadInstagram() {
     return;
   }
 
-  // 새 게시물 버튼
-  await page.waitForSelector('svg[aria-label="새 게시물"], svg[aria-label="New post"], [aria-label="New post"]', { timeout: 15000 });
-  await page.click('svg[aria-label="새 게시물"], svg[aria-label="New post"], [aria-label="New post"]');
+  // 새 게시물 버튼 (Instagram UI 변경 대응 — 여러 셀렉터 순서대로 시도)
+  const NEW_POST_SELECTORS = [
+    '[aria-label="새 게시물"]',
+    '[aria-label="New post"]',
+    '[aria-label="Create"]',
+    '[aria-label="만들기"]',
+    'svg[aria-label="새 게시물"]',
+    'svg[aria-label="New post"]',
+    'a[href="/create/select/"]',
+    // 플러스 아이콘 버튼 (nav 안)
+    'nav a[href*="create"]',
+  ];
+  let clicked = false;
+  for (const sel of NEW_POST_SELECTORS) {
+    try {
+      await page.waitForSelector(sel, { timeout: 3000 });
+      await page.click(sel);
+      clicked = true;
+      console.log(`[Instagram] 새 게시물 버튼 클릭: ${sel}`);
+      break;
+    } catch (_) {}
+  }
+  if (!clicked) {
+    const shotPath = path.join(ROOT, 'output', 'ig-debug.png');
+    await page.screenshot({ path: shotPath, fullPage: true });
+    throw new Error(`[Instagram] 새 게시물 버튼을 찾지 못함. 스크린샷: ${shotPath}`);
+  }
   await page.waitForTimeout(2000);
 
   // 파일 선택
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
-    page.locator('text=컴퓨터에서 선택, text=Select from computer').first().click().catch(() =>
+    page.locator('text=컴퓨터에서 선택, text=Select from computer, text=Select from Gallery').first().click().catch(() =>
       page.locator('input[type=file]').first().click()
     ),
   ]);
@@ -146,7 +170,7 @@ async function uploadInstagram() {
 
   // Reels 선택 (비디오인 경우)
   if (type === 'reels') {
-    await page.locator('text=릴스, text=Reels').first().click().catch(() => {});
+    await page.locator('text=릴스, text=Reels, text=Reel').first().click().catch(() => {});
     await page.waitForTimeout(1000);
   }
 
@@ -157,7 +181,7 @@ async function uploadInstagram() {
   await page.waitForTimeout(2000);
 
   // 캡션 입력
-  await page.click('textarea, [aria-label="캡션 작성"], [aria-label="Write a caption"]');
+  await page.click('textarea, [aria-label="캡션 작성"], [aria-label="Write a caption"], [aria-label="캡션"]').catch(() => {});
   await page.keyboard.type(meta.instagram.caption, { delay: 20 });
   await page.waitForTimeout(1000);
 
