@@ -7,40 +7,152 @@ on:
         description: '제품 선택'
         required: true
         type: choice
-        default: filo
+        default: yongcha
         options:
+          - yongcha
           - filo
           - donway
-          - yongcha
           - mbtico
-          - dine
           - all
       steps:
         description: '실행 단계 (콤마 구분)'
         required: true
-        default: 'record,compose'
+        default: 'record,compose,youtube'
         type: choice
         options:
           - 'record,compose'
+          - 'record,compose,youtube'
           - 'record'
           - 'compose'
-          - 'record,compose,youtube'
-          - 'record,compose,instagram'
-          - 'record,compose,youtube,instagram'
-          - 'record,compose,youtube,instagram,blog'
           - 'youtube'
-          - 'instagram'
-          - 'youtube,instagram'
       dry_run:
         description: '업로드 없이 테스트만'
         type: boolean
         default: false
 
 jobs:
-  run-on-oracle:
-    name: Oracle Cloud 실행 (${{ inputs.product }})
+  run-pipeline:
+    name: 파이프라인 실행 (${{ inputs.product }})
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
+
+    env:
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci --ignore-scripts
+
+      - name: FFmpeg 설치
+        run: sudo apt-get install -y ffmpeg fonts-noto-cjk
+
+      - name: Playwright Chromium 설치
+        run: npx playwright install chromium --with-deps
+
+      - name: 나레이션 MP3 생성
+        if: ${{ contains(inputs.steps, 'record') || contains(inputs.steps, 'compose') }}
+        run: |
+          PRODUCT="${{ inputs.product }}"
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha mbtico; do
+              echo "[$p] 나레이션 생성..."
+              node scripts/audio/generate-narration.js --product $p || echo "[$p] 나레이션 생성 건너뜀 (API 키 없거나 파일 이미 존재)"
+            done
+          else
+            node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 생성 건너뜀"
+          fi
+
+      - name: 화면 녹화 (Playwright)
+        if: ${{ contains(inputs.steps, 'record') }}
+        run: |
+          PRODUCT="${{ inputs.product }}"
+          mkdir -p output
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha mbtico; do
+              echo "[$p] 녹화 시작..."
+              node scripts/capture/record-$p.js || echo "[$p] 녹화 실패 (건너뜀)"
+            done
+          else
+            node scripts/capture/record-$PRODUCT.js
+          fi
+
+      - name: FFmpeg 영상 편집
+        if: ${{ contains(inputs.steps, 'compose') }}
+        run: |
+          PRODUCT="${{ inputs.product }}"
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha mbtico; do
+              RAW="output/${p}-raw.webm"
+              if [ -f "$RAW" ]; then
+                echo "[$p] 편집 시작..."
+                bash scripts/compose/compose-video.sh $p || echo "[$p] 편집 실패"
+              else
+                echo "[$p] 녹화 파일 없음: $RAW (건너뜀)"
+              fi
+            done
+          else
+            bash scripts/compose/compose-video.sh $PRODUCT
+          fi
+
+      - name: YouTube 업로드 (Data API v3)
+        if: ${{ contains(inputs.steps, 'youtube') }}
+        run: |
+          PRODUCT="${{ inputs.product }}"
+          DRY_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
+
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha mbtico; do
+              MP4="output/${p}-reels.mp4"
+              if [ -f "$MP4" ]; then
+                echo "[$p] YouTube 숏츠 업로드..."
+                node scripts/upload/upload-youtube-api.js --product $p --reels $DRY_FLAG || echo "[$p] 업로드 실패"
+              else
+                echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
+              fi
+            done
+          else
+            MP4="output/${PRODUCT}-reels.mp4"
+            if [ -f "$MP4" ] || [ "${{ inputs.dry_run }}" = "true" ]; then
+              node scripts/upload/upload-youtube-api.js --product $PRODUCT --reels $DRY_FLAG
+            else
+              echo "[${PRODUCT}] Reels MP4 없음. compose 먼저 실행하세요."
+              exit 1
+            fi
+          fi
+
+      - name: 영상 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos-${{ inputs.product }}-${{ github.run_number }}
+          path: |
+            output/*.mp4
+            output/*.webm
+            output/*.png
+            output/*-upload-result.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  # Oracle SSH가 복구되면 Instagram 업로드 가능 (선택)
+  upload-instagram-oracle:
+    name: Instagram 업로드 (Oracle SSH)
+    runs-on: ubuntu-latest
+    needs: run-pipeline
+    if: ${{ contains(inputs.steps, 'instagram') && secrets.ORACLE_SSH_KEY != '' }}
+    timeout-minutes: 30
 
     steps:
       - name: SSH 키 설정
@@ -51,22 +163,15 @@ jobs:
           echo "$ORACLE_SSH_KEY" > ~/.ssh/oracle_key
           chmod 600 ~/.ssh/oracle_key
 
-      - name: Oracle Cloud에서 파이프라인 실행
+      - name: Oracle VM에서 Instagram 업로드
         env:
-          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
-          ORACLE_IP: '161.33.136.154'
-          ORACLE_USER: 'opc'
           PRODUCT: ${{ inputs.product }}
-          STEPS: ${{ inputs.steps }}
-          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           DRY_FLAG=""
-          if [ "$DRY_RUN" = "true" ]; then
-            DRY_FLAG="--dry-run"
-          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
 
           ssh -i ~/.ssh/oracle_key \
             -o StrictHostKeyChecking=no \
             -o ConnectTimeout=30 \
-            ${ORACLE_USER}@${ORACLE_IP} \
-            "cd ~/mbti-logistics && git pull origin main && node scripts/run-pipeline.js --product ${PRODUCT} --steps \"${STEPS}\" ${DRY_FLAG} 2>&1"
+            opc@161.33.136.154 \
+            "cd ~/mbti-logistics && git pull origin main && node scripts/upload/upload-instagram.js --product ${PRODUCT} --type reels ${DRY_FLAG} 2>&1"
