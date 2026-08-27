@@ -1,10 +1,7 @@
 /**
- * 용차앱 화면 녹화 스크립트
+ * 용차앱 프로모션 HTML 녹화 스크립트
+ * 기사·대리점 양쪽 기능을 담은 로컬 HTML 슬라이드쇼 녹화
  * 실행: node scripts/capture/record-yongcha.js
- *
- * yongcha.app은 Worker에 HTML이 내장됨 (KV 없음)
- * 랜딩 페이지는 public — 인증 불필요
- * 앱 내부(공고 목록 등)는 Firebase 로그인 필요
  */
 
 const { chromium } = require('playwright');
@@ -13,54 +10,62 @@ const fs = require('fs');
 
 const { getChromiumLaunchOpts } = require('../utils/launch-options');
 const ROOT = path.join(__dirname, '../..');
-const scenario = require('../content/yongcha-scenario.json');
 const headless = process.env.HEADLESS !== 'false';
 
 async function record() {
   const outputDir = path.join(ROOT, 'output');
   fs.mkdirSync(outputDir, { recursive: true });
 
+  const promoHtml = path.join(ROOT, 'assets/promo/yongcha-promo.html');
+  if (!fs.existsSync(promoHtml)) {
+    console.error('[용차] ERROR: assets/promo/yongcha-promo.html 없음. 먼저 파일 확인.');
+    process.exit(1);
+  }
+
   const browser = await chromium.launch(getChromiumLaunchOpts(headless));
 
-  // 용차 랜딩은 모바일 기준
   const ctx = await browser.newContext({
-    viewport: scenario.viewport,
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    viewport: { width: 390, height: 844 },
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
     recordVideo: {
       dir: outputDir,
-      size: scenario.viewport,
+      size: { width: 390, height: 844 },
     },
   });
 
   const page = await ctx.newPage();
-  console.log('[용차] 녹화 시작...');
+  console.log('[용차] 프로모션 HTML 녹화 시작...');
 
-  for (const step of scenario.steps) {
-    if (step.action === 'goto') {
-      // 로컬 HTML 파일이면 file:// URL로 변환
-      const url = step.url.startsWith('local:')
-        ? `file://${path.join(ROOT, step.url.replace('local:', ''))}`
-        : step.url;
-      console.log(`  → ${url}`);
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() =>
-        page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 })
-      );
-      await page.waitForTimeout(step.wait || 2000);
-    } else if (step.action === 'scroll') {
-      await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'smooth' }), step.y);
-      await page.waitForTimeout(step.wait || 1500);
-    } else if (step.action === 'screenshot') {
-      const shot = path.join(outputDir, `yongcha-${step.label}.png`);
-      await page.screenshot({ path: shot, fullPage: false });
-      console.log(`  [스크린샷] yongcha-${step.label}.png`);
-    } else if (step.action === 'wait') {
-      await page.waitForTimeout(step.ms);
-    }
+  const fileUrl = 'file://' + promoHtml;
+  await page.goto(fileUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  console.log('  → 프로모션 HTML 로드 완료');
+
+  // 슬라이드 7장 × 평균 5.4초 = ~38초 + 여유
+  const totalMs = 7 * 5500 + 3000;
+  console.log(`  → ${Math.round(totalMs/1000)}초 녹화 중...`);
+
+  // 슬라이드별 스크린샷
+  const shots = [
+    { label: 'landing-hero',     delay: 1500 },
+    { label: 'landing-compare',  delay: 5500 },
+    { label: 'landing-driver',   delay: 5500 },
+    { label: 'landing-dealer',   delay: 6000 },
+    { label: 'landing-guarantee',delay: 5500 },
+    { label: 'landing-pricing-table', delay: 5500 },
+    { label: 'landing-cta',      delay: 6000 },
+  ];
+
+  for (const s of shots) {
+    await page.waitForTimeout(s.delay);
+    await page.screenshot({ path: path.join(outputDir, `yongcha-${s.label}.png`) });
+    console.log(`  [스크린샷] yongcha-${s.label}.png`);
   }
 
+  await page.waitForTimeout(2000);
   await ctx.close();
   await browser.close();
 
+  // webm → yongcha-raw.webm 이름 변경
   const files = fs.readdirSync(outputDir)
     .filter(f => f.endsWith('.webm') && f !== 'yongcha-raw.webm')
     .sort((a, b) =>
