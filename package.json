@@ -41,7 +41,12 @@
     "smoke:mbtico": "node scripts/test/run-smoke.js --app mbtico",
     "smoke:shared": "node scripts/test/run-smoke.js --all",
     "login:filo": "node scripts/capture/record-filo.js --login-only",
-    "record:all": "node scripts/capture/record-all.js"
+    "record:all": "node scripts/capture/record-all.js",
+    "check-apis": "node scripts/check-apis.js",
+    "get-youtube-token": "node scripts/upload/get-youtube-token.js",
+    "narration:filo": "node scripts/audio/generate-narration.js --product filo",
+    "narration:donway": "node scripts/audio/generate-narration.js --product donway",
+    "narration:yongcha": "node scripts/audio/generate-narration.js --product yongcha"
   },
   "repository": {
     "type": "git",
