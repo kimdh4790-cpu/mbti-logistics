@@ -30,14 +30,11 @@ echo "[Reels] 세로형 클립 생성: ${CLIP_START} ~ +${CLIP_DUR}초"
 FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
 
 # 16:9 → 9:16 변환 (중앙 크롭 + 패딩)
+# -ss/-t를 -i 뒤에 배치 (출력 시킹) — 짧은 영상에서 입력 시킹 시 empty 출력 버그 방지
 "$FFMPEG" -y \
-  -ss "$CLIP_START" -t "$CLIP_DUR" \
   -i "$INPUT" \
-  -vf "
-    scale=1080:1920:force_original_aspect_ratio=decrease,
-    pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,
-    setsar=1
-  " \
+  -ss "$CLIP_START" -t "$CLIP_DUR" \
+  -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1" \
   -c:v libx264 -preset medium -crf 23 \
   -c:a aac -b:a 128k \
   -movflags +faststart \
