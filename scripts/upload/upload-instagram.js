@@ -128,60 +128,99 @@ async function uploadInstagram() {
     return;
   }
 
-  // 새 게시물 버튼 (Instagram UI 변경 대응 — 여러 셀렉터 순서대로 시도)
-  const NEW_POST_SELECTORS = [
-    '[aria-label="새 게시물"]',
-    '[aria-label="New post"]',
-    '[aria-label="Create"]',
-    '[aria-label="만들기"]',
-    'svg[aria-label="새 게시물"]',
-    'svg[aria-label="New post"]',
-    'a[href="/create/select/"]',
-    // 플러스 아이콘 버튼 (nav 안)
-    'nav a[href*="create"]',
-  ];
-  let clicked = false;
-  for (const sel of NEW_POST_SELECTORS) {
+  // 방법 A: /create/style/ 직접 이동 (버튼 클릭 없이 우회)
+  let navigatedToCreate = false;
+  try {
+    await page.goto('https://www.instagram.com/create/style/', { waitUntil: 'networkidle', timeout: 15000 });
+    await page.waitForTimeout(2000);
+    const curUrl = page.url();
+    if (!curUrl.includes('/login') && !curUrl.includes('instagram.com/?')) {
+      navigatedToCreate = true;
+      console.log('[Instagram] /create/style/ 직접 이동 성공');
+    }
+  } catch (_) {}
+
+  // 방법 B: /create/select/ 시도
+  if (!navigatedToCreate) {
     try {
-      await page.waitForSelector(sel, { timeout: 3000 });
-      await page.click(sel);
-      clicked = true;
-      console.log(`[Instagram] 새 게시물 버튼 클릭: ${sel}`);
-      break;
+      await page.goto('https://www.instagram.com/create/select/', { waitUntil: 'networkidle', timeout: 15000 });
+      await page.waitForTimeout(2000);
+      const curUrl = page.url();
+      if (!curUrl.includes('/login') && !curUrl.includes('instagram.com/?')) {
+        navigatedToCreate = true;
+        console.log('[Instagram] /create/select/ 직접 이동 성공');
+      }
     } catch (_) {}
   }
-  if (!clicked) {
+
+  // 방법 C: 버튼 클릭 폴백
+  if (!navigatedToCreate) {
+    await page.goto('https://www.instagram.com', { waitUntil: 'networkidle', timeout: 20000 });
+    await page.waitForTimeout(2000);
+    const NEW_POST_SELECTORS = [
+      '[aria-label="새 게시물"]',
+      '[aria-label="New post"]',
+      '[aria-label="Create"]',
+      '[aria-label="만들기"]',
+      'a[href="/create/select/"]',
+      'nav a[href*="create"]',
+      // aria-label 없는 플러스 아이콘 — SVG path로 찾기
+      'svg[aria-label]',
+    ];
+    for (const sel of NEW_POST_SELECTORS) {
+      try {
+        await page.waitForSelector(sel, { timeout: 3000 });
+        await page.click(sel);
+        navigatedToCreate = true;
+        console.log(`[Instagram] 새 게시물 버튼 클릭: ${sel}`);
+        break;
+      } catch (_) {}
+    }
+  }
+
+  if (!navigatedToCreate) {
     const shotPath = path.join(ROOT, 'output', 'ig-debug.png');
     await page.screenshot({ path: shotPath, fullPage: true });
-    throw new Error(`[Instagram] 새 게시물 버튼을 찾지 못함. 스크린샷: ${shotPath}`);
+    throw new Error(`[Instagram] 새 게시물 화면 진입 실패. 스크린샷: ${shotPath}`);
   }
   await page.waitForTimeout(2000);
 
-  // 파일 선택
-  const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser'),
-    page.locator('text=컴퓨터에서 선택, text=Select from computer, text=Select from Gallery').first().click().catch(() =>
-      page.locator('input[type=file]').first().click()
-    ),
-  ]);
+  // 파일 input 찾기 (hidden input[type=file] 강제 클릭)
+  let fileChooser;
+  try {
+    [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser', { timeout: 8000 }),
+      page.evaluate(() => {
+        const inp = document.querySelector('input[type="file"]');
+        if (inp) { inp.style.display = 'block'; inp.click(); }
+      }),
+    ]);
+  } catch (_) {
+    // input[type=file]이 없으면 "컴퓨터에서 선택" 버튼 시도
+    [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser', { timeout: 10000 }),
+      page.locator('text=컴퓨터에서 선택, text=Select from computer, text=Select from Gallery, text=선택').first().click(),
+    ]);
+  }
   await fileChooser.setFiles(videoPath);
   console.log('[Instagram] 파일 선택 완료, 업로드 중...');
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(6000);
 
   // Reels 선택 (비디오인 경우)
   if (type === 'reels') {
     await page.locator('text=릴스, text=Reels, text=Reel').first().click().catch(() => {});
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
   }
 
-  // 다음 버튼
-  await page.locator('text=다음, text=Next').first().click();
-  await page.waitForTimeout(2000);
-  await page.locator('text=다음, text=Next').first().click();
-  await page.waitForTimeout(2000);
+  // 다음 버튼 (최대 3번)
+  for (let i = 0; i < 3; i++) {
+    await page.locator('text=다음, text=Next').first().click().catch(() => {});
+    await page.waitForTimeout(2000);
+  }
 
   // 캡션 입력
-  await page.click('textarea, [aria-label="캡션 작성"], [aria-label="Write a caption"], [aria-label="캡션"]').catch(() => {});
+  const captionSel = 'textarea, [aria-label="캡션 작성"], [aria-label="Write a caption"], [aria-label="캡션"], [contenteditable="true"]';
+  await page.click(captionSel).catch(() => {});
   await page.keyboard.type(meta.instagram.caption, { delay: 20 });
   await page.waitForTimeout(1000);
 
