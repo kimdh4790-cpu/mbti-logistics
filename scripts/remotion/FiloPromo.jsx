@@ -1,5 +1,5 @@
 const React = require('react');
-const { useCurrentFrame, useVideoConfig, interpolate, spring, Sequence, AbsoluteFill, Easing } = require('remotion');
+const { useCurrentFrame, useVideoConfig, interpolate, spring, Sequence, AbsoluteFill, Easing, Audio, staticFile } = require('remotion');
 
 // ── 상수 ──────────────────────────────────────────────
 const NAVY = '#08101f';
@@ -466,7 +466,7 @@ function TransitionOverlay({ direction = 'out' }) {
 }
 
 // ── 메인 컴포지션 ─────────────────────────────────────
-function FiloPromo() {
+function FiloPromo({ hasNarration }) {
   const SCENES = [
     { component: SceneIntro,   start: 0,   duration: 150 },
     { component: SceneQR,      start: 150, duration: 210 },
@@ -477,6 +477,9 @@ function FiloPromo() {
 
   return (
     <AbsoluteFill style={{ background: NAVY }}>
+      {hasNarration && (
+        <Audio src={staticFile('filo-narration.mp3')} volume={1} />
+      )}
       {SCENES.map(({ component: Comp, start, duration }) => (
         <Sequence key={start} from={start} durationInFrames={duration}>
           <Comp />
