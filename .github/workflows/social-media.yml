@@ -11,6 +11,7 @@ on:
         options:
           - yongcha
           - filo
+          - dine
           - donway
           - mbtico
           - all
@@ -71,7 +72,7 @@ jobs:
         run: |
           PRODUCT="${{ inputs.product }}"
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha mbtico; do
+            for p in filo dine donway yongcha mbtico; do
               echo "[$p] 나레이션 생성..."
               node scripts/audio/generate-narration.js --product $p || echo "[$p] 나레이션 생성 건너뜀 (API 키 없거나 파일 이미 존재)"
             done
@@ -79,18 +80,36 @@ jobs:
             node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 생성 건너뜀"
           fi
 
+      - name: Remotion FILO 영상 렌더링
+        if: ${{ contains(inputs.steps, 'record') && (inputs.product == 'filo' || inputs.product == 'all') }}
+        run: |
+          mkdir -p output
+          # Playwright가 설치한 Chromium 경로 탐색
+          CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
+          if [ -n "$CHROMIUM" ]; then
+            export CHROMIUM_PATH="$CHROMIUM"
+            echo "[Remotion] Chromium: $CHROMIUM"
+          fi
+          echo "[Remotion] FILO 본영상 렌더링 (30초)..."
+          node scripts/remotion/render-filo.js || echo "[Remotion] 본영상 렌더링 실패"
+          echo "[Remotion] FILO Reels 렌더링..."
+          node scripts/remotion/render-filo.js --reels || echo "[Remotion] Reels 렌더링 실패"
+
       - name: 화면 녹화 (Playwright)
         if: ${{ contains(inputs.steps, 'record') }}
         run: |
           PRODUCT="${{ inputs.product }}"
           mkdir -p output
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha mbtico; do
+            # filo는 Remotion에서 처리하므로 제외
+            for p in dine donway yongcha mbtico; do
               echo "[$p] 녹화 시작..."
               node scripts/capture/record-$p.js || echo "[$p] 녹화 실패 (건너뜀)"
             done
-          else
+          elif [ "$PRODUCT" != "filo" ]; then
             node scripts/capture/record-$PRODUCT.js
+          else
+            echo "[filo] Remotion에서 처리됨 (Playwright 녹화 건너뜀)"
           fi
 
       - name: FFmpeg 영상 편집
@@ -98,7 +117,7 @@ jobs:
         run: |
           PRODUCT="${{ inputs.product }}"
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha mbtico; do
+            for p in dine donway yongcha mbtico; do
               RAW="output/${p}-raw.webm"
               if [ -f "$RAW" ]; then
                 echo "[$p] 편집 시작..."
@@ -107,6 +126,24 @@ jobs:
                 echo "[$p] 녹화 파일 없음: $RAW (건너뜀)"
               fi
             done
+            # filo: Remotion 출력 확인
+            if [ -f "output/filo-promo.mp4" ]; then
+              echo "[filo] Remotion 영상 준비됨 (FFmpeg 편집 건너뜀)"
+            else
+              echo "[filo] Remotion 출력 없음. Playwright 영상으로 시도..."
+              RAW="output/filo-raw.webm"
+              if [ -f "$RAW" ]; then
+                bash scripts/compose/compose-video.sh filo || echo "[filo] 편집 실패"
+              else
+                echo "[filo] 영상 없음: 건너뜀"
+              fi
+            fi
+          elif [ "$PRODUCT" = "filo" ]; then
+            if [ -f "output/filo-promo.mp4" ]; then
+              echo "[filo] Remotion 영상 준비됨 (FFmpeg 편집 건너뜀)"
+            else
+              bash scripts/compose/compose-video.sh filo
+            fi
           else
             bash scripts/compose/compose-video.sh $PRODUCT
           fi
@@ -118,24 +155,29 @@ jobs:
           DRY_FLAG=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
 
-          if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha mbtico; do
+          upload_yt() {
+            local p=$1
+            # filo는 promo.mp4 사용, 나머지는 reels.mp4
+            if [ "$p" = "filo" ]; then
+              MP4="output/filo-promo.mp4"
+              [ ! -f "$MP4" ] && MP4="output/filo-final.mp4"
+            else
               MP4="output/${p}-reels.mp4"
-              if [ -f "$MP4" ]; then
-                echo "[$p] YouTube 숏츠 업로드..."
-                node scripts/upload/upload-youtube-api.js --product $p --reels $DRY_FLAG || echo "[$p] 업로드 실패"
-              else
-                echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
-              fi
+            fi
+            if [ -f "$MP4" ] || [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "[$p] YouTube 숏츠 업로드..."
+              node scripts/upload/upload-youtube-api.js --product $p --reels $DRY_FLAG || echo "[$p] 업로드 실패"
+            else
+              echo "[$p] MP4 없음: $MP4 (건너뜀)"
+            fi
+          }
+
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo dine donway yongcha mbtico; do
+              upload_yt $p
             done
           else
-            MP4="output/${PRODUCT}-reels.mp4"
-            if [ -f "$MP4" ] || [ "${{ inputs.dry_run }}" = "true" ]; then
-              node scripts/upload/upload-youtube-api.js --product $PRODUCT --reels $DRY_FLAG
-            else
-              echo "[${PRODUCT}] Reels MP4 없음. compose 먼저 실행하세요."
-              exit 1
-            fi
+            upload_yt $PRODUCT
           fi
 
       - name: Instagram Reels 업로드
@@ -150,7 +192,11 @@ jobs:
 
           upload_one() {
             local p=$1
+            # filo: reels 없으면 promo 사용
             MP4="output/${p}-reels.mp4"
+            if [ ! -f "$MP4" ] && [ "$p" = "filo" ]; then
+              MP4="output/filo-promo.mp4"
+            fi
             if [ ! -f "$MP4" ] && [ "${{ inputs.dry_run }}" != "true" ]; then
               echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
               return
@@ -165,7 +211,7 @@ jobs:
           }
 
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha mbtico; do
+            for p in filo dine donway yongcha mbtico; do
               upload_one $p
             done
           else
@@ -184,4 +230,3 @@ jobs:
             output/*-upload-result.json
           if-no-files-found: warn
           retention-days: 7
-
