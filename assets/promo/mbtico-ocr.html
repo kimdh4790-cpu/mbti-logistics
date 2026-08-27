@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390,initial-scale=1">
+<title>물류배송앱 - 택배 라벨 사진 찍으면 자동 입력 + GPS 오배송 방지 | 물류배송앱 MBTICO</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif}
+  html,body{width:390px;height:844px;overflow:hidden;background:#030f0a}
+
+  .reel{position:absolute;top:0;left:0;width:390px;height:844px;display:flex;flex-direction:column;
+    justify-content:center;align-items:center;opacity:0;transform:translateY(24px);
+    transition:opacity 0.5s ease,transform 0.5s ease;pointer-events:none}
+  .reel.active{opacity:1;transform:translateY(0);pointer-events:auto}
+  .reel.exit{opacity:0;transform:translateY(-24px)}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .anim-1{animation:fadeUp 0.5s 0.1s both}
+  .anim-2{animation:fadeUp 0.5s 0.3s both}
+  .anim-3{animation:fadeUp 0.5s 0.5s both}
+  .anim-4{animation:fadeUp 0.5s 0.7s both}
+  .anim-5{animation:fadeUp 0.5s 0.9s both}
+
+  .progress{position:fixed;bottom:0;left:0;height:3px;background:#4ade80;width:0;transition:width linear;z-index:100}
+  .dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:200}
+  .dot{width:6px;height:6px;border-radius:50%;background:#374060;transition:all 0.3s}
+  .dot.active{background:#4ade80;width:20px;border-radius:3px}
+
+  /* ── SLIDE 1: 히어로 ── */
+  #s1{background:linear-gradient(160deg,#030f0a 30%,#071a0d 100%);padding:32px 28px}
+  .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:5px 14px;
+    font-size:11px;color:#a0b0d0;letter-spacing:1px;font-weight:700;margin-bottom:20px}
+  .hero-emoji{font-size:52px;margin-bottom:12px}
+  .hero-product{font-size:34px;font-weight:900;color:#4ade80;margin-bottom:4px}
+  .hero-title{font-size:18px;font-weight:700;color:#fff;line-height:1.4;text-align:center;margin-bottom:16px}
+  .hero-hook{background:rgba(255,255,255,0.05);border-left:3px solid #4ade80;
+    border-radius:0 12px 12px 0;padding:12px 16px;font-size:14px;color:#c0d0f0;line-height:1.6;width:100%}
+  .hero-domain{font-size:13px;color:#374060;margin-top:20px}
+
+  /* ── SLIDE 2: 나레이션 ── */
+  #s2{background:#030f0a;padding:32px 28px}
+  .narration-line{display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;width:100%}
+  .narration-num{font-size:11px;font-weight:800;color:#4ade80;background:rgba(255,255,255,0.05);
+    border-radius:6px;padding:4px 8px;flex-shrink:0;font-variant-numeric:tabular-nums;letter-spacing:1px}
+  .narration-text{font-size:15px;color:#e0e8ff;line-height:1.65;font-weight:500}
+
+  /* ── SLIDE 3: 인스타그램 캡션 ── */
+  #s3{background:linear-gradient(160deg,#030f0a,#071a0d);padding:28px}
+  .caption-box{background:#071a0d;border:1px solid #0d4020;border-radius:20px;padding:20px;width:100%}
+  .caption-line{font-size:15px;color:#e0e8ff;line-height:1.6;font-weight:600}
+  .check-item{font-size:14px;color:#c0d0e0;line-height:1.7;padding-left:4px}
+  .domain-line{font-size:13px;color:#4ade80;font-weight:700;margin-top:4px}
+  .hashtag{display:inline-block;font-size:11px;color:#4ade80;margin:3px 3px 0 0;
+    background:rgba(255,255,255,0.04);border:1px solid #0d4020;border-radius:10px;padding:3px 8px}
+
+  /* ── SLIDE 4: CTA ── */
+  #s4{background:#030f0a;padding:32px 28px}
+  .cta-circle{width:100px;height:100px;border-radius:50%;
+    background:linear-gradient(135deg,#22c55e,#4ade80);
+    display:flex;align-items:center;justify-content:center;font-size:44px;
+    box-shadow:0 0 48px #22c55e66;margin-bottom:24px}
+  .cta-title{font-size:26px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px}
+  .cta-sub{font-size:14px;color:#7a8aaa;text-align:center;margin-bottom:28px}
+  .cta-btn{background:linear-gradient(90deg,#22c55e,#4ade80);color:#fff;
+    font-size:18px;font-weight:900;border-radius:16px;padding:18px 48px;
+    box-shadow:0 8px 24px #22c55e66;white-space:nowrap}
+  .cta-domain{font-size:14px;color:#7a8aaa;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="dots" id="dots"></div>
+<div class="progress" id="progress"></div>
+
+<!-- SLIDE 1: 히어로 -->
+<div class="reel active" id="s1">
+  <div style="display:flex;flex-direction:column;align-items:center;width:100%">
+    <div class="hero-badge anim-1">📅 2026-09-08 · OCR-DELIVERY</div>
+    <div class="hero-emoji anim-1">📦</div>
+    <div class="hero-product anim-2">물류배송앱</div>
+    <div class="hero-title anim-2">택배 라벨 사진 찍으면 자동 입력 + GPS 오배송 방지 MBTICO</div>
+    <div class="hero-hook anim-3">사진 한 장 → 배송 정보 자동 입력 — 수기 0</div>
+    <div class="hero-domain anim-4">mbtico.kr</div>
+  </div>
+</div>
+
+<!-- SLIDE 2: 나레이션 -->
+<div class="reel" id="s2">
+  <div style="width:100%;padding:0 4px">
+    <div style="font-size:11px;color:#374060;font-weight:700;letter-spacing:2px;margin-bottom:20px;text-align:center">NARRATION</div>
+    
+    <div class="narration-line anim-2" style="animation-delay:0.2s">
+      <span class="narration-num">01</span>
+      <span class="narration-text">택배 라벨 수기 입력하다 오배송 난 적 있으신가요?</span>
+    </div>
+    <div class="narration-line anim-3" style="animation-delay:0.6000000000000001s">
+      <span class="narration-num">02</span>
+      <span class="narration-text">물류배송앱 AI OCR이 사진 한 장으로 배송 정보를 자동 인식하고 GPS로 오배송을 원천 차단합니다.</span>
+    </div>
+    <div class="narration-line anim-4" style="animation-delay:1s">
+      <span class="narration-num">03</span>
+      <span class="narration-text">QR 출퇴근, 60일 이력, 블루투스 프린터까지. mbtico.kr</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: 인스타그램 캡션 -->
+<div class="reel" id="s3">
+  <div style="width:100%">
+    <div style="font-size:11px;color:#374060;font-weight:700;letter-spacing:2px;margin-bottom:14px;text-align:center">INSTAGRAM CAPTION</div>
+    <div class="caption-box anim-2">
+      <div class="caption-line">택배 오배송 AI가 막아줌</div><div style="height:10px"></div><div class="caption-line">물류배송앱 MBTICO</div><div class="check-item">✅ 라벨 사진 → AI 자동 입력</div><div class="check-item">✅ GPS 오배송 위치 검증</div><div class="check-item">✅ QR 출퇴근 300m GPS 인증</div><div class="check-item">✅ 60일 배송 이력 엑셀 내보내기</div><div style="height:10px"></div><div class="caption-line">mbtico.kr</div>
+    </div>
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;anim-3" class="anim-3">
+      <span class="hashtag">#물류배송앱</span><span class="hashtag">#AIOCR</span><span class="hashtag">#오배송방지</span><span class="hashtag">#택배기사</span><span class="hashtag">#쿠팡기사</span><span class="hashtag">#배송관리</span>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: CTA -->
+<div class="reel" id="s4">
+  <div style="display:flex;flex-direction:column;align-items:center">
+    <div class="cta-circle anim-1">📦</div>
+    <div class="cta-title anim-2">물류배송앱</div>
+    <div class="cta-sub anim-2">사진 한 장 → 배송 정보 자동 입력 — 수기 0</div>
+    <div class="cta-btn anim-3">지금 무료 시작 →</div>
+    <div class="cta-domain anim-4">mbtico.kr</div>
+  </div>
+</div>
+
+<script>
+const SLIDES = ['s1','s2','s3','s4'];
+const DURATIONS = [5000, 7000, 6000, 5000];
+let current = 0, timer = null;
+
+const dotsEl = document.getElementById('dots');
+const progressEl = document.getElementById('progress');
+
+SLIDES.forEach((id, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  dotsEl.appendChild(d);
+});
+
+function goTo(idx) {
+  const prev = SLIDES[current];
+  const next = SLIDES[idx];
+  document.getElementById(prev).classList.remove('active');
+  document.getElementById(prev).classList.add('exit');
+  setTimeout(() => document.getElementById(prev).classList.remove('exit'), 600);
+  current = idx;
+  document.getElementById(next).classList.add('active');
+  document.querySelectorAll('.dot').forEach((d,i) => d.className='dot'+(i===idx?' active':''));
+  progressEl.style.transition = 'none';
+  progressEl.style.width = '0%';
+  requestAnimationFrame(() => {
+    progressEl.style.transition = 'width ' + DURATIONS[idx] + 'ms linear';
+    progressEl.style.width = '100%';
+  });
+}
+
+function schedule() {
+  if (timer) clearTimeout(timer);
+  timer = setTimeout(() => { goTo((current + 1) % SLIDES.length); schedule(); }, DURATIONS[current]);
+}
+
+progressEl.style.transition = 'width ' + DURATIONS[0] + 'ms linear';
+progressEl.style.width = '100%';
+schedule();
+</script>
+</body>
+</html>
