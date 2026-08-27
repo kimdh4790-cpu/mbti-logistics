@@ -617,59 +617,43 @@ async function uploadYouTube() {
 
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-before-publish.png'), fullPage: true });
 
-  // done-button 활성화 대기: inner shadow <button>이 enabled 될 때까지 폴링
-  // outer element는 항상 disabled 아님 → outer 체크 의미 없음. inner만 체크.
-  // Playwright locator 체인은 shadow root를 자동 관통함.
+  // done-button 활성화 대기: outer element의 disabled 속성이 제거될 때까지 대기 (최대 10분)
+  // 진단: outer-disabled:true / inner-disabled:null(closed shadow root) / saving:true 가 수 분간 지속됨
+  // 원인: YouTube 서버 처리(저작권·인코딩 검사) — 파일 크기 무관, 완료 시 disabled 제거됨
   let doneEnabled = false;
-  const innerDoneBtn = page.locator('ytcp-button#done-button').locator('button');
-  for (let di = 0; di < 90; di++) {
-    const innerOk = !(await innerDoneBtn.isDisabled().catch(() => true));
-    if (innerOk) {
-      doneEnabled = true;
-      console.log(`[YouTube] done-button 내부 버튼 활성화 확인 — ${di * 2}s 경과`);
-      break;
-    }
-    if (di % 15 === 0) {
-      await page.screenshot({ path: path.join(ROOT, 'output', `yt-wait-${di * 2}s.png`) });
-      // shadow DOM 상태 로깅
-      const domState = await page.evaluate(() => {
-        const btn = document.querySelector('ytcp-button#done-button');
-        if (!btn) return 'done-button 없음';
-        const sr = btn.shadowRoot;
-        const inner = sr ? sr.querySelector('button') : null;
-        return `outer-disabled:${btn.hasAttribute('disabled')} inner-disabled:${inner ? inner.disabled : 'null'} saving:${document.body.innerText.includes('저장 중')}`;
-      });
-      console.log(`[YouTube] done-button 대기 ${di * 2}s/180s — ${domState}`);
-    }
-    await page.waitForTimeout(2000);
+  console.log('[YouTube] done-button 활성화 대기 (최대 10분, YouTube 서버 처리 중)...');
+  try {
+    await page.waitForFunction(() => {
+      const btn = document.querySelector('ytcp-button#done-button');
+      return btn && !btn.hasAttribute('disabled');
+    }, { timeout: 600000 }); // 10분
+    doneEnabled = true;
+    const elapsed = await page.evaluate(() => {
+      const btn = document.querySelector('ytcp-button#done-button');
+      return btn ? `outer-disabled:${btn.hasAttribute('disabled')}` : 'btn없음';
+    });
+    console.log(`[YouTube] done-button 활성화 확인 — ${elapsed}`);
+  } catch(e) {
+    // 10분 타임아웃: 현재 상태 스크린샷 + 종료
+    await page.screenshot({ path: path.join(ROOT, 'output', 'yt-done-timeout.png'), fullPage: true });
+    const domState = await page.evaluate(() => {
+      const btn = document.querySelector('ytcp-button#done-button');
+      if (!btn) return 'done-button 없음';
+      return `outer-disabled:${btn.hasAttribute('disabled')} saving:${document.body.innerText.includes('저장 중')}`;
+    });
+    console.error(`[YouTube] 오류: done-button 10분 후에도 활성화 안 됨. 상태: ${domState}`);
+    console.error('[YouTube] 스크린샷: yt-done-timeout.png');
+    await ctx.close();
+    process.exit(1);
   }
 
-  if (!doneEnabled) {
-    // inner button이 3분 후에도 disabled → outer element 클릭 시도 (Polymer 이벤트 핸들러 직접 호출)
-    console.log('[YouTube] 경고: inner button 3분 대기 실패. outer element 클릭 시도...');
-    await page.evaluate(() => {
-      const btn = document.querySelector('ytcp-button#done-button');
-      if (btn) btn.click(); // Polymer 이벤트 핸들러 직접 호출
-    });
-    await page.waitForTimeout(5000);
-    const dialogStillThere = await page.locator('ytcp-upload-dialog').count() > 0;
-    if (dialogStillThere) {
-      const shotPath = path.join(ROOT, 'output', 'yt-done-timeout.png');
-      await page.screenshot({ path: shotPath, fullPage: true });
-      console.error('[YouTube] 오류: 게시 버튼 활성화 실패. 스크린샷: yt-done-timeout.png');
-      await ctx.close();
-      process.exit(1);
-    }
-    console.log('[YouTube] evaluate click으로 다이얼로그 닫힘 → 게시 시도됨');
-  } else {
-    // inner button 활성화 → outer element 클릭 (Polymer 이벤트 핸들러는 outer에 있음)
-    try {
-      await page.click('ytcp-button#done-button', { timeout: 5000 });
-      console.log('[YouTube] 게시 버튼 클릭 (outer ytcp-button)');
-    } catch(e) {
-      await page.evaluate(() => document.querySelector('ytcp-button#done-button')?.click());
-      console.log('[YouTube] 게시 버튼 클릭 (evaluate fallback)');
-    }
+  // 게시 클릭 — outer element 클릭 (Polymer의 이벤트 핸들러는 outer에 있음)
+  try {
+    await page.click('ytcp-button#done-button', { timeout: 5000 });
+    console.log('[YouTube] 게시 버튼 클릭 (outer ytcp-button)');
+  } catch(e) {
+    await page.evaluate(() => document.querySelector('ytcp-button#done-button')?.click());
+    console.log('[YouTube] 게시 버튼 클릭 (evaluate fallback)');
   }
 
   // 게시 완료 확인 — dialog 닫힘 + "처리 시작됨"은 오탐이므로 제외
