@@ -44,8 +44,8 @@ jobs:
       YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
-      INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
-      INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
 
     steps:
       - name: 코드 체크아웃
@@ -138,7 +138,7 @@ jobs:
             fi
           fi
 
-      - name: Instagram Reels 업로드 (Playwright)
+      - name: Instagram Reels 업로드 (Graph API)
         if: ${{ contains(inputs.steps, 'instagram') }}
         run: |
           PRODUCT="${{ inputs.product }}"
@@ -150,13 +150,13 @@ jobs:
               MP4="output/${p}-reels.mp4"
               if [ -f "$MP4" ]; then
                 echo "[$p] Instagram Reels 업로드..."
-                node scripts/upload/upload-instagram.js --product $p --type reels $DRY_FLAG || echo "[$p] Instagram 업로드 실패 (계속 진행)"
+                node scripts/upload/upload-instagram-api.js --product $p $DRY_FLAG || echo "[$p] Instagram 업로드 실패 (계속 진행)"
               else
                 echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
               fi
             done
           else
-            node scripts/upload/upload-instagram.js --product $PRODUCT --type reels $DRY_FLAG
+            node scripts/upload/upload-instagram-api.js --product $PRODUCT $DRY_FLAG
           fi
 
       - name: 영상 아티팩트 업로드
