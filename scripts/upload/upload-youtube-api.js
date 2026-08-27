@@ -1,25 +1,28 @@
 /**
- * YouTube Data API v3 업로드 (Playwright 없음, 봇감지 없음)
+ * YouTube Data API v3 업로드 스크립트
+ * 사용법: node upload-youtube-api.js --product filo [--reels] [--dry-run]
  *
- * 1회 초기 설정 (로컬 PC):
- *   node scripts/upload/upload-youtube-api.js --setup
- *   → 브라우저 열림 → Google 로그인 → refresh_token 출력
- *   → Oracle VM ~/.env 에 저장:
- *       YOUTUBE_CLIENT_ID=...
- *       YOUTUBE_CLIENT_SECRET=...
- *       YOUTUBE_REFRESH_TOKEN=...
+ * 환경변수 (Oracle Cloud ~/.env 에 저장):
+ *   YOUTUBE_CLIENT_ID=...
+ *   YOUTUBE_CLIENT_SECRET=...
+ *   YOUTUBE_REFRESH_TOKEN=...
  *
- * 이후 Oracle VM에서 자동 업로드:
- *   node scripts/upload/upload-youtube-api.js --product yongcha
- *   node scripts/upload/upload-youtube-api.js --product donway
- *   node scripts/upload/upload-youtube-api.js --product filo
- *   node scripts/upload/upload-youtube-api.js --product donway --reels   ← 숏츠 업로드
+ * 최초 1회 토큰 발급:
+ *   node upload-youtube-api.js --get-token
  */
 
-const path = require('path');
 const fs = require('fs');
-const https = require('https');
-const { execSync } = require('child_process');
+const path = require('path');
+const { google } = require('googleapis');
+
+// Oracle Cloud ~/.env 로드
+const envPath = path.join(process.env.HOME || '/home/opc', '.env');
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf-8').split('\n').forEach(line => {
+    const m = line.match(/^([^=]+)=(.*)$/);
+    if (m) process.env[m[1].trim()] = m[2].trim().replace(/^['"]|['"]$/g, '');
+  });
+}
 
 const args = process.argv.slice(2);
 function getArg(name) {
@@ -30,283 +33,143 @@ function getArg(name) {
 }
 
 const product = getArg('product') || 'filo';
-const setupMode = args.includes('--setup');
+const dryRun = args.includes('--dry-run');
+const getToken = args.includes('--get-token');
 const reelsMode = args.includes('--reels');
+
 const ROOT = path.join(__dirname, '../..');
+let meta = require(`../content/${product}-meta.json`);
 
-// .env 로드 (Oracle VM: ~/.env)
-function loadEnv() {
-  const envPaths = [
-    path.join(process.env.HOME || '', '.env'),
-    path.join(ROOT, '.env.local'),
-    path.join(ROOT, '.env'),
-  ];
-  for (const p of envPaths) {
-    if (fs.existsSync(p)) {
-      fs.readFileSync(p, 'utf8').split('\n').forEach(line => {
-        const m = line.match(/^([^#=]+)=(.*)$/);
-        if (m) process.env[m[1].trim()] = m[2].trim().replace(/^['"]|['"]$/g, '');
-      });
-      console.log(`[API] 환경변수 로드: ${p}`);
-      return;
-    }
-  }
+// 주차 기반 variant 선택
+if (meta.variants && meta.variants.length > 0) {
+  const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % meta.variants.length;
+  const variant = meta.variants[weekIdx];
+  if (variant.youtube) meta = { ...meta, youtube: { ...meta.youtube, ...variant.youtube } };
+  console.log(`[YouTube] 콘텐츠 변형: ${variant.label} (${weekIdx + 1}/${meta.variants.length}주차 순환)`);
 }
 
-// Access token 갱신 (refresh_token 사용)
-async function getAccessToken() {
-  const { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN } = process.env;
-  if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET || !YOUTUBE_REFRESH_TOKEN) {
-    console.error('[API] 오류: 환경변수 YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN 필요');
-    console.error('       node scripts/upload/upload-youtube-api.js --setup 으로 초기 설정');
-    process.exit(1);
-  }
-
-  return new Promise((resolve, reject) => {
-    const body = new URLSearchParams({
-      client_id: YOUTUBE_CLIENT_ID,
-      client_secret: YOUTUBE_CLIENT_SECRET,
-      refresh_token: YOUTUBE_REFRESH_TOKEN,
-      grant_type: 'refresh_token',
-    }).toString();
-
-    const req = https.request({
-      hostname: 'oauth2.googleapis.com',
-      path: '/token',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': body.length },
-    }, res => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => {
-        const json = JSON.parse(data);
-        if (json.access_token) {
-          resolve(json.access_token);
-        } else {
-          console.error('[API] token 갱신 실패:', data);
-          reject(new Error('token 갱신 실패'));
-        }
-      });
-    });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-// Resumable upload: 메타데이터 + 동영상 파일 업로드
-async function uploadVideo(accessToken, meta, videoPath) {
-  const videoStat = fs.statSync(videoPath);
-  console.log(`[API] 영상 크기: ${(videoStat.size / 1024 / 1024).toFixed(1)}MB`);
-
-  // 1단계: 업로드 세션 URI 받기
-  const initBody = JSON.stringify({
-    snippet: {
-      title: meta.youtube.title,
-      description: meta.youtube.description,
-      tags: meta.youtube.tags || [],
-      categoryId: meta.youtube.categoryId || '22', // People & Blogs
-      defaultLanguage: 'ko',
+// 숏츠 모드: 제목에 #Shorts 추가
+if (reelsMode) {
+  meta = {
+    ...meta,
+    youtube: {
+      ...meta.youtube,
+      title: meta.youtube.title.includes('#Shorts') ? meta.youtube.title : `${meta.youtube.title} #Shorts`,
+      tags: [...(meta.youtube.tags || []), 'Shorts', '유튜브쇼츠'],
     },
-    status: {
-      privacyStatus: 'public',
-      selfDeclaredMadeForKids: false,
-    },
-  });
-
-  const uploadUri = await new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'www.googleapis.com',
-      path: '/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-        'Content-Length': Buffer.byteLength(initBody),
-        'X-Upload-Content-Type': 'video/mp4',
-        'X-Upload-Content-Length': videoStat.size,
-      },
-    }, res => {
-      if (res.statusCode === 200) {
-        resolve(res.headers.location);
-      } else {
-        let d = '';
-        res.on('data', c => d += c);
-        res.on('end', () => reject(new Error(`업로드 세션 생성 실패 ${res.statusCode}: ${d}`)));
-      }
-    });
-    req.on('error', reject);
-    req.write(initBody);
-    req.end();
-  });
-
-  console.log('[API] 업로드 세션 생성됨. 영상 전송 시작...');
-
-  // 2단계: 실제 파일 업로드 (청크 업로드 — 최대 1 청크로 처리)
-  const videoData = fs.readFileSync(videoPath);
-  const uploadHost = new URL(uploadUri);
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: uploadHost.hostname,
-      path: uploadHost.pathname + uploadHost.search,
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Length': videoStat.size,
-      },
-    }, res => {
-      let data = '';
-      res.on('data', d => data += d);
-      res.on('end', () => {
-        if (res.statusCode === 200 || res.statusCode === 201) {
-          const json = JSON.parse(data);
-          resolve(json);
-        } else {
-          console.error('[API] 업로드 응답:', res.statusCode, data.slice(0, 500));
-          reject(new Error(`업로드 실패 ${res.statusCode}`));
-        }
-      });
-    });
-    req.on('error', reject);
-
-    // 업로드 진행 상황 출력
-    let sent = 0;
-    const stream = require('fs').createReadStream(videoPath);
-    stream.on('data', chunk => {
-      sent += chunk.length;
-      if (sent % (1024 * 1024) < 65536) {
-        console.log(`[API] 전송 중: ${(sent / 1024 / 1024).toFixed(1)}MB / ${(videoStat.size / 1024 / 1024).toFixed(1)}MB`);
-      }
-    });
-    stream.pipe(req);
-  });
+  };
 }
 
-// --setup: 1회 OAuth 초기 설정 (로컬 PC에서 실행)
-async function setup() {
-  const { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET } = process.env;
-  if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET) {
-    console.log('\n=== YouTube API OAuth 초기 설정 ===\n');
-    console.log('1. https://console.cloud.google.com 접속');
-    console.log('2. 새 프로젝트 생성 → YouTube Data API v3 사용 설정');
-    console.log('3. OAuth 2.0 클라이언트 ID 생성 (데스크톱 앱)');
-    console.log('4. ~/.env 에 저장:');
-    console.log('   YOUTUBE_CLIENT_ID=your-client-id.apps.googleusercontent.com');
-    console.log('   YOUTUBE_CLIENT_SECRET=your-client-secret');
-    console.log('\n5. 다시 실행: node scripts/upload/upload-youtube-api.js --setup\n');
-    return;
-  }
+const CLIENT_ID = process.env.YOUTUBE_CLIENT_ID;
+const CLIENT_SECRET = process.env.YOUTUBE_CLIENT_SECRET;
+const REFRESH_TOKEN = process.env.YOUTUBE_REFRESH_TOKEN;
 
-  const authUrl = `https://accounts.google.com/o/oauth2/auth?` +
-    `client_id=${YOUTUBE_CLIENT_ID}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&` +
-    `response_type=code&scope=https://www.googleapis.com/auth/youtube.upload` +
-    `+https://www.googleapis.com/auth/youtube&access_type=offline&prompt=consent`;
+const oauth2Client = new google.auth.OAuth2(
+  CLIENT_ID,
+  CLIENT_SECRET,
+  'urn:ietf:wg:oauth:2.0:oob'
+);
 
-  console.log('\n=== 브라우저에서 아래 URL 열어서 Google 로그인 ===\n');
+// --get-token: 브라우저에서 인증 후 토큰 발급
+async function getRefreshToken() {
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/youtube.upload'],
+  });
+  console.log('\n[YouTube] 아래 URL을 브라우저에서 열어 Google 계정 인증 후 코드를 붙여넣으세요:');
   console.log(authUrl);
-  console.log('\n로그인 후 표시되는 코드를 입력하세요:');
+  console.log('');
 
   const readline = require('readline');
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const code = await new Promise(r => rl.question('코드: ', r));
+  const code = await new Promise(resolve => rl.question('인증 코드: ', resolve));
   rl.close();
 
-  // authorization code → refresh_token 교환
-  const tokenBody = new URLSearchParams({
-    code,
-    client_id: YOUTUBE_CLIENT_ID,
-    client_secret: YOUTUBE_CLIENT_SECRET,
-    redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
-    grant_type: 'authorization_code',
-  }).toString();
-
-  const tokenData = await new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'oauth2.googleapis.com',
-      path: '/token',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': tokenBody.length },
-    }, res => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => resolve(JSON.parse(d)));
-    });
-    req.on('error', reject);
-    req.write(tokenBody);
-    req.end();
-  });
-
-  if (!tokenData.refresh_token) {
-    console.error('refresh_token 없음. prompt=consent 재확인 필요:', tokenData);
-    return;
-  }
-
-  console.log('\n=== ~/.env 에 아래 내용 추가 ===\n');
-  console.log(`YOUTUBE_REFRESH_TOKEN=${tokenData.refresh_token}`);
-  console.log('\n설정 완료! Oracle VM ~/.env 에 복사 후 업로드 실행:\n');
-  console.log(`  node scripts/upload/upload-youtube-api.js --product yongcha`);
+  const { tokens } = await oauth2Client.getToken(code);
+  console.log('\n[YouTube] REFRESH_TOKEN (아래를 ~/.env 에 저장):');
+  console.log(`YOUTUBE_REFRESH_TOKEN=${tokens.refresh_token}`);
 }
 
-async function main() {
-  loadEnv();
-
-  if (setupMode) {
-    await setup();
-    return;
-  }
-
-  // 영상 파일 확인
-  const videoFile = reelsMode ? `${product}-reels.mp4` : `${product}-promo.mp4`;
-  const videoPath = path.join(ROOT, 'output', videoFile);
-  if (!fs.existsSync(videoPath)) {
-    console.error(`[API] 영상 파일 없음: ${videoPath}`);
+async function uploadVideo() {
+  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+    console.error('[YouTube] 오류: ~/.env 에 YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET / YOUTUBE_REFRESH_TOKEN 필요');
+    console.error('  1. Google Cloud Console → OAuth 2.0 클라이언트 ID 생성');
+    console.error('  2. node upload-youtube-api.js --get-token 실행 → 토큰 발급');
+    console.error('  3. ~/.env 에 환경변수 저장');
     process.exit(1);
   }
 
-  // 메타데이터 로드
-  let meta = require(`../content/${product}-meta.json`);
-  if (meta.variants && meta.variants.length > 0) {
-    const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % meta.variants.length;
-    const variant = meta.variants[weekIdx];
-    if (variant.youtube) meta = { ...meta, youtube: { ...meta.youtube, ...variant.youtube } };
+  oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+  const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+
+  const videoFile = reelsMode ? `${product}-reels.mp4` : `${product}-promo.mp4`;
+  const videoPath = path.join(ROOT, 'output', videoFile);
+  if (!fs.existsSync(videoPath)) {
+    console.error(`[YouTube] 파일 없음: ${videoPath}`);
+    process.exit(1);
   }
 
-  // 숏츠 모드: 제목에 #Shorts 태그 추가
-  if (reelsMode) {
-    meta = {
-      ...meta,
-      youtube: {
-        ...meta.youtube,
-        title: meta.youtube.title.includes('#Shorts') ? meta.youtube.title : `${meta.youtube.title} #Shorts`,
-        tags: [...(meta.youtube.tags || []), 'Shorts', '유튜브쇼츠'],
+  const ytMeta = meta.youtube;
+  console.log(`[YouTube] 제품: ${product} ${reelsMode ? '(숏츠)' : ''}`);
+  console.log(`[YouTube] 업로드 시작: ${ytMeta.title}`);
+
+  if (dryRun) {
+    console.log('[YouTube][DRY-RUN] 업로드 건너뜀.');
+    console.log(`  제목: ${ytMeta.title}`);
+    console.log(`  태그: ${(ytMeta.tags || []).join(', ')}`);
+    return;
+  }
+
+  const fileSize = fs.statSync(videoPath).size;
+  console.log(`[YouTube] 파일 크기: ${(fileSize / 1024 / 1024).toFixed(1)} MB`);
+
+  const res = await youtube.videos.insert({
+    part: ['snippet', 'status'],
+    requestBody: {
+      snippet: {
+        title: ytMeta.title,
+        description: ytMeta.description,
+        tags: ytMeta.tags || [],
+        categoryId: ytMeta.category || '22',
+        defaultLanguage: 'ko',
+        defaultAudioLanguage: 'ko',
       },
-    };
-  }
+      status: {
+        privacyStatus: ytMeta.privacy || 'public',
+        selfDeclaredMadeForKids: false,
+      },
+    },
+    media: {
+      body: fs.createReadStream(videoPath),
+    },
+  }, {
+    onUploadProgress: evt => {
+      const pct = Math.round((evt.bytesRead / fileSize) * 100);
+      process.stdout.write(`\r[YouTube] 업로드 중... ${pct}%`);
+    },
+  });
 
-  console.log(`[API] 제품: ${product} ${reelsMode ? '(숏츠)' : ''}`);
-  console.log(`[API] 제목: ${meta.youtube.title}`);
-
-  // Access token 갱신
-  const accessToken = await getAccessToken();
-  console.log('[API] Access token 갱신 완료');
-
-  // 업로드
-  const result = await uploadVideo(accessToken, meta, videoPath);
-
-  const videoId = result.id;
+  const videoId = res.data.id;
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-  console.log(`[API] 업로드 완료!`);
-  console.log(`[API] 영상 URL: ${videoUrl}`);
-  console.log(`[API] Studio: https://studio.youtube.com/video/${videoId}/edit`);
+  console.log(`\n[YouTube] 업로드 완료! 영상 ID: ${videoId}`);
+  console.log(`  URL: ${videoUrl}`);
+  console.log(`  상태: ${res.data.status.uploadStatus}`);
 
   // 결과 저장
-  const resultPath = path.join(ROOT, 'output', `${product}-yt-upload-result.json`);
-  fs.writeFileSync(resultPath, JSON.stringify({ videoId, videoUrl, title: meta.youtube.title, uploadedAt: new Date().toISOString() }, null, 2));
-  console.log(`[API] 결과 저장: ${resultPath}`);
+  const suffix = reelsMode ? '-reels' : '';
+  const resultPath = path.join(ROOT, 'output', `${product}${suffix}-yt-upload-result.json`);
+  fs.writeFileSync(resultPath, JSON.stringify({
+    videoId,
+    videoUrl,
+    title: ytMeta.title,
+    reels: reelsMode,
+    uploadedAt: new Date().toISOString(),
+  }, null, 2));
+  console.log(`  결과 저장: ${resultPath}`);
 }
 
-main().catch(e => {
-  console.error('[API] 오류:', e.message);
-  process.exit(1);
-});
+if (getToken) {
+  getRefreshToken().catch(console.error);
+} else {
+  uploadVideo().catch(console.error);
+}

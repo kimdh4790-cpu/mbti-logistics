@@ -244,6 +244,10 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-27 | upload-instagram.js: /create/style/ 직접 이동 방식 추가 (버튼 클릭 폴백 유지), file input 강제 클릭 방식으로 파일 선택 안정화 |
+| 2026-08-27 | upload-youtube-api.js: googleapis 기반으로 교체, --reels 모드 복원, 결과 JSON 저장 복원 |
+| 2026-08-27 | compose-video.sh: 출력 해상도 1280x720→1080x1920 수정 (Shorts 흰배경 버그 수정) |
+| 2026-08-27 | make-reels.sh: -ss/-t를 -i 뒤로 이동 (output seeking), 스케일 필터 제거 (compose 이미 1080x1920) |
 | 2026-08-27 | GOOGLE_TTS_API_KEY Oracle VM 재등록, --reels 옵션 추가, 업로드 순서 명시 |
 | 2026-08-27 | DONWAY YouTube 업로드 완료 (Data API v3), REFRESH_TOKEN 발급, 현황 업데이트 |
 | 2026-08-27 | SOCIAL_MEDIA_MEMO.md 전면 업데이트 (Google TTS 전환, 세션 이전 완료 반영) |
