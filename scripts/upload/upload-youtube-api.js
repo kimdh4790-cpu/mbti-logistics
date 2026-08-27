@@ -5,9 +5,9 @@
  *   node scripts/upload/upload-youtube-api.js --setup
  *   → 브라우저 열림 → Google 로그인 → refresh_token 출력
  *   → Oracle VM ~/.env 에 저장:
- *       YT_CLIENT_ID=...
- *       YT_CLIENT_SECRET=...
- *       YT_REFRESH_TOKEN=...
+ *       YOUTUBE_CLIENT_ID=...
+ *       YOUTUBE_CLIENT_SECRET=...
+ *       YOUTUBE_REFRESH_TOKEN=...
  *
  * 이후 Oracle VM에서 자동 업로드:
  *   node scripts/upload/upload-youtube-api.js --product yongcha
@@ -53,18 +53,18 @@ function loadEnv() {
 
 // Access token 갱신 (refresh_token 사용)
 async function getAccessToken() {
-  const { YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN } = process.env;
-  if (!YT_CLIENT_ID || !YT_CLIENT_SECRET || !YT_REFRESH_TOKEN) {
-    console.error('[API] 오류: 환경변수 YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN 필요');
+  const { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN } = process.env;
+  if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET || !YOUTUBE_REFRESH_TOKEN) {
+    console.error('[API] 오류: 환경변수 YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN 필요');
     console.error('       node scripts/upload/upload-youtube-api.js --setup 으로 초기 설정');
     process.exit(1);
   }
 
   return new Promise((resolve, reject) => {
     const body = new URLSearchParams({
-      client_id: YT_CLIENT_ID,
-      client_secret: YT_CLIENT_SECRET,
-      refresh_token: YT_REFRESH_TOKEN,
+      client_id: YOUTUBE_CLIENT_ID,
+      client_secret: YOUTUBE_CLIENT_SECRET,
+      refresh_token: YOUTUBE_REFRESH_TOKEN,
       grant_type: 'refresh_token',
     }).toString();
 
@@ -183,21 +183,21 @@ async function uploadVideo(accessToken, meta, videoPath) {
 
 // --setup: 1회 OAuth 초기 설정 (로컬 PC에서 실행)
 async function setup() {
-  const { YT_CLIENT_ID, YT_CLIENT_SECRET } = process.env;
-  if (!YT_CLIENT_ID || !YT_CLIENT_SECRET) {
+  const { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET } = process.env;
+  if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET) {
     console.log('\n=== YouTube API OAuth 초기 설정 ===\n');
     console.log('1. https://console.cloud.google.com 접속');
     console.log('2. 새 프로젝트 생성 → YouTube Data API v3 사용 설정');
     console.log('3. OAuth 2.0 클라이언트 ID 생성 (데스크톱 앱)');
     console.log('4. ~/.env 에 저장:');
-    console.log('   YT_CLIENT_ID=your-client-id.apps.googleusercontent.com');
-    console.log('   YT_CLIENT_SECRET=your-client-secret');
+    console.log('   YOUTUBE_CLIENT_ID=your-client-id.apps.googleusercontent.com');
+    console.log('   YOUTUBE_CLIENT_SECRET=your-client-secret');
     console.log('\n5. 다시 실행: node scripts/upload/upload-youtube-api.js --setup\n');
     return;
   }
 
   const authUrl = `https://accounts.google.com/o/oauth2/auth?` +
-    `client_id=${YT_CLIENT_ID}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&` +
+    `client_id=${YOUTUBE_CLIENT_ID}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&` +
     `response_type=code&scope=https://www.googleapis.com/auth/youtube.upload` +
     `+https://www.googleapis.com/auth/youtube&access_type=offline&prompt=consent`;
 
@@ -213,8 +213,8 @@ async function setup() {
   // authorization code → refresh_token 교환
   const tokenBody = new URLSearchParams({
     code,
-    client_id: YT_CLIENT_ID,
-    client_secret: YT_CLIENT_SECRET,
+    client_id: YOUTUBE_CLIENT_ID,
+    client_secret: YOUTUBE_CLIENT_SECRET,
     redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
     grant_type: 'authorization_code',
   }).toString();
@@ -241,7 +241,7 @@ async function setup() {
   }
 
   console.log('\n=== ~/.env 에 아래 내용 추가 ===\n');
-  console.log(`YT_REFRESH_TOKEN=${tokenData.refresh_token}`);
+  console.log(`YOUTUBE_REFRESH_TOKEN=${tokenData.refresh_token}`);
   console.log('\n설정 완료! Oracle VM ~/.env 에 복사 후 업로드 실행:\n');
   console.log(`  node scripts/upload/upload-youtube-api.js --product yongcha`);
 }
