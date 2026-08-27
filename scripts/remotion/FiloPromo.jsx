@@ -1,5 +1,5 @@
 const React = require('react');
-const { useCurrentFrame, useVideoConfig, interpolate, spring, Sequence, AbsoluteFill, Easing, Audio, staticFile } = require('remotion');
+const { useCurrentFrame, useVideoConfig, interpolate, spring, Sequence, AbsoluteFill, Easing, Audio, staticFile, Series } = require('remotion');
 
 // ── 상수 ──────────────────────────────────────────────
 const NAVY = '#08101f';
@@ -252,7 +252,7 @@ function ScenePOS() {
         transform: 'translateX(-50%)',
         opacity: fadeIn(frame, 35, 15),
         fontSize: 28, color: GOLD,
-      }}>⚡</div>
+      }}>→</div>
 
       {/* 주방 화면 목업 */}
       <div style={{
@@ -266,7 +266,7 @@ function ScenePOS() {
         boxShadow: `0 16px 40px #000c`,
       }}>
         <div style={{ background: '#0f1f0f', padding: '10px 14px', borderBottom: '1px solid #44aa4422' }}>
-          <span style={{ color: '#66cc66', fontSize: 12, fontWeight: 700 }}>🍳 주방 디스플레이</span>
+          <span style={{ color: '#66cc66', fontSize: 12, fontWeight: 700 }}>주방 디스플레이</span>
         </div>
         {[
           { order: '3번 테이블', time: '02:15', status: '조리중' },
@@ -310,10 +310,10 @@ function ScenePayroll() {
   const frame = useCurrentFrame();
 
   const cards = [
-    { icon: '💰', title: '급여 자동 계산', desc: '출퇴근 QR → 급여 자동 집계', color: '#1a2f1a' },
-    { icon: '📦', title: '재고 관리', desc: '소모품 추적·발주 알림', color: '#1a1a2f' },
-    { icon: '📊', title: '마진 분석', desc: 'AI 매출예측 7일', color: '#2f1a1a' },
-    { icon: '👥', title: '직원 관리', desc: 'QR 출퇴근·스케줄', color: '#2f2a1a' },
+    { icon: '급', title: '급여 자동 계산', desc: '출퇴근 QR → 급여 자동 집계', color: '#1a2f1a' },
+    { icon: '재', title: '재고 관리', desc: '소모품 추적·발주 알림', color: '#1a1a2f' },
+    { icon: '마', title: '마진 분석', desc: 'AI 매출예측 7일', color: '#2f1a1a' },
+    { icon: '직', title: '직원 관리', desc: 'QR 출퇴근·스케줄', color: '#2f2a1a' },
   ];
 
   return (
@@ -357,7 +357,12 @@ function ScenePayroll() {
             opacity: fadeIn(frame, 20 + i * 12, 20),
             transform: `translateY(${slideUp(frame, 20 + i * 12, 20)}px)`,
           }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{card.icon}</div>
+            <div style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: `${GOLD}22`, border: `1px solid ${GOLD}55`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 10, fontSize: 16, fontWeight: 800, color: GOLD,
+            }}>{card.icon}</div>
             <div style={{ color: WHITE, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{card.title}</div>
             <div style={{ color: `${WHITE}66`, fontSize: 12, lineHeight: 1.4 }}>{card.desc}</div>
           </div>
@@ -371,7 +376,7 @@ function ScenePayroll() {
         borderRadius: 24, padding: '10px 30px',
         opacity: fadeIn(frame, 70, 20),
       }}>
-        <span style={{ color: GOLD, fontSize: 15, fontWeight: 600 }}>✨ AI 매출 예측 포함</span>
+        <span style={{ color: GOLD, fontSize: 15, fontWeight: 600 }}>AI 매출 예측 포함</span>
       </div>
     </AbsoluteFill>
   );
@@ -449,11 +454,12 @@ function SceneCTA() {
 }
 
 // ── 전환 효과 ─────────────────────────────────────────
-function TransitionOverlay({ direction = 'out' }) {
+function TransitionOverlay({ direction = 'out', totalFrames }) {
   const frame = useCurrentFrame();
   const { durationInFrames } = useVideoConfig();
+  const end = totalFrames || durationInFrames;
   const progress = direction === 'out'
-    ? interpolate(frame, [durationInFrames - 15, durationInFrames], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+    ? interpolate(frame, [end - 15, end], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
     : interpolate(frame, [0, 15], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
   return (
@@ -466,7 +472,7 @@ function TransitionOverlay({ direction = 'out' }) {
 }
 
 // ── 메인 컴포지션 ─────────────────────────────────────
-function FiloPromo({ hasNarration }) {
+function FiloPromo({ hasNarration, hasBgm }) {
   const SCENES = [
     { component: SceneIntro,   start: 0,   duration: 150 },
     { component: SceneQR,      start: 150, duration: 210 },
@@ -480,9 +486,14 @@ function FiloPromo({ hasNarration }) {
       {hasNarration && (
         <Audio src={staticFile('filo-narration.mp3')} volume={1} />
       )}
-      {SCENES.map(({ component: Comp, start, duration }) => (
+      {hasBgm && (
+        <Audio src={staticFile('bgm.mp3')} volume={0.25} />
+      )}
+      {SCENES.map(({ component: Comp, start, duration }, idx) => (
         <Sequence key={start} from={start} durationInFrames={duration}>
           <Comp />
+          <TransitionOverlay direction="in" totalFrames={duration} />
+          {idx < SCENES.length - 1 && <TransitionOverlay direction="out" totalFrames={duration} />}
         </Sequence>
       ))}
     </AbsoluteFill>
