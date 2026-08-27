@@ -188,7 +188,12 @@ async function elevenLabs(text, voiceId, outFile) {
 async function buildFinalAudio(lines, segments, outFile) {
   const { execSync } = require('child_process');
   const ffmpeg = (() => {
-    try { return require('ffmpeg-static'); } catch { return 'ffmpeg'; }
+    try {
+      const p = require('ffmpeg-static');
+      const fs2 = require('fs');
+      if (p && fs2.existsSync(p)) return p;
+    } catch {}
+    return 'ffmpeg';
   })();
 
   // 각 구간 mp3 → 시작시간 기준 silence gap 삽입 후 concat
