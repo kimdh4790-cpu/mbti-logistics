@@ -604,23 +604,18 @@ async function uploadYouTube() {
   await page.waitForTimeout(1000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-before-publish.png'), fullPage: true });
 
-  // done-button disabled 해제 대기 (최대 2분 — 대용량 파일 업로드 완료 대기)
+  // done-button disabled 해제 대기 (최대 3분)
+  // Playwright isDisabled()는 Polymer web component의 disabled 속성을 직접 읽어서 evaluate()보다 신뢰도 높음
   let doneEnabled = false;
-  for (let di = 0; di < 60; di++) {
-    const disabled = await page.evaluate(() => {
-      const btn = document.querySelector('ytcp-button#done-button');
-      if (!btn) return true;
-      // shadow root의 <button> 요소만 체크 (iron-icon 등 내부 요소의 disabled 오감지 방지)
-      const innerBtn = btn.shadowRoot?.querySelector('button');
-      if (innerBtn) return innerBtn.hasAttribute('disabled') || innerBtn.disabled;
-      return btn.hasAttribute('disabled') || btn.getAttribute('disabled') === '';
-    });
+  const doneLocator = page.locator('ytcp-button#done-button');
+  for (let di = 0; di < 90; di++) {
+    const disabled = await doneLocator.isDisabled().catch(() => true);
     if (!disabled) { doneEnabled = true; break; }
-    if (di % 5 === 0) console.log(`[YouTube] done-button 활성화 대기... (${di * 2}s / 120s)`);
+    if (di % 5 === 0) console.log(`[YouTube] done-button 활성화 대기... (${di * 2}s / 180s)`);
     await page.waitForTimeout(2000);
   }
   if (!doneEnabled) {
-    console.log('[YouTube] done-button 2분 후에도 disabled — 강제 진행');
+    console.log('[YouTube] done-button 3분 후에도 disabled — 강제 진행');
   } else {
     console.log('[YouTube] done-button 활성화 확인 — 게시 진행');
   }
