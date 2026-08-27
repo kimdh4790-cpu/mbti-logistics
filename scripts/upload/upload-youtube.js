@@ -600,48 +600,69 @@ async function uploadYouTube() {
   }
   await page.waitForTimeout(1000);
 
-  // 게시 — done-button이 enabled 상태가 될 때까지 대기 (disabled 상태에서 force 클릭하면 YouTube가 다이얼로그 닫음)
+  // 게시 — done-button shadow DOM 내부 <button>이 enabled 될 때까지 대기
+  // disabled done-button을 force 클릭하면 YouTube가 다이얼로그를 dismiss(닫기)만 하고 게시 안 함
   await page.waitForTimeout(1000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-before-publish.png'), fullPage: true });
 
-  // done-button disabled 해제 대기 (최대 3분)
-  // Playwright isDisabled()는 Polymer web component의 disabled 속성을 직접 읽어서 evaluate()보다 신뢰도 높음
+  // Playwright 로케이터 체인: shadow root를 자동으로 관통해서 실제 <button>에 접근
+  // ytcp-button#done-button (shadow host) → button (shadow DOM 내부)
+  const innerDoneBtn = page.locator('ytcp-button#done-button').locator('button');
+
+  // 1단계: CSS :not([disabled]) selector로 빠른 감지 (외부 element 기준, 최대 10초)
   let doneEnabled = false;
-  const doneLocator = page.locator('ytcp-button#done-button');
-  for (let di = 0; di < 90; di++) {
-    const disabled = await doneLocator.isDisabled().catch(() => true);
-    if (!disabled) { doneEnabled = true; break; }
-    if (di % 5 === 0) console.log(`[YouTube] done-button 활성화 대기... (${di * 2}s / 180s)`);
-    await page.waitForTimeout(2000);
-  }
-  if (!doneEnabled) {
-    console.log('[YouTube] done-button 3분 후에도 disabled — 강제 진행');
-  } else {
-    console.log('[YouTube] done-button 활성화 확인 — 게시 진행');
+  try {
+    await page.waitForSelector('ytcp-button#done-button:not([disabled])', { timeout: 10000 });
+    doneEnabled = true;
+    console.log('[YouTube] done-button 외부 속성으로 활성화 확인 (빠른 감지)');
+  } catch(e) {
+    // 2단계: 내부 shadow <button>의 disabled 폴링 (최대 5분 — 업로드+처리 대기)
+    for (let di = 0; di < 150; di++) {
+      const outerOk = !(await page.locator('ytcp-button#done-button').isDisabled().catch(() => true));
+      const innerOk = !(await innerDoneBtn.isDisabled().catch(() => true));
+      if (outerOk || innerOk) {
+        doneEnabled = true;
+        console.log(`[YouTube] done-button 활성화 확인 (outer:${outerOk} inner:${innerOk}) — ${di * 2}s 경과`);
+        break;
+      }
+      // 30초마다 스크린샷 (디버그)
+      if (di % 15 === 0) {
+        await page.screenshot({ path: path.join(ROOT, 'output', `yt-wait-${di}.png`) });
+        console.log(`[YouTube] done-button 활성화 대기... (${di * 2}s / 300s)`);
+      }
+      await page.waitForTimeout(2000);
+    }
   }
 
-  // 게시 클릭 (done-button 직접 클릭, disabled 여부 무관)
+  if (!doneEnabled) {
+    // 5분 후에도 disabled: 스크린샷 찍고 종료 (force 클릭 안 함 — 게시 안 됨 확정이라 의미 없음)
+    const shotPath = path.join(ROOT, 'output', 'yt-done-timeout.png');
+    await page.screenshot({ path: shotPath, fullPage: true });
+    console.error('[YouTube] 오류: done-button이 5분 후에도 disabled. 업로드 실패.');
+    console.error(`[YouTube] 스크린샷: ${shotPath}`);
+    await ctx.close();
+    process.exit(1);
+  }
+
+  // 게시 클릭: 내부 shadow <button>을 직접 클릭 (outer web component 클릭 시 이벤트 미전달 문제 방지)
   let doneClicked = false;
   try {
-    // done-button은 항상 ytcp-button#done-button
-    await page.waitForSelector('ytcp-button#done-button', { timeout: 5000 });
-    // force: false 우선 시도 (disabled이면 오류 발생 → 아래 force로 재시도)
-    try {
-      await page.click('ytcp-button#done-button');
-      doneClicked = true;
-      console.log('[YouTube] 게시 버튼 클릭 (done-button, 정상)');
-    } catch(e) {
-      await page.click('ytcp-button#done-button', { force: true });
-      doneClicked = true;
-      console.log('[YouTube] 게시 버튼 클릭 (done-button, force)');
-    }
+    await innerDoneBtn.click({ timeout: 5000 });
+    doneClicked = true;
+    console.log('[YouTube] 게시 버튼 클릭 (shadow DOM inner button)');
   } catch(e) {
-    // done-button 없으면 aria-label 시도
+    // inner button 클릭 실패 → outer element 클릭 fallback
     try {
-      await page.click('[aria-label="게시"]');
+      await page.click('ytcp-button#done-button', { timeout: 5000 });
       doneClicked = true;
-      console.log('[YouTube] 게시 버튼 클릭 (aria-label=게시)');
-    } catch(e2) {}
+      console.log('[YouTube] 게시 버튼 클릭 (outer ytcp-button, fallback)');
+    } catch(e2) {
+      try {
+        await page.click('[aria-label="게시"]', { timeout: 5000 });
+        doneClicked = true;
+        console.log('[YouTube] 게시 버튼 클릭 (aria-label=게시, fallback)');
+      } catch(e3) {}
+    }
   }
   if (!doneClicked) {
     const shotPath = path.join(ROOT, 'output', 'yt-done-debug.png');
@@ -651,33 +672,34 @@ async function uploadYouTube() {
     process.exit(1);
   }
 
-  // 게시 완료 확인 — 업로드 다이얼로그가 DOM에서 제거되면 성공
-  // 최대 2회 재시도: 게시 클릭 후 팝업이 다시 뜨는 경우 dismiss 후 재게시
+  // 게시 완료 확인 — "게시됨" 또는 "처리 중" 텍스트 또는 다이얼로그 닫힘 확인
+  // 단순히 dialog detach만 체크하면 dismiss(취소)와 게시를 구분 못 함
   let publishConfirmed = false;
-  for (let pubTry = 0; pubTry < 2; pubTry++) {
-    try {
-      await page.waitForSelector('ytcp-upload-dialog', { state: 'detached', timeout: 15000 });
+  for (let pubTry = 0; pubTry < 3; pubTry++) {
+    // 성공 신호 1: YouTube가 "게시됨" / "공개됨" / "처리 중입니다" 텍스트 표시
+    const successText = await page.evaluate(() => {
+      const body = document.body.innerText || '';
+      return body.includes('게시됨') || body.includes('공개됨') || body.includes('처리 중입니다') ||
+             body.includes('Published') || body.includes('Video published') || body.includes('처리 시작됨');
+    });
+    if (successText) {
       publishConfirmed = true;
-      console.log(`[YouTube] 업로드 다이얼로그 닫힘 → 게시 완료. URL: ${page.url()}`);
+      console.log(`[YouTube] 게시 성공 텍스트 확인 → 게시 완료. URL: ${page.url()}`);
       break;
-    } catch(e) {
-      // 15초 내 dialog detach 안 됨 → 팝업 새로 뜬 것 처리 후 재게시
+    }
+    // 성공 신호 2: 다이얼로그 사라짐 + URL에 /video/ 포함 (영상 페이지로 이동)
+    const dialogGone = await page.locator('ytcp-upload-dialog').count() === 0;
+    const onVideoPage = page.url().includes('/video/');
+    if (dialogGone && onVideoPage) {
+      publishConfirmed = true;
+      console.log(`[YouTube] video 페이지 이동 확인 → 게시 완료. URL: ${page.url()}`);
+      break;
+    }
+    if (pubTry < 2) {
       await page.screenshot({ path: path.join(ROOT, 'output', `yt-publish-wait-${pubTry}.png`) });
-      console.log(`[YouTube] 게시 대기 ${pubTry+1}회 타임아웃 → 팝업 처리 후 재게시`);
-      await dismissPopups(`publish-${pubTry}`, 10);
-      // backdrop 강제 제거
-      await page.evaluate(() => {
-        document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
-      });
-      await page.waitForTimeout(1000);
-      // done-button 재클릭
-      try {
-        await page.click('ytcp-button#done-button', { force: true });
-        console.log(`[YouTube] 게시 버튼 재클릭 ${pubTry+1}회`);
-      } catch(e2) {
-        try { await page.click('[aria-label="게시"]', { force: true }); } catch(e3) {}
-      }
-      await page.waitForTimeout(3000);
+      console.log(`[YouTube] 게시 확인 대기 ${pubTry+1}회 (5초 후 재확인)`);
+      await dismissPopups(`publish-${pubTry}`, 5);
+      await page.waitForTimeout(5000);
     }
   }
 
