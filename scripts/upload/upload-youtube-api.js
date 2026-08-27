@@ -48,14 +48,20 @@ if (meta.variants && meta.variants.length > 0) {
   console.log(`[YouTube] 콘텐츠 변형: ${variant.label} (${weekIdx + 1}/${meta.variants.length}주차 순환)`);
 }
 
-// 숏츠 모드: 제목에 #Shorts 추가
+// 숏츠 모드: 제목·설명에 #Shorts 추가 (YouTube 숏츠 인식 필수)
 if (reelsMode) {
+  const title = meta.youtube.title.includes('#Shorts')
+    ? meta.youtube.title
+    : `${meta.youtube.title} #Shorts`;
+  const desc = meta.youtube.description || '';
+  const description = desc.includes('#Shorts') ? desc : `${desc}\n\n#Shorts`;
   meta = {
     ...meta,
     youtube: {
       ...meta.youtube,
-      title: meta.youtube.title.includes('#Shorts') ? meta.youtube.title : `${meta.youtube.title} #Shorts`,
-      tags: [...(meta.youtube.tags || []), 'Shorts', '유튜브쇼츠'],
+      title,
+      description,
+      tags: [...(meta.youtube.tags || []), 'Shorts', '유튜브쇼츠', '숏츠'],
     },
   };
 }
