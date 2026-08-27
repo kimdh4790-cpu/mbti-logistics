@@ -59,20 +59,22 @@
 - [x] **나레이션 MP3 3개 생성** (filo/donway/yongcha — `output/` 저장됨)
 - [x] **Playwright 세션 4개 전송** (filo-record, youtube-upload, instagram-upload, naver-blog)
 - [x] Chromium 경로 동적 탐색으로 수정 (`scripts/utils/launch-options.js`)
+- [x] **YouTube Data API v3 업로드 스크립트** (`scripts/upload/upload-youtube-api.js`) — Playwright 대체
+- [x] **YOUTUBE_REFRESH_TOKEN 발급·등록** (Oracle Cloud `~/.env`)
+- [x] **DONWAY 영상 YouTube 업로드 완료** (https://www.youtube.com/watch?v=AKvxliFvraY)
 
 ### 막혀있는 것
 
 | 블로커 | 해결 방법 | 담당 |
 |---|---|---|
-| **Oracle VM SSH 접속 불가** | Oracle 콘솔에서 SSH 키 재등록 또는 Cloud Shell에서 실행 시도 | 사용자 |
 | **BGM 파일 없음** | YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` | 사용자 |
-| **영상 녹화 미실행** | Oracle VM 접속 후 run-pipeline.js 실행 | 사용자 |
+| **FILO·YONGCHA 영상 미생성** | Oracle VM에서 record + compose 실행 필요 | 사용자 |
 
 ### 영상 제작 현황
 | 제품 | 나레이션 MP3 | 녹화 WebM | 편집 MP4 | YouTube |
 |---|---|---|---|---|
 | FILO | output/filo-narration.mp3 | 미생성 | 미생성 | 미완 |
-| DONWAY | output/donway-narration.mp3 | 미생성 | 미생성 | 미완 |
+| DONWAY | output/donway-narration.mp3 | 생성됨 | output/donway-promo.mp4 | **완료** https://youtu.be/AKvxliFvraY |
 | YONGCHA | output/yongcha-narration.mp3 | 미생성 | 미생성 | 미완 |
 
 ---
@@ -165,6 +167,7 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-27 | DONWAY YouTube 업로드 완료 (Data API v3), REFRESH_TOKEN 발급, 현황 업데이트 |
 | 2026-08-27 | SOCIAL_MEDIA_MEMO.md 전면 업데이트 (Google TTS 전환, 세션 이전 완료 반영) |
 | 2026-08-27 | 나레이션 JSON voice 필드 Google TTS로 통일, 자막 요금 정보 수정 |
 | 2026-08-27 | launch-options.js Chromium 동적 탐색 추가 |
