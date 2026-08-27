@@ -13,6 +13,7 @@
  *   node scripts/upload/upload-youtube-api.js --product yongcha
  *   node scripts/upload/upload-youtube-api.js --product donway
  *   node scripts/upload/upload-youtube-api.js --product filo
+ *   node scripts/upload/upload-youtube-api.js --product donway --reels   ← 숏츠 업로드
  */
 
 const path = require('path');
@@ -30,6 +31,7 @@ function getArg(name) {
 
 const product = getArg('product') || 'filo';
 const setupMode = args.includes('--setup');
+const reelsMode = args.includes('--reels');
 const ROOT = path.join(__dirname, '../..');
 
 // .env 로드 (Oracle VM: ~/.env)
@@ -255,7 +257,8 @@ async function main() {
   }
 
   // 영상 파일 확인
-  const videoPath = path.join(ROOT, 'output', `${product}-promo.mp4`);
+  const videoFile = reelsMode ? `${product}-reels.mp4` : `${product}-promo.mp4`;
+  const videoPath = path.join(ROOT, 'output', videoFile);
   if (!fs.existsSync(videoPath)) {
     console.error(`[API] 영상 파일 없음: ${videoPath}`);
     process.exit(1);
@@ -269,7 +272,19 @@ async function main() {
     if (variant.youtube) meta = { ...meta, youtube: { ...meta.youtube, ...variant.youtube } };
   }
 
-  console.log(`[API] 제품: ${product}`);
+  // 숏츠 모드: 제목에 #Shorts 태그 추가
+  if (reelsMode) {
+    meta = {
+      ...meta,
+      youtube: {
+        ...meta.youtube,
+        title: meta.youtube.title.includes('#Shorts') ? meta.youtube.title : `${meta.youtube.title} #Shorts`,
+        tags: [...(meta.youtube.tags || []), 'Shorts', '유튜브쇼츠'],
+      },
+    };
+  }
+
+  console.log(`[API] 제품: ${product} ${reelsMode ? '(숏츠)' : ''}`);
   console.log(`[API] 제목: ${meta.youtube.title}`);
 
   // Access token 갱신
