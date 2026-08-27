@@ -22,9 +22,12 @@ on:
         options:
           - 'record,compose'
           - 'record,compose,youtube'
+          - 'record,compose,youtube,instagram'
           - 'record'
           - 'compose'
           - 'youtube'
+          - 'instagram'
+          - 'youtube,instagram'
       dry_run:
         description: '업로드 없이 테스트만'
         type: boolean
@@ -41,6 +44,8 @@ jobs:
       YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
       GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+      INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+      INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
 
     steps:
       - name: 코드 체크아웃
@@ -133,6 +138,27 @@ jobs:
             fi
           fi
 
+      - name: Instagram Reels 업로드 (Graph API)
+        if: ${{ contains(inputs.steps, 'instagram') }}
+        run: |
+          PRODUCT="${{ inputs.product }}"
+          DRY_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
+
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha mbtico; do
+              MP4="output/${p}-reels.mp4"
+              if [ -f "$MP4" ]; then
+                echo "[$p] Instagram Reels 업로드..."
+                node scripts/upload/upload-instagram-api.js --product $p $DRY_FLAG || echo "[$p] Instagram 업로드 실패 (계속 진행)"
+              else
+                echo "[$p] Reels MP4 없음: $MP4 (건너뜀)"
+              fi
+            done
+          else
+            node scripts/upload/upload-instagram-api.js --product $PRODUCT $DRY_FLAG
+          fi
+
       - name: 영상 아티팩트 업로드
         if: always()
         uses: actions/upload-artifact@v4
@@ -146,32 +172,3 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Oracle SSH가 복구되면 Instagram 업로드 가능 (선택)
-  upload-instagram-oracle:
-    name: Instagram 업로드 (Oracle SSH)
-    runs-on: ubuntu-latest
-    needs: run-pipeline
-    if: ${{ contains(inputs.steps, 'instagram') }}
-    timeout-minutes: 30
-
-    steps:
-      - name: SSH 키 설정
-        env:
-          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$ORACLE_SSH_KEY" > ~/.ssh/oracle_key
-          chmod 600 ~/.ssh/oracle_key
-
-      - name: Oracle VM에서 Instagram 업로드
-        env:
-          PRODUCT: ${{ inputs.product }}
-        run: |
-          DRY_FLAG=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then DRY_FLAG="--dry-run"; fi
-
-          ssh -i ~/.ssh/oracle_key \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=30 \
-            opc@161.33.136.154 \
-            "cd ~/mbti-logistics && git pull origin main && node scripts/upload/upload-instagram.js --product ${PRODUCT} --type reels ${DRY_FLAG} 2>&1"
