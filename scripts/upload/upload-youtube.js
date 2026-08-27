@@ -604,9 +604,9 @@ async function uploadYouTube() {
   await page.waitForTimeout(1000);
   await page.screenshot({ path: path.join(ROOT, 'output', 'yt-before-publish.png'), fullPage: true });
 
-  // done-button disabled 해제 대기 (최대 30초)
+  // done-button disabled 해제 대기 (최대 2분 — 대용량 파일 업로드 완료 대기)
   let doneEnabled = false;
-  for (let di = 0; di < 15; di++) {
+  for (let di = 0; di < 60; di++) {
     const disabled = await page.evaluate(() => {
       const btn = document.querySelector('ytcp-button#done-button');
       if (!btn) return true;
@@ -614,11 +614,13 @@ async function uploadYouTube() {
              btn.shadowRoot?.querySelector('[disabled]') !== null;
     });
     if (!disabled) { doneEnabled = true; break; }
-    console.log(`[YouTube] done-button 활성화 대기 ${di+1}/15...`);
+    if (di % 5 === 0) console.log(`[YouTube] done-button 활성화 대기... (${di * 2}s / 120s)`);
     await page.waitForTimeout(2000);
   }
   if (!doneEnabled) {
-    console.log('[YouTube] done-button 30초 후에도 disabled — 강제 진행');
+    console.log('[YouTube] done-button 2분 후에도 disabled — 강제 진행');
+  } else {
+    console.log('[YouTube] done-button 활성화 확인 — 게시 진행');
   }
 
   // 게시 클릭 (done-button 직접 클릭, disabled 여부 무관)
