@@ -27,7 +27,12 @@ fi
 
 echo "[Reels] 세로형 클립 생성: ${CLIP_START} ~ +${CLIP_DUR}초"
 
-FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
+FFMPEG_STATIC="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)"
+if [ -n "$FFMPEG_STATIC" ] && [ -f "$FFMPEG_STATIC" ]; then
+  FFMPEG="$FFMPEG_STATIC"
+else
+  FFMPEG="ffmpeg"
+fi
 
 # compose-video.sh 가 이미 1080x1920 세로형 출력이므로 트림만 수행
 # (스케일 변환 불필요 — 다시 변환하면 오히려 화질 손실)

@@ -16,8 +16,13 @@ SUBTITLES="$ROOT/scripts/content/${PRODUCT}-subtitles.srt"
 INPUT="$OUTPUT_DIR/${PRODUCT}-raw.webm"
 FINAL="$OUTPUT_DIR/${PRODUCT}-final.mp4"
 
-# ffmpeg-static 우선, 없으면 시스템 ffmpeg
-FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
+# ffmpeg-static 우선, 없거나 파일 없으면 시스템 ffmpeg
+FFMPEG_STATIC="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)"
+if [ -n "$FFMPEG_STATIC" ] && [ -f "$FFMPEG_STATIC" ]; then
+  FFMPEG="$FFMPEG_STATIC"
+else
+  FFMPEG="ffmpeg"
+fi
 echo "[ffmpeg] 사용: $FFMPEG"
 
 if [ ! -f "$INPUT" ]; then
