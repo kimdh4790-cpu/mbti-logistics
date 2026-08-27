@@ -15,7 +15,12 @@ if [ ! -f "$INPUT" ]; then
   exit 1
 fi
 
-FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
+FFMPEG_STATIC="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)"
+if [ -n "$FFMPEG_STATIC" ] && [ -f "$FFMPEG_STATIC" ]; then
+  FFMPEG="$FFMPEG_STATIC"
+else
+  FFMPEG="ffmpeg"
+fi
 
 # 가장 임팩트 있는 프레임 (10초 지점) 추출
 "$FFMPEG" -y \

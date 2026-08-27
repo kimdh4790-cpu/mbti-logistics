@@ -12,7 +12,12 @@ NARRATION="$OUTPUT_DIR/${PRODUCT}-narration.mp3"
 FINAL="$OUTPUT_DIR/${PRODUCT}-final.mp4"
 REELS="$OUTPUT_DIR/${PRODUCT}-reels.mp4"
 
-FFMPEG="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){process.stdout.write('ffmpeg')}" 2>/dev/null)"
+FFMPEG_STATIC="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)"
+if [ -n "$FFMPEG_STATIC" ] && [ -f "$FFMPEG_STATIC" ]; then
+  FFMPEG="$FFMPEG_STATIC"
+else
+  FFMPEG="ffmpeg"
+fi
 
 # 스크린샷 목록 (타임스탬프 순)
 SHOTS=($(ls "$OUTPUT_DIR/${PRODUCT}-landing-"*.png 2>/dev/null | sort))
