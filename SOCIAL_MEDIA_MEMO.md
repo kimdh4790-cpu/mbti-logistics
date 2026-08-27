@@ -67,11 +67,18 @@
 
 ### Oracle VM ~/.env 등록 항목 (2026-08-27 기준)
 ```
-GOOGLE_TTS_API_KEY=등록완료
+GOOGLE_TTS_API_KEY=등록필요  ← Google Cloud Console → "API 키 3개" → 키 표시 (Cloud Text-to-Speech API 전용, 2026-08-27 생성)
 YOUTUBE_CLIENT_ID=40761160761-3v5h03e9r974vfq2io4oa08nqhn6r5o8.apps.googleusercontent.com
-YOUTUBE_CLIENT_SECRET=등록완료
+YOUTUBE_CLIENT_SECRET=등록완료  ← Google Cloud Console → OAuth 2.0 → mbtico-youtube (데스크톱)
 YOUTUBE_REFRESH_TOKEN=등록완료
 ```
+
+### Google Cloud Console API 키 목록
+| 이름 | 용도 | 비고 |
+|---|---|---|
+| API 키 3개 | **GOOGLE_TTS_API_KEY** (Google TTS 나레이션 생성) | Cloud Text-to-Speech API 전용 |
+| mbti | 범용 API 키 (6개 API) | Firebase 등 |
+| Browser key | Firebase 자동 생성 | 수정 금지 |
 
 ### 막혀있는 것
 
