@@ -367,77 +367,96 @@ async function uploadYouTube() {
   await page.waitForSelector(titleSel, { timeout: 60000 });
   await page.waitForTimeout(2000);
 
-  // Playwright locator 체인 → shadow DOM 자동 관통 → 실제 contenteditable에 keyboard 이벤트 발생
-  // execCommand는 keyboard 이벤트를 발생시키지 않아 YouTube 저장 트리거 안 됨 → fill 방식으로 교체
-  const titleLocator = page.locator('ytcp-mention-textbox[label="제목"], ytcp-mention-textbox[label="Title"]')
-    .first().locator('[contenteditable]');
+  // 제목 입력: outer ytcp-mention-textbox 클릭 → 브라우저가 내부 contenteditable로 포커스 위임
+  // locator 체인(.locator('[contenteditable]'))은 closed shadow root 미관통 — outer click 방식으로 교체
+  const outerTitleSel = 'ytcp-mention-textbox[label="제목"], ytcp-mention-textbox[label="Title"]';
   let titleEntered = false;
   try {
-    await titleLocator.click({ timeout: 5000 });
+    await page.click(outerTitleSel, { timeout: 8000 });
+    await page.waitForTimeout(500);
     await page.keyboard.press('Control+a');
     await page.waitForTimeout(200);
     await page.keyboard.type(meta.youtube.title, { delay: 40 });
     titleEntered = true;
-  } catch(e) {
-    // fallback: execCommand (keyboard 이벤트 없음 — 최후 수단)
-    titleEntered = await page.evaluate((title) => {
-      const comps = [
-        document.querySelector('ytcp-mention-textbox[label="제목"]'),
-        document.querySelector('ytcp-mention-textbox[label="Title"]'),
-        document.querySelector('#title-textarea'),
-      ].filter(Boolean);
-      for (const comp of comps) {
-        const tb = comp.querySelector('[contenteditable]') ||
-                   (comp.shadowRoot && comp.shadowRoot.querySelector('[contenteditable]'));
-        if (tb) {
-          tb.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('insertText', false, title);
-          tb.dispatchEvent(new InputEvent('input', { bubbles: true, data: title, inputType: 'insertText' }));
-          tb.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
+  } catch(e1) {
+    // 방법 2: #title-textarea 직접 클릭
+    try {
+      await page.click('#title-textarea', { timeout: 5000 });
+      await page.waitForTimeout(500);
+      await page.keyboard.press('Control+a');
+      await page.waitForTimeout(200);
+      await page.keyboard.type(meta.youtube.title, { delay: 40 });
+      titleEntered = true;
+    } catch(e2) {
+      // 최후 수단: execCommand (keyboard 이벤트 없음 — done-button 활성화 안 될 수 있음)
+      titleEntered = await page.evaluate((title) => {
+        const comps = [
+          document.querySelector('ytcp-mention-textbox[label="제목"]'),
+          document.querySelector('ytcp-mention-textbox[label="Title"]'),
+          document.querySelector('#title-textarea'),
+        ].filter(Boolean);
+        for (const comp of comps) {
+          const tb = comp.querySelector('[contenteditable]') ||
+                     (comp.shadowRoot && comp.shadowRoot.querySelector('[contenteditable]'));
+          if (tb) {
+            tb.focus();
+            document.execCommand('selectAll', false, null);
+            document.execCommand('insertText', false, title);
+            ['keydown','keypress','keyup'].forEach(t => tb.dispatchEvent(new KeyboardEvent(t, { bubbles: true, cancelable: true, key: title.slice(-1) })));
+            tb.dispatchEvent(new InputEvent('input', { bubbles: true, data: title, inputType: 'insertText' }));
+            return true;
+          }
         }
-      }
-      return false;
-    }, meta.youtube.title);
+        return false;
+      }, meta.youtube.title);
+    }
   }
   console.log(`[YouTube] 제목 입력 완료 (keyboard:${titleEntered}): "${meta.youtube.title}"`);
 
-  // 저장 트리거 확인: Tab 키로 포커스 이동 → YouTube auto-save 시작
+  // Tab으로 포커스 이동 → YouTube auto-save 시작
   await page.keyboard.press('Tab');
   await page.waitForTimeout(1000);
 
-  // 설명 입력
-  const descSel = 'ytcp-mention-textbox[label="설명"], ytcp-mention-textbox[label="Description"], #description-textarea';
-  const descLocator = page.locator('ytcp-mention-textbox[label="설명"], ytcp-mention-textbox[label="Description"]')
-    .first().locator('[contenteditable]');
+  // 설명 입력: 동일한 outer click 방식
+  const outerDescSel = 'ytcp-mention-textbox[label="설명"], ytcp-mention-textbox[label="Description"]';
   let descEntered = false;
   try {
-    await descLocator.click({ timeout: 5000 });
+    await page.click(outerDescSel, { timeout: 8000 });
+    await page.waitForTimeout(500);
     await page.keyboard.press('Control+a');
     await page.waitForTimeout(200);
     await page.keyboard.type(meta.youtube.description, { delay: 10 });
     descEntered = true;
-  } catch(e) {
-    descEntered = await page.evaluate((desc) => {
-      const comps = [
-        document.querySelector('ytcp-mention-textbox[label="설명"]'),
-        document.querySelector('ytcp-mention-textbox[label="Description"]'),
-        document.querySelector('#description-textarea'),
-      ].filter(Boolean);
-      for (const comp of comps) {
-        const tb = comp.querySelector('[contenteditable]') ||
-                   (comp.shadowRoot && comp.shadowRoot.querySelector('[contenteditable]'));
-        if (tb) {
-          tb.focus();
-          document.execCommand('selectAll', false, null);
-          document.execCommand('insertText', false, desc);
-          tb.dispatchEvent(new InputEvent('input', { bubbles: true, data: desc, inputType: 'insertText' }));
-          return true;
+  } catch(e1) {
+    try {
+      await page.click('#description-textarea', { timeout: 5000 });
+      await page.waitForTimeout(500);
+      await page.keyboard.press('Control+a');
+      await page.waitForTimeout(200);
+      await page.keyboard.type(meta.youtube.description, { delay: 10 });
+      descEntered = true;
+    } catch(e2) {
+      descEntered = await page.evaluate((desc) => {
+        const comps = [
+          document.querySelector('ytcp-mention-textbox[label="설명"]'),
+          document.querySelector('ytcp-mention-textbox[label="Description"]'),
+          document.querySelector('#description-textarea'),
+        ].filter(Boolean);
+        for (const comp of comps) {
+          const tb = comp.querySelector('[contenteditable]') ||
+                     (comp.shadowRoot && comp.shadowRoot.querySelector('[contenteditable]'));
+          if (tb) {
+            tb.focus();
+            document.execCommand('selectAll', false, null);
+            document.execCommand('insertText', false, desc);
+            ['keydown','keypress','keyup'].forEach(t => tb.dispatchEvent(new KeyboardEvent(t, { bubbles: true, cancelable: true, key: desc.slice(-1) })));
+            tb.dispatchEvent(new InputEvent('input', { bubbles: true, data: desc, inputType: 'insertText' }));
+            return true;
+          }
         }
-      }
-      return false;
-    }, meta.youtube.description);
+        return false;
+      }, meta.youtube.description);
+    }
   }
   await page.keyboard.press('Tab');
   console.log(`[YouTube] 설명 입력 완료 (keyboard:${descEntered})`);
