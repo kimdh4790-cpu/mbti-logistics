@@ -72,17 +72,29 @@ async function main() {
     console.log('[Remotion] Chromium 경로 자동 탐색 실패 — 기본값 사용');
   }
 
-  // 나레이션 MP3 → public/ 복사 (staticFile 접근용)
-  const narFile = path.join(OUT_DIR, 'filo-narration.mp3');
   const pubDir = path.join(ROOT, 'public');
+  fs.mkdirSync(pubDir, { recursive: true });
+
+  // 나레이션 MP3 → public/ 복사
+  const narFile = path.join(OUT_DIR, 'filo-narration.mp3');
   let hasNarration = false;
   if (fs.existsSync(narFile)) {
-    fs.mkdirSync(pubDir, { recursive: true });
     fs.copyFileSync(narFile, path.join(pubDir, 'filo-narration.mp3'));
     hasNarration = true;
     console.log('[Remotion] 나레이션 파일 복사 완료');
   } else {
     console.log('[Remotion] 나레이션 파일 없음 — 무음으로 렌더링');
+  }
+
+  // BGM MP3 → public/ 복사
+  const bgmFile = path.join(ROOT, 'assets/bgm/background.mp3');
+  let hasBgm = false;
+  if (fs.existsSync(bgmFile)) {
+    fs.copyFileSync(bgmFile, path.join(pubDir, 'bgm.mp3'));
+    hasBgm = true;
+    console.log('[Remotion] BGM 파일 복사 완료');
+  } else {
+    console.log('[Remotion] BGM 파일 없음 — BGM 없이 렌더링');
   }
 
   console.log('[Remotion] 번들링 중...');
@@ -96,7 +108,7 @@ async function main() {
   const composition = await selectComposition({
     serveUrl: bundled,
     id: compositionId,
-    inputProps: { hasNarration },
+    inputProps: { hasNarration, hasBgm },
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
   });
 
@@ -106,7 +118,7 @@ async function main() {
     serveUrl: bundled,
     codec: 'h264',
     outputLocation: outFile,
-    inputProps: { hasNarration },
+    inputProps: { hasNarration, hasBgm },
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
     onProgress: ({ renderedFrames, totalFrames }) => {
       if (renderedFrames % 60 === 0 || renderedFrames === totalFrames) {
