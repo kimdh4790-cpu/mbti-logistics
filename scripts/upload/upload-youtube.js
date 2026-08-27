@@ -407,22 +407,30 @@ async function uploadYouTube() {
   // 핵심: disabled 상태의 next-button에 force:true 클릭 → wizard 안 넘어감
   // → enabled 될 때까지 폴링 후 정상 클릭
   for (let i = 0; i < 3; i++) {
-    // next-button enabled 될 때까지 최대 30초 대기
+    // next-button enabled 될 때까지 최대 40초 대기
+    // 스텝 전환 중 버튼이 잠시 사라지는 경우 있음 → 3회 연속 없을 때만 종료
     let nextReady = false;
-    for (let ni = 0; ni < 15; ni++) {
+    let missingCount = 0;
+    for (let ni = 0; ni < 20; ni++) {
       const state = await page.evaluate(() => {
         const btn = document.querySelector('ytcp-button#next-button');
-        if (!btn) return { exists: false, disabled: false };
+        if (!btn) return { exists: false, disabled: true };
         const disabled = btn.hasAttribute('disabled') ||
           btn.classList.contains('disabled') ||
           (btn.shadowRoot && btn.shadowRoot.querySelector('[disabled]') !== null);
         return { exists: true, disabled };
       });
       if (!state.exists) {
-        console.log(`[YouTube] next-button 없음 (${i+1}번째, ${ni}초) — 조기 종료`);
-        nextReady = false;
-        break;
+        missingCount++;
+        if (missingCount >= 3) {
+          console.log(`[YouTube] next-button 지속 없음 (${i+1}번째, ${ni}번) — 종료`);
+          break;
+        }
+        console.log(`[YouTube] next-button 잠시 없음 (${i+1}번째, ${ni}번) — 스텝 전환 대기`);
+        await page.waitForTimeout(2000);
+        continue;
       }
+      missingCount = 0;
       if (!state.disabled) { nextReady = true; break; }
       console.log(`[YouTube] next-button 활성화 대기 ${i+1}/3 ... (${ni*2}s)`);
       await page.waitForTimeout(2000);
@@ -432,15 +440,13 @@ async function uploadYouTube() {
     await page.evaluate(() => {
       document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.removeAttribute('opened'));
     });
-    // force 없이 정상 클릭 (disabled이면 Playwright가 오류 발생)
     try {
       await page.click('ytcp-button#next-button');
     } catch(e) {
-      // 비활성 상태면 force로 재시도
       await page.click('ytcp-button#next-button', { force: true });
     }
     console.log(`[YouTube] 다음 버튼 ${i + 1}/3`);
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
   }
 
   // 공개설정 페이지 렌더링 대기 + 스크린샷
