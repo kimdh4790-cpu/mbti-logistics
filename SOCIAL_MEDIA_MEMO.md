@@ -74,15 +74,9 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 **Instagram 업로드**: Oracle SSH 복구 후에만 가능 (세션이 Oracle에 저장됨)
 
-### Oracle SSH 키 문제 해결 방법
-현재 `ssh-key-2026-08-02.key`가 Oracle VM에서 Permission denied 발생.
-
-**해결 방법 (Oracle Cloud Console에서):**
-1. Oracle Cloud Console → Compute → Instances → filo-a1-2c12g
-2. 오른쪽 메뉴 → Console connection → Create console connection
-3. 브라우저 VNC/SSH 터미널에서 접속
-4. `cat ~/.ssh/authorized_keys` 확인
-5. 새 공개키 추가: `echo "새_공개키" >> ~/.ssh/authorized_keys`
+### Oracle SSH 키 상태
+- `ssh-key-2026-08-02.key` → **등록 완료** (2026-08-28)
+- SSH 접속: `ssh -i ~/ssh-key-2026-08-02 opc@161.33.136.154`
 
 ---
 
