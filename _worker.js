@@ -3384,6 +3384,9 @@ function doRegister(){
           const {did, name, phone} = body;
           if (!did || !name) return Response.json({ok:false,error:'이름을 입력하세요'});
           const token = await getAccessToken(env);
+          // dealerId 유효성 검증 — 존재하지 않는 매장에 직원 생성 방지
+          const _qrCompCheck = await fetch(`${FS_BASE}/companies/${did}`, {headers:{Authorization:'Bearer '+token}});
+          if (!_qrCompCheck.ok) return Response.json({ok:false,error:'유효하지 않은 매장입니다'});
           const res = await fetch(`${FS_BASE}/members`, {
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
@@ -3460,6 +3463,9 @@ function doRegister(){
           const type = ['in','out','break_start','break_end'].includes(action) ? action : 'in';
 
           const token = await getAccessToken(env);
+          // dealerId 유효성 검증 — 존재하지 않는 매장에 근태 기록 방지
+          const _qcCompCheck = await fetch(`${FS_BASE}/companies/${did}`, {headers:{Authorization:'Bearer '+token}});
+          if (!_qcCompCheck.ok) return Response.json({ok:false,error:'유효하지 않은 매장입니다'});
 
           // 오늘 같은 uid+type 중복 체크 (서버 사이드)
           const dupRes = await fetch(`${FS_BASE}:runQuery`, {
@@ -7357,6 +7363,9 @@ function doRegister(){
           const {did, name, phone} = body;
           if (!did || !name) return Response.json({ok:false,error:'이름을 입력하세요'});
           const token = await getAccessToken(env);
+          // dealerId 유효성 검증 — 존재하지 않는 매장에 직원 생성 방지
+          const _qrCompCheck = await fetch(`${FS_BASE}/companies/${did}`, {headers:{Authorization:'Bearer '+token}});
+          if (!_qrCompCheck.ok) return Response.json({ok:false,error:'유효하지 않은 매장입니다'});
           const res = await fetch(`${FS_BASE}/members`, {
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
@@ -7433,6 +7442,9 @@ function doRegister(){
           const type = ['in','out','break_start','break_end'].includes(action) ? action : 'in';
 
           const token = await getAccessToken(env);
+          // dealerId 유효성 검증 — 존재하지 않는 매장에 근태 기록 방지
+          const _qcCompCheck = await fetch(`${FS_BASE}/companies/${did}`, {headers:{Authorization:'Bearer '+token}});
+          if (!_qcCompCheck.ok) return Response.json({ok:false,error:'유효하지 않은 매장입니다'});
 
           // 오늘 같은 uid+type 중복 체크 (서버 사이드)
           const dupRes = await fetch(`${FS_BASE}:runQuery`, {
@@ -11058,6 +11070,8 @@ service cloud.firestore {
 
     // ── 결제 주문 생성 (/toss/create-order) ──
     if (path === '/toss/create-order' && method === 'POST') {
+      const _tcoUser = await verifyFirebaseToken(request, env);
+      if (!_tcoUser) return Response.json({ok:false,error:'인증 필요'},{status:401});
       try {
         const body = await request.json();
         const { dealerId, companyName, email, planType, amount } = body;
