@@ -159,6 +159,14 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (4차)
+**filo-menu 계열 중복 함수 제거 및 레시피 기능 정리**
+- `filo-menu.js`: 1524줄 → 687줄 (-837줄) — recipe CRUD 8개 + mgmt 중복 9개 = 17개 함수 제거
+- `filo-menu-recipe.js`: 파일 삭제 (전체 15개 함수가 filo-menu.js에 중복 존재하던 미완성 분리본)
+- `filo-auth.js`: recipe 메뉴 항목·라우터·titles 맵 제거
+- `_worker.js`: 파일 서빙 허용 목록에서 filo-menu-recipe.js 제거
+- 남은 filo-menu.js 기능: 이미지 유틸·원가 관리·유통기한·재고알림·메뉴 시딩·일괄번역
+
 ### 2026-08-28 (3차)
 **1단계 HIGH 리팩토링 — dead code 제거, N+1 Promise.all 병렬화, 리스너 등록 보완**
 - `filo.html`: deprecated `filo-schedule.js` 스크립트 태그 제거
