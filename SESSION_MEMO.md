@@ -98,6 +98,15 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 - **선행 조건**: 테스트 매장에 직원 1명 이상 등록 필요 (홍길동/010-1234-5678/시급10000)
 - 테스트: `node filo-e2e-test-win.js` (로컬에서만)
 
+### 6팀 심층 조사 완료 (2026-08-28 야간)
+- 배달 연동: 바로고 Gorela API (developer.gorelas.com) 파트너 신청 가능 확인
+- 마켓플레이스: 카드수수료 단독 모델 매장 300개 이상 필요 → 네이버 스마트플레이스 연동이 단기 최선
+- AI 자동화: ROI 11배 (구독 8만원 vs 절감 91만원), AI 리뷰 답글 3~5일 구현 가능
+- FCM: 급여명세서·재고·주문 FCM 전부 이미 구현 완료 확인 (추가 개발 불필요)
+- 정부 바우처: 소상공인 스마트상점 기술보급사업 — 2026년 마감, 2027년 1월 신청 목표. 월 2.5만원 전용 플랜 필요
+- 프랜차이즈 물류: 가맹본부 7,432개 · 가맹점 309,000개. 핵심 타겟 2,000개 브랜드 = ARR 잠재 72억~120억
+- STRATEGY_MEMO.md 전면 업데이트 (생태계 구조도 + 로컬 필수 항목 목록 추가)
+
 ### ✅ 완료된 항목 (2026-08-28 5차 기준)
 - 팝빌 역발행 auth 버그 수정: _ySendSettleNotify에 Authorization Bearer 토큰 추가 (yongcha.html + _worker.js YONGCHA_HTML_YONGCHA 동시)
 - CLAUDE.md 핵심 마케팅 메시지 수정: FILO=POS+HR번들, DONWAY=복잡배달대행정산SaaS, DINE=직원전용앱
