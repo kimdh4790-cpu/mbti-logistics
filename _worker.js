@@ -4127,6 +4127,10 @@ ${JSON.stringify(postSummary)}
           const {dealerId,type,status,payType,tableNum,tableName,items,total,createdAt,date,fcmToken}=body;
           if(!dealerId||!items||!Array.isArray(items)||!items.length)
             return new Response(JSON.stringify({error:'invalid'}),{status:400,headers:_foCors});
+          const _foTok=await getAccessToken(env);
+          const _foComp=await fetch(`${FS_BASE}/companies/${dealerId}`,{headers:{'Authorization':'Bearer '+_foTok}});
+          const _foCompDoc=await _foComp.json();
+          if(!_foCompDoc.fields) return new Response(JSON.stringify({error:'invalid dealer'}),{status:400,headers:_foCors});
           // JS 값 → Firestore REST 형식 (integerValue는 반드시 string)
           function _fsv(v){
             if(v===null||v===undefined)return{nullValue:null};
@@ -4150,10 +4154,9 @@ ${JSON.stringify(postSummary)}
             date:_fsv(date||new Date().toISOString().slice(0,10))
           };
           if(fcmToken)fields.fcmToken=_fsv(fcmToken);
-          const tok=await getAccessToken(env);
           const fsRes=await fetch(`${FS_BASE}/filo_orders`,{
             method:'POST',
-            headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},
+            headers:{'Authorization':'Bearer '+_foTok,'Content-Type':'application/json'},
             body:JSON.stringify({fields})
           });
           const fsData=await fsRes.json();
@@ -4197,6 +4200,9 @@ ${JSON.stringify(postSummary)}
           const earned = Math.floor(Number(total) / 100); // 1% 적립 (100원 = 1포인트)
           if (earned < 1) return new Response(JSON.stringify({ok:true,earned:0}),{headers:corsH});
           const token = await getAccessToken(env);
+          const _peComp=await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
+          const _peCompDoc=await _peComp.json();
+          if(!_peCompDoc.fields) return new Response(JSON.stringify({ok:false,error:'invalid dealer'}),{status:400,headers:corsH});
           // filo_customers 에서 fcmToken으로 고객 조회
           const qRes = await fetch(`${FS_BASE}:runQuery`,{
             method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
@@ -4786,6 +4792,9 @@ ${JSON.stringify(postSummary)}
           const {did, orderId, fromTable, toTable, toTableName} = body;
           if (!did||!orderId||!fromTable||!toTable) return Response.json({ok:false,error:'파라미터 오류'});
           const token = await getAccessToken(env);
+          const _mtComp=await fetch(`${FS_BASE}/companies/${did}`,{headers:{'Authorization':'Bearer '+token}});
+          const _mtCompDoc=await _mtComp.json();
+          if(!_mtCompDoc.fields) return Response.json({ok:false,error:'invalid dealer'});
           const now = new Date().toISOString();
           const toName = toTableName || ('테이블 ' + toTable);
           // filo_orders 업데이트
@@ -4817,6 +4826,8 @@ ${JSON.stringify(postSummary)}
       }
       // /kitchen/update — 주문 상태 변경
       if (path === '/kitchen/update' && request.method === 'POST') {
+        const _kuUser = await verifyFirebaseToken(request, env);
+        if (!_kuUser) return Response.json({ok:false,error:'인증 필요'},{status:401});
         try {
           const body = await request.json();
           const {did, orderId, status, col} = body;
@@ -8390,15 +8401,16 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const { name, phone, msg } = body;
         if (!name || !phone) return new Response(JSON.stringify({ok:false,error:'필수 항목 누락'}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
+        const _he = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
           <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
             <div style="font-size:28px;font-weight:900;color:#fff">DONWAY</div>
             <div style="font-size:14px;color:rgba(255,255,255,.8);margin-top:4px">랜딩페이지 문의 접수</div>
           </div>
           <table style="width:100%;border-collapse:collapse">
-            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;color:#374151;width:120px">이름/회사</td><td style="padding:12px 16px;color:#111">${name}</td></tr>
-            <tr><td style="padding:12px 16px;font-weight:700;color:#374151">연락처</td><td style="padding:12px 16px;color:#111">${phone}</td></tr>
-            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;color:#374151;vertical-align:top">문의내용</td><td style="padding:12px 16px;color:#111;line-height:1.6">${(msg||'-').replace(/\n/g,'<br>')}</td></tr>
+            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;color:#374151;width:120px">이름/회사</td><td style="padding:12px 16px;color:#111">${_he(name)}</td></tr>
+            <tr><td style="padding:12px 16px;font-weight:700;color:#374151">연락처</td><td style="padding:12px 16px;color:#111">${_he(phone)}</td></tr>
+            <tr style="background:#f8fafc"><td style="padding:12px 16px;font-weight:700;color:#374151;vertical-align:top">문의내용</td><td style="padding:12px 16px;color:#111;line-height:1.6">${_he(msg||'-').replace(/\n/g,'<br>')}</td></tr>
           </table>
           <div style="margin-top:20px;padding:12px;background:#eff6ff;border-radius:8px;font-size:12px;color:#6b7280;text-align:center">
             donway.ai.kr 랜딩페이지 문의폼 · ${new Date().toLocaleString('ko-KR')}
@@ -8746,6 +8758,8 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
 
     // 토스페이먼츠 결제 확인 + Firestore 구독 업데이트
     if (path === '/toss-confirm' && method === 'POST') {
+      const _tossUser = await verifyFirebaseToken(request, env);
+      if (!_tossUser) return new Response(JSON.stringify({success:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       try {
         const body   = await request.json();
         const { paymentKey, orderId, amount } = body;
@@ -8772,7 +8786,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const parts  = orderId.split('-');
         const plan   = parts[parts.length - 1] || 'basic'; // 마지막 파트 = plan
         const months = 1; // 월간 고정
-        const uid    = body.uid || ''; // subscribe-success.html에서 Firebase Auth uid 전달
+        const uid    = _tossUser.localId || _tossUser.uid || '';
         if (!uid) throw new Error('uid 누락 — 로그인 후 다시 시도해주세요');
 
         // 3. Firestore 구독 업데이트
