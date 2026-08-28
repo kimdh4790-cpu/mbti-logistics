@@ -98,6 +98,13 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 - **선행 조건**: 테스트 매장에 직원 1명 이상 등록 필요 (홍길동/010-1234-5678/시급10000)
 - 테스트: `node filo-e2e-test-win.js` (로컬에서만)
 
+### ✅ 완료된 항목 (2026-08-28 5차 기준)
+- 팝빌 역발행 auth 버그 수정: _ySendSettleNotify에 Authorization Bearer 토큰 추가 (yongcha.html + _worker.js YONGCHA_HTML_YONGCHA 동시)
+- CLAUDE.md 핵심 마케팅 메시지 수정: FILO=POS+HR번들, DONWAY=복잡배달대행정산SaaS, DINE=직원전용앱
+- 업종별 커스텀 테마 시스템: order.js CSS 변수 6개 누락 수정 (brand-glow/brand3/surface2/surface3/border2/shadow)
+- 업종별 기본 메뉴 템플릿 자동 세팅: filo-auth.js에 신규가입 시 업종 선택 모달 트리거 추가
+- 5개 시장조사팀 완료: 정부지원금/홍보운영/앱분리판매/생존확률/용차법적구조
+
 ### ✅ 완료된 항목 (2026-08-28 4차 기준)
 - filo-menu.js 레시피 CRUD 7개 함수 제거 (filo-menu-mgmt.js 중복 9개 함수 제거 포함, 1524→687줄)
 - filo-menu-recipe.js 삭제 (filo-menu.js와 15개 전량 중복, filo.html에 로드 안 됨)
@@ -142,6 +149,16 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 4. **매출분석** — ✅ 완료 (_worker.js /api/seed-sales 엔드포인트 추가. 실행: POST /api/seed-sales {secret:"filo2026demo",did:"9XD2K3W1tIhIs6XM74YT0xfRFEP2",month:"2026-07"} → filo_sales 약 300건 생성)
 5. **용차앱 라우팅 버그** — _worker.js 코드 정상 (line 843: yongcha.app → handleYongcha 우선 라우팅). Cloudflare 배포/DNS 설정 문제일 가능성 — 로컬에서 `npx wrangler deploy` 실행 후 확인 필요
 6. **용차앱 팝빌 auth 버그** — ✅ 완료 (2026-08-28): `_ySendSettleNotify`에 `Authorization: Bearer` 토큰 추가 (yongcha.html + _worker.js YONGCHA_HTML_YONGCHA 동시 수정)
+
+### 포스기 관련 (2026-08-28)
+- **Sunany A100-156 샘플 발주** ($573): 아직 결제 전. Vicky에게 보내야 할 것:
+  1. 플러그 타입: 한국=EU Type F (220V/60Hz) 확인
+  2. FILO APK 파일 전송 (선설치용)
+  3. 부팅 로고 파일 (1920×1080, JPG, <1MB)
+  - 결제: Alibaba Trade Assurance (신용카드)
+  - 추가비용: DAP 조건 → 부산 도착 후 한국 통관 관세 약 $50~100 별도
+- **KC 인증**: Sunany에서 FCC/CE 서류 있음 → 국내 KC 인증은 별도 신청 필요
+- **하드웨어 연동 코드**: ESC/POS 프린터·카드단말기(KCP/나이스)·바코드스캐너 — 미개발
 
 ### 다음 단계 (2단계 — 큰 설계)
 - filo-menu.js·filo-pos.js 계열 정리 완료 (4차)
