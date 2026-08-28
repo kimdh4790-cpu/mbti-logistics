@@ -311,6 +311,8 @@ cd mbtico-pages && npx wrangler deploy
 - verifyFirebaseToken JWT 서명 미검증 폴백 수정
 - /admin/cleanup-dup-orders, /api/filo-order, /api/point-earn, /order/move-table, /kitchen/update, /api/inquiry, /toss-confirm, /api/emergency-driver-profile, /api/delivery-dispatch 보안 수정
 - dine.js 로그인 오류 시 owner 자동 승격 버그 수정
+- /qr/register, /qr/confirm dealerId → companies 유효성 검증 추가 (임의 매장 데이터 생성 방지)
+- /toss/create-order verifyFirebaseToken 인증 추가 (비인증 결제 주문 생성 방지)
 - filo-staff.js 전역변수 충돌(_attendUnsub) + _liveTickerTimer 중복 선언 수정
 - filo-pos.js 테이블 onSnapshot date 필터 추가 (Firestore ~25% 절감)
 - filo-auth.js kiosk 리스너 누수 + 로그아웃 cleanup 수정
