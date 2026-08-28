@@ -52,7 +52,7 @@ if [ -f "$SUBTITLES" ]; then
 lines = open('$ASS_FILE').readlines()
 for i, l in enumerate(lines):
     if l.startswith('Style: Default,'):
-        lines[i] = 'Style: Default,Noto Sans KR,34,&H00FFFFFF,&H000000FF,&H00000000,&HAA000000,1,0,0,0,100,100,0,0,3,0,0,2,20,20,55,1\n'
+        lines[i] = 'Style: Default,Noto Sans KR,46,&H0000FFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,5,2,2,20,20,100,1\n'
 open('$ASS_FILE', 'w').writelines(lines)
 " 2>/dev/null || true
     SUBTITLE_FILTER=",ass=${ASS_FNAME}"
@@ -98,7 +98,7 @@ AUDIO_FILTER=$(build_audio_filter)
 
 # ─── 비디오 필터 ────────────────────────────────────────────────
 # 블러 배경 채우기: 세로형(390x844) → 1080x1920 세로 (YouTube Shorts / Instagram Reels 직접 출력)
-BLUR_VF="split[main][bg];[bg]scale=1080:1920,boxblur=25:5[blurred];[main]scale=1080:1920:force_original_aspect_ratio=decrease[fg];[blurred][fg]overlay=(W-w)/2:(H-h)/2,setsar=1${SUBTITLE_FILTER}"
+BLUR_VF="scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1${SUBTITLE_FILTER}"
 
 # ─── 인트로/아웃로 있는 경우 ─────────────────────────────────────
 if [ -f "$INTRO" ] && [ -f "$OUTRO" ]; then
@@ -114,7 +114,7 @@ EOF
       -f concat -safe 0 -i "$LIST_FILE" \
       $AUDIO_ARGS \
       -filter_complex "${AUDIO_FILTER}" \
-      -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1${SUBTITLE_FILTER}" \
+      -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1${SUBTITLE_FILTER}" \
       -map 0:v -map "[audio]" \
       -c:v libx264 -preset slow -crf 18 \
       -c:a aac -b:a 192k \
@@ -123,7 +123,7 @@ EOF
   else
     "$FFMPEG" -y \
       -f concat -safe 0 -i "$LIST_FILE" \
-      -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1${SUBTITLE_FILTER}" \
+      -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1${SUBTITLE_FILTER}" \
       -c:v libx264 -preset slow -crf 18 -an \
       "$FINAL"
   fi

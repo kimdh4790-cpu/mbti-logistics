@@ -378,15 +378,15 @@ function SceneCTA() {
 
 // ── 자막 바 (전역 프레임 기준) ────────────────────────────
 var SUBTITLES_DATA = [
-  { from: 0,   to: 75,  text: "POS 앱 3개 쓰면서 월 15만원 내고 있어요?" },
-  { from: 75,  to: 150, text: "손님이 QR 찍으면" },
-  { from: 150, to: 240, text: "메뉴 선택 → 결제까지 혼자 다 해요" },
-  { from: 240, to: 330, text: "홀 직원 없어도 됩니다" },
-  { from: 330, to: 435, text: "주방은 실시간으로 주문을 받아요" },
-  { from: 435, to: 540, text: "벨 누를 필요도, 말할 필요도 없어요" },
-  { from: 540, to: 660, text: "매출·재고·직원 출퇴근·급여까지" },
-  { from: 660, to: 780, text: "앱 하나로 전부 끝" },
-  { from: 780, to: 900, text: "지금 무료 체험 · filo.ai.kr" },
+  { from: 0,   to: 90,  text: "POS가 세 개인데, 관리는 여기 하나로 끝나요" },
+  { from: 90,  to: 150, text: "지금 쓰는 포스기 그대로 써요" },
+  { from: 150, to: 270, text: "손님이 QR 찍으면요" },
+  { from: 270, to: 360, text: "주문이 알아서 들어와요" },
+  { from: 360, to: 480, text: "주방에도 바로 뜨고요" },
+  { from: 480, to: 570, text: "홀 직원 없어도 돼요" },
+  { from: 570, to: 690, text: "출퇴근이랑 급여, 재고까지" },
+  { from: 690, to: 780, text: "전부 FILO 하나에 다 있어요" },
+  { from: 780, to: 900, text: "무료로 한번 써보세요 · filo.ai.kr" },
 ];
 
 function SubtitleBar() {
@@ -405,7 +405,7 @@ function SubtitleBar() {
   return React.createElement('div', {
     style: { position: 'absolute', bottom: 130, left: 0, right: 0, textAlign: 'center', padding: '0 28px', opacity: op, pointerEvents: 'none', zIndex: 100 },
   }, React.createElement('div', {
-    style: { display: 'inline-block', background: 'rgba(0,0,0,0.75)', borderRadius: 12, padding: '11px 24px', fontSize: 24, fontWeight: 700, color: WHITE, lineHeight: 1.45, letterSpacing: 0.3, textShadow: '0 2px 10px #000000cc', maxWidth: 960, fontFamily: BASE.fontFamily },
+    style: { display: 'inline-block', background: 'none', padding: '0 28px', fontSize: 38, fontWeight: 900, color: '#FFE600', lineHeight: 1.4, letterSpacing: 0.2, textShadow: '-3px -3px 0 #000,-3px 3px 0 #000,3px -3px 0 #000,3px 3px 0 #000,0 0 12px rgba(0,0,0,0.8)', maxWidth: 1000, fontFamily: BASE.fontFamily },
   }, current.text));
 }
 
