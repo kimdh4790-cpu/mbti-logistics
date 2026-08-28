@@ -137,7 +137,7 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 
 ### 미완료 항목
 1. **선결제/후불 모달** — ✅ 완료 (모달 이미 구현, tableNum/type/date 누락+VAPID 오타 수정)
-2. **FCM 영수증 푸시** — `order.js` reqReceiptFCM undefined (KV캐시 문제)
+2. **FCM 영수증 푸시** — ✅ 완료 (order-done.html VAPID 오타 수정, order.js v13 KV 갱신, 실폰 테스트 필요)
 3. **직원 근태 QR** — 이름+연락처 등록 화면 수정
 4. **매출분석** — 7월 테스트 데이터 시딩
 5. **용차앱 라우팅 버그** — 접속 시 DONWAY 랜딩 (별도 확인 필요)
