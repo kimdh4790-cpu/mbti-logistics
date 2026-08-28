@@ -103,6 +103,21 @@ jobs:
           fi
           echo "제품: $PRODUCT / 단계: $STEPS / 드라이런: $DRY_RUN"
 
+      - name: BGM 파일 준비
+        run: |
+          if [ -f "assets/bgm/background.mp3" ]; then
+            echo "[BGM] 기존 파일 사용: assets/bgm/background.mp3"
+          else
+            echo "[BGM] 파일 없음 — ffmpeg으로 앰비언트 BGM 자동 생성 (실제 BGM은 assets/bgm/background.mp3 직접 추가 권장)"
+            mkdir -p assets/bgm
+            ffmpeg -y -f lavfi \
+              -i "aevalsrc=0.04*(sin(2*PI*220*t)+0.6*sin(2*PI*330*t)+0.4*sin(2*PI*440*t+0.3*sin(2*PI*0.2*t))):sample_rate=44100" \
+              -af "afade=in:st=0:d=3,volume=0.6" \
+              -t 300 assets/bgm/background.mp3 2>/dev/null \
+              && echo "[BGM] 임시 앰비언트 생성 완료" \
+              || echo "[BGM] 생성 실패 — BGM 없이 진행"
+          fi
+
       - name: 나레이션 MP3 생성
         if: ${{ contains(env.STEPS, 'record') || contains(env.STEPS, 'compose') }}
         run: |
