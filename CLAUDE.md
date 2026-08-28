@@ -322,6 +322,14 @@ cd mbtico-pages && npx wrangler deploy
 - filo-staff.js 60초 attendance.get() 폴링 → onSnapshot + 캐시 전환 (_tickerAttendSnap)
 - dine.js _dineReleaseListeners() 추가 — 로그아웃 시 모든 DINE 리스너 일괄 해제
 - filo-auth.js 로그아웃 시 _tickerAttendUnsub cleanup 추가
+- filo.html deprecated filo-schedule.js 스크립트 태그 제거
+- filo-auth.js _filoPageCostMgmt 래퍼 함수 추가 (cost_mgmt 라우터 오류 방지)
+- filo-auth.js _FILO_WATCHERS delivery 항목 추가 (_deliveryUnsub 자동 해제)
+- _worker.js 중복 /api/translate 핸들러 제거 (dead code)
+- _worker.js 기사 PATCH for-await → Promise.all 병렬화
+- _worker.js 데모 초기화 18개 직렬 쿼리 → Promise.all 병렬화
+- _worker.js 메뉴 번역 N×3 직렬 → Promise.all 병렬화
+- yongcha-worker.js _pgDispatchLocations onSnapshot unsub 저장 (리스너 누수 방지)
 
 ### 최우선
 1. 선결제/후불 모달 - table-order.html 미작업

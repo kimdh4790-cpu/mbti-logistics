@@ -98,6 +98,16 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 - **선행 조건**: 테스트 매장에 직원 1명 이상 등록 필요 (홍길동/010-1234-5678/시급10000)
 - 테스트: `node filo-e2e-test-win.js` (로컬에서만)
 
+### ✅ 완료된 항목 (2026-08-28 3차 기준)
+- filo.html deprecated filo-schedule.js 스크립트 태그 제거
+- filo-auth.js `_filoPageCostMgmt` 래퍼 추가 (cost_mgmt 라우터 undefined 오류 방지)
+- filo-auth.js `_FILO_WATCHERS` delivery 항목 추가 (_deliveryUnsub 자동 해제 연결)
+- _worker.js 중복 /api/translate 핸들러 제거 (dead code)
+- _worker.js 기사 PATCH for await → Promise.all 병렬화
+- _worker.js 데모 초기화 18개 직렬 쿼리 → Promise.all 병렬화
+- _worker.js 메뉴 번역 N×3 직렬 → Promise.all 병렬화
+- yongcha-worker.js _pgDispatchLocations onSnapshot unsub 저장 (리스너 누수 방지)
+
 ### ✅ 완료된 항목 (2026-08-28 기준)
 - 솔라피 → 알리고 교체 (`_worker.js` 알림톡 발송부)
 - verifyFirebaseToken JWT 서명 미검증 폴백 → null 반환으로 수정
@@ -125,6 +135,11 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 4. **매출분석** — 7월 테스트 데이터 시딩
 5. **용차앱 라우팅 버그** — 접속 시 DONWAY 랜딩 (별도 확인 필요)
 6. **용차앱 세부사항** — YONGCHA_MEMO.md 참조 (경쟁사 분석, 함수 목록, DB 구조 포함)
+
+### 다음 단계 (2단계 — 큰 설계)
+- `filo-menu.js`(55KB) 분리: filo-menu-mgmt.js·filo-menu-recipe.js와 중복 함수 7개 정리
+- `filo-pos.js`(39KB) 분리: filo-pos-core.js·filo-pos-ui.js와 중복 함수 14개 정리
+- 설계 확정 후 별도 세션에서 진행 (대형 작업)
 
 ---
 

@@ -159,6 +159,17 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (3차)
+**1단계 HIGH 리팩토링 — dead code 제거, N+1 Promise.all 병렬화, 리스너 등록 보완**
+- `filo.html`: deprecated `filo-schedule.js` 스크립트 태그 제거
+- `filo-auth.js`: `_filoPageCostMgmt(el)` 래퍼 함수 추가 — `cost_mgmt` 라우터 호출 시 undefined 오류 방지
+- `filo-auth.js`: `_FILO_WATCHERS`에 `delivery` 페이지 + `_deliveryUnsub` 항목 추가 (filo-order.js 리스너 자동 해제 연결)
+- `_worker.js`: 중복 `/api/translate` 핸들러 제거 (L4587 dead code — L2357 핸들러가 항상 먼저 반환)
+- `_worker.js`: 기사 PATCH `for await` 루프 → `Promise.all` 병렬화
+- `_worker.js`: 데모 초기화 18개 직렬 쿼리 (3컬렉션 × 6데모) → `Promise.all` 병렬화
+- `_worker.js`: 메뉴 번역 N×3 직렬 Anthropic API 호출 → `Promise.all` 병렬화 + `_translateOne` 헬퍼 추출
+- `yongcha-worker.js`: `_pgDispatchLocations` — `_dispatchLocationsUnsub` 변수 추가, 재진입 시 기존 리스너 해제
+
 ### 2026-08-28 (2차)
 **코드 품질 — N+1 제거, onSnapshot 전환, 리스너 cleanup 구조화**
 - `dine.js`: `_dineSendNotif` N+1 직렬 `await` → `Promise.all` 병렬 조회 (알림 발송 속도 개선)
