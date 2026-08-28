@@ -8803,29 +8803,20 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const headcount = parts.length >= 5 ? parseInt(parts[4]) || 50 : 50;
         const subType   = parts.length >= 6 ? parts[5] : 'ind'; // ind=개인, grp=단체
 
-        // 실제 요금 계산 (settle.html DW_TIERS_IND/GRP 기준)
-        const DW_TIERS_IND = [
-          {cap:50,   amt:200000},  {cap:100,  amt:400000},
-          {cap:200,  amt:800000},  {cap:300,  amt:1200000},
-          {cap:500,  amt:2000000}, {cap:700,  amt:2800000},
-          {cap:1000, amt:4000000}, {cap:1500, amt:6000000},
-          {cap:2000, amt:8000000}, {cap:9999, amt:0}
+        // 실제 요금 계산 (2,500원/인 단일 요금, settle.html DW_TIERS 기준)
+        const DW_TIERS = [
+          {cap:50,   amt:125000},  {cap:100,  amt:250000},
+          {cap:200,  amt:500000},  {cap:300,  amt:750000},
+          {cap:400,  amt:1000000}, {cap:500,  amt:1250000},
+          {cap:1000, amt:2500000}, {cap:9999, amt:0}
         ];
-        const DW_TIERS_GRP = [
-          {cap:50,   amt:150000},  {cap:100,  amt:300000},
-          {cap:200,  amt:600000},  {cap:300,  amt:900000},
-          {cap:500,  amt:1500000}, {cap:700,  amt:2100000},
-          {cap:1000, amt:3000000}, {cap:1500, amt:4500000},
-          {cap:2000, amt:6000000}, {cap:9999, amt:0}
-        ];
-        function _calcPlanAmt(pType, hc, sType) {
-          if (pType === 'qr_payroll') return (hc || 50) * 3500; // 인당 3,500원
+        function _calcPlanAmt(pType, hc) {
+          if (pType === 'qr_payroll') return (hc || 50) * 3500;
           if (pType === 'filo_combo') return 110000;
-          const tiers = sType === 'grp' ? DW_TIERS_GRP : DW_TIERS_IND;
-          for (const t of tiers) { if (hc <= t.cap) return t.amt; }
-          return tiers[tiers.length - 2].amt;
+          for (const t of DW_TIERS) { if (hc <= t.cap) return t.amt; }
+          return DW_TIERS[DW_TIERS.length - 2].amt;
         }
-        const calcedAmt = _calcPlanAmt(planType, headcount, subType);
+        const calcedAmt = _calcPlanAmt(planType, headcount);
 
         await fsPatch(token, `${FS_BASE}/subscriptions/${uid}`, {
           plan:       { stringValue: planType },
