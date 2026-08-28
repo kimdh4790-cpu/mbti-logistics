@@ -159,6 +159,21 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (9차)
+**POS 결제 터미널 전면 재설계 — 기업급 풀스크린 UI**
+- `filo-pos.js`: _filoPay() 4버튼 모달 → 풀스크린 다크 결제 터미널(#070d1b) 완전 재설계 (~404줄)
+  - 좌측 패널: 주문 내역 상세 + VAT 10% 분리 표시 (소계/부가세/합계 골드 강조)
+  - 우측 패널: 6종 결제수단 그리드 (카드/현금/카카오페이/네이버페이/토스페이/서비스)
+  - 현금 결제: 소프트 넘패드(3x4) + 빠른금액 버튼 + 거스름돈 실시간 계산
+  - 카드 결제: 단말기 탭 애니메이션 (cardPulse + cardWave 키프레임)
+  - 카카오/네이버: QR 안내 화면 (브랜드 색상 #FEE500/#03C75A)
+  - 토스: Toss SDK 연동 버튼
+  - 할인 모달: 정액/정률 탭 전환 + % 단축 버튼 (5%/10%/20%/30%)
+  - 확인 버튼: 결제수단 색상 동적 반영 + glow box-shadow 효과
+  - 결제 확정: _posDo() → _filoConfirmPay(m,label) (filo-payment.js)
+  - 분할결제: _filoSplitPay(total) 위임 (filo-pos-core.js)
+- commit: `569d843`
+
 ### 2026-08-28 (8차)
 **홈 nav 버튼 + QR주문 음성TTS 번역**
 - `filo-auth.js`: `_buildFiloNav()` 홈 대시보드 nav 항목 추가 (홈→다른 페이지 이동 후 복귀 경로)
