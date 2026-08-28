@@ -159,6 +159,20 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (7차)
+**홈 대시보드 신규 구현 — 실시간 운영 현황판**
+- `filo-auth.js`: 로그인 기본 화면 `kiosk` → `home` 으로 변경 (L180)
+- `filo-auth.js`: 라우팅 체인 최상단에 `home` case 추가 (L661)
+- `filo-auth.js`: `_filoPageHome(el)` + 헬퍼 5개 신규 구현 (~206줄)
+  - 전역: `_homeUnsubs[]`, `_homeOrdersAll[]`, `_homeOrderPage`
+  - 운영상태 pill: 주문 있으면 "운영 중" (초록·펄스), 없으면 "주문 없음" (뮤트)
+  - 히어로 카드: 오늘 매출 `_countUp` 애니메이션, 주문건수·평균단가·미처리건
+  - 3분할 타일: 직원출근(attendance onSnapshot) / 웨이팅대기(filo_bookings onSnapshot) / 재고부족(inventory 1회 get)
+  - 최근 주문: 5개씩 페이지네이션 (`_hmRenderPage`, `_hmNext`, `_hmPrev`)
+  - 오늘 예약: 실시간 목록, 시간순 정렬, 상태 칩 (확정/취소/대기)
+  - `_FILO_WATCHERS.home_orders/home_attend/home_book` 등록 → 페이지 전환 시 리스너 자동 해제
+- commit: `3364db7`
+
 ### 2026-08-28 (6차)
 **업종별 커스텀 테마 시스템 완성 — order.js glow 변수 누락 보완 및 메모 정리**
 - `order.js`: `_applyStoreTheme()` 에 `--brand-glow`, `--brand3`, `--surface2`, `--surface3`, `--border2`, `--shadow-md`, `--shadow-lg` 추가 — order.html 이 사용하는 CSS 변수 중 glow/shadow 계열이 테마 변경 시 보라색 고정되던 문제 수정
