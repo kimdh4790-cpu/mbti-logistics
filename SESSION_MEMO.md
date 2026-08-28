@@ -99,7 +99,7 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 - 테스트: `node filo-e2e-test-win.js` (로컬에서만)
 
 ### CLAUDE.md 미완료 항목
-1. **선결제/후불 모달** — `table-order.html` 미작업 (박람회 D-11)
+1. **선결제/후불 모달** — `table-order.html` 미작업
 2. **솔라피→알리고 교체** — `_worker.js` 알림톡 발송부
 3. **직원 근태 QR** — 이름+연락처 등록 화면 수정
 4. **매출분석** — 7월 테스트 데이터 시딩

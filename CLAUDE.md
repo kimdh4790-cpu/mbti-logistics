@@ -172,7 +172,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 - mbtico-ctrl.js — 슈퍼어드민용 (채팅·공지·결제·매장 관리)
 
 **MBTICO 절대 금지**
-- mbtico-pages/_worker.js 대규모 수정 금지 (515KB — 리팩토링은 박람회 이후)
+- mbtico-pages/_worker.js 대규모 수정 금지 (515KB — 분리 작업은 별도 세션에서 계획 수립 후 진행)
 - 슈퍼어드민 UID·dealerId 변경 금지
 
 ---
@@ -304,26 +304,41 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
-## 🔴 미완료 작업 (박람회 D-4, 2026-08-20)
+## 🔴 미완료 작업 (2026-08-28 현재 / BEXCO 박람회 완료)
+
+### ✅ 완료 (2026-08-28)
+- 솔라피 → 알리고 교체 (_worker.js 알림톡 발송부)
+- verifyFirebaseToken JWT 서명 미검증 폴백 수정
+- /admin/cleanup-dup-orders, /api/filo-order, /api/point-earn, /order/move-table, /kitchen/update, /api/inquiry, /toss-confirm, /api/emergency-driver-profile, /api/delivery-dispatch 보안 수정
+- dine.js 로그인 오류 시 owner 자동 승격 버그 수정
+- filo-staff.js 전역변수 충돌(_attendUnsub) + _liveTickerTimer 중복 선언 수정
+- filo-pos.js 테이블 onSnapshot date 필터 추가 (Firestore ~25% 절감)
+- filo-auth.js kiosk 리스너 누수 + 로그아웃 cleanup 수정
+- dine-analytics.js 좀비 쿼리(staff→members) 수정
+- DW_TIERS 구요금 → 2,500원/인 단일 요금 동기화
 
 ### 최우선
 1. 선결제/후불 모달 - table-order.html 미작업
 2. FCM 영수증 푸시 - order.js reqReceiptFCM undefined (KV캐시 문제)
-3. 솔라피  알리고 교체 - _worker.js 알림톡 발송부 (완료)
 
 ### 중간
-4. FILO 메뉴 이미지 Pollinations  Pexels 일괄 업데이트
-5. 관제센터 채팅/공지/결제 탭 실사용 테스트
-7. 직원 근태 QR 이름+연락처 등록 화면 수정
-8. 매출분석 7월 테스트 데이터 시딩
+3. FILO 메뉴 이미지 Pollinations → Pexels 일괄 업데이트
+4. 관제센터 채팅/공지/결제 탭 실사용 테스트
+5. 직원 근태 QR 이름+연락처 등록 화면 수정
+6. 매출분석 7월 테스트 데이터 시딩
+7. dine.js N+1 직렬 await → Promise.all 변환
+8. filo-staff.js 60초 polling → attendance onSnapshot 전환
+9. DINE 페이지 리스너 cleanup 구조 추가
 
-### 박람회 이후
-9. filo-menu.js 분리 (55KB)
-10. filo-pos.js 분리 (39KB)
-11. mbtico-pages/_worker.js 경량화 (515KB)
-12. emergency.html 재작성 (461KB)
-13. 용차앱 저작권 등록
-14. 벤처 인증 (기보 부산지점)
+### 파일 분리·경량화 (대형 작업)
+10. filo-menu.js 분리 (55KB)
+11. filo-pos.js 분리 (39KB)
+12. mbtico-pages/_worker.js 경량화 (515KB)
+13. emergency.html 재작성 (461KB)
+
+### 법무·인증 (외부 절차)
+14. 용차앱 저작권 등록 (cros.or.kr)
+15. 벤처기업 인증 (기보 부산지점)
 
 ---
 

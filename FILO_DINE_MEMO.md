@@ -10,10 +10,10 @@
 |---|---|---|---|
 | filo-auth.js | 로그인·홈 대시보드·페이지 라우팅·리스너 등록 | 중 | 홈 onSnapshot 6개 관리 |
 | filo-common.js | 공통 유틸(toast·icon·날짜·fetch) | 중 | **수정 금지** |
-| filo-pos.js | 키오스크 POS·테이블바·결제 | 39KB | 분리 예정(박람회 이후) |
+| filo-pos.js | 키오스크 POS·테이블바·결제 | 39KB | 분리 예정 |
 | filo-pos-core.js | POS 결제 핵심 로직 | 소 | |
 | filo-pos-ui.js | POS UI 렌더링 | 소 | |
-| filo-menu.js | 메뉴 관리·레시피·원가·번역·이미지 | 55KB | 분리 예정(박람회 이후) |
+| filo-menu.js | 메뉴 관리·레시피·원가·번역·이미지 | 55KB | 분리 예정 |
 | filo-menu-mgmt.js | 메뉴 CRUD UI | 소 | |
 | filo-menu-recipe.js | 레시피 관리 | 소 | |
 | filo-order.js | 홀 주문 현황·배달 주문 | 중 | |
