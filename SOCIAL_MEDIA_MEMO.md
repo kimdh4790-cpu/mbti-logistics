@@ -90,7 +90,7 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 ### 완료된 것
 - [x] 영상 녹화 스크립트 4개 (`scripts/capture/record-*.js`)
-- [x] FFmpeg 편집 + 블러 배경 채우기 (`scripts/compose/compose-video.sh`)
+- [x] FFmpeg 편집 + 화면 꽉 채움 (`scripts/compose/compose-video.sh`) — scale+crop, 블러 배경 없음
 - [x] Instagram Reels 세로형 추출 (`scripts/compose/make-reels.sh`)
 - [x] YouTube 자동 업로드 (`scripts/upload/upload-youtube.js`)
 - [x] 자막·시나리오 전면 재설계 (경쟁사 직접 비교, 팩트·숫자 훅)
@@ -172,7 +172,6 @@ node scripts/run-pipeline.js --product <product> --steps record,compose,youtube
 
 | 블로커 | 해결 방법 | 담당 |
 |---|---|---|
-| **BGM 파일 없음** | YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` | 사용자 |
 | **YONGCHA YouTube 미업로드** | GitHub Actions product=yongcha steps=youtube 실행 필요 | Claude |
 
 ### 업로드 필수 순서 (반드시 지킬 것)
@@ -189,7 +188,7 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 |---|---|---|---|---|---|
 | FILO | ✅ 완료 | ✅ 6종 생성 | Remotion | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
 | DONWAY | ✅ 완료 | ✅ 4종 생성 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) |
-| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 (Oracle Cloud, 2026-08-28) | ⏳ YouTube 토큰 등록 후 가능 |
+| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 (Oracle Cloud, 2026-08-28) | ⏳ GitHub Actions steps=youtube 실행 필요 |
 | MBTICO | 미생성 | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
 
 ---
@@ -245,9 +244,10 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ### Google Cloud TTS (현재 사용)
 - 발급처: console.cloud.google.com → Text-to-Speech API → API 키
-- 무료: WaveNet 월 100만 자
+- 무료: Neural2 월 100만 자
 - 환경변수: `GOOGLE_TTS_API_KEY` (`~/.env`)
-- 기본 음성: `ko-KR-Wavenet-A` (여성, 속도 0.95)
+- 기본 음성: `ko-KR-Neural2-C` (여성, 속도 1.0) — Wavenet보다 훨씬 자연스러운 최신 AI 음성
+- 나레이션 텍스트: 구어체 (반말 아닌 자연스러운 존댓말, "~요" 어미 위주)
 
 ---
 
@@ -273,10 +273,10 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 1. ~~**DONWAY YouTube 숏츠 업로드**~~ ✅ 완료 (https://youtu.be/3HRSPE2bNDM, 2026-08-27)
 2. ~~**YONGCHA 영상 제작**~~ ✅ Oracle Cloud 편집 완료 (2026-08-28, output/yongcha-final.mp4)
-3. **YONGCHA YouTube 업로드** → YouTube Secrets 등록 후 `node scripts/upload/upload-youtube-api.js --product yongcha --reels`
-4. **FILO 영상 제작** → GitHub Actions 렌더링 중 (FiloPromo.jsx 전면 재작성 — 네이비 배경, 애니메이션, 8Mbps)
-5. **BGM 파일 추가** → YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` → git push
-6. **DONWAY Instagram Reels 업로드** → Instagram 세션 필요
+3. **YONGCHA YouTube 업로드** → GitHub Actions product=yongcha steps=youtube 실행 (Secrets 이미 등록됨)
+4. **FILO 재렌더링** → GitHub Actions product=filo steps=record,compose,youtube (자막·음성·화면 전면 개선 반영)
+5. **DONWAY Instagram Reels 업로드** → Instagram 세션 필요 (Oracle Cloud)
+6. **MBTICO 영상 제작** → 나레이션 생성 후 record,compose,youtube
 
 ### 업로드 방향 (확정)
 - YouTube: **숏츠(--reels) 우선** — 구독자 적을 때 알고리즘 노출 유리
@@ -288,6 +288,8 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-28 | 영상 퀄리티 전면 개선: 자막 노란색 46pt+두꺼운 검은 외곽선(TikTok 스타일), 음성 Neural2-C speedRate 1.0(자연스러운 구어체), 화면 scale+crop으로 꽉 채움(블러배경 제거), 나레이션 4종 전면 재작성 |
+| 2026-08-28 | BGM: ffmpeg 자체 생성 방식 채택 (YouTube 오디오 라이브러리 저작권 우려 → 자체 합성 BGM 사용) |
 | 2026-08-28 | FiloPromo.jsx 전면 재작성: Particles/AnimatedCounter 추가, 모든 씬 네이비 배경, 이모지→텍스트, TransitionOverlay Sequence 로컬프레임 버그 수정, hasBgm 지원 |
 | 2026-08-28 | render-filo.js: videoBitrate '8M' 추가 (고화질 H.264) |
 | 2026-08-28 | Oracle Cloud 초기화 완료 (oracle-init.sh 실행, Chromium /usr/bin/chromium 확인) |
