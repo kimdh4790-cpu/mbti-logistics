@@ -159,6 +159,14 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (5차)
+**업종별 기본 메뉴 템플릿 자동 세팅 — 첫 로그인 모달 구현**
+- `filo-auth.js`: `_filoCheckAndShowIndustryModal(did)` 추가 — 딜러 첫 로그인 시 filo_menus 비어있으면 모달 표시
+- `filo-auth.js`: `_filoShowIndustryModal(did)` 추가 — 업종 선택 fullscreen 오버레이 모달 렌더링
+- `filo-auth.js`: `_filoIndustryModalConfirm(did)` 추가 — 업종 선택 후 companies.theme 저장, filo-menu.js 동적 로드 후 `_filoSeedDefaultMenus` 호출
+- `filo-auth.js`: `_showApp()` 에 3200ms setTimeout 추가 — 딜러(role!=='member') 로그인 시 자동 체크
+- 기존 `_filoSeedDefaultMenus` (filo-menu.js) / `_filoSeedDefaultMenusManual` (filo-menu.js) / 회원가입 시딩(_filoRegister) 은 이미 구현됨 — 변경 없음
+
 ### 2026-08-28 (4차)
 **filo-menu 계열 중복 함수 제거 및 레시피 기능 정리**
 - `filo-menu.js`: 1524줄 → 687줄 (-837줄) — recipe CRUD 8개 + mgmt 중복 9개 = 17개 함수 제거

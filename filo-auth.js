@@ -191,6 +191,10 @@ function _showApp(){
  },1500);
  // FCM 토큰 등록 (filo.ai.kr 도메인으로 알림 발신)
  setTimeout(_initFiloFCM, 2000);
+ // 첫 로그인 딜러 — 메뉴 없으면 업종 선택 모달 표시
+ setTimeout(function(){
+  if(_CU&&_CU.role!=='member') _filoCheckAndShowIndustryModal(_CU.dealerId||_CU.uid);
+ }, 3200);
 }
 
 function _initFiloFCM(){
@@ -215,6 +219,88 @@ function _initFiloFCM(){
     fcmCompanyName: companyName
    });
   }).catch(function(e){ console.log('[FILO FCM]', e.message); });
+}
+
+/* ══════════════════════════════════════════════════════
+   업종별 기본 메뉴 자동 세팅 — 첫 로그인 모달
+   메뉴가 없는 딜러에게만 표시. filo-menu.js의
+   _filoSeedDefaultMenus()를 동적 로드 후 호출한다.
+══════════════════════════════════════════════════════ */
+
+/**
+ * 딜러의 filo_menus가 비어 있으면 업종 선택 모달을 띄운다.
+ * 회원(member)·데모 계정은 스킵.
+ */
+function _filoCheckAndShowIndustryModal(did){
+ if(!did||!_db) return;
+ if(did.startsWith('demo_')) return;
+ _db.collection('filo_menus').where('dealerId','==',did).limit(1).get()
+ .then(function(snap){
+  if(!snap.empty) return; // 이미 메뉴 있음 → 모달 생략
+  _filoShowIndustryModal(did);
+ }).catch(function(){});
+}
+
+/** 업종 선택 모달 렌더링 */
+function _filoShowIndustryModal(did){
+ var ex=document.getElementById('filo-industry-modal');
+ if(ex) ex.remove();
+ var d=_cachedCompanyDoc||{};
+ var curTheme=d.theme||'';
+ var order=['cafe','korean','japanese','chinese','fastfood','izakaya','other'];
+ var opts='<option value="">업종을 선택하세요</option>';
+ order.forEach(function(k){
+  var t=(typeof _FILO_THEMES!=='undefined')&&_FILO_THEMES[k];
+  if(!t) return;
+  opts+='<option value="'+k+'"'+(curTheme===k?' selected':'')+'>'+t.emoji+' '+t.label+'</option>';
+ });
+ var overlay=document.createElement('div');
+ overlay.id='filo-industry-modal';
+ overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+ overlay.innerHTML=
+  '<div style="background:var(--b2);border:1px solid var(--bd);border-radius:16px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.6)">'+
+  '<div style="font-size:18px;font-weight:900;margin-bottom:6px;color:var(--tx)">환영합니다!</div>'+
+  '<div style="font-size:13px;color:var(--t3);margin-bottom:20px;line-height:1.55">매장 업종을 선택하시면 기본 메뉴를 자동으로 등록해 드립니다.<br>나중에 설정 > 매장 테마에서 변경할 수 있습니다.</div>'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:5px">업종 선택</div>'+
+  '<select id="industry-modal-sel" class="inp" style="width:100%;font-size:13px;margin-bottom:20px;padding:10px 12px">'+opts+'</select>'+
+  '<div style="display:flex;gap:8px">'+
+  '<button class="btn btn-brand" style="flex:1;padding:11px" onclick="_filoIndustryModalConfirm(\''+did+'\')">기본 메뉴 등록</button>'+
+  '<button class="btn" style="background:var(--b3);color:var(--t2);flex:1;padding:11px;border:1px solid var(--bd)" onclick="document.getElementById(\'filo-industry-modal\').remove()">나중에</button>'+
+  '</div>'+
+  '</div>';
+ document.body.appendChild(overlay);
+}
+
+/** "기본 메뉴 등록" 버튼 핸들러 */
+function _filoIndustryModalConfirm(did){
+ var sel=document.getElementById('industry-modal-sel');
+ var industry=sel?sel.value:'';
+ if(!industry){_filoToast('업종을 선택해 주세요');return;}
+ var overlay=document.getElementById('filo-industry-modal');
+ if(overlay) overlay.remove();
+ /* companies/{did}에 theme(업종) 저장 */
+ _db.collection('companies').doc(did).update({
+  theme:industry,
+  updatedAt:(typeof _nowISO==='function')?_nowISO():new Date().toISOString()
+ }).then(function(){
+  if(_cachedCompanyDoc) _cachedCompanyDoc.theme=industry;
+  if(typeof _filoApplyTheme==='function')
+   _filoApplyTheme(Object.assign({},_cachedCompanyDoc||{},{theme:industry}));
+ }).catch(function(){});
+ /* 메뉴 시딩 — filo-menu.js가 로드돼 있어야 함 */
+ function doSeed(){
+  if(typeof _filoSeedDefaultMenus!=='function') return;
+  _filoToast('기본 메뉴 등록 중...');
+  _filoSeedDefaultMenus(did,industry).then(function(n){
+   if(n>0) _filoToast('기본 메뉴 '+n+'개가 등록됐습니다!');
+   else _filoToast('이미 메뉴가 있어 건너뛰었습니다');
+  }).catch(function(e){ _filoToast('메뉴 등록 오류: '+e.message); });
+ }
+ if(typeof _filoSeedDefaultMenus==='function'){
+  doSeed();
+ } else {
+  _filoLoadAndRun('filo-menu.js', doSeed);
+ }
 }
 
 /* ── 라인 아이콘 헬퍼 (Lucide 24px 기준) ── */
