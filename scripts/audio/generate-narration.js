@@ -57,8 +57,8 @@ async function googleTTS(text, outFile) {
 
   const bodyStr = JSON.stringify({
     input: { text },
-    voice: { languageCode: 'ko-KR', name: 'ko-KR-Wavenet-A', ssmlGender: 'FEMALE' },
-    audioConfig: { audioEncoding: 'MP3', speakingRate: 0.95, pitch: 0 },
+    voice: { languageCode: 'ko-KR', name: script.voice || 'ko-KR-Neural2-C', ssmlGender: 'FEMALE' },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: script.speedRate || 1.0, pitch: 0 },
   });
 
   return new Promise((resolve, reject) => {
