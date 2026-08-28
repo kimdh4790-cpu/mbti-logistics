@@ -143,7 +143,7 @@ YOUTUBE_REFRESH_TOKEN=등록완료
 | 날짜 | 제품 | 기능 | 플랫폼 | 상태 |
 |---|---|---|---|---|
 | 2026-08-11 (월) | 용차앱 | 기사·대리점 직접 매칭 | YouTube | ⏳ |
-| 2026-08-11 (화) | FILO | QR 테이블 주문 | YouTube | ⏳ |
+| 2026-08-11 (화) | FILO | QR 테이블 주문 | YouTube | ✅ https://youtu.be/BdG2vAkzZuo |
 | 2026-08-14 (목) | DONWAY | 쿠팡 엑셀 자동 정산 | YouTube | ✅ https://youtu.be/zC4n7B3bIv8 |
 | 2026-08-18 (월) | 용차앱 | AI 루트코치 | YouTube | ⏳ |
 | 2026-08-18 (화) | FILO | POS 분할결제 | YouTube | ⏳ |
@@ -173,7 +173,7 @@ node scripts/run-pipeline.js --product <product> --steps record,compose,youtube
 | 블로커 | 해결 방법 | 담당 |
 |---|---|---|
 | **BGM 파일 없음** | YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` | 사용자 |
-| **FILO·YONGCHA 영상 미생성** | Oracle VM에서 record + compose 실행 필요 | 사용자 |
+| **YONGCHA YouTube 미업로드** | GitHub Actions product=yongcha steps=youtube 실행 필요 | Claude |
 
 ### 업로드 필수 순서 (반드시 지킬 것)
 ```
@@ -187,7 +187,7 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 ### 영상 제작 현황
 | 제품 | 나레이션 MP3 | 프로모 HTML | 녹화 WebM | 편집 MP4 | YouTube |
 |---|---|---|---|---|---|
-| FILO | 미생성 | ✅ 6종 생성 | Remotion | ⏳ GitHub Actions 렌더링 중 | ⏳ 업로드 진행 중 |
+| FILO | ✅ 완료 | ✅ 6종 생성 | Remotion | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
 | DONWAY | ✅ 완료 | ✅ 4종 생성 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) |
 | YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 (Oracle Cloud, 2026-08-28) | ⏳ YouTube 토큰 등록 후 가능 |
 | MBTICO | 미생성 | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
