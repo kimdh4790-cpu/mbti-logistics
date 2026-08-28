@@ -159,6 +159,16 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28
+**보안·코드 품질·Firestore 효율성 전면 점검**
+- `dine.js`: 로그인 `.catch()` 2곳 — 네트워크 오류 시 owner 자동 승격 버그 수정 → 에러 메시지 표시로 교체
+- `filo-staff.js`: `_attendUnsub` → `_staffAttendUnsub` 이름변경 (filo-members.js 전역 충돌 방지), `_liveTickerTimer` 중복 선언(L363) 제거, `var _staffAttendUnsub=null` 명시적 선언 추가
+- `filo-pos.js`: 테이블 주문 onSnapshot에 `.where('date','==',_posToday)` 추가 (전체 이력 구독 → 오늘 주문만, ~25% 읽기 절감)
+- `filo-auth.js`: `_FILO_WATCHERS`에 `kiosk` 페이지 (`_kioskTableUnsub`) 추가; 로그아웃 시 `_filoDineResUnsub` 정리 추가 (재로그인 이중 구독 방지)
+- `dine-analytics.js`: `_dineLoadMyPayroll` 좀비 쿼리 수정 (`staff`→`members`, `staffId`→`memberId`)
+- `_worker.js`: 보안 수정 6건 — verifyFirebaseToken 폴백 null 반환, /admin/cleanup-dup-orders requireAdmin 추가, /api/filo-order·/api/point-earn·/order/move-table dealerId 검증, /kitchen/update 인증 추가, /api/inquiry HTML 이스케이프, /toss-confirm uid 검증, /api/emergency-driver-profile·/api/delivery-dispatch 인증 추가
+- `_worker.js`: DW_TIERS 구요금 → 2,500원/인 단일 요금으로 동기화
+
 ### 2026-08-16 (3차)
 **보안 취약점 수정 (XSS·미인증 API 엔드포인트)**
 - `dine-member.js`: `_de()` XSS 이스케이프 헬퍼 추가. 회원 목록 `d.name`·`d.phone`, 수정 모달 `existing.name`·`existing.phone`·`existing.birth`·`existing.memo` value="" 속성 전체 적용
