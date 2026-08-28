@@ -158,7 +158,7 @@ async function verifyFirebaseToken(request, _env) {
     if (!token || token.length < 100) return null;
     const _e = _env || _env_ref;
     const apiKey = (_e && _e.FIREBASE_API_KEY) ? _e.FIREBASE_API_KEY : '';
-    if (!apiKey) return _jwtDecode(token);
+    if (!apiKey) return null;
     try {
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
         method: 'POST',
@@ -170,8 +170,8 @@ async function verifyFirebaseToken(request, _env) {
         if (data.users?.[0]) return data.users[0];
       }
     } catch(e) {}
-    // API 호출 실패 시 JWT 페이로드 직접 디코딩 (서명 검증 없음)
-    return _jwtDecode(token);
+    // Firebase API 장애 시 서명 미검증 폴백 제거 — 인증 거부
+    return null;
   } catch(e) { return null; }
 }
 
@@ -4743,6 +4743,8 @@ ${JSON.stringify(postSummary)}
       }
       // /admin/cleanup-dup-orders — filo_sales 테이블 중복 주문 삭제
       if (path === '/admin/cleanup-dup-orders' && request.method === 'POST') {
+        const _cleanAdmin = await requireAdmin(request, env);
+        if (!_cleanAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
         try {
           const body = await request.json();
           const {did} = body;
@@ -10054,6 +10056,8 @@ service cloud.firestore {
 
     // ── 기사 프로필 저장: POST /api/emergency-driver-profile ──
     if (path === '/api/emergency-driver-profile' && method === 'POST') {
+      const _dpUser = await verifyFirebaseToken(request, env);
+      if (!_dpUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
         const { dealerId, driverName, phone, idNum, carNum, carType, bankAccount } = body;
@@ -10308,6 +10312,8 @@ service cloud.firestore {
     // ── 배달대행 배차 요청 (/api/delivery-dispatch) ──
     if (path === '/api/delivery-dispatch' && method === 'POST') {
       const cors = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _ddUser = await verifyFirebaseToken(request, env);
+      if (!_ddUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:cors});
       try {
         const body = await request.json();
         const {orderId, did, address, customerName, phone, items, total, agency} = body;
