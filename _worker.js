@@ -4542,6 +4542,66 @@ ${JSON.stringify(postSummary)}
           return new Response(JSON.stringify({ok:true,did,today,stats:{menus:menus.length,staff:staff.length,completedOrders:completedOrders.length,activeOrders:activeOrders.length,todayTotal,inventory:invItems.length},batches:bres}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
       }
+      // ── /api/seed-sales — 테스트 매장 filo_sales 월별 데이터 시딩
+      if (path === '/api/seed-sales' && method === 'POST') {
+        try {
+          let body; try{body=await request.json();}catch(e){body={};}
+          const _ss=env.DEMO_SECRET||'filo2026demo'; if(body.secret!==_ss) return Response.json({ok:false,error:'unauthorized'},{status:401});
+          const did=body.did||'9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+          const ym=body.month||'2026-07';
+          const [yr,mo]=ym.split('-').map(Number);
+          const daysInMonth=new Date(yr,mo,0).getDate();
+          const token=await getAccessToken(env);
+          function fsv(v){if(typeof v==='string')return{stringValue:v};if(typeof v==='boolean')return{booleanValue:v};if(typeof v==='number')return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};if(Array.isArray(v))return{arrayValue:{values:v.map(fsv)}};if(v&&typeof v==='object')return{mapValue:{fields:Object.fromEntries(Object.entries(v).map(([k,x])=>[k,fsv(x)]))}};return{nullValue:null};}
+          function fsd(col,id,obj){return{update:{name:`projects/mbti-logistics/databases/(default)/documents/${col}/${id}`,fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,fsv(v)]))}}}
+          function rng(seed){let s=(seed|1)>>>0;return()=>{s=Math.imul(s,1664525)+1013904223|0;return(s>>>0)/4294967296;}}
+          const menus=[
+            {name:'모듬회(소)',price:35000,cat:'회'},{name:'모듬회(중)',price:55000,cat:'회'},
+            {name:'광어회(소)',price:40000,cat:'회'},{name:'해물탕',price:35000,cat:'탕'},
+            {name:'알탕',price:25000,cat:'탕'},{name:'새우구이',price:20000,cat:'구이'},
+            {name:'전복구이',price:20000,cat:'구이'},{name:'파전',price:10000,cat:'안주'},
+            {name:'소주',price:5000,cat:'주류'},{name:'맥주',price:6000,cat:'주류'},
+            {name:'생굴',price:15000,cat:'해산물'},{name:'공기밥',price:1000,cat:'밥'}
+          ];
+          const pays=['card','card','card','card','card','card','card','cash','cash','kakaopay'];
+          const writes=[];let totalDocs=0;
+          for(let day=1;day<=daysInMonth;day++){
+            const dateStr=`${yr}-${String(mo).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const dow=new Date(Date.UTC(yr,mo-1,day)).getDay();
+            const isWeekend=dow===0||dow===6;
+            const r=rng(day*137+yr+mo);
+            const ordersPerSession=isWeekend?[6,7,8]:[4,5,6];
+            for(const [sh,eh,slot] of [[11,14,'lunch'],[17,22,'dinner']]){
+              const cnt=ordersPerSession[Math.floor(r()*3)];
+              for(let i=0;i<cnt;i++){
+                const r2=rng(day*10000+i*37+sh+mo);
+                const hour=sh+Math.floor(r2()*(eh-sh));
+                const min=Math.floor(r2()*60);
+                const kstMs=Date.UTC(yr,mo-1,day,hour,min,0);
+                const isoStr=new Date(kstMs-9*3600000).toISOString();
+                const numItems=1+Math.floor(r2()*3);
+                const items=[];let tot=0;
+                for(let j=0;j<numItems;j++){const m=menus[Math.floor(r2()*menus.length)];const qty=1+Math.floor(r2()*2);items.push({name:m.name,price:m.price,qty,category:m.cat});tot+=m.price*qty;}
+                const payMethod=pays[Math.floor(r2()*pays.length)];
+                const tableNum=1+Math.floor(r2()*8);
+                const docId=`seed_${did.slice(0,6)}_${dateStr}_${slot}_${String(i).padStart(2,'0')}`;
+                writes.push(fsd('filo_sales',docId,{dealerId:did,items,total:tot,tableNum,tableName:'테이블 '+tableNum,tableId:String(tableNum),createdAt:isoStr,date:dateStr,type:'pos',payMethod,payType:'prepay',status:'paid',createdBy:'seed'}));
+                totalDocs++;
+              }
+            }
+          }
+          const batchUrl=`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:batchWrite`;
+          const hdrs={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+          const batchResults=[];
+          for(let i=0;i<writes.length;i+=400){
+            const br=await fetch(batchUrl,{method:'POST',headers:hdrs,body:JSON.stringify({writes:writes.slice(i,i+400)})});
+            const bd=await br.json();
+            batchResults.push({batch:Math.floor(i/400)+1,status:br.status,count:writes.slice(i,i+400).length,errs:(bd.status||[]).filter(x=>x&&x.code&&x.code!==0).length});
+          }
+          return Response.json({ok:true,did,month:ym,totalDocs,batches:batchResults});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
       // ── /api/demo-delete-all — 데모 매장 데이터 일괄 삭제
       if (path === '/api/demo-delete-all' && method === 'POST') {
         if (request.method === 'OPTIONS') return new Response(null,{headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
