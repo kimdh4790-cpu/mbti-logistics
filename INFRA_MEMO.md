@@ -105,7 +105,20 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | URL | http://localhost:20128 |
 | 기본 비밀번호 | CHANGEME |
 | 총 공급자 | 256개 |
-| 연결된 공급자 | Augment (aug/) — 연결완료 |
+| 연결된 공급자 | Augment (aug/) + Gemini + Groq — 모두 연결완료 |
+| 총 활성 모델 | 79개 (Augment 12 + Gemini 53 + Groq 14) |
+
+### OmniRoute 실행 방법 (매 PC 부팅 후)
+```powershell
+omniroute serve --daemon
+```
+
+### 연결된 공급자 현황 (2026-08-28 기준)
+| 공급자 | 모델 수 | 키 이름 | 비고 |
+|---|---|---|---|
+| Augment | 12개 | main | aug/claude-*, aug/gemini-* |
+| Gemini (Google AI Studio) | 53개 | main | gemini-2.0-flash 등 |
+| Groq | 14개 | main | llama-3.3-70b 등 초고속 |
 
 ### Augment 제공 무료 모델
 - aug/claude-sonnet-4.6
@@ -154,3 +167,4 @@ claude
 | 날짜 | 내용 |
 |---|---|
 | 2026-08-28 | 최초 생성 (Oracle Cloud, GitHub Actions, 플러그인, OmniRoute 정보 통합) |
+| 2026-08-28 | OmniRoute에 Gemini(53개)·Groq(14개) API 키 등록 완료. 총 79개 무료 모델 활성화 |
