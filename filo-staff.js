@@ -480,6 +480,10 @@ function _filoShowStaffReg(){
   if(ph)ph.value='';
   var wg=document.getElementById('nr-wage');
   if(wg)wg.value='';
+  var wt=document.getElementById('nr-wagetype');
+  if(wt)wt.value='hourly';
+  var et=document.getElementById('nr-emptype');
+  if(et)et.value='part';
  }
 }
 
@@ -500,9 +504,14 @@ function _filoRegisterStaff(){
  }).then(function(docRef){
   _filoToast(name+' 등록 완료');
   document.getElementById('staff-reg').style.display='none';
+  /* 캐시 무효화 — 새 직원이 즉시 반영되도록 */
+  _membersCache=null;_membersCacheAt=0;
   /* 드롭다운 갱신 */
   _db.collection('members').where('dealerId','==',did).orderBy('name').get()
   .then(function(snap){
+   var wm={};
+   snap.forEach(function(d){var m=d.data();wm[d.id]=m;if(m.name)wm[m.name]=m;});
+   _membersCache=wm;_membersCacheAt=Date.now();
    var sel=document.getElementById('mc-member');if(!sel)return;
    while(sel.options.length>1)sel.remove(1);
    snap.forEach(function(doc){

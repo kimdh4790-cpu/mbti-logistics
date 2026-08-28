@@ -3324,8 +3324,9 @@ function resetForm(){
 }
 function doRegister(){
   var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
-  var phone=(document.getElementById('r-phone')&&document.getElementById('r-phone').value||'').trim();
+  var phone=((document.getElementById('r-phone')&&document.getElementById('r-phone').value)||'').replace(/[^0-9]/g,'');
   if(!name){setStatus('이름을 입력하세요');return;}
+  if(phone.length<9){setStatus('연락처를 올바르게 입력하세요');return;}
   setStatus('등록 중...','#aaa');
   fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone})})
     .then(function(r){return r.json();})
@@ -7236,8 +7237,9 @@ function resetForm(){
 }
 function doRegister(){
   var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
-  var phone=(document.getElementById('r-phone')&&document.getElementById('r-phone').value||'').trim();
+  var phone=((document.getElementById('r-phone')&&document.getElementById('r-phone').value)||'').replace(/[^0-9]/g,'');
   if(!name){setStatus('이름을 입력하세요');return;}
+  if(phone.length<9){setStatus('연락처를 올바르게 입력하세요');return;}
   setStatus('등록 중...','#aaa');
   fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone})})
     .then(function(r){return r.json();})
