@@ -371,7 +371,6 @@ function _buildFiloNav(){
  if(hasAll||hasSub('inventory')||hasFeature('inventory')){
   menus.push({s:'재고',items:[
    {ic:'package',l:'재고 현황',p:'inventory'},
-   {ic:'flask',l:'레시피·원가',p:'recipe'},
    {ic:'refresh',l:'자동 발주',p:'auto_order'},
   ]});
  }
@@ -562,7 +561,7 @@ function _filoGoPage(p){
  var el=document.getElementById('content');
  var titles={home:'대시보드',members:'직원 관리',schedule:'달력',
  inventory:'재고 대시보드',stock_in:'입고 등록',stock_out:'출고 등록',
- auto_order:'자동 발주',sales_report:'매출·마진',recipe:'레시피 관리',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',delivery:'배달 주문',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
+ auto_order:'자동 발주',sales_report:'매출·마진',qr_staff:'직원 QR (동적)',table_qr:'테이블 QR',table_mgmt:'테이블 관리',delivery:'배달 주문',schedule:'예약·달력',tax_share:'세무사 연동',member_qr:'회원 QR',cost_mgmt:'원가 관리',
  attendance:'QR 출퇴근',attend_dash:'출퇴근 현황',payroll:'급여 현황',roster:'근무표',
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리',
@@ -588,7 +587,6 @@ function _filoGoPage(p){
  else if(p==='stock_in') _filoPageStockIn(el);
  else if(p==='stock_out') _filoPageStockOut(el);
  else if(p==='auto_order') _filoPageAutoOrder(el);
- else if(p==='recipe') _filoPageRecipe(el);
  else if(p==='expiry') _filoPageExpiry(el);
  else if(p==='members') _filoPageMembers(el);
  else if(p==='attend_dash'||p==='attendance'||p==='payroll'||p==='roster'||p==='work_schedule'){
