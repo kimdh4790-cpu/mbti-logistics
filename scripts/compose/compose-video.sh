@@ -52,7 +52,7 @@ if [ -f "$SUBTITLES" ]; then
 lines = open('$ASS_FILE').readlines()
 for i, l in enumerate(lines):
     if l.startswith('Style: Default,'):
-        lines[i] = 'Style: Default,Noto Sans KR,46,&H0000FFFF,&H000000FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,5,2,2,20,20,100,1\n'
+        lines[i] = 'Style: Default,Noto Sans CJK KR,34,&H00FFFFFF,&H000000FF,&H00000000,&HA0000000,1,0,0,0,100,100,0,0,1,3,1,2,20,20,160,1\n'
 open('$ASS_FILE', 'w').writelines(lines)
 " 2>/dev/null || true
     SUBTITLE_FILTER=",ass=${ASS_FNAME}"
