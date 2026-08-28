@@ -137,7 +137,7 @@ function _filoSaveTheme(){
  .then(function(){
   if(_cachedCompanyDoc){_cachedCompanyDoc.theme=key;_cachedCompanyDoc.primaryColor=primary;_cachedCompanyDoc.bgColor=bg;}
   if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:key,primaryColor:primary,bgColor:bg});
-  _filoToast('테마가 적용됐습니다');
+  _filoToast('테마가 저장됐어요.');
  }).catch(function(e){_filoToast(e.message);});
 }
 function _filoNFCWrite(url, btn){

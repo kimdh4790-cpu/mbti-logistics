@@ -159,6 +159,17 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (6차)
+**업종별 커스텀 테마 시스템 완성 — order.js glow 변수 누락 보완 및 메모 정리**
+- `order.js`: `_applyStoreTheme()` 에 `--brand-glow`, `--brand3`, `--surface2`, `--surface3`, `--border2`, `--shadow-md`, `--shadow-lg` 추가 — order.html 이 사용하는 CSS 변수 중 glow/shadow 계열이 테마 변경 시 보라색 고정되던 문제 수정
+- `filo-settings.js`: `_filoSaveTheme()` 저장 완료 토스트 메시지 '테마가 적용됐습니다' → '테마가 저장됐어요.' 수정
+- 기존 구현 상태 검증 완료 (모두 main 브랜치와 동일):
+  - `filo-common.js`: `_FILO_THEMES`(7종) + `_filoApplyTheme()` + `_filoLoadStoreTheme()` 구현됨
+  - `filo-settings.js`: 설정 화면 "매장 테마" 섹션 구현됨 (업종 select + 컬러피커 + 미리보기 + 저장)
+  - `order.js`: companies 로드 콜백에서 `_applyStoreTheme(d)` 호출 구현됨
+  - `store.js`: companies 로드 콜백에서 `_applyStoreTheme(snap.data())` 호출 구현됨
+  - `kitchen.html`: `/kitchen/data` 응답에서 `_applyTheme(res.company)` 호출 구현됨
+
 ### 2026-08-28 (5차)
 **업종별 기본 메뉴 템플릿 자동 세팅 — 첫 로그인 모달 구현**
 - `filo-auth.js`: `_filoCheckAndShowIndustryModal(did)` 추가 — 딜러 첫 로그인 시 filo_menus 비어있으면 모달 표시
