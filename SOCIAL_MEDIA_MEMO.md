@@ -182,8 +182,8 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 |---|---|---|---|---|---|
 | FILO | ✅ 완료 | ✅ 6종 생성 | Remotion | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
 | DONWAY | ✅ 완료 | ✅ 4종 생성 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) |
-| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 (Oracle Cloud, 2026-08-28) | ⏳ GitHub Actions steps=youtube 실행 필요 |
-| MBTICO | 미생성 | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
+| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 | ⚠️ eDpowbKedgs 깨짐(무음+자막가림) — 삭제 후 재업로드 필요 |
+| MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
 
 ---
 
@@ -240,7 +240,8 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 - 발급처: console.cloud.google.com → Text-to-Speech API → API 키
 - 무료: Neural2 월 100만 자
 - 환경변수: `GOOGLE_TTS_API_KEY` (`~/.env`)
-- 기본 음성: `ko-KR-Neural2-C` (여성, 속도 1.0) — Wavenet보다 훨씬 자연스러운 최신 AI 음성
+- 기본 음성: `ko-KR-Neural2-C` (**남성**, 속도 1.0) — Wavenet보다 훨씬 자연스러운 최신 AI 음성
+- ⚠️ **주의**: API 요청 시 `ssmlGender` 제거 필수 (ko-KR-Neural2-C는 남성 음성 — FEMALE 지정 시 400 에러)
 - 나레이션 텍스트: 구어체 (반말 아닌 자연스러운 존댓말, "~요" 어미 위주)
 
 ---
@@ -266,11 +267,11 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 다음 작업 우선순위
 
 1. ~~**DONWAY YouTube 숏츠 업로드**~~ ✅ 완료 (https://youtu.be/3HRSPE2bNDM, 2026-08-27)
-2. ~~**YONGCHA 영상 제작**~~ ✅ Oracle Cloud 편집 완료 (2026-08-28, output/yongcha-final.mp4)
-3. **YONGCHA YouTube 업로드** → GitHub Actions product=yongcha steps=youtube 실행 (Secrets 이미 등록됨)
-4. **FILO 재렌더링** → GitHub Actions product=filo steps=record,compose,youtube (자막·음성·화면 전면 개선 반영)
+2. ~~**YONGCHA 영상 제작**~~ ✅ Oracle Cloud 편집 완료 (2026-08-28)
+3. **YONGCHA YouTube 재업로드** → YouTube Studio에서 eDpowbKedgs 삭제 후, GitHub Actions product=yongcha steps=record,compose,youtube 재실행
+4. **FILO 재렌더링** → GitHub Actions product=filo steps=record,compose,youtube
 5. **DONWAY Instagram Reels 업로드** → Instagram 세션 필요 (Oracle Cloud)
-6. **MBTICO 영상 제작** → 나레이션 생성 후 record,compose,youtube
+6. **MBTICO 영상 제작** → GitHub Actions product=mbtico steps=record,compose,youtube
 
 ### 업로드 방향 (확정)
 - YouTube: **숏츠(--reels) 우선** — 구독자 적을 때 알고리즘 노출 유리
@@ -282,6 +283,9 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-28 | **브랜드 보이스 스킬 생성** `.claude/skills/mbtico-social-voice.md` — StoryScope + roy.branding 기반 AI 탈출 원칙 적용. 나레이션 스크립트 개선: yongcha 오프너 질문형 후크로 변경, mbtico 마무리 AI패턴 → 열린 CTA로 변경 |
+| 2026-08-28 | **YONGCHA 영상 버그 2가지 수정** — ①무음(Google TTS 400 에러: ssmlGender FEMALE 제거), ②자막 화면가림(폰트명 'Noto Sans KR'→'Noto Sans CJK KR', 크기46→34, 노란색→흰색, MarginV 100→160). yongcha-subtitles.srt 나레이션 동기화. 자동 머지+배포 완료 |
+| 2026-08-28 | YONGCHA YouTube 깨진 영상 ID: eDpowbKedgs (무음+자막가림) — 삭제 필요 |
 | 2026-08-28 | 영상 퀄리티 전면 개선: 자막 노란색 46pt+두꺼운 검은 외곽선(TikTok 스타일), 음성 Neural2-C speedRate 1.0(자연스러운 구어체), 화면 scale+crop으로 꽉 채움(블러배경 제거), 나레이션 4종 전면 재작성 |
 | 2026-08-28 | BGM: ffmpeg 자체 생성 방식 채택 (YouTube 오디오 라이브러리 저작권 우려 → 자체 합성 BGM 사용) |
 | 2026-08-28 | FiloPromo.jsx 전면 재작성: Particles/AnimatedCounter 추가, 모든 씬 네이비 배경, 이모지→텍스트, TransitionOverlay Sequence 로컬프레임 버그 수정, hasBgm 지원 |
