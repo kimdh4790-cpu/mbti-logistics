@@ -1,6 +1,25 @@
 ﻿# MBTICO - CLAUDE.md
 > 유한회사 엠비티아이 SaaS 모노레포. 세션 시작 시 반드시 이 파일 전체를 읽고 시작할 것.
 
+## 📋 메모 파일 체계 (무조건 필수)
+
+| 파일 | 읽어야 할 때 |
+|---|---|
+| `CLAUDE.md` | 매 세션 시작 시 (필수) |
+| `SOCIAL_MEDIA_MEMO.md` | 소셜미디어·영상 작업 시 |
+| `BUSINESS_MEMO.md` | 비즈니스·요금·POS기·특허·경쟁사 관련 시 |
+| `INFRA_MEMO.md` | Oracle Cloud·GitHub Actions·플러그인·OmniRoute 작업 시 |
+| `FILO_DINE_MEMO.md` | FILO·DINE 앱 작업 시 |
+| `YONGCHA_MEMO.md` | 용차앱 작업 시 |
+| `배송앱_변경내역.md` | 배송앱·emergency.html 수정 시 |
+
+### ⚠️ 메모 업데이트 무조건 필수 규칙
+- 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
+- 새 정보(계정·API키·서버설정·기능변경) 추가 시 즉시 해당 메모에 기록
+- 메모 업데이트 없이 세션 종료 금지
+
+---
+
 ## 📹 소셜미디어 작업 시 필독
 소셜미디어 홍보 영상 관련 작업은 **SOCIAL_MEDIA_MEMO.md** 먼저 읽을 것.
 앱 화면 구성, 계정 정보, 파이프라인 현황, 블로커 목록 전부 정리되어 있음.
