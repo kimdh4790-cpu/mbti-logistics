@@ -189,8 +189,8 @@ function _filoPageAttendance(el){
   .catch(function(){});
  }
 
- if(_attendUnsub)_attendUnsub();
- _attendUnsub=_db.collection('attendance')
+ if(_staffAttendUnsub)_staffAttendUnsub();
+ _staffAttendUnsub=_db.collection('attendance')
  .where('dealerId','==',did)
  .where('date','==',today)
  .orderBy('time','desc')
@@ -243,7 +243,7 @@ function _filoLoadAttendDash(){
  var did=_CU.dealerId||_CU.uid;
  var dateEl=document.getElementById('ad-date');
  var date=dateEl?dateEl.value:_today();
- if(_attendUnsub)_attendUnsub();
+ if(_staffAttendUnsub)_staffAttendUnsub();
  /* 직원 시급 정보 — 캐시 5분 유효 시 재사용 */
  var wageMap=(_membersCache&&(Date.now()-_membersCacheAt)<300000)?_membersCache:{};
  if(!Object.keys(wageMap).length){
@@ -252,7 +252,7 @@ function _filoLoadAttendDash(){
    _membersCache=wageMap;_membersCacheAt=Date.now();
   }).catch(function(){});
  }
- _attendUnsub=_db.collection('attendance')
+ _staffAttendUnsub=_db.collection('attendance')
  .where('dealerId','==',did).where('date','==',date)
  .orderBy('time','asc')
  .onSnapshot(function(snap){
@@ -359,8 +359,6 @@ function _filoPagePayroll(el){
  _filoStartLiveTicker();
 }
 
-/* ── 실시간 출근중 티커 ── */
-var _liveTickerTimer=null;
 function _filoLoadPayroll(){
  var did=_CU.dealerId||_CU.uid;
  var ymEl=document.getElementById('pay-ym');
@@ -524,6 +522,7 @@ function _filoRegisterStaff(){
    실시간 급여 티커 — 출근중 직원 급여 1분마다 갱신
    ══════════════════════════════════════════ */
 var _liveTickerTimer=null;
+var _staffAttendUnsub=null;
 /* members 캐시 — 5분 TTL, 반복 조회 방지 */
 var _membersCache=null, _membersCacheAt=0;
 function _filoStartLiveTicker(){

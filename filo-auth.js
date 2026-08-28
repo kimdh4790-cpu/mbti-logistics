@@ -669,7 +669,8 @@ var _FILO_WATCHERS=[
  {pages:['schedule'],        keys:['_calUnsub']},
  {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub','_tableOrderUnsub']},
  {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']},
- {pages:['waiting'],         keys:['_waitUnsub','_waitSeatedUnsub']}
+ {pages:['waiting'],         keys:['_waitUnsub','_waitSeatedUnsub']},
+ {pages:['kiosk'],           keys:['_kioskTableUnsub']}
 ];
 
 function _filoReleaseOne(key){
@@ -899,6 +900,7 @@ function _filoGoDine(){
 
 function _filoLogout(){
  if(!confirm('로그아웃 하시겠습니까?'))return;
+ if(window._filoDineResUnsub){try{window._filoDineResUnsub();}catch(e){} window._filoDineResUnsub=null;}
  _auth.signOut();
 }
 

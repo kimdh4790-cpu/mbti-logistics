@@ -386,14 +386,11 @@ function _dineLogin(){
       return;
      }
     }).catch(function(){
-     _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
-     _dineAfterLogin();
+     err.textContent='직원 정보 조회 실패. 네트워크를 확인해주세요';
     });
    }
   }).catch(function(){
-   /* companies 조회 실패 시 → 직원으로 폴백 */
-   _CU={uid:_lid,email:_lemail,dealerId:_lid,name:_lemail.split('@')[0],role:'owner'};
-   _dineAfterLogin();
+   err.textContent='계정 정보 조회 실패. 네트워크를 확인해주세요';
   });
  }).catch(function(e){err.textContent='네트워크 오류: '+e.message;});
 }

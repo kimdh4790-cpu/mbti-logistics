@@ -200,7 +200,8 @@ function _filoPageKiosk(el){
   /* 테이블 목록 1회 로드 → onSnapshot 콜백에서 캐시 재사용 */
   var _startOrderWatch=function(){
    if(_kioskTableUnsub){try{_kioskTableUnsub();}catch(e){}}
-   _kioskTableUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table')
+   var _posToday=new Date().toISOString().slice(0,10);
+   _kioskTableUnsub=_db.collection('filo_orders').where('dealerId','==',did).where('type','==','table').where('date','==',_posToday)
     .onSnapshot(function(oSnap){_renderBar(oSnap);},function(){});
   };
   if(_kioskTablesCache){_startOrderWatch();}

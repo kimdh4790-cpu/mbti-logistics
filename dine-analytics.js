@@ -580,12 +580,12 @@ function _dineMyPayroll(el){
 function _dineLoadMyPayroll(){
  var ym=document.getElementById('my-pay-ym')?.value;
  if(!ym) return;
- var did=_CU.dealerId;var sid=_CU.staffId||_CU.uid;
+ var did=_CU.dealerId;var sid=_CU.memberId||_CU.uid;
  // 직원 정보 + 출퇴근 기록 조회
- _db.collection('staff').doc(sid).get().then(function(snap){
+ _db.collection('members').doc(sid).get().then(function(snap){
   var st=snap.data()||{name:_CU.name,hourlyWage:10320,payType:'hourly'};
   _db.collection('attendance').where('dealerId','==',did)
-   .where('staffId','==',sid)
+   .where('memberId','==',sid)
    .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get()
   .then(function(attSnap){
    var dateIns={};var dateOuts={};
