@@ -431,6 +431,7 @@ function _buildFiloNav(){
  var menus=[];
 
  /* ── 홈 (항상) ── */
+ menus.push({s:'홈',items:[{ic:'home',l:'홈 대시보드',p:'home'}]});
 
  /* ── 주문·매출 ── */
  var _sales=[];

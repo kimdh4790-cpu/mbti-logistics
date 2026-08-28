@@ -263,6 +263,17 @@ body.dark .mi-sold{background:rgba(13,15,26,.8)}
   box-shadow:0 2px 8px var(--brand-glow);min-width:22px;text-align:center
 }
 .mi-badge.on{display:block}
+.mi-tts-btn{
+  position:absolute;bottom:8px;right:8px;
+  width:32px;height:32px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(0,0,0,.45);color:#fff;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);transition:.2s;padding:0;
+  touch-action:manipulation;
+}
+.mi-tts-btn:active{transform:scale(.88);opacity:.8}
+/* 비KO 언어 선택 시 보이게 */
+body[data-tts="on"] .mi-tts-btn{display:flex}
 
 /* ── 리스트뷰 ────────────────────────────────────── */
 .mi-list{

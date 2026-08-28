@@ -167,6 +167,9 @@ function _renderMenuGrid(menus, gridId){
   var badgeId='badge-'+_menuSlug(m.name);
   var inCart=_cart[m.name]&&_cart[m.name].qty>0;
   var nameEsc=m.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  var ttsBtnHtml='<button class="mi-tts-btn" aria-label="음성 안내" onclick="event.stopPropagation();_ttsMenu(\''+nameEsc+'\',\'\')" ontouchend="event.stopPropagation();event.preventDefault();_ttsMenu(\''+nameEsc+'\',\'\')">'+
+   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'+
+   '</button>';
   if(m.imageUrl){
    item.innerHTML='<div class="mi-img-wrap">'+
     '<img class="mi-img" src="'+m.imageUrl+'" loading="lazy" alt="'+m.name+'">'+
@@ -175,6 +178,7 @@ function _renderMenuGrid(menus, gridId){
     '<div class="mi-tr-img" id="'+trId+'"></div>'+
     '<div class="mi-price-img">₩'+(m.price||0).toLocaleString()+'</div>'+
     '</div></div>'+
+    ttsBtnHtml+
     '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   } else {
    var _mClrs=['#c9a84c','#2563eb','#059669','#dc2626','#d97706','#db2777'];
@@ -188,6 +192,7 @@ function _renderMenuGrid(menus, gridId){
     '<div class="mi-tr" id="'+trId+'"></div>'+
     '<div class="mi-price">₩'+(m.price||0).toLocaleString()+'</div>'+
     '</div>'+
+    ttsBtnHtml+
     '<div class="mi-badge'+(inCart?' on':'')+'" id="'+badgeId+'">'+(inCart?_cart[m.name].qty:'')+'</div>';
   }
   if(m.stock!=null&&m.stock<=0){
@@ -418,6 +423,16 @@ function _openMdlCommon(m){
  // 모달 열기
  var mdlEl = document.getElementById(mdlId);
  if(mdlEl) mdlEl.classList.add('open');
+ // 메뉴 모달 열릴 때 TTS로 메뉴명 읽기 (비KO 언어 전용)
+ if(_lang!=='ko'){
+  setTimeout(function(){
+   var ck=m.name+'_'+_lang;
+   var readName=_tlCache[ck]||m.name;
+   var dk=m.name+'_desc_'+_lang;
+   var readDesc=_tlCache[dk]||'';
+   _ttsMenu(readName, readDesc);
+  }, 300);
+ }
 }
 
 // ── 수량 조절 ────────────────────────────────────────────────────────────────
@@ -512,6 +527,44 @@ function _cartChg(name,d){
  if(!Object.keys(_cart).filter(function(k){return _cart[k]&&_cart[k].qty>0;}).length)_closeCart();
 }
 
+// ── TTS 음성 안내 ─────────────────────────────────────────────────────────────
+var _TTS_LANG={ko:'ko-KR',en:'en-US',zh:'zh-TW',ja:'ja-JP'};
+var _TTS_GREET={
+ ko:'안녕하세요! 메뉴를 선택해 주세요.',
+ en:'Welcome! Please select a menu item.',
+ zh:'欢迎光临！请选择菜单。',
+ ja:'いらっしゃいませ！メニューをお選びください。'
+};
+
+function _ttsSpeak(text, lang){
+ if(!window.speechSynthesis||!text) return;
+ window.speechSynthesis.cancel();
+ var u=new SpeechSynthesisUtterance(text);
+ u.lang=_TTS_LANG[lang||_lang]||'ko-KR';
+ u.rate=0.95;
+ u.pitch=1.05;
+ // 해당 언어 음성 우선 선택
+ var voices=window.speechSynthesis.getVoices();
+ var matched=voices.filter(function(v){return v.lang===u.lang;});
+ if(matched.length) u.voice=matched[0];
+ window.speechSynthesis.speak(u);
+}
+
+function _ttsMenu(menuName, desc){
+ var translatedName='';
+ var ck=menuName+'_'+_lang;
+ if(_lang==='ko'){
+  translatedName=menuName;
+ } else if(_tlCache[ck]){
+  translatedName=_tlCache[ck];
+ } else {
+  // 캐시 없으면 원문으로 읽기
+  translatedName=menuName;
+ }
+ var text=translatedName+(desc?' — '+desc:'');
+ _ttsSpeak(text, _lang);
+}
+
 // ── 언어 변경 ────────────────────────────────────────────────────────────────
 function _setLang(l){
  _lang=l;
@@ -542,6 +595,15 @@ function _setLang(l){
  if(addBtn&&_curMdlMenu){
   var p=(_curMdlMenu.price||0)*(_tlQtyVal||1);
   addBtn.textContent=_t('add')+' — ₩'+p.toLocaleString();
+ }
+ // TTS 버튼 노출 (비KO 언어)
+ document.body.dataset.tts=(l!=='ko')?'on':'';
+ // 언어 전환 TTS 인사말 (음성 목록 로드 후 실행)
+ if(window.speechSynthesis){
+  var _doGreet=function(){_ttsSpeak(_TTS_GREET[l]||_TTS_GREET.ko, l);};
+  var _voices=window.speechSynthesis.getVoices();
+  if(_voices.length) _doGreet();
+  else window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.onvoiceschanged=null;_doGreet();};
  }
 }
 
