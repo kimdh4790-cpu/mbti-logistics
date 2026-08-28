@@ -96,6 +96,23 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | claude-mem (thedotmack/claude-mem) | v13.16.1 | 설치완료 | 세션간 기억 유지 |
 | claude-code-setup (anthropics/claude-plugins-official) | v1.0.0 | 설치완료 | 프로젝트 분석·추천 |
 
+### Motion Graphics 스킬 (2026-08-28 설치, Remotion 기반)
+| 스킬 | 역할 |
+|---|---|
+| motion-graphics | 움직임에 뜻 부여 — 자료조사·로고·승인 관문 |
+| cinematic-camera | 컷을 하나의 세계로 연결 |
+| terminal-inserts | CLI 데모를 실제처럼 렌더 |
+| article-highlights | 기사 강조 (형광펜·흐림·3D 회전) |
+| Remotion 공식 스킬 12종 | remotion-render, remotion-captions 등 |
+- 설치 위치: `C:\Users\82104\motion-graphics\.claude\skills\`
+- 렌더 비용 0원 (로컬 렌더), MIT 라이선스
+- 미리보기: `cd motion-graphics && npx remotion studio`
+
+### MCP 서버 (로컬 PC ~/.claude/settings.json)
+| 서버 | 역할 | 상태 |
+|---|---|---|
+| context7 | 최신 라이브러리 문서 실시간 주입 | 2026-08-28 등록 |
+
 ---
 
 ## OmniRoute (로컬 PC)
@@ -168,3 +185,4 @@ claude
 |---|---|
 | 2026-08-28 | 최초 생성 (Oracle Cloud, GitHub Actions, 플러그인, OmniRoute 정보 통합) |
 | 2026-08-28 | OmniRoute에 Gemini(53개)·Groq(14개) API 키 등록 완료. 총 79개 무료 모델 활성화 |
+| 2026-08-28 | Motion Graphics 스킬 4종 + Remotion 공식 12종 설치. Context7 MCP 등록 |
