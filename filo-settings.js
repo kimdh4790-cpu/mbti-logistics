@@ -28,6 +28,29 @@ function _filoPageSettings(el){
  '<div style="display:flex;justify-content:space-between;padding:8px 0">'+
  '<span style="font-size:12px;color:var(--t3)">역할</span>'+
  '<span style="font-size:13px;font-weight:700">'+(_CU.role||'관리자')+'</span></div>'+
+ /* 🤖 AI 리뷰 답글 — 자주 쓰는 기능 최상단 */
+ '<div class="card" style="margin-top:12px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:4px">AI 리뷰 답글</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">고객 리뷰를 붙여넣으면 AI가 답글 초안을 작성합니다</div>'+
+ '<textarea id="ai-review-input" class="inp" rows="4" placeholder="리뷰 내용을 여기에 붙여넣으세요..." style="width:100%;font-size:13px;resize:vertical;min-height:100px;margin-bottom:10px"></textarea>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+ '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">플랫폼</div>'+
+ '<select id="ai-review-platform" class="inp" style="width:100%;font-size:14px;min-height:44px">'+
+ '<option value="네이버">네이버 플레이스</option>'+
+ '<option value="카카오맵">카카오맵</option>'+
+ '<option value="구글">구글 리뷰</option>'+
+ '</select></div>'+
+ '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">답글 톤</div>'+
+ '<select id="ai-review-tone" class="inp" style="width:100%;font-size:14px;min-height:44px">'+
+ '<option value="정중한">정중한</option>'+
+ '<option value="친근한">친근한</option>'+
+ '<option value="간결한">간결한</option>'+
+ '</select></div>'+
+ '</div>'+
+ '<button id="ai-reply-btn" class="btn btn-brand btn-sm" style="width:100%;min-height:44px;font-size:14px" onclick="_filoAiReplyGenerate()">AI 답글 생성</button>'+
+ '<div id="ai-reply-result" style="margin-top:10px"></div>'+
+ '</div>'+
+ /* ⭐ 리뷰 링크 설정 */
  '<div class="card" style="margin-top:12px">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">⭐ 리뷰 링크 설정</div>'+
  '<div style="font-size:11px;color:var(--t3);margin-bottom:10px">고객이 결제 후 리뷰를 남길 수 있는 링크를 등록하세요</div>'+
@@ -40,28 +63,6 @@ function _filoPageSettings(el){
  '<input id="review-kakao" class="inp" placeholder="https://place.map.kakao.com/..." value="'+(d.reviewUrlKakao||'')+'" style="width:100%;font-size:12px">'+
  '</div>'+
  '<button class="btn btn-brand btn-sm" onclick="_filoSaveReviewUrls()">저장</button>'+
- '</div>'+
- /* 🤖 AI 리뷰 답글 생성 */
- '<div class="card" style="margin-top:12px">'+
- '<div style="font-size:13px;font-weight:800;margin-bottom:4px">AI 리뷰 답글</div>'+
- '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">고객 리뷰를 붙여넣으면 AI가 답글 초안을 작성합니다</div>'+
- '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
- '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">플랫폼</div>'+
- '<select id="ai-review-platform" class="inp" style="width:100%;font-size:12px">'+
- '<option value="네이버">네이버 플레이스</option>'+
- '<option value="카카오맵">카카오맵</option>'+
- '<option value="구글">구글 리뷰</option>'+
- '</select></div>'+
- '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">답글 톤</div>'+
- '<select id="ai-review-tone" class="inp" style="width:100%;font-size:12px">'+
- '<option value="정중한">정중한</option>'+
- '<option value="친근한">친근한</option>'+
- '<option value="간결한">간결한</option>'+
- '</select></div>'+
- '</div>'+
- '<textarea id="ai-review-input" class="inp" rows="4" placeholder="리뷰 내용을 여기에 붙여넣으세요..." style="width:100%;font-size:12px;resize:vertical;min-height:90px"></textarea>'+
- '<button id="ai-reply-btn" class="btn btn-brand btn-sm" style="margin-top:8px;width:100%" onclick="_filoAiReplyGenerate()">AI 답글 생성</button>'+
- '<div id="ai-reply-result" style="margin-top:10px"></div>'+
  '</div>'+
  /* 🎨 업종별 테마 — 매장별 독립 적용 */
  '<div class="card" style="margin-top:12px">'+
@@ -91,12 +92,6 @@ function _filoPageSettings(el){
  '</div>'+
  '<div style="font-size:10px;color:var(--t3);margin-top:8px">※ 테마는 이 매장에만 적용되며 주문·매장·주방 화면에도 함께 반영됩니다</div>'+
  '</div>'+
- /* 🗑️ 데이터 관리 */
- '<div class="card" style="margin-top:12px;border:1px solid rgba(220,38,38,.25)">'+
- '<div style="font-size:13px;font-weight:800;margin-bottom:8px;color:#ef4444">데이터 관리</div>'+
- '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">주방화면·주문대기 중복 표시 문제가 있을 때 실행하세요. filo_sales의 테이블 임시 주문 데이터를 삭제합니다.</div>'+
- '<button class="btn btn-sm" style="background:rgba(220,38,38,.1);color:#ef4444;border:1px solid rgba(220,38,38,.3)" onclick="_filoCleanupDupOrders()">중복 주문 데이터 정리</button>'+
- '</div>'+
  /* 📱 NFC 태그 기록 */
  '<div class="card" style="margin-top:12px">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:4px">NFC 태그 기록</div>'+
@@ -109,6 +104,12 @@ function _filoPageSettings(el){
  '<input id="nfc-table-num" class="inp" type="number" min="0" placeholder="1" style="width:70px;font-size:12px;padding:6px 8px">'+
  '</div>'+
  '<div id="nfc-menus-list" style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:var(--t3)">메뉴 정보 로딩 중...</div></div>'+
+ '</div>'+
+ /* 🗑️ 데이터 관리 — 비상시만 사용, 맨 아래 */
+ '<div class="card" style="margin-top:12px;border:1px solid rgba(220,38,38,.25)">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:8px;color:#ef4444">데이터 관리</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">주방화면·주문대기 중복 표시 문제가 있을 때 실행하세요. filo_sales의 테이블 임시 주문 데이터를 삭제합니다.</div>'+
+ '<button class="btn btn-sm" style="background:rgba(220,38,38,.1);color:#ef4444;border:1px solid rgba(220,38,38,.3)" onclick="_filoCleanupDupOrders()">중복 주문 데이터 정리</button>'+
  '</div>'+
  '</div></div>';
  _filoThemePreview();
@@ -316,7 +317,7 @@ async function _filoAiReplyGenerate(){
   window._filoAiReplyText=text;
   var safe=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   resultDiv.innerHTML='<div style="background:var(--b3);border-radius:10px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word">'+safe+'</div>'+
-   '<button class="btn btn-sm" style="margin-top:8px;font-size:11px;padding:6px 14px;background:var(--b3);color:var(--t2);border:1px solid var(--bd)" onclick="_filoAiReplyCopy()">답글 복사</button>';
+   '<button class="btn btn-sm" style="margin-top:8px;width:100%;min-height:44px;font-size:14px;font-weight:700;background:var(--b3);color:var(--t2);border:1px solid var(--bd)" onclick="_filoAiReplyCopy()">답글 복사</button>';
  }catch(e){
   _filoToast('오류: '+e.message.split('\n')[0]);
   resultDiv.innerHTML='';
