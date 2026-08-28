@@ -318,6 +318,10 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js kiosk 리스너 누수 + 로그아웃 cleanup 수정
 - dine-analytics.js 좀비 쿼리(staff→members) 수정
 - DW_TIERS 구요금 → 2,500원/인 단일 요금 동기화
+- dine.js _dineSendNotif N+1 → Promise.all 변환
+- filo-staff.js 60초 attendance.get() 폴링 → onSnapshot + 캐시 전환 (_tickerAttendSnap)
+- dine.js _dineReleaseListeners() 추가 — 로그아웃 시 모든 DINE 리스너 일괄 해제
+- filo-auth.js 로그아웃 시 _tickerAttendUnsub cleanup 추가
 
 ### 최우선
 1. 선결제/후불 모달 - table-order.html 미작업
@@ -328,19 +332,16 @@ cd mbtico-pages && npx wrangler deploy
 4. 관제센터 채팅/공지/결제 탭 실사용 테스트
 5. 직원 근태 QR 이름+연락처 등록 화면 수정
 6. 매출분석 7월 테스트 데이터 시딩
-7. dine.js N+1 직렬 await → Promise.all 변환
-8. filo-staff.js 60초 polling → attendance onSnapshot 전환
-9. DINE 페이지 리스너 cleanup 구조 추가
 
 ### 파일 분리·경량화 (대형 작업)
-10. filo-menu.js 분리 (55KB)
-11. filo-pos.js 분리 (39KB)
-12. mbtico-pages/_worker.js 경량화 (515KB)
-13. emergency.html 재작성 (461KB)
+7. filo-menu.js 분리 (55KB)
+8. filo-pos.js 분리 (39KB)
+9. mbtico-pages/_worker.js 경량화 (515KB)
+10. emergency.html 재작성 (461KB)
 
 ### 법무·인증 (외부 절차)
-14. 용차앱 저작권 등록 (cros.or.kr)
-15. 벤처기업 인증 (기보 부산지점)
+11. 용차앱 저작권 등록 (cros.or.kr)
+12. 벤처기업 인증 (기보 부산지점)
 
 ---
 

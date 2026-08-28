@@ -86,15 +86,18 @@ function _dineRequestNotifPermission(did){
 }
 async function _dineSendNotif(did,memberIds,title,body,alimtalkFn){
   var tokens=[];var noTokenIds=[];
-  for(var i=0;i<memberIds.length;i++){
-    var snap=await _db.collection('members').doc(memberIds[i]).get();
+  // Promise.all로 병렬 조회 (N+1 직렬 await → 1회 병렬)
+  var snaps=await Promise.all(memberIds.map(function(id){
+    return _db.collection('members').doc(id).get().catch(function(){return {data:function(){return {};},id:id};});
+  }));
+  snaps.forEach(function(snap,i){
     var d=snap.data()||{};
     var toks=((d.fcmTokens||[]).map(function(t){return t.token||t;})).filter(Boolean);
     if(d.fcmToken) toks.push(d.fcmToken);
     toks=[...new Set(toks)].filter(function(t){return t&&t.length>20;});
     if(toks.length){ tokens=tokens.concat(toks); }
     else { noTokenIds.push(memberIds[i]); }
-  }
+  });
   if(tokens.length){
     fetch('https://donway.ai.kr/fcm/notify-drivers',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({tokens:tokens,title:title,body:body})}).catch(function(){});
@@ -410,8 +413,20 @@ function _dineGoFilo(){
  window.open(url,'_blank');
 }
 
+function _dineReleaseListeners(){
+  var keys=[
+    '_dineAttendUnsub','_dineSalesUnsub','_dineChUnsub',
+    '_dineStockUnsub','_dineFiloSalesUnsub','_dineResUnsub',
+    '_payrollUnsub','_dineResListUnsub','_tickerAttendUnsub'
+  ];
+  keys.forEach(function(k){
+    try{if(window[k]){window[k]();window[k]=null;}}catch(e){}
+  });
+  if(typeof _attendInterval!=='undefined'&&_attendInterval){clearInterval(_attendInterval);_attendInterval=null;}
+}
 function _dineLogout(){
  if(!confirm('로그아웃하시겠습니까?'))return;
+ _dineReleaseListeners();
  _auth.signOut().catch(function(){});
  _dineToken=null; _CU={};
  document.getElementById('login-wrap').style.display='flex';

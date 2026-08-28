@@ -901,6 +901,7 @@ function _filoGoDine(){
 function _filoLogout(){
  if(!confirm('로그아웃 하시겠습니까?'))return;
  if(window._filoDineResUnsub){try{window._filoDineResUnsub();}catch(e){} window._filoDineResUnsub=null;}
+ if(window._tickerAttendUnsub){try{window._tickerAttendUnsub();}catch(e){} window._tickerAttendUnsub=null;}
  _auth.signOut();
 }
 

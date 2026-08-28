@@ -525,59 +525,67 @@ var _liveTickerTimer=null;
 var _staffAttendUnsub=null;
 /* members 캐시 — 5분 TTL, 반복 조회 방지 */
 var _membersCache=null, _membersCacheAt=0;
+/* attendance onSnapshot 캐시 — 60초 get() 폴링 대체 */
+var _tickerAttendSnap=null;
 function _filoStartLiveTicker(){
  if(_liveTickerTimer)clearInterval(_liveTickerTimer);
- var _tick=function(){
-  var liveEl=document.getElementById('pay-live');
-  if(!liveEl){clearInterval(_liveTickerTimer);return;}
-  var did=_CU&&(_CU.dealerId||_CU.uid);
-  if(!did)return;
-  var today=_today();
-  /* attendance in/out 단일 쿼리 (2쿼리 → 1쿼리) */
-  _db.collection('attendance').where('dealerId','==',did).where('date','==',today)
-  .where('type','in',['in','out']).get().then(function(attSnap){
-   var ins={},outIds=new Set();
-   attSnap.forEach(function(d){var r=d.data();if(r.type==='in')ins[r.memberId]=r;else if(r.type==='out')outIds.add(r.memberId);});
-   var working=Object.values(ins).filter(function(r){return !outIds.has(r.memberId);});
-   if(!working.length){liveEl.innerHTML='';return;}
-   var rows=working.map(function(r){
-    var minWorked=(Date.now()-new Date(r.time))/60000;
-    return {name:r.memberName||r.memberId,mid:r.memberId,minWorked:Math.round(minWorked)};
-   });
-   /* members — 캐시 5분 유효 시 재사용 */
-   var now=Date.now();
-   var _render=function(wm){
-    var html='<div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:12px;padding:12px 14px;margin-bottom:12px">'+
-    '<div style="font-size:11px;font-weight:800;color:#10B981;margin-bottom:8px;display:flex;align-items:center;gap:5px">'+
-    '<span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;animation:pulse 1.5s infinite"></span>출근중 실시간 급여</div>'+
-    '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
-    rows.map(function(r){
-     var info=wm[r.mid]||wm[r.name]||{};
-     var wage=info.wage||0;
-     var wageType=info.wageType||'hourly';
-     var livePay=wageType==='hourly'?Math.round((r.minWorked/60)*wage):0;
-     return '<div style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(16,185,129,.2)">'+
-     '<div style="font-size:11px;font-weight:800;color:var(--tx)">'+esc(r.name)+'</div>'+
-     '<div style="font-size:13px;font-weight:900;color:#10B981">₩'+livePay.toLocaleString()+'</div>'+
-     '<div style="font-size:9px;color:var(--t3)">'+Math.floor(r.minWorked/60)+'h '+r.minWorked%60+'m'+
-     (wage?' · '+(wageType==='hourly'?wage.toLocaleString()+'원/h':''):'')+'</div></div>';
-    }).join('')+
-    '</div></div>';
-    liveEl.innerHTML=html;
-   };
-   if(_membersCache&&(now-_membersCacheAt)<300000){
-    _render(_membersCache);
-   } else {
-    _db.collection('members').where('dealerId','==',did).get().then(function(ms){
-     var wm={};ms.forEach(function(d){var m=d.data();wm[d.id]=m;wm[m.name]=m;});
-     _membersCache=wm;_membersCacheAt=Date.now();
-     _render(wm);
-    }).catch(function(){});
-   }
-  }).catch(function(){});
+ // 기존 ticker attendance 구독 정리
+ if(window._tickerAttendUnsub){try{window._tickerAttendUnsub();}catch(e){} window._tickerAttendUnsub=null;}
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ if(!did)return;
+ var today=_today();
+ // attendance onSnapshot으로 실시간 수신 → 캐시 저장 (60초 get() 폴링 제거)
+ window._tickerAttendUnsub=_db.collection('attendance')
+  .where('dealerId','==',did).where('date','==',today)
+  .where('type','in',['in','out'])
+  .onSnapshot(function(snap){_tickerAttendSnap=snap;_tickerRender();},function(){});
+ // 1분마다 급여 금액만 재계산 (DB 조회 없이 캐시 사용)
+ _liveTickerTimer=setInterval(_tickerRender,60000);
+}
+function _tickerRender(){
+ var liveEl=document.getElementById('pay-live');
+ if(!liveEl){clearInterval(_liveTickerTimer);return;}
+ var attSnap=_tickerAttendSnap;
+ if(!attSnap)return;
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ if(!did)return;
+ var ins={},outIds=new Set();
+ attSnap.forEach(function(d){var r=d.data();if(r.type==='in')ins[r.memberId]=r;else if(r.type==='out')outIds.add(r.memberId);});
+ var working=Object.values(ins).filter(function(r){return !outIds.has(r.memberId);});
+ if(!working.length){liveEl.innerHTML='';return;}
+ var rows=working.map(function(r){
+  var minWorked=(Date.now()-new Date(r.time))/60000;
+  return {name:r.memberName||r.memberId,mid:r.memberId,minWorked:Math.round(minWorked)};
+ });
+ var now=Date.now();
+ var _doRender=function(wm){
+  var html='<div style="background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);border-radius:12px;padding:12px 14px;margin-bottom:12px">'+
+  '<div style="font-size:11px;font-weight:800;color:#10B981;margin-bottom:8px;display:flex;align-items:center;gap:5px">'+
+  '<span style="width:7px;height:7px;border-radius:50%;background:#10B981;display:inline-block;animation:pulse 1.5s infinite"></span>출근중 실시간 급여</div>'+
+  '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
+  rows.map(function(r){
+   var info=wm[r.mid]||wm[r.name]||{};
+   var wage=info.wage||0;
+   var wageType=info.wageType||'hourly';
+   var livePay=wageType==='hourly'?Math.round((r.minWorked/60)*wage):0;
+   return '<div style="background:#fff;border-radius:10px;padding:8px 12px;border:1px solid rgba(16,185,129,.2)">'+
+   '<div style="font-size:11px;font-weight:800;color:var(--tx)">'+esc(r.name)+'</div>'+
+   '<div style="font-size:13px;font-weight:900;color:#10B981">₩'+livePay.toLocaleString()+'</div>'+
+   '<div style="font-size:9px;color:var(--t3)">'+Math.floor(r.minWorked/60)+'h '+r.minWorked%60+'m'+
+   (wage?' · '+(wageType==='hourly'?wage.toLocaleString()+'원/h':''):'')+'</div></div>';
+  }).join('')+
+  '</div></div>';
+  liveEl.innerHTML=html;
  };
- _tick();
- _liveTickerTimer=setInterval(_tick,60000);
+ if(_membersCache&&(now-_membersCacheAt)<300000){
+  _doRender(_membersCache);
+ } else {
+  _db.collection('members').where('dealerId','==',did).get().then(function(ms){
+   var wm={};ms.forEach(function(d){var m=d.data();wm[d.id]=m;wm[m.name]=m;});
+   _membersCache=wm;_membersCacheAt=Date.now();
+   _doRender(wm);
+  }).catch(function(){});
+ }
 }
 
 /* ══════════════════════════════════════════

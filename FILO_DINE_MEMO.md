@@ -159,7 +159,14 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
-### 2026-08-28
+### 2026-08-28 (2차)
+**코드 품질 — N+1 제거, onSnapshot 전환, 리스너 cleanup 구조화**
+- `dine.js`: `_dineSendNotif` N+1 직렬 `await` → `Promise.all` 병렬 조회 (알림 발송 속도 개선)
+- `dine.js`: `_dineReleaseListeners()` 함수 추가 — 로그아웃 시 모든 window._dine* 리스너 일괄 해제 (`_dineLogout` 연결)
+- `filo-staff.js`: `_filoStartLiveTicker` 리팩터 — 60초 `attendance.get()` 폴링 → `attendance.onSnapshot` + `_tickerAttendSnap` 캐시; `_tickerRender()` 분리 (1분 interval은 시간 기반 급여 재계산만 담당, DB 조회 없음)
+- `filo-auth.js`: `_filoLogout`에 `_tickerAttendUnsub` cleanup 추가
+
+### 2026-08-28 (1차)
 **보안·코드 품질·Firestore 효율성 전면 점검**
 - `dine.js`: 로그인 `.catch()` 2곳 — 네트워크 오류 시 owner 자동 승격 버그 수정 → 에러 메시지 표시로 교체
 - `filo-staff.js`: `_attendUnsub` → `_staffAttendUnsub` 이름변경 (filo-members.js 전역 충돌 방지), `_liveTickerTimer` 중복 선언(L363) 제거, `var _staffAttendUnsub=null` 명시적 선언 추가
