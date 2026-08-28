@@ -187,9 +187,9 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 ### 영상 제작 현황
 | 제품 | 나레이션 MP3 | 프로모 HTML | 녹화 WebM | 편집 MP4 | YouTube |
 |---|---|---|---|---|---|
-| FILO | 미생성 | ✅ 6종 생성 | 미생성 | 미생성 | 미완 |
+| FILO | 미생성 | ✅ 6종 생성 | Remotion | ⏳ GitHub Actions 렌더링 중 | ⏳ 업로드 진행 중 |
 | DONWAY | ✅ 완료 | ✅ 4종 생성 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) |
-| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | 미생성 | 미생성 | 미완 |
+| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 (Oracle Cloud, 2026-08-28) | ⏳ YouTube 토큰 등록 후 가능 |
 | MBTICO | 미생성 | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
 
 ---
@@ -272,10 +272,11 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 다음 작업 우선순위
 
 1. ~~**DONWAY YouTube 숏츠 업로드**~~ ✅ 완료 (https://youtu.be/3HRSPE2bNDM, 2026-08-27)
-2. **DONWAY Instagram Reels 업로드** → `node scripts/upload/upload-instagram.js --product donway` (음성 포함 세로형)
-3. **YONGCHA 영상 제작** → 녹화→나레이션→합성→YouTube 숏츠→Instagram Reels
-4. **FILO 영상 제작** → 동일 순서
-5. **BGM 파일 추가 (선택)** → YouTube 오디오 라이브러리 → `assets/bgm/background.mp3`
+2. ~~**YONGCHA 영상 제작**~~ ✅ Oracle Cloud 편집 완료 (2026-08-28, output/yongcha-final.mp4)
+3. **YONGCHA YouTube 업로드** → YouTube Secrets 등록 후 `node scripts/upload/upload-youtube-api.js --product yongcha --reels`
+4. **FILO 영상 제작** → GitHub Actions 렌더링 중 (FiloPromo.jsx 전면 재작성 — 네이비 배경, 애니메이션, 8Mbps)
+5. **BGM 파일 추가** → YouTube 오디오 라이브러리 → `assets/bgm/background.mp3` → git push
+6. **DONWAY Instagram Reels 업로드** → Instagram 세션 필요
 
 ### 업로드 방향 (확정)
 - YouTube: **숏츠(--reels) 우선** — 구독자 적을 때 알고리즘 노출 유리
@@ -287,6 +288,12 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-28 | FiloPromo.jsx 전면 재작성: Particles/AnimatedCounter 추가, 모든 씬 네이비 배경, 이모지→텍스트, TransitionOverlay Sequence 로컬프레임 버그 수정, hasBgm 지원 |
+| 2026-08-28 | render-filo.js: videoBitrate '8M' 추가 (고화질 H.264) |
+| 2026-08-28 | Oracle Cloud 초기화 완료 (oracle-init.sh 실행, Chromium /usr/bin/chromium 확인) |
+| 2026-08-28 | 용차앱 영상 Oracle Cloud에서 완성 (30초, 1080x1920, output/yongcha-final.mp4) |
+| 2026-08-28 | GitHub Actions FILO 렌더링+YouTube 업로드 트리거 (social-media.yml, 진행 중) |
+| 2026-08-28 | superpowers 플러그인 설치 (v6.3.0, 스킬 14개) |
 | 2026-08-27 | upload-instagram.js: /create/style/ 직접 이동 방식 추가 (버튼 클릭 폴백 유지), file input 강제 클릭 방식으로 파일 선택 안정화 |
 | 2026-08-27 | upload-youtube-api.js: googleapis 기반으로 교체, --reels 모드 복원, 결과 JSON 저장 복원 |
 | 2026-08-27 | compose-video.sh: 출력 해상도 1280x720→1080x1920 수정 (Shorts 흰배경 버그 수정) |
