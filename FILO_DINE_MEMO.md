@@ -159,6 +159,16 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-28 (8차)
+**홈 nav 버튼 + QR주문 음성TTS 번역**
+- `filo-auth.js`: `_buildFiloNav()` 홈 대시보드 nav 항목 추가 (홈→다른 페이지 이동 후 복귀 경로)
+- `filo-order-common.js`: `_ttsSpeak()`, `_ttsMenu()` 신규 — 언어별 speechSynthesis lang 설정 (en-US/zh-TW/ja-JP/ko-KR)
+- `filo-order-common.js`: 언어 전환 시 해당 언어 인사말 TTS 자동 재생
+- `filo-order-common.js`: 메뉴 모달 열릴 때 번역된 메뉴명+설명 자동 읽기
+- `filo-order-common.js`: 메뉴 카드 스피커 버튼 추가 (비KO 언어 시 자동 표시)
+- `order.html`: `.mi-tts-btn` CSS, `body[data-tts=on]` 토글 방식
+- commit: `0f7f93c`
+
 ### 2026-08-28 (7차)
 **홈 대시보드 신규 구현 — 실시간 운영 현황판**
 - `filo-auth.js`: 로그인 기본 화면 `kiosk` → `home` 으로 변경 (L180)
