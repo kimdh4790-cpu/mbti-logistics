@@ -173,7 +173,16 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `filo-pos.js`: 테이블 주문 onSnapshot에 `.where('date','==',_posToday)` 추가 (전체 이력 구독 → 오늘 주문만, ~25% 읽기 절감)
 - `filo-auth.js`: `_FILO_WATCHERS`에 `kiosk` 페이지 (`_kioskTableUnsub`) 추가; 로그아웃 시 `_filoDineResUnsub` 정리 추가 (재로그인 이중 구독 방지)
 - `dine-analytics.js`: `_dineLoadMyPayroll` 좀비 쿼리 수정 (`staff`→`members`, `staffId`→`memberId`)
-- `_worker.js`: 보안 수정 6건 — verifyFirebaseToken 폴백 null 반환, /admin/cleanup-dup-orders requireAdmin 추가, /api/filo-order·/api/point-earn·/order/move-table dealerId 검증, /kitchen/update 인증 추가, /api/inquiry HTML 이스케이프, /toss-confirm uid 검증, /api/emergency-driver-profile·/api/delivery-dispatch 인증 추가
+- `_worker.js`: 보안 수정 14건
+  - verifyFirebaseToken 폴백 null 반환 (JWT 서명 미검증 제거)
+  - /admin/cleanup-dup-orders requireAdmin 추가
+  - /api/filo-order·/api/point-earn·/order/move-table dealerId→companies 검증
+  - /kitchen/update verifyFirebaseToken 인증 추가
+  - /api/inquiry HTML 이스케이프 (_he 함수)
+  - /toss-confirm verifyFirebaseToken 인증 + uid 검증
+  - /api/emergency-driver-profile·/api/delivery-dispatch verifyFirebaseToken 인증
+  - /qr/register·/qr/confirm (×2 핸들러) dealerId→companies 존재 검증 (임의 매장 데이터 생성 방지)
+  - /toss/create-order verifyFirebaseToken 인증 추가 (비인증 결제 주문 생성 방지)
 - `_worker.js`: DW_TIERS 구요금 → 2,500원/인 단일 요금으로 동기화
 
 ### 2026-08-16 (3차)

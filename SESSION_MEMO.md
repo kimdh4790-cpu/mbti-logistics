@@ -98,9 +98,29 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 - **선행 조건**: 테스트 매장에 직원 1명 이상 등록 필요 (홍길동/010-1234-5678/시급10000)
 - 테스트: `node filo-e2e-test-win.js` (로컬에서만)
 
-### CLAUDE.md 미완료 항목
-1. **선결제/후불 모달** — `table-order.html` 미작업
-2. **솔라피→알리고 교체** — `_worker.js` 알림톡 발송부
+### ✅ 완료된 항목 (2026-08-28 기준)
+- 솔라피 → 알리고 교체 (`_worker.js` 알림톡 발송부)
+- verifyFirebaseToken JWT 서명 미검증 폴백 → null 반환으로 수정
+- `/admin/cleanup-dup-orders` requireAdmin 추가
+- `/api/filo-order`, `/api/point-earn`, `/order/move-table` dealerId companies 검증 추가
+- `/kitchen/update` verifyFirebaseToken 인증 추가
+- `/api/inquiry` HTML 이스케이프 (_he 함수) 추가
+- `/toss-confirm` verifyFirebaseToken 인증 + DW_TIERS 2,500원/인 가격 수정
+- `/api/emergency-driver-profile`, `/api/delivery-dispatch` verifyFirebaseToken 인증 추가
+- `/qr/register`, `/qr/confirm` dealerId → companies 유효성 검증 추가 (임의 매장 데이터 생성 방지)
+- `/toss/create-order` verifyFirebaseToken 인증 추가 (비인증 결제 주문 생성 방지)
+- `dine.js` 로그인 오류 시 owner 자동 승격 버그 수정
+- `filo-staff.js` _attendUnsub 전역충돌·_liveTickerTimer 중복 선언 수정
+- `filo-pos.js` 테이블 onSnapshot date 필터 (Firestore ~25% 절감)
+- `filo-auth.js` kiosk 리스너 누수 + 로그아웃 cleanup 수정
+- `dine-analytics.js` 좀비 쿼리 (staff→members) 수정
+- `dine.js` _dineSendNotif N+1 → Promise.all 병렬 조회
+- `filo-staff.js` LiveTicker 60초 get() 폴링 → attendance onSnapshot 캐시 전환
+- `dine.js` _dineReleaseListeners() 추가 (로그아웃 시 DINE 리스너 일괄 해제)
+
+### 미완료 항목
+1. **선결제/후불 모달** — `table-order.html` 미작업 (최우선)
+2. **FCM 영수증 푸시** — `order.js` reqReceiptFCM undefined (KV캐시 문제)
 3. **직원 근태 QR** — 이름+연락처 등록 화면 수정
 4. **매출분석** — 7월 테스트 데이터 시딩
 5. **용차앱 라우팅 버그** — 접속 시 DONWAY 랜딩 (별도 확인 필요)
