@@ -243,38 +243,6 @@ function _applyTranslation(lang){
 
 /* ── 매장 + 메뉴 로드 ── */
 
-// ── FCM 토큰 발급 및 저장 ────────────────────────────────────────
-var _fcmToken = null;
-var _VAPID = 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
-
-function _initFCM() {
-  if(!('Notification' in window) || !('serviceWorker' in navigator)) return;
-  // localStorage 캐시 확인
-  try {
-    var saved = localStorage.getItem('filo_fcm_' + DID);
-    if(saved && saved.length > 20) { _fcmToken = saved; return; }
-  } catch(e) {}
-
-  if(Notification.permission === 'denied') return;
-
-  navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
-    .then(function(reg) {
-      var messaging = firebase.messaging();
-      return messaging.getToken({ vapidKey: _VAPID, serviceWorkerRegistration: reg });
-    }).then(function(token) {
-      if(!token) return;
-      _fcmToken = token;
-      try { localStorage.setItem('filo_fcm_' + DID, token); } catch(e) {}
-    }).catch(function() {});
-}
-
-function _requestFCMPermission() {
-  if(!('Notification' in window)) return;
-  Notification.requestPermission().then(function(perm) {
-    if(perm === 'granted') _initFCM();
-  });
-}
-
 function init(){
   if(!DID){document.getElementById('menu-area').innerHTML='<div class="loading">잘못된 QR코드입니다.</div>';return;}
   applyUIText();
@@ -432,11 +400,12 @@ window.doOrder=function(){
 
 function _doTablePrepay(items,total,orderName){
   var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
+  var today=new Date().toISOString().slice(0,10);
   var orderData={
-    dealerId:DID,tableId:TID,orderId:orderId,
+    dealerId:DID,tableNum:TID,tableId:TID,orderId:orderId,
     items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
-    total:total,status:'pending_payment',payType:'prepay',
-    source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
+    total:total,status:'pending_payment',payType:'prepay',type:'table',
+    source:'table_qr',lang:_lang,date:today,createdAt:new Date().toISOString()
   };
   var tok=_myFcmToken||null;
   if(tok)orderData.fcmToken=tok;
@@ -460,11 +429,12 @@ function _doTablePrepay(items,total,orderName){
 
 function _doTablePostpay(items,total){
   var orderId='TABLE-'+DID.slice(0,6)+'-'+TID+'-'+Date.now();
+  var today=new Date().toISOString().slice(0,10);
   var orderData={
-    dealerId:DID,tableId:TID,orderId:orderId,
+    dealerId:DID,tableNum:TID,tableId:TID,orderId:orderId,
     items:items.map(function(e){return {name:e[1].name,price:e[1].price,qty:e[1].qty,subtotal:e[1].price*e[1].qty};}),
-    total:total,status:'pending',payType:'postpay',
-    source:'table_qr',lang:_lang,createdAt:new Date().toISOString()
+    total:total,status:'pending',payType:'postpay',type:'table',
+    source:'table_qr',lang:_lang,date:today,createdAt:new Date().toISOString()
   };
   var tok=_myFcmToken||null;
   if(tok)orderData.fcmToken=tok;
@@ -505,7 +475,6 @@ function _doTablePostpay(items,total){
 init();
 
 // ── 영수증 FCM 발송 ────────────────────────────────────────────
-var _VAPID_KEY = 'BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW1A';
 var _myFcmToken = null;
 
 // 페이지 로드 시 FCM 토큰 자동 발급
@@ -519,7 +488,7 @@ var _myFcmToken = null;
     navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
       .then(function(reg) {
         var msg = firebase.messaging();
-        return msg.getToken({vapidKey: _VAPID_KEY, serviceWorkerRegistration: reg});
+        return msg.getToken({vapidKey: _VAPID, serviceWorkerRegistration: reg});
       }).then(function(tok) {
         if(!tok) return;
         _myFcmToken = tok;
@@ -545,7 +514,7 @@ function sendReceipt() {
       }
       navigator.serviceWorker.register('/firebase-messaging-sw.js', {scope:'/'})
         .then(function(reg) {
-          return firebase.messaging().getToken({vapidKey: _VAPID_KEY, serviceWorkerRegistration: reg});
+          return firebase.messaging().getToken({vapidKey: _VAPID, serviceWorkerRegistration: reg});
         }).then(function(t) {
           _myFcmToken = t;
           try { localStorage.setItem('filo_fcm_' + DID, t); } catch(e) {}
