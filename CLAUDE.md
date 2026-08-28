@@ -26,6 +26,7 @@
 | `FILO_DINE_MEMO.md` | FILO·DINE 앱 작업 시 |
 | `YONGCHA_MEMO.md` | 용차앱 작업 시 |
 | `배송앱_변경내역.md` | 배송앱·emergency.html 수정 시 |
+| `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
