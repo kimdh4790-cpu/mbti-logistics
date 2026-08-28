@@ -23,7 +23,9 @@
   JS 모듈 구조 (2026-07-15 확정):
   - filo-auth.js      : 로그인·회원가입·권한·사이드바 빌드 (_buildFiloNav)
   - filo-common.js    : 공통 유틸·Firebase·네비·toast·동적QR
-  - filo-pos.js       : POS 카트·테이블결제·각자계산·분할결제 (15개)
+  - filo-pos-core.js  : POS 카트·분할결제 (7개)
+  - filo-pos-ui.js   : POS 키오스크 UI·영수증·테이블결제 (10개)
+  - filo-pos.js      : _filoPay 결제수단 모달 (1개)
   - filo-table.js     : 테이블현황·QR·착석·비움·이동·픽업알림 (27개)
   - filo-booking.js   : 예약·달력·스케줄·예약확정/거절·알림 (9개)
   - filo-menu.js      : 메뉴관리·레시피·원가·유통기한·재고이력 (24개)
@@ -1304,7 +1306,9 @@ input:focus,select:focus,textarea:focus{
 <script src="/filo-booking.js?v=1"></script>
 <script src="/filo-table.js?v=3"></script>
   <script src="/filo-qr.js?v=1"></script>
-<script src="/filo-pos.js?v=5"></script>
+<script src="/filo-pos-core.js?v=1"></script>
+<script src="/filo-pos-ui.js?v=1"></script>
+<script src="/filo-pos.js?v=6"></script>
 <!-- filo-ai.js 통합됨: filo-margin.js (2026-08-04) -->
 <script src="/filo-memo.js?v=1"></script>
 </body>
