@@ -418,23 +418,22 @@ async function handleDriversBatch(request, env) {
       if (name) nameMap[name] = doc.name;
     }
 
-    let updated = 0, notFound = [];
-    for (const drv of drivers) {
+    const notFound = [];
+    const patches = drivers.map(drv => {
       const docPath = nameMap[drv.name];
-      if (!docPath) { notFound.push(drv.name); continue; }
-
+      if (!docPath) { notFound.push(drv.name); return null; }
       const fields = {};
       if (drv.ssn) fields.ssn = {stringValue: drv.ssn};
       if (drv.joinDate) fields.joinDate = {stringValue: drv.joinDate};
       if (drv.bizNum) { fields.bizNum = {stringValue: drv.bizNum}; fields.isBiz = {booleanValue: true}; }
-
       const mask = Object.keys(fields).map(k=>`updateMask.fieldPaths=${k}`).join('&');
-      await fetch(`https://firestore.googleapis.com/v1/${docPath}?${mask}`, {
+      return fetch(`https://firestore.googleapis.com/v1/${docPath}?${mask}`, {
         method:'PATCH', headers:{'Authorization':`Bearer ${access_token}`,'Content-Type':'application/json'},
         body: JSON.stringify({fields})
       });
-      updated++;
-    }
+    }).filter(Boolean);
+    await Promise.all(patches);
+    const updated = patches.length;
 
     return new Response(JSON.stringify({ok:true, updated, notFound}), {headers:{'Content-Type':'application/json'}});
   } catch(e) {
@@ -2622,64 +2621,61 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAC83UlEQV
               body: JSON.stringify({structuredQuery:{from:[{collectionId:'filo_menus'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}}})
             });
             const docs2 = await qr2.json();
-            let translated = 0;
             const langs = ['en','zh','ja'];
-            for (const item of (docs2||[])) {
-              if (!item.document) continue;
-              const f = item.document.fields || {};
-              const hasTranslation = f.nameTranslations && f.nameTranslations.mapValue;
-              if (!hasTranslation || force) {
-                const name = (f.name && f.name.stringValue) || '';
-                if (!name) continue;
-                const docId = item.document.name.split('/').pop();
-                const nameTranslations = {};
-                const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-                for (const lang of langs) {
-                  try {
-                    const k2 = (env.ANTHROPIC_API_KEY||'').trim();
-                    let translated2 = '';
-                    if (k2) {
-                      const res2 = await fetch('https://api.anthropic.com/v1/messages',{
-                        method:'POST',
-                        headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
-                        body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
-                      });
-                      if (res2.ok) {
-                        const d2 = await res2.json();
-                        translated2 = (d2.content&&d2.content[0]&&d2.content[0].text)||'';
-                      }
-                    }
-                    // Google 폴백
-                    if (!translated2 || translated2 === name) {
-                      const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
-                      const gKey2 = (env.GOOGLE_TRANSLATE_KEY||'').trim();
-                      if(gKey2){
-                        const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey2,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:langMap[lang],format:'text'})});
-                        const gData = await gRes.json();
-                        translated2 = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||name;
-                      } else {
-                        const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+langMap[lang]+'&dt=t&q='+encodeURIComponent(name));
-                        const gData = await gRes.json();
-                        translated2 = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
-                      }
-                    }
-                    nameTranslations[lang] = translated2 || name;
-                    // KV 캐시 갱신
-                    const cacheKey2 = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
-                    try{await env.DONWAY_ASSETS.put(cacheKey2, nameTranslations[lang], {expirationTtl:86400});}catch(e){}
-                  } catch(e) { nameTranslations[lang] = name; }
-                }
-                const fields = {};
-                for (const [lang, val] of Object.entries(nameTranslations)) {
-                  fields[lang] = {stringValue: val};
-                }
-                await fetch(`${FS_BASE}/filo_menus/${docId}?updateMask.fieldPaths=nameTranslations`, {
-                  method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
-                  body: JSON.stringify({fields:{nameTranslations:{mapValue:{fields}}}})
-                });
-                translated++;
+            const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
+            const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
+            const k2 = (env.ANTHROPIC_API_KEY||'').trim();
+            const gKey2 = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+
+            async function _translateOne(name, lang) {
+              let result = '';
+              if (k2) {
+                try {
+                  const res2 = await fetch('https://api.anthropic.com/v1/messages',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
+                    body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
+                  });
+                  if (res2.ok) { const d2=await res2.json(); result=(d2.content&&d2.content[0]&&d2.content[0].text)||''; }
+                } catch(e){}
               }
+              if (!result || result === name) {
+                try {
+                  if (gKey2) {
+                    const gRes=await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey2,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:langMap[lang],format:'text'})});
+                    const gData=await gRes.json();
+                    result=(gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||name;
+                  } else {
+                    const gRes=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+langMap[lang]+'&dt=t&q='+encodeURIComponent(name));
+                    const gData=await gRes.json();
+                    result=(gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||name;
+                  }
+                } catch(e){ result=name; }
+              }
+              return result || name;
             }
+
+            const items = (docs2||[]).filter(item=>item.document&&(!(item.document.fields?.nameTranslations?.mapValue)||force)&&(item.document.fields?.name?.stringValue));
+            const translateTasks = items.map(item=>{
+              const name=(item.document.fields.name.stringValue)||'';
+              const docId=item.document.name.split('/').pop();
+              return Promise.all(langs.map(lang=>_translateOne(name,lang))).then(async results=>{
+                const nameTranslations={};
+                for(let i=0;i<langs.length;i++){
+                  nameTranslations[langs[i]]=results[i];
+                  const cacheKey2='tr:'+langs[i]+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
+                  try{await env.DONWAY_ASSETS.put(cacheKey2,results[i],{expirationTtl:86400});}catch(e){}
+                }
+                const fields={};
+                for(const [l,v] of Object.entries(nameTranslations))fields[l]={stringValue:v};
+                await fetch(`${FS_BASE}/filo_menus/${docId}?updateMask.fieldPaths=nameTranslations`,{
+                  method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+fsToken2},
+                  body:JSON.stringify({fields:{nameTranslations:{mapValue:{fields}}}})
+                });
+              });
+            });
+            await Promise.all(translateTasks);
+            const translated = items.length;
             return new Response(JSON.stringify({ok:true, translated}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           }
 
@@ -4562,17 +4558,15 @@ ${JSON.stringify(postSummary)}
             [1,2,3,4,5,6,7,8,9,10].forEach(i=>deletes.push({delete:`${FB_DOC}/inventory/${did}_inv_${i}`}));
           });
           const varCols=['filo_orders','filo_sales','attendance'];
-          for(const col of varCols){
-            for(const did of DEMO_IDS){
-              const qRes=await fetch(`https://firestore.googleapis.com/v1/${FB_DOC}:runQuery`,{
-                method:'POST',
-                headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-                body:JSON.stringify({structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},select:{fields:[]}}})
-              });
-              const rows=await qRes.json();
-              rows.forEach(r=>{if(r.document?.name)deletes.push({delete:r.document.name});});
-            }
-          }
+          const varQueries=varCols.flatMap(col=>DEMO_IDS.map(did=>
+            fetch(`https://firestore.googleapis.com/v1/${FB_DOC}:runQuery`,{
+              method:'POST',
+              headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+              body:JSON.stringify({structuredQuery:{from:[{collectionId:col}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},select:{fields:[]}}})
+            }).then(r=>r.json())
+          ));
+          const varResults=await Promise.all(varQueries);
+          varResults.forEach(rows=>{(rows||[]).forEach(r=>{if(r.document?.name)deletes.push({delete:r.document.name});});});
           const batchUrl=`https://firestore.googleapis.com/v1/${FB_DOC}:batchWrite`;
           const hdrs={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
           let deleted=0;
@@ -4582,71 +4576,6 @@ ${JSON.stringify(postSummary)}
           }
           return new Response(JSON.stringify({ok:true,deleted}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         }catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
-      }
-
-      if (path === '/api/translate') {
-        if (request.method === 'OPTIONS') return new Response(null, {headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type'}});
-        const _trIP2 = request.headers.get('CF-Connecting-IP') || 'unknown';
-        if (!checkRateLimit(_trIP2 + ':translate', 30, 60000)) {
-          return new Response(JSON.stringify({error:'요청 한도 초과'}),{status:429,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-        let body;try{body=await request.json();}catch(e){body={};}
-        const name = body.name || '';
-        const lang = body.lang || 'en';
-        if(!name) return new Response(JSON.stringify({translated:''}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        // KV 캐시 확인 (24시간) - ASCII 해시로 키 생성
-        const cacheKey = 'tr:'+lang+':'+(function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;})(name);
-        try {
-          const cached = await env.DONWAY_ASSETS.get(cacheKey);
-          if(cached&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cached)) return new Response(JSON.stringify({translated:cached}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*','X-Cache':'HIT'}});
-        } catch(e){}
-        const langNames = {en:'English',zh:'Chinese (Simplified)',ja:'Japanese'};
-        const langMap = {en:'en',zh:'zh-CN',ja:'ja'};
-        let translated = '';
-        // Anthropic 재시도 3회 + Google 폴백
-        const k = (env.ANTHROPIC_API_KEY||'').trim();
-        const tl2 = langMap[lang]||'en';
-        for(let attempt=0; attempt<3 && !translated; attempt++) {
-          try {
-            if(attempt>0) await new Promise(r=>setTimeout(r,500*attempt));
-            if(k) {
-              const res = await fetch('https://api.anthropic.com/v1/messages',{
-                method:'POST',
-                headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
-              });
-              if(res.ok){
-                const d = await res.json();
-                translated = (d.content&&d.content[0]&&d.content[0].text)||'';
-                console.log('[tr] anthropic ok(attempt '+attempt+'):'+translated);
-              } else {
-                console.log('[tr] anthropic '+res.status+' attempt '+attempt);
-              }
-            }
-          } catch(e){console.log('[tr] anthropic err:'+e.message);}
-        }
-        // Google 폴백
-        if(!translated || translated===name) {
-          try {
-            const gKey = (env.GOOGLE_TRANSLATE_KEY||'').trim();
-          if(gKey){
-            const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:name,source:'ko',target:tl2,format:'text'})});
-            const gData = await gRes.json();
-            translated = (gData&&gData.data&&gData.data.translations&&gData.data.translations[0]&&gData.data.translations[0].translatedText)||'';
-            console.log('[tr] google official:'+translated);
-          } else {
-            const gRes = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2+'&dt=t&q='+encodeURIComponent(name));
-            const gData = await gRes.json();
-            translated = (gData&&gData[0]&&gData[0][0]&&gData[0][0][0])||'';
-            console.log('[tr] google fallback:'+translated);
-          }
-          } catch(e){}
-        }
-        // 번역 성공 시만 KV 캐시 저장
-        if(translated && translated.trim() !== name) {
-          try{await env.DONWAY_ASSETS.put(cacheKey,translated.trim(),{expirationTtl:86400});}catch(e){}
-        }
-        return new Response(JSON.stringify({translated:translated.trim()}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
       if (path === '/api/menus') {
         const did = new URL(request.url).searchParams.get('did');

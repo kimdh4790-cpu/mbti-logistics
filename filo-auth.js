@@ -658,6 +658,14 @@ function _countUp(el, target, duration, prefix, suffix){
 
 
 
+function _filoPageCostMgmt(el){
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ if(!did||!el)return;
+ el.innerHTML='<div class="page-hdr"><h1 class="page-title">원가 관리</h1></div>'+
+  '<div id="mg-content" style="min-height:200px"><div class="spinner"></div></div>';
+ if(typeof _filoRenderCostMgmt==='function')_filoRenderCostMgmt(did);
+}
+
 /* ── 페이지별 실시간 리스너 소유권 표 ──────────────────────────────
    각 모듈은 자기 페이지의 onSnapshot 해제 함수를 아래 전역에 보관한다.
    페이지를 벗어날 때 여기서 일괄 해제해 리스너가 누적되지 않게 한다.
@@ -670,7 +678,8 @@ var _FILO_WATCHERS=[
  {pages:['table_qr'],        keys:['_tableUnsub','_bookingUnsub','_callUnsub','_tableOrderUnsub']},
  {pages:['table_mgmt'],      keys:['_tableMgmtUnsub']},
  {pages:['waiting'],         keys:['_waitUnsub','_waitSeatedUnsub']},
- {pages:['kiosk'],           keys:['_kioskTableUnsub']}
+ {pages:['kiosk'],           keys:['_kioskTableUnsub']},
+ {pages:['delivery'],        keys:['_deliveryUnsub']}
 ];
 
 function _filoReleaseOne(key){

@@ -7480,10 +7480,12 @@ function _pgDashboardAgency(el){
 
 /* ══ 대리점/관리자 — 배차 현황 ══════════════════════════════ */
 
+var _dispatchLocationsUnsub=null;
 function _pgDispatchLocations(){
   if(!_CU||_CU.type==='driver')return;
+  if(_dispatchLocationsUnsub){try{_dispatchLocationsUnsub();}catch(e){} _dispatchLocationsUnsub=null;}
   // 리얼타임 위치 구독 (배치현황 나가면 자동 해제)
-  _db.collection('yongcha_locations')
+  _dispatchLocationsUnsub=_db.collection('yongcha_locations')
     .where('isActive','==',true).onSnapshot(function(snap){
       var existing=document.getElementById('dispatch-locations');
       if(!existing)return;
