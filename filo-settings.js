@@ -41,6 +41,28 @@ function _filoPageSettings(el){
  '</div>'+
  '<button class="btn btn-brand btn-sm" onclick="_filoSaveReviewUrls()">저장</button>'+
  '</div>'+
+ /* 🤖 AI 리뷰 답글 생성 */
+ '<div class="card" style="margin-top:12px">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:4px">AI 리뷰 답글</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">고객 리뷰를 붙여넣으면 AI가 답글 초안을 작성합니다</div>'+
+ '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+ '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">플랫폼</div>'+
+ '<select id="ai-review-platform" class="inp" style="width:100%;font-size:12px">'+
+ '<option value="네이버">네이버 플레이스</option>'+
+ '<option value="카카오맵">카카오맵</option>'+
+ '<option value="구글">구글 리뷰</option>'+
+ '</select></div>'+
+ '<div><div style="font-size:11px;color:var(--t3);margin-bottom:4px">답글 톤</div>'+
+ '<select id="ai-review-tone" class="inp" style="width:100%;font-size:12px">'+
+ '<option value="정중한">정중한</option>'+
+ '<option value="친근한">친근한</option>'+
+ '<option value="간결한">간결한</option>'+
+ '</select></div>'+
+ '</div>'+
+ '<textarea id="ai-review-input" class="inp" rows="4" placeholder="리뷰 내용을 여기에 붙여넣으세요..." style="width:100%;font-size:12px;resize:vertical;min-height:90px"></textarea>'+
+ '<button id="ai-reply-btn" class="btn btn-brand btn-sm" style="margin-top:8px;width:100%" onclick="_filoAiReplyGenerate()">AI 답글 생성</button>'+
+ '<div id="ai-reply-result" style="margin-top:10px"></div>'+
+ '</div>'+
  /* 🎨 업종별 테마 — 매장별 독립 적용 */
  '<div class="card" style="margin-top:12px">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">매장 테마</div>'+
@@ -267,6 +289,45 @@ function _filoSaveReviewUrls(){
   if(_cachedCompanyDoc){_cachedCompanyDoc.reviewUrlNaver=naver;_cachedCompanyDoc.reviewUrlKakao=kakao;}
   _filoToast('리뷰 링크 저장됨');
  }).catch(function(e){_filoToast(e.message);});
+}
+async function _filoAiReplyGenerate(){
+ var reviewText=(document.getElementById('ai-review-input').value||'').trim();
+ if(!reviewText){_filoToast('리뷰 내용을 입력하세요');return;}
+ var platform=document.getElementById('ai-review-platform').value||'네이버';
+ var tone=document.getElementById('ai-review-tone').value||'정중한';
+ var btn=document.getElementById('ai-reply-btn');
+ var resultDiv=document.getElementById('ai-reply-result');
+ var user=firebase.auth().currentUser;
+ if(!user){_filoToast('로그인 필요');return;}
+ btn.disabled=true; btn.textContent='AI 생성 중...';
+ resultDiv.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:12px">답글을 작성하는 중입니다...</div>';
+ var companyName=(_cachedCompanyDoc&&(_cachedCompanyDoc.companyName||_cachedCompanyDoc.name))||'저희 매장';
+ var prompt=companyName+' '+platform+' 리뷰에 달 답글을 작성해주세요.\n\n톤: '+tone+'\n리뷰 내용:\n'+reviewText+'\n\n요구사항:\n- 3~5문장 이내로 간결하게\n- 고객 의견에 공감하고 감사 표현\n- 부정적 내용은 진심으로 사과 후 개선 약속\n- 자연스러운 한국어, 이모티콘 1~2개 포함\n- 답글만 출력 (설명 없이)';
+ try{
+  var token=await user.getIdToken();
+  var resp=await fetch('/api/claude',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+   body:JSON.stringify({max_tokens:400,messages:[{role:'user',content:prompt}]})
+  });
+  var data=await resp.json();
+  var text=(data.content&&data.content[0]&&data.content[0].text)||'';
+  if(!text){_filoToast('AI 응답 없음');resultDiv.innerHTML='';btn.disabled=false;btn.textContent='AI 답글 생성';return;}
+  window._filoAiReplyText=text;
+  var safe=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  resultDiv.innerHTML='<div style="background:var(--b3);border-radius:10px;padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word">'+safe+'</div>'+
+   '<button class="btn btn-sm" style="margin-top:8px;font-size:11px;padding:6px 14px;background:var(--b3);color:var(--t2);border:1px solid var(--bd)" onclick="_filoAiReplyCopy()">답글 복사</button>';
+ }catch(e){
+  _filoToast('오류: '+e.message.split('\n')[0]);
+  resultDiv.innerHTML='';
+ }
+ btn.disabled=false; btn.textContent='AI 답글 생성';
+}
+function _filoAiReplyCopy(){
+ var text=window._filoAiReplyText||'';
+ if(!text)return;
+ if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){_filoToast('답글이 복사됐습니다');});}
+ else{_filoToast('복사 실패 — 직접 선택하여 복사하세요');}
 }
 function _filoPageSubscription(el){
  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
