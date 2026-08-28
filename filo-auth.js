@@ -177,7 +177,7 @@ function _showApp(){
   '</div>';
  }
  _buildFiloNav();
- _filoGoPage('kiosk');
+ _filoGoPage('home');
  // 업종 데모 로그인 시 해당 딜러로 자동 전환
  var _demoPending=localStorage.getItem('_demoType');
  if(_demoPending){
@@ -658,7 +658,8 @@ function _filoGoPage(p){
  /* 라우팅 처리 여부 — 미처리 페이지는 아래에서 '준비 중' 안내를 그린다 */
  var _routed=true;
 
- if(p==='ai') _filoPageAI(el);
+ if(p==='home') _filoPageHome(el);
+ else if(p==='ai') _filoPageAI(el);
  else if(p==='kiosk') _filoPageKiosk(el);
  else if(p==='menu_mgmt') _filoPageMenuMgmt(el);
  else if(p==='qr_mgmt') {
@@ -741,6 +742,209 @@ function _countUp(el, target, duration, prefix, suffix){
 }
 
 
+
+/* ─────────────────────────────────────────────────────
+   홈 대시보드 — 실시간 운영 현황판
+   ───────────────────────────────────────────────────── */
+var _homeUnsubs=[];
+var _homeOrdersAll=[];
+var _homeOrderPage=0;
+
+function _filoPageHome(el){
+ /* 이전 리스너 정리 */
+ _homeUnsubs.forEach(function(u){try{u();}catch(e){}});
+ _homeUnsubs=[];
+ _homeOrdersAll=[];
+ _homeOrderPage=0;
+ ['home_orders','home_attend','home_book'].forEach(function(k){
+  if(typeof _FILO_WATCHERS!=='undefined'&&_FILO_WATCHERS[k]){try{_FILO_WATCHERS[k]();}catch(e){} delete _FILO_WATCHERS[k];}
+ });
+
+ var did=_CU.dealerId||_CU.uid;
+ var today=new Date().toISOString().slice(0,10);
+ var todayKr=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+
+ el.innerHTML=
+  '<style>@keyframes _hpulse{0%,100%{opacity:1}50%{opacity:.35}}</style>'+
+  '<div class="slide-up" style="max-width:680px;margin:0 auto;padding-bottom:32px">'+
+
+  /* 운영 상태 + 날짜 */
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+  '<div id="hm-status-wrap" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:99px;background:var(--b3);border:1px solid var(--bd)">'+
+  '<span id="hm-dot" style="width:7px;height:7px;border-radius:50%;background:var(--t3);animation:_hpulse 2s infinite"></span>'+
+  '<span id="hm-status" style="font-size:12px;font-weight:800;color:var(--t3)">연결 중...</span>'+
+  '</div>'+
+  '<div style="font-size:12px;color:var(--t3);font-weight:600">'+todayKr+'</div>'+
+  '</div>'+
+
+  /* 오늘 매출 히어로 */
+  '<div class="hero-card" style="margin-bottom:16px">'+
+  '<div style="position:relative;z-index:1">'+
+  '<div style="font-size:10px;color:rgba(201,168,76,.65);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">오늘 매출</div>'+
+  '<div id="hm-sales" style="font-size:34px;font-weight:900;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:#fff">₩ —</div>'+
+  '<div style="display:flex;gap:24px;margin-top:14px">'+
+  '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">주문 건수</div>'+
+  '<div id="hm-cnt" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
+  '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">평균 단가</div>'+
+  '<div id="hm-avg" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
+  '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">미처리</div>'+
+  '<div id="hm-pending" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
+  '</div></div></div>'+
+
+  /* 타일 3개 */
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
+  _hmTileHtml('hm-t-staff','직원 출근','명')+
+  _hmTileHtml('hm-t-wait','웨이팅 대기','팀')+
+  _hmTileHtml('hm-t-inv','재고 부족','개')+
+  '</div>'+
+
+  /* 최근 주문 5개 */
+  '<div class="card" style="margin-bottom:14px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+  '<div style="font-size:13px;font-weight:800">최근 주문</div>'+
+  '<div style="display:flex;align-items:center;gap:6px">'+
+  '<button onclick="_hmPrev()" style="width:30px;height:30px;border-radius:50%;background:var(--b3);border:1px solid var(--bd);color:var(--t2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>'+
+  '<span id="hm-pg" style="font-size:11px;color:var(--t3);min-width:32px;text-align:center">0/0</span>'+
+  '<button onclick="_hmNext()" style="width:30px;height:30px;border-radius:50%;background:var(--b3);border:1px solid var(--bd);color:var(--t2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>'+
+  '</div></div>'+
+  '<div id="hm-orders"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">불러오는 중...</div></div>'+
+  '</div>'+
+
+  /* 예약·웨이팅 실시간 */
+  '<div class="card">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+  '<div style="font-size:13px;font-weight:800">오늘 예약·웨이팅</div>'+
+  '<span id="hm-bk-cnt" style="font-size:11px;color:var(--t3)"></span>'+
+  '</div>'+
+  '<div id="hm-bookings"><div style="color:var(--t3);font-size:12px;text-align:center;padding:20px">불러오는 중...</div></div>'+
+  '</div>'+
+  '</div>';
+
+ /* Listener 1: 오늘 주문 */
+ var u1=_db.collection('filo_orders')
+  .where('dealerId','==',did).where('date','==',today).orderBy('createdAt','desc')
+  .onSnapshot(function(snap){
+   var all=[]; snap.forEach(function(d){all.push(Object.assign({id:d.id},d.data()));});
+   var active=all.filter(function(o){return o.status!=='cancelled';});
+   var tot=active.reduce(function(s,o){return s+(o.totalPrice||o.total||0);},0);
+   var cnt=active.length;
+   var avg=cnt?Math.round(tot/cnt):0;
+   var pend=all.filter(function(o){return o.status==='pending'||o.status==='confirmed';}).length;
+
+   var eS=document.getElementById('hm-sales');
+   if(eS){ if(typeof _countUp==='function')_countUp(eS,tot,700,'₩ ',''); else eS.textContent='₩ '+tot.toLocaleString(); }
+   var eC=document.getElementById('hm-cnt'); if(eC) eC.textContent=cnt+'건';
+   var eA=document.getElementById('hm-avg'); if(eA) eA.textContent=avg?'₩'+avg.toLocaleString():'—';
+   var eP=document.getElementById('hm-pending');
+   if(eP){eP.textContent=pend;eP.style.color=pend>0?'#ef4444':'rgba(255,255,255,.45)';}
+
+   var sw=document.getElementById('hm-status-wrap'),sd=document.getElementById('hm-dot'),st=document.getElementById('hm-status');
+   if(cnt>0){
+    if(sw){sw.style.background='rgba(34,197,94,.1)';sw.style.borderColor='rgba(34,197,94,.3)';}
+    if(sd)sd.style.background='#22c55e';
+    if(st){st.textContent='운영 중';st.style.color='#22c55e';}
+   } else {
+    if(sw){sw.style.background='var(--b3)';sw.style.borderColor='var(--bd)';}
+    if(sd)sd.style.background='var(--t3)';
+    if(st){st.textContent='주문 없음';st.style.color='var(--t3)';}
+   }
+   _homeOrdersAll=active; _homeOrderPage=0; _hmRenderPage();
+  },function(){});
+ _homeUnsubs.push(u1);
+ if(typeof _FILO_WATCHERS!=='undefined')_FILO_WATCHERS.home_orders=u1;
+
+ /* Listener 2: 직원 출근 */
+ var u2=_db.collection('attendance')
+  .where('dealerId','==',did).where('date','==',today).where('type','==','in')
+  .onSnapshot(function(snap){
+   var e=document.getElementById('hm-t-staff'); if(e)_hmTileSet(e,snap.size,'');
+  },function(){});
+ _homeUnsubs.push(u2);
+ if(typeof _FILO_WATCHERS!=='undefined')_FILO_WATCHERS.home_attend=u2;
+
+ /* Listener 3: 예약·웨이팅 */
+ var u3=_db.collection('filo_bookings')
+  .where('dealerId','==',did).where('date','==',today)
+  .onSnapshot(function(snap){
+   var items=[]; snap.forEach(function(d){items.push(Object.assign({id:d.id},d.data()));});
+   items.sort(function(a,b){return(a.time||'').localeCompare(b.time||'');});
+   var waiting=items.filter(function(i){return i.status==='waiting'||!i.status;}).length;
+   var ew=document.getElementById('hm-t-wait'); if(ew)_hmTileSet(ew,waiting,waiting>3?'warn':'');
+   var ec=document.getElementById('hm-bk-cnt'); if(ec)ec.textContent=items.length?'총 '+items.length+'건':'';
+   var el2=document.getElementById('hm-bookings'); if(!el2)return;
+   if(!items.length){el2.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">오늘 예약·웨이팅 없음</div>';return;}
+   el2.innerHTML=items.map(function(b){
+    var sc=b.status==='confirmed'?'#22c55e':b.status==='cancelled'?'#ef4444':'#c9a84c';
+    var sl=b.status==='confirmed'?'확정':b.status==='cancelled'?'취소':'대기';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="font-size:13px;font-weight:900;color:#c9a84c;min-width:44px;font-variant-numeric:tabular-nums">'+(b.time||'—')+'</div>'+
+     '<div style="flex:1;min-width:0">'+
+     '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.guestName||b.name||'이름 없음')+'</div>'+
+     '<div style="font-size:11px;color:var(--t3)">'+(b.partySize||1)+'명'+(b.phone?' · '+b.phone:'')+'</div>'+
+     '</div>'+
+     '<span style="font-size:11px;font-weight:700;color:'+sc+';padding:3px 9px;border-radius:99px;background:'+sc+'1a;border:1px solid '+sc+'33;white-space:nowrap">'+sl+'</span>'+
+     '</div>';
+   }).join('');
+  },function(){});
+ _homeUnsubs.push(u3);
+ if(typeof _FILO_WATCHERS!=='undefined')_FILO_WATCHERS.home_book=u3;
+
+ /* One-shot: 재고 부족 */
+ _db.collection('filo_inventory').where('dealerId','==',did).get()
+  .then(function(snap){
+   var low=0;
+   snap.forEach(function(d){var v=d.data();if(typeof v.stock==='number'&&typeof v.minStock==='number'&&v.stock<=v.minStock)low++;});
+   var e=document.getElementById('hm-t-inv'); if(e)_hmTileSet(e,low,low>0?'warn':'');
+  }).catch(function(){});
+}
+
+function _hmTileHtml(id,label,unit){
+ return '<div class="card" style="text-align:center;padding:16px 8px">'+
+  '<div style="font-size:10px;color:var(--t3);margin-bottom:6px;letter-spacing:.4px">'+label+'</div>'+
+  '<div id="'+id+'" style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--t3)">—</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:4px">'+unit+'</div>'+
+  '</div>';
+}
+
+function _hmTileSet(el,val,flag){
+ if(!el)return;
+ el.textContent=val;
+ el.style.color=flag==='warn'&&val>0?'#ef4444':val===0?'var(--t3)':'var(--tx)';
+}
+
+function _hmRenderPage(){
+ var listEl=document.getElementById('hm-orders');
+ var pgEl=document.getElementById('hm-pg');
+ if(!listEl)return;
+ var tot=_homeOrdersAll.length;
+ if(!tot){
+  listEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:24px">오늘 주문 없음</div>';
+  if(pgEl)pgEl.textContent='0/0'; return;
+ }
+ var pages=Math.ceil(tot/5);
+ _homeOrderPage=Math.max(0,Math.min(_homeOrderPage,pages-1));
+ if(pgEl)pgEl.textContent=(_homeOrderPage+1)+'/'+pages;
+ var slice=_homeOrdersAll.slice(_homeOrderPage*5,_homeOrderPage*5+5);
+ listEl.innerHTML=slice.map(function(o){
+  var sc=o.status==='completed'?'#22c55e':o.status==='cancelled'?'#ef4444':'#c9a84c';
+  var sl=o.status==='completed'?'완료':o.status==='cancelled'?'취소':o.status==='confirmed'?'진행':'대기';
+  var names=(o.items||[]).slice(0,2).map(function(i){return i.name||'';}).join(', ');
+  if((o.items||[]).length>2)names+=' 외 '+((o.items||[]).length-2)+'개';
+  var tbl=o.tableNum!=null?'테이블 '+o.tableNum:(o.tableName||'');
+  var price=(o.totalPrice||o.total||0).toLocaleString();
+  var time=''; try{if(o.createdAt&&o.createdAt.toDate)time=o.createdAt.toDate().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}catch(e){}
+  return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
+   '<div style="flex:1;min-width:0">'+
+   '<div style="font-size:13px;font-weight:700">'+tbl+(names?' · '+names:'')+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);margin-top:2px">₩'+price+(time?' · '+time:'')+'</div>'+
+   '</div>'+
+   '<span style="font-size:11px;font-weight:700;color:'+sc+';padding:3px 9px;border-radius:99px;background:'+sc+'1a;border:1px solid '+sc+'33;white-space:nowrap">'+sl+'</span>'+
+   '</div>';
+ }).join('');
+}
+
+function _hmNext(){_homeOrderPage++;_hmRenderPage();}
+function _hmPrev(){_homeOrderPage--;_hmRenderPage();}
 
 function _filoPageCostMgmt(el){
  var did=_CU&&(_CU.dealerId||_CU.uid);
