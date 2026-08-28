@@ -39,15 +39,22 @@ BGM="$ASSETS_DIR/bgm/background.mp3"
 INTRO="$ASSETS_DIR/intro.mp4"
 OUTRO="$ASSETS_DIR/outro.mp4"
 
-# 자막 필터 (SRT → ASS 변환 후 overlay)
+# 자막 필터 (SRT → ASS 변환 후 스타일 커스터마이즈)
 SUBTITLE_FILTER=""
 if [ -f "$SUBTITLES" ]; then
   ASS_FNAME="${PRODUCT}-subtitles.ass"
   ASS_FILE="$OUTPUT_DIR/${ASS_FNAME}"
   (cd "$OUTPUT_DIR" && "$FFMPEG" -y -i "$SUBTITLES" "$ASS_FNAME" 2>/dev/null) || true
   if [ -f "$ASS_FILE" ]; then
-    # ASS 스타일: 크고 굵게, 하단 중앙, 흰색 + 검은 테두리
-    # 스타일은 ffmpeg가 SRT→ASS 변환 시 기본 스타일 사용. 커스텀은 ASS 직접 편집 필요.
+    # ASS Style 라인 커스터마이즈: Noto Sans KR 32pt, 흰색, 반투명 검은 박스, 하단
+    # 필드 순서: Name,Font,Size,PrimaryC,SecondaryC,OutlineC,BackC,Bold,Italic,Underline,Strike,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+    python3 -c "
+lines = open('$ASS_FILE').readlines()
+for i, l in enumerate(lines):
+    if l.startswith('Style: Default,'):
+        lines[i] = 'Style: Default,Noto Sans KR,34,&H00FFFFFF,&H000000FF,&H00000000,&HAA000000,1,0,0,0,100,100,0,0,3,0,0,2,20,20,55,1\n'
+open('$ASS_FILE', 'w').writelines(lines)
+" 2>/dev/null || true
     SUBTITLE_FILTER=",ass=${ASS_FNAME}"
   fi
 fi
@@ -78,7 +85,7 @@ build_audio_args() {
 build_audio_filter() {
   if [ "$HAS_NAR" = "1" ] && [ "$HAS_BGM" = "1" ]; then
     # 나레이션 + BGM 덕킹 믹싱 (나레이션 1:audio stream, BGM 2:audio stream)
-    echo "[1:a]volume=1.0[nar];[2:a]volume=0.15[bgm];[nar][bgm]amix=inputs=2:duration=first[audio]"
+    echo "[1:a]volume=1.0[nar];[2:a]volume=0.10[bgm];[nar][bgm]amix=inputs=2:duration=first:normalize=0[audio]"
   elif [ "$HAS_NAR" = "1" ]; then
     echo "[1:a]volume=1.0[audio]"
   elif [ "$HAS_BGM" = "1" ]; then
@@ -109,15 +116,15 @@ EOF
       -filter_complex "${AUDIO_FILTER}" \
       -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1${SUBTITLE_FILTER}" \
       -map 0:v -map "[audio]" \
-      -c:v libx264 -preset medium -crf 23 \
-      -c:a aac -b:a 128k \
+      -c:v libx264 -preset slow -crf 18 \
+      -c:a aac -b:a 192k \
       -shortest \
       "$FINAL"
   else
     "$FFMPEG" -y \
       -f concat -safe 0 -i "$LIST_FILE" \
       -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,setsar=1${SUBTITLE_FILTER}" \
-      -c:v libx264 -preset medium -crf 23 -an \
+      -c:v libx264 -preset slow -crf 18 -an \
       "$FINAL"
   fi
 else
@@ -129,15 +136,15 @@ else
       -filter_complex "${AUDIO_FILTER}" \
       -vf "$BLUR_VF" \
       -map 0:v -map "[audio]" \
-      -c:v libx264 -preset medium -crf 23 \
-      -c:a aac -b:a 128k \
+      -c:v libx264 -preset slow -crf 18 \
+      -c:a aac -b:a 192k \
       -shortest \
       "$FINAL"
   else
     "$FFMPEG" -y \
       -i "$INPUT" \
       -vf "$BLUR_VF" \
-      -c:v libx264 -preset medium -crf 23 \
+      -c:v libx264 -preset slow -crf 18 \
       -an \
       "$FINAL"
   fi

@@ -436,7 +436,7 @@ function FiloPromo(props) {
   return (
     <AbsoluteFill style={{ background: NAVY }}>
       {hasNarration && <Audio src={staticFile('filo-narration.mp3')} volume={1} />}
-      {hasBgm && <Audio src={staticFile('bgm.mp3')} volume={0.25} />}
+      {hasBgm && <Audio src={staticFile('bgm.mp3')} volume={0.12} />}
       {SCENES.map(function(scene, idx) {
         var Comp = scene.component;
         return (
