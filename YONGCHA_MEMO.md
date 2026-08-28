@@ -161,11 +161,12 @@ git push -u origin claude/브랜치명
 
 ---
 
-## 팝빌 세금계산서 (미완성)
+## 팝빌 세금계산서 (2026-08-28 수정 완료)
 
-- `/api/yongcha/popbill-issue` POST — 핸들러 존재하나 Firestore 조회 없이 바로 호출 → 빈값 오류
-- 수정 필요: workId → `yongcha_work` 조회 → fullParams 구성 후 호출
-- `yongcha-worker.js`에 팝빌 라우트 추가 필요 (현재 `_worker.js`에만 있음)
+- `/api/yongcha/popbill-issue` POST — 서버 핸들러 정상 (yongcha_work + yongcha_users Firestore 조회 후 호출)
+- **수정 완료**: `_ySendSettleNotify` 클라이언트 호출에 `Authorization: Bearer <token>` 헤더 추가 (`_yGetToken()` 사용)
+  - `yongcha.html` line 3204, `_worker.js` line 15342 (YONGCHA_HTML_YONGCHA 내부) 동시 수정
+- `yongcha-worker.js`에 팝빌 라우트 추가 필요 (현재 `_worker.js`에만 있음) — 미완료
 
 ---
 

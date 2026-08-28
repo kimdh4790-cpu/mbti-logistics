@@ -3201,8 +3201,10 @@ function _ySendSettleNotify(settleId,driverPhone,driverName,agencyName,driverId,
   var btn=event&&event.currentTarget;
   if(btn){btn.disabled=true;btn.textContent='발송중...';}
   // 1) 팝빌 역발행 요청
-  fetch('/api/yongcha/popbill-issue',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({workId:settleId,agencyId:_CU.uid,driverId:driverId,driverName:driverName,fare:totalAmount})
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/popbill-issue',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({workId:settleId,agencyId:_CU.uid,driverId:driverId,driverName:driverName,fare:totalAmount})
+    });
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false&&d.error&&d.error.indexOf('사업자번호')>=0){
       _yToast('사업자번호 미등록: 프로필에서 사업자번호를 먼저 입력하세요.');

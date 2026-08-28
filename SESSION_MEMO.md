@@ -140,8 +140,8 @@ push → auto-merge → 자동 배포. `donway-settle-app CI 빨간 표시`는 �
 2. **FCM 영수증 푸시** — ✅ 완료 (order-done.html VAPID 오타 수정, order.js v13 KV 갱신, 실폰 테스트 필요)
 3. **직원 근태 QR** — ✅ 완료 (filo-staff.js: 폼 리셋 wagetype/emptype 추가 + 등록 후 캐시 무효화; _worker.js: doRegister phone 정규화·validation 추가)
 4. **매출분석** — ✅ 완료 (_worker.js /api/seed-sales 엔드포인트 추가. 실행: POST /api/seed-sales {secret:"filo2026demo",did:"9XD2K3W1tIhIs6XM74YT0xfRFEP2",month:"2026-07"} → filo_sales 약 300건 생성)
-5. **용차앱 라우팅 버그** — 접속 시 DONWAY 랜딩 (별도 확인 필요)
-6. **용차앱 세부사항** — YONGCHA_MEMO.md 참조 (경쟁사 분석, 함수 목록, DB 구조 포함)
+5. **용차앱 라우팅 버그** — _worker.js 코드 정상 (line 843: yongcha.app → handleYongcha 우선 라우팅). Cloudflare 배포/DNS 설정 문제일 가능성 — 로컬에서 `npx wrangler deploy` 실행 후 확인 필요
+6. **용차앱 팝빌 auth 버그** — ✅ 완료 (2026-08-28): `_ySendSettleNotify`에 `Authorization: Bearer` 토큰 추가 (yongcha.html + _worker.js YONGCHA_HTML_YONGCHA 동시 수정)
 
 ### 다음 단계 (2단계 — 큰 설계)
 - filo-menu.js·filo-pos.js 계열 정리 완료 (4차)
