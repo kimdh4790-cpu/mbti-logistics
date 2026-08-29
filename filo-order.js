@@ -72,10 +72,12 @@ function _filoSendOrderAlert(did){
 function _filoPageOrders(el){
  var did=_CU.dealerId||_CU.uid;
  el.innerHTML='<div class="slide-up">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">'+
   '<div style="font-size:17px;font-weight:900">주문 대기</div>'+
+  '<div style="display:flex;gap:6px;align-items:center">'+
+  '<button onclick="_filoRefundLookup()" style="padding:6px 12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#ef4444;font-size:11px;font-weight:700;cursor:pointer">환불 조회</button>'+
   '<button onclick="window.open(\'https://filo.ai.kr/kitchen?did=\'+(_CU.dealerId||_CU.uid),\'_blank\')" style="padding:6px 12px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);border-radius:8px;color:#a78bfa;font-size:11px;font-weight:700;cursor:pointer">주방화면 열기</button>'+
-  '<div class="live-dot"></div></div>'+
+  '<div class="live-dot"></div></div></div>'+
   '<div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">로딩 중...</div></div>'+
   '</div>';
  if(_ordersUnsub) _ordersUnsub();
@@ -145,6 +147,151 @@ function _filoPageOrders(el){
    _renderOrders();
   });
  _ordersUnsub=function(){_u1();_u2();};
+}
+
+// ── 과거 주문 환불 조회 ────────────────────────────────────────────────────────
+function _filoRefundLookup(){
+ var did=_CU.dealerId||_CU.uid;
+ var today=new Date().toISOString().slice(0,10);
+ var sevenDaysAgo=new Date(Date.now()-30*24*3600000).toISOString().slice(0,10);
+
+ var mo=document.createElement('div');mo.className='mo';
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+ var box=document.createElement('div');
+ box.style.cssText='background:var(--b2);border:1px solid var(--bd);border-radius:20px;padding:20px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto';
+ mo.appendChild(box);
+ mo.onclick=function(e){if(e.target===mo)mo.remove();};
+ document.body.appendChild(mo);
+
+ function render(results){
+  var listHtml=!results?'':!results.length?
+   '<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px">조회된 결제 내역 없음</div>':
+   results.map(function(r){
+    var d=new Date(r.paidAt||r.createdAt||'');
+    var kst=new Date(d.getTime()+9*3600000);
+    var dateStr=kst.getUTCFullYear()+'/'+(kst.getUTCMonth()+1).toString().padStart(2,'0')+'/'+kst.getUTCDate().toString().padStart(2,'0')+
+      ' '+kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+    var stColor=r.status==='refund'?'#a78bfa':r.status==='cancel'?'#ef4444':'#22c55e';
+    var stLabel=r.status==='refund'?'환불완료':r.status==='cancel'?'취소됨':'결제완료';
+    var itemStr=(r.items||[]).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ').slice(0,60);
+    return '<div style="border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:8px">'+
+     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+     '<div>'+
+     '<div style="font-size:12px;color:var(--t3)">'+dateStr+' · '+(r.tableName||r.tableNum?'테이블 '+(r.tableName||r.tableNum):'카운터')+'</div>'+
+     '<div style="font-size:13px;color:var(--t2);margin-top:2px">'+esc(itemStr)+(itemStr.length>=60?'…':'')+'</div>'+
+     '</div>'+
+     '<span style="font-size:10px;font-weight:700;color:'+stColor+';background:'+stColor+'18;padding:2px 8px;border-radius:20px;flex-shrink:0;margin-left:8px">'+stLabel+'</span>'+
+     '</div>'+
+     '<div style="display:flex;justify-content:space-between;align-items:center">'+
+     '<div style="font-size:16px;font-weight:900;color:#c9a84c">₩'+(r.total||0).toLocaleString()+'</div>'+
+     (r.status!=='refund'&&r.status!=='cancel'?
+      '<button data-rid="'+r._id+'" onclick="_filoDoRefund(this.dataset.rid,\''+esc(r.total||0)+'\',\''+esc(dateStr)+'\')" '+
+      'style="padding:6px 14px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer">환불 처리</button>':
+      '<span style="font-size:11px;color:var(--t3)">'+(r.refundNote?esc(r.refundNote.slice(0,20)):'')+'</span>'
+     )+
+     '</div>'+
+     (r.refundAt?'<div style="font-size:10px;color:var(--t3);margin-top:4px">환불 처리: '+esc(r.refundBy||'')+'</div>':'')+
+     '</div>';
+   }).join('');
+  box.innerHTML='<div style="font-size:16px;font-weight:900;margin-bottom:14px">환불 조회</div>'+
+   '<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">'+
+   '<div style="flex:1;min-width:120px"><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:4px">시작 날짜</label>'+
+   '<input id="rf-from" type="date" value="'+sevenDaysAgo+'" style="width:100%;padding:8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px"></div>'+
+   '<div style="flex:1;min-width:120px"><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:4px">종료 날짜</label>'+
+   '<input id="rf-to" type="date" value="'+today+'" style="width:100%;padding:8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px"></div>'+
+   '<div style="flex:1;min-width:100px"><label style="font-size:11px;color:var(--t3);display:block;margin-bottom:4px">금액 (선택)</label>'+
+   '<input id="rf-amt" type="number" placeholder="예: 44500" style="width:100%;padding:8px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px"></div>'+
+   '</div>'+
+   '<button onclick="_filoRefundSearch(\''+did+'\')" style="width:100%;padding:10px;background:#c9a84c;border:none;border-radius:10px;color:#0a0a0a;font-size:14px;font-weight:900;cursor:pointer;margin-bottom:14px">조회하기</button>'+
+   '<div id="rf-list">'+listHtml+'</div>'+
+   '<button onclick="this.closest(\'.mo\').remove()" style="width:100%;padding:10px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;color:var(--t2);font-size:13px;cursor:pointer;margin-top:8px">닫기</button>';
+ }
+ render(null);
+}
+
+function _filoRefundSearch(did){
+ var from=document.getElementById('rf-from').value;
+ var to=document.getElementById('rf-to').value;
+ var amt=parseInt(document.getElementById('rf-amt').value)||0;
+ if(!from||!to){_filoToast('날짜를 선택해주세요');return;}
+ var listEl=document.getElementById('rf-list');
+ if(listEl)listEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">조회 중...</div>';
+
+ var q=_db.collection('filo_sales').where('dealerId','==',did)
+  .where('date','>=',from).where('date','<=',to).orderBy('date','desc').limit(100);
+ q.get().then(function(snap){
+  var rows=[];
+  snap.forEach(function(doc){
+   var d=doc.data();
+   if(amt&&Math.abs((d.total||0)-amt)>100)return; // 금액 필터 (±100원 오차 허용)
+   rows.push(Object.assign({},d,{_id:doc.id}));
+  });
+  rows.sort(function(a,b){return (b.paidAt||b.createdAt||'').localeCompare(a.paidAt||a.createdAt||'');});
+  var listEl2=document.getElementById('rf-list');
+  if(!listEl2)return;
+  if(!rows.length){listEl2.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px">조회된 결제 내역 없음</div>';return;}
+  var d2=new Date();
+  listEl2.innerHTML=rows.map(function(r){
+   var d=new Date(r.paidAt||r.createdAt||'');
+   var kst=new Date(d.getTime()+9*3600000);
+   var dateStr=kst.getUTCFullYear()+'/'+(kst.getUTCMonth()+1).toString().padStart(2,'0')+'/'+kst.getUTCDate().toString().padStart(2,'0')+
+     ' '+kst.getUTCHours().toString().padStart(2,'0')+':'+kst.getUTCMinutes().toString().padStart(2,'0');
+   var stColor=r.status==='refund'?'#a78bfa':r.status==='cancel'?'#ef4444':'#22c55e';
+   var stLabel=r.status==='refund'?'환불완료':r.status==='cancel'?'취소됨':'결제완료';
+   var itemStr=(r.items||[]).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ').slice(0,60);
+   var daysDiff=Math.floor((d2-d)/86400000);
+   return '<div style="border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:8px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'+
+    '<div>'+
+    '<div style="font-size:12px;color:var(--t3)">'+dateStr+' · '+(r.tableName||r.tableNum?'테이블 '+(r.tableName||r.tableNum):'카운터')+
+    (daysDiff>0?' · <span style="color:#f59e0b">'+daysDiff+'일 전</span>':' · 오늘')+'</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-top:2px">'+esc(itemStr)+(itemStr.length>=60?'…':'')+'</div>'+
+    '</div>'+
+    '<span style="font-size:10px;font-weight:700;color:'+stColor+';background:'+stColor+'18;padding:2px 8px;border-radius:20px;flex-shrink:0;margin-left:8px">'+stLabel+'</span>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center">'+
+    '<div style="font-size:16px;font-weight:900;color:#c9a84c">₩'+(r.total||0).toLocaleString()+
+    (r.payMethod?' · <span style="font-size:11px;color:var(--t3)">'+esc(r.payMethod)+'</span>':'')+'</div>'+
+    (r.status!=='refund'&&r.status!=='cancel'?
+     '<button data-rid="'+r._id+'" data-amt="'+esc(String(r.total||0))+'" data-date="'+esc(dateStr)+'" data-method="'+esc(r.payMethod||'')+'" '+
+     'onclick="_filoDoRefund(this.dataset.rid,this.dataset.amt,this.dataset.date,this.dataset.method)" '+
+     'style="padding:6px 14px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:12px;font-weight:700;cursor:pointer">환불 처리</button>':
+     '<span style="font-size:11px;color:var(--t3)">'+(r.refundNote?'사유: '+esc(r.refundNote.slice(0,20)):'')+'</span>'
+    )+
+    '</div>'+
+    (r.refundAt?'<div style="font-size:10px;color:var(--t3);margin-top:4px">환불처리: '+esc(r.refundBy||'')+'</div>':'')+
+    '</div>';
+  }).join('');
+ }).catch(function(e){
+  var el=document.getElementById('rf-list');
+  if(el)el.innerHTML='<div style="color:var(--red);padding:12px">'+e.message+'</div>';
+ });
+}
+
+function _filoDoRefund(saleId, amt, dateStr, method){
+ var note=prompt('환불 사유를 입력하세요 (영수증 '+dateStr+' / ₩'+parseInt(amt).toLocaleString()+(method?' / '+method:'')+'):');
+ if(note===null)return; // 취소
+ var did=_CU.dealerId||_CU.uid;
+ var now=new Date().toISOString();
+ var tasks=[
+  _db.collection('filo_sales').doc(saleId).update({
+   status:'refund', refundNote:note||'사유 없음',
+   refundAt:now, refundBy:_CU.name||_CU.email||''
+  }),
+  _db.collection('filo_refunds').add({
+   dealerId:did, saleId:saleId,
+   amt:parseInt(amt)||0, method:method||'',
+   note:note||'사유 없음', refundAt:now,
+   refundBy:_CU.name||_CU.email||'',
+   createdAt:now
+  })
+ ];
+ Promise.all(tasks).then(function(){
+  _filoToast('환불 처리 완료');
+  // 목록 새로고침
+  var rfFrom=document.getElementById('rf-from');
+  if(rfFrom) _filoRefundSearch(did);
+ }).catch(function(e){_filoToast('환불 실패: '+e.message);});
 }
 
 function _filoOrderStatus(orderId, status, src){
