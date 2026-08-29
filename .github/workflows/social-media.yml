@@ -141,51 +141,55 @@ jobs:
             node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 건너뜀"
           fi
 
-      - name: Remotion FILO 영상 렌더링
-        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'all') }}
+      - name: Remotion 코드 영상 렌더링 (FILO·DONWAY·용차앱)
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'all') }}
         run: |
           mkdir -p output
           CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
           [ -n "$CHROMIUM" ] && export CHROMIUM_PATH="$CHROMIUM" && echo "[Remotion] Chromium: $CHROMIUM"
-          echo "[Remotion] FILO 본영상 렌더링..."
-          node scripts/remotion/render-filo.js || echo "[Remotion] 본영상 렌더링 실패"
-          echo "[Remotion] FILO Reels 렌더링..."
-          node scripts/remotion/render-filo.js --reels || echo "[Remotion] Reels 렌더링 실패"
 
-      - name: 화면 녹화 (Playwright)
-        if: ${{ contains(env.STEPS, 'record') }}
+          render_remotion() {
+            local p=$1
+            echo "[Remotion] ${p} 본영상 렌더링..."
+            node scripts/remotion/render-${p}.js || echo "[Remotion] ${p} 본영상 렌더링 실패"
+            echo "[Remotion] ${p} Reels 렌더링..."
+            node scripts/remotion/render-${p}.js --reels || echo "[Remotion] ${p} Reels 렌더링 실패"
+          }
+
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha; do render_remotion $p; done
+          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ]; then
+            render_remotion $PRODUCT
+          fi
+
+      - name: 화면 녹화 (Playwright) — dine·mbtico만
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'dine' || env.PRODUCT == 'mbtico' || env.PRODUCT == 'all') }}
         run: |
           mkdir -p output
           if [ "$PRODUCT" = "all" ]; then
-            for p in dine donway yongcha mbtico; do
+            for p in dine mbtico; do
               echo "[$p] 녹화 시작..."
               node scripts/capture/record-$p.js || echo "[$p] 녹화 실패 (건너뜀)"
             done
-          elif [ "$PRODUCT" != "filo" ]; then
+          elif [ "$PRODUCT" = "dine" ] || [ "$PRODUCT" = "mbtico" ]; then
             node scripts/capture/record-$PRODUCT.js
-          else
-            echo "[filo] Remotion에서 처리됨"
           fi
 
       - name: FFmpeg 영상 편집
         if: ${{ contains(env.STEPS, 'compose') }}
         run: |
+          # Remotion 렌더 완료 제품(filo/donway/yongcha)은 FFmpeg 편집 불필요
+          # Playwright 녹화 제품(dine/mbtico)만 FFmpeg 합성
           if [ "$PRODUCT" = "all" ]; then
-            for p in dine donway yongcha mbtico; do
+            for p in filo donway yongcha; do
+              [ -f "output/${p}-promo.mp4" ] && echo "[$p] Remotion 영상 준비됨" || echo "[$p] Remotion 영상 없음"
+            done
+            for p in dine mbtico; do
               RAW="output/${p}-raw.webm"
               [ -f "$RAW" ] && bash scripts/compose/compose-video.sh $p || echo "[$p] 녹화 파일 없음: 건너뜀"
             done
-            if [ -f "output/filo-promo.mp4" ]; then
-              echo "[filo] Remotion 영상 준비됨"
-            elif [ -f "output/filo-raw.webm" ]; then
-              bash scripts/compose/compose-video.sh filo || echo "[filo] 편집 실패"
-            fi
-          elif [ "$PRODUCT" = "filo" ]; then
-            if [ -f "output/filo-promo.mp4" ]; then
-              echo "[filo] Remotion 영상 준비됨 (FFmpeg 건너뜀)"
-            else
-              bash scripts/compose/compose-video.sh filo
-            fi
+          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ]; then
+            [ -f "output/${PRODUCT}-promo.mp4" ] && echo "[$PRODUCT] Remotion 영상 준비됨 (FFmpeg 건너뜀)" || echo "[$PRODUCT] Remotion 영상 없음 — compose 건너뜀"
           else
             bash scripts/compose/compose-video.sh $PRODUCT
           fi
