@@ -473,6 +473,7 @@ function _dineAfterLogin(){
  _dineWatchFiloSales();  // FILO POS 실시간 연동
  _dineWatchReservations(); // 예약 실시간 연동
  _dineWatchStock(); // FILO 재고 부족 실시간
+ if(_CU.role==='owner') _dineCheckAbsents(_CU.dealerId); // 결근 자동 감지
 }
 
 // FILO 재고 부족 → DINE 알림
@@ -868,4 +869,55 @@ function _dineAivoInsight(){
  }).finally(function(){
   if(btn){btn.disabled=false;btn.textContent='AIVO 분석';}
  });
+}
+
+/* ── 결근 자동 감지 ──────────────────────────────────────────
+   로그인 시 오늘 스케줄 있는 직원 중 출근 기록 없는 사람을 찾아
+   대시보드 배지 + 토스트 알림 표시. 09:30 이후에만 동작.
+   ────────────────────────────────────────────────────────── */
+function _dineCheckAbsents(did){
+ var now=new Date();
+ // 09:30 이전이면 실행하지 않음 (출근 시간 여유)
+ if(now.getHours()<9||(now.getHours()===9&&now.getMinutes()<30)) return;
+ var today=now.toISOString().slice(0,10);
+ Promise.all([
+  _db.collection('schedules').where('dealerId','==',did).where('date','==',today).get(),
+  _db.collection('attendance').where('dealerId','==',did).where('date','==',today).where('type','==','in').get()
+ ]).then(function(results){
+  var schedSnap=results[0], attSnap=results[1];
+  if(schedSnap.empty) return; // 오늘 스케줄 없으면 패스
+  var checkedIn=new Set();
+  attSnap.forEach(function(doc){checkedIn.add(doc.data().memberId);});
+  var absents=[];
+  schedSnap.forEach(function(doc){
+   var d=doc.data();
+   // 출근 시간이 현재보다 30분 이상 지났는데 기록 없으면 결근 의심
+   var startH=parseInt((d.startTime||'09:00').split(':')[0]);
+   var startM=parseInt((d.startTime||'09:00').split(':')[1]||0);
+   var schStart=new Date(today+'T'+(d.startTime||'09:00')+':00');
+   var minsLate=(now-schStart)/60000;
+   if(minsLate>30&&!checkedIn.has(d.memberId)){
+    absents.push(d.memberName||d.memberId);
+   }
+  });
+  if(!absents.length) return;
+  // 배지 표시
+  var badge=document.getElementById('dine-absent-badge');
+  if(badge){
+   badge.textContent='결근 의심: '+absents.slice(0,3).join(', ')+(absents.length>3?' 외 '+(absents.length-3)+'명':'');
+   badge.style.display='block';
+  } else {
+   // 배지 없으면 사이드바에 동적 생성
+   var sb=document.querySelector('.sidebar-top')||document.getElementById('app-wrap');
+   if(sb){
+    var b=document.createElement('div');
+    b.id='dine-absent-badge';
+    b.style.cssText='margin:8px 12px;padding:8px 12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:10px;font-size:11px;font-weight:700;color:#ef4444;cursor:pointer';
+    b.textContent='결근 의심 '+absents.length+'명: '+absents.slice(0,2).join(', ')+(absents.length>2?' 외':'');
+    b.onclick=function(){_dinePage('staff',document.querySelector('[data-p="staff"]'));};
+    sb.insertBefore(b,sb.firstChild);
+   }
+  }
+  _dineToast('결근 의심 직원 '+absents.length+'명 — 근태 탭 확인', 5000);
+ }).catch(function(){});
 }

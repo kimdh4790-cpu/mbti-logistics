@@ -187,7 +187,7 @@ function _dineTaxGenerate(did){
   var salesSnap=results[0],memSnap=results[1],attSnap=results[2],stockSnap=results[3],fixedDoc=results[4];
   var fixed={};if(fixedDoc&&fixedDoc.fields){var ff=fixedDoc.fields;Object.keys(ff).forEach(function(k){fixed[k]=ff[k].integerValue||ff[k].stringValue||0;});}
   var fixedRent=fixed.rent||0,fixedElec=fixed.elec||0,fixedGas=fixed.gas||0;
-  var fixedWater=fixed.water||0,fixedCardFee=fixed['card-fee']||0,fixedOther=fixed.other||0;
+  var fixedWater=fixed.water||0,fixedCardFee=fixed['card-fee']||fixed.cardFee||0,fixedOther=fixed.other||0;
   var fixedMemo=fixed.memo||'';
   var totalFixed=fixedRent+fixedElec+fixedGas+fixedWater+fixedCardFee+fixedOther;
   var totalSales=0,cnt=0,methods={};

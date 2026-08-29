@@ -516,6 +516,7 @@ function _dinePage(p,el){
  else if(p==='reservation') _dineReservation(c);
  else if(p==='store')    _dineStore(c);
  else if(p==='alimtalk') _dineAlimtalk(c);
+ else if(p==='reviews')  _dineReviews(c);
 }
 
 

@@ -25,7 +25,7 @@ function _monthStr(){return new Date().toISOString().slice(0,7);}
 
 
 function _dineScheduleAdd(did){
- _db.collection('staff').where('dealerId','==',did).get().then(function(snap){
+ _db.collection('members').where('dealerId','==',did).get().then(function(snap){
   if(snap.empty){_dineToast('등록된 직원이 없습니다');return;}
   var opts=snap.docs.map(function(d){return '<option value="'+d.id+'">'+d.data().name+'</option>';}).join('');
   var mo=document.createElement('div');mo.className='mo';

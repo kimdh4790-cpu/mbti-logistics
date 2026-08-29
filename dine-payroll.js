@@ -406,7 +406,50 @@ function _dinePayslipModal(memberId,ym){
 }
 
 function _dineSendPayslip(memberId,ym){
- _dineToast('알림톡 발송 기능은 알림톡 설정에서 활성화 후 사용 가능합니다');
+ var did=_CU.dealerId;
+ if(!memberId||!ym){_dineToast('발송 정보 없음');return;}
+ _dineToast('명세서 발송 중...');
+ // payroll 컬렉션에서 확정된 급여 조회 (locked 상태 우선)
+ _db.collection('payroll').where('dealerId','==',did).where('memberId','==',memberId).where('ym','==',ym)
+  .orderBy('lockedAt','desc').limit(1).get()
+  .then(function(snap){
+   var pData=snap.empty?null:snap.docs[0].data();
+   // 직원 정보 조회 (이름·전화)
+   return _db.collection('members').doc(memberId).get().then(function(mDoc){
+    var m=mDoc.exists?mDoc.data():{};
+    var name=m.name||'직원';
+    var phone=m.phone||'';
+    // payroll 없으면 attendance에서 즉석 계산
+    if(!pData){
+     return _db.collection('attendance').where('dealerId','==',did).where('memberId','==',memberId)
+      .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get()
+      .then(function(attSnap){
+       var att={ins:[],outs:[],breaks:[]};
+       attSnap.forEach(function(doc){var d=doc.data();if(d.type==='in')att.ins.push(d);else if(d.type==='out')att.outs.push(d);else att.breaks.push(d);});
+       var r=_calcPayFull(m,att,1,ym);
+       return {name:name,phone:phone,netSalary:r.netSalary,basePay:r.basePay};
+      });
+    }
+    return {name:name,phone:phone,netSalary:pData.netSalary||0,basePay:pData.basePay||0};
+   });
+  })
+  .then(function(info){
+   return (_auth&&_auth.currentUser?_auth.currentUser.getIdToken():Promise.resolve(''))
+    .then(function(token){
+     return fetch('/api/payslip-push',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({did:did,ym:ym,members:[{memberId:memberId,name:info.name,netSalary:info.netSalary}]})
+     }).then(function(r){return r.json();}).then(function(d){
+      if(d.sent>0){
+       _dineToast(info.name+' 급여명세서 앱 발송 완료 (₩'+info.netSalary.toLocaleString()+')');
+      } else {
+       _dineToast(info.name+' — 앱 미설치 또는 알림 미허용 상태');
+      }
+     });
+    });
+  })
+  .catch(function(e){_dineToast('발송 실패: '+e.message);});
 }
 
 /* 실시간 급여 자동 계산 (onSnapshot) */

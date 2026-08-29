@@ -230,3 +230,207 @@ document.addEventListener('touchstart',function(e){
   }
  }
 });
+
+/* ══════════════════════════════════════════════════════════
+   리뷰 관리 — 네이버·카카오 리뷰 연동
+   - 매장 Place URL 저장 (설정에서 1회)
+   - 리뷰 요청 알림톡 발송 (최근 방문 고객 대상)
+   - 직원이 직접 수집한 리뷰 수동 등록
+   - 리뷰 통계 (평균 별점, 플랫폼별 건수)
+   ══════════════════════════════════════════════════════════ */
+function _dineReviews(el){
+ var did=_CU&&_CU.dealerId;
+ el.innerHTML='';
+ var wrap=document.createElement('div');wrap.className='slide-up';
+
+ // ── 설정 카드 (Place URL) ──────────────────────────────
+ var settCard=document.createElement('div');
+ settCard.className='card';settCard.style.marginBottom='16px';
+ settCard.innerHTML='<div class="page-title" style="margin-bottom:4px">리뷰 관리</div>'+
+  '<div class="page-sub" style="margin-bottom:16px">네이버·카카오 리뷰 링크를 등록하고 고객에게 리뷰를 요청하세요</div>'+
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">'+
+   '<div><label style="font-size:11px;font-weight:700;color:var(--t3);display:block;margin-bottom:4px">네이버 플레이스 URL</label>'+
+   '<input id="rv-naver-url" type="url" placeholder="https://map.naver.com/v5/entry/place/..." class="inp" style="font-size:12px"></div>'+
+   '<div><label style="font-size:11px;font-weight:700;color:var(--t3);display:block;margin-bottom:4px">카카오맵 URL</label>'+
+   '<input id="rv-kakao-url" type="url" placeholder="https://place.map.kakao.com/..." class="inp" style="font-size:12px"></div>'+
+  '</div>'+
+  '<button onclick="_dineReviewSaveUrls(\''+did+'\')" class="btn btn-primary" style="font-size:12px">URL 저장</button>'+
+  '&nbsp;<a id="rv-naver-link" href="#" target="_blank" style="display:none;font-size:12px;color:#03c75a;font-weight:700;text-decoration:none;padding:7px 14px;border:1px solid #03c75a;border-radius:8px">N 리뷰 페이지 열기</a>'+
+  '&nbsp;<a id="rv-kakao-link" href="#" target="_blank" style="display:none;font-size:12px;color:#f9e000;font-weight:700;text-decoration:none;padding:7px 14px;border:1px solid #f9e000;border-radius:8px;background:#1b1400">K 리뷰 페이지 열기</a>';
+ wrap.appendChild(settCard);
+
+ // ── 통계 카드 ──────────────────────────────────────────
+ var statsCard=document.createElement('div');
+ statsCard.className='card';statsCard.style.marginBottom='16px';
+ statsCard.innerHTML='<div style="font-size:14px;font-weight:800;margin-bottom:12px">리뷰 통계</div>'+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="rv-stats">'+
+   '<div style="text-align:center;padding:12px;background:var(--surface2);border-radius:12px"><div style="font-size:20px;font-weight:900;color:#facc15" id="rv-avg">-</div><div style="font-size:10px;color:var(--t3);margin-top:2px">평균 별점</div></div>'+
+   '<div style="text-align:center;padding:12px;background:var(--surface2);border-radius:12px"><div style="font-size:20px;font-weight:900;color:#03c75a" id="rv-naver-cnt">0</div><div style="font-size:10px;color:var(--t3);margin-top:2px">네이버</div></div>'+
+   '<div style="text-align:center;padding:12px;background:var(--surface2);border-radius:12px"><div style="font-size:20px;font-weight:900;color:#f9e000" id="rv-kakao-cnt">0</div><div style="font-size:10px;color:var(--t3);margin-top:2px">카카오</div></div>'+
+  '</div>';
+ wrap.appendChild(statsCard);
+
+ // ── 리뷰 요청 발송 카드 ────────────────────────────────
+ var reqCard=document.createElement('div');
+ reqCard.className='card';reqCard.style.marginBottom='16px';
+ reqCard.innerHTML='<div style="font-size:14px;font-weight:800;margin-bottom:8px">리뷰 요청 알림톡</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:12px">오늘 방문한 고객에게 카카오 알림톡으로 리뷰 요청을 보냅니다</div>'+
+  '<div style="display:flex;gap:8px;align-items:center">'+
+  '<button onclick="_dineReviewRequest(\''+did+'\')" class="btn btn-primary" style="font-size:12px;background:#f9e000;color:#1b1400;border:none">카카오 리뷰 요청 발송</button>'+
+  '<button onclick="_dineReviewRequest(\''+did+'\',\'naver\')" class="btn" style="font-size:12px;background:#03c75a;color:#fff;border:none">네이버 리뷰 요청 발송</button>'+
+  '</div>'+
+  '<div id="rv-req-result" style="margin-top:10px;font-size:12px;color:var(--t3)"></div>';
+ wrap.appendChild(reqCard);
+
+ // ── 수동 리뷰 등록 카드 ────────────────────────────────
+ var addCard=document.createElement('div');
+ addCard.className='card';addCard.style.marginBottom='16px';
+ addCard.innerHTML='<div style="font-size:14px;font-weight:800;margin-bottom:12px">리뷰 직접 등록</div>'+
+  '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;margin-bottom:8px">'+
+  '<select id="rv-platform" class="inp" style="font-size:12px;width:100px"><option value="naver">네이버</option><option value="kakao">카카오</option><option value="google">구글</option><option value="etc">기타</option></select>'+
+  '<input id="rv-content" class="inp" type="text" placeholder="리뷰 내용 (일부 발췌)" style="font-size:12px">'+
+  '<div style="display:flex;gap:4px;align-items:center" id="rv-star-row">'+
+   [5,4,3,2,1].map(function(s){return '<button onclick="_rvSetStar('+s+')" data-s="'+s+'" style="background:none;border:none;font-size:18px;cursor:pointer;padding:0;color:#d1d5db">★</button>';}).join('')+
+  '</div></div>'+
+  '<button onclick="_dineSaveReview(\''+did+'\')" class="btn btn-primary" style="font-size:12px">등록</button>';
+ wrap.appendChild(addCard);
+
+ // ── 리뷰 목록 ──────────────────────────────────────────
+ var listCard=document.createElement('div');
+ listCard.className='card';
+ listCard.innerHTML='<div style="font-size:14px;font-weight:800;margin-bottom:12px">리뷰 목록</div>'+
+  '<div id="rv-list"><div style="text-align:center;padding:24px;color:var(--t3);font-size:12px">로딩 중...</div></div>';
+ wrap.appendChild(listCard);
+
+ el.appendChild(wrap);
+ _dineLoadReviewSettings(did);
+ _dineLoadReviews(did);
+}
+
+var _rvStarVal=5;
+function _rvSetStar(s){
+ _rvStarVal=s;
+ document.querySelectorAll('#rv-star-row button').forEach(function(b){
+  b.style.color=parseInt(b.dataset.s)<=s?'#facc15':'#d1d5db';
+ });
+}
+
+function _dineLoadReviewSettings(did){
+ _db.collection('companies').doc(did).get().then(function(doc){
+  var d=doc.exists?doc.data():{};
+  var nu=d.naverPlaceUrl||'';var ku=d.kakaoPlaceUrl||'';
+  if(nu){
+   var inp=document.getElementById('rv-naver-url');if(inp)inp.value=nu;
+   var lnk=document.getElementById('rv-naver-link');if(lnk){lnk.href=nu;lnk.style.display='inline-block';}
+  }
+  if(ku){
+   var inp2=document.getElementById('rv-kakao-url');if(inp2)inp2.value=ku;
+   var lnk2=document.getElementById('rv-kakao-link');if(lnk2){lnk2.href=ku;lnk2.style.display='inline-block';}
+  }
+ }).catch(function(){});
+}
+
+function _dineReviewSaveUrls(did){
+ var nu=(document.getElementById('rv-naver-url')||{}).value||'';
+ var ku=(document.getElementById('rv-kakao-url')||{}).value||'';
+ _db.collection('companies').doc(did).update({naverPlaceUrl:nu,kakaoPlaceUrl:ku})
+  .then(function(){
+   _dineToast('리뷰 링크 저장됐습니다');
+   var nl=document.getElementById('rv-naver-link');var kl=document.getElementById('rv-kakao-link');
+   if(nl&&nu){nl.href=nu;nl.style.display='inline-block';}
+   if(kl&&ku){kl.href=ku;kl.style.display='inline-block';}
+  }).catch(function(e){_dineToast('저장 실패: '+e.message);});
+}
+
+function _dineLoadReviews(did){
+ _db.collection('dine_reviews').where('dealerId','==',did)
+  .orderBy('createdAt','desc').limit(30).get()
+  .then(function(snap){
+   var list=document.getElementById('rv-list');
+   if(!list)return;
+   if(snap.empty){list.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:12px">등록된 리뷰가 없습니다.<br>직접 등록하거나 고객에게 리뷰를 요청해 보세요.</div>';return;}
+   var total=0,cnt=0,naverCnt=0,kakaoCnt=0;
+   var rows=[];
+   snap.forEach(function(doc){
+    var d=doc.data();
+    if(d.star){total+=d.star;cnt++;}
+    if(d.platform==='naver')naverCnt++;
+    else if(d.platform==='kakao')kakaoCnt++;
+    var stars='★'.repeat(d.star||5)+'☆'.repeat(5-(d.star||5));
+    var plColor={naver:'#03c75a',kakao:'#f9e000',google:'#4285f4',etc:'#94a3b8'}[d.platform]||'#94a3b8';
+    rows.push('<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
+     '<span style="font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid '+plColor+';color:'+plColor+';font-weight:700">'+
+      {naver:'네이버',kakao:'카카오',google:'구글',etc:'기타'}[d.platform||'etc']+'</span>'+
+     '<span style="color:#facc15;font-size:13px">'+stars+'</span>'+
+     '<span style="font-size:10px;color:var(--t3);margin-left:auto">'+((d.createdAt||'').slice(0,10))+'</span>'+
+     '</div>'+
+     '<div style="font-size:13px;color:var(--tx)">'+esc(d.content||'')+'</div>'+
+    '</div>');
+   });
+   list.innerHTML=rows.join('');
+   // 통계 업데이트
+   var avgEl=document.getElementById('rv-avg');var ncEl=document.getElementById('rv-naver-cnt');var kcEl=document.getElementById('rv-kakao-cnt');
+   if(avgEl)avgEl.textContent=cnt?( total/cnt).toFixed(1)+' ★':'-';
+   if(ncEl)ncEl.textContent=naverCnt;if(kcEl)kcEl.textContent=kakaoCnt;
+  }).catch(function(e){var l=document.getElementById('rv-list');if(l)l.innerHTML='<div style="padding:16px;color:#ef4444;font-size:12px">오류: '+e.message+'</div>';});
+}
+
+function _dineSaveReview(did){
+ var content=(document.getElementById('rv-content')||{}).value||'';
+ var platform=(document.getElementById('rv-platform')||{}).value||'naver';
+ if(!content){_dineToast('리뷰 내용을 입력하세요');return;}
+ _db.collection('dine_reviews').add({
+  dealerId:did,platform:platform,star:_rvStarVal,content:content,
+  source:'manual',createdAt:new Date().toISOString(),createdBy:_CU.name||_CU.uid
+ }).then(function(){
+  _dineToast('리뷰 등록됐습니다');
+  var inp=document.getElementById('rv-content');if(inp)inp.value='';
+  _rvStarVal=5;
+  document.querySelectorAll('#rv-star-row button').forEach(function(b){b.style.color='#d1d5db';});
+  _dineLoadReviews(did);
+ }).catch(function(e){_dineToast('등록 실패: '+e.message);});
+}
+
+function _dineReviewRequest(did,platform){
+ platform=platform||'kakao';
+ // 오늘 방문 고객 조회 (filo_orders 기준)
+ var today=new Date().toISOString().slice(0,10);
+ _db.collection('filo_orders').where('dealerId','==',did).where('date','==',today)
+  .where('status','==','paid').limit(20).get()
+  .then(function(snap){
+   if(snap.empty){_dineToast('오늘 방문 고객 데이터가 없습니다');return;}
+   var phones=[];var seen=new Set();
+   snap.forEach(function(doc){
+    var d=doc.data();
+    var ph=(d.customerPhone||d.phone||'').replace(/[^0-9]/g,'');
+    if(ph&&ph.length>=10&&!seen.has(ph)){seen.add(ph);phones.push(ph);}
+   });
+   if(!phones.length){_dineToast('발송 가능한 고객 연락처가 없습니다');return;}
+   // companies에서 Place URL 가져오기
+   _db.collection('companies').doc(did).get().then(function(cdoc){
+    var co=cdoc.exists?cdoc.data():{};
+    var placeUrl=platform==='naver'?(co.naverPlaceUrl||''):(co.kakaoPlaceUrl||'');
+    if(!placeUrl){_dineToast((platform==='naver'?'네이버':'카카오')+' Place URL을 먼저 등록해 주세요');return;}
+    var msg='안녕하세요! 오늘 방문해 주셔서 감사합니다 :)\n리뷰를 남겨 주시면 큰 힘이 됩니다.\n→ '+placeUrl;
+    var resultEl=document.getElementById('rv-req-result');
+    if(resultEl)resultEl.textContent='발송 중... ('+phones.length+'명)';
+    // 알리고 SMS 발송 (알림톡 템플릿 없을 경우 SMS fallback)
+    (_auth&&_auth.currentUser?_auth.currentUser.getIdToken():Promise.resolve(''))
+    .then(function(token){
+     return fetch('/api/send-sms-bulk',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({did:did,phones:phones,msg:msg})
+     }).then(function(r){return r.json();});
+    }).then(function(d){
+     var sentCnt=d.sent||phones.length;
+     if(resultEl)resultEl.textContent=sentCnt+'명 발송 완료 ('+new Date().toLocaleTimeString()+')';
+     _dineToast('리뷰 요청 '+sentCnt+'명 발송 완료');
+    }).catch(function(){
+     // API 없는 경우 — 직접 링크 복사 안내
+     if(resultEl)resultEl.innerHTML='자동 발송 API 미설정 — <a href="'+placeUrl+'" target="_blank" style="color:#facc15">링크 복사</a>해서 직접 공유하세요';
+    });
+   });
+  }).catch(function(e){_dineToast('고객 조회 실패: '+e.message);});
+}
