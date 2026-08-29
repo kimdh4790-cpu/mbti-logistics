@@ -66,20 +66,19 @@ function _filoPageMenuMgmt(el){
 
  /* 카테고리 관리 */
  var catCard=document.createElement('div');
- catCard.className='card';
- catCard.style.marginBottom='14px';
- catCard.innerHTML='<div class="sec-title" style="margin-bottom:10px">카테고리</div>'+
+ catCard.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)';
+ catCard.innerHTML='<div class="sec-title" style="margin-bottom:10px;color:#1e293b">카테고리</div>'+
   '<div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>'+
   '<div style="display:flex;gap:8px">'+
-  '<input id="new-cat-inp" type="text" placeholder="새 카테고리명" style="flex:1;padding:9px 12px;background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);color:var(--tx);font-size:13px;outline:none">'+
+  '<input id="new-cat-inp" type="text" placeholder="새 카테고리명" style="flex:1;padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--r);color:#1e293b;font-size:13px;outline:none">'+
   '<button onclick="_filoAddCategory(\''+did+'\')" style="padding:9px 16px;background:var(--br);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;cursor:pointer">추가</button>'+
   '</div>';
  wrap.appendChild(catCard);
 
  /* 메뉴 목록 */
  var menuCard=document.createElement('div');
- menuCard.className='card';
- menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">메뉴 목록</div>'+
+ menuCard.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)';
+ menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px;color:#1e293b">메뉴 목록</div>'+
   '<div id="menu-mgmt-list"><div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div></div>';
  wrap.appendChild(menuCard);
 
@@ -106,9 +105,9 @@ function _filoLoadMenuMgmt(did){
   var catList=document.getElementById('cat-list');
   if(catList){
    catList.innerHTML=cats.map(function(c){
-    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);border-radius:20px;font-size:12px;font-weight:700;color:#a78bfa">'+
+    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:700;color:#475569">'+
      c+
-     '<button onclick="_filoDeleteCategory(\''+did+'\',\''+c+'\')" style="background:none;border:none;color:#a78bfa;cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px;opacity:.6">×</button>'+
+     '<button onclick="_filoDeleteCategory(\''+did+'\',\''+c+'\')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px">×</button>'+
      '</div>';
    }).join('');
   }
@@ -141,13 +140,13 @@ function _filoLoadMenuMgmt(did){
 
    grouped[cat].forEach(function(m){
     var card=document.createElement('div');
-    card.style.cssText='background:var(--surface2);border:1px solid var(--bd2);border-radius:var(--r);padding:12px;position:relative;transition:.2s';
-    card.onmouseover=function(){this.style.borderColor='rgba(201,168,76,.3)';};
-    card.onmouseout=function(){this.style.borderColor='var(--bd2)';};
+    card.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:var(--r);padding:12px;position:relative;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.06)';
+    card.onmouseover=function(){this.style.borderColor='rgba(201,168,76,.5)';this.style.boxShadow='0 2px 10px rgba(201,168,76,.15)';};
+    card.onmouseout=function(){this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';};
 
     /* 이미지 or 이모지 */
     var imgDiv=document.createElement('div');
-    imgDiv.style.cssText='width:100%;height:80px;border-radius:8px;overflow:hidden;background:var(--surface3);display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:32px';
+    imgDiv.style.cssText='width:100%;height:80px;border-radius:8px;overflow:hidden;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:32px';
     if(m.imageUrl){
      var img=document.createElement('img');
      img.src=m.imageUrl;
