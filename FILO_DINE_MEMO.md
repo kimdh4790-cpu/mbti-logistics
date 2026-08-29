@@ -162,6 +162,20 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-29 (12차)
+**DINE 근태·급여 화면 디자인 전면 개선**
+- `dine-staff.js`: 출퇴근 현황 KPI 카드 — 아이콘+border-left 컬러 강조, font-variant-numeric:tabular-nums 적용
+- `dine-staff.js`: 상태 뱃지 → 컬러 도트+pill 스타일(근무중/퇴근/미출근), 수정 버튼 → 연필 SVG 아이콘 버튼
+- `dine-staff.js`: 테이블 헤더 uppercase letter-spacing 처리
+- `dine-analytics.js`: 근무 스케줄 헤더 — 주간 날짜 범위 표시, 화살표 아이콘 네비+등록 버튼 추가
+- `dine-analytics.js`: 오늘 날짜 골드 원형 강조, 주말(일=빨강/토=파랑) 색상 구분
+- `dine-analytics.js`: 스케줄 셀 — 출근=초록/퇴근=파랑/근무중=골드 펄스 도트, 빈 셀 dashed+plus 아이콘
+- `dine-payroll.js`: 급여 계산 KPI 3칸 카드 폰트/패딩 정비, 직원 카드 2×2 그리드 요약 레이아웃
+- `dine-payroll.js`: 급여명세서 모달 — MBTICO 뱃지+이름 28px, 실수령액 2px border+32px+세전→공제 요약
+- `dine-schedule.js`: 급여명세서 목록 — 진행바(월160h 기준), 이름+파트 분리, 발송 버튼 골드+send SVG
+- `dine-schedule.js`: 일괄발송 영역 summary 카드 형태로 개선
+- commit: `949397b`
+
 ### 2026-08-29 (11차)
 **응원 메시지 개인화 + 버그 3종 수정**
 - `dine-staff.js`: `_dineCheerMsg(sch)` 시그니처 변경 — 스케줄 없으면 절대시각 폴백 유지
