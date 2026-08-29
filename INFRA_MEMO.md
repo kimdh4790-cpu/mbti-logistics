@@ -68,7 +68,7 @@ YOUTUBE_REFRESH_TOKEN=등록완료
 | `YOUTUBE_CLIENT_SECRET` | 등록완료 |
 | `YOUTUBE_REFRESH_TOKEN` | 등록완료 |
 | `GOOGLE_TTS_API_KEY` | 등록완료 |
-| `ORACLE_SSH_KEY` | **미등록** (Oracle 자동화에 필요) |
+| `ORACLE_SSH_KEY` | 등록완료 (2026-08-27, Oracle Cloud SSH 자동화용) |
 
 ### social-media.yml 실행 방법
 ```
