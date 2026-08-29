@@ -3299,7 +3299,7 @@ function doSave(deviceId,dupKey,lat,lng){
         '<div class="done-name">'+m.name+'</div>'+
         '<div class="done-time">'+date+' '+timeStr+'</div>'+
         salaryHtml+
-        '<button class="btn-sub" style="margin-top:16px" onclick="history.back()">확인</button>'+
+        '<button class="btn-sub" style="margin-top:16px" onclick="location.reload()">확인</button>'+
       '</div>';
     } else {setStatus(res.error||'오류가 발생했습니다');}
   }).catch(function(){setStatus('네트워크 오류');});
@@ -7415,7 +7415,7 @@ function doSave(deviceId,dupKey,lat,lng){
         '<div class="done-name">'+m.name+'</div>'+
         '<div class="done-time">'+date+' '+timeStr+'</div>'+
         salaryHtml+
-        '<button class="btn-sub" style="margin-top:16px" onclick="history.back()">확인</button>'+
+        '<button class="btn-sub" style="margin-top:16px" onclick="location.reload()">확인</button>'+
       '</div>';
     } else {setStatus(res.error||'오류가 발생했습니다');}
   }).catch(function(){setStatus('네트워크 오류');});
