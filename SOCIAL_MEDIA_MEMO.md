@@ -280,10 +280,74 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ---
 
+## 콘텐츠 A/B/C/D 로테이션 시스템 (2026-08-29 구축)
+
+### 개요
+매주 다른 각도의 영상을 자동으로 선택하여 제작. 현재 주차 번호 % 4 → A/B/C/D 자동 선택.
+
+### 파일 위치
+```
+scripts/content/variants/yongcha-variants.json   # 4가지 각도 정의
+scripts/content/variants/filo-variants.json
+scripts/content/variants/donway-variants.json
+scripts/compose/generate-variant.js              # 주차 기반 선택 + 파일 자동 생성
+```
+
+### 각 앱 4가지 각도
+| 앱 | A | B | C | D |
+|---|---|---|---|---|
+| 용차앱 | 수수료제로 | 기사혜택(건수무제한) | 소장혜택(공고등록) | 비교각도(원콜vs용차앱) |
+| FILO | POS통합(3앱→1앱) | 직원근태(QR출퇴근) | AI매출예측(7일 예측) | 비용비교(경쟁사 대비) |
+| DONWAY | 대량정산(엑셀업로드) | 알림톡(기사별명세서) | 요금비교(경쟁사 대비50%) | 세금계산서(팝빌연동) |
+
+### 사용 방법
+```bash
+# 주차 기반 자동 선택 (GitHub Actions에서 자동 실행)
+node scripts/compose/generate-variant.js --product yongcha
+
+# 특정 variant 수동 지정
+node scripts/compose/generate-variant.js --product filo --variant B
+
+# 생성되는 파일들:
+#   scripts/content/{product}-narration.json   ← generate-narration.js가 읽음
+#   scripts/content/{product}-subtitles.srt    ← compose-video.sh가 읽음
+#   scripts/content/{product}-meta.json        ← YouTube 제목/설명
+#   assets/promo/{product}-promo.html          ← 슬라이드쇼 화면 (녹화 대상)
+```
+
+### GitHub Actions 실행 순서
+```
+Variant 선택 (generate-variant.js) → 나레이션 MP3 생성 → 화면 녹화 → FFmpeg 편집 → YouTube 업로드
+```
+→ social-media.yml 에 "콘텐츠 Variant 선택" 스텝 추가 완료 (나레이션 생성 전 실행)
+
+---
+
+## 자막 시스템 (2026-08-29 수정)
+
+### 현재 방식: SRT → ASS 변환 후 렌더링
+- 스크립트: `scripts/compose/srt-to-ass.js`
+- 변환 후 `ass` 필터로 ffmpeg에 주입 (`compose-video.sh`)
+- **PlayResX=1080, PlayResY=1920** 기준 명시 → 1080x1920 영상에 정확히 맞춤
+- **Fontsize=52** (PlayResY 기준 스케일), **Alignment=2** (하단 중앙), **MarginV=120** (하단 120px 여백)
+- 폰트: `Noto Sans CJK KR` (한글 지원)
+
+### 수동 실행
+```bash
+# SRT → ASS 변환
+node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/yongcha-subtitles.ass
+
+# compose-video.sh 내에서 자동 실행됨
+```
+
+---
+
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
-| 2026-08-29 | 나레이션 전체 음성 남성(Neural2-C)→여성(Neural2-A) 전환 (yongcha/filo/donway-narration.json). 자막 force_style 하단 고정(Alignment=2, MarginV=140, Fontsize=22) + ASS 변환 폐지. YONGCHA GitHub Actions 재실행 완료 |
+| 2026-08-29 | **콘텐츠 A/B/C/D 로테이션 시스템 구축** — variants/{yongcha,filo,donway}-variants.json + generate-variant.js + social-media.yml Variant 선택 스텝 추가. 매주 자동으로 다른 각도 영상 제작 |
+| 2026-08-29 | **자막 ASS 변환 방식 도입** — srt-to-ass.js (PlayResY=1920, Fontsize=52, Alignment=2, MarginV=120). compose-video.sh에서 SRT→ASS 자동 변환 후 ass 필터 적용. 자막 위치 하단 고정 확실 |
+| 2026-08-29 | 나레이션 전체 음성 남성(Neural2-C)→여성(Neural2-A) 전환 (yongcha/filo/donway-narration.json). YONGCHA GitHub Actions 재실행 완료 |
 | 2026-08-29 | 관제센터(mbtico.kr) 에러로그·소셜미디어 관리 탭 추가. _worker.js /api/trigger-social 엔드포인트 추가 (GITHUB_TOKEN Secret 필요). 에러 뱃지 실시간 갱신(24시간 기준) |
 | 2026-08-28 | **브랜드 보이스 스킬 생성** `.claude/skills/mbtico-social-voice.md` — StoryScope + roy.branding 기반 AI 탈출 원칙 적용. 나레이션 스크립트 개선: yongcha 오프너 질문형 후크로 변경, mbtico 마무리 AI패턴 → 열린 CTA로 변경 |
 | 2026-08-28 | **YONGCHA 영상 버그 2가지 수정** — ①무음(Google TTS 400 에러: ssmlGender FEMALE 제거), ②자막 화면가림(폰트명 'Noto Sans KR'→'Noto Sans CJK KR', 크기46→34, 노란색→흰색, MarginV 100→160). yongcha-subtitles.srt 나레이션 동기화. 자동 머지+배포 완료 |

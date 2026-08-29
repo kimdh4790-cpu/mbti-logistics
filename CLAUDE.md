@@ -376,6 +376,15 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: menu_mgmt → _filoLoadAndRun lazy-load 수정 (_filoPageMenuMgmt is not defined 해결)
 - filo-menu-mgmt.js: 카드 배경 다크→흰색 변경 (background:#fff)
 
+### ✅ 완료 (2026-08-29 소셜미디어 자동화)
+- **n8n v2.8.4 Oracle Cloud VM 영구 설치** (161.33.136.154:5678, admin/Mbtico2026!, crontab @reboot 자동시작, 라이선스 활성화)
+- Oracle Cloud VCN Security List TCP 5678 Ingress Rule 추가 (n8n 외부 접속용)
+- **자막 ASS 변환 방식 도입** — scripts/compose/srt-to-ass.js (PlayResY=1920, Fontsize=52, Alignment=2 하단, MarginV=120). compose-video.sh 자동 변환 적용. 자막이 화면 중앙 크게 표시되던 버그 수정
+- **콘텐츠 A/B/C/D 로테이션 시스템** — scripts/content/variants/{yongcha,filo,donway}-variants.json + scripts/compose/generate-variant.js (주차 기반 자동 선택). social-media.yml에 Variant 선택 스텝 추가
+  - 용차앱: 수수료제로/기사혜택/소장혜택/비교각도
+  - FILO: POS통합/직원근태/AI매출예측/비용비교
+  - DONWAY: 대량정산/알림톡/요금비교/세금계산서
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
