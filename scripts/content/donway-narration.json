@@ -1,27 +1,27 @@
 {
   "product": "donway",
-  "voice": "ko-KR-Neural2-A",
-  "speedRate": 1.0,
+  "voice": "ko-KR-Neural2-B",
+  "speedRate": 1,
   "lines": [
     {
-      "startSec": 0.0,
-      "text": "기사 수십 명 정산, 아직도 수작업으로 하세요?"
+      "startSec": 0,
+      "text": "정산하고 기사 한 명씩 연락하고 계시나요?"
     },
     {
-      "startSec": 5.0,
-      "text": "쿠팡 엑셀 올리면요. 5분 만에 전부 계산돼요."
+      "startSec": 6,
+      "text": "DONWAY는 정산 완료 즉시 카카오 알림톡 자동 발송."
     },
     {
-      "startSec": 13.0,
-      "text": "계산 끝나면 카카오로 기사들한테 바로 발송해드려요."
+      "startSec": 13,
+      "text": "기사별 금액·공제내역 명세서가 카톡으로 바로 가요."
     },
     {
-      "startSec": 19.0,
-      "text": "이거, 국내에서 돈웨이만 가능해요."
+      "startSec": 20,
+      "text": "문의 전화도 줄고, 분쟁도 줄어요."
     },
     {
-      "startSec": 27.0,
-      "text": "무료로 한번 써보세요. 돈웨이 닷 에이아이 닷 케이알."
+      "startSec": 27,
+      "text": "7일 무료체험. donway.ai.kr"
     }
   ]
 }

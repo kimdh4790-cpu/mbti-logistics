@@ -119,11 +119,21 @@ function renderSlide(slide, idx) {
     </div>`;
   }
   if (slide.type === 'price') {
+    if (slide.p50) {
+      // DONWAY 스타일: 인원 구간별 요금
+      return `<div class="reel${activeClass}" id="${id}" style="padding:28px">
+        <div class="tag tag-gold anim-1">요금제 (기사당 ₩2,500/월)</div>
+        <div class="price-row anim-2"><span class="price-label">~50명</span><span class="price-val">${slide.p50}</span></div>
+        <div class="price-row anim-3"><span class="price-label">~100명</span><span class="price-val">${slide.p100}</span></div>
+        <div class="price-note anim-4">~500명: ${slide.p500}</div>
+      </div>`;
+    }
+    // 기본: 기사/소장 구분 요금 (용차앱 등)
     return `<div class="reel${activeClass}" id="${id}" style="padding:28px">
       <div class="tag tag-gold anim-1">요금제</div>
-      <div class="price-row anim-2"><span class="price-label">기사</span><span class="price-val">${slide.driver}</span></div>
-      <div class="price-row anim-3"><span class="price-label">소장</span><span class="price-val">${slide.dealer}</span></div>
-      <div class="price-note anim-4">${slide.donway}</div>
+      <div class="price-row anim-2"><span class="price-label">기사</span><span class="price-val">${slide.driver || ''}</span></div>
+      <div class="price-row anim-3"><span class="price-label">소장</span><span class="price-val">${slide.dealer || ''}</span></div>
+      <div class="price-note anim-4">${slide.donway || ''}</div>
     </div>`;
   }
   if (slide.type === 'cta') {

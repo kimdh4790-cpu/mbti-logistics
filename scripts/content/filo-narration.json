@@ -1,27 +1,27 @@
 {
   "product": "filo",
-  "voice": "ko-KR-Neural2-A",
-  "speedRate": 1.0,
+  "voice": "ko-KR-Neural2-B",
+  "speedRate": 1,
   "lines": [
     {
-      "startSec": 0.5,
-      "text": "POS가 세 개인데, 관리는 여기 하나로 끝나요."
+      "startSec": 0,
+      "text": "오늘 장사 잘 될지, 어떤 메뉴 준비해야 할지 모르겠죠?"
     },
     {
-      "startSec": 5.5,
-      "text": "손님이 QR 찍으면요, 주문이 알아서 들어와요."
+      "startSec": 7,
+      "text": "FILO AI가 날씨, 시간대, 재고를 분석해서 알려줘요."
     },
     {
-      "startSec": 12.5,
-      "text": "주방에도 바로 뜨고요. 홀 직원 없어도 돼요."
+      "startSec": 14,
+      "text": "7일 매출 예측과 추천 메뉴를 매일 아침 확인하세요."
     },
     {
-      "startSec": 19.5,
-      "text": "출퇴근이랑 급여, 재고까지. 전부 FILO 하나에 다 있어요."
+      "startSec": 21,
+      "text": "마진 분석으로 진짜 남는 메뉴가 뭔지도 보여요."
     },
     {
-      "startSec": 26.5,
-      "text": "무료로 한번 써보세요. 필로 닷 에이아이 닷 케이알."
+      "startSec": 28,
+      "text": "데이터로 운영하세요. FILO. 파일로 닷 에이아이."
     }
   ]
 }

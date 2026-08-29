@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=390,initial-scale=1">
-<title>용차앱 홍보</title>
+<title>FILO 홍보</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif}
-  html,body{width:390px;height:844px;overflow:hidden;background:#08101f}
+  html,body{width:390px;height:844px;overflow:hidden;background:#0f0a1e}
   .reel{position:absolute;top:0;left:0;width:390px;height:844px;display:flex;flex-direction:column;justify-content:center;align-items:center;opacity:0;transform:translateY(24px);transition:opacity 0.5s,transform 0.5s;pointer-events:none}
   .reel.active{opacity:1;transform:translateY(0);pointer-events:auto}
   .reel.exit{opacity:0;transform:translateY(-24px)}
   @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
   .anim-1{animation:fadeUp 0.5s 0.1s both}.anim-2{animation:fadeUp 0.5s 0.3s both}
   .anim-3{animation:fadeUp 0.5s 0.5s both}.anim-4{animation:fadeUp 0.5s 0.7s both}
-  .progress-bar{position:fixed;bottom:0;left:0;width:0%;height:3px;background:linear-gradient(90deg,#c9a84c,#f0d070);transition:width linear;z-index:100}
+  .progress-bar{position:fixed;bottom:0;left:0;width:0%;height:3px;background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width linear;z-index:100}
   .dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:200}
   .dot{width:6px;height:6px;border-radius:50%;background:#374060;transition:all 0.3s}
-  .dot.active{background:#f0d070;width:20px;border-radius:3px}
+  .dot.active{background:#a78bfa;width:20px;border-radius:3px}
   .hero-badge{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:5px 14px;font-size:11px;color:#a0b0d0;letter-spacing:1px;font-weight:700;margin-bottom:20px}
   .hero-emoji{font-size:52px;margin-bottom:12px}
   .h1{font-size:34px;font-weight:800;line-height:1.2;text-align:center;color:#fff}
@@ -24,7 +24,7 @@
   .body{font-size:15px;line-height:1.7;color:#b0c0e0}
   .hero-sub{font-size:15px;color:#7a8aaa;margin-top:10px;text-align:center}
   .tag{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:8px}
-  .tag-gold{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);color:#f0d070}
+  .tag-gold{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.4);color:#a78bfa}
   .tag-red{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171}
   .cmp-box{width:100%;border-radius:14px;padding:16px;font-size:13px;color:#b0c0e0;line-height:1.6}
   .cmp-box.bad{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2)}
@@ -33,51 +33,48 @@
   .feat-icon{font-size:52px}
   .price-row{width:100%;display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.06)}
   .price-label{font-size:13px;color:#7a8aaa;font-weight:600}
-  .price-val{font-size:22px;font-weight:800;color:#f0d070}
+  .price-val{font-size:22px;font-weight:800;color:#a78bfa}
   .price-note{font-size:12px;color:#22c55e;margin-top:14px;text-align:center}
-  .cta-domain{font-size:18px;font-weight:700;color:#f0d070;margin-top:20px;letter-spacing:1px}
+  .cta-domain{font-size:18px;font-weight:700;color:#a78bfa;margin-top:20px;letter-spacing:1px}
 </style>
 </head>
 <body>
 <div class="reel active" id="s1">
-      <div class="hero-badge anim-1">수수료 제로</div>
+      <div class="hero-badge anim-1">AI 예측</div>
       <div class="hero-emoji anim-2">🚚</div>
-      <div class="h1 anim-3" style="white-space:pre-line">수수료 20%
-아직도 내고 있어요?</div>
-      <div class="hero-sub anim-4">용차앱으로 직접 계약하세요</div>
+      <div class="h1 anim-3" style="white-space:pre-line">오늘 뭐 많이 팔릴지
+AI가 알려줘요</div>
+      <div class="hero-sub anim-4">데이터 기반 매장 운영</div>
     </div>
-<div class="reel" id="s2" style="padding:28px">
-      <div class="tag tag-red anim-1">기존 방식</div>
-      <div class="cmp-box bad anim-2" style="white-space:pre-line;margin-top:12px">주선사 수수료 20%+
-단가 불투명 · 브로커 의존</div>
-      <div class="arrow-down anim-3">↓</div>
-      <div class="tag tag-gold anim-3">✅ 용차앱</div>
-      <div class="cmp-box good anim-4" style="white-space:pre-line;margin-top:8px">기사 ↔ 대리점 직접 연결
-수수료 없음 · 단가 100% 공개</div>
+<div class="reel" id="s2" style="padding:32px 28px">
+      <div class="feat-icon anim-1">🤖</div>
+      <div class="h2 anim-2" style="margin-top:16px;text-align:center">7일 매출 예측</div>
+      <div class="body anim-3" style="text-align:center;margin-top:12px;white-space:pre-line">날씨·요일·계절 패턴 분석
+오늘 예상 매출 미리 확인</div>
     </div>
 <div class="reel" id="s3" style="padding:32px 28px">
-      <div class="feat-icon anim-1">📋</div>
-      <div class="h2 anim-2" style="margin-top:16px;text-align:center">공고 무제한 등록</div>
-      <div class="body anim-3" style="text-align:center;margin-top:12px;white-space:pre-line">소장님이 공고 올리면
-기사가 직접 지원해요</div>
+      <div class="feat-icon anim-1">🍽</div>
+      <div class="h2 anim-2" style="margin-top:16px;text-align:center">AI 메뉴 추천</div>
+      <div class="body anim-3" style="text-align:center;margin-top:12px;white-space:pre-line">시간대·재고·날씨 기반
+오늘의 추천 메뉴 자동 선정</div>
     </div>
 <div class="reel" id="s4" style="padding:32px 28px">
-      <div class="feat-icon anim-1">🤖</div>
-      <div class="h2 anim-2" style="margin-top:16px;text-align:center">AI 루트코치</div>
-      <div class="body anim-3" style="text-align:center;margin-top:12px;white-space:pre-line">최적 노선·단가 자동 추천
-공차 없이 운행하세요</div>
+      <div class="feat-icon anim-1">📈</div>
+      <div class="h2 anim-2" style="margin-top:16px;text-align:center">마진 분석</div>
+      <div class="body anim-3" style="text-align:center;margin-top:12px;white-space:pre-line">원가 입력 시 메뉴별 수익률
+실제 남는 메뉴 파악</div>
     </div>
-<div class="reel" id="s5" style="padding:28px">
-      <div class="tag tag-gold anim-1">요금제</div>
-      <div class="price-row anim-2"><span class="price-label">기사</span><span class="price-val">₩150,000/월</span></div>
-      <div class="price-row anim-3"><span class="price-label">소장</span><span class="price-val">₩50,000/월</span></div>
-      <div class="price-note anim-4">DONWAY 구독 소장 무료</div>
+<div class="reel" id="s5" style="padding:32px 28px">
+      <div class="feat-icon anim-1">🌍</div>
+      <div class="h2 anim-2" style="margin-top:16px;text-align:center">다국어 메뉴 번역</div>
+      <div class="body anim-3" style="text-align:center;margin-top:12px;white-space:pre-line">외국인 고객용 메뉴판
+AI 자동 번역</div>
     </div>
-<div class="reel" id="s6" style="background:linear-gradient(160deg,#08101f 0%,#111c35 100%);padding:32px 28px">
+<div class="reel" id="s6" style="background:linear-gradient(160deg,#0f0a1e 0%,#160d2e 100%);padding:32px 28px">
       <div class="hero-emoji anim-1">🚚</div>
-      <div class="h1 anim-2">용차앱</div>
-      <div class="hero-sub anim-3">수수료 없는 직접 매칭</div>
-      <div class="cta-domain anim-4">yongcha.app</div>
+      <div class="h1 anim-2">FILO</div>
+      <div class="hero-sub anim-3">AI가 함께하는 매장 운영</div>
+      <div class="cta-domain anim-4">filo.ai.kr</div>
     </div>
 <div class="progress-bar" id="pb"></div>
 <div class="dots" id="dots"><div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
