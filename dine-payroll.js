@@ -108,16 +108,16 @@ function _dineCalcPayroll(did){
 
   /* ── KPI 요약 (compact 1줄) ── */
   var html=
-   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px">'+
-   '<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:10px;text-align:center">'+
-    '<div style="font-size:10px;color:var(--t3)">직원 실수령</div>'+
-    '<div style="font-size:15px;font-weight:900;color:#22c55e">₩'+totalNet.toLocaleString()+'</div></div>'+
-   '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px;text-align:center">'+
-    '<div style="font-size:10px;color:var(--t3)">공제 합계</div>'+
-    '<div style="font-size:15px;font-weight:900;color:#ef4444">₩'+(totalGross-totalNet).toLocaleString()+'</div></div>'+
-   '<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:10px;text-align:center">'+
-    '<div style="font-size:10px;color:var(--t3)">사업주 부담</div>'+
-    '<div style="font-size:15px;font-weight:900;color:#f59e0b">₩'+totalEmployerCost.toLocaleString()+'</div></div>'+
+   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
+   '<div style="background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:12px;padding:12px 10px">'+
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">직원 실수령</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#22c55e;font-variant-numeric:tabular-nums;letter-spacing:-.5px">₩'+totalNet.toLocaleString()+'</div></div>'+
+   '<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:12px;padding:12px 10px">'+
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">공제 합계</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#ef4444;font-variant-numeric:tabular-nums;letter-spacing:-.5px">₩'+(totalGross-totalNet).toLocaleString()+'</div></div>'+
+   '<div style="background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.15);border-radius:12px;padding:12px 10px">'+
+    '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--t3);margin-bottom:6px">사업주 부담</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-.5px">₩'+totalEmployerCost.toLocaleString()+'</div></div>'+
    '</div>'+
    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
    '<div style="font-size:12px;font-weight:700;color:var(--t2)">'+ym+' 계산 결과 <span style="color:var(--t3);font-weight:400">총 '+cards.length+'명</span></div>'+
@@ -139,27 +139,25 @@ function _dineCalcPayroll(did){
     var empIns=Math.floor(g*(0.0475+0.03595+0.03595*0.1314+0.0115+0.0147));
     var retire=Math.floor(g*0.0833);
     var empTotal=g+empIns+retire;
-    return '<div style="border-bottom:1px solid var(--bd);padding:10px 0">'+
-     /* 1행: 이름 + 실수령 + 버튼 */
-     '<div style="display:flex;align-items:center;justify-content:space-between">'+
-      '<div style="display:flex;align-items:center;gap:8px">'+
-       '<span style="font-size:13px;font-weight:800">'+m.name+'</span>'+
-       '<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:rgba(255,255,255,.06);color:'+partColor+'">'+partLabel+'</span>'+
-       (r.weeklyHoliday?'<span style="font-size:9px;color:#f59e0b">주휴</span>':'')+
-      '</div>'+
-      '<div style="display:flex;align-items:center;gap:6px">'+
-       '<span style="font-size:15px;font-weight:900;color:#22c55e">₩'+r.netSalary.toLocaleString()+'</span>'+
-       '<button data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t2);cursor:pointer">명세서</button>'+
-       '<button data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;background:var(--br);border:none;border-radius:6px;color:#fff;cursor:pointer">알림</button>'+
-      '</div>'+
+    return '<div style="padding:13px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<span style="font-size:14px;font-weight:800;flex:1;color:var(--tx)">'+m.name+'</span>'+
+      '<span style="font-size:10px;padding:2px 9px;border-radius:20px;border:1px solid '+partColor+'30;background:'+partColor+'15;color:'+partColor+'">'+partLabel+'</span>'+
+      (r.weeklyHoliday?'<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2)">주휴</span>':'')+
      '</div>'+
-     /* 2행: 기본급·공제·사업주부담 inline */
-     '<div style="display:flex;gap:10px;margin-top:5px;font-size:11px;color:var(--t3);flex-wrap:wrap">'+
-      '<span>기본 <b style="color:var(--tx)">₩'+r.basePay.toLocaleString()+'</b></span>'+
-      (r.weeklyHoliday?'<span>주휴 <b style="color:#22c55e">+₩'+r.weeklyHoliday.toLocaleString()+'</b></span>':'')+
-      (r.insTotal||r.taxTotal?'<span>공제 <b style="color:#ef4444">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</b></span>':'')+
-      '<span>사업주 <b style="color:#f59e0b">₩'+empTotal.toLocaleString()+'</b></span>'+
-      (r.lawAlerts&&r.lawAlerts.length?r.lawAlerts.slice(0,2).map(function(a){return '<span style="padding:1px 5px;border-radius:8px;background:'+a.bg+';color:'+a.color+'">'+a.text+'</span>';}).join(''):'')+
+     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:9px;font-size:11px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(8,16,31,.04);border-radius:6px;padding:5px 8px"><span style="color:var(--t3)">기본급</span><b style="color:var(--tx);font-variant-numeric:tabular-nums">₩'+r.basePay.toLocaleString()+'</b></div>'+
+      (r.weeklyHoliday?'<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(34,197,94,.05);border-radius:6px;padding:5px 8px"><span style="color:var(--t3)">주휴</span><b style="color:#22c55e;font-variant-numeric:tabular-nums">+₩'+r.weeklyHoliday.toLocaleString()+'</b></div>':'<div style="background:rgba(8,16,31,.04);border-radius:6px;padding:5px 8px"></div>')+
+      (r.insTotal||r.taxTotal?'<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(239,68,68,.04);border-radius:6px;padding:5px 8px"><span style="color:var(--t3)">공제</span><b style="color:#ef4444;font-variant-numeric:tabular-nums">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</b></div>':'<div style="background:rgba(8,16,31,.04);border-radius:6px;padding:5px 8px"></div>')+
+      '<div style="display:flex;justify-content:space-between;align-items:center;background:rgba(201,168,76,.05);border-radius:6px;padding:5px 8px"><span style="color:var(--t3)">사업주</span><b style="color:#c9a84c;font-variant-numeric:tabular-nums">₩'+empTotal.toLocaleString()+'</b></div>'+
+     '</div>'+
+     '<div style="display:flex;align-items:center;gap:6px">'+
+      '<div style="flex:1">'+
+       (r.lawAlerts&&r.lawAlerts.length?r.lawAlerts.slice(0,2).map(function(a){return '<span style="font-size:9px;padding:2px 7px;border-radius:20px;background:'+a.bg+';color:'+a.color+';border:1px solid '+(a.border||a.bg)+';margin-right:3px">'+a.text+'</span>';}).join(''):'<span style="font-size:11px;color:var(--t3)">세전 ₩'+r.grossSalary.toLocaleString()+'</span>')+
+      '</div>'+
+      '<div style="font-size:18px;font-weight:900;color:#22c55e;font-variant-numeric:tabular-nums">₩'+r.netSalary.toLocaleString()+'</div>'+
+      '<button data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="min-width:44px;padding:6px 10px;border:1px solid var(--bd2);border-radius:8px;background:transparent;color:var(--t2);cursor:pointer;font-size:11px;font-weight:600">명세서</button>'+
+      '<button data-mid="'+m._id+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="min-width:44px;padding:6px 10px;background:var(--br);border:none;border-radius:8px;color:#0F172A;cursor:pointer;font-size:11px;font-weight:700"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:2px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>알림</button>'+
      '</div>'+
     '</div>';
    }).join('');
@@ -360,11 +358,11 @@ function _dinePayslipModal(memberId,ym){
   var totalDeduct=r.insTotal+r.taxTotal;
 
   var html=
-   '<div style="text-align:center;padding-bottom:14px;border-bottom:1px solid var(--bd);margin-bottom:4px">'+
-   '<div style="font-size:10px;color:var(--t3);letter-spacing:2px;margin-bottom:4px">MBTICO · 급여명세서</div>'+
-   '<div style="font-size:22px;font-weight:900">'+m.name+'</div>'+
-   '<div style="font-size:12px;color:var(--t2);margin-top:3px">'+partLabel+(m.level?' · '+({'new':'신입','junior':'6개월↑','mid':'1년↑','senior':'3년↑','expert':'5년↑'}[m.level]||m.level):'')+(payTypeLabel?' · '+payTypeLabel:'')+'</div>'+
-   '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+ymLabel+' | 발행일 '+today+'</div>'+
+   '<div style="text-align:center;padding:0 0 16px;margin-bottom:8px;border-bottom:1px solid var(--bd)">'+
+   '<div style="display:inline-block;padding:2px 12px;border-radius:20px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.2);font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#c9a84c;margin-bottom:10px">MBTICO · 급여명세서</div>'+
+   '<div style="font-size:28px;font-weight:900;letter-spacing:-.5px;color:var(--tx);line-height:1.1">'+m.name+'</div>'+
+   '<div style="font-size:13px;color:var(--t2);margin-top:5px">'+partLabel+(m.level?' · '+({'new':'신입','junior':'6개월↑','mid':'1년↑','senior':'3년↑','expert':'5년↑'}[m.level]||m.level):'')+(payTypeLabel?' · '+payTypeLabel:'')+'</div>'+
+   '<div style="display:inline-flex;gap:8px;margin-top:6px;font-size:11px;color:var(--t3)"><span>'+ymLabel+'</span><span>·</span><span>발행일 '+today+'</span></div>'+
    '</div>'+
    _secHead('근무 현황')+
    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px">'+
@@ -386,9 +384,10 @@ function _dinePayslipModal(memberId,ym){
     '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px;font-weight:800;border-top:2px solid var(--bd);margin-top:4px;color:#ef4444">'+
     '<span>총 공제액</span><span>- ₩'+totalDeduct.toLocaleString()+'</span></div>'
    :'')+
-   '<div style="background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:14px 16px;margin:14px 0;text-align:center">'+
-   '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">실수령액</div>'+
-   '<div style="font-size:28px;font-weight:900;color:#c9a84c">₩'+r.netSalary.toLocaleString()+'</div>'+
+   '<div style="border:2px solid rgba(201,168,76,.35);border-radius:14px;padding:16px;margin:14px 0;text-align:center">'+
+   '<div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#c9a84c;margin-bottom:6px">실수령액</div>'+
+   '<div style="font-size:32px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px">₩'+r.netSalary.toLocaleString()+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);margin-top:6px">세전 ₩'+r.grossSalary.toLocaleString()+' → 공제 -₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</div>'+
    '</div>'+
    (r.lawAlerts&&r.lawAlerts.length?
     '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px">'+

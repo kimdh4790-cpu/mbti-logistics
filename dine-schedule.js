@@ -331,10 +331,10 @@ function _dinePayslipList(did){
 
   /* ── 합계 + 일괄발송 (관리자만) ── */
   var sumHtml=isStaff?
-   '<div style="font-size:12px;color:var(--t3);margin-bottom:10px">'+ym+' 내 급여명세서 · 실수령 <b style="color:#22c55e">₩'+totalNet.toLocaleString()+'</b></div>':
-   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-   '<div style="font-size:12px;color:var(--t3)">'+ym+' 명세서 <b style="color:var(--tx)">총 '+cards.length+'명</b> · 실수령 합계 <b style="color:#22c55e">₩'+totalNet.toLocaleString()+'</b></div>'+
-   '<button data-did="'+did+'" data-ym="'+ym+'" onclick="_dinePayslipBulkSend(this.dataset.did,this.dataset.ym)" style="font-size:11px;padding:5px 12px;background:var(--br);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:700">일괄발송</button>'+
+   '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);border-radius:10px;margin-bottom:12px"><div style="flex:1;font-size:12px;color:var(--t3)">'+ym+' 내 급여명세서</div><div style="font-size:16px;font-weight:900;color:#22c55e;font-variant-numeric:tabular-nums">₩'+totalNet.toLocaleString()+'</div></div>':
+   '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;margin-bottom:12px">'+
+   '<div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--t2)">'+ym+' 급여명세서 <span style="color:var(--t3);font-weight:400">총 '+cards.length+'명</span></div><div style="font-size:18px;font-weight:900;color:#22c55e;font-variant-numeric:tabular-nums;margin-top:2px">₩'+totalNet.toLocaleString()+'</div></div>'+
+   '<button data-did="'+did+'" data-ym="'+ym+'" onclick="_dinePayslipBulkSend(this.dataset.did,this.dataset.ym)" style="min-width:44px;padding:7px 14px;background:var(--br);border:none;border-radius:8px;color:#0F172A;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:2px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>일괄발송</button>'+
    '</div>';
 
   /* ── 5명 페이지네이션 ── */
@@ -346,21 +346,20 @@ function _dinePayslipList(did){
     var m=c.m,r=c.r;
     var partLabel={'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||(m.part||'-');
     var partColor={'kitchen':'#ef4444','hall':'#38bdf8','management':'#a78bfa'}[m.part]||'#a78bfa';
-    return '<div style="border-bottom:1px solid var(--bd);padding:10px 0">'+
-     /* 1행: 이름 + 파트 + 실수령 + 버튼 */
-     '<div style="display:flex;align-items:center;gap:8px">'+
-     '<div style="font-size:13px;font-weight:800;flex:1">'+m.name+'</div>'+
-     '<span style="font-size:10px;font-weight:700;color:'+partColor+';background:'+partColor+'22;padding:2px 7px;border-radius:10px">'+partLabel+'</span>'+
-     '<div style="font-size:14px;font-weight:900;color:#22c55e">₩'+r.netSalary.toLocaleString()+'</div>'+
-     '<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--t2);cursor:pointer">보기</button>'+
-     (isStaff?'':'<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="font-size:10px;padding:4px 9px;border:1px solid rgba(8,145,178,.3);border-radius:6px;background:rgba(8,145,178,.08);color:#38bdf8;cursor:pointer">발송</button>')+
+    return '<div style="padding:13px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+     '<div style="font-size:14px;font-weight:800;flex:1;color:var(--tx)">'+m.name+'</div>'+
+     '<span style="font-size:10px;font-weight:700;color:'+partColor+';background:'+partColor+'15;border:1px solid '+partColor+'30;padding:2px 9px;border-radius:20px">'+partLabel+'</span>'+
      '</div>'+
-     /* 2행: 출근일·근무·기본급·공제 인라인 */
-     '<div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:var(--t3)">'+
-     '<span>출근 <b style="color:var(--tx)">'+c.days+'일</b></span>'+
-     '<span>근무 <b style="color:var(--br)">'+r.monthlyHours+'h</b></span>'+
-     '<span>기본 <b style="color:var(--tx)">₩'+r.basePay.toLocaleString()+'</b></span>'+
-     '<span>공제 <b style="color:#ef4444">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</b></span>'+
+     '<div style="margin-bottom:8px"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:4px;background:var(--bd);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,Math.round(r.monthlyHours/160*100))+'%;background:linear-gradient(90deg,var(--br),#22c55e);border-radius:2px"></div></div><span style="font-size:10px;font-weight:700;color:var(--t3);white-space:nowrap;font-variant-numeric:tabular-nums">'+r.monthlyHours+'h · '+c.days+'일</span></div></div>'+
+     '<div style="display:flex;align-items:center;gap:6px">'+
+     '<div style="flex:1;display:flex;gap:10px;font-size:11px;color:var(--t3);flex-wrap:wrap">'+
+     '<span>기본 <b style="color:var(--tx);font-variant-numeric:tabular-nums">₩'+r.basePay.toLocaleString()+'</b></span>'+
+     '<span>공제 <b style="color:#ef4444;font-variant-numeric:tabular-nums">-₩'+(r.insTotal+r.taxTotal).toLocaleString()+'</b></span>'+
+     '</div>'+
+     '<div style="font-size:16px;font-weight:900;color:#22c55e;font-variant-numeric:tabular-nums;white-space:nowrap">₩'+r.netSalary.toLocaleString()+'</div>'+
+     '<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dinePayslipModal(this.dataset.mid,this.dataset.ym)" style="min-width:44px;padding:6px 10px;border:1px solid var(--bd2);border-radius:8px;background:transparent;color:var(--t2);cursor:pointer;font-size:11px;font-weight:600;white-space:nowrap">보기</button>'+
+     (isStaff?'':'<button data-mid="'+c.mid+'" data-ym="'+ym+'" onclick="_dineSendPayslip(this.dataset.mid,this.dataset.ym)" style="min-width:44px;padding:6px 10px;border:1px solid rgba(201,168,76,.3);border-radius:8px;background:rgba(201,168,76,.06);color:#c9a84c;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:2px"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>발송</button>')+
      '</div>'+
      '</div>';
    }).join('');

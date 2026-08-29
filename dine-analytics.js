@@ -685,19 +685,25 @@ function _dineSchedule(el){
  var PAGE_SIZE=5;
  if(window._schedPage===undefined)window._schedPage=0;
 
+ var weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
+ var _wkLabel=(weekStart.getMonth()+1)+'월 '+weekStart.getDate()+'일 – '+(weekEnd.getMonth()+1)+'월 '+weekEnd.getDate()+'일';
  wrap.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">'+
-  '<div><div class="page-title">근무 스케줄</div><div class="page-sub">주간 근무 현황</div></div>'+
-  '<div style="display:flex;gap:6px">'+
-  '<button onclick="_dineScheduleWeek(-1)" style="padding:5px 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">← 이전주</button>'+
-  '<button onclick="_dineScheduleWeek(1)" style="padding:5px 12px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">다음주 →</button>'+
+  '<div><div class="page-title">근무 스케줄</div><div style="font-size:12px;color:var(--t3);margin-top:2px"><b style="color:var(--br)">'+_wkLabel+'</b> 주간</div></div>'+
+  '<div style="display:flex;gap:6px;align-items:center">'+
+  '<button onclick="_dineScheduleWeek(-1)" style="min-width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--bd2);border-radius:8px;background:transparent;color:var(--t2);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>'+
+  '<button onclick="_dineScheduleAdd(\''+did+'\')" style="height:36px;padding:0 14px;border:none;border-radius:8px;background:var(--br);color:#0F172A;font-size:12px;font-weight:700;cursor:pointer">+ 등록</button>'+
+  '<button onclick="_dineScheduleWeek(1)" style="min-width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--bd2);border-radius:8px;background:transparent;color:var(--t2);cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>'+
   '</div></div>'+
-  '<div class="card" style="overflow-x:auto"><div id="sch-header" style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px;padding-bottom:8px;border-bottom:1px solid var(--bd);margin-bottom:8px">'+
-  '<div style="padding:6px;color:var(--t3);font-weight:700">직원</div>'+
+  '<div class="card" style="overflow-x:auto;padding:12px"><div id="sch-header" style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px;padding-bottom:10px;border-bottom:2px solid var(--bd2);margin-bottom:10px">'+
+  '<div style="padding:6px 4px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--t3);display:flex;align-items:flex-end">직원</div>'+
   Array.from({length:7},function(_,i){
    var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
    var isToday=d.toISOString().slice(0,10)===now.toISOString().slice(0,10);
-   return '<div style="padding:6px;text-align:center;font-weight:700;'+(isToday?'color:var(--br)':'color:var(--t3)')+'">'+
-    days[d.getDay()]+'<br><span style="font-size:9px">'+(d.getMonth()+1)+'/'+d.getDate()+'</span></div>';
+   var isSun=d.getDay()===0,isSat=d.getDay()===6;
+   if(isToday){
+    return '<div style="padding:4px;text-align:center"><div style="display:inline-flex;flex-direction:column;align-items:center;background:var(--br);border-radius:8px;padding:4px 6px;min-width:32px"><span style="font-size:9px;font-weight:800;color:#0F172A">'+days[d.getDay()]+'</span><span style="font-size:14px;font-weight:900;color:#0F172A;line-height:1.2">'+d.getDate()+'</span></div></div>';
+   }
+   return '<div style="padding:4px;text-align:center"><div style="font-size:10px;font-weight:700;color:'+(isSun?'#ef4444':isSat?'#38bdf8':'var(--t3)')+'">'+days[d.getDay()]+'</div><div style="font-size:14px;font-weight:900;color:'+(isSun?'#ef4444':isSat?'#38bdf8':'var(--t2)')+'">'+d.getDate()+'</div></div>';
   }).join('')+
   '</div>'+
   '<div id="sch-rows"></div>'+
@@ -733,18 +739,20 @@ function _dineSchedule(el){
    pageMem.forEach(function(item){
     var m=item.m;
     var partColor={'kitchen':'#ef4444','hall':'#38bdf8'}[m.part]||'#a78bfa';
-    rowsHtml+='<div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px;margin-bottom:4px">'+
-     '<div style="padding:6px;font-weight:700;font-size:11px;color:'+partColor+'">'+m.name+'</div>';
+    rowsHtml+='<div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:4px;font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--bd)">'+
+     '<div style="padding:4px 6px;font-weight:700;font-size:11px;color:'+partColor+';display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis" title="'+m.name+'">'+m.name+'</div>';
     for(var i=0;i<7;i++){
      var d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
      var dateStr=d.toISOString().slice(0,10);
+     var isColToday=dateStr===now.toISOString().slice(0,10);
      var att=attMap[item.id+'_'+dateStr];
      if(att&&att.in){
       var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
-      var outT=att.out?new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):'근무중';
-      rowsHtml+='<div style="padding:4px;background:rgba(34,197,94,.1);border-radius:6px;text-align:center;font-size:9px;color:#22c55e;cursor:pointer" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')">'+inT+'<br>'+outT+'</div>';
+      var isWorking=!att.out;
+      var outDisplay=isWorking?'<span style="display:inline-flex;align-items:center;gap:2px;color:#c9a84c;font-weight:700"><span style="width:4px;height:4px;border-radius:50%;background:#c9a84c;animation:pulse 1.5s infinite;display:inline-block"></span>중</span>':'<span style="color:#38bdf8">'+new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>';
+      rowsHtml+='<div style="padding:3px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);border-radius:6px;text-align:center;font-size:9px;cursor:pointer;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.6'+(isColToday?';box-shadow:0 0 0 1.5px rgba(201,168,76,.35)':'')+'" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')"><span style="color:#22c55e;font-weight:700">'+inT+'</span>'+outDisplay+'</div>';
      } else {
-      rowsHtml+='<div style="padding:4px;text-align:center;font-size:9px;color:var(--t3);cursor:pointer" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')">-</div>';
+      rowsHtml+='<div style="padding:4px;text-align:center;cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px dashed rgba(15,23,42,.1);color:var(--bd2)'+(isColToday?';background:rgba(201,168,76,.04)':'')+'" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>';
      }
     }
     rowsHtml+='</div>';
