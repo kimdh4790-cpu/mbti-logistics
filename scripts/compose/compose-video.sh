@@ -39,24 +39,11 @@ BGM="$ASSETS_DIR/bgm/background.mp3"
 INTRO="$ASSETS_DIR/intro.mp4"
 OUTRO="$ASSETS_DIR/outro.mp4"
 
-# 자막 필터 (SRT → ASS 변환 후 스타일 커스터마이즈)
+# 자막 필터 (SRT force_style 직접 적용 — ASS 변환 없음, 하단 고정)
 SUBTITLE_FILTER=""
 if [ -f "$SUBTITLES" ]; then
-  ASS_FNAME="${PRODUCT}-subtitles.ass"
-  ASS_FILE="$OUTPUT_DIR/${ASS_FNAME}"
-  (cd "$OUTPUT_DIR" && "$FFMPEG" -y -i "$SUBTITLES" "$ASS_FNAME" 2>/dev/null) || true
-  if [ -f "$ASS_FILE" ]; then
-    # ASS Style 라인 커스터마이즈: Noto Sans KR 32pt, 흰색, 반투명 검은 박스, 하단
-    # 필드 순서: Name,Font,Size,PrimaryC,SecondaryC,OutlineC,BackC,Bold,Italic,Underline,Strike,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-    python3 -c "
-lines = open('$ASS_FILE').readlines()
-for i, l in enumerate(lines):
-    if l.startswith('Style: Default,'):
-        lines[i] = 'Style: Default,Noto Sans CJK KR,34,&H00FFFFFF,&H000000FF,&H00000000,&HA0000000,1,0,0,0,100,100,0,0,1,3,1,2,20,20,160,1\n'
-open('$ASS_FILE', 'w').writelines(lines)
-" 2>/dev/null || true
-    SUBTITLE_FILTER=",ass=${ASS_FNAME}"
-  fi
+  # Alignment=2(하단중앙), Fontsize=22, MarginV=140, 흰색+검은 외곽선
+  SUBTITLE_FILTER=",subtitles='${SUBTITLES}':force_style='Fontname=Noto Sans CJK KR,Fontsize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Bold=1,Outline=3,Shadow=1,Alignment=2,MarginV=140'"
 fi
 
 cd "$OUTPUT_DIR"
