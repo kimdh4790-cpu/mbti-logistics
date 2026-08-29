@@ -197,6 +197,9 @@ window.onload=function(){
   var m=(_menus||[]).filter(function(x){return x.name===itemName;})[0];
   if(m){_addToCart(m);_filoToast((m.emoji||'🍽')+' '+m.name+' 담겼습니다!');}
  });
+ // 저장된 언어 복원 (번역 상태 포함)
+ var _savedLang=localStorage.getItem('filo_lang')||'ko';
+ if(_savedLang!=='ko'){_setLang(_savedLang);}else{_setLang('ko');}
  _listenOrders(); // 픽업 알림
  _checkExistingOrder();
  _loadBakeryCart(); // 빵 진열대 QR 스캔 카트 자동 로드 // 기존 주문 테이블 이동 감지
@@ -212,7 +215,7 @@ window.onload=function(){
     var dn=document.getElementById('done');
     var dnum=document.getElementById('done-num');
     var ditems=document.getElementById('done-items');
-    if(dnum)dnum.textContent='테이블 '+d.tableNum+'번 · 주문번호 #'+lastId.slice(-6).toUpperCase();
+    if(dnum)dnum.textContent=_t('tableNum')+' '+d.tableNum+' · '+_t('orderNum')+' #'+lastId.slice(-6).toUpperCase();
     if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
     if(dn)dn.style.display='flex';
     _listenPickup(lastId);
@@ -265,7 +268,7 @@ function _checkExistingOrder(){
     _listenPickup(lastId);
     // 손님 화면 갱신
     var dnum=document.getElementById('done-num');
-    if(dnum)dnum.textContent=_tName+' · 주문번호 #'+lastId.slice(-6).toUpperCase();
+    if(dnum)dnum.textContent=_tName+' · '+_t('orderNum')+' #'+lastId.slice(-6).toUpperCase();
     var dn=document.getElementById('done');if(dn)dn.style.display='flex';
     _filoToast(_tName+'으로 이동됐습니다!');
    }).catch(function(e){_filoToast('이동 실패: '+e.message);okBtn.disabled=false;okBtn.textContent='이동';});
@@ -361,9 +364,9 @@ function _doOrder(payType){
   if(!data.ok||!data.id){throw new Error(data.error||'주문 실패');}
   var orderId=data.id;
   _closeCart();_cart={};_updFab();
-  var orderInfo=items.map(function(i){return (i.emoji||'🍽')+' '+i.name+' ×'+i.qty;}).join('\n');
+  var orderInfo=items.map(function(i){var tname=(_lang&&_lang!=='ko'&&_tlCache&&_tlCache[i.name+'_'+_lang])||i.name;return (i.emoji||'🍽')+' '+tname+' ×'+i.qty;}).join('\n');
   var dn=document.getElementById('done');
-  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?'포장':'테이블 '+_tNum+'번')+' · 주문번호 #'+orderId.slice(-6).toUpperCase();
+  var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?(_t('addr')||'포장'):_t('tableNum')+' '+_tNum)+' · '+_t('orderNum')+' #'+orderId.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
   if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}

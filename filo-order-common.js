@@ -56,19 +56,75 @@ var _i18n_common={
  ko:{cart:'장바구니',order:'주문하기',total:'합계',fab:'주문하기',
      done:'주문 완료!',sub:'잠시 후 준비됩니다',back:'메뉴 더 담기',
      addr:'주소 입력',sold:'품절',call:'직원 호출',close:'닫기',
-     qty:'수량',add:'담기'},
+     qty:'수량',add:'담기',
+     payTitle:'결제 방식 선택',paySub:'편하신 방법으로 결제해주세요',
+     postpay:'후불 결제',postpayDesc:'식사 후 카운터에서 결제',payDefault:'기본',
+     prepay:'선결제',prepayDesc:'카드·카카오페이·네이버페이',prepayBadge:'준비중',
+     payCancel:'취소',
+     orderNum:'주문번호',tableNum:'테이블',
+     receiptQ:'주문 영수증을 받으시겠어요?',receiptYes:'받기',receiptNo:'괜찮아요',
+     receiptTitle:'주문 영수증',receiptTotal:'합계',receiptFcm:'영수증 알림 받기',
+     cashNotice:'현금영수증이 필요하신 경우 카운터 직원에게 문의해 주세요',
+     postpayNotice:'식사 후 카운터에서 결제해 주세요',postpayNoticeSub:'결제 완료 시 영수증을 보내드려요',
+     pickupTitle:'픽업 알림 안내',pickupDesc1:'음식이 준비되면 폰 알림으로 알려드려요!',
+     pickupDesc2:'화면이 꺼져도 알림이 도착합니다',pickupWait:'주방에서 준비 중...',
+     changeTable:'테이블 번호 변경',
+     fcmTitle:'픽업 알림 안내',fcmSub:'주문하신 음식이 준비되면 휴대폰으로 알림을 보내드립니다',
+     fcmAllow:'알림 허용하기',fcmDenied:'알림 권한이 거부됐습니다',fcmDeniedSub:'주소창 잠금 아이콘 → 알림 → 허용 으로 변경해주세요',fcmRetry:'다시 시도하기'},
  en:{cart:'Cart',order:'Order',total:'Total',fab:'Order',
      done:'Order Placed!',sub:'Your order is being prepared',back:'Add More',
      addr:'Enter Address',sold:'Sold Out',call:'Call Staff',close:'Close',
-     qty:'Qty',add:'Add to Cart'},
+     qty:'Qty',add:'Add to Cart',
+     payTitle:'Select Payment',paySub:'Choose your preferred payment method',
+     postpay:'Pay Later',postpayDesc:'Pay at counter after meal',payDefault:'Default',
+     prepay:'Pay Now',prepayDesc:'Card · KakaoPay · NaverPay',prepayBadge:'Coming Soon',
+     payCancel:'Cancel',
+     orderNum:'Order #',tableNum:'Table',
+     receiptQ:'Would you like an order receipt?',receiptYes:'Yes',receiptNo:'No thanks',
+     receiptTitle:'Order Receipt',receiptTotal:'Total',receiptFcm:'Get Receipt Alert',
+     cashNotice:'For cash receipts, please ask the staff at the counter',
+     postpayNotice:'Please pay at the counter after your meal',postpayNoticeSub:'A receipt will be sent when payment is complete',
+     pickupTitle:'Pickup Notification',pickupDesc1:'We\'ll send a phone alert when your food is ready!',
+     pickupDesc2:'Alerts arrive even when your screen is off',pickupWait:'Kitchen is preparing...',
+     changeTable:'Change Table Number',
+     fcmTitle:'Pickup Alert',fcmSub:'We\'ll send a notification when your order is ready',
+     fcmAllow:'Allow Notifications',fcmDenied:'Notification permission denied',fcmDeniedSub:'Tap the lock icon in address bar → Notifications → Allow',fcmRetry:'Try Again'},
  zh:{cart:'购物车',order:'点餐',total:'合计',fab:'点餐',
      done:'下单成功！',sub:'请稍候，正在准备中',back:'继续点餐',
      addr:'输入地址',sold:'售罄',call:'呼叫服务员',close:'关闭',
-     qty:'数量',add:'加入购物车'},
+     qty:'数量',add:'加入购物车',
+     payTitle:'选择支付方式',paySub:'请选择您方便的支付方式',
+     postpay:'餐后结账',postpayDesc:'用餐后在柜台结账',payDefault:'默认',
+     prepay:'立即支付',prepayDesc:'银行卡·KakaoPay·NaverPay',prepayBadge:'准备中',
+     payCancel:'取消',
+     orderNum:'订单号',tableNum:'桌号',
+     receiptQ:'需要订单收据吗？',receiptYes:'需要',receiptNo:'不用了',
+     receiptTitle:'订单收据',receiptTotal:'合计',receiptFcm:'接收收据通知',
+     cashNotice:'需要现金收据请向柜台工作人员咨询',
+     postpayNotice:'请用餐后在柜台结账',postpayNoticeSub:'结账完成后将发送收据',
+     pickupTitle:'取餐提醒',pickupDesc1:'食物准备好后将发送手机通知！',
+     pickupDesc2:'即使关屏也能收到通知',pickupWait:'厨房准备中...',
+     changeTable:'更改桌号',
+     fcmTitle:'取餐提醒',fcmSub:'您的餐点准备好时，我们会通过手机通知您',
+     fcmAllow:'允许通知',fcmDenied:'通知权限被拒绝',fcmDeniedSub:'点击地址栏锁图标 → 通知 → 允许',fcmRetry:'重试'},
  ja:{cart:'カート',order:'注文する',total:'合計',fab:'注文する',
      done:'ご注文完了！',sub:'少々お待ちください',back:'メニューに戻る',
      addr:'住所入力',sold:'売切れ',call:'スタッフ呼出',close:'閉じる',
-     qty:'数量',add:'カートに追加'}
+     qty:'数量',add:'カートに追加',
+     payTitle:'お支払い方法を選択',paySub:'ご希望のお支払い方法をお選びください',
+     postpay:'後払い',postpayDesc:'お食事後にカウンターでお支払い',payDefault:'デフォルト',
+     prepay:'事前決済',prepayDesc:'カード·KakaoPay·NaverPay',prepayBadge:'準備中',
+     payCancel:'キャンセル',
+     orderNum:'注文番号',tableNum:'テーブル',
+     receiptQ:'注文レシートを受け取りますか？',receiptYes:'受け取る',receiptNo:'不要です',
+     receiptTitle:'注文レシート',receiptTotal:'合計',receiptFcm:'レシート通知を受け取る',
+     cashNotice:'現金領収書が必要な場合はカウンタースタッフにお申し付けください',
+     postpayNotice:'お食事後にカウンターでお支払いください',postpayNoticeSub:'支払い完了後にレシートをお送りします',
+     pickupTitle:'お知らせ',pickupDesc1:'食事の準備ができたら通知でお知らせします！',
+     pickupDesc2:'画面がオフでも通知が届きます',pickupWait:'キッチンで準備中...',
+     changeTable:'テーブル番号を変更',
+     fcmTitle:'お知らせ設定',fcmSub:'ご注文の準備ができたらお知らせします',
+     fcmAllow:'通知を許可する',fcmDenied:'通知が拒否されました',fcmDeniedSub:'アドレスバーの鍵マーク → 通知 → 許可 に変更してください',fcmRetry:'再試行'}
 };
 
 function _t(k){
@@ -590,6 +646,7 @@ function _ttsMenu(menuName, desc){
 // ── 언어 변경 ────────────────────────────────────────────────────────────────
 function _setLang(l){
  _lang=l;
+ try{localStorage.setItem('filo_lang',l);}catch(e){}
  _tlCache={};
  ['ko','en','zh','ja'].forEach(function(x){
   var b=document.getElementById('lb-'+x);if(b)b.classList.toggle('on',x===l);
@@ -603,11 +660,39 @@ function _setLang(l){
   'total-label':_t('total'),'tl-total':_t('total'),
   'fab-label':_t('fab'),'done-title':_t('done'),
   'done-sub':_t('sub'),'done-back':_t('back'),
-  'dn-back':_t('back'),'addr-btn':_t('addr')
+  'dn-back':_t('back'),'addr-btn':_t('addr'),
+  // 결제 모달
+  'pay-title-txt':_t('payTitle'),'pay-sub-txt':_t('paySub'),
+  'postpay-name':_t('postpay'),'postpay-desc':_t('postpayDesc'),
+  'pay-default-badge':_t('payDefault'),'prepay-badge':_t('prepayBadge'),
+  'prepay-desc':_t('prepayDesc'),'pay-cancel-btn':_t('payCancel'),
+  // 주문 완료 화면
+  'receipt-q-txt':_t('receiptQ'),'receipt-yes-btn':_t('receiptYes'),'receipt-no-btn':_t('receiptNo'),
+  'receipt-title-txt':_t('receiptTitle'),'receipt-total-lbl':_t('receiptTotal'),
+  'cash-receipt-notice':_t('cashNotice'),
+  'postpay-notice-main':_t('postpayNotice'),'postpay-notice-sub':_t('postpayNoticeSub'),
+  'pickup-title-txt':_t('pickupTitle'),'pickup-desc2-txt':_t('pickupDesc2'),
+  'pickup-status':_t('pickupWait'),'change-table-txt':_t('changeTable'),
+  // FCM 게이트
+  'fcm-title-txt':_t('fcmTitle'),'fcm-allow-btn':_t('fcmAllow'),
+  'fcm-denied-title-txt':_t('fcmDenied'),'fcm-denied-sub-txt':_t('fcmDeniedSub'),
+  'fcm-retry-btn':_t('fcmRetry'),'receipt-fcm-btn':_t('receiptFcm')
  };
  Object.keys(els).forEach(function(id){
   var el=document.getElementById(id);if(el&&els[id])el.textContent=els[id];
  });
+ var pd1=document.getElementById('pickup-desc1-txt');
+ if(pd1)pd1.textContent=_t('pickupDesc1');
+ var ppn=document.getElementById('prepay-name');
+ if(ppn){
+  var ppnBadge=document.getElementById('prepay-badge');
+  // 텍스트 노드만 변경 (배지 스팬 유지)
+  Array.from(ppn.childNodes).forEach(function(n){if(n.nodeType===3)n.textContent=_t('prepay')+' ';});
+  if(ppnBadge)ppnBadge.textContent=_t('prepayBadge');
+ }
+ // fcm-sub: <strong> 포함
+ var fcmSub=document.getElementById('fcm-sub-txt');
+ if(fcmSub)fcmSub.textContent=_t('fcmSub');
  // 메뉴 카드 번역 적용 (ko 복원 후 비KO 언어만 적용, 한 번만 호출)
  if(l!=='ko'&&_menus&&_menus.length) _applyTranslationsToGrid(_menus);
  // 품절 텍스트

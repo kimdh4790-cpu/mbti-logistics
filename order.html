@@ -818,34 +818,34 @@ body.dark .ap-box{background:var(--bg2)}
   <div class="fcm-icon">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
   </div>
-  <div class="fcm-title">픽업 알림 안내</div>
-  <div class="fcm-sub">주문하신 음식이 준비되면<br><strong style="color:#fff">휴대폰으로 알림</strong>을 보내드립니다</div>
+  <div class="fcm-title" id="fcm-title-txt">픽업 알림 안내</div>
+  <div class="fcm-sub" id="fcm-sub-txt">주문하신 음식이 준비되면<br><strong style="color:#fff">휴대폰으로 알림</strong>을 보내드립니다</div>
   <div class="fcm-card">
     <div class="fcm-item">
       <div class="fcm-item-ico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/><line x1="1" y1="1" x2="23" y2="23" style="display:none"/></svg>
       </div>
-      <div class="fcm-item-txt">화면이 꺼져도<br><strong>알림을 받을 수 있어요</strong></div>
+      <div class="fcm-item-txt" id="fcm-item1-txt">화면이 꺼져도<br><strong>알림을 받을 수 있어요</strong></div>
     </div>
     <div class="fcm-item">
       <div class="fcm-item-ico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       </div>
-      <div class="fcm-item-txt">카톡·SNS 사용 중에도<br><strong>알림이 도착해요</strong></div>
+      <div class="fcm-item-txt" id="fcm-item2-txt">카톡·SNS 사용 중에도<br><strong>알림이 도착해요</strong></div>
     </div>
     <div class="fcm-item">
       <div class="fcm-item-ico">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
-      <div class="fcm-item-txt">픽업 타이밍을<br><strong>절대 놓치지 않아요</strong></div>
+      <div class="fcm-item-txt" id="fcm-item3-txt">픽업 타이밍을<br><strong>절대 놓치지 않아요</strong></div>
     </div>
   </div>
-  <div class="fcm-note">알림을 허용해야 음식 준비 알림을 받을 수 있습니다</div>
+  <div class="fcm-note" id="fcm-note-txt">알림을 허용해야 음식 준비 알림을 받을 수 있습니다</div>
   <button id="fcm-allow-btn" onclick="_requestFCM()">알림 허용하기</button>
   <div id="fcm-denied-msg">
-    <div class="fcm-denied-title">알림 권한이 거부됐습니다</div>
-    <div class="fcm-denied-sub">주소창 잠금 아이콘 → 알림 → 허용 으로 변경해주세요</div>
-    <button onclick="_requestFCM()">다시 시도하기</button>
+    <div class="fcm-denied-title" id="fcm-denied-title-txt">알림 권한이 거부됐습니다</div>
+    <div class="fcm-denied-sub" id="fcm-denied-sub-txt">주소창 잠금 아이콘 → 알림 → 허용 으로 변경해주세요</div>
+    <button id="fcm-retry-btn" onclick="_requestFCM()">다시 시도하기</button>
   </div>
 </div>
 
@@ -854,8 +854,8 @@ body.dark .ap-box{background:var(--bg2)}
   <div class="done-circle">
     <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
   </div>
-  <div class="done-title" id="done-title">주문 완료!</div>
-  <div class="done-sub" id="done-sub">잠시 후 준비됩니다</div>
+  <div class="done-title" id="done-title"></div>
+  <div class="done-sub" id="done-sub"></div>
   <div class="done-num" id="done-num"></div>
   <div class="done-items" id="done-items"></div>
   <div id="done-pay-msg" style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6;text-align:center"></div>
@@ -863,51 +863,51 @@ body.dark .ap-box{background:var(--bg2)}
   <div id="receipt-choice" style="display:none">
     <div class="receipt-choice-lbl">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5z"/><line x1="8" y1="8" x2="15" y2="8"/><line x1="8" y1="12" x2="15" y2="12"/></svg>
-      주문 영수증을 받으시겠어요?
+      <span id="receipt-q-txt">주문 영수증을 받으시겠어요?</span>
     </div>
     <div class="receipt-choice-row">
-      <button onclick="_showOrderReceipt()">받기</button>
-      <button onclick="document.getElementById('receipt-choice').style.display='none'">괜찮아요</button>
+      <button id="receipt-yes-btn" onclick="_showOrderReceipt()">받기</button>
+      <button id="receipt-no-btn" onclick="document.getElementById('receipt-choice').style.display='none'">괜찮아요</button>
     </div>
   </div>
 
   <div id="order-receipt-box" style="display:none">
     <div id="order-receipt-header">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5z"/><line x1="8" y1="8" x2="15" y2="8"/><line x1="8" y1="12" x2="15" y2="12"/></svg>
-      주문 영수증
+      <span id="receipt-title-txt">주문 영수증</span>
     </div>
     <div id="order-receipt-items"></div>
     <div class="receipt-total-row">
-      <span>합계</span><span id="order-receipt-total"></span>
+      <span id="receipt-total-lbl">합계</span><span id="order-receipt-total"></span>
     </div>
     <div id="order-receipt-pay"></div>
-    <div id="cash-receipt-notice">현금영수증이 필요하신 경우 카운터 직원에게 문의해 주세요</div>
-    <button id="receipt-fcm-btn" onclick="reqReceiptFCM()" style="margin-top:14px;width:100%;padding:12px;background:var(--brand);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:-.3px">영수증 알림 받기</button>
+    <div id="cash-receipt-notice"></div>
+    <button id="receipt-fcm-btn" onclick="reqReceiptFCM()" style="margin-top:14px;width:100%;padding:12px;background:var(--brand);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:-.3px"></button>
     <div id="receipt-fcm-status" style="display:none;font-size:12px;color:var(--text2);text-align:center;margin-top:6px"></div>
   </div>
 
   <div id="postpay-notice" style="display:none">
-    식사 후 카운터에서 결제해 주세요<br>
-    <span style="font-size:11px;color:var(--text3)">결제 완료 시 영수증을 보내드려요</span>
+    <span id="postpay-notice-main">식사 후 카운터에서 결제해 주세요</span><br>
+    <span id="postpay-notice-sub" style="font-size:11px;color:var(--text3)">결제 완료 시 영수증을 보내드려요</span>
   </div>
 
   <div id="pickup-wait">
-    <div style="font-size:13px;font-weight:800;color:var(--brand-txt);margin-bottom:4px">픽업 알림 안내</div>
+    <div id="pickup-title-txt" style="font-size:13px;font-weight:800;color:var(--brand-txt);margin-bottom:4px">픽업 알림 안내</div>
     <div style="font-size:12px;color:var(--text2);line-height:1.8">
-      음식이 준비되면 <strong style="color:var(--text1)">폰 알림</strong>으로 알려드려요!<br>
-      화면이 꺼져도 알림이 도착합니다
+      <span id="pickup-desc1-txt">음식이 준비되면 <strong style="color:var(--text1)">폰 알림</strong>으로 알려드려요!</span><br>
+      <span id="pickup-desc2-txt">화면이 꺼져도 알림이 도착합니다</span>
     </div>
-    <div id="pickup-status">주방에서 준비 중...</div>
+    <div id="pickup-status"></div>
     <div id="ios-chrome-notice">
       아이폰 사용자 안내 — 알림 수신은 <strong>사파리 브라우저</strong>에서만 지원됩니다.<br>
       화면을 유지하시면 음식 준비 시 알려드려요!
     </div>
   </div>
 
-  <button id="done-back" onclick="location.reload()">메뉴 더 담기</button>
-  <button class="done-change-btn" onclick="_changeTable()">
+  <button id="done-back" onclick="location.reload()"></button>
+  <button class="done-change-btn" id="change-table-btn" onclick="_changeTable()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M3 11V7a2 2 0 012-2h14a2 2 0 012 2v4"/><line x1="12" y1="11" x2="12" y2="21"/></svg>
-    테이블 번호 변경
+    <span id="change-table-txt">테이블 번호 변경</span>
   </button>
 </div>
 
@@ -930,8 +930,8 @@ body.dark .ap-box{background:var(--bg2)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-<script src="/filo-order-common.js?v=12"></script>
-<script src="/order.js?v=14"></script>
+<script src="/filo-order-common.js?v=13"></script>
+<script src="/order.js?v=15"></script>
 
 <!-- ── 직원 호출 ─────────────────────────────── -->
 <div id="call-btn" onclick="_callStaff()">
@@ -967,8 +967,8 @@ body.dark .ap-box{background:var(--bg2)}
 <div id="pay-mdl" onclick="if(event.target===this)_closePayMdl()">
   <div id="pay-mb">
     <div class="pay-drag"></div>
-    <div class="pay-title">결제 방식 선택</div>
-    <div class="pay-sub">편하신 방법으로 결제해주세요</div>
+    <div class="pay-title" id="pay-title-txt">결제 방식 선택</div>
+    <div class="pay-sub" id="pay-sub-txt">편하신 방법으로 결제해주세요</div>
     <div class="pay-total" id="pay-total-amt">₩0</div>
     <div class="pay-opts">
       <div class="pay-opt" onclick="_doOrder('postpay')">
@@ -976,22 +976,22 @@ body.dark .ap-box{background:var(--bg2)}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2.5-1.5L9 22l2.5-1.5L14 22l2.5-1.5L19 22V2l-2.5 1.5L14 2l-2.5 1.5L9 2 6.5 3.5z"/><line x1="8" y1="8" x2="15" y2="8"/><line x1="8" y1="12" x2="15" y2="12"/></svg>
         </div>
         <div class="pay-opt-info">
-          <div class="pay-opt-name">후불 결제</div>
-          <div class="pay-opt-desc">식사 후 카운터에서 결제</div>
+          <div class="pay-opt-name" id="postpay-name">후불 결제</div>
+          <div class="pay-opt-desc" id="postpay-desc">식사 후 카운터에서 결제</div>
         </div>
-        <div class="pay-opt-badge">기본</div>
+        <div class="pay-opt-badge" id="pay-default-badge">기본</div>
       </div>
       <div class="pay-opt disabled" id="prepay-opt" onclick="_doOrder('prepay')">
         <div class="pay-opt-ico">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         </div>
         <div class="pay-opt-info">
-          <div class="pay-opt-name">선결제 <span style="font-size:10px;color:#f59e0b;font-weight:700">준비중</span></div>
-          <div class="pay-opt-desc">카드·카카오페이·네이버페이</div>
+          <div class="pay-opt-name" id="prepay-name">선결제 <span id="prepay-badge" style="font-size:10px;color:#f59e0b;font-weight:700">준비중</span></div>
+          <div class="pay-opt-desc" id="prepay-desc">카드·카카오페이·네이버페이</div>
         </div>
       </div>
     </div>
-    <button class="pay-cancel" onclick="_closePayMdl()">취소</button>
+    <button class="pay-cancel" id="pay-cancel-btn" onclick="_closePayMdl()">취소</button>
   </div>
 </div>
 
