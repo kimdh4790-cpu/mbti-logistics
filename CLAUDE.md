@@ -340,6 +340,7 @@ cd mbtico-pages && npx wrangler deploy
 - 번역 일괄생성 버튼 메뉴관리 헤더에 노출 (filo-menu-mgmt.js)
 - 매출분석 7월 테스트 데이터 시딩 완료 (336건, GitHub Actions seed-sales.yml)
 - filo-settings.js 매출 테스트 데이터 카드 추가 (브라우저에서도 생성 가능)
+- filo-menu.js 분리 완료: filo-menu-image.js(이미지·번역) + filo-menu-templates.js(템플릿+시딩) + filo-menu.js(원가·재고·코어만, ~55KB→~7KB)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
@@ -348,7 +349,6 @@ cd mbtico-pages && npx wrangler deploy
 2. 관제센터 채팅/공지/결제 탭 실사용 테스트
 
 ### 파일 분리·경량화 (대형 작업)
-7. filo-menu.js 분리 (55KB)
 8. filo-pos.js 분리 (39KB)
 9. mbtico-pages/_worker.js 경량화 (515KB)
 10. emergency.html 재작성 (461KB)

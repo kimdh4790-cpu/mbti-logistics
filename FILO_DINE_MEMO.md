@@ -13,7 +13,9 @@
 | filo-pos.js | 키오스크 POS·테이블바·결제 | 39KB | 분리 예정 |
 | filo-pos-core.js | POS 결제 핵심 로직 | 소 | |
 | filo-pos-ui.js | POS UI 렌더링 | 소 | |
-| filo-menu.js | 메뉴 관리·레시피·원가·번역·이미지 | 55KB | 분리 예정 |
+| filo-menu.js | 원가·유통기한·재고이력·재고알림 (코어) | ~7KB | 분리 완료 |
+| filo-menu-image.js | 이미지 자동생성·일괄갱신·번역 일괄생성 | 소 | 2026-08-29 신규 |
+| filo-menu-templates.js | 업종별 기본메뉴 템플릿 데이터+시딩 함수 | 소 | 2026-08-29 신규 |
 | filo-menu-mgmt.js | 메뉴 CRUD UI | 소 | |
 | filo-menu-recipe.js | 레시피 관리 | 소 | |
 | filo-order.js | 홀 주문 현황·배달 주문 | 중 | |
@@ -320,3 +322,9 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `filo-settings.js`: "매출 테스트 데이터" 카드 추가 — `_filoSeedSalesData()` → /api/seed-sales POST
 - `.github/workflows/seed-sales.yml`: workflow_dispatch 워크플로우 신규 — GitHub Actions에서 curl로 시딩 (filo.ai.kr 직접 호출)
 - 2026-07 7월 매출 샘플 데이터 336건 시딩 완료 (did: 9XD2K3W1tIhIs6XM74YT0xfRFEP2)
+
+**filo-menu.js 파일 분리 (55KB → 3파일)**
+- `filo-menu-image.js` (신규): `_filoAutoImageUrl`, `_filoFetchMenuImage`, `_filoRefreshAllMenuImages`, `_filoBatchTranslate`
+- `filo-menu-templates.js` (신규): `_FILO_MENU_TEMPLATES` 데이터 + `_filoSeedDefaultMenus`, `_filoFillTemplateImages`, `_filoSeedDefaultMenusManual`
+- `filo-menu.js` (감축 ~7KB): 원가(`_filoRenderCostMgmt`/`_filoSaveCost`/`_filoDelCost`) + 유통기한(`_filoPageExpiry`) + 재고이력(`_filoLoadStockHistory`) + 재고알림(`_filoStockLowAlert`)만 유지
+- `filo.html`: 스크립트 순서 → filo-menu-templates.js?v=1, filo-menu-image.js?v=1, filo-menu.js?v=3
