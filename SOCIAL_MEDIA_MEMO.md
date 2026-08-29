@@ -109,7 +109,7 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 - [x] **프로모션 HTML 16개 생성** (`assets/promo/` — 기능별 슬라이드쇼)
 - [x] **용차앱 기사·대리점 양면 프로모션 HTML** (`assets/promo/yongcha-promo.html` — 7슬라이드)
 - [x] **record-yongcha.js** — 로컬 프로모션 HTML 녹화 방식으로 교체
-- [ ] **DONWAY Instagram Reels 업로드** — 진행 예정
+- [x] **DONWAY Instagram Reels 업로드** — 완료 (2026-08-29, Oracle Cloud Playwright)
 - [ ] **YONGCHA 영상 제작** — Oracle VM에서 실행 필요
 - [ ] **FILO 영상 제작** — Oracle VM에서 실행 필요
 
@@ -270,7 +270,9 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 2. ~~**YONGCHA 영상 제작**~~ ✅ Oracle Cloud 편집 완료 (2026-08-28)
 3. **YONGCHA YouTube 재업로드** → YouTube Studio에서 eDpowbKedgs 삭제 후, GitHub Actions product=yongcha steps=record,compose,youtube 재실행
 4. **FILO 재렌더링** → GitHub Actions product=filo steps=record,compose,youtube
-5. **DONWAY Instagram Reels 업로드** → Instagram 세션 필요 (Oracle Cloud)
+5. ~~**DONWAY Instagram Reels 업로드**~~ ✅ 완료 (2026-08-29)
+6. **YONGCHA Instagram Reels 업로드** → Oracle Cloud: `node scripts/run-pipeline.js --product yongcha --steps instagram`
+7. **FILO Instagram Reels 업로드** → Oracle Cloud: `node scripts/run-pipeline.js --product filo --steps instagram`
 6. **MBTICO 영상 제작** → GitHub Actions product=mbtico steps=record,compose,youtube
 
 ### 업로드 방향 (확정)
@@ -345,6 +347,9 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-29 | **DONWAY Instagram Reels 업로드 완료** — Oracle Cloud Playwright, `[role="button"]:has-text("공유")` 셀렉터 수정으로 해결 |
+| 2026-08-29 | **Instagram 공유 버튼 셀렉터 강화** — upload-instagram.js: role=button 포함 8가지 순차 시도, 실패 시 스크린샷 저장 |
+| 2026-08-29 | **DINE 근태·급여 화면 디자인 전면 개선** — dine-staff.js(KPI 카드 SVG+border-left, 상태 pill, 수정→연필SVG), dine-analytics.js(오늘 골드 강조, 근무중 펄스, 빈셀 +아이콘), dine-payroll.js(명세서 명함스타일, 실수령 골드), dine-schedule.js(근무 진행바, 일괄발송 카드) |
 | 2026-08-29 | **콘텐츠 A/B/C/D 로테이션 시스템 구축** — variants/{yongcha,filo,donway}-variants.json + generate-variant.js + social-media.yml Variant 선택 스텝 추가. 매주 자동으로 다른 각도 영상 제작 |
 | 2026-08-29 | **자막 ASS 변환 방식 도입** — srt-to-ass.js (PlayResY=1920, Fontsize=52, Alignment=2, MarginV=120). compose-video.sh에서 SRT→ASS 자동 변환 후 ass 필터 적용. 자막 위치 하단 고정 확실 |
 | 2026-08-29 | 나레이션 전체 음성 남성(Neural2-C)→여성(Neural2-A) 전환 (yongcha/filo/donway-narration.json). YONGCHA GitHub Actions 재실행 완료 |
