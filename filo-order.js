@@ -80,7 +80,7 @@ function _filoPageOrders(el){
   '<div class="live-dot"></div></div></div>'+
   '<div id="orders-list"><div style="text-align:center;padding:40px;color:var(--t3)">로딩 중...</div></div>'+
   '</div>';
- if(_ordersUnsub) _ordersUnsub();
+ if(typeof _ordersUnsub==='function') _ordersUnsub();
  var today=new Date().toISOString().slice(0,10);
  var _oSales=[], _oQR=[];
  function _renderOrders(){
