@@ -370,7 +370,7 @@ function _filoMenuAddModal(did, menu, cat){
   if(!name){_filoToast('메뉴명을 입력하세요');return;}
   if(!price){_filoToast('가격을 입력하세요');return;}
   var description=(document.getElementById('menu-desc-inp')?document.getElementById('menu-desc-inp').value||'':'').trim();
-  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||_filoAutoImageUrl(name,category,emoji),stock:stock,minStock:stockMin>0?stockMin:null,description:description,updatedAt:_nowISO()};
+  var data={dealerId:did,name:name,price:price,category:category,emoji:emoji,forSale:forSale,imageUrl:_imageUrl||'',stock:stock,minStock:stockMin>0?stockMin:null,description:description,updatedAt:_nowISO()};
   var promise=isEdit?
    _db.collection('filo_menus').doc(menu._id).set(data,{merge:true}):
    _db.collection('filo_menus').add(Object.assign(data,{createdAt:_nowISO()}));
@@ -381,6 +381,12 @@ function _filoMenuAddModal(did, menu, cat){
    if(stock!=null && stockMin>0 && stock<=stockMin) _filoStockLowAlert(name, stock, stockMin);
    // 메뉴 저장 후 자동 번역 → Firestore에 저장
    var docId=isEdit?menu._id:(ref&&ref.id);
+   // 이미지 없으면 비동기로 Pexels 이미지 가져와 업데이트
+   if(docId && !_imageUrl && typeof _filoAutoImageUrl==='function'){
+    _filoAutoImageUrl(name,category,emoji).then(function(url){
+     if(url) _db.collection('filo_menus').doc(docId).update({imageUrl:url}).catch(function(){});
+    });
+   }
    if(docId && name){
     var langs=['en','zh','ja'];
     var translations={};
@@ -455,7 +461,7 @@ function _filoImportMenuExcel(input){
     if(!isBakery) isBakery = bakeryKw.some(function(k){return (category||'').includes(k)||(name||'').includes(k);});
     if(!name||!price)return;
     var excelImg = col(['imageSearchQuery','이미지검색어']) || '';
-    var autoImg  = excelImg || (typeof _filoAutoImageUrl==='function' ? _filoAutoImageUrl(name,category,emoji) : '');
+    var autoImg  = excelImg || '';
     batch.push({name:name,price:price,category:category,emoji:emoji,description:desc,
       isBakery:isBakery,soldOut:soldOut,forSale:true,dealerId:did,
       imageSearchQuery:autoImg,stock:null,minStock:null});
@@ -483,7 +489,7 @@ function _filoImportMenuExcel(input){
     });
     return bw.commit().then(function(){
      _filoToast('신규 '+addCnt+'개 추가 / '+updCnt+'개 업데이트 완료!');
-     _filoLoadMenuMgmt(document.getElementById('content'), did);
+     _filoLoadMenuMgmt(did);
     });
    }).catch(function(e){_filoToast('저장 오류: '+e.message);});
   }catch(e){_filoToast('파일 읽기 오류: '+e.message);}

@@ -213,8 +213,6 @@ function _cartAddFromEl(el){
  setTimeout(function(){el.style.transform='';},150);
 }
 
-var _origFilterKiosk = _filoFilterKiosk;
-
 document.addEventListener('click',function(e){
  var mc=e.target.closest('.member-card[data-id]');
  if(mc)_filoShowMemberDetail(mc.dataset.id);

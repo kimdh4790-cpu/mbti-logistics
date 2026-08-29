@@ -343,6 +343,17 @@ cd mbtico-pages && npx wrangler deploy
 - filo-menu.js 분리 완료: filo-menu-image.js(이미지·번역) + filo-menu-templates.js(템플릿+시딩) + filo-menu.js(원가·재고·코어만, ~55KB→~7KB)
 - filo-pos-ui.js 분리 완료: filo-pos-ui.js(키오스크 렌더링·모드, ~15KB) + filo-pos-pay.js(결제·영수증·고객화면, ~28KB) (44KB→2파일)
 
+### ✅ 완료 (2026-08-29 버그 스캔+수정)
+- alert()/toast 교체: filo-auth.js, filo-qr.js 4곳
+- _worker.js KV allowlist: filo-pos-pay.js, filo-menu-image.js, filo-menu-templates.js 추가 (404 수정)
+- filo-pos-ui.js: _filoRenderKioskSimple 구현 (심플 모드 실제 작동), _kioskTablesCache 캐시 추가
+- filo-pos-pay.js: 죽은 코드 _ordersUnsub 제거
+- filo-menu-mgmt.js:486: _filoLoadMenuMgmt 인수 오류 수정 (HTMLElement→dealerId 잘못 전달)
+- filo-menu-mgmt.js:373,458: _filoAutoImageUrl Promise를 imageUrl에 직접 대입하던 버그 수정 (저장 후 비동기 업데이트)
+- filo-pos.js:417: _filoToast 불필요한 두 번째 인수 제거
+- filo-pos-core.js:216: _origFilterKiosk 미사용 선언 제거 (로드 타임 undefined 캡처)
+- filo-members.js:101: d.name null 가드 누락 수정 (→ (d.name||'?').slice(0,1))
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 

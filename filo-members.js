@@ -98,7 +98,7 @@ function _filoShowMemberDetail(docId){
  var did=_CU.dealerId||_CU.uid;
  var html='<div style="padding:20px;max-width:400px;margin:0 auto">'+
  '<div style="text-align:center;margin-bottom:16px">'+
- '<div class="avatar" style="width:60px;height:60px;font-size:24px;margin:0 auto 8px">'+esc(d.name.slice(0,1))+'</div>'+
+ '<div class="avatar" style="width:60px;height:60px;font-size:24px;margin:0 auto 8px">'+esc((d.name||'?').slice(0,1))+'</div>'+
  '<div style="font-size:17px;font-weight:900">'+esc(d.name)+'</div>'+
  '<div style="font-size:12px;color:var(--t3)">'+esc(d.dept||'')+'</div></div>'+
  '<div style="background:var(--b3);border-radius:12px;padding:14px;margin-bottom:14px">'+

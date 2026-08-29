@@ -414,7 +414,7 @@ function _posDo(){
  // 현금 거스름돈 토스트
  if(m==='cash'){
   var change=parseInt(_posCashIn||'0')-_posTotal;
-  if(change>0)_filoToast('거스름돈 ₩'+change.toLocaleString(),3000);
+  if(change>0)_filoToast('거스름돈 ₩'+change.toLocaleString());
  }
  _filoConfirmPay(m,label);
 }
