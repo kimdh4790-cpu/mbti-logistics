@@ -512,6 +512,8 @@ input[type=text]:focus,input[type=number]:focus,input[type=password]:focus,input
 body,#app,#content,#content-wrap,.main{
   background:#F7F8FA!important;color:#0F172A!important}
 
+/* POS 카테고리 필터 숨김 — !important 없으면 display:flex!important 에 덮임 */
+.menu-item.pos-hidden{display:none!important}
 /* POS 메뉴 카드 — 토스페이 스타일 */
 .menu-item{
   display:flex!important;

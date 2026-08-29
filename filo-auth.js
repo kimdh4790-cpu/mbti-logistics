@@ -623,8 +623,12 @@ function _toggleOrientation(){
 function _filoGoPage(p){
  /* 페이지 전환 시 이전 화면의 실시간 리스너를 모두 해제한다 (리스너 누수 방지) */
  _filoReleaseWatchers(p);
- /* POS 결제 하단 바 — kiosk 이외 페이지로 이동 시 제거 */
- if(p!=='kiosk'){var _ppb=document.getElementById('pos-pay-bar');if(_ppb)_ppb.remove();}
+ /* POS 결제 하단 바 + 고객 화면 — kiosk 이외 페이지로 이동 시 제거 */
+ if(p!=='kiosk'){
+  var _ppb=document.getElementById('pos-pay-bar');if(_ppb)_ppb.remove();
+  var _pcd=document.getElementById('pos-cust-disp');if(_pcd)_pcd.remove();
+  if(typeof _posCustSyncStop==='function')_posCustSyncStop();
+ }
  var sb=document.getElementById('sidebar');
  if(sb&&sb.classList.contains('open')&&window.innerWidth<=768){
   sb.classList.remove('open');

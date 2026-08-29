@@ -85,6 +85,8 @@ function _filoPageKiosk(el){
    modeBtn +
  '<button onclick="_filoGoPage(\'menu_mgmt\')" class="btn" style="background:var(--br);color:#fff;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700">'+
  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 메뉴 등록</button>'+
+ '<button onclick="_posCustomerDisplay()" class="btn" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700" id="pos-cust-btn">'+
+ '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg> 고객 화면</button>'+
  '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px;display:inline-flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 메뉴 엑셀 업로드</button>'+
  '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
  '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap"></div>'+
@@ -286,13 +288,14 @@ function _filoRenderKiosk(menus){
 
 function _filoFilterKiosk(cat,btn){
  document.querySelectorAll('#kiosk-cats .btn').forEach(function(b){
- b.style.background=b===btn?'#c9a84c':'#F1F5F9';
- b.style.color=b===btn?'#0f172a':'#475569';
- b.style.border=b===btn?'none':'1.5px solid rgba(0,0,0,.08)';
- b.style.fontWeight=b===btn?'800':'700';
+  b.style.background=b===btn?'#c9a84c':'#F1F5F9';
+  b.style.color=b===btn?'#0f172a':'#475569';
+  b.style.border=b===btn?'none':'1.5px solid rgba(0,0,0,.08)';
+  b.style.fontWeight=b===btn?'800':'700';
  });
+ /* pos-hidden 클래스로 토글 — display:flex!important CSS를 클래스로 우선 순위 확보 */
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
- el.style.display=(cat==='전체'||el.dataset.cat===cat)?'flex':'none';
+  el.classList.toggle('pos-hidden',cat!=='전체'&&el.dataset.cat!==cat);
  });
 }
 
@@ -701,5 +704,100 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
 }
 
 
+
+// ── 고객 확인 화면 (양면 POS — 고객이 볼 수 있는 주문 현황) ─────────────────────
+function _posCustomerDisplay(){
+ var el=document.getElementById('pos-cust-disp');if(el){el.remove();_posCustMode=false;_posCustSyncStop();return;}
+ _posCustMode=true;
+ var overlay=document.createElement('div');
+ overlay.id='pos-cust-disp';
+ overlay.style.cssText='position:fixed;inset:0;z-index:850;background:#050e1a;display:flex;flex-direction:column;font-family:Pretendard,-apple-system,sans-serif;color:#e2e8f0;overflow:hidden';
+
+ var tbl=window._selectedTableName||'';
+ var tblLabel=tbl?tbl+' 주문':'주문 내역';
+
+ // 헤더
+ var hdr=document.createElement('div');
+ hdr.style.cssText='flex-shrink:0;padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between';
+ hdr.innerHTML='<div>'+
+  '<div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#475569;text-transform:uppercase;margin-bottom:4px">CUSTOMER DISPLAY</div>'+
+  '<div style="font-size:18px;font-weight:900;color:#e2e8f0">'+tblLabel+'</div>'+
+  '</div>'+
+  '<button id="cust-close" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;padding:8px 16px;display:flex;align-items:center;gap:6px">'+
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>닫기</button>';
+
+ // 주문 목록 영역
+ var listWrap=document.createElement('div');
+ listWrap.style.cssText='flex:1;overflow-y:auto;padding:20px 24px';
+ listWrap.id='cust-item-list';
+
+ // 합계 바
+ var foot=document.createElement('div');
+ foot.style.cssText='flex-shrink:0;padding:20px 24px 32px;border-top:1px solid rgba(255,255,255,.08);background:#0a1628';
+ foot.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end">'+
+  '<div>'+
+  '<div id="cust-item-count" style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px">0개 항목</div>'+
+  '<div style="font-size:13px;color:#64748b">합계</div>'+
+  '</div>'+
+  '<div id="cust-total" style="font-size:38px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px">₩0</div>'+
+  '</div>'+
+  '<div style="margin-top:16px;padding:14px 18px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:12px;text-align:center">'+
+  '<div style="font-size:12px;color:#94a3b8">메뉴를 선택하시면 직원이 바로 처리해 드립니다</div>'+
+  '</div>';
+
+ overlay.appendChild(hdr);
+ overlay.appendChild(listWrap);
+ overlay.appendChild(foot);
+ document.body.appendChild(overlay);
+
+ overlay.querySelector('#cust-close').onclick=function(){overlay.remove();_posCustMode=false;_posCustSyncStop();};
+
+ _posCustRender();
+ _posCustSyncStart();
+}
+
+var _posCustMode=false;
+var _posCustTimer=null;
+
+function _posCustSyncStart(){
+ _posCustTimer=setInterval(_posCustRender,300);
+}
+function _posCustSyncStop(){
+ if(_posCustTimer){clearInterval(_posCustTimer);_posCustTimer=null;}
+}
+
+function _posCustRender(){
+ var listEl=document.getElementById('cust-item-list');
+ var totalEl=document.getElementById('cust-total');
+ var countEl=document.getElementById('cust-item-count');
+ if(!listEl)return;
+ var items=window._cartItems||[];
+ if(!items.length){
+  listEl.innerHTML='<div style="text-align:center;padding:60px 20px;color:#334155">'+
+   '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'+
+   '<div style="font-size:16px;color:#475569;font-weight:700">선택된 메뉴가 없습니다</div></div>';
+  if(totalEl)totalEl.textContent='₩0';
+  if(countEl)countEl.textContent='0개 항목';
+  return;
+ }
+ var total=items.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var disc=window._posDiscount||0;
+ var finalTotal=Math.max(0,total-disc);
+ var totalQty=items.reduce(function(s,c){return s+c.qty;},0);
+ listEl.innerHTML=items.map(function(c){
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+   '<div style="flex:1">'+
+   '<div style="font-size:16px;font-weight:800;color:#e2e8f0;margin-bottom:4px">'+esc(c.name)+'</div>'+
+   '<div style="font-size:13px;color:#64748b">₩'+c.price.toLocaleString()+' × '+c.qty+'</div>'+
+   '</div>'+
+   '<div style="font-size:18px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums">₩'+(c.price*c.qty).toLocaleString()+'</div>'+
+   '</div>';
+ }).join('')+
+ (disc>0?'<div style="display:flex;justify-content:space-between;padding:12px 0;color:#f87171">'+
+  '<span style="font-size:14px;font-weight:700">할인</span>'+
+  '<span style="font-size:16px;font-weight:900">-₩'+disc.toLocaleString()+'</span></div>':'');
+ if(totalEl)totalEl.textContent='₩'+finalTotal.toLocaleString();
+ if(countEl)countEl.textContent=totalQty+'개 항목 선택됨';
+}
 
 // 결제 완료 처리
