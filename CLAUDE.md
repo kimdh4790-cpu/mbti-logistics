@@ -384,6 +384,7 @@ cd mbtico-pages && npx wrangler deploy
   - 용차앱: 수수료제로/기사혜택/소장혜택/비교각도
   - FILO: POS통합/직원근태/AI매출예측/비용비교
   - DONWAY: 대량정산/알림톡/요금비교/세금계산서
+- **DONWAY·용차앱 Remotion 코드 영상 추가** — DonwayPromo.jsx(5씬: 브랜드/엑셀정산/알림톡/요금/CTA), YongchaPromo.jsx(5씬: 수수료0/직접매칭/AI루트/요금/CTA). render-donway.js·render-yongcha.js 신규. social-media.yml Remotion 렌더 범위 FILO→FILO·DONWAY·용차앱 확장. 비용 0원, 완전 코드 기반 고품질 영상 자동 생성
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요

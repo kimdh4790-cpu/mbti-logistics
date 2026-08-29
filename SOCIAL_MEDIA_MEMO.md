@@ -178,12 +178,12 @@ node scripts/run-pipeline.js --product <product> --steps record,compose,youtube
 compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 
 ### 영상 제작 현황
-| 제품 | 나레이션 MP3 | 프로모 HTML | 녹화 WebM | 편집 MP4 | YouTube |
-|---|---|---|---|---|---|
-| FILO | ✅ 완료 | ✅ 6종 생성 | Remotion | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
-| DONWAY | ✅ 완료 | ✅ 4종 생성 | output/donway-raw.webm | ✅ 완료 (음성포함) | ✅ 숏츠 완료 (3HRSPE2bNDM) |
-| YONGCHA | ✅ 완료 | ✅ yongcha-promo.html | output/yongcha-raw.webm | ✅ 완료 | ⚠️ eDpowbKedgs 깨짐(무음+자막가림) — 삭제 후 재업로드 필요 |
-| MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html | 미생성 | 미생성 | 미완 |
+| 제품 | 나레이션 MP3 | 영상 소스 | 편집 MP4 | YouTube |
+|---|---|---|---|---|
+| FILO | ✅ 완료 | ✅ Remotion (FiloPromo.jsx) | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
+| DONWAY | ✅ 완료 | ✅ Remotion (DonwayPromo.jsx, 2026-08-29) | output/donway-promo.mp4 | ✅ 숏츠 완료 (3HRSPE2bNDM) |
+| YONGCHA | ✅ 완료 | ✅ Remotion (YongchaPromo.jsx, 2026-08-29) | output/yongcha-promo.mp4 | ⚠️ eDpowbKedgs 깨짐(무음+자막가림) — 삭제 후 재업로드 필요 |
+| MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 |
 
 ---
 
@@ -347,6 +347,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-29 | **DONWAY·용차앱 Remotion 코드 영상 추가** — DonwayPromo.jsx(5씬 파티클·카운터·자막), YongchaPromo.jsx(5씬 AI타이핑·루트비교). render-donway.js·render-yongcha.js 신규 생성. social-media.yml Remotion 렌더 범위 확장(FILO→FILO·DONWAY·용차앱), Playwright 녹화·FFmpeg 편집은 dine·mbtico만으로 변경. 비용 없이 코드 기반 고품질 영상 자동 생성 |
 | 2026-08-29 | **DONWAY Instagram Reels 업로드 완료** — Oracle Cloud Playwright, `[role="button"]:has-text("공유")` 셀렉터 수정으로 해결 |
 | 2026-08-29 | **Instagram 공유 버튼 셀렉터 강화** — upload-instagram.js: role=button 포함 8가지 순차 시도, 실패 시 스크린샷 저장 |
 | 2026-08-29 | **DINE 근태·급여 화면 디자인 전면 개선** — dine-staff.js(KPI 카드 SVG+border-left, 상태 pill, 수정→연필SVG), dine-analytics.js(오늘 골드 강조, 근무중 펄스, 빈셀 +아이콘), dine-payroll.js(명세서 명함스타일, 실수령 골드), dine-schedule.js(근무 진행바, 일괄발송 카드) |
