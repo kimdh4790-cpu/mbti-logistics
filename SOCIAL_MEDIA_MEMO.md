@@ -120,8 +120,15 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | Instagram Account ID | `17841476542581165` |
 | Facebook Page ID (Mbtico) | `1254758224392727` |
 | Meta Business Manager ID | `2453846855112728` |
-| MBTICO Social 앱 ID | `2923328344667962` |
-| INSTAGRAM_ACCESS_TOKEN | GitHub Secret 등록 필요 (토큰 발급 후) |
+| MBTICO Social 앱 ID | `1377132184613591` |
+| INSTAGRAM_ACCESS_TOKEN | GitHub Secret 등록 완료 (2026-08-29) |
+| **토큰 만료일** | **2026-10-28** (60일 토큰) ← 만료 1주일 전 알림 예약됨 |
+
+#### 토큰 갱신 방법 (만료 전)
+1. developers.facebook.com/tools/explorer 접속
+2. MBTICO Social 앱 선택 → 사용자 토큰 생성
+3. developers.facebook.com/tools/debug/accesstoken/ → 액세스 토큰 확장 (60일 갱신)
+4. GitHub → Settings → Secrets → `INSTAGRAM_ACCESS_TOKEN` 업데이트
 
 ### Oracle VM ~/.env 등록 항목 (2026-08-27 기준)
 ```
@@ -130,7 +137,7 @@ YOUTUBE_CLIENT_ID=40761160761-3v5h03e9r974vfq2io4oa08nqhn6r5o8.apps.googleuserco
 YOUTUBE_CLIENT_SECRET=등록완료  ← Google Cloud Console → OAuth 2.0 → mbtico-youtube (데스크톱)
 YOUTUBE_REFRESH_TOKEN=등록완료
 INSTAGRAM_ACCOUNT_ID=17841476542581165
-INSTAGRAM_ACCESS_TOKEN=발급 후 등록 필요
+INSTAGRAM_ACCESS_TOKEN=등록완료 (만료: 2026-10-28)
 ```
 
 ### Google Cloud Console API 키 목록
