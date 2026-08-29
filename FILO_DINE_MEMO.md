@@ -313,3 +313,10 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `_worker.js`: /qr/register POST 핸들러 wage 파라미터 수신 → integerValue로 저장 (미입력 시 최저시급 10030원 기본값)
 - `order.html`: order.js 스크립트 태그 v=13 → v=14 캐시버스터 업데이트 (reqReceiptFCM KV캐시 문제 해결)
 - `CLAUDE.md`: 미완료 항목 정리 (선결제/후불 모달 완료, QR 등록화면 수정 완료)
+
+**메뉴 이미지 일괄 갱신 + 번역 일괄생성 + 매출 테스트 데이터 시딩**
+- `filo-menu.js`: `_filoRefreshAllMenuImages(did, btn)` 신규 — pollinations.ai URL 메뉴만 선별해 Pexels로 순차 교체 (800ms 간격)
+- `filo-menu-mgmt.js`: 메뉴관리 헤더에 "이미지 일괄 갱신" (cyan) + "번역 일괄생성" (violet) 버튼 추가
+- `filo-settings.js`: "매출 테스트 데이터" 카드 추가 — `_filoSeedSalesData()` → /api/seed-sales POST
+- `.github/workflows/seed-sales.yml`: workflow_dispatch 워크플로우 신규 — GitHub Actions에서 curl로 시딩 (filo.ai.kr 직접 호출)
+- 2026-07 7월 매출 샘플 데이터 336건 시딩 완료 (did: 9XD2K3W1tIhIs6XM74YT0xfRFEP2)

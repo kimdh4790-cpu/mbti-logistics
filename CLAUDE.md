@@ -336,14 +336,16 @@ cd mbtico-pages && npx wrangler deploy
 - table-order.html 선결제/후불 모달 구현 완료
 - order.html order.js 버전 v=14 캐시버스터 업데이트 (reqReceiptFCM KV캐시 문제 해결)
 - QR 출퇴근 신규 직원 등록 화면에 시급 입력 필드 추가 (_worker.js /qr, /qr/register 양쪽)
+- FILO 메뉴 이미지 Pollinations → Pexels 일괄 업데이트 버튼 추가 (filo-menu.js + filo-menu-mgmt.js)
+- 번역 일괄생성 버튼 메뉴관리 헤더에 노출 (filo-menu-mgmt.js)
+- 매출분석 7월 테스트 데이터 시딩 완료 (336건, GitHub Actions seed-sales.yml)
+- filo-settings.js 매출 테스트 데이터 카드 추가 (브라우저에서도 생성 가능)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
 ### 중간
-2. FILO 메뉴 이미지 Pollinations → Pexels 일괄 업데이트
-3. 관제센터 채팅/공지/결제 탭 실사용 테스트
-4. 매출분석 7월 테스트 데이터 시딩
+2. 관제센터 채팅/공지/결제 탭 실사용 테스트
 
 ### 파일 분리·경량화 (대형 작업)
 7. filo-menu.js 분리 (55KB)
