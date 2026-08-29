@@ -113,12 +113,24 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 - [ ] **YONGCHA 영상 제작** — Oracle VM에서 실행 필요
 - [ ] **FILO 영상 제작** — Oracle VM에서 실행 필요
 
+### Instagram Graph API 계정 정보 (2026-08-29)
+| 항목 | 값 |
+|---|---|
+| Instagram 계정 | @hyung.83 |
+| Instagram Account ID | `17841476542581165` |
+| Facebook Page ID (Mbtico) | `1254758224392727` |
+| Meta Business Manager ID | `2453846855112728` |
+| MBTICO Social 앱 ID | `2923328344667962` |
+| INSTAGRAM_ACCESS_TOKEN | GitHub Secret 등록 필요 (토큰 발급 후) |
+
 ### Oracle VM ~/.env 등록 항목 (2026-08-27 기준)
 ```
 GOOGLE_TTS_API_KEY=등록완료  ← "API 키 3개" (Cloud Text-to-Speech API 전용, 2026-08-27 생성)
 YOUTUBE_CLIENT_ID=40761160761-3v5h03e9r974vfq2io4oa08nqhn6r5o8.apps.googleusercontent.com
 YOUTUBE_CLIENT_SECRET=등록완료  ← Google Cloud Console → OAuth 2.0 → mbtico-youtube (데스크톱)
 YOUTUBE_REFRESH_TOKEN=등록완료
+INSTAGRAM_ACCOUNT_ID=17841476542581165
+INSTAGRAM_ACCESS_TOKEN=발급 후 등록 필요
 ```
 
 ### Google Cloud Console API 키 목록
