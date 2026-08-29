@@ -10,9 +10,10 @@
 |---|---|---|---|
 | filo-auth.js | 로그인·홈 대시보드·페이지 라우팅·리스너 등록 | 중 | 홈 onSnapshot 6개 관리 |
 | filo-common.js | 공통 유틸(toast·icon·날짜·fetch) | 중 | **수정 금지** |
-| filo-pos.js | 키오스크 POS·테이블바·결제 | 39KB | 분리 예정 |
+| filo-pos.js | 키오스크 POS·테이블바·결제 | 중 | |
 | filo-pos-core.js | POS 결제 핵심 로직 | 소 | |
-| filo-pos-ui.js | POS UI 렌더링 | 소 | |
+| filo-pos-ui.js | POS 키오스크 렌더링·모드 전환 (분리 완료) | ~15KB | 2026-08-29 분리 |
+| filo-pos-pay.js | 테이블 결제·각자계산·영수증·고객화면 | ~28KB | 2026-08-29 신규 |
 | filo-menu.js | 원가·유통기한·재고이력·재고알림 (코어) | ~7KB | 분리 완료 |
 | filo-menu-image.js | 이미지 자동생성·일괄갱신·번역 일괄생성 | 소 | 2026-08-29 신규 |
 | filo-menu-templates.js | 업종별 기본메뉴 템플릿 데이터+시딩 함수 | 소 | 2026-08-29 신규 |
@@ -328,3 +329,8 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `filo-menu-templates.js` (신규): `_FILO_MENU_TEMPLATES` 데이터 + `_filoSeedDefaultMenus`, `_filoFillTemplateImages`, `_filoSeedDefaultMenusManual`
 - `filo-menu.js` (감축 ~7KB): 원가(`_filoRenderCostMgmt`/`_filoSaveCost`/`_filoDelCost`) + 유통기한(`_filoPageExpiry`) + 재고이력(`_filoLoadStockHistory`) + 재고알림(`_filoStockLowAlert`)만 유지
 - `filo.html`: 스크립트 순서 → filo-menu-templates.js?v=1, filo-menu-image.js?v=1, filo-menu.js?v=3
+
+**filo-pos-ui.js 파일 분리 (44KB → 2파일)**
+- `filo-pos-ui.js` (감축 ~15KB): 모드 전환(`_filoPosMode`/`_filoPosSetMode`) + 키오스크 렌더링(`_filoPageKiosk`/`_loadKioskTableBar`/`_filoRenderKiosk`/`_filoFilterKiosk`) + 영수증 업로드(`_filoReceiptSelected`)
+- `filo-pos-pay.js` (신규 ~28KB): 테이블 결제(`_filoTablePay`) + 각자계산(`_filoTableSelfPay`) + 영수증 모달(`_filoShowReceipt`) + 영수증 알림팝업(`_filoReceiptNotify`) + 고객화면(`_posCustomerDisplay`/`_posCustRender`)
+- `filo.html`: filo-pos-ui.js?v=1 → v=2, filo-pos-pay.js?v=1 추가 (filo-pos-ui.js 다음)
