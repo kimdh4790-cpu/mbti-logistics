@@ -103,6 +103,53 @@ function _cartQty(idx,delta){
 function _cartClear(){_cartItems=[];_cartRender();}
 
 
+function _cartRemoveSheet(){
+ if(!_cartItems.length)return;
+ // 1개면 바로 전체 삭제
+ if(_cartItems.length===1){
+  if(confirm(_cartItems[0].name+' 1개를 삭제할까요?')){_cartItems=[];_cartRender();}
+  return;
+ }
+ var mo=document.createElement('div');
+ mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+ function render(){
+  var rows=_cartItems.map(function(c,i){
+   return '<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--bd,#2d3748)">'
+    +'<div style="flex:1;min-width:0">'
+    +'<div style="font-size:14px;font-weight:700;color:var(--tx,#f1f5f9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(c.name)+'</div>'
+    +'<div style="font-size:12px;color:#94a3b8">₩'+c.price.toLocaleString()+'</div>'
+    +'</div>'
+    +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+    +'<button onclick="window._csQty('+i+',-1)" style="width:32px;height:32px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#ef4444;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'
+    +'<span style="font-size:14px;font-weight:900;min-width:20px;text-align:center;color:var(--tx,#f1f5f9)">'+c.qty+'</span>'
+    +'<button onclick="window._csQty('+i+',1)" style="width:32px;height:32px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:8px;color:#818cf8;font-size:16px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'
+    +'</div></div>';
+  }).join('');
+  mo.innerHTML='<div style="background:var(--b2,#1e293b);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px 16px 32px">'
+   +'<div style="width:36px;height:4px;background:#475569;border-radius:2px;margin:0 auto 16px"></div>'
+   +'<div style="font-size:15px;font-weight:900;color:var(--tx,#f1f5f9);margin-bottom:4px">장바구니 수정</div>'
+   +'<div style="font-size:12px;color:#64748b;margin-bottom:12px">항목을 수정하거나 − 로 0이 되면 자동 삭제됩니다</div>'
+   +rows
+   +'<div style="display:flex;gap:8px;margin-top:16px">'
+   +'<button onclick="window._csClose()" style="flex:1;height:46px;background:#1e293b;border:1px solid #334155;border-radius:12px;color:#94a3b8;font-size:14px;font-weight:700;cursor:pointer">닫기</button>'
+   +'<button onclick="window._csAll()" style="flex:1;height:46px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;font-size:14px;font-weight:700;cursor:pointer">전체 삭제</button>'
+   +'</div></div>';
+ }
+ window._csQty=function(idx,delta){
+  _cartItems[idx].qty+=delta;
+  if(_cartItems[idx].qty<=0)_cartItems.splice(idx,1);
+  _cartRender();
+  if(!_cartItems.length){mo.remove();delete window._csQty;delete window._csClose;delete window._csAll;return;}
+  render();
+ };
+ window._csClose=function(){mo.remove();delete window._csQty;delete window._csClose;delete window._csAll;};
+ window._csAll=function(){_cartItems=[];_cartRender();window._csClose();};
+ mo.addEventListener('click',function(e){if(e.target===mo)window._csClose();});
+ render();
+ document.body.appendChild(mo);
+}
+
+
 function _filoSplitPay(total){
  var mo=document.createElement('div');mo.className='mo';
  var box=document.createElement('div');

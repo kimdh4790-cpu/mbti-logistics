@@ -76,7 +76,7 @@ function _filoPageKiosk(el){
   '<div id="ppb-count" style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:.5px">장바구니 비어 있음</div>'+
   '<div id="ppb-total" style="font-size:22px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;line-height:1.2">₩0</div>'+
   '</div>'+
-  '<button onclick="_cartClear()" style="width:44px;height:44px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
+  '<button onclick="_cartRemoveSheet()" style="width:44px;height:44px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'+
   '<button onclick="_filoPay()" style="height:44px;padding:0 24px;background:#c9a84c;border:none;border-radius:12px;color:#0a0a0a;font-size:15px;font-weight:900;cursor:pointer;flex-shrink:0;letter-spacing:-.3px">결제하기</button>';
  document.body.appendChild(payBar);
