@@ -1,0 +1,90 @@
+{
+  "A": {
+    "youtube_title": "수수료 20% 아직도 내고 계세요? | 용차앱",
+    "youtube_description": "주선사 수수료 없이 직접 계약하세요...",
+    "voice": "ko-KR-Neural2-A",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "주선사에 수수료 20% 내고 계시나요? 안 내도 됩니다."},
+      {"startSec": 6.0, "text": "공고 올리면 기사가 직접 지원해요. 수수료 없이요."},
+      {"startSec": 14.0, "text": "AI가 최적 노선 알려주고요. 기사님 월 십오만원 고정이에요."},
+      {"startSec": 22.0, "text": "DONWAY 쓰고 계신 소장님은요, 용차앱이 무료예요."},
+      {"startSec": 29.0, "text": "공차 없이 이동하세요. 용차 닷 앱."}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "수수료 제로", "title": "수수료 20%\n아직도 내고 있어요?", "sub": "용차앱으로 직접 계약하세요"},
+      {"type": "compare", "bad": "주선사 수수료 20%+\n단가 불투명 · 브로커 의존", "good": "기사 ↔ 대리점 직접 연결\n수수료 없음 · 단가 100% 공개"},
+      {"type": "feature", "icon": "📋", "title": "공고 무제한 등록", "desc": "소장님이 공고 올리면\n기사가 직접 지원해요"},
+      {"type": "feature", "icon": "🤖", "title": "AI 루트코치", "desc": "최적 노선·단가 자동 추천\n공차 없이 운행하세요"},
+      {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 구독 소장 무료"},
+      {"type": "cta", "title": "용차앱", "sub": "수수료 없는 직접 매칭", "domain": "yongcha.app"}
+    ],
+    "hashtags": ["용차앱", "수수료없는용차", "화물운송", "기사모집", "대리점"]
+  },
+  "B": {
+    "youtube_title": "기사님, 월 15만원으로 전국 공고 무제한 | 용차앱",
+    "youtube_description": "전국 공고 한눈에 보고 AI 루트코치까지...",
+    "voice": "ko-KR-Neural2-A",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "공고 찾느라 하루를 날리고 있나요?"},
+      {"startSec": 6.0, "text": "용차앱에 가입하면 전국 공고가 한눈에."},
+      {"startSec": 13.0, "text": "AI 루트코치가 최적 경로와 단가를 추천해요."},
+      {"startSec": 20.0, "text": "실시간 알림으로 빈 차 없이 운행하세요."},
+      {"startSec": 27.0, "text": "기사님 월 십오만원 고정. 용차 닷 앱."}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "기사님 전용", "title": "공고 찾느라\n하루를 날리나요?", "sub": "전국 공고가 한눈에"},
+      {"type": "feature", "icon": "📦", "title": "전국 공고 실시간", "desc": "내 위치 반경 공고\n실시간 알림 수신"},
+      {"type": "feature", "icon": "🤖", "title": "AI 루트코치", "desc": "단가 추천 · 최적 경로\n귀로 화물 연결"},
+      {"type": "feature", "icon": "⛽", "title": "주유소 최저가", "desc": "경로 위 최저가 주유소\n자동 안내"},
+      {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "공고 무제한 · 수수료 없음"},
+      {"type": "cta", "title": "용차앱", "sub": "기사님을 위한 직접 매칭", "domain": "yongcha.app"}
+    ],
+    "hashtags": ["용차앱", "화물기사", "공고", "AI루트코치", "화물운송"]
+  },
+  "C": {
+    "youtube_title": "소장님, 공차 줄이는 법 알려드릴게요 | 용차앱",
+    "youtube_description": "귀로 화물 연결, AI 루트코치로 공차 없이 운행...",
+    "voice": "ko-KR-Neural2-A",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "공차 비율이 몇 퍼센트나 되세요?"},
+      {"startSec": 6.0, "text": "용차앱은 귀로 화물도 연결해 드려요."},
+      {"startSec": 13.0, "text": "단가 백 퍼센트 공개, 흥정 없이 계약하세요."},
+      {"startSec": 20.0, "text": "DONWAY 구독하시면 용차앱 소장 요금 무료예요."},
+      {"startSec": 27.0, "text": "빈 차 없이 달리세요. 용차 닷 앱."}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "소장님 전용", "title": "공차 비율\n줄이고 싶으세요?", "sub": "귀로 화물까지 연결해드려요"},
+      {"type": "feature", "icon": "🔄", "title": "귀로 화물 연결", "desc": "빈 차로 돌아오는 길\n수익 화물로 채우세요"},
+      {"type": "feature", "icon": "💰", "title": "단가 100% 공개", "desc": "흥정 없이 투명한 계약\n중간 수수료 없음"},
+      {"type": "feature", "icon": "⭐", "title": "기사 신뢰도 평점", "desc": "검증된 기사와 매칭\n안심 계약"},
+      {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 구독 소장 무료"},
+      {"type": "cta", "title": "용차앱", "sub": "소장님의 공차를 줄여드려요", "domain": "yongcha.app"}
+    ],
+    "hashtags": ["용차앱", "공차없는운행", "화물소장", "귀로화물", "물류"]
+  },
+  "D": {
+    "youtube_title": "주선사 수수료 vs 용차앱 월정액 수익 비교 | 용차앱",
+    "youtube_description": "월 1000만원 매출, 수수료 200만원 vs 월정액 15만원...",
+    "voice": "ko-KR-Neural2-A",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "월 매출 천만원, 수수료 20%면 이백만원이 날아가요."},
+      {"startSec": 7.0, "text": "용차앱은 월정액 십오만원. 수수료 없어요."},
+      {"startSec": 14.0, "text": "단가도 직접 보고, 계약도 직접 해요."},
+      {"startSec": 20.0, "text": "AI가 가장 수익 좋은 루트를 추천해요."},
+      {"startSec": 27.0, "text": "한 달 무료로 비교해보세요. 용차 닷 앱."}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "수익 비교", "title": "주선사 vs 용차앱\n수익 비교", "sub": "숫자로 직접 보세요"},
+      {"type": "compare", "bad": "주선사\n월 매출 1000만원 → 수수료 200만원 손실", "good": "용차앱\n월 매출 1000만원 → 비용 15만원만"},
+      {"type": "feature", "icon": "📊", "title": "수익 185만원 차이", "desc": "연간 2,220만원 차이\n5년이면 1억이 넘어요"},
+      {"type": "feature", "icon": "🤖", "title": "AI 수익 최적화", "desc": "가장 수익 좋은 루트\nAI가 실시간 추천"},
+      {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 구독 소장 무료"},
+      {"type": "cta", "title": "용차앱", "sub": "한 달 무료로 비교해보세요", "domain": "yongcha.app"}
+    ],
+    "hashtags": ["용차앱", "수수료비교", "화물수익", "주선사대안", "화물운송"]
+  }
+}

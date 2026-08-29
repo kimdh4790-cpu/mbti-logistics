@@ -119,6 +119,17 @@ jobs:
               || echo "[BGM] 생성 실패 — BGM 없이 진행"
           fi
 
+      - name: 콘텐츠 Variant 선택 (주차 기반 A/B/C/D 로테이션)
+        if: ${{ contains(env.STEPS, 'record') || contains(env.STEPS, 'compose') }}
+        run: |
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha; do
+              node scripts/compose/generate-variant.js --product $p || echo "[$p] variant 생성 건너뜀"
+            done
+          else
+            node scripts/compose/generate-variant.js --product $PRODUCT || echo "[$PRODUCT] variant 생성 건너뜀"
+          fi
+
       - name: 나레이션 MP3 생성
         if: ${{ contains(env.STEPS, 'record') || contains(env.STEPS, 'compose') }}
         run: |

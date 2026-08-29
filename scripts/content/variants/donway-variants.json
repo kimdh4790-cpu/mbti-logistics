@@ -1,0 +1,90 @@
+{
+  "A": {
+    "youtube_title": "기사 500명 정산, 엑셀 하나로 5분 완료 | DONWAY",
+    "youtube_description": "배달대행·쿠팡 물류사 전용 드라이버 정산 SaaS. 엑셀 한 번 업로드로 수백 명 정산 완료. 카카오 알림톡 자동 발송, 세금계산서 자동 발행까지.\n\n#DONWAY #드라이버정산 #배달대행 #물류정산 #쿠팡물류",
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "기사 수백 명 정산, 매달 며칠씩 걸리시나요?"},
+      {"startSec": 6.0, "text": "DONWAY는 엑셀 한 번 올리면 전체 정산 끝입니다."},
+      {"startSec": 13.0, "text": "카카오 알림톡으로 기사별 명세서 자동 발송."},
+      {"startSec": 20.0, "text": "세금계산서도 자동으로 발행돼요. 팝빌 연동."},
+      {"startSec": 27.0, "text": "50명 기준 월 125,000원. donway.ai.kr"}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "대량 정산", "title": "기사 500명 정산\n엑셀 하나로 5분 완료", "sub": "배달대행·쿠팡 물류사 전용 SaaS"},
+      {"type": "compare", "bad": "엑셀 수작업 며칠\n오류·누락 반복", "good": "엑셀 업로드 1회\n전체 정산 자동 완료"},
+      {"type": "feature", "icon": "📊", "title": "일괄 정산", "desc": "엑셀 업로드 한 번으로\n수백 명 동시 정산"},
+      {"type": "feature", "icon": "💬", "title": "카카오 알림톡", "desc": "기사별 정산 명세서\n자동 발송"},
+      {"type": "price", "p50": "₩125,000/월", "p100": "₩250,000/월", "p500": "₩1,250,000/월"},
+      {"type": "cta", "title": "DONWAY", "sub": "드라이버 정산 자동화", "domain": "donway.ai.kr"}
+    ],
+    "hashtags": ["DONWAY", "드라이버정산", "배달대행", "물류정산", "쿠팡물류"]
+  },
+  "B": {
+    "youtube_title": "카카오 알림톡으로 정산 명세서 자동 발송 | DONWAY",
+    "youtube_description": "정산 완료 즉시 카카오 알림톡으로 기사별 명세서 자동 발송. 기사들에게 일일이 연락할 필요 없어요.\n\n#DONWAY #알림톡 #정산명세서 #드라이버관리",
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "정산하고 기사 한 명씩 연락하고 계시나요?"},
+      {"startSec": 6.0, "text": "DONWAY는 정산 완료 즉시 카카오 알림톡 자동 발송."},
+      {"startSec": 13.0, "text": "기사별 금액·공제내역 명세서가 카톡으로 바로 가요."},
+      {"startSec": 20.0, "text": "문의 전화도 줄고, 분쟁도 줄어요."},
+      {"startSec": 27.0, "text": "7일 무료체험. donway.ai.kr"}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "알림톡 자동 발송", "title": "정산 완료 즉시\n카카오로 자동 전송", "sub": "기사 한 명씩 연락은 이제 그만"},
+      {"type": "feature", "icon": "💬", "title": "카카오 알림톡", "desc": "정산 완료 즉시\n기사별 명세서 자동 발송"},
+      {"type": "feature", "icon": "📋", "title": "상세 명세서", "desc": "기본급·공제·실수령액\n기사가 바로 확인"},
+      {"type": "feature", "icon": "📞", "title": "문의 감소", "desc": "명확한 명세서로\n분쟁·문의 대폭 감소"},
+      {"type": "price", "p50": "₩125,000/월", "p100": "₩250,000/월", "p500": "₩1,250,000/월"},
+      {"type": "cta", "title": "DONWAY", "sub": "정산 자동화 SaaS", "domain": "donway.ai.kr"}
+    ],
+    "hashtags": ["DONWAY", "알림톡", "정산명세서", "드라이버관리", "물류SaaS"]
+  },
+  "C": {
+    "youtube_title": "경쟁사보다 50% 저렴한 드라이버 정산 솔루션 | DONWAY",
+    "youtube_description": "기존 정산 솔루션 대비 50% 이상 저렴. 50명 기준 월 125,000원. 계약·설치 없이 바로 사용.\n\n#DONWAY #정산솔루션 #가격비교 #배달대행SaaS",
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "드라이버 정산 솔루션, 비싸게 쓰고 계시나요?"},
+      {"startSec": 6.0, "text": "DONWAY는 50명 기준 월 12만5천원이에요."},
+      {"startSec": 13.0, "text": "장기계약 없고, 설치도 없어요. 바로 시작."},
+      {"startSec": 20.0, "text": "엑셀 업로드·알림톡·세금계산서 다 포함된 가격이에요."},
+      {"startSec": 27.0, "text": "7일 무료체험. donway.ai.kr"}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "가격 비교", "title": "경쟁사 대비 50% 저렴\n모든 기능 포함", "sub": "50명 기준 월 125,000원"},
+      {"type": "compare", "bad": "기존 솔루션\n월 25만~50만+\n장기계약 필수", "good": "DONWAY\n월 125,000원~\n월별 해지 가능"},
+      {"type": "feature", "icon": "✅", "title": "포함 기능", "desc": "엑셀정산+알림톡+세금계산서\n추가 비용 없음"},
+      {"type": "feature", "icon": "🚀", "title": "즉시 시작", "desc": "설치·계약 없이\n회원가입 후 바로 사용"},
+      {"type": "price", "p50": "₩125,000/월", "p100": "₩250,000/월", "p500": "₩1,250,000/월"},
+      {"type": "cta", "title": "DONWAY", "sub": "7일 무료체험", "domain": "donway.ai.kr"}
+    ],
+    "hashtags": ["DONWAY", "정산솔루션", "가격비교", "배달대행SaaS", "드라이버정산"]
+  },
+  "D": {
+    "youtube_title": "세금계산서 자동 발행까지 — 팝빌 연동 | DONWAY",
+    "youtube_description": "정산 완료 후 세금계산서 자동 발행. 팝빌 연동으로 국세청 신고까지 원클릭. 회계 담당자 업무 90% 감소.\n\n#DONWAY #세금계산서 #팝빌 #전자세금계산서 #물류정산",
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      {"startSec": 0.0, "text": "정산 후 세금계산서 발행, 아직 수동으로 하시나요?"},
+      {"startSec": 6.0, "text": "DONWAY는 팝빌 연동으로 세금계산서 자동 발행."},
+      {"startSec": 13.0, "text": "정산 버튼 하나로 명세서+세금계산서 동시에 처리."},
+      {"startSec": 20.0, "text": "회계 담당자 업무 90% 줄어요."},
+      {"startSec": 27.0, "text": "donway.ai.kr — 7일 무료체험"}
+    ],
+    "slides": [
+      {"type": "hero", "tag": "세금계산서 자동화", "title": "팝빌 연동\n세금계산서 자동 발행", "sub": "정산 버튼 하나로 모든 것이 끝납니다"},
+      {"type": "feature", "icon": "🧾", "title": "전자세금계산서", "desc": "팝빌 연동\n국세청 자동 신고"},
+      {"type": "feature", "icon": "⚡", "title": "원클릭 처리", "desc": "정산+명세서+세금계산서\n동시 처리"},
+      {"type": "feature", "icon": "📉", "title": "업무 90% 감소", "desc": "회계 담당자 수작업\n대폭 감소"},
+      {"type": "price", "p50": "₩125,000/월", "p100": "₩250,000/월", "p500": "₩1,250,000/월"},
+      {"type": "cta", "title": "DONWAY", "sub": "정산·세금계산서 자동화", "domain": "donway.ai.kr"}
+    ],
+    "hashtags": ["DONWAY", "세금계산서", "팝빌", "전자세금계산서", "물류정산"]
+  }
+}
