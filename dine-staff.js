@@ -716,6 +716,23 @@ function _dineAttendSave(memberId,date,inDocId,outDocId){
 }
 
 /* ── 직원 대시보드 ── */
+/* ── 상황별 응원 메시지 ── */
+function _dineCheerMsg(){
+ var now=new Date();
+ var h=now.getHours(),m=now.getMinutes(),d=now.getDate(),dow=now.getDay();
+ var hm=h*100+m;
+ var payday=(_CU.company&&_CU.company.payday)||25;
+ var name=(_CU.name||'').split(' ')[0]||'';
+ if(d===payday) return {bg:'linear-gradient(135deg,#c9a84c,#a67c2e)',emoji:'🎉',msg:'오늘 월급날이야'+( name?' '+name+'!' : '!'),sub:'이번 달도 진짜 고생했어. 오늘은 하고 싶은 거 다 해~'};
+ if(hm>=1130&&hm<1330) return {bg:'linear-gradient(135deg,#f97316,#ea580c)',emoji:'🔥',msg:'지금 점심 피크야, 힘내!',sub:'조금만 버텨봐. 이 시간 지나면 좀 한숨 돌려'};
+ if(hm>=1730&&hm<2100) return {bg:'linear-gradient(135deg,#8b5cf6,#6d28d9)',emoji:'💪',msg:'저녁 러시, 거의 다 왔어!',sub:'조금만 더 — 끝나면 맛있는 거 먹자'};
+ if(dow===1&&hm<1000) return {bg:'linear-gradient(135deg,#0ea5e9,#0284c7)',emoji:'😤',msg:'월요일... 그래도 왔잖아',sub:'오늘 하루만 잘 버티면 나머지는 금방이야'};
+ if(dow===5&&hm>=1700) return {bg:'linear-gradient(135deg,#16a34a,#15803d)',emoji:'🙌',msg:'금요일 마무리야!',sub:'오늘 다 끝내고 주말 마음 편히 즐겨'};
+ if(h>=9&&h<11) return {bg:'linear-gradient(135deg,#06b6d4,#0891b2)',emoji:'☕',msg:'왔어? 오늘도 잘 부탁해',sub:'커피 한 잔하고 시작하자'};
+ if(h>=22||h<5) return {bg:'linear-gradient(135deg,#475569,#334155)',emoji:'🌙',msg:'이 시간에도 수고가 많다',sub:'오늘 하루 진짜 고생했어. 빨리 쉬어'};
+ return {bg:'linear-gradient(135deg,#16a34a,#15803d)',emoji:'👋',msg:'오늘도 잘 부탁해'+( name?' '+name+'~' : '~'),sub:'천천히 해도 돼. 같이 하면 다 잘 되거든'};
+}
+
 function _dineStaffDashboard(el){
  var did=_CU.dealerId;
  var sid=_CU.staffId||_CU.uid;
@@ -727,32 +744,53 @@ function _dineStaffDashboard(el){
  wrap.className='slide-up';
  wrap.style.cssText='padding:0 0 32px';
 
- /* 상단 인사 */
- var greeting=document.createElement('div');
- greeting.style.cssText='padding:20px 20px 12px;';
- greeting.innerHTML='<div style="font-size:20px;font-weight:800;color:var(--tx)">안녕하세요, <span style="color:var(--br)">'+(_CU.name||'직원')+'</span>님</div>'+
-  '<div style="font-size:13px;color:var(--t2);margin-top:4px">'+_fmtDateKo(today)+'</div>';
- wrap.appendChild(greeting);
+ /* ── 응원 메시지 카드 ── */
+ var cm=_dineCheerMsg();
+ var cheerCard=document.createElement('div');
+ cheerCard.style.cssText='margin:16px 16px 0;border-radius:18px;padding:20px;background:'+cm.bg+';color:#fff;';
+ cheerCard.id='staff-cheer-card';
+ cheerCard.innerHTML=
+  '<div id="staff-cheer-emoji" style="font-size:28px;margin-bottom:8px">'+cm.emoji+'</div>'+
+  '<div id="staff-cheer-msg" style="font-size:16px;font-weight:800;letter-spacing:-.3px;line-height:1.4;margin-bottom:4px">'+cm.msg+'</div>'+
+  '<div id="staff-cheer-sub" style="font-size:12px;opacity:.85">'+cm.sub+'</div>'+
+  '<div style="font-size:11px;opacity:.6;margin-top:12px">'+(_CU.name||'직원')+'님 · '+_fmtDateKo(today)+'</div>';
+ wrap.appendChild(cheerCard);
 
- /* 현재 근무 카드 */
+ /* ── 이번 달 예상 급여 카드 ── */
+ var payCard=document.createElement('div');
+ payCard.style.cssText='margin:12px 16px 0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;display:flex;justify-content:space-between;align-items:center;';
+ payCard.innerHTML=
+  '<div>'+
+  '<div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:1px;margin-bottom:6px">이번 달 예상 급여</div>'+
+  '<div id="staff-month-pay" style="font-size:26px;font-weight:900;color:var(--br);letter-spacing:-.5px">계산 중...</div>'+
+  '<div id="staff-month-pay-sub" style="font-size:11px;color:var(--t3);margin-top:3px"></div>'+
+  '</div>'+
+  '<div style="text-align:right">'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">근무시간</div>'+
+  '<div id="staff-month-hours" style="font-size:16px;font-weight:800;color:var(--tx)">—</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:2px">실수령 기준</div>'+
+  '</div>';
+ wrap.appendChild(payCard);
+
+ /* ── 현재 근무 카드 ── */
  var clockCard=document.createElement('div');
  clockCard.id='staff-clock-card';
- clockCard.style.cssText='margin:0 16px 16px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px 18px 14px;';
- clockCard.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:1px;margin-bottom:10px">현재 근무</div>'+
+ clockCard.style.cssText='margin:12px 16px 0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px 18px 14px;';
+ clockCard.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:1px;margin-bottom:10px">오늘 출퇴근</div>'+
   '<div id="staff-clock-inner" style="display:flex;align-items:center;gap:10px"><div style="color:var(--t3);font-size:13px">로딩 중...</div></div>';
  wrap.appendChild(clockCard);
 
- /* 이번 주 근무 카드 */
+ /* ── 이번 주 근무 카드 ── */
  var weekCard=document.createElement('div');
- weekCard.style.cssText='margin:0 16px 16px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;';
+ weekCard.style.cssText='margin:12px 16px 0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;';
  weekCard.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:1px;margin-bottom:14px">이번주 근무</div>'+
   '<div id="staff-week-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center"></div>'+
   '<div id="staff-week-hours" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)"></div>';
  wrap.appendChild(weekCard);
 
- /* 1주 평균 근로시간 카드 */
+ /* ── 1주 평균 근로시간 카드 ── */
  var avgCard=document.createElement('div');
- avgCard.style.cssText='margin:0 16px 16px;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;';
+ avgCard.style.cssText='margin:12px 16px 0;background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:18px;';
  avgCard.innerHTML='<div style="font-size:11px;font-weight:700;color:var(--t2);letter-spacing:1px;margin-bottom:12px">1주 평균 근로시간</div>'+
   '<div id="staff-avg-inner"><div style="color:var(--t3);font-size:13px">계산 중...</div></div>';
  wrap.appendChild(avgCard);
@@ -763,6 +801,62 @@ function _dineStaffDashboard(el){
  _staffLoadClock(did,sid,todayStr);
  _staffLoadWeek(did,sid,today);
  _staffLoadAvg(did,sid,today);
+ _staffLoadMonthPay(did,sid,today);
+}
+
+/* ── 이번 달 예상 급여 계산 ── */
+function _staffLoadMonthPay(did,sid,today){
+ var FS='https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents';
+ var tok=_dineToken||'';
+ var ym=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0');
+ Promise.all([
+  fetch(FS+'/members/'+sid,{headers:{'Authorization':'Bearer '+tok}}).then(function(r){return r.json();}).catch(function(){return null;}),
+  fetch(FS+':runQuery',{method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+   body:JSON.stringify({structuredQuery:{from:[{collectionId:'attendance'}],where:{compositeFilter:{op:'AND',filters:[
+    {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},
+    {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:sid}}},
+    {fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:ym+'-01'}}},
+    {fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:ym+'-31'}}}
+   ]}}}}
+  }).then(function(r){return r.json();}).catch(function(){return [];})
+ ]).then(function(res){
+  var memF=res[0]&&res[0].fields?res[0].fields:null;
+  var attDocs=Array.isArray(res[1])?res[1].filter(function(d){return d.document;}).map(function(d){return d.document.fields;}):[];
+  var wage=memF&&memF.wage?Number(memF.wage.integerValue||memF.wage.doubleValue||0):(memF&&memF.hourlyWage?Number(memF.hourlyWage.integerValue||0):10320);
+  var wageType=memF&&memF.wageType?memF.wageType.stringValue:'hourly';
+  var monthlySalary=memF&&memF.monthlySalary?Number(memF.monthlySalary.integerValue||memF.monthlySalary.doubleValue||0):0;
+  var dateIns={},dateOuts={};
+  attDocs.forEach(function(f){
+   if(!f.date||!f.type)return;
+   var ds=f.date.stringValue,tp=f.type.stringValue,tm=f.time?f.time.stringValue:'';
+   if(tp==='in')dateIns[ds]=tm;
+   else if(tp==='out')dateOuts[ds]=tm;
+  });
+  var totalMin=0;var workDays=Object.keys(dateIns).length;
+  var todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  Object.keys(dateIns).forEach(function(date){
+   var inT=new Date(dateIns[date]);
+   var outT=dateOuts[date]?new Date(dateOuts[date]):(date===todayStr?today:null);
+   if(!outT)return;
+   var diffMin=(outT-inT)/60000;
+   var brMin=diffMin>=480?60:diffMin>=240?30:0;
+   totalMin+=Math.max(0,diffMin-brMin);
+  });
+  var workH=totalMin/60;
+  var basePay=wageType==='monthly'?Math.round((monthlySalary||2500000)*workDays/22):Math.round(workH*wage);
+  var ins4=Math.round(basePay*0.0925);
+  var netPay=basePay-ins4;
+  var payEl=document.getElementById('staff-month-pay');
+  var subEl=document.getElementById('staff-month-pay-sub');
+  var hoursEl=document.getElementById('staff-month-hours');
+  if(payEl)payEl.textContent='₩'+netPay.toLocaleString();
+  if(subEl)subEl.textContent='세전 ₩'+basePay.toLocaleString()+' · 4대보험 -₩'+ins4.toLocaleString();
+  if(hoursEl)hoursEl.textContent=Math.floor(workH)+'h '+Math.round((workH%1)*60)+'m';
+ }).catch(function(){
+  var payEl=document.getElementById('staff-month-pay');
+  if(payEl)payEl.textContent='조회 실패';
+ });
 }
 
 function _fmtDateKo(d){
@@ -811,6 +905,23 @@ function _staffLoadClock(did,sid,todayStr){
   var wageType=memFields&&memFields.wageType?memFields.wageType.stringValue:'hourly';
   var inner=document.getElementById('staff-clock-inner');
   if(!inner)return;
+  /* 휴무일 — 스케줄 없고 출근 기록도 없으면 응원 카드를 휴식 멘트로 교체 */
+  if(!sch&&!inDoc){
+   var offMsgs=[
+    {emoji:'🌿',msg:'오늘은 쉬는 날이야',sub:'폰 내려놓고 그냥 편하게 있어. 아무것도 안 해도 돼'},
+    {emoji:'☀️',msg:'오늘은 그냥 나만의 날',sub:'먹고 싶은 거 먹고, 보고 싶은 거 봐. 그게 다야'},
+    {emoji:'💤',msg:'오늘은 빠짝 쉬어',sub:'잘 쉬어야 다음에도 잘 할 수 있거든. 진심으로 완전 OFF해'},
+    {emoji:'🎧',msg:'오늘은 아무 생각 하지 마',sub:'일 걱정은 내일부터. 지금은 그냥 너 시간이야'}
+   ];
+   var om=offMsgs[today.getDate()%offMsgs.length];
+   var cc=document.getElementById('staff-cheer-card');
+   if(cc){
+    cc.style.background='linear-gradient(135deg,#334155,#1e293b)';
+    var em=document.getElementById('staff-cheer-emoji');if(em)em.textContent=om.emoji;
+    var mmsg=document.getElementById('staff-cheer-msg');if(mmsg)mmsg.textContent=om.msg;
+    var msub=document.getElementById('staff-cheer-sub');if(msub)msub.textContent=om.sub;
+   }
+  }
   var badge=isIn?'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,.12);color:#16a34a;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700"><span style="width:6px;height:6px;background:#16a34a;border-radius:50%;display:inline-block"></span>근무중</span>':
    (inDoc&&outDoc?'<span style="background:rgba(71,85,105,.1);color:var(--t2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">퇴근완료</span>':
    '<span style="background:rgba(71,85,105,.1);color:var(--t2);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">미출근</span>');

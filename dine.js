@@ -826,21 +826,23 @@ function _dineGenAiAdvice(d){
  var tips=[];
  var h=new Date().getHours();
  /* 매출 기반 */
- if(d.orderCnt===0) tips.push({icon:'📢',color:'#f59e0b',text:'아직 오늘 주문이 없습니다. 단골 회원에게 알림톡 프로모션을 발송해 보세요.'});
- else if(d.orderCnt>=20) tips.push({icon:'🔥',color:'#22c55e',text:'오늘 주문이 활발합니다 ('+d.orderCnt+'건). 주방 직원 피로도를 확인하고 필요 시 지원 인력을 배치하세요.'});
+ if(d.orderCnt===0) tips.push({icon:'📢',color:'#f59e0b',text:'오늘 아직 주문이 없네. 단골들한테 알림 하나 돌려볼까?'});
+ else if(d.orderCnt>=20) tips.push({icon:'🔥',color:'#22c55e',text:'오늘 '+d.orderCnt+'건 — 잘 되는 날이네! 주방 쪽 힘든 거 없나 한 번 봐줘.'});
+ else if(d.orderCnt>=10) tips.push({icon:'📊',color:'#38bdf8',text:'주문 '+d.orderCnt+'건. 무난하게 가고 있어. 이 속도면 마감은 괜찮을 것 같은데.'});
  /* 마진 */
- if(d.marginRate<30&&d.orderCnt>0) tips.push({icon:'📉',color:'#ef4444',text:'마진율이 '+d.marginRate+'%로 낮습니다. 원가 비중이 높은 메뉴의 레시피 수율을 점검하거나 가격 조정을 검토하세요.'});
- else if(d.marginRate>=60&&d.orderCnt>0) tips.push({icon:'📈',color:'#22c55e',text:'마진율이 '+d.marginRate+'%로 양호합니다. 오늘 운영 효율이 좋습니다.'});
+ if(d.marginRate<30&&d.orderCnt>0) tips.push({icon:'📉',color:'#ef4444',text:'마진이 '+d.marginRate+'%밖에 안 돼. 원가 많이 나가는 메뉴 좀 살펴봐야 할 것 같은데.'});
+ else if(d.marginRate>=60&&d.orderCnt>0) tips.push({icon:'📈',color:'#22c55e',text:'마진 '+d.marginRate+'% — 오늘 운영 잘 되고 있어. 이런 날이 많으면 좋겠다.'});
  /* 인건비 */
- if(d.laborRate>35&&d.orderCnt>0) tips.push({icon:'⚠️',color:'#ef4444',text:'인건비 비율이 '+d.laborRate+'%입니다. 권장 수준(25~30%)을 초과했습니다. 피크 외 시간대 스케줄 최적화를 검토하세요.'});
- else if(d.laborRate>0&&d.laborRate<=25) tips.push({icon:'✅',color:'#22c55e',text:'인건비 비율 '+d.laborRate+'% — 적정 수준입니다. 출근 '+d.working+'명 운영 효율 양호.'});
+ if(d.laborRate>35&&d.orderCnt>0) tips.push({icon:'⚠️',color:'#ef4444',text:'인건비가 '+d.laborRate+'%야. 매출 대비 좀 높네 — 한가한 시간대 스케줄 한번 손볼 필요 있어 보여.'});
+ else if(d.laborRate>0&&d.laborRate<=25) tips.push({icon:'✅',color:'#22c55e',text:'인건비 '+d.laborRate+'%, 적당한 수준이야. '+d.working+'명이 잘 돌아가고 있는 것 같아.'});
  /* 피크타임 */
- if(h>=10&&h<=11) tips.push({icon:'⏰',color:'#38bdf8',text:'점심 피크타임이 곧 시작됩니다. 식재료 전처리와 홀/주방 배치를 지금 점검하세요.'});
- else if(h>=16&&h<=17) tips.push({icon:'⏰',color:'#38bdf8',text:'저녁 피크타임 1시간 전입니다. 재료 보충과 홀 정리를 미리 해두세요.'});
+ if(h>=10&&h<=11) tips.push({icon:'⏰',color:'#38bdf8',text:'점심 피크 한 시간 남았어. 전처리랑 자리 세팅 지금 마무리하자.'});
+ else if(h>=16&&h<=17) tips.push({icon:'⏰',color:'#38bdf8',text:'저녁 피크 1시간 전이야. 재료 보충이랑 홀 정리 지금 해두면 나중에 편해.'});
+ else if(h>=11&&h<14) tips.push({icon:'🕛',color:'#f97316',text:'지금 점심 피크야. 잘 되고 있지? 직원들 틈틈이 챙겨줘.'});
  /* 베스트 메뉴 */
- if(d.bestMenu) tips.push({icon:'🏆',color:'#C8A356',text:'오늘 가장 많이 팔린 메뉴: '+d.bestMenu+' ('+d.orderCnt+'건 중 상위). 재고와 재료 준비 상태를 확인하세요.'});
- /* 최소 3개 보장 */
- if(tips.length<1) tips.push({icon:'💡',color:'#a78bfa',text:'데이터가 충분히 쌓이면 맞춤 조언을 제공합니다. 지금은 매장 설정을 점검해 보세요.'});
+ if(d.bestMenu) tips.push({icon:'🏆',color:'#C8A356',text:'"'+d.bestMenu+'" 오늘 제일 많이 나가고 있어. 재료 충분한지 확인해봐.'});
+ /* 기본 */
+ if(tips.length<1) tips.push({icon:'💡',color:'#a78bfa',text:'아직 데이터가 별로 없어. 주문이 쌓이면 더 자세하게 볼 수 있어.'});
  tips=tips.slice(0,3);
  el.innerHTML=tips.map(function(t){
   return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:2px solid '+t.color+'">'+
