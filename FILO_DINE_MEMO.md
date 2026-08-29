@@ -162,6 +162,22 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-29 (10차)
+**DINE 전면 개선 + FILO POS 수량 시트 + SMS 일괄 발송**
+- `dine-tax.js`: fixed['card-fee'] → fixed.cardFee 폴백 (카드수수료 0원 버그)
+- `dine-schedule.js`: collection('staff') → collection('members') (직원 드롭다운 빈화면)
+- `dine-payroll.js`: _dineSendPayslip() 완전 구현 (payroll 조회→FCM 발송)
+- `dine-analytics.js`: _dineCheckAbsents() — 09:30 이후 로그인 시 결근자 자동 감지·배지
+- `dine-member.js`: _dineReviews() 리뷰 관리 페이지 추가 (네이버·카카오 Place URL, 리뷰 기록, 요청 SMS)
+- `dine.js`: reviews 라우트 추가
+- `dine.html`: 사이드바 리뷰 관리 nav 추가
+- `_worker.js`: /api/send-sms-bulk 추가 (Aligo SMS 일괄 발송, dealer 토큰 인증)
+- `filo-pos-ui.js`: X 버튼 _cartClear → _cartRemoveSheet (개별 수량 수정 바텀시트)
+- `filo-pos-core.js`: _cartRemoveSheet() 구현
+- `filo-auth.js`: menu_mgmt lazy-load 수정 (_filoPageMenuMgmt is not defined)
+- `filo-menu-mgmt.js`: 카드 배경 흰색 변경
+- commit: `047e24f` + SMS bulk 추가 커밋(미정)
+
 ### 2026-08-28 (9차)
 **POS 결제 터미널 전면 재설계 — 기업급 풀스크린 UI**
 - `filo-pos.js`: _filoPay() 4버튼 모달 → 풀스크린 다크 결제 터미널(#070d1b) 완전 재설계 (~404줄)

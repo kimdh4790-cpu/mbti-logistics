@@ -11154,6 +11154,54 @@ service cloud.firestore {
       }
     }
 
+    // ── SMS 일괄 발송 (/api/send-sms-bulk) — DINE 리뷰 요청용 ──
+    if (path === '/api/send-sms-bulk' && method === 'POST') {
+      const _bulkUser = await verifyFirebaseToken(request, env);
+      if (!_bulkUser) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      const _bulkH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const body = await request.json();
+        const { did, phones, msg } = body;
+        if (!did || !phones || !phones.length || !msg) {
+          return new Response(JSON.stringify({error:'did·phones·msg 필수'}),{status:400,headers:_bulkH});
+        }
+        // 요청자가 해당 dealerId 소속인지 확인
+        if (_bulkUser.dealerId && _bulkUser.dealerId !== did) {
+          return new Response(JSON.stringify({error:'권한 없음'}),{status:403,headers:_bulkH});
+        }
+        const apiKey = env.ALIGO_KEY;
+        const userId = env.ALIGO_USER_ID;
+        const sender = env.ALIGO_SENDER || '05171133103';
+        if (!apiKey || !userId) {
+          return new Response(JSON.stringify({error:'Aligo 키 미설정'}),{status:500,headers:_bulkH});
+        }
+        // Aligo는 최대 1000건 한 번에, receiver 콤마 구분
+        const cleanPhones = phones.map(p => String(p).replace(/[^0-9]/g,'')).filter(p => p.length >= 9);
+        if (!cleanPhones.length) {
+          return new Response(JSON.stringify({sent:0,total:phones.length}),{status:200,headers:_bulkH});
+        }
+        const msgType = msg.length > 90 ? 'LMS' : 'SMS';
+        const params = new URLSearchParams({
+          key: apiKey,
+          user_id: userId,
+          sender: sender,
+          receiver: cleanPhones.join(','),
+          msg: msg,
+          msg_type: msgType
+        });
+        const res = await fetch('https://apis.aligo.in/send/', {
+          method: 'POST',
+          headers: {'Content-Type':'application/x-www-form-urlencoded'},
+          body: params.toString()
+        });
+        const data = await res.json();
+        const sent = data.result_code == 1 ? cleanPhones.length : 0;
+        return new Response(JSON.stringify({sent, total:cleanPhones.length, ok: data.result_code==1}),{status:200,headers:_bulkH});
+      } catch(e) {
+        return new Response(JSON.stringify({error:e.message}),{status:500,headers:_bulkH});
+      }
+    }
+
     // Cron 만료처리 — 수동 트리거
     if (path === '/cron-expire' && method === 'POST') {
       const secret = request.headers.get('X-Cron-Secret') || '';

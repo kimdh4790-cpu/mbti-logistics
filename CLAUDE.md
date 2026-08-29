@@ -362,6 +362,20 @@ cd mbtico-pages && npx wrangler deploy
 - filo-pos-core.js:216: _origFilterKiosk 미사용 선언 제거 (로드 타임 undefined 캡처)
 - filo-members.js:101: d.name null 가드 누락 수정 (→ (d.name||'?').slice(0,1))
 
+### ✅ 완료 (2026-08-29 DINE 전면 개선)
+- dine-tax.js: fixed['card-fee'] → fixed.cardFee 폴백 추가 (카드수수료 항상 0원 버그)
+- dine-schedule.js: collection('staff') → collection('members') (직원 드롭다운 빈화면 버그)
+- dine-payroll.js: _dineSendPayslip() 스텁 → payroll 조회 + FCM 발송 완전 구현
+- dine-analytics.js: _dineCheckAbsents() 추가 — 로그인 09:30 이후 자동 결근 감지 + 사이드바 배지
+- dine-member.js: _dineReviews() 페이지 전체 구현 (네이버·카카오 Place URL 등록, 리뷰 수동 기록, 리뷰 요청 SMS)
+- dine.js: reviews 라우트 추가
+- dine.html: 사이드바 리뷰 관리 nav 추가
+- _worker.js: /api/send-sms-bulk 엔드포인트 추가 (DINE 리뷰 요청 일괄 SMS, Aligo 사용)
+- filo-pos-ui.js: X 버튼 전체 삭제 → 개별 수량 수정 바텀시트(_cartRemoveSheet) 변경
+- filo-pos-core.js: _cartRemoveSheet() 구현
+- filo-auth.js: menu_mgmt → _filoLoadAndRun lazy-load 수정 (_filoPageMenuMgmt is not defined 해결)
+- filo-menu-mgmt.js: 카드 배경 다크→흰색 변경 (background:#fff)
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
