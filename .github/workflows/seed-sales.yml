@@ -1,0 +1,33 @@
+name: 매출 테스트 데이터 시딩
+
+on:
+  workflow_dispatch:
+    inputs:
+      did:
+        description: '딜러ID (비워두면 테스트 계정 사용)'
+        required: false
+        default: '9XD2K3W1tIhIs6XM74YT0xfRFEP2'
+      month:
+        description: '월 (YYYY-MM)'
+        required: false
+        default: '2026-07'
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Seed sales data
+        run: |
+          RESP=$(curl -s -w "\n%{http_code}" -X POST https://filo.ai.kr/api/seed-sales \
+            -H "Content-Type: application/json" \
+            -d "{\"secret\":\"filo2026demo\",\"did\":\"${{ github.event.inputs.did }}\",\"month\":\"${{ github.event.inputs.month }}\"}" \
+            --max-time 120)
+          BODY=$(echo "$RESP" | head -n -1)
+          CODE=$(echo "$RESP" | tail -n 1)
+          echo "HTTP $CODE"
+          echo "$BODY"
+          if echo "$BODY" | grep -q '"ok":true'; then
+            echo "시딩 완료"
+          else
+            echo "시딩 실패" && exit 1
+          fi

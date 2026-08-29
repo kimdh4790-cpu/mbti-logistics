@@ -105,6 +105,13 @@ function _filoPageSettings(el){
  '</div>'+
  '<div id="nfc-menus-list" style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:var(--t3)">메뉴 정보 로딩 중...</div></div>'+
  '</div>'+
+ /* 📊 매출 테스트 데이터 — 개발/데모용 */
+ '<div class="card" style="margin-top:12px;border:1px solid rgba(99,102,241,.25)">'+
+ '<div style="font-size:13px;font-weight:800;margin-bottom:8px;color:#6366f1">매출 테스트 데이터</div>'+
+ '<div style="font-size:11px;color:var(--t3);margin-bottom:12px">매출분석 화면 확인을 위한 7월(2026-07) 샘플 데이터를 생성합니다. 기존 데이터는 변경되지 않습니다.</div>'+
+ '<button id="seed-sales-btn" class="btn btn-sm" style="background:rgba(99,102,241,.1);color:#6366f1;border:1px solid rgba(99,102,241,.3)" onclick="_filoSeedSalesData()">7월 매출 샘플 데이터 생성</button>'+
+ '<div id="seed-sales-result" style="font-size:11px;margin-top:8px"></div>'+
+ '</div>'+
  /* 🗑️ 데이터 관리 — 비상시만 사용, 맨 아래 */
  '<div class="card" style="margin-top:12px;border:1px solid rgba(220,38,38,.25)">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:8px;color:#ef4444">데이터 관리</div>'+
@@ -550,5 +557,31 @@ async function _filoGenReviewReply(type){
   } catch(e2){
    if(outputEl)outputEl.value='답글 생성에 실패했습니다. 잠시 후 다시 시도하세요.';
   }
+ }
+}
+
+async function _filoSeedSalesData(){
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ if(!did){_filoToast('로그인 정보 없음');return;}
+ var btn=document.getElementById('seed-sales-btn');
+ var resEl=document.getElementById('seed-sales-result');
+ if(btn)btn.disabled=true;
+ if(resEl)resEl.textContent='생성 중... (30초 내외 소요)';
+ try{
+  var r=await fetch('/api/seed-sales',{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({secret:'filo2026demo',did:did,month:'2026-07'})});
+  var d=await r.json();
+  if(d.ok){
+   if(resEl)resEl.innerHTML='<span style="color:#22c55e">완료: '+d.count+'개 매출 데이터가 생성되었습니다.</span>';
+   _filoToast('7월 매출 샘플 데이터 생성 완료! ('+d.count+'건)');
+  } else {
+   if(resEl)resEl.innerHTML='<span style="color:#ef4444">오류: '+(d.error||JSON.stringify(d))+'</span>';
+   _filoToast('생성 실패: '+(d.error||'알 수 없는 오류'));
+  }
+ } catch(e){
+  if(resEl)resEl.innerHTML='<span style="color:#ef4444">오류: '+e.message+'</span>';
+  _filoToast('오류: '+e.message);
+ } finally {
+  if(btn)btn.disabled=false;
  }
 }
