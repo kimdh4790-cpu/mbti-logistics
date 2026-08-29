@@ -283,6 +283,8 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-29 | 나레이션 전체 음성 남성(Neural2-C)→여성(Neural2-A) 전환 (yongcha/filo/donway-narration.json). 자막 force_style 하단 고정(Alignment=2, MarginV=140, Fontsize=22) + ASS 변환 폐지. YONGCHA GitHub Actions 재실행 완료 |
+| 2026-08-29 | 관제센터(mbtico.kr) 에러로그·소셜미디어 관리 탭 추가. _worker.js /api/trigger-social 엔드포인트 추가 (GITHUB_TOKEN Secret 필요). 에러 뱃지 실시간 갱신(24시간 기준) |
 | 2026-08-28 | **브랜드 보이스 스킬 생성** `.claude/skills/mbtico-social-voice.md` — StoryScope + roy.branding 기반 AI 탈출 원칙 적용. 나레이션 스크립트 개선: yongcha 오프너 질문형 후크로 변경, mbtico 마무리 AI패턴 → 열린 CTA로 변경 |
 | 2026-08-28 | **YONGCHA 영상 버그 2가지 수정** — ①무음(Google TTS 400 에러: ssmlGender FEMALE 제거), ②자막 화면가림(폰트명 'Noto Sans KR'→'Noto Sans CJK KR', 크기46→34, 노란색→흰색, MarginV 100→160). yongcha-subtitles.srt 나레이션 동기화. 자동 머지+배포 완료 |
 | 2026-08-28 | YONGCHA YouTube 깨진 영상 ID: eDpowbKedgs (무음+자막가림) — 삭제 필요 |
