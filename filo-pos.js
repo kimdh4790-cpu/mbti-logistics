@@ -51,17 +51,18 @@ function _posTerminalOpen(raw,disc,total){
   '<div style="font-size:10px;color:#334155;text-align:right;line-height:1.5">'+ts+'</div>'+
   '</div>';
 
- // ── 바디 ─────────────────────────────────────────────────────────────────
- var body='<div style="flex:1;display:flex;min-height:0;overflow:hidden">'+
-  '<div id="pos-left" style="width:320px;flex-shrink:0;display:flex;flex-direction:column;background:#0b1220;border-right:1px solid rgba(255,255,255,.06);overflow-y:auto">'+
+ // ── 바디 (모바일: 세로 / 데스크탑: 가로) ──────────────────────────────────
+ var mob=window.innerWidth<640;
+ var body='<div style="flex:1;display:flex;min-height:0;overflow:hidden;flex-direction:'+(mob?'column':'row')+'">'+
+  '<div id="pos-left" style="'+(mob?'width:100%;max-height:42%;':'width:320px;flex-shrink:0;')+'display:flex;flex-direction:column;background:#0b1220;border-'+(mob?'bottom':'right')+':1px solid rgba(255,255,255,.06);overflow-y:auto">'+
   _posLeftCol(raw,disc,sub,vat,total)+'</div>'+
-  '<div id="pos-right" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:18px 20px 20px">'+
+  '<div id="pos-right" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:'+(mob?'12px 16px 16px':'18px 20px 20px')+'">'+
   '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:#334155;text-transform:uppercase;margin-bottom:12px">결제 수단</div>'+
   _posMethodGrid()+
   '<div style="margin-top:10px;display:flex;gap:8px">'+
-  '<button id="pos-discount-btn" onclick="_posDiscountModal('+total+')" style="flex:1;height:36px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:8px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer">'+
+  '<button id="pos-discount-btn" onclick="_posDiscountModal('+total+')" style="flex:1;height:44px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);border-radius:8px;color:#818cf8;font-size:12px;font-weight:700;cursor:pointer">'+
   _svgIcon('tag')+' 할인</button>'+
-  '<button onclick="_filoSplitPay('+total+');document.getElementById(\'pos-pay-term\').remove();" style="flex:1;height:36px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer">'+
+  '<button onclick="_filoSplitPay('+total+');document.getElementById(\'pos-pay-term\').remove();" style="flex:1;height:44px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:8px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer">'+
   _svgIcon('split-square-horizontal')+' 분할결제</button>'+
   '</div>'+
   '<div id="pos-dynamic" style="flex:1;overflow:hidden;margin-top:14px;display:flex;flex-direction:column"></div>'+
