@@ -376,6 +376,17 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: menu_mgmt → _filoLoadAndRun lazy-load 수정 (_filoPageMenuMgmt is not defined 해결)
 - filo-menu-mgmt.js: 카드 배경 다크→흰색 변경 (background:#fff)
 
+### ✅ 완료 (2026-08-29 Instagram Graph API 설정)
+- **Instagram Graph API 연동 완전 완료**
+  - Instagram 계정 @hyung.83 → Mbtico Facebook 페이지 연결
+  - MBTICO Social 앱(ID: 1377132184613591) 권한 등록: instagram_basic, instagram_content_publish, pages_show_list
+  - Instagram Account ID: 17841476542581165 / Facebook Page ID: 1254758224392727
+  - 60일 장기 액세스 토큰 발급 (만료: 2026-10-28)
+  - GitHub Secrets 등록 완료: INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_ACCOUNT_ID
+  - social-media.yml Workflow #25 실행 성공 (1분 14초) 확인
+  - 만료 7일 전(2026-10-21) 갱신 알림 루틴 설정 (trig_01D7CfWvKuGuWBGjM9CxH649)
+- SOCIAL_MEDIA_MEMO.md: 토큰 만료일·갱신 방법·앱 ID 수정 기록
+
 ### ✅ 완료 (2026-08-29 소셜미디어 자동화)
 - **n8n v2.8.4 Oracle Cloud VM 영구 설치** (161.33.136.154:5678, admin/Mbtico2026!, crontab @reboot 자동시작, 라이선스 활성화)
 - Oracle Cloud VCN Security List TCP 5678 Ingress Rule 추가 (n8n 외부 접속용)
