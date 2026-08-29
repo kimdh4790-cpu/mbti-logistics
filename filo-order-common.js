@@ -26,6 +26,28 @@
  *   _today/_nowISO/_toDateStr/_monthStr — order.js 날짜 유틸
  */
 
+// ── 전역 오류 탐지 (QR주문·주방·스토어 전체 커버) ──────────────────────────
+(function(){
+ function _sendErr(data){
+  try{
+   data.source='order-frontend';
+   data.ts=new Date().toISOString();
+   data.did=new URLSearchParams(location.search).get('d')||'unknown';
+   data.url=location.href.slice(0,200);
+   navigator.sendBeacon?navigator.sendBeacon('/api/log-error',JSON.stringify(data))
+    :fetch('/api/log-error',{method:'POST',body:JSON.stringify(data),keepalive:true}).catch(function(){});
+  }catch(e){}
+ }
+ window.onerror=function(msg,src,line,col,err){
+  _sendErr({type:'js',msg:String(msg).slice(0,300),src:String(src||'').slice(0,150),line:line||0,col:col||0,stack:err&&err.stack});
+  return false;
+ };
+ window.onunhandledrejection=function(e){
+  var r=e.reason;
+  _sendErr({type:'promise',msg:String(r&&(r.message||r)).slice(0,300),stack:r&&r.stack});
+ };
+})();
+
 // ── 전역 공유 변수 (order.js / store.js 와 공유) ──────────────────────────────
 var _menus=[], _did='', _lang='ko', _tlCache={}, _curMdlMenu=null, _tlQtyVal=1;
 

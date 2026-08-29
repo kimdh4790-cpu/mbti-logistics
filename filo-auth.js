@@ -24,6 +24,31 @@
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
+// ── 전역 오류 탐지 (FILO 대시보드 전체 커버) ──────────────────────────────
+(function(){
+ function _sendErr(data){
+  try{
+   data.source='filo-frontend';
+   data.ts=new Date().toISOString();
+   data.did=(window._CU&&(window._CU.dealerId||window._CU.uid))||'unknown';
+   data.user=(window._CU&&window._CU.email)||'unknown';
+   data.url=location.href.slice(0,200);
+   navigator.sendBeacon?navigator.sendBeacon('/api/log-error',JSON.stringify(data))
+    :fetch('/api/log-error',{method:'POST',body:JSON.stringify(data),keepalive:true}).catch(function(){});
+  }catch(e){}
+ }
+ window._filoLogError=function(e,ctx){
+  _sendErr({type:'manual',msg:String(e&&(e.message||e)).slice(0,300),stack:e&&e.stack,ctx:String(ctx||'')});
+ };
+ window.onerror=function(msg,src,line,col,err){
+  _sendErr({type:'js',msg:String(msg).slice(0,300),src:String(src||'').slice(0,150),line:line||0,col:col||0,stack:err&&err.stack});
+  return false;
+ };
+ window.onunhandledrejection=function(e){
+  var r=e.reason;
+  _sendErr({type:'promise',msg:String(r&&(r.message||r)).slice(0,300),stack:r&&r.stack});
+ };
+})();
 
 // ── JS 파일 동적 로드 후 콜백 실행 ─────────────────────────────
 function _filoLoadAndRun(jsFile, callback) {

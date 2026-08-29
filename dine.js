@@ -57,6 +57,32 @@ var _CU   = {};
 _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});
 
 
+// ── 전역 오류 탐지 (DINE 전체 커버) ──────────────────────────────────────
+(function(){
+ function _sendErr(data){
+  try{
+   data.source='dine-frontend';
+   data.ts=new Date().toISOString();
+   data.did=(window._CU&&(window._CU.dealerId||window._CU.uid))||'unknown';
+   data.user=(window._CU&&window._CU.email)||'unknown';
+   data.url=location.href.slice(0,200);
+   navigator.sendBeacon?navigator.sendBeacon('/api/log-error',JSON.stringify(data))
+    :fetch('/api/log-error',{method:'POST',body:JSON.stringify(data),keepalive:true}).catch(function(){});
+  }catch(e){}
+ }
+ window._dineLogError=function(e,ctx){
+  _sendErr({type:'manual',msg:String(e&&(e.message||e)).slice(0,300),stack:e&&e.stack,ctx:String(ctx||'')});
+ };
+ window.onerror=function(msg,src,line,col,err){
+  _sendErr({type:'js',msg:String(msg).slice(0,300),src:String(src||'').slice(0,150),line:line||0,col:col||0,stack:err&&err.stack});
+  return false;
+ };
+ window.onunhandledrejection=function(e){
+  var r=e.reason;
+  _sendErr({type:'promise',msg:String(r&&(r.message||r)).slice(0,300),stack:r&&r.stack});
+ };
+})();
+
 var MIN_WAGE = 10320;
 var DINE_FCM_VAPID = 'BEl62iUYgUivxIkv69yViEuiBIa40Lf1WvVB_QPL-nBelGT5LbwzMvCwMmS_-ZxCjPIe4i7E6y2bQf5zZ7X0';
 function _dineInitFCM(did){

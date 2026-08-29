@@ -4747,6 +4747,73 @@ ${JSON.stringify(postSummary)}
           return Response.json({error:e.message});
         }
       }
+      // /api/log-error — 프론트엔드 오류 수신 (전체 앱 공통)
+      if (path === '/api/log-error' && method === 'POST') {
+        try {
+          const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+          // Rate limit: IP당 60초에 최대 20건
+          const rlKey = 'errl:' + ip;
+          const rlCnt = parseInt(await env.DONWAY_ASSETS.get(rlKey) || '0');
+          if (rlCnt > 20) return new Response('rate-limited', {status:429});
+          await env.DONWAY_ASSETS.put(rlKey, String(rlCnt + 1), {expirationTtl: 60});
+
+          const body = await request.json().catch(() => ({}));
+          const msg = String(body.msg || body.message || '').slice(0, 300);
+          const errType = body.type || 'js';
+          const source = body.source || (hostname.includes('dine') ? 'dine-frontend' :
+            hostname.includes('donway') ? 'donway-frontend' :
+            hostname.includes('yongcha') ? 'yongcha-frontend' :
+            hostname.includes('mbtico') ? 'mbtico-frontend' : 'filo-frontend');
+
+          // 중복 카운팅 (fingerprint = 앱+메시지 앞 80자)
+          const fp = (source + ':' + msg).replace(/[^a-zA-Z0-9가-힣]/g, '').slice(0, 60);
+          const fpKey = 'errfp:' + fp;
+          const prevCnt = parseInt(await env.DONWAY_ASSETS.get(fpKey) || '0');
+          const newCnt = prevCnt + 1;
+          await env.DONWAY_ASSETS.put(fpKey, String(newCnt), {expirationTtl: 3600});
+
+          // Firestore 저장 (최초 + 5배수 건만: 1,5,10,50,100...)
+          const shouldLog = newCnt === 1 || newCnt % 5 === 0;
+          if (shouldLog) {
+            const token = await getAccessToken(env);
+            await fsAdd(token, env.FIREBASE_PROJECT_ID, 'filo_errors', {
+              ts:        { stringValue: new Date().toISOString() },
+              type:      { stringValue: errType },
+              source:    { stringValue: source },
+              hostname:  { stringValue: hostname },
+              msg:       { stringValue: msg },
+              stack:     { stringValue: String(body.stack || '').slice(0, 500) },
+              src:       { stringValue: String(body.src || '').slice(0, 200) },
+              line:      { integerValue: parseInt(body.line) || 0 },
+              did:       { stringValue: String(body.did || 'unknown').slice(0, 50) },
+              user:      { stringValue: String(body.user || 'unknown').slice(0, 100) },
+              count:     { integerValue: newCnt },
+              ip:        { stringValue: ip },
+              userAgent: { stringValue: (request.headers.get('User-Agent') || '').slice(0, 150) }
+            }).catch(() => {});
+          }
+
+          // 임계치 도달 시 filo_alerts에 기록 (루틴이 이를 감지해 즉시 수정)
+          if (newCnt === 10 || newCnt === 50 || newCnt === 200) {
+            const token = await getAccessToken(env);
+            await fsAdd(token, env.FIREBASE_PROJECT_ID, 'filo_alerts', {
+              ts:      { stringValue: new Date().toISOString() },
+              type:    { stringValue: 'error_threshold' },
+              source:  { stringValue: source },
+              msg:     { stringValue: msg },
+              count:   { integerValue: newCnt },
+              status:  { stringValue: 'pending' }
+            }).catch(() => {});
+          }
+
+          return new Response('ok', {
+            headers: { 'Access-Control-Allow-Origin': '*' }
+          });
+        } catch(e) {
+          return new Response('error', {status: 500});
+        }
+      }
+
       // /api/errors — Worker 런타임 오류 조회 (슈퍼어드민 전용)
       if (path === '/api/errors' && method === 'GET') {
         const _errAdmin = await requireAdmin(request, env);
@@ -4767,9 +4834,29 @@ ${JSON.stringify(postSummary)}
           const errors = (Array.isArray(rows)?rows:[]).filter(r=>r.document).map(r=>{
             const f=r.document.fields||{};
             return {ts:f.ts?.stringValue,path:f.path?.stringValue,method:f.method?.stringValue,
-              hostname:f.hostname?.stringValue,message:f.message?.stringValue,stack:f.stack?.stringValue};
+              hostname:f.hostname?.stringValue,source:f.source?.stringValue,
+              message:f.message?.stringValue||f.msg?.stringValue,
+              stack:f.stack?.stringValue,count:f.count?.integerValue,
+              did:f.did?.stringValue,user:f.user?.stringValue,type:f.type?.stringValue};
           });
-          return Response.json({ok:true,errors});
+          // filo_alerts (임계치 도달 경고) 함께 조회
+          const aRes = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{
+              from:[{collectionId:'filo_alerts'}],
+              where:{fieldFilter:{field:{fieldPath:'status'},op:'EQUAL',value:{stringValue:'pending'}}},
+              orderBy:[{field:{fieldPath:'ts'},direction:'DESCENDING'}],
+              limit:20
+            }})
+          });
+          const aRows = await aRes.json();
+          const alerts = (Array.isArray(aRows)?aRows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            return {ts:f.ts?.stringValue,type:f.type?.stringValue,source:f.source?.stringValue,
+              msg:f.msg?.stringValue,count:f.count?.integerValue};
+          });
+          return Response.json({ok:true,errors,alerts,total:errors.length});
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
