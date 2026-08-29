@@ -10,7 +10,7 @@
  *   1. Meta Developer → 앱 생성 → instagram_basic, instagram_content_publish 권한
  *   2. Instagram 계정을 비즈니스/크리에이터로 전환 + Facebook 페이지 연결
  *   3. 토큰 발급 → ~/.env 또는 GitHub Secrets에 저장
- *   4. 비디오는 catbox.moe를 통해 공개 URL로 변환 후 Meta API 전달
+ *   4. 비디오는 0x0.st → transfer.sh 순서로 공개 URL 생성 후 Meta API 전달
  */
 
 'use strict';
@@ -65,20 +65,47 @@ if (meta.variants && meta.variants.length > 0) {
 const ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
 const ACCOUNT_ID = process.env.INSTAGRAM_ACCOUNT_ID;
 
-// catbox.moe에 파일 업로드 → 공개 URL 반환
-function uploadToCatbox(filePath) {
-  console.log(`[Instagram] catbox.moe 업로드 중: ${path.basename(filePath)} ...`);
+// 공개 파일 호스팅 업로드 → 공개 URL 반환 (0x0.st → transfer.sh 폴백)
+async function uploadToPublicHost(filePath) {
   const fileSize = (fs.statSync(filePath).size / 1024 / 1024).toFixed(1);
-  console.log(`  파일 크기: ${fileSize} MB`);
-  const result = execSync(
-    `curl -s --max-time 120 -F "reqtype=fileupload" -F "fileToUpload=@${filePath}" "https://catbox.moe/user.php"`,
-    { timeout: 130000, encoding: 'utf8' }
-  ).trim();
-  if (!result.startsWith('https://')) {
-    throw new Error(`catbox.moe 업로드 실패: ${result}`);
+  const fileName = path.basename(filePath);
+  console.log(`[Instagram] 공개 URL 생성 중: ${fileName} (${fileSize} MB) ...`);
+
+  const services = [
+    {
+      name: '0x0.st',
+      fn: () => {
+        const r = execSync(
+          `curl -s --max-time 120 -F "file=@${filePath}" "https://0x0.st"`,
+          { timeout: 130000, encoding: 'utf8' }
+        ).trim();
+        if (!r.startsWith('https://')) throw new Error(`0x0.st 실패: ${r.slice(0, 100)}`);
+        return r;
+      },
+    },
+    {
+      name: 'transfer.sh',
+      fn: () => {
+        const r = execSync(
+          `curl -s --max-time 120 --upload-file "${filePath}" "https://transfer.sh/${fileName}"`,
+          { timeout: 130000, encoding: 'utf8' }
+        ).trim();
+        if (!r.startsWith('https://')) throw new Error(`transfer.sh 실패: ${r.slice(0, 100)}`);
+        return r;
+      },
+    },
+  ];
+
+  for (const svc of services) {
+    try {
+      const url = svc.fn();
+      console.log(`  공개 URL (${svc.name}): ${url}`);
+      return url;
+    } catch (e) {
+      console.warn(`  [경고] ${e.message} → 다음 서비스 시도`);
+    }
   }
-  console.log(`  공개 URL: ${result}`);
-  return result;
+  throw new Error('모든 파일 호스팅 서비스 실패 (0x0.st, transfer.sh)');
 }
 
 // Instagram Graph API 요청
@@ -172,8 +199,8 @@ async function main() {
     return;
   }
 
-  // 1. catbox.moe에 비디오 업로드 → 공개 URL
-  const videoUrl = uploadToCatbox(videoPath);
+  // 1. 공개 파일 호스팅에 비디오 업로드 → 공개 URL
+  const videoUrl = await uploadToPublicHost(videoPath);
 
   // 2. Reels 컨테이너 생성
   console.log('[Instagram] Reels 컨테이너 생성 중...');
