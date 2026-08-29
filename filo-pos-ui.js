@@ -110,6 +110,7 @@ function _filoPageKiosk(el){
 
  // 테이블 현황 바 실시간 로드 (5개씩)
  var _kioskTableUnsub=null;
+ var _kioskTablesCache=null; // filo_tables 캐시 (onSnapshot 재조회 방지)
 
  function _loadKioskTableBar(){
   var bar=document.getElementById('kiosk-table-bar');
@@ -148,8 +149,11 @@ function _filoPageKiosk(el){
       }
      }
     });
-    // 테이블 목록 로드
-    _db.collection('filo_tables').where('dealerId','==',did).get().then(function(tSnap){
+    // 테이블 목록 로드 (캐시 우선)
+    var tablePromise=_kioskTablesCache
+     ?Promise.resolve(_kioskTablesCache)
+     :_db.collection('filo_tables').where('dealerId','==',did).get().then(function(s){_kioskTablesCache=s;return s;});
+    tablePromise.then(function(tSnap){
      var tables=tSnap.empty?
       Array.from({length:10},function(_,i){return {num:i+1,name:'테이블 '+(i+1),status:'empty'};})
       :tSnap.docs.map(function(d){var f=d.data();return {num:f.tableNum||1,name:f.tableName||'테이블',status:f.status||'empty'};})
@@ -250,7 +254,8 @@ function _filoPageKiosk(el){
    menus.push(Object.assign({_id:doc.id},doc.data()));
   });
   menus.sort(function(a,b){return (a.category||'').localeCompare(b.category||'');});
-  _filoRenderKiosk(menus);
+  if(_filoPosMode()==='simple') _filoRenderKioskSimple(menus);
+  else _filoRenderKiosk(menus);
  }).catch(function(e){
   var menuEl=document.getElementById('kiosk-menu');
   if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--red);display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>메뉴 로드 실패: '+e.message+'</div>';
@@ -281,6 +286,36 @@ function _filoRenderKiosk(menus){
  '<div style="font-size:13px;font-weight:900;color:#059669;letter-spacing:-.3px;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
  (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+'</div>';
  }).join('');
+ }
+ window._kioskMenus=menus;
+}
+
+// 심플 모드: 카드형 UI (토스/페이히어 스타일)
+function _filoRenderKioskSimple(menus){
+ var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
+ var catEl=document.getElementById('kiosk-cats');
+ if(catEl){
+  catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-sm" style="border-radius:100px;background:#c9a84c;color:#0f172a;font-weight:800;border:none">전체</button>'+
+  cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:#F1F5F9;color:#475569;font-weight:700;border:1.5px solid rgba(0,0,0,.08)">'+c+'</button>';}).join('');
+ }
+ var menuEl=document.getElementById('kiosk-menu');
+ if(menuEl){
+  menuEl.innerHTML=menus.map(function(m,i){
+   var _colors=['#6366f1','#10b981','#f59e0b','#ef4444','#0891b2','#8b5cf6','#ec4899'];
+   var _ci=m.name?m.name.charCodeAt(0)%_colors.length:0;
+   var _c=_colors[_ci];
+   var _init=esc((m.name||'?').slice(0,1));
+   var imgHtml=m.imageUrl
+    ?'<img src="'+esc(m.imageUrl)+'" style="width:100%;height:88px;object-fit:cover;display:block;border-radius:14px 14px 0 0" loading="lazy" onerror="this.style.display=\'none\'">'
+    :'<div style="width:100%;height:88px;border-radius:14px 14px 0 0;background:'+_c+'1a;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:'+_c+'">'+_init+'</div>';
+   return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;cursor:pointer;display:block">'+
+   imgHtml+
+   '<div style="padding:10px 12px 12px">'+
+   '<div style="font-size:14px;font-weight:800;color:#1a1a2e;line-height:1.35;margin-bottom:4px;word-break:keep-all">'+esc(m.name)+'</div>'+
+   '<div style="font-size:16px;font-weight:900;color:#059669">₩'+m.price.toLocaleString()+'</div>'+
+   (m.stock!=null?'<div style="font-size:10px;color:#94a3b8;margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+
+   '</div></div>';
+  }).join('');
  }
  window._kioskMenus=menus;
 }

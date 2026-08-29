@@ -246,9 +246,7 @@ function _filoShowReceipt(orderId, items, total, method, methodLabel, now){
 
 
 
-// ── 주문 대기 페이지 (실시간) ──
-var _ordersUnsub = null;
-// ── 테이블 결제 통합 함수 ──────────────────────────────────────────────────────
+// ── 영수증 알림 ──────────────────────────────────────────────────────
 
 function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
   // 기존 토스트 제거
