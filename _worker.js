@@ -877,7 +877,7 @@ export default {
       const _ghJs = await _ghRes.text();
       return new Response(_ghJs, { headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0', 'Pragma': 'no-cache' } });
     }
-    if (['/filo-common.js','/filo-auth.js','/filo-margin.js','/filo-members.js','/filo-payroll2.js','/filo-payment.js','/filo-schedule.js','/filo-settings.js','/filo-pos.js','/filo-pos-core.js','/filo-pos-ui.js','/filo-table.js','/filo-qr.js','/filo-menu.js','/filo-menu-mgmt.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/filo-booking.js','/filo-memo.js','/dine.js','/dine-schedule.js','/dine-staff.js','/dine-payroll.js','/dine-sales.js','/dine-analytics.js','/dine-tax.js','/dine-member.js','/donway_landing.js','/filo-landing.js','/mbtico-ctrl.js'].indexOf(pathNoQ) !== -1) {
+    if (['/filo-common.js','/filo-auth.js','/filo-margin.js','/filo-members.js','/filo-payroll2.js','/filo-payment.js','/filo-schedule.js','/filo-settings.js','/filo-pos.js','/filo-pos-core.js','/filo-pos-ui.js','/filo-pos-pay.js','/filo-table.js','/filo-qr.js','/filo-menu.js','/filo-menu-mgmt.js','/filo-menu-image.js','/filo-menu-templates.js','/filo-order.js','/filo-inventory.js','/filo-staff.js','/filo-report.js','/filo-booking.js','/filo-memo.js','/dine.js','/dine-schedule.js','/dine-staff.js','/dine-payroll.js','/dine-sales.js','/dine-analytics.js','/dine-tax.js','/dine-member.js','/donway_landing.js','/filo-landing.js','/mbtico-ctrl.js'].indexOf(pathNoQ) !== -1) {
       return serveKVFile(env, pathNoQ.slice(1), 'application/javascript');
     }
     if (path === '/firebase-app-compat.js') {

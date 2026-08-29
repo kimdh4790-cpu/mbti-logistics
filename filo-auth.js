@@ -1073,7 +1073,7 @@ function _filoToggleSvc(k){
  var idx=_filoSelectedSvcs.indexOf(k);
  if(k==='combo'||k==='inventory'||k==='kiosk'){
  _filoSelectedSvcs=['combo'];
- if(k!=='combo') setTimeout(function(){alert('재고관리·키오스크는 콤보 플랜으로만 제공됩니다 (165,000원/월)');},100);
+ if(k!=='combo') _filoToast('재고관리·키오스크는 콤보 플랜으로만 제공됩니다 (165,000원/월)');
  } else {
  _filoSelectedSvcs=_filoSelectedSvcs.filter(function(x){return x!=='combo';});
  if(idx>=0)_filoSelectedSvcs.splice(idx,1);
