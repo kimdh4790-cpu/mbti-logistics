@@ -63,7 +63,7 @@ function _filoPageKiosk(el){
  _cartItems=[];
  var mode = _filoPosMode();
  // 모드 전환 버튼
- var modeBtn = '<button onclick="_filoPosSetMode(\''+( mode==='simple'?'pro':'simple' )+'\');_filoPageKiosk(document.getElementById(\'page-content\'))" '+
+ var modeBtn = '<button onclick="_filoPosSetMode(\''+( mode==='simple'?'pro':'simple' )+'\');_filoPageKiosk(document.getElementById(\'content\'))" '+
    'style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;font-size:11px;cursor:pointer;background:'+(mode==='simple'?'#0066ff':'#f1f5f9')+';color:'+(mode==='simple'?'#fff':'#333')+'">'+
    (mode==='simple'?'심플 모드':'프로 모드')+'</button>';
 
