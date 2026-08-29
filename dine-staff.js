@@ -455,11 +455,15 @@ function _dineLoadAttend(did){
      if(outT>ns)nightH=(outT-Math.max(inT,ns))/3600000;
      totalPay+=Math.round(h*(m.hourlyWage||MIN_WAGE)+nightH*(m.hourlyWage||MIN_WAGE)*0.5);
     });
+    var _svgUsers='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    var _svgOut='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>';
+    var _svgAlert='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    var _svgCard='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>';
     if(kpi)kpi.innerHTML=
-     '<div class="kpi-card" style="border-top:2px solid #22c55e"><div class="kpi-label">근무중</div><div class="kpi-val" style="color:#22c55e">'+working+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #38bdf8"><div class="kpi-label">퇴근</div><div class="kpi-val" style="color:#38bdf8">'+done+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #ef4444"><div class="kpi-label">미출근</div><div class="kpi-val" style="color:#ef4444">'+absent+'명</div></div>'+
-     '<div class="kpi-card" style="border-top:2px solid #f59e0b"><div class="kpi-label">예상급여</div><div class="kpi-val" style="color:#f59e0b;font-size:13px">₩'+totalPay.toLocaleString()+'</div></div>';
+     '<div class="kpi-card" style="border-left:3px solid #22c55e;padding-left:13px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;color:#22c55e">'+_svgUsers+'<span class="kpi-label" style="margin-bottom:0;color:#22c55e">근무중</span></div><div class="kpi-val" style="color:#22c55e;font-variant-numeric:tabular-nums">'+working+'<span style="font-size:12px;font-weight:600;margin-left:2px">명</span></div></div>'+
+     '<div class="kpi-card" style="border-left:3px solid #38bdf8;padding-left:13px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;color:#38bdf8">'+_svgOut+'<span class="kpi-label" style="margin-bottom:0;color:#38bdf8">퇴근</span></div><div class="kpi-val" style="color:#38bdf8;font-variant-numeric:tabular-nums">'+done+'<span style="font-size:12px;font-weight:600;margin-left:2px">명</span></div></div>'+
+     '<div class="kpi-card" style="border-left:3px solid #ef4444;padding-left:13px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;color:#ef4444">'+_svgAlert+'<span class="kpi-label" style="margin-bottom:0;color:#ef4444">미출근</span></div><div class="kpi-val" style="color:#ef4444;font-variant-numeric:tabular-nums">'+absent+'<span style="font-size:12px;font-weight:600;margin-left:2px">명</span></div></div>'+
+     '<div class="kpi-card" style="border-left:3px solid #c9a84c;padding-left:13px"><div style="display:flex;align-items:center;gap:5px;margin-bottom:6px;color:#c9a84c">'+_svgCard+'<span class="kpi-label" style="margin-bottom:0;color:#c9a84c">예상급여</span></div><div class="kpi-val" style="color:#c9a84c;font-size:15px;font-variant-numeric:tabular-nums">₩'+totalPay.toLocaleString()+'</div></div>';
     var tbl=document.getElementById('att-table');if(!tbl)return;
     var allIds=[...new Set([...allMem.map(function(m){return m.id;}),...Object.keys(ins)])];
     if(!allIds.length){tbl.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 직원 없음</div>';return;}
@@ -474,17 +478,18 @@ function _dineLoadAttend(did){
     function renderAttPage(page){
      window._attPage=page;
      var pageIds=activeIds.slice(page*ATT_PAGE_SIZE,(page+1)*ATT_PAGE_SIZE);
+     var _thStyle='padding:10px 8px;font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--t3);white-space:nowrap';
      var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">'+
-      '<thead><tr style="border-bottom:2px solid var(--bd);background:var(--bg3)">'+
-      '<th style="padding:8px;text-align:left">이름</th>'+
-      '<th style="padding:8px;text-align:left">파트</th>'+
-      '<th style="padding:8px;text-align:center">출근</th>'+
-      '<th style="padding:8px;text-align:center">퇴근</th>'+
-      '<th style="padding:8px;text-align:center">근무시간</th>'+
-      '<th style="padding:8px;text-align:center">야간</th>'+
-      '<th style="padding:8px;text-align:right">예상급여</th>'+
-      '<th style="padding:8px;text-align:center">상태</th>'+
-      '<th style="padding:8px;text-align:center">수정</th>'+
+      '<thead><tr style="border-bottom:2px solid var(--bd2);background:rgba(8,16,31,.04)">'+
+      '<th style="'+_thStyle+';text-align:left">이름</th>'+
+      '<th style="'+_thStyle+';text-align:left">파트</th>'+
+      '<th style="'+_thStyle+';text-align:center">출근</th>'+
+      '<th style="'+_thStyle+';text-align:center">퇴근</th>'+
+      '<th style="'+_thStyle+';text-align:center">근무</th>'+
+      '<th style="'+_thStyle+';text-align:center">야간</th>'+
+      '<th style="'+_thStyle+';text-align:right">예상급여</th>'+
+      '<th style="'+_thStyle+';text-align:center">상태</th>'+
+      '<th style="'+_thStyle+';text-align:center;padding-right:4px"></th>'+
       '</tr></thead><tbody>';
      pageIds.forEach(function(id){
       var m=memMap[id]||{};
@@ -514,16 +519,16 @@ function _dineLoadAttend(did){
        '<td style="padding:8px"><span style="font-size:10px;font-weight:700;color:'+partColor+'">'+({'kitchen':'주방','hall':'홀','management':'관리'}[m.part]||'-')+'</span></td>'+
        '<td style="padding:8px;text-align:center">'+(inT?'<span>'+inT.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>':'<span style="color:#ef4444">-</span>')+'</td>'+
        '<td style="padding:8px;text-align:center">'+(outT?outT.toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'}):isWorking?'<span style="color:#22c55e;font-weight:700">근무중</span>':'-')+'</td>'+
-       '<td style="padding:8px;text-align:center;font-weight:700;color:var(--br)">'+(diffH?diffH+'h':'-')+'</td>'+
-       '<td style="padding:8px;text-align:center;color:#f59e0b">'+(nightH?nightH+'h':'-')+'</td>'+
-       '<td style="padding:8px;text-align:right;font-weight:700;color:#22c55e">'+(estPay?'₩'+estPay.toLocaleString():'-')+'</td>'+
+       '<td style="padding:8px;text-align:center;font-weight:700;color:var(--br);font-variant-numeric:tabular-nums">'+(diffH?diffH+'h':'-')+'</td>'+
+       '<td style="padding:8px;text-align:center;color:#f59e0b;font-variant-numeric:tabular-nums">'+(nightH?nightH+'h':'-')+'</td>'+
+       '<td style="padding:8px;text-align:right;font-weight:800;color:#22c55e;font-variant-numeric:tabular-nums">'+(estPay?'₩'+estPay.toLocaleString():'-')+'</td>'+
        '<td style="padding:8px;text-align:center">'+
-       (isWorking?'<span style="font-size:10px;font-weight:700;background:rgba(34,197,94,.15);color:#22c55e;border-radius:20px;padding:2px 8px">● 근무중</span>':
-        isAbsent?'<span style="font-size:10px;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border-radius:20px;padding:2px 8px">미출근</span>':
-        '<span style="font-size:10px;color:var(--t3)">완료</span>')+
+       (isWorking?'<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;background:rgba(34,197,94,.1);color:#22c55e;border-radius:20px;padding:3px 9px;border:1px solid rgba(34,197,94,.2)"><span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulse 1.5s infinite"></span>근무중</span>':
+        isAbsent?'<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;background:rgba(239,68,68,.07);color:#ef4444;border-radius:20px;padding:3px 9px;border:1px solid rgba(239,68,68,.15)"><span style="width:5px;height:5px;border-radius:50%;background:#ef4444;display:inline-block"></span>미출근</span>':
+        '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;background:rgba(56,189,248,.07);color:#38bdf8;border-radius:20px;padding:3px 9px;border:1px solid rgba(56,189,248,.15)"><span style="width:5px;height:5px;border-radius:50%;background:#38bdf8;display:inline-block"></span>퇴근</span>')+
        '</td>'+
        '<td style="padding:8px;text-align:center">'+
-       '<button data-mid="'+id+'" data-dt="'+date+'" onclick="_dineAttendEdit(this.dataset.mid,this.dataset.dt)" style="font-size:9px;padding:2px 7px;border:1px solid var(--bd);border-radius:5px;background:transparent;color:var(--t3);cursor:pointer">수정</button>'+
+       '<button data-mid="'+id+'" data-dt="'+date+'" onclick="_dineAttendEdit(this.dataset.mid,this.dataset.dt)" title="출퇴근 수정" style="width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--bd2);border-radius:8px;background:transparent;cursor:pointer;color:var(--t3)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
        '</td></tr>';
      });
      html+='</tbody></table></div>';
