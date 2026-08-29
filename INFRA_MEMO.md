@@ -186,3 +186,5 @@ claude
 | 2026-08-28 | 최초 생성 (Oracle Cloud, GitHub Actions, 플러그인, OmniRoute 정보 통합) |
 | 2026-08-28 | OmniRoute에 Gemini(53개)·Groq(14개) API 키 등록 완료. 총 79개 무료 모델 활성화 |
 | 2026-08-28 | Motion Graphics 스킬 4종 + Remotion 공식 12종 설치. Context7 MCP 등록 |
+| 2026-08-29 | n8n v2.8.4 Oracle Cloud VM 영구 설치 완료 (http://161.33.136.154:5678, admin/Mbtico2026!, crontab @reboot 자동시작, 라이선스 활성화) |
+| 2026-08-29 | Oracle Cloud VCN Security List TCP 5678 Ingress Rule 추가 (n8n 외부 접속용) |
