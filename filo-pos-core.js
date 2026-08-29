@@ -82,7 +82,12 @@ function _cartRender(){
  if(ppb){
   var totalQty=_cartItems.reduce(function(s,c){return s+c.qty;},0);
   ppb.style.display='flex';
-  if(ppbCount)ppbCount.textContent=totalQty+'개 선택 · 결제 대기';
+  if(ppbCount){
+   var _names=_cartItems.map(function(c){return c.name+(c.qty>1?' ×'+c.qty:'');});
+   var _nameStr=_names.length===1?_names[0]:_names.length===2?_names.join(', '):(_names[0]+', '+_names[1]+' 외 '+(_names.length-2)+'개');
+   ppbCount.innerHTML='<span style="font-size:12px;color:#e2e8f0;font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_nameStr+'</span>'+
+    '<span style="font-size:10px;color:#64748b">총 '+totalQty+'개 선택 · 결제 대기</span>';
+  }
   if(ppbTotal)ppbTotal.textContent='₩'+total.toLocaleString();
  }
 }

@@ -8,6 +8,7 @@
  */
 // 의존성: filo-common.js, filo-pos-core.js, filo-pos-ui.js
 // 관련 컬렉션: filo_payments, filo_sales, filo_orders
+var _lastPosSaleRef=null; // 결제 후 취소용 마지막 sale 참조
 function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds){
  if(!items||!items.length||total<=0)return;
  var now=new Date();
@@ -35,7 +36,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
    tableNum:tableNum, tableName:tableName,
    payMethod:method, payType:'table', status:'done',
    date:today, createdAt:now.toISOString(), paidAt:now.toISOString()
-  }).catch(function(e){console.warn('[filo_sales]',e.message);});
+  }).then(function(ref){ _lastPosSaleRef=ref; }).catch(function(e){console.warn('[filo_sales]',e.message);});
 
   // 3. 전체 결제 완료 확인 → filo_orders cleared
   if(orderIds&&orderIds.length){
@@ -277,6 +278,29 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
     'border-radius:10px;color:#fff;font-size:13px;font-weight:800;cursor:pointer';
   sendBtn.textContent = '\ud83e\uddfe \uc601\uc218\uc99d \ubc1c\uc1a1';
   row.appendChild(sendBtn);
+
+  // 주문 취소 버튼
+  var cancelPayBtn = document.createElement('button');
+  cancelPayBtn.style.cssText = 'flex:1;padding:9px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);' +
+    'border-radius:10px;color:#ef4444;font-size:12px;font-weight:800;cursor:pointer';
+  cancelPayBtn.textContent = '\uC8FC\uBB38 \uCDE8\uC18C';
+  cancelPayBtn.onclick = function(){
+    if(!confirm('\uACB0\uC81C\uB97C \uCDE8\uC18C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\n\uACB0\uC81C \uAE30\uB85D\uC774 \uCDE8\uC18C \uCC98\uB9AC\uB429\uB2C8\uB2E4.'))return;
+    var tasks=[];
+    if(_lastPosSaleRef) tasks.push(_lastPosSaleRef.update({status:'cancel',cancelledAt:new Date().toISOString()}));
+    tasks.push(
+      _db.collection('filo_payments').where('dealerId','==',did).where('tableNum','==',tableNum)
+        .where('date','==',new Date().toISOString().slice(0,10)).orderBy('paidAt','desc').limit(1).get()
+        .then(function(snap){
+          if(!snap.empty) return snap.docs[0].ref.update({status:'cancel',cancelledAt:new Date().toISOString()});
+        })
+    );
+    Promise.all(tasks).then(function(){
+      popup.remove(); _lastPosSaleRef=null;
+      _filoToast('\uC8FC\uBB38\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4');
+    }).catch(function(e){_filoToast('\uCDE8\uC18C \uC2E4\uD328: '+e.message);});
+  };
+  row.appendChild(cancelPayBtn);
 
   // 닫기 버튼
   var closeBtn = document.createElement('button');

@@ -80,6 +80,7 @@ function _filoConfirmPay(method, methodLabel){
  };
  // filo_sales에 저장
  _db.collection('filo_sales').add(saveData).then(function(ref){
+  if(typeof _lastPosSaleRef!=='undefined') window._lastPosSaleRef=ref;
   // 테이블 선택 시 filo_orders에도 저장 (테이블 현황 연동)
   if(tableId){
    _db.collection('filo_orders').add(Object.assign({},saveData,{
