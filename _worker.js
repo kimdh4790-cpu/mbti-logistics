@@ -833,6 +833,7 @@ async function syncKVFromGitHub(env) {
 export default {
   // scheduled: KV sync moved to main scheduled handler below
   async fetch(request, env) {
+    try {
     _env_ref = env;
     const url      = new URL(request.url);
     const path     = url.pathname;
@@ -4746,6 +4747,32 @@ ${JSON.stringify(postSummary)}
           return Response.json({error:e.message});
         }
       }
+      // /api/errors — Worker 런타임 오류 조회 (슈퍼어드민 전용)
+      if (path === '/api/errors' && method === 'GET') {
+        const _errAdmin = await requireAdmin(request, env);
+        if (!_errAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
+        try {
+          const token = await getAccessToken(env);
+          const limit = parseInt(new URL(request.url).searchParams.get('limit')||'50');
+          const res = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{
+              from:[{collectionId:'filo_errors'}],
+              orderBy:[{field:{fieldPath:'ts'},direction:'DESCENDING'}],
+              limit
+            }})
+          });
+          const rows = await res.json();
+          const errors = (Array.isArray(rows)?rows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            return {ts:f.ts?.stringValue,path:f.path?.stringValue,method:f.method?.stringValue,
+              hostname:f.hostname?.stringValue,message:f.message?.stringValue,stack:f.stack?.stringValue};
+          });
+          return Response.json({ok:true,errors});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
       // /admin/cleanup-dup-orders — filo_sales 테이블 중복 주문 삭제
       if (path === '/admin/cleanup-dup-orders' && request.method === 'POST') {
         const _cleanAdmin = await requireAdmin(request, env);
@@ -12126,6 +12153,26 @@ service cloud.firestore {
     // ★ 시뮬레이터 파일은 iframe 허용 (랜딩페이지 팝업용)
     const isSimulator = url.pathname.includes('시뮬레이터') || url.pathname.includes('%EC%8B%9C%EB%AE%AC%EB%A0%88%EC%9D%B4%ED%84%B0');
     return addSecurityHeaders(assetResp, isSimulator);
+    } catch(e) {
+      console.error('[worker-error]', request.method, new URL(request.url).pathname, e.message);
+      try {
+        const _et = await getAccessToken(env).catch(()=>null);
+        if(_et){
+          const _eu=new URL(request.url);
+          await fsAdd(_et,'filo_errors',{
+            ts:{stringValue:new Date().toISOString()},
+            path:{stringValue:_eu.pathname.slice(0,200)},
+            method:{stringValue:request.method},
+            hostname:{stringValue:_eu.hostname},
+            message:{stringValue:(e.message||String(e)).slice(0,500)},
+            stack:{stringValue:(e.stack||'').slice(0,800)}
+          }).catch(()=>{});
+        }
+      } catch(_){}
+      return new Response(JSON.stringify({error:'서버 오류가 발생했습니다',path:new URL(request.url).pathname}),{
+        status:500,headers:{'content-type':'application/json','access-control-allow-origin':'*'}
+      });
+    }
   },
 
   // Cloudflare Cron Trigger — 매일 01:00 UTC (한국 10:00 KST)

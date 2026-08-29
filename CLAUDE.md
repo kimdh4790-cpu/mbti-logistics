@@ -343,6 +343,14 @@ cd mbtico-pages && npx wrangler deploy
 - filo-menu.js 분리 완료: filo-menu-image.js(이미지·번역) + filo-menu-templates.js(템플릿+시딩) + filo-menu.js(원가·재고·코어만, ~55KB→~7KB)
 - filo-pos-ui.js 분리 완료: filo-pos-ui.js(키오스크 렌더링·모드, ~15KB) + filo-pos-pay.js(결제·영수증·고객화면, ~28KB) (44KB→2파일)
 
+### ✅ 완료 (2026-08-29 자동 오류 탐지 시스템 구축)
+- _worker.js: 메인 fetch 핸들러 전체 try-catch 래퍼 추가 → 런타임 오류 Firestore(filo_errors) 자동 기록
+- _worker.js: /api/errors GET 엔드포인트 추가 (슈퍼어드민 전용, filo_errors 최근 50건 조회)
+- Claude Code Remote Routine 생성: 매주 월요일 09:00 KST 코드 스캔+자동 수정+push
+  - Routine ID: trig_017v7VeuyqrwpjM3UKt2dGVj
+  - 스캔 패턴: alert()→toast, null가드 누락, Promise→string 대입, 함수 인수 불일치 등
+  - 완료 시 push notifications 발송
+
 ### ✅ 완료 (2026-08-29 버그 스캔+수정)
 - alert()/toast 교체: filo-auth.js, filo-qr.js 4곳
 - _worker.js KV allowlist: filo-pos-pay.js, filo-menu-image.js, filo-menu-templates.js 추가 (404 수정)
