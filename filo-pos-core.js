@@ -51,28 +51,39 @@ function _cartRender(){
  var totalEl=document.getElementById('cart-total');
  if(!list)return;
  if(!_cartItems.length){
- list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">메뉴를 선택하세요</div>';
- if(totalEl)totalEl.textContent='₩0';
- return;
+  list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">메뉴를 선택하세요</div>';
+  if(totalEl)totalEl.textContent='₩0';
+  var ppb=document.getElementById('pos-pay-bar');if(ppb)ppb.style.display='none';
+  return;
  }
  var rawTotal=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
  var discount=window._posDiscount||0;
  var total=Math.max(0,rawTotal-discount);
- window._posDiscount=0; /* 결제 후 초기화 */
+ window._posDiscount=0;
  list.innerHTML=_cartItems.map(function(c,i){
- return '<div class="cart-item">'+
- '<div style="flex:1">'+
- '<div style="font-size:13px;font-weight:700">'+esc(c.name)+'</div>'+
- '<div style="font-size:12px;color:var(--t3)">₩'+c.price.toLocaleString()+'</div></div>'+
- '<div style="display:flex;align-items:center;gap:6px">'+
- '<button class="qty-btn" onclick="_cartQty('+i+',-1)">−</button>'+
- '<span style="font-size:14px;font-weight:900;min-width:20px;text-align:center">'+c.qty+'</span>'+
- '<button class="qty-btn" onclick="_cartQty('+i+',1)">+</button></div></div>';
+  return '<div class="cart-item">'+
+  '<div style="flex:1">'+
+  '<div style="font-size:13px;font-weight:700">'+esc(c.name)+'</div>'+
+  '<div style="font-size:12px;color:var(--t3)">₩'+c.price.toLocaleString()+'</div></div>'+
+  '<div style="display:flex;align-items:center;gap:6px">'+
+  '<button class="qty-btn" onclick="_cartQty('+i+',-1)">−</button>'+
+  '<span style="font-size:14px;font-weight:900;min-width:20px;text-align:center">'+c.qty+'</span>'+
+  '<button class="qty-btn" onclick="_cartQty('+i+',1)">+</button></div></div>';
  }).join('');
  if(totalEl){
- totalEl.textContent='₩'+total.toLocaleString();
- totalEl.style.transform='scale(1.1)';
- setTimeout(function(){totalEl.style.transform='';},200);
+  totalEl.textContent='₩'+total.toLocaleString();
+  totalEl.style.transform='scale(1.1)';
+  setTimeout(function(){totalEl.style.transform='';},200);
+ }
+ // 모바일 하단 고정 결제 바 동기화
+ var ppb=document.getElementById('pos-pay-bar');
+ var ppbCount=document.getElementById('ppb-count');
+ var ppbTotal=document.getElementById('ppb-total');
+ if(ppb){
+  var totalQty=_cartItems.reduce(function(s,c){return s+c.qty;},0);
+  ppb.style.display='flex';
+  if(ppbCount)ppbCount.textContent=totalQty+'개 선택 · 결제 대기';
+  if(ppbTotal)ppbTotal.textContent='₩'+total.toLocaleString();
  }
 }
 
