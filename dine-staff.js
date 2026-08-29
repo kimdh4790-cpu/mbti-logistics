@@ -717,20 +717,67 @@ function _dineAttendSave(memberId,date,inDocId,outDocId){
 
 /* ── 직원 대시보드 ── */
 /* ── 상황별 응원 메시지 ── */
-function _dineCheerMsg(){
+/* 스케줄 인식 응원 메시지 — sch가 있으면 시프트 상대 위치로, 없으면 절대 시각 폴백 */
+function _dineCheerMsg(sch){
  var now=new Date();
  var h=now.getHours(),m=now.getMinutes(),d=now.getDate(),dow=now.getDay();
  var hm=h*100+m;
  var payday=(_CU.company&&_CU.company.payday)||25;
  var name=(_CU.name||'').split(' ')[0]||'';
- if(d===payday) return {bg:'linear-gradient(135deg,#c9a84c,#a67c2e)',emoji:'🎉',msg:'오늘 월급날이야'+( name?' '+name+'!' : '!'),sub:'이번 달도 진짜 고생했어. 오늘은 하고 싶은 거 다 해~'};
+ /* 월급날 최우선 */
+ if(d===payday) return {bg:'linear-gradient(135deg,#c9a84c,#a67c2e)',emoji:'🎉',msg:'오늘 월급날이야'+(name?' '+name+'!':'!'),sub:'이번 달도 진짜 고생했어. 오늘은 하고 싶은 거 다 해~'};
+ /* 스케줄 있으면 시프트 내 상대 위치로 판단 */
+ if(sch&&sch.startTime&&sch.endTime){
+  var sp=sch.startTime.split(':'),ep=sch.endTime.split(':');
+  var startM=parseInt(sp[0])*60+(parseInt(sp[1])||0);
+  var endM=parseInt(ep[0])*60+(parseInt(ep[1])||0);
+  var nowM=h*60+m;
+  if(endM<=startM)endM+=1440; /* 야간 자정 넘김 */
+  if(nowM<startM&&endM>1440)nowM+=1440;
+  var dur=endM-startM;
+  var elapsed=nowM-startM;
+  var ratio=dur>0?elapsed/dur:0.5;
+  var startH=parseInt(sp[0]);
+  var isMorn=(startH>=5&&startH<12);
+  var isEve=(startH>=12&&startH<20);
+  var isNight=(startH>=20||startH<5);
+  /* 출근 직후 (비율 12% 미만 또는 아직 시프트 전) */
+  if(ratio<0.12){
+   var greets=[
+    {emoji:'☕',msg:'왔어? 오늘도 잘 부탁해'+(name?' '+name+'~':'~'),sub:'천천히 시작해도 돼. 커피 한 잔하고 가자'},
+    {emoji:'🌅',msg:'나와줬네'+(name?' '+name+'!':'!'),sub:'시작이 반이야. 그냥 흘러가다 보면 다 돼'},
+    {emoji:'👋',msg:'안녕'+(name?' '+name+'!':'!'),sub:'오늘도 같이 잘 해보자. 잘 부탁해'}
+   ];
+   var g=greets[d%3];
+   return Object.assign({bg:'linear-gradient(135deg,#06b6d4,#0891b2)'},g);
+  }
+  /* 퇴근 직전 (비율 85% 이상) */
+  if(ratio>=0.85){
+   var ends=[
+    {emoji:'🏁',msg:'거의 다 왔어! 조금만 더',sub:'퇴근까지 얼마 안 남았어. 마무리 잘 하고 가'},
+    {emoji:'🎯',msg:'끝이 보인다, 힘내!',sub:'이 구간이 제일 길게 느껴지는데 — 진짜 얼마 없어'}
+   ];
+   var e=ends[d%2];
+   return Object.assign({bg:'linear-gradient(135deg,#16a34a,#15803d)'},e);
+  }
+  /* 후반전 (65~84%) */
+  if(ratio>=0.65){
+   return {bg:'linear-gradient(135deg,#8b5cf6,#6d28d9)',emoji:'💪',msg:'후반전이야, 마무리 잘 하자!',sub:'지금이 제일 힘든 구간인데 — 거의 다 왔거든'};
+  }
+  /* 피크 시간 — 본인 시프트 타입에 맞는 것만 */
+  if(isMorn&&h>=11&&h<14) return {bg:'linear-gradient(135deg,#f97316,#ea580c)',emoji:'🔥',msg:'점심 피크야, 힘내!',sub:'조금만 버텨봐. 이 시간 지나면 좀 한숨 돌려'};
+  if((isEve||isNight)&&h>=18&&h<21) return {bg:'linear-gradient(135deg,#f97316,#ea580c)',emoji:'🔥',msg:'저녁 러시야, 힘내!',sub:'이 시간만 넘기면 돼. 거의 다 왔어'};
+  if(isNight&&(h>=23||h<3)) return {bg:'linear-gradient(135deg,#475569,#334155)',emoji:'🌙',msg:'야간이지만 수고 많아',sub:'이 시간대 진짜 쉽지 않은데 대단해. 조금만 더'};
+  /* 중반 — 시프트 내 별 이슈 없는 구간 */
+  return {bg:'linear-gradient(135deg,#16a34a,#15803d)',emoji:'👍',msg:'잘 하고 있어'+(name?' '+name+'~':'~'),sub:'이 페이스로 그냥 가면 돼. 어렵지 않아'};
+ }
+ /* 스케줄 없을 때 — 절대 시각 기반 폴백 */
  if(hm>=1130&&hm<1330) return {bg:'linear-gradient(135deg,#f97316,#ea580c)',emoji:'🔥',msg:'지금 점심 피크야, 힘내!',sub:'조금만 버텨봐. 이 시간 지나면 좀 한숨 돌려'};
  if(hm>=1730&&hm<2100) return {bg:'linear-gradient(135deg,#8b5cf6,#6d28d9)',emoji:'💪',msg:'저녁 러시, 거의 다 왔어!',sub:'조금만 더 — 끝나면 맛있는 거 먹자'};
  if(dow===1&&hm<1000) return {bg:'linear-gradient(135deg,#0ea5e9,#0284c7)',emoji:'😤',msg:'월요일... 그래도 왔잖아',sub:'오늘 하루만 잘 버티면 나머지는 금방이야'};
  if(dow===5&&hm>=1700) return {bg:'linear-gradient(135deg,#16a34a,#15803d)',emoji:'🙌',msg:'금요일 마무리야!',sub:'오늘 다 끝내고 주말 마음 편히 즐겨'};
- if(h>=9&&h<11) return {bg:'linear-gradient(135deg,#06b6d4,#0891b2)',emoji:'☕',msg:'왔어? 오늘도 잘 부탁해',sub:'커피 한 잔하고 시작하자'};
  if(h>=22||h<5) return {bg:'linear-gradient(135deg,#475569,#334155)',emoji:'🌙',msg:'이 시간에도 수고가 많다',sub:'오늘 하루 진짜 고생했어. 빨리 쉬어'};
- return {bg:'linear-gradient(135deg,#16a34a,#15803d)',emoji:'👋',msg:'오늘도 잘 부탁해'+( name?' '+name+'~' : '~'),sub:'천천히 해도 돼. 같이 하면 다 잘 되거든'};
+ return {bg:'linear-gradient(135deg,#16a34a,#15803d)',emoji:'👋',msg:'오늘도 잘 부탁해'+(name?' '+name+'~':'~'),sub:'천천히 해도 돼. 같이 하면 다 잘 되거든'};
 }
 
 function _dineStaffDashboard(el){
@@ -905,21 +952,29 @@ function _staffLoadClock(did,sid,todayStr){
   var wageType=memFields&&memFields.wageType?memFields.wageType.stringValue:'hourly';
   var inner=document.getElementById('staff-clock-inner');
   if(!inner)return;
-  /* 휴무일 — 스케줄 없고 출근 기록도 없으면 응원 카드를 휴식 멘트로 교체 */
-  if(!sch&&!inDoc){
-   var offMsgs=[
-    {emoji:'🌿',msg:'오늘은 쉬는 날이야',sub:'폰 내려놓고 그냥 편하게 있어. 아무것도 안 해도 돼'},
-    {emoji:'☀️',msg:'오늘은 그냥 나만의 날',sub:'먹고 싶은 거 먹고, 보고 싶은 거 봐. 그게 다야'},
-    {emoji:'💤',msg:'오늘은 빠짝 쉬어',sub:'잘 쉬어야 다음에도 잘 할 수 있거든. 진심으로 완전 OFF해'},
-    {emoji:'🎧',msg:'오늘은 아무 생각 하지 마',sub:'일 걱정은 내일부터. 지금은 그냥 너 시간이야'}
-   ];
-   var om=offMsgs[today.getDate()%offMsgs.length];
-   var cc=document.getElementById('staff-cheer-card');
-   if(cc){
-    cc.style.background='linear-gradient(135deg,#334155,#1e293b)';
-    var em=document.getElementById('staff-cheer-emoji');if(em)em.textContent=om.emoji;
-    var mmsg=document.getElementById('staff-cheer-msg');if(mmsg)mmsg.textContent=om.msg;
-    var msub=document.getElementById('staff-cheer-sub');if(msub)msub.textContent=om.sub;
+  /* 응원 카드 업데이트 — 스케줄 데이터 확보 후 개인화 */
+  var cc2=document.getElementById('staff-cheer-card');
+  if(cc2){
+   if(!sch&&!inDoc){
+    /* 휴무일 */
+    var offMsgs=[
+     {emoji:'🌿',msg:'오늘은 쉬는 날이야',sub:'폰 내려놓고 그냥 편하게 있어. 아무것도 안 해도 돼'},
+     {emoji:'☀️',msg:'오늘은 그냥 나만의 날',sub:'먹고 싶은 거 먹고, 보고 싶은 거 봐. 그게 다야'},
+     {emoji:'💤',msg:'오늘은 빠짝 쉬어',sub:'잘 쉬어야 다음에도 잘 할 수 있거든. 진심으로 완전 OFF해'},
+     {emoji:'🎧',msg:'오늘은 아무 생각 하지 마',sub:'일 걱정은 내일부터. 지금은 그냥 너 시간이야'}
+    ];
+    var om=offMsgs[today.getDate()%offMsgs.length];
+    cc2.style.background='linear-gradient(135deg,#334155,#1e293b)';
+    var em2=document.getElementById('staff-cheer-emoji');if(em2)em2.textContent=om.emoji;
+    var mmsg2=document.getElementById('staff-cheer-msg');if(mmsg2)mmsg2.textContent=om.msg;
+    var msub2=document.getElementById('staff-cheer-sub');if(msub2)msub2.textContent=om.sub;
+   } else {
+    /* 근무일 — 스케줄 기반 개인화 멘트로 교체 */
+    var pcm=_dineCheerMsg(sch);
+    cc2.style.background=pcm.bg;
+    var em3=document.getElementById('staff-cheer-emoji');if(em3)em3.textContent=pcm.emoji;
+    var mmsg3=document.getElementById('staff-cheer-msg');if(mmsg3)mmsg3.textContent=pcm.msg;
+    var msub3=document.getElementById('staff-cheer-sub');if(msub3)msub3.textContent=pcm.sub;
    }
   }
   var badge=isIn?'<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(22,163,74,.12);color:#16a34a;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700"><span style="width:6px;height:6px;background:#16a34a;border-radius:50%;display:inline-block"></span>근무중</span>':
