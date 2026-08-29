@@ -1,16 +1,12 @@
 /**
- * Instagram Graph API Reels 업로드
+ * Instagram Graph API Reels 업로드 — Resumable Upload 방식
+ * (공개 URL 불필요, 파일을 Meta 서버에 직접 전송)
+ *
  * 사용법: node upload-instagram-api.js --product filo [--dry-run]
  *
- * 필요 환경변수 (Oracle Cloud ~/.env 또는 GitHub Secrets):
+ * 필요 환경변수:
  *   INSTAGRAM_ACCESS_TOKEN=...  (Meta Business 장기 액세스 토큰)
  *   INSTAGRAM_ACCOUNT_ID=...   (Instagram 비즈니스 계정 ID)
- *
- * 설정 방법:
- *   1. Meta Developer → 앱 생성 → instagram_basic, instagram_content_publish 권한
- *   2. Instagram 계정을 비즈니스/크리에이터로 전환 + Facebook 페이지 연결
- *   3. 토큰 발급 → ~/.env 또는 GitHub Secrets에 저장
- *   4. 비디오는 0x0.st → transfer.sh 순서로 공개 URL 생성 후 Meta API 전달
  */
 
 'use strict';
@@ -18,7 +14,6 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const { execSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '../..');
 
@@ -65,50 +60,7 @@ if (meta.variants && meta.variants.length > 0) {
 const ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
 const ACCOUNT_ID = process.env.INSTAGRAM_ACCOUNT_ID;
 
-// 공개 파일 호스팅 업로드 → 공개 URL 반환 (0x0.st → transfer.sh 폴백)
-async function uploadToPublicHost(filePath) {
-  const fileSize = (fs.statSync(filePath).size / 1024 / 1024).toFixed(1);
-  const fileName = path.basename(filePath);
-  console.log(`[Instagram] 공개 URL 생성 중: ${fileName} (${fileSize} MB) ...`);
-
-  const services = [
-    {
-      name: '0x0.st',
-      fn: () => {
-        const r = execSync(
-          `curl -s --max-time 120 -F "file=@${filePath}" "https://0x0.st"`,
-          { timeout: 130000, encoding: 'utf8' }
-        ).trim();
-        if (!r.startsWith('https://')) throw new Error(`0x0.st 실패: ${r.slice(0, 100)}`);
-        return r;
-      },
-    },
-    {
-      name: 'transfer.sh',
-      fn: () => {
-        const r = execSync(
-          `curl -s --max-time 120 --upload-file "${filePath}" "https://transfer.sh/${fileName}"`,
-          { timeout: 130000, encoding: 'utf8' }
-        ).trim();
-        if (!r.startsWith('https://')) throw new Error(`transfer.sh 실패: ${r.slice(0, 100)}`);
-        return r;
-      },
-    },
-  ];
-
-  for (const svc of services) {
-    try {
-      const url = svc.fn();
-      console.log(`  공개 URL (${svc.name}): ${url}`);
-      return url;
-    } catch (e) {
-      console.warn(`  [경고] ${e.message} → 다음 서비스 시도`);
-    }
-  }
-  throw new Error('모든 파일 호스팅 서비스 실패 (0x0.st, transfer.sh)');
-}
-
-// Instagram Graph API 요청
+// Instagram Graph API 요청 (graph.facebook.com)
 function apiRequest(method, endpoint, body = null) {
   const bodyStr = body ? JSON.stringify(body) : null;
   return new Promise((resolve, reject) => {
@@ -145,7 +97,64 @@ function apiRequest(method, endpoint, body = null) {
   });
 }
 
-// 컨테이너 업로드 완료까지 polling (최대 5분)
+// Resumable Upload 세션 초기화 → container_id + upload_uri 반환
+async function initResumableUpload(caption) {
+  console.log('[Instagram] Resumable Upload 세션 초기화...');
+  const res = await apiRequest('POST', `/${ACCOUNT_ID}/media?access_token=${ACCESS_TOKEN}`, {
+    media_type: 'REELS',
+    upload_type: 'resumable',
+    caption,
+    share_to_feed: true,
+  });
+  console.log(`  컨테이너 ID: ${res.id}`);
+  console.log(`  업로드 URI: ${res.uri}`);
+  return res; // { id, uri }
+}
+
+// 파일을 Meta 서버에 직접 스트리밍 업로드
+async function uploadVideoToMeta(uploadUri, videoPath) {
+  const fileSize = fs.statSync(videoPath).size;
+  const fileSizeMB = (fileSize / 1024 / 1024).toFixed(1);
+  console.log(`[Instagram] 파일 직접 전송 중: ${path.basename(videoPath)} (${fileSizeMB} MB)`);
+
+  const url = new URL(uploadUri);
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: {
+        Authorization: `OAuth ${ACCESS_TOKEN}`,
+        offset: '0',
+        file_size: String(fileSize),
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': fileSize,
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', d => (data += d));
+      res.on('end', () => {
+        console.log(`  전송 응답 [${res.statusCode}]: ${data.slice(0, 200)}`);
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve(JSON.parse(data)); } catch { resolve({}); }
+        } else {
+          reject(new Error(`파일 전송 실패 [${res.statusCode}]: ${data.slice(0, 300)}`));
+        }
+      });
+    });
+    req.on('error', reject);
+
+    // 스트림으로 파일 전송 (메모리 절약)
+    const fileStream = fs.createReadStream(videoPath);
+    fileStream.on('error', reject);
+    fileStream.pipe(req);
+  });
+}
+
+// 컨테이너 처리 완료까지 polling (최대 5분)
 async function waitForContainer(containerId) {
   const start = Date.now();
   const maxWait = 300000;
@@ -169,12 +178,6 @@ async function main() {
     console.error('[Instagram] 오류: 환경변수 미설정');
     console.error('  INSTAGRAM_ACCESS_TOKEN — Meta Business 장기 액세스 토큰');
     console.error('  INSTAGRAM_ACCOUNT_ID   — Instagram 비즈니스 계정 ID');
-    console.error('');
-    console.error('설정 순서:');
-    console.error('  1. developers.facebook.com → 앱 생성');
-    console.error('  2. Instagram Graph API 권한: instagram_basic, instagram_content_publish');
-    console.error('  3. Instagram 계정 비즈니스/크리에이터 전환 + Facebook 페이지 연결');
-    console.error('  4. 장기 액세스 토큰 발급 → GitHub Secrets에 저장');
     process.exit(1);
   }
 
@@ -199,27 +202,20 @@ async function main() {
     return;
   }
 
-  // 1. 공개 파일 호스팅에 비디오 업로드 → 공개 URL
-  const videoUrl = await uploadToPublicHost(videoPath);
+  // 1. Resumable Upload 세션 초기화
+  const { id: containerId, uri: uploadUri } = await initResumableUpload(caption);
 
-  // 2. Reels 컨테이너 생성
-  console.log('[Instagram] Reels 컨테이너 생성 중...');
-  const container = await apiRequest('POST', `/${ACCOUNT_ID}/media?access_token=${ACCESS_TOKEN}`, {
-    media_type: 'REELS',
-    video_url: videoUrl,
-    caption,
-    share_to_feed: true,
-  });
-  console.log(`  컨테이너 ID: ${container.id}`);
+  // 2. 파일을 Meta 서버에 직접 전송
+  await uploadVideoToMeta(uploadUri, videoPath);
 
-  // 3. 업로드 완료 대기
+  // 3. 처리 완료 대기
   console.log('[Instagram] 업로드 처리 중 (최대 5분)...');
-  await waitForContainer(container.id);
+  await waitForContainer(containerId);
 
   // 4. 게시
   console.log('[Instagram] 게시 중...');
   const result = await apiRequest('POST', `/${ACCOUNT_ID}/media_publish?access_token=${ACCESS_TOKEN}`, {
-    creation_id: container.id,
+    creation_id: containerId,
   });
 
   const mediaId = result.id;
@@ -230,7 +226,6 @@ async function main() {
     mediaId,
     product,
     caption: caption.slice(0, 150),
-    videoUrl,
     uploadedAt: new Date().toISOString(),
   }, null, 2));
   console.log(`  결과 저장: ${resultPath}`);
