@@ -630,6 +630,46 @@ function _filoSeedDefaultMenusManual(){
  }).catch(function(e){_filoToast(e.message);});
 }
 
+/* ── 메뉴 이미지 일괄 갱신 (Pollinations → Pexels) ── */
+function _filoRefreshAllMenuImages(did, btn){
+ if(btn){btn.disabled=true;btn.textContent='갱신 중...';}
+ _db.collection('filo_menus').where('dealerId','==',did).get()
+ .then(function(snap){
+  var menus=[];
+  snap.forEach(function(doc){menus.push(Object.assign({_id:doc.id},doc.data()));});
+  var need=menus.filter(function(m){
+   return !m.imageUrl||m.imageUrl.indexOf('pollinations.ai')>=0;
+  });
+  if(!need.length){
+   if(btn){btn.disabled=false;btn.textContent='이미지 일괄 갱신';}
+   _filoToast('갱신할 이미지가 없습니다 (이미 Pexels 적용됨)');
+   return;
+  }
+  _filoToast(need.length+'개 메뉴 이미지 갱신 시작...');
+  var idx=0;
+  function next(){
+   if(idx>=need.length){
+    if(btn){btn.disabled=false;btn.textContent='이미지 갱신 완료';}
+    _filoToast('이미지 일괄 갱신 완료!');
+    return;
+   }
+   var m=need[idx++];
+   var q=m.name;
+   _filoFetchMenuImage(q).then(function(url){
+    if(!url)return;
+    return _db.collection('filo_menus').doc(m._id).update({imageUrl:url});
+   }).catch(function(){}).then(function(){
+    if(btn)btn.textContent='갱신 중... ('+idx+'/'+need.length+')';
+    setTimeout(next,800);
+   });
+  }
+  next();
+ }).catch(function(e){
+  _filoToast('오류: '+e.message);
+  if(btn){btn.disabled=false;btn.textContent='이미지 일괄 갱신';}
+ });
+}
+
 /* ── 번역 일괄 생성 ── */
 function _filoBatchTranslate(did, btn){
  if(btn){btn.disabled=true;btn.textContent='번역 중...';}

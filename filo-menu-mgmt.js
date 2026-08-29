@@ -45,6 +45,23 @@ function _filoPageMenuMgmt(el){
  xlsInput.onchange=function(){ _filoImportMenuExcel(this); };
  xlsLabel.appendChild(xlsInput);
  hdr.appendChild(xlsLabel);
+
+ // ★ 이미지 일괄 갱신 버튼 (Pollinations → Pexels)
+ var imgBtn=document.createElement('button');
+ imgBtn.className='btn btn-sm';
+ imgBtn.style.cssText='background:#0891b2;color:#fff;font-size:12px';
+ imgBtn.textContent='이미지 일괄 갱신';
+ (function(b){imgBtn.onclick=function(){_filoRefreshAllMenuImages(did,b);};})(imgBtn);
+ hdr.appendChild(imgBtn);
+
+ // ★ 번역 일괄생성 버튼
+ var trBtn=document.createElement('button');
+ trBtn.className='btn btn-sm';
+ trBtn.style.cssText='background:#7c3aed;color:#fff;font-size:12px';
+ trBtn.textContent='번역 일괄생성';
+ (function(b){trBtn.onclick=function(){_filoBatchTranslate(did,b);};})(trBtn);
+ hdr.appendChild(trBtn);
+
  wrap.appendChild(hdr);
 
  /* 카테고리 관리 */
