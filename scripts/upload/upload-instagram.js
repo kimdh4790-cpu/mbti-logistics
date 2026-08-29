@@ -237,20 +237,42 @@ async function uploadInstagram() {
     await page.waitForTimeout(1500);
   }
 
-  // 다음 버튼 (최대 3번)
+  // 다음 버튼 (최대 3번) — role=button 포함 다중 셀렉터
   for (let i = 0; i < 3; i++) {
-    await page.locator('text=다음, text=Next').first().click().catch(() => {});
-    await page.waitForTimeout(2000);
+    const nextClicked = await page.locator('text=다음').first().click({ timeout: 4000 }).then(() => true).catch(() => false)
+      || await page.locator('text=Next').first().click({ timeout: 4000 }).then(() => true).catch(() => false)
+      || await page.locator('[role="button"]:has-text("다음"), [role="button"]:has-text("Next")').first().click({ timeout: 4000 }).then(() => true).catch(() => false);
+    if (!nextClicked) break;
+    await page.waitForTimeout(2500);
   }
 
   // 캡션 입력
   const captionSel = 'textarea, [aria-label="캡션 작성"], [aria-label="Write a caption"], [aria-label="캡션"], [contenteditable="true"]';
-  await page.click(captionSel).catch(() => {});
+  await page.click(captionSel, { timeout: 5000 }).catch(() => {});
   await page.keyboard.type(meta.instagram.caption, { delay: 20 });
   await page.waitForTimeout(1000);
 
-  // 공유
-  await page.locator('text=공유, text=Share').first().click();
+  // 공유 버튼 — 다양한 셀렉터 순차 시도
+  const SHARE_SELECTORS = [
+    '[role="button"]:has-text("공유")',
+    '[role="button"]:has-text("Share")',
+    'button:has-text("공유")',
+    'button:has-text("Share")',
+    'div[role="button"]:has-text("공유")',
+    'div[role="button"]:has-text("Share")',
+    'text=공유',
+    'text=Share',
+  ];
+  let shared = false;
+  for (const sel of SHARE_SELECTORS) {
+    shared = await page.locator(sel).first().click({ timeout: 8000 }).then(() => true).catch(() => false);
+    if (shared) { console.log(`[Instagram] 공유 버튼 클릭: ${sel}`); break; }
+  }
+  if (!shared) {
+    const shotPath = path.join(ROOT, 'output', 'ig-share-debug.png');
+    await page.screenshot({ path: shotPath, fullPage: true });
+    throw new Error(`[Instagram] 공유 버튼 클릭 실패. 스크린샷: ${shotPath}`);
+  }
   console.log('[Instagram] 업로드 완료!');
 
   await page.waitForTimeout(5000);
