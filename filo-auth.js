@@ -1149,7 +1149,7 @@ function _filoRegister(){
  }).then(function(){
  /* 선택한 업종 테마 즉시 적용 */
  if(typeof _filoApplyTheme==='function')_filoApplyTheme({theme:industry});
- _filoToast('등록 완료! 1개월 무료 체험을 시작합니다');
+ _filoToast('등록 완료! 7일 무료 체험을 시작합니다');
  if(typeof _filoSeedDefaultMenus==='function'){
   setTimeout(function(){
    _filoSeedDefaultMenus(window._filoNewDealerId,industry).then(function(n){
