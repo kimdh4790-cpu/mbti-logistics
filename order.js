@@ -106,6 +106,41 @@ function _applyStoreTheme(co){
  else document.body.classList.remove('dark');
 }
 
+// ── 완료 화면 단계 전환 ───────────────────────────────────────────────────────
+var _doneStepTimer=null;
+function _doneStep(n){
+ if(_doneStepTimer){clearTimeout(_doneStepTimer);_doneStepTimer=null;}
+ [1,2,3].forEach(function(i){
+  var el=document.getElementById('done-s'+i);
+  if(el){el.classList.remove('ds-in');el.style.display='none';}
+ });
+ var step=document.getElementById('done-s'+n);
+ if(!step)return;
+ step.style.display='flex';
+ void step.offsetWidth;
+ step.classList.add('ds-in');
+ if(n===2){
+  var rc=document.getElementById('receipt-choice');
+  var rb=document.getElementById('order-receipt-box');
+  var ns=document.getElementById('done-s2-next');
+  if(rc)rc.style.display='block';
+  if(rb)rb.style.display='none';
+  if(ns)ns.style.display='none';
+ }
+ if(n===1){
+  var _skip=function(){
+   step.removeEventListener('click',_skip);
+   if(_doneStepTimer){clearTimeout(_doneStepTimer);_doneStepTimer=null;}
+   _doneStep(2);
+  };
+  step.addEventListener('click',_skip);
+  _doneStepTimer=setTimeout(function(){
+   step.removeEventListener('click',_skip);
+   _doneStep(2);
+  },1500);
+ }
+}
+
 // ── 주문 영수증 표시 ──────────────────────────────────────────────────────────
 function _showOrderReceipt(items, total, payType, method){
  var rc=items||_lastOrderItems, rt=total||_lastOrderTotal, rp=payType||_lastPayType;
@@ -139,6 +174,8 @@ function _showOrderReceipt(items, total, payType, method){
  if(cashNotice)cashNotice.style.display=(method==='cash')?'block':'none';
  if(choice)choice.style.display='none';
  box.style.display='block';
+ var ns=document.getElementById('done-s2-next');
+ if(ns)ns.style.display='block';
 }
 // FILO FCM VAPID 키
 var _VAPID_KEY='BHO3mU6K2VlLkYfUgsunV5zXsx6oOc_I4dIyE9ErYPBZE5AkBhPP-HUmQhqvHLDsbjcRgEDsMbXg0TYiSiKW93c';
@@ -368,17 +405,11 @@ function _doOrder(payType){
   var dn=document.getElementById('done');
   var dnum=document.getElementById('done-num');if(dnum)dnum.textContent=(_takeout?(_t('addr')||'포장'):_t('tableNum')+' '+_tNum)+' · '+_t('orderNum')+' #'+orderId.slice(-6).toUpperCase();
   var ditems=document.getElementById('done-items');if(ditems)ditems.textContent=orderInfo;
-  if(dn)dn.style.display='flex';
   if(btn){btn.disabled=false;btn.textContent=_t('order');}
   _lastOrderItems=items;_lastOrderTotal=total;_lastPayType=payType;
-  var rcChoice=document.getElementById('receipt-choice');
   var postNotice=document.getElementById('postpay-notice');
-  if(payType==='postpay'){
-   if(postNotice)postNotice.style.display='block';
-   if(rcChoice)rcChoice.style.display='block';
-  } else {
-   if(rcChoice)rcChoice.style.display='block';
-  }
+  if(postNotice)postNotice.style.display=(payType==='postpay')?'block':'none';
+  if(dn){dn.style.display='flex';_doneStep(1);}
   _lastOrderId=orderId;
   _listenPickup(orderId);
   try{localStorage.setItem('filo_order_'+_did,orderId);}catch(e){}
