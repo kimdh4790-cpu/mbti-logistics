@@ -162,6 +162,21 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-29 (11차)
+**응원 메시지 개인화 + 버그 3종 수정**
+- `dine-staff.js`: `_dineCheerMsg(sch)` 시그니처 변경 — 스케줄 없으면 절대시각 폴백 유지
+  - 시프트 내 비율(elapsed/totalDur) 계산: <12% 출근직후·65~84% 후반전·≥85% 퇴근직전
+  - 아침 시프트(5~12시 출근)만 점심 피크, 저녁/야간 시프트만 저녁 러시, 야간만 심야 격려
+  - `_staffLoadClock`: 스케줄 확보 후 카드 개인화 업데이트 (휴무 감지 로직 유지)
+- `dine-staff.js`: `JSON.stringify(` 닫는 `)` 누락 → 문법 오류·파일 파싱 실패 수정 (l.868)
+  - 증상: dine.js `_dineStaff is not defined`, `_dineAttend is not defined`
+- `filo-pos-ui.js`: 모드 전환 버튼 onclick `document.getElementById('page-content')` → `'content'` (null 오류)
+- `filo-pos.js`: 결제 터미널 모바일 반응형 수정
+  - `window.innerWidth < 640` 감지 → `flex-direction: column` (상하 레이아웃)
+  - `pos-left`: `width:100%; max-height:42%` / `pos-right`: `flex:1; overflow-y:auto`
+  - 데스크탑(640px+): 기존 좌우 2패널 유지
+- commit: `2419488`, `3d12c23`, `b146de5`, `e1b1520`
+
 ### 2026-08-29 (10차)
 **DINE 전면 개선 + FILO POS 수량 시트 + SMS 일괄 발송**
 - `dine-tax.js`: fixed['card-fee'] → fixed.cardFee 폴백 (카드수수료 0원 버그)
