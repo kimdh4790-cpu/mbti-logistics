@@ -39,11 +39,16 @@ BGM="$ASSETS_DIR/bgm/background.mp3"
 INTRO="$ASSETS_DIR/intro.mp4"
 OUTRO="$ASSETS_DIR/outro.mp4"
 
-# 자막 필터 (SRT force_style 직접 적용 — ASS 변환 없음, 하단 고정)
+# 자막 필터 (SRT → ASS 변환 후 정확한 위치 제어)
+# PlayResY=1920 기준 Fontsize=52, 하단 120px 고정
 SUBTITLE_FILTER=""
 if [ -f "$SUBTITLES" ]; then
-  # Alignment=2(하단중앙), Fontsize=22, MarginV=140, 흰색+검은 외곽선
-  SUBTITLE_FILTER=",subtitles='${SUBTITLES}':force_style='Fontname=Noto Sans CJK KR,Fontsize=22,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Bold=1,Outline=3,Shadow=1,Alignment=2,MarginV=140'"
+  ASS_FILE="${OUTPUT_DIR}/${PRODUCT}-subtitles.ass"
+  if node "${ROOT}/scripts/compose/srt-to-ass.js" "${SUBTITLES}" "${ASS_FILE}" 2>/dev/null; then
+    SUBTITLE_FILTER=",ass='${ASS_FILE}'"
+  else
+    echo "[자막] ASS 변환 실패 — 자막 없이 진행"
+  fi
 fi
 
 cd "$OUTPUT_DIR"
