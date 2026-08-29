@@ -135,7 +135,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 
 ### 🟡 QR 주문·주방 (filo.ai.kr/order·/store·/kitchen)
 - order.html, order.js, order-done.html — 고객 QR 주문
-- table-order.html — 테이블 직접 주문 (선결제/후불 모달 미완료)
+- table-order.html — 테이블 직접 주문 (선결제/후불 모달 완료)
 - store.html — 매장 주문 현황
 - kitchen.html — 주방 디스플레이
 - filo-order-common.js — 메뉴 로딩·번역 공통 (order·table-order·store 공유)
@@ -332,15 +332,18 @@ cd mbtico-pages && npx wrangler deploy
 - _worker.js 메뉴 번역 N×3 직렬 → Promise.all 병렬화
 - yongcha-worker.js _pgDispatchLocations onSnapshot unsub 저장 (리스너 누수 방지)
 
+### ✅ 완료 (2026-08-29)
+- table-order.html 선결제/후불 모달 구현 완료
+- order.html order.js 버전 v=14 캐시버스터 업데이트 (reqReceiptFCM KV캐시 문제 해결)
+- QR 출퇴근 신규 직원 등록 화면에 시급 입력 필드 추가 (_worker.js /qr, /qr/register 양쪽)
+
 ### 최우선
-1. 선결제/후불 모달 - table-order.html 미작업
-2. FCM 영수증 푸시 - order.js reqReceiptFCM undefined (KV캐시 문제)
+1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
 ### 중간
-3. FILO 메뉴 이미지 Pollinations → Pexels 일괄 업데이트
-4. 관제센터 채팅/공지/결제 탭 실사용 테스트
-5. 직원 근태 QR 이름+연락처 등록 화면 수정
-6. 매출분석 7월 테스트 데이터 시딩
+2. FILO 메뉴 이미지 Pollinations → Pexels 일괄 업데이트
+3. 관제센터 채팅/공지/결제 탭 실사용 테스트
+4. 매출분석 7월 테스트 데이터 시딩
 
 ### 파일 분리·경량화 (대형 작업)
 7. filo-menu.js 분리 (55KB)

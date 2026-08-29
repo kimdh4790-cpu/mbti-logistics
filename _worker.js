@@ -3312,6 +3312,8 @@ function showRegForm(phone){
   panel.innerHTML='<div class="reg-title">신규 직원 등록</div>'+
     '<input id="r-name" type="text" class="inp" placeholder="이름" autocomplete="name">'+
     '<input id="r-phone" type="tel" class="inp" placeholder="연락처 (010-0000-0000)" autocomplete="tel" value="'+(phone||'')+'">'+
+    '<input id="r-wage" type="number" class="inp" placeholder="시급 (원, 예: 10030)" value="10030" min="0" inputmode="numeric">'+
+    '<div style="font-size:11px;color:#666;margin:-6px 0 12px;text-align:right">2026 최저시급 10,030원</div>'+
     '<button class="btn-main" onclick="doRegister()">'+(ACTION==='in'?'출근':'퇴근')+'하기</button>'+
     '<button class="btn-sub" onclick="resetForm()">← 돌아가기</button>';
   setTimeout(function(){var n=document.getElementById('r-name');if(n)n.focus();},100);
@@ -3325,14 +3327,15 @@ function resetForm(){
 function doRegister(){
   var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
   var phone=((document.getElementById('r-phone')&&document.getElementById('r-phone').value)||'').replace(/[^0-9]/g,'');
+  var wage=parseInt((document.getElementById('r-wage')&&document.getElementById('r-wage').value)||'10030')||10030;
   if(!name){setStatus('이름을 입력하세요');return;}
   if(phone.length<9){setStatus('연락처를 올바르게 입력하세요');return;}
   setStatus('등록 중...','#aaa');
-  fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone})})
+  fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone,wage:wage})})
     .then(function(r){return r.json();})
     .then(function(res){
       if(res.ok&&res.uid){
-        _cur={id:res.uid,name:name,wage:0,wageType:'hourly'};
+        _cur={id:res.uid,name:name,wage:wage,wageType:'hourly'};
         var deviceId=getDeviceId();
         var today=getToday();
         var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
@@ -3378,7 +3381,7 @@ function doRegister(){
       if (path === '/qr/register' && request.method === 'POST') {
         try {
           const body = await request.json();
-          const {did, name, phone} = body;
+          const {did, name, phone, wage} = body;
           if (!did || !name) return Response.json({ok:false,error:'이름을 입력하세요'});
           const token = await getAccessToken(env);
           // dealerId 유효성 검증 — 존재하지 않는 매장에 직원 생성 방지
@@ -3392,7 +3395,7 @@ function doRegister(){
               name:       {stringValue: name},
               phone:      {stringValue: phone||''},
               role:       {stringValue: 'part'},
-              wage:       {integerValue: 0},
+              wage:       {integerValue: parseInt(wage)||10030},
               wageType:   {stringValue: 'hourly'},
               is_active:  {booleanValue: true},
               createdAt:  {stringValue: new Date().toISOString()}
@@ -7285,6 +7288,8 @@ function showRegForm(phone){
   panel.innerHTML='<div class="reg-title">신규 직원 등록</div>'+
     '<input id="r-name" type="text" class="inp" placeholder="이름" autocomplete="name">'+
     '<input id="r-phone" type="tel" class="inp" placeholder="연락처 (010-0000-0000)" autocomplete="tel" value="'+(phone||'')+'">'+
+    '<input id="r-wage" type="number" class="inp" placeholder="시급 (원, 예: 10030)" value="10030" min="0" inputmode="numeric">'+
+    '<div style="font-size:11px;color:#666;margin:-6px 0 12px;text-align:right">2026 최저시급 10,030원</div>'+
     '<button class="btn-main" onclick="doRegister()">'+(ACTION==='in'?'출근':'퇴근')+'하기</button>'+
     '<button class="btn-sub" onclick="resetForm()">← 돌아가기</button>';
   setTimeout(function(){var n=document.getElementById('r-name');if(n)n.focus();},100);
@@ -7298,14 +7303,15 @@ function resetForm(){
 function doRegister(){
   var name=(document.getElementById('r-name')&&document.getElementById('r-name').value||'').trim();
   var phone=((document.getElementById('r-phone')&&document.getElementById('r-phone').value)||'').replace(/[^0-9]/g,'');
+  var wage=parseInt((document.getElementById('r-wage')&&document.getElementById('r-wage').value)||'10030')||10030;
   if(!name){setStatus('이름을 입력하세요');return;}
   if(phone.length<9){setStatus('연락처를 올바르게 입력하세요');return;}
   setStatus('등록 중...','#aaa');
-  fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone})})
+  fetch('/qr/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({did:DID,name:name,phone:phone,wage:wage})})
     .then(function(r){return r.json();})
     .then(function(res){
       if(res.ok&&res.uid){
-        _cur={id:res.uid,name:name,wage:0,wageType:'hourly'};
+        _cur={id:res.uid,name:name,wage:wage,wageType:'hourly'};
         var deviceId=getDeviceId();
         var today=getToday();
         var dupKey='att_'+DID+'_'+today+'_'+deviceId+'_'+ACTION;
@@ -7351,7 +7357,7 @@ function doRegister(){
       if (path === '/qr/register' && request.method === 'POST') {
         try {
           const body = await request.json();
-          const {did, name, phone} = body;
+          const {did, name, phone, wage} = body;
           if (!did || !name) return Response.json({ok:false,error:'이름을 입력하세요'});
           const token = await getAccessToken(env);
           // dealerId 유효성 검증 — 존재하지 않는 매장에 직원 생성 방지
@@ -7365,7 +7371,7 @@ function doRegister(){
               name:       {stringValue: name},
               phone:      {stringValue: phone||''},
               role:       {stringValue: 'part'},
-              wage:       {integerValue: 0},
+              wage:       {integerValue: parseInt(wage)||10030},
               wageType:   {stringValue: 'hourly'},
               is_active:  {booleanValue: true},
               createdAt:  {stringValue: new Date().toISOString()}

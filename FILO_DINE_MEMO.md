@@ -306,3 +306,10 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 **번역 KV 캐시 한국어 오염 수정**
 - `_worker.js`: /api/translate 및 /api/translate-batch — KV 캐시 반환 전 한글 정규식 검증 추가
 - `filo-order-common.js`: Firestore nameTranslations 사용 전 한글 검증 추가
+
+### 2026-08-29
+**QR 출퇴근 · FCM · order.html 캐시버스터**
+- `_worker.js`: /qr 신규 직원 등록 폼에 시급(r-wage) 입력 필드 추가 → wage=0 문제 해결 (양쪽 중복 핸들러 동시 수정)
+- `_worker.js`: /qr/register POST 핸들러 wage 파라미터 수신 → integerValue로 저장 (미입력 시 최저시급 10030원 기본값)
+- `order.html`: order.js 스크립트 태그 v=13 → v=14 캐시버스터 업데이트 (reqReceiptFCM KV캐시 문제 해결)
+- `CLAUDE.md`: 미완료 항목 정리 (선결제/후불 모달 완료, QR 등록화면 수정 완료)
