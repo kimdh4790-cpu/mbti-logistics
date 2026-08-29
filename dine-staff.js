@@ -865,7 +865,7 @@ function _staffLoadMonthPay(did,sid,today){
     {fieldFilter:{field:{fieldPath:'memberId'},op:'EQUAL',value:{stringValue:sid}}},
     {fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:ym+'-01'}}},
     {fieldFilter:{field:{fieldPath:'date'},op:'LESS_THAN_OR_EQUAL',value:{stringValue:ym+'-31'}}}
-   ]}}}}
+   ]}}}})
   }).then(function(r){return r.json();}).catch(function(){return [];})
  ]).then(function(res){
   var memF=res[0]&&res[0].fields?res[0].fields:null;
