@@ -257,6 +257,7 @@ function _posUpdateCashDisplay(total){
   conf.disabled=!ok;
   conf.style.opacity=ok?'1':'0.45';
   conf.style.cursor=ok?'pointer':'not-allowed';
+  conf.style.background=ok?'#22c55e':'rgba(34,197,94,.25)';
  }
 }
 
@@ -389,9 +390,9 @@ function _posConfirmBtn(method,total){
  var bg=mCfg?mCfg.bg:'rgba(200,163,86,.3)';
  var tc=mCfg?(mCfg.tc||'#fff'):'rgba(200,163,86,.5)';
  var label=mCfg?mCfg.label:'결제 수단을 선택하세요';
- var disabled=!method||method==='cash';
- return '<button id="pos-confirm-btn" '+
-  (disabled?'disabled':'onclick="_posDo()"')+' '+
+ var disabled=!method;
+ return '<button id="pos-confirm-btn" onclick="_posDo()" '+
+  (disabled?'disabled':'')+' '+
   'style="width:100%;height:56px;background:'+bg+';border:none;border-radius:14px;'+
   'font-size:16px;font-weight:900;color:'+tc+';cursor:'+(disabled?'not-allowed':'pointer')+';'+
   'opacity:'+(disabled?'0.45':'1')+';letter-spacing:.5px;'+
