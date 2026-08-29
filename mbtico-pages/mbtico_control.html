@@ -230,6 +230,23 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       <div class="acc-body" id="acc-billing"></div>
     </div>
 
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('errors')">
+        <span class="acc-icon" id="ico-errors">▶</span>
+        <span class="acc-title">🚨 에러 로그</span>
+        <span class="acc-badge" id="badge-errors"></span>
+      </div>
+      <div class="acc-body" id="acc-errors"></div>
+    </div>
+
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('social')">
+        <span class="acc-icon" id="ico-social">▶</span>
+        <span class="acc-title">📹 소셜미디어 영상 관리</span>
+      </div>
+      <div class="acc-body" id="acc-social"></div>
+    </div>
+
   </div><!-- /main-scroll -->
 </div><!-- /main-screen -->
 
@@ -325,6 +342,12 @@ function _ctrlStartListeners() {
     });
   _unsubs.push(u2);
 
+  // 에러 로그 뱃지 (최근 24시간 에러 수)
+  var cutTs = new Date(Date.now() - 86400000);
+  _db.collection('filo_errors').where('ts', '>=', cutTs).onSnapshot(function(snap) {
+    _ctrlBadge('badge-errors', snap.size);
+  });
+
   // 대시보드 초기 로드
   _ctrlLoadDashboard();
 }
@@ -349,7 +372,9 @@ function _ctrlLoad(id) {
     companies: _ctrlLoadCompanies,
     chat:      _ctrlLoadChat,
     notice:    _ctrlLoadNotice,
-    billing:   _ctrlLoadBilling
+    billing:   _ctrlLoadBilling,
+    errors:    _ctrlLoadErrors,
+    social:    _ctrlLoadSocial
   }[id];
   if (fn) fn();
 }
@@ -961,6 +986,133 @@ function _ctrlLoadBilling() {
       html += '</tbody></table></div>';
       html = '<div class="billing-total">이번 조회 합계: <b>₩' + totalAmt.toLocaleString() + '</b></div>' + html;
       c.innerHTML = html;
+    });
+}
+
+// ── 🚨 에러 로그 ──────────────────────────────────────────────────
+function _ctrlLoadErrors() {
+  var c = document.getElementById('acc-errors');
+  c.innerHTML = '<div class="ctrl-loading">에러 로그 로딩 중...</div>';
+  _db.collection('filo_errors').orderBy('ts', 'desc').limit(50)
+    .get().then(function(snap) {
+      if (snap.empty) {
+        c.innerHTML = '<div class="ctrl-empty">최근 에러 없음 ✓</div>';
+        _ctrlBadge('badge-errors', 0);
+        return;
+      }
+      var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
+        '<span style="font-size:12px;color:var(--tx2)">' + snap.size + '건 (최근 50건)</span>' +
+        '<button class="ctrl-btn ctrl-btn-err" onclick="_ctrlClearErrors()">전체 삭제</button></div>' +
+        '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+        '<th>시각</th><th>경로</th><th>오류</th><th>매장ID</th><th>Worker</th>' +
+        '</tr></thead><tbody>';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        var ts = d.ts ? (d.ts.toDate ? d.ts.toDate() : new Date(d.ts)) : null;
+        var timeStr = ts ? ts.toLocaleDateString('ko') + ' ' + ts.toLocaleTimeString('ko', {hour:'2-digit',minute:'2-digit'}) : '-';
+        var msg = (d.message || d.error || '-').slice(0, 80);
+        var path = (d.path || d.url || '-').slice(0, 40);
+        var did = (d.dealerId || '-').slice(0, 12);
+        var env = d.env || d.source || 'worker';
+        html += '<tr>' +
+          '<td style="font-size:11px;color:var(--tx3);white-space:nowrap">' + timeStr + '</td>' +
+          '<td style="font-size:11px;font-family:monospace;color:var(--acc2)">' + path + '</td>' +
+          '<td style="font-size:11px;color:var(--red2)">' + msg + '</td>' +
+          '<td style="font-size:10px;color:var(--tx3)">' + did + '</td>' +
+          '<td style="font-size:10px;color:var(--tx3)">' + env + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table></div>';
+      c.innerHTML = html;
+      _ctrlBadge('badge-errors', snap.size);
+    }).catch(function(e) {
+      c.innerHTML = '<div class="ctrl-empty">오류: ' + e.message + '</div>';
+    });
+}
+function _ctrlClearErrors() {
+  if (!confirm('에러 로그 전체 삭제하시겠습니까?')) return;
+  _db.collection('filo_errors').limit(50).get().then(function(snap) {
+    var batch = _db.batch();
+    snap.forEach(function(doc) { batch.delete(doc.ref); });
+    return batch.commit();
+  }).then(function() {
+    _ctrlToast('에러 로그 삭제 완료');
+    _ctrlLoadErrors();
+  }).catch(function(e) { _ctrlToast('삭제 실패: ' + e.message); });
+}
+
+// ── 📹 소셜미디어 영상 관리 ──────────────────────────────────────────
+var _SOCIAL_PRODUCTS = [
+  { id: 'yongcha', label: '용차앱', color: '#f59e0b', icon: '🚚', schedule: '월 09:00' },
+  { id: 'filo',    label: 'FILO',   color: '#6366f1', icon: '🟣', schedule: '화 09:00' },
+  { id: 'donway',  label: 'DONWAY', color: '#10b981', icon: '🟢', schedule: '목 09:00' },
+  { id: 'mbtico',  label: 'MBTICO', color: '#3b82f6', icon: '⚪', schedule: '-' }
+];
+var _socialProd = 'yongcha', _socialSteps = 'record,compose,youtube';
+function _ctrlLoadSocial() {
+  var c = document.getElementById('acc-social');
+  var prodBtns = _SOCIAL_PRODUCTS.map(function(p) {
+    return '<button class="ctrl-btn social-prod-btn' + (p.id === _socialProd ? ' ctrl-btn-acc' : '') +
+      '" data-pid="' + p.id + '" onclick="_socialSelProd(this.dataset.pid)" style="gap:5px">' +
+      p.icon + ' ' + p.label + '<span style="font-size:9px;color:var(--tx3);margin-left:2px">' + p.schedule + '</span></button>';
+  }).join('');
+  var stepOpts = [
+    { v: 'record,compose,youtube', l: '녹화+편집+YouTube' },
+    { v: 'record,compose,youtube,instagram', l: '녹화+편집+YouTube+Instagram' },
+    { v: 'record,compose', l: '녹화+편집만' },
+    { v: 'youtube', l: 'YouTube 업로드만' },
+    { v: 'youtube,instagram', l: 'YouTube+Instagram' }
+  ];
+  var stepSel = '<select id="social-steps" class="ctrl-select" style="flex:1;min-width:200px" onchange="_socialSteps=this.value">' +
+    stepOpts.map(function(o) {
+      return '<option value="' + o.v + '"' + (o.v === _socialSteps ? ' selected' : '') + '>' + o.l + '</option>';
+    }).join('') + '</select>';
+  var schedTable = '<div class="ctrl-table-wrap" style="margin-top:16px"><table class="ctrl-table">' +
+    '<thead><tr><th>제품</th><th>플랫폼</th><th>스케줄</th><th>상태</th></tr></thead><tbody>' +
+    '<tr><td>용차앱</td><td>YouTube</td><td>월 09:00 KST</td><td><span class="badge badge-ok">자동</span></td></tr>' +
+    '<tr><td>FILO</td><td>YouTube</td><td>화 09:00 KST</td><td><span class="badge badge-ok">자동</span></td></tr>' +
+    '<tr><td>FILO</td><td>Instagram</td><td>화 10:00 KST</td><td><span class="badge badge-ok">자동</span></td></tr>' +
+    '<tr><td>DONWAY</td><td>YouTube</td><td>목 09:00 KST</td><td><span class="badge badge-ok">자동</span></td></tr>' +
+    '<tr><td>DONWAY</td><td>Instagram</td><td>목 10:00 KST</td><td><span class="badge badge-ok">자동</span></td></tr>' +
+    '<tr><td>MBTICO</td><td>-</td><td>미정</td><td><span class="badge badge-hold">준비중</span></td></tr>' +
+    '</tbody></table></div>';
+  c.innerHTML =
+    '<div style="margin-bottom:16px"><div class="ctrl-label">제품 선택</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px" id="social-prod-btns">' + prodBtns + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
+    '<div class="ctrl-label" style="margin:0;white-space:nowrap">단계 선택</div>' + stepSel +
+    '<button class="ctrl-btn ctrl-btn-acc" onclick="_socialTrigger()" style="padding:8px 18px">' +
+    '▶ GitHub Actions 실행</button>' +
+    '<a href="https://github.com/kimdh4790-cpu/mbti-logistics/actions/workflows/social-media.yml" ' +
+    'target="_blank" class="ctrl-btn" style="padding:8px 14px">Actions 로그 보기 ↗</a>' +
+    '</div></div>' +
+    '<div style="margin-top:4px;font-size:11px;color:var(--tx3)">실행 결과는 GitHub Actions 탭에서 확인. YouTube 업로드는 GOOGLE_TTS_API_KEY + YOUTUBE 토큰 등록 필요.</div>' +
+    schedTable;
+}
+function _socialSelProd(pid) {
+  _socialProd = pid;
+  document.querySelectorAll('.social-prod-btn').forEach(function(b) {
+    b.classList.toggle('ctrl-btn-acc', b.dataset.pid === pid);
+  });
+}
+function _socialTrigger() {
+  if (!_socialProd) { _ctrlToast('제품을 선택하세요'); return; }
+  var steps = document.getElementById('social-steps') ? document.getElementById('social-steps').value : _socialSteps;
+  _ctrlToast('GitHub Actions 실행 요청 중...');
+  fetch('https://filo.ai.kr/api/trigger-social', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product: _socialProd, steps: steps, uid: _CU ? _CU.uid : '' })
+  }).then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) {
+        _ctrlToast('GitHub Actions 실행됨! ' + _socialProd + ' / ' + steps, 'ok');
+      } else {
+        _ctrlToast('실패: ' + (d.error || '알 수 없는 오류'));
+      }
+    }).catch(function() {
+      _ctrlToast('직접 실행 불가 — GitHub Actions 탭에서 수동 실행하세요');
+      window.open('https://github.com/kimdh4790-cpu/mbti-logistics/actions/workflows/social-media.yml', '_blank');
     });
 }
 

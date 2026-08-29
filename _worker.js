@@ -4860,6 +4860,33 @@ ${JSON.stringify(postSummary)}
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
+      // /api/trigger-social — GitHub Actions 소셜미디어 워크플로우 실행 (슈퍼어드민 전용)
+      if (path === '/api/trigger-social' && method === 'POST') {
+        const _tsAdmin = await requireAdmin(request, env);
+        if (!_tsAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
+        const GITHUB_TOKEN = env.GITHUB_TOKEN;
+        if (!GITHUB_TOKEN) return Response.json({ok:false,error:'GITHUB_TOKEN Secret 미등록'},{status:503});
+        try {
+          const body = await request.json();
+          const prod = ['yongcha','filo','dine','donway','mbtico','all'].includes(body.product) ? body.product : null;
+          if (!prod) return Response.json({ok:false,error:'유효하지 않은 product'},{status:400});
+          const steps = body.steps || 'record,compose,youtube';
+          const ghRes = await fetch('https://api.github.com/repos/kimdh4790-cpu/mbti-logistics/actions/workflows/social-media.yml/dispatches', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${GITHUB_TOKEN}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Content-Type': 'application/json',
+              'User-Agent': 'mbtico-worker'
+            },
+            body: JSON.stringify({ ref: 'main', inputs: { product: prod, steps, dry_run: 'false' } })
+          });
+          if (ghRes.status === 204) return Response.json({ok:true,product:prod,steps});
+          const err = await ghRes.text();
+          return Response.json({ok:false,error:`GitHub API ${ghRes.status}: ${err}`},{status:500});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
       // /admin/cleanup-dup-orders — filo_sales 테이블 중복 주문 삭제
       if (path === '/admin/cleanup-dup-orders' && request.method === 'POST') {
         const _cleanAdmin = await requireAdmin(request, env);
