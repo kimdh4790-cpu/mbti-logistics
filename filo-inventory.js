@@ -26,6 +26,7 @@ function _filoPageInventoryDash(el){
   '<div style="display:flex;border-bottom:2px solid var(--bd);margin-bottom:14px">'+
   '<button id="inv-tab-stock" onclick="_filoInvSwitchTab(\'stock\',\''+did+'\')" style="flex:1;padding:9px;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--tx);border-bottom:2px solid var(--br,#0891b2);margin-bottom:-2px">재고현황</button>'+
   '<button id="inv-tab-order" onclick="_filoInvSwitchTab(\'order\',\''+did+'\')" style="flex:1;padding:9px;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--t3)">발주현황 <span id="inv-order-badge" style="display:none;background:#f59e0b;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;vertical-align:middle"></span></button>'+
+  '<button id="inv-tab-recipe" onclick="_filoInvSwitchTab(\'recipe\',\''+did+'\')" style="flex:1;padding:9px;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--t3)">메뉴-재고 연동</button>'+
   '</div>'+
   '<div id="inv-list"><div style="text-align:center;padding:40px;color:var(--t3)">로딩 중...</div></div>'+
   '</div>';
@@ -37,10 +38,14 @@ function _filoPageInventoryDash(el){
 window._filoInvSwitchTab=function(tab,did){
  var ts=document.getElementById('inv-tab-stock');
  var to=document.getElementById('inv-tab-order');
- if(ts){ts.style.color=tab==='stock'?'var(--tx)':'var(--t3)';ts.style.borderBottom=tab==='stock'?'2px solid var(--br,#0891b2)':'none';}
- if(to){to.style.color=tab==='order'?'var(--tx)':'var(--t3)';to.style.borderBottom=tab==='order'?'2px solid var(--br,#0891b2)':'none';}
+ var tr=document.getElementById('inv-tab-recipe');
+ var act='2px solid var(--br,#0891b2)';
+ if(ts){ts.style.color=tab==='stock'?'var(--tx)':'var(--t3)';ts.style.borderBottom=tab==='stock'?act:'none';}
+ if(to){to.style.color=tab==='order'?'var(--tx)':'var(--t3)';to.style.borderBottom=tab==='order'?act:'none';}
+ if(tr){tr.style.color=tab==='recipe'?'var(--tx)':'var(--t3)';tr.style.borderBottom=tab==='recipe'?act:'none';}
  if(tab==='stock') _filoInvLoad(did);
- else _filoInvLoadOrders(did);
+ else if(tab==='order') _filoInvLoadOrders(did);
+ else _filoInvLoadRecipes(did);
 };
 
 // ── 재고 로드 ─────────────────────────────────────────────────────────────────
@@ -493,6 +498,166 @@ window._filoInvDoSave=function(did,itemId){
   var mo=document.getElementById('inv-form-modal'); if(mo) mo.remove();
   _filoInvLoad(did);
  }).catch(function(e){_filoToast((e&&e.message)||'오류');});
+};
+
+// ── 메뉴-재고 레시피 연동 ────────────────────────────────────────────────────
+// menu_recipes: {dealerId, menuId, menuName, ingredients:[{invId,invName,qty,unit}]}
+// 주문 완료 시 _worker.js /api/filo-order 에서 자동 차감
+
+function _filoInvLoadRecipes(did){
+ var list=document.getElementById('inv-list');
+ if(list) list.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>';
+ var db=firebase.firestore();
+ Promise.all([
+  db.collection('menu_recipes').where('dealerId','==',did).get(),
+  db.collection('filo_menus').where('dealerId','==',did).get(),
+  db.collection('inventory').where('dealerId','==',did).orderBy('name').get()
+ ]).then(function(results){
+  var recipes=results[0].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  var menus=results[1].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  var invItems=results[2].docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  _filoInvRenderRecipes(did,recipes,menus,invItems);
+ }).catch(function(e){
+  if(list) list.innerHTML='<div style="text-align:center;padding:30px;color:#ef4444">'+e.message+'</div>';
+ });
+}
+
+function _filoInvRenderRecipes(did,recipes,menus,invItems){
+ var list=document.getElementById('inv-list');
+ if(!list) return;
+ var menusWithoutRecipe=menus.filter(function(m){return !recipes.find(function(r){return r.menuId===m.id;});});
+ var html='<div style="margin-bottom:16px">';
+ html+='<div style="font-size:12px;color:var(--t3);margin-bottom:10px">메뉴별로 소비되는 재료를 등록하면 QR주문·POS결제 시 재고가 자동으로 차감됩니다.</div>';
+ // 연동된 메뉴
+ if(recipes.length){
+  html+='<div style="font-size:11px;font-weight:700;color:var(--t3);margin-bottom:8px;letter-spacing:1px">연동된 메뉴 ('+recipes.length+'개)</div>';
+  recipes.forEach(function(rec){
+   var ings=(rec.ingredients||[]);
+   html+='<div style="background:var(--card,#141e2c);border:1px solid var(--bd);border-radius:14px;padding:14px 16px;margin-bottom:10px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+    '<div style="font-size:14px;font-weight:800;color:var(--tx)">'+_escHtml(rec.menuName)+'</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="_filoInvEditRecipe(\''+did+'\',\''+rec.id+'\')" style="padding:4px 10px;font-size:11px;font-weight:700;background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);border-radius:8px;cursor:pointer">수정</button>'+
+    '<button onclick="_filoInvDeleteRecipe(\''+rec.id+'\',\''+did+'\')" style="padding:4px 10px;font-size:11px;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:8px;cursor:pointer">삭제</button>'+
+    '</div></div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+    ings.map(function(ig){return '<span style="padding:4px 10px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:20px;font-size:11px;color:var(--t2)">'+_escHtml(ig.invName)+' '+ig.qty+(ig.unit||'개')+'</span>';}).join('')+
+    '</div></div>';
+  });
+ }
+ // 연동 안 된 메뉴 (추가 버튼)
+ if(menusWithoutRecipe.length){
+  html+='<div style="font-size:11px;font-weight:700;color:var(--t3);margin:14px 0 8px;letter-spacing:1px">연동 안 된 메뉴 ('+menusWithoutRecipe.length+'개)</div>';
+  menusWithoutRecipe.forEach(function(m){
+   html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card,#141e2c);border:1px solid var(--bd);border-radius:12px;margin-bottom:8px">'+
+    '<span style="font-size:13px;color:var(--tx)">'+_escHtml(m.name||'')+'</span>'+
+    '<button onclick="_filoInvAddRecipeModal(\''+did+'\',\''+m.id+'\',\''+_escAttr(m.name||'')+'\',null)" style="padding:5px 12px;font-size:11px;font-weight:700;background:rgba(14,165,233,.15);color:#38bdf8;border:1px solid rgba(14,165,233,.3);border-radius:8px;cursor:pointer">+ 재료 등록</button>'+
+    '</div>';
+  });
+ }
+ if(!recipes.length&&!menus.length){
+  html+='<div style="text-align:center;padding:40px;color:var(--t3)">등록된 메뉴가 없어요.<br>먼저 메뉴를 등록하세요.</div>';
+ }
+ html+='</div>';
+ list.innerHTML=html;
+}
+
+function _escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _escAttr(s){return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');}
+
+window._filoInvAddRecipeModal=function(did,menuId,menuName,recipeId){
+ var ex=document.getElementById('inv-recipe-modal'); if(ex) ex.remove();
+ var db=firebase.firestore();
+ db.collection('inventory').where('dealerId','==',did).orderBy('name').get().then(function(snap){
+  var invItems=snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+  // 기존 레시피 로드
+  var loadRecipe=recipeId
+   ?db.collection('menu_recipes').doc(recipeId).get().then(function(d){return d.exists?d.data():null;})
+   :Promise.resolve(null);
+  return loadRecipe.then(function(existing){
+   var existIngredients=existing?existing.ingredients||[]:[];
+   var m=document.createElement('div');
+   m.id='inv-recipe-modal';
+   m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end';
+   var rows=existIngredients.length?existIngredients:[];
+   var rowHtml=rows.map(function(ig,i){
+    return _filoRecipeRow(i,ig.invId,ig.qty,ig.unit,invItems);
+   }).join('');
+   m.innerHTML='<div class="card" style="width:100%;border-radius:20px 20px 0 0;padding:24px;max-height:90vh;overflow-y:auto">'+
+    '<div style="font-size:15px;font-weight:900;margin-bottom:4px">재료 등록</div>'+
+    '<div style="font-size:12px;color:var(--t3);margin-bottom:16px">'+_escHtml(menuName)+' 1인분 기준 소비 재료</div>'+
+    '<div id="recipe-rows" style="display:flex;flex-direction:column;gap:10px">'+rowHtml+'</div>'+
+    '<button onclick="_filoAddRecipeRow()" style="width:100%;margin-top:10px;padding:10px;border:1px dashed var(--bd);border-radius:10px;background:none;color:var(--t3);font-size:12px;cursor:pointer">+ 재료 추가</button>'+
+    '<div style="display:flex;gap:8px;margin-top:16px">'+
+    '<button onclick="document.getElementById(\'inv-recipe-modal\').remove()" style="flex:1;padding:13px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
+    '<button onclick="_filoSaveRecipe(\''+did+'\',\''+menuId+'\',\''+_escAttr(menuName)+'\','+(recipeId?'\''+recipeId+'\'':'null')+')" style="flex:2;padding:13px;background:var(--br,#0891b2);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer">저장</button>'+
+    '</div></div>';
+   // 재료 옵션 data를 전역에 저장
+   window._filoInvItemsForRecipe=invItems;
+   if(!rowHtml) setTimeout(function(){_filoAddRecipeRow();},50);
+   document.body.appendChild(m);
+  });
+ }).catch(function(e){_filoToast(e.message||'오류');});
+};
+
+window._filoAddRecipeRow=function(){
+ var rows=document.getElementById('recipe-rows');
+ if(!rows) return;
+ var idx=rows.children.length;
+ var div=document.createElement('div');
+ div.innerHTML=_filoRecipeRow(idx,'',1,'개',window._filoInvItemsForRecipe||[]);
+ rows.appendChild(div.firstElementChild);
+};
+
+function _filoRecipeRow(idx,selId,qty,unit,invItems){
+ var opts=invItems.map(function(it){return '<option value="'+it.id+'" '+(it.id===selId?'selected':'')+'>'+_escHtml(it.name)+' ('+_escHtml(it.unit||'개')+')</option>';}).join('');
+ return '<div class="recipe-row" style="display:flex;align-items:center;gap:8px">'+
+  '<select class="rec-inv" style="flex:2;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:12px"><option value="">재료 선택</option>'+opts+'</select>'+
+  '<input class="rec-qty" type="number" min="0.01" step="0.01" value="'+(qty||1)+'" style="flex:1;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:12px">'+
+  '<input class="rec-unit" type="text" placeholder="단위" value="'+(unit||'개')+'" style="width:50px;padding:9px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:12px">'+
+  '<button onclick="this.parentElement.remove()" style="padding:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>'+
+  '</div>';
+}
+
+window._filoSaveRecipe=function(did,menuId,menuName,recipeId){
+ var rows=document.querySelectorAll('#inv-recipe-modal .recipe-row');
+ var ingredients=[];
+ rows.forEach(function(row){
+  var invId=(row.querySelector('.rec-inv')||{}).value||'';
+  var qty=parseFloat((row.querySelector('.rec-qty')||{}).value||'0');
+  var unit=(row.querySelector('.rec-unit')||{}).value||'개';
+  if(!invId||!qty) return;
+  var invName=((window._filoInvItemsForRecipe||[]).find(function(i){return i.id===invId;})||{}).name||'';
+  ingredients.push({invId:invId,invName:invName,qty:qty,unit:unit});
+ });
+ if(!ingredients.length){_filoToast('재료를 1개 이상 등록하세요');return;}
+ var db=firebase.firestore();
+ var data={dealerId:did,menuId:menuId,menuName:menuName,ingredients:ingredients,updatedAt:new Date().toISOString()};
+ var p=recipeId
+  ?db.collection('menu_recipes').doc(recipeId).update(data)
+  :db.collection('menu_recipes').add(Object.assign({createdAt:new Date().toISOString()},data));
+ p.then(function(){
+  _filoToast('저장 완료 — 이제 QR주문/POS 결제 시 자동 차감됩니다');
+  var mo=document.getElementById('inv-recipe-modal'); if(mo) mo.remove();
+  _filoInvLoadRecipes(did);
+ }).catch(function(e){_filoToast(e.message||'오류');});
+};
+
+window._filoInvEditRecipe=function(did,recipeId){
+ var db=firebase.firestore();
+ db.collection('menu_recipes').doc(recipeId).get().then(function(doc){
+  if(!doc.exists){_filoToast('레시피를 찾을 수 없어요');return;}
+  var d=doc.data();
+  _filoInvAddRecipeModal(did,d.menuId,d.menuName,recipeId);
+ });
+};
+
+window._filoInvDeleteRecipe=function(recipeId,did){
+ if(!confirm('이 레시피를 삭제할까요?')) return;
+ firebase.firestore().collection('menu_recipes').doc(recipeId).delete().then(function(){
+  _filoToast('삭제 완료');
+  _filoInvLoadRecipes(did);
+ }).catch(function(e){_filoToast(e.message||'오류');});
 };
 
 /* 구 호환 */

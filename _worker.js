@@ -4166,6 +4166,43 @@ ${JSON.stringify(postSummary)}
           if(!fsRes.ok)return new Response(JSON.stringify({error:fsData.error?.message||'fs error'}),{status:500,headers:_foCors});
           // 문서 ID 추출
           const docId=(fsData.name||'').split('/').pop();
+          // 레시피 기반 재고 자동 차감 (non-critical)
+          try {
+            const recRes=await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Authorization':'Bearer '+_foTok,'Content-Type':'application/json'},
+              body:JSON.stringify({structuredQuery:{from:[{collectionId:'menu_recipes'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}}})});
+            const recData=await recRes.json();
+            const recipes=Array.isArray(recData)?recData.filter(r=>r.document).map(r=>{
+              const f=r.document.fields||{};
+              return {menuName:f.menuName?.stringValue||'',
+                ingredients:(f.ingredients?.arrayValue?.values||[]).map(v=>{const mf=v.mapValue?.fields||{};return{invId:mf.invId?.stringValue||'',qty:Number(mf.qty?.doubleValue||mf.qty?.integerValue||0)};})};
+            }):[];
+            if(recipes.length){
+              const deductions=[];
+              for(const it of items){
+                const rec=recipes.find(r=>r.menuName===it.name);
+                if(!rec)continue;
+                for(const ing of rec.ingredients){
+                  if(!ing.invId||!ing.qty)continue;
+                  const ex=deductions.find(d=>d.id===ing.invId);
+                  if(ex)ex.delta+=ing.qty*(it.qty||1);
+                  else deductions.push({id:ing.invId,delta:ing.qty*(it.qty||1)});
+                }
+              }
+              await Promise.all(deductions.map(async({id,delta})=>{
+                try{
+                  const dRes=await fetch(`${FS_BASE}/inventory/${id}`,{headers:{'Authorization':'Bearer '+_foTok}});
+                  const dData=await dRes.json();
+                  if(!dData.fields)return;
+                  const cur=Number(dData.fields.stock?.integerValue||dData.fields.qty?.integerValue||0);
+                  const next=Math.max(0,cur-delta);
+                  await fetch(`${FS_BASE}/inventory/${id}?updateMask.fieldPaths=stock&updateMask.fieldPaths=updatedAt`,{
+                    method:'PATCH',headers:{'Authorization':'Bearer '+_foTok,'Content-Type':'application/json'},
+                    body:JSON.stringify({fields:{stock:{integerValue:String(Math.round(next))},updatedAt:{stringValue:new Date().toISOString()}}})
+                  });
+                }catch(e){}
+              }));
+            }
+          }catch(e){}
           return new Response(JSON.stringify({ok:true,id:docId}),{headers:_foCors});
         } catch(e){return new Response(JSON.stringify({error:e.message}),{status:500,headers:_foCors});}
       }
