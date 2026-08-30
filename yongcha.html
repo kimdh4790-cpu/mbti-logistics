@@ -8626,35 +8626,35 @@ window._zones = window._zones || [];
 function _addZipCodeZone(){
   var input = document.getElementById('pw-zip-input');
   if(!input) return;
-  var zip = (input.value||'').trim();
-  if(!/^\d{5}$/.test(zip)){_yToast('5자리 우편번호를 입력하세요');return;}
-  _loadKakaoMap(function(){
-    var gc = new kakao.maps.services.Geocoder();
-    gc.addressSearch(zip, function(res, status){
-      if(status !== kakao.maps.services.Status.OK || !res.length){
-        _yToast('해당 우편번호를 찾을 수 없어요');return;
-      }
-      var item = res[0];
-      var lat = parseFloat(item.y), lng = parseFloat(item.x);
-      var addr = item.address||{};
-      // 시/도 약칭(광역시·특별시·도 제거), 구, 동 단위까지 정확히
-      var r1 = (addr.region_1depth_name||'').replace(/(특별시|광역시|특별자치도|특별자치시)$/,'').trim();
-      var r2 = addr.region_2depth_name||'';
-      var r3 = addr.region_3depth_name||'';
-      var name = [r1,r2,r3].filter(Boolean).join(' ');
-      if(!name) name = item.address_name||'선택구역';
-      var dup = window._zones.some(function(z){return z.zipcode===zip;});
-      if(dup){_yToast('이미 추가된 우편번호예요');return;}
-      window._zones.push({zipcode:zip, name:name, lat:lat, lng:lng});
-      _renderZoneTags();
-      _updateMapZones();
-      var areaInp = document.getElementById('pw-area');
-      if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-      var msgEl = document.getElementById('zip-add-msg');
-      if(msgEl) msgEl.textContent = zip+' '+name+' 구역이 추가됐어요';
-      input.value = '';
-    });
-  });
+  var zip = (input.value||'').replace(/\D/g,'');
+  if(zip.length !== 5){_yToast('5자리 우편번호를 입력하세요');return;}
+  new daum.Postcode({
+    oncomplete: function(data){
+      var addr = data.roadAddress || data.jibunAddress;
+      var zipcode = data.zonecode || zip;
+      var name = ((data.sido||'')+' '+(data.sigungu||'')+' '+(data.bname||data.bname1||'')).trim();
+      _loadKakaoMap(function(){
+        var gc = new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr, function(res, status){
+          if(status === kakao.maps.services.Status.OK){
+            var lat = parseFloat(res[0].y), lng = parseFloat(res[0].x);
+            var dup = window._zones.some(function(z){return z.zipcode===zipcode;});
+            if(dup){_yToast('이미 추가된 우편번호예요');return;}
+            window._zones.push({zipcode:zipcode, name:name, lat:lat, lng:lng});
+            _renderZoneTags();
+            _updateMapZones();
+            var areaInp = document.getElementById('pw-area');
+            if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+            var msgEl = document.getElementById('zip-add-msg');
+            if(msgEl) msgEl.textContent = zipcode+' '+name+' 구역이 추가됐어요';
+            input.value = '';
+          } else {
+            _yToast('주소 좌표를 찾을 수 없어요');
+          }
+        });
+      });
+    }
+  }).open({q: zip});
 }
 function _openDaumPost(){
   new daum.Postcode({
