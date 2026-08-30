@@ -26,6 +26,19 @@
  * 최종수정: 2026-07-17 | 리팩토링 분리 + 심플모드 추가
  */
 
+// ── 오프라인 상태 배너 ────────────────────────────────────────────────────────
+function _offlineBanner(){
+ var banner=document.getElementById('filo-offline-banner');
+ if(!banner)return;
+ if(navigator.onLine){
+  banner.hidden=true;
+ }else{
+  banner.hidden=false;
+ }
+}
+// 초기 상태 반영
+document.addEventListener('DOMContentLoaded',_offlineBanner);
+
 function _filoReceiptSelected(input){
  var file=input.files&&input.files[0];
  if(!file)return;

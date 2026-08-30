@@ -78,6 +78,15 @@ function _filoConfirmPay(method, methodLabel){
   status:payType==='prepay'?'paid':'pending',
   createdBy:_CU.name||_CU.userId||''
  };
+ // 오프라인 시 IndexedDB 큐에 저장
+ if(!navigator.onLine){
+  if(method!=='cash'){_filoToast('오프라인 상태에서는 현금 결제만 가능합니다');return;}
+  if(typeof _offlineQueueSale==='function')_offlineQueueSale(saveData);
+  _filoToast('오프라인 주문 저장됨 — 인터넷 연결 시 자동 동기화됩니다');
+  window._selectedTableId=null;window._selectedTableName=null;
+  _cartClear();
+  return;
+ }
  // filo_sales에 저장
  _db.collection('filo_sales').add(saveData).then(function(ref){
   if(typeof _lastPosSaleRef!=='undefined') window._lastPosSaleRef=ref;

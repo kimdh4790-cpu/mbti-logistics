@@ -1254,6 +1254,7 @@ input:focus,select:focus,textarea:focus{
 </div>
 
 <!-- ── 앱 화면 ── -->
+<div id="filo-offline-banner" hidden style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;text-align:center;padding:7px 16px;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.3px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>오프라인 모드 — 현금 결제만 가능 · 인터넷 연결 시 주문이 자동으로 동기화됩니다</div>
 <div id="app">
  <div class="topbar">
   <button id="sidebar-toggle" onclick="_toggleSidebar()" style="background:none;border:none;color:#0f172a;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s;width:36px;justify-content:center" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='none'"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
@@ -1299,7 +1300,7 @@ input:focus,select:focus,textarea:focus{
 <script src="/filo-margin.js?v=1"></script>
 <script src="/filo-members.js?v=1"></script>
 <script src="/filo-payroll2.js?v=1"></script>
-<script src="/filo-payment.js?v=1"></script>
+<script src="/filo-payment.js?v=2"></script>
 <script src="/filo-settings.js?v=1"></script>
 <script src="/filo-report.js?v=2"></script>
 <script src="/filo-menu-templates.js?v=1"></script>
@@ -1311,10 +1312,10 @@ input:focus,select:focus,textarea:focus{
 <script src="/filo-booking.js?v=1"></script>
 <script src="/filo-table.js?v=3"></script>
   <script src="/filo-qr.js?v=1"></script>
-<script src="/filo-pos-core.js?v=1"></script>
-<script src="/filo-pos-ui.js?v=2"></script>
+<script src="/filo-pos-core.js?v=2"></script>
+<script src="/filo-pos-ui.js?v=3"></script>
 <script src="/filo-pos-pay.js?v=1"></script>
-<script src="/filo-pos.js?v=6"></script>
+<script src="/filo-pos.js?v=7"></script>
 <!-- filo-ai.js 통합됨: filo-margin.js (2026-08-04) -->
 <script src="/filo-memo.js?v=1"></script>
 </body>

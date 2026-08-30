@@ -272,6 +272,62 @@ document.addEventListener('click',function(e){
  if(db)_filoDeleteMember(db.dataset.id, db.dataset.name||'');
 });
 
+// ── 오프라인 모드 — IndexedDB 큐 ────────────────────────────────────────────
+var _offlineDB=null;
+
+function _offlineInit(){
+ if(_offlineDB)return;
+ try{
+  var req=indexedDB.open('filo_offline',1);
+  req.onupgradeneeded=function(e){
+   var db=e.target.result;
+   if(!db.objectStoreNames.contains('pending_sales'))
+    db.createObjectStore('pending_sales',{autoIncrement:true});
+  };
+  req.onsuccess=function(e){
+   _offlineDB=e.target.result;
+   _offlineSync();
+  };
+  req.onerror=function(){console.warn('[offline] IndexedDB 열기 실패');};
+ }catch(err){console.warn('[offline] IndexedDB 미지원',err);}
+}
+
+function _offlineQueueSale(data){
+ if(!_offlineDB)return;
+ try{
+  _offlineDB.transaction('pending_sales','readwrite').objectStore('pending_sales').add(data);
+ }catch(e){console.warn('[offline queue]',e);}
+}
+
+function _offlineSync(){
+ if(!navigator.onLine||!_offlineDB||typeof _db==='undefined')return;
+ try{
+  var tx=_offlineDB.transaction('pending_sales','readwrite');
+  var store=tx.objectStore('pending_sales');
+  store.openCursor().onsuccess=function(e){
+   var cursor=e.target.result;
+   if(!cursor)return;
+   var key=cursor.key, data=cursor.value;
+   _db.collection('filo_sales').add(data).then(function(){
+    try{_offlineDB.transaction('pending_sales','readwrite').objectStore('pending_sales').delete(key);}catch(err){}
+    _filoToast('오프라인 주문 동기화 완료');
+   }).catch(function(err){console.warn('[offline sync]',err.message);});
+   cursor.continue();
+  };
+ }catch(e){console.warn('[offline sync error]',e);}
+}
+
+window.addEventListener('online',function(){
+ _offlineSync();
+ if(typeof _offlineBanner==='function')_offlineBanner();
+});
+window.addEventListener('offline',function(){
+ if(typeof _offlineBanner==='function')_offlineBanner();
+});
+
+// 앱 로드 시 초기화
+setTimeout(_offlineInit,1000);
+
 
 /* ══════════════════════════════════
    테이블 관리 페이지

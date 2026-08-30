@@ -126,16 +126,20 @@ var _POS_METHODS=[
 ];
 
 function _posMethodGrid(){
- return '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
+ var online=navigator.onLine;
+ return (online?'':'<div style="margin-bottom:10px;padding:8px 12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;display:flex;align-items:center;gap:8px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><span style="font-size:11px;color:#ef4444;font-weight:700">오프라인 — 현금 결제만 가능</span></div>')+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
   _POS_METHODS.map(function(m){
+   var disabled=!online&&m.key!=='cash'&&m.key!=='service';
    return '<button class="pos-method-btn" data-method="'+m.key+'" '+
+    (disabled?'disabled ':'')+
     'style="background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;'+
-    'padding:14px 8px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;'+
-    'min-height:80px;transition:all .18s;touch-action:manipulation">'+
+    'padding:14px 8px 12px;cursor:'+(disabled?'not-allowed':'pointer')+';display:flex;flex-direction:column;align-items:center;gap:6px;'+
+    'min-height:80px;transition:all .18s;touch-action:manipulation;'+(disabled?'opacity:.35;':'')+'">'+
     '<div style="width:36px;height:36px;border-radius:10px;background:'+m.bg+'22;display:flex;align-items:center;justify-content:center;color:'+m.bg+'">'+
     _svgIcon(m.icon)+'</div>'+
     '<div style="font-size:12px;font-weight:900;color:#cbd5e1">'+m.label+'</div>'+
-    '<div style="font-size:9px;color:#334155;font-weight:600">'+m.sub+'</div>'+
+    '<div style="font-size:9px;color:#334155;font-weight:600">'+(disabled?'인터넷 필요':m.sub)+'</div>'+
     '</button>';
   }).join('')+
   '</div>';
