@@ -63,13 +63,12 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
     await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
     await ss(page, '01-landing');
 
-    // 이메일 입력
-    const emailInput = page.locator('input[type="email"], input[placeholder*="이메일"]').first();
-    await emailInput.fill(EMAIL);
-    const passInput = page.locator('input[type="password"]').first();
-    await passInput.fill(PASS);
+    // 이메일 입력 (filo.html: #fl-id type=text, #fl-pw type=password)
+    await page.waitForSelector('#fl-id', { timeout: 15000 });
+    await page.fill('#fl-id', EMAIL);
+    await page.fill('#fl-pw', PASS);
     await ss(page, '02-login-filled');
-    await passInput.press('Enter');
+    await page.press('#fl-pw', 'Enter');
     await wait(3000);
     await ss(page, '03-after-login');
 
@@ -205,27 +204,17 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
       await dinePage.goto(DINE_URL, { waitUntil: 'networkidle', timeout: 30000 });
       await ss(dinePage, '13-dine-landing');
 
-      // 전화번호 로그인
-      const phoneInput = dinePage.locator('input[type="tel"], input[placeholder*="전화"], input[placeholder*="번호"]').first();
-      if (await phoneInput.count() > 0) {
-        await phoneInput.fill(STAFF_PHONE);
-        const dinePassInput = dinePage.locator('input[type="password"]').first();
-        await dinePassInput.fill(STAFF_PASS);
-        await ss(dinePage, '14-dine-login-filled');
-        await dinePassInput.press('Enter');
-        await wait(3000);
-        await ss(dinePage, '15-dine-after-login');
-        const dineUrl = dinePage.url();
-        log('DINE 직원 로그인', dineUrl.includes('dine.ne.kr'));
-      } else {
-        // 이메일 폼인 경우
-        const emailInput2 = dinePage.locator('input[type="email"]').first();
-        if (await emailInput2.count() > 0) {
-          await emailInput2.fill(STAFF_PHONE + '@filo.kr');
-        }
-        log('DINE 로그인 폼 감지', false);
-        await ss(dinePage, '14-dine-form-unknown');
-      }
+      // DINE 로그인: #li-email + #li-pw
+      await dinePage.waitForSelector('#li-email', { timeout: 15000 });
+      // 직원 계정은 전화번호를 이메일 필드에 입력 (Firebase phone auth 미사용 시)
+      await dinePage.fill('#li-email', STAFF_PHONE + '@dine.filo');
+      await dinePage.fill('#li-pw', STAFF_PASS);
+      await ss(dinePage, '14-dine-login-filled');
+      await dinePage.press('#li-pw', 'Enter');
+      await wait(3000);
+      await ss(dinePage, '15-dine-after-login');
+      const dineUrl = dinePage.url();
+      log('DINE 앱 접속', dineUrl.includes('dine.ne.kr'));
 
       // 출퇴근 현황 확인
       const dineContent = await dinePage.content();
