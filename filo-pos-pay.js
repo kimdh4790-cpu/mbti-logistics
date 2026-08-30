@@ -77,7 +77,7 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
               });
             });
             if(!tokens.length)return;
-            var iNames=items.slice(0,3).map(function(it){return it.name+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
+            var iNames=items.slice(0,3).map(function(it){return (it.name||'메뉴')+(it.qty>1?' ×'+it.qty:'');}).join(' · ');
             if(items.length>3)iNames+=' 외 '+(items.length-3)+'건';
             fetch('/fcm/notify-drivers',{
               method:'POST',

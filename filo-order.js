@@ -797,7 +797,7 @@ function _toSubmitOrder(did){
  _db.collection('filo_orders').add({
   dealerId:did,tableId:_toTable.tableId,tableNum:_toTable.tableId,
   tableName:_toTable.tableId+'번 테이블',
-  items:items.map(function(it){return {name:it.name,price:it.price,qty:it.qty};}),
+  items:items.map(function(it){return {name:it.name||'',price:it.price||0,qty:it.qty||1};}),
   total:total,status:'pending',type:'table',source:'staff',
   payMethod:'카운터결제',createdBy:_CU.name||_CU.userId||'직원',
   createdAt:now.toISOString(),date:now.toISOString().slice(0,10)

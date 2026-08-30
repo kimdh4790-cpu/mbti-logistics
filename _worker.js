@@ -13413,7 +13413,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
       <div class="type-card" id="t-driver" onclick="_setType('driver')">
         <div class="type-ico">🚗</div>
         <div class="type-lbl">기사</div>
-        <div class="type-desc">노선 지원 · 매칭</div>
+        <div class="type-desc">노선 지원 · 직접 선택</div>
       </div>
     </div>
     <div class="inp-wrap">
@@ -15956,7 +15956,7 @@ function _showPostDetail(d){
         '<text x="36" y="32" text-anchor="middle" font-size="17" font-weight="900" fill="'+_scoreC+'" font-family="Pretendard,sans-serif">'+_aiScore+'</text>'+
         '<text x="36" y="44" text-anchor="middle" font-size="9" font-weight="700" fill="var(--t3)" font-family="Pretendard,sans-serif">MATCH</text>'+
       '</svg>'+
-      '<div style="font-size:10px;color:var(--t3);font-weight:700">AI 매칭</div>'+
+      '<div style="font-size:10px;color:var(--t3);font-weight:700">AI 추천</div>'+
     '</div>':'')+
   '</div>'+
 
@@ -17890,6 +17890,9 @@ function _pgProfile(el){
   (type==='agency'?
   '<button onclick="_goPage(\\'post_write\\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
 
+  '<div style="margin:16px 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
+  '용차앱은 소장과 기사 간 직접 거래를 위한 정보 서비스를 제공합니다. 플랫폼은 계약의 당사자가 아니며, 소장과 기사 간에 직접 체결된 계약에 대해 책임을 지지 않습니다.'+
+  '</div>'+
   '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>'+
 
   // 기사 포트폴리오
@@ -20361,11 +20364,11 @@ function _pgRouteIQ(el){
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'+
     '<span class="riq-badge">ROUTEIQ</span>'+
     '<h1 class="page-title" style="margin:0">AI 노선 인텔리전스</h1></div>'+
-    '<p class="page-sub">실시간 시세·실적 기반 맞춤 매칭</p></div>'+
+    '<p class="page-sub">실시간 시세·실적 기반 맞춤 추천</p></div>'+
     '<div class="sub-tab-row" id="riq-tabs">'+
     '<button class="sub-tab on" onclick="_riqSwitch(\\'heatmap\\')">시세 히트맵</button>'+
     '<button class="sub-tab" onclick="_riqSwitch(\\'record\\')">실적 카드</button>'+
-    (isDriver?'<button class="sub-tab" onclick="_riqSwitch(\\'match\\')">AI 매칭</button>':'')+
+    (isDriver?'<button class="sub-tab" onclick="_riqSwitch(\\'match\\')">AI 기사 추천</button>':'')+
     '</div>'+
     '<div id="riq-body"></div>';
   _riqSwitch('heatmap');
@@ -20795,7 +20798,7 @@ function _riqMatch(el){
         html+='<div class="pcard is-open" onclick="_yOpenPost(\\''+post.id+'\\')" style="margin-bottom:12px">'+
           '<div class="pc-ribbon">'+
           '<span class="riq-badge" style="background:transparent;color:#fff;border:none;padding:0;letter-spacing:1px">ROUTEIQ 추천 #'+(idx+1)+'</span>'+
-          (score?'<span style="font-size:10.5px;font-weight:800;color:#fff;margin-left:auto">매칭 '+score+'점</span>':'')+
+          (score?'<span style="font-size:10.5px;font-weight:800;color:#fff;margin-left:auto">추천 '+score+'점</span>':'')+
           '</div>'+
           '<div class="pc-head">'+
           '<span class="courier-badge">'+_esc(post.courier||post.courierBrand||'택배사')+'</span>'+
@@ -20817,7 +20820,7 @@ function _riqMatch(el){
     });
   }).catch(function(e){
     var mb=document.getElementById('riq-match-body');
-    if(mb)mb.innerHTML='<div class="card" style="color:var(--rd);text-align:center;padding:24px">AI 매칭 오류: '+_esc(e.message)+'</div>';
+    if(mb)mb.innerHTML='<div class="card" style="color:var(--rd);text-align:center;padding:24px">AI 추천 오류: '+_esc(e.message)+'</div>';
   });
 }
 
