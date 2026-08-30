@@ -51,7 +51,10 @@ function _filoPageMenuMgmt(el){
  imgBtn.className='btn btn-sm';
  imgBtn.style.cssText='background:#0891b2;color:#fff;font-size:12px';
  imgBtn.textContent='이미지 일괄 갱신';
- (function(b){imgBtn.onclick=function(){_filoRefreshAllMenuImages(did,b);};})(imgBtn);
+ (function(b){imgBtn.onclick=function(){
+  if(typeof _filoRefreshAllMenuImages==='function'){_filoRefreshAllMenuImages(did,b);}
+  else{_filoLoadAndRun('filo-menu-image.js',function(){_filoRefreshAllMenuImages(did,b);});}
+ };})(imgBtn);
  hdr.appendChild(imgBtn);
 
  // ★ 번역 일괄생성 버튼
@@ -59,7 +62,10 @@ function _filoPageMenuMgmt(el){
  trBtn.className='btn btn-sm';
  trBtn.style.cssText='background:#7c3aed;color:#fff;font-size:12px';
  trBtn.textContent='번역 일괄생성';
- (function(b){trBtn.onclick=function(){_filoBatchTranslate(did,b);};})(trBtn);
+ (function(b){trBtn.onclick=function(){
+  if(typeof _filoBatchTranslate==='function'){_filoBatchTranslate(did,b);}
+  else{_filoLoadAndRun('filo-menu-image.js',function(){_filoBatchTranslate(did,b);});}
+ };})(trBtn);
  hdr.appendChild(trBtn);
 
  wrap.appendChild(hdr);
