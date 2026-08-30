@@ -107,6 +107,19 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 - 설치 방식: 프로젝트 직접 복사 (`cp -R skills/<name> /home/user/mbti-logistics/.claude/skills/`)
 - 제거: `.claude/skills/<이름>/` 폴더 삭제 후 commit
 
+### 프론트엔드 디자인 스킬 (2026-08-30 설치)
+| 스킬 | 역할 | 출처 | 설치 위치 |
+|---|---|---|---|
+| design-taste-frontend | Anti-slop 프론트엔드 — 디자인 다이얼(VARIANCE/MOTION/DENSITY) 기반 고품질 랜딩·포트폴리오 생성. Material/Fluent/Carbon 등 공식 디자인시스템 연결 | github.com/Leonxlnx/taste-skill | `.claude/skills/design-taste-frontend/` |
+| image-to-code | 디자인 이미지 분석 → 실제 작동 코드 생성 (같은 저장소 서브스킬) | github.com/Leonxlnx/taste-skill | `.claude/skills/image-to-code/` |
+| web-design-guidelines | Vercel Web Interface Guidelines 기준 UI/UX 코드 감사 (접근성·색 대비·모바일 레이아웃 등) | github.com/vercel-labs/agent-skills | `.claude/skills/web-design-guidelines/` |
+
+**미설치 (로컬 PC에서 수동 설치 필요)**:
+| 스킬 | 설치 명령 | 이유 |
+|---|---|---|
+| Awesome Design MD (57개 브랜드) | Claude Code에 `https://github.com/voltagent/awesome-design-md 이 저장소 설치해줘` 라고 말하기 | 57개 브랜드 파일 대용량 — 로컬에서 처리 |
+| Playwright CLI | `npm install -g @playwright/cli@latest && playwright-cli install --skills` | npm global 설치 필요 |
+
 ### ECC 추가 설치 (2026-08-30, 2차)
 | 항목 | 종류 | 역할 | 위치 |
 |---|---|---|---|
@@ -255,3 +268,4 @@ claude
 | 2026-08-29 | Oracle Cloud VCN Security List TCP 5678 Ingress Rule 추가 (n8n 외부 접속용) |
 | 2026-08-30 | ECC 스킬 2차 설치: frontend-design-direction, code-reviewer 에이전트 |
 | 2026-08-30 | 커스텀 슬래시 명령어 20개 구현: 개발 5개(5whys·risks·blueprint·critique·checklist) + 마케팅 10개(brainstorm·hooks·ghost·tone·story·audience·improve·tweet·expand·proofread) + 비즈니스분석 7개(pros-cons·compare·steelman·devil·tldr·margin·pricing·shorter·rephrase·outline) |
+| 2026-08-30 | 프론트엔드 디자인 스킬 3개 설치: design-taste-frontend(1206줄, Leonxlnx), image-to-code(1228줄), web-design-guidelines(39줄, Vercel). Awesome Design MD·Playwright CLI는 로컬 설치 필요 |
