@@ -162,7 +162,7 @@ async function verifyFirebaseToken(request, _env) {
     try {
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', 'Referer': 'https://filo.ai.kr', 'Origin': 'https://filo.ai.kr'},
         body: JSON.stringify({idToken: token})
       });
       if (res.ok) {
