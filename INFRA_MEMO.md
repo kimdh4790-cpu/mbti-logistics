@@ -86,6 +86,26 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | Account ID | 02709cbec18d848913b4246015b9148f |
 | KV NS_ID | 7f0e90efaea64f3ab08ff00f8970b28b |
 
+### Worker Secrets 등록 현황
+| Secret | 값 | 상태 |
+|---|---|---|
+| `FIREBASE_API_KEY` | `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0` | **미등록 — 등록 필요** |
+| `ANTHROPIC_API_KEY` | (별도 관리) | 확인 필요 |
+| `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 확인 필요 |
+
+### Worker Secrets 등록 방법
+**방법 A — OPC VM에서 wrangler CLI:**
+```bash
+cd ~/mbti-logistics
+CLOUDFLARE_API_TOKEN=<CF_GLOBAL_KEY값> npx wrangler secret put FIREBASE_API_KEY
+# 입력: AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0
+```
+
+**방법 B — Cloudflare 대시보드:**
+dash.cloudflare.com → Workers & Pages → mbti-logistics → Settings → Variables → Encrypt 체크 후 추가
+
+> ⚠️ `FIREBASE_API_KEY` 미등록 시 `/api/errors` 등 슈퍼어드민 API 전체 401 반환
+
 ---
 
 ## Claude Code 플러그인 현황 (로컬 PC)

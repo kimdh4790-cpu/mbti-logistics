@@ -186,7 +186,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 **_worker.js 절대 금지**
 - `}{status:400` 치환 패턴 수정 금지 (Worker 빌드 깨짐)
 - wrangler.toml [vars] 수정 금지
-- Cloudflare Secrets는 대시보드에서만 관리
+- Cloudflare Secrets는 대시보드 또는 `wrangler secret put` (OPC VM에서 CF_GLOBAL_KEY 사용)으로 관리
 
 ---
 
