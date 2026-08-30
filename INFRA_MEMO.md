@@ -120,8 +120,9 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 - Superpowers, Claude-Mem — 이미 설치됨 (로컬 PC 기준)
 
 ### 커스텀 슬래시 명령어 (2026-08-30, .claude/commands/)
-프롬프트 명령어 40개 중 개발 워크플로에 유용한 5개 커스텀 명령어로 구현:
+프롬프트 명령어 40개 중 20개 커스텀 명령어로 구현 (개발 5개 + 마케팅 10개 + 비즈니스분석 5개):
 
+#### 개발·코드 (1차, 2026-08-30)
 | 명령어 | 역할 |
 |---|---|
 | `/5whys` | 버그 증상 → 근본 원인 5단계 분석 + 재발 방지 |
@@ -130,7 +131,35 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | `/critique` | 코드·설계 약점 진단 (HIGH/MEDIUM/LOW 심각도) |
 | `/checklist` | 배포 전 CLAUDE.md 기준 체크리스트 자동 생성 |
 
-출처: 블로그 프롬프트 40개 → 개발 특화 재구성, MBTICO 프로젝트 규칙 반영
+#### 마케팅·콘텐츠 (2차, 2026-08-30)
+| 명령어 | 역할 |
+|---|---|
+| `/brainstorm` | 주제 → 아이디어 10개 발산 + TOP 3 추천 |
+| `/hooks` | 제품·주제 → 후킹 첫 문장 5가지 유형 |
+| `/ghost` | AI 티 나는 글 → 자연스럽게 다듬기 |
+| `/tone` | casual/formal/sns/blog/sales/story 말투 전환 |
+| `/story` | 제품 → Before-After 사례 스토리 |
+| `/audience` | 소상공인/배달대행/기사/투자자 등 독자 맞춤 |
+| `/improve` | 글 설득력·명확성·가독성 개선 |
+| `/tweet` | 내용 → SNS 임팩트 문장 5가지 + 해시태그 |
+| `/expand` | 짧은 개요 → 블로그/제안서 완성본 |
+| `/proofread` | 맞춤법·띄어쓰기·번역투·중복 교정 |
+
+#### 비즈니스 분석·마진 (2차, 2026-08-30)
+| 명령어 | 역할 |
+|---|---|
+| `/pros-cons` | 결정·아이디어 장단점 표 + 종합 판단 |
+| `/compare` | 옵션A vs B 비교표 + FILO 차별화 포인트 |
+| `/steelman` | 주장 최강 버전 재구성 + 반론 선점 |
+| `/devil` | 계획 약점·가정 오류 선제 탐색 |
+| `/tldr` | 긴 글 → 3줄 요약 + 한 줄 버전 |
+| `/margin` | 마진율·손익분기점 계산 + 개선 방향 |
+| `/pricing` | 가격 전략 분석 + 요금제 구조 최적화 |
+| `/shorter` | 의미 손실 없이 최대한 압축 |
+| `/rephrase` | 같은 내용 3가지 다른 표현으로 |
+| `/outline` | 글·영상·제안서 목차 구조 설계 |
+
+출처: 블로그 프롬프트 40개 → 개발·마케팅·비즈니스 특화 재구성, MBTICO 프로젝트 규칙 반영
 
 ### Motion Graphics 스킬 (2026-08-28 설치, Remotion 기반)
 | 스킬 | 역할 |
@@ -224,3 +253,5 @@ claude
 | 2026-08-28 | Motion Graphics 스킬 4종 + Remotion 공식 12종 설치. Context7 MCP 등록 |
 | 2026-08-29 | n8n v2.8.4 Oracle Cloud VM 영구 설치 완료 (http://161.33.136.154:5678, admin/Mbtico2026!, crontab @reboot 자동시작, 라이선스 활성화) |
 | 2026-08-29 | Oracle Cloud VCN Security List TCP 5678 Ingress Rule 추가 (n8n 외부 접속용) |
+| 2026-08-30 | ECC 스킬 2차 설치: frontend-design-direction, code-reviewer 에이전트 |
+| 2026-08-30 | 커스텀 슬래시 명령어 20개 구현: 개발 5개(5whys·risks·blueprint·critique·checklist) + 마케팅 10개(brainstorm·hooks·ghost·tone·story·audience·improve·tweet·expand·proofread) + 비즈니스분석 7개(pros-cons·compare·steelman·devil·tldr·margin·pricing·shorter·rephrase·outline) |
