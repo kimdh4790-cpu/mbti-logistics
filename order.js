@@ -247,16 +247,26 @@ window.onload=function(){
    _db.collection('filo_orders').doc(lastId).get().then(function(doc){
     if(!doc.exists)return;
     var d=doc.data();
-    if(d.status!=='pending'&&d.status!=='ready'&&d.status!=='served')return;
+    if(d.status!=='pending'&&d.status!=='ready'&&d.status!=='served'&&d.status!=='completed')return;
     _lastOrderId=lastId;
+    _lastOrderItems=d.items||[];_lastOrderTotal=d.total||0;
     var dn=document.getElementById('done');
     var dnum=document.getElementById('done-num');
     var ditems=document.getElementById('done-items');
+    var dtitle=document.getElementById('done-title');
+    var dsub=document.getElementById('done-sub');
+    if(dtitle)dtitle.textContent='주문 완료';
+    if(dsub)dsub.textContent='주문이 정상 접수됐습니다';
     if(dnum)dnum.textContent=_t('tableNum')+' '+d.tableNum+' · '+_t('orderNum')+' #'+lastId.slice(-6).toUpperCase();
     if(ditems){var il=(d.items||[]).map(function(i){return (i.emoji||'🍽')+' '+i.name+' x'+i.qty;});ditems.textContent=il.join(', ');}
     if(dn)dn.style.display='flex';
-    _listenPickup(lastId);
-    if(d.status==='ready')_showPickupAlert();
+    if(d.status==='pending'||d.status==='ready'||d.status==='served'){
+     _doneStep(3);
+     _listenPickup(lastId);
+     if(d.status==='ready')_showPickupAlert();
+    } else {
+     _doneStep(1);
+    }
    }).catch(function(){});
   }
  } else {
@@ -481,7 +491,7 @@ function _showPickupAlert(){
  alert.id='pickup-alert';
  alert.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
  alert.innerHTML='<div style="background:#fff;border-radius:24px;padding:32px;text-align:center;max-width:320px;width:100%">'+
-  '<div style="font-size:24px;margin-bottom:16px"></div>'+
+  '<div style="font-size:48px;margin-bottom:16px">🔔</div>'+
   '<div style="font-size:22px;font-weight:900;margin-bottom:8px;color:#0f172a">준비 완료!</div>'+
   '<div style="font-size:15px;color:#475569;margin-bottom:24px">주문하신 음식이 준비됐습니다.<br>카운터에서 수령해주세요</div>'+
   '<button onclick="document.getElementById(\'pickup-alert\').remove()" style="width:100%;padding:16px;background:#0891b2;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:800;cursor:pointer">확인</button>'+
@@ -941,6 +951,20 @@ function reqReceiptFCM(){
         btn.textContent='영수증 알림 받기';btn.disabled=false;
       });
   });
+}
+
+// ── 영수증 공유 ──────────────────────────────────────────────────────────────
+function _shareReceipt(){
+  var items=_lastOrderItems||[];
+  var lines=items.map(function(i){
+    return (i.emoji||'')+' '+(i.name||'')+(i.qty>1?' ×'+i.qty:'')+' ₩'+((i.price||0)*(i.qty||1)).toLocaleString();
+  });
+  var text=(_storeName||'매장')+' 주문 영수증\n테이블 '+_tNum+'\n\n'+lines.join('\n')+'\n\n합계: ₩'+(_lastOrderTotal||0).toLocaleString();
+  if(navigator.share){
+    navigator.share({title:(_storeName||'매장')+' 영수증',text:text}).catch(function(){});
+  } else {
+    _filoToast('화면을 캡처해서 저장해 주세요');
+  }
 }
 
 // ── 다크모드 ──────────────────────────────────────────────────
