@@ -225,5 +225,6 @@ git push -u origin claude/브랜치명
 | 2026-08-30 | _worker.js, yongcha-worker.js | AI 매칭→AI 추천, 노선 지원·직접 선택 텍스트 동기화 (yongcha.html 커밋 aeb8902·01b0a52 반영) |
 | 2026-08-30 | _worker.js, yongcha-worker.js | 프로필 화면 로그아웃 버튼 위 부가통신사업자 법적 고지 문구 추가 |
 | 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js, yongcha-landing.html, yongcha-meta.json | 부가통신사업자 포지셔닝 전면 반영: '배차'→'단건 요청/운행/연결', '배차완료'→'운행완료', AI 프롬프트 '배차 최적화'→'기사 추천 정보', 마케팅 메시지 '직접 매칭'→'직접 거래 정보 서비스' |
+| 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js | 공고 등록 구역 정보 섹션에 배송지 우편번호(pw-deliveryZip) 입력 필드 추가. Firestore yongcha_posts.deliveryZip 저장. 상차지와 별개 필드. |
 | 2026-08-30 | yongcha-landing.html | 랜딩 페이지 전면 리디자인: 다크 네이비→흰색 테마, 세로 스크롤→가로 슬라이드 5패널 (Hero/기능/요금제/후기/CTA), KV 재배포 필요 |
 | 2026-08-30 | yongcha-landing.html | 랜딩 페이지 삭제 — 허위 수치(2,400+ 기사 등) 포함, 마케팅 미집행 상태라 불필요. git rm + KV 키 삭제 필요 |
