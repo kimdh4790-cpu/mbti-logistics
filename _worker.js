@@ -13823,7 +13823,7 @@ var NAV_TABS={
   agency:[{ico:_ico.dash,lbl:'대시보드',p:'home'},{ico:_ico.list,lbl:'공고관리',p:'my_posts'},
           {ico:_ico.users,lbl:'기사관리',p:'members'},{ico:_ico.wallet,lbl:'정산관리',p:'dashboard'},
           {ico:_ico.more,lbl:'더보기',p:'profile'}],
-  driver:[{ico:_ico.home,lbl:'홈',p:'home'},{ico:_ico.truck,lbl:'배차',p:'posts'},
+  driver:[{ico:_ico.home,lbl:'홈',p:'home'},{ico:_ico.truck,lbl:'공고',p:'posts'},
           {ico:_ico.pkg,lbl:'배송',p:'my_routes'},{ico:_ico.wallet,lbl:'정산',p:'dashboard'},
           {ico:_ico.user,lbl:'내정보',p:'profile'}]
 };
@@ -13896,7 +13896,7 @@ function _yStopHomeWatch(){
 
 /* 알림 타입 메타 — SVG 아이콘 + 색상 */
 var _NOTIF_TYPES={
-  dispatch:{lbl:'배차',
+  dispatch:{lbl:'단건 요청',
     ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
     bg:'var(--gnl)',col:'var(--gn)'},
   apply:{lbl:'지원',
@@ -13935,7 +13935,7 @@ function _pgNotifications(el){
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
   var filterTabs=[
     {key:'all',lbl:'전체'},
-    {key:'dispatch',lbl:'배차'},
+    {key:'dispatch',lbl:'단건 요청'},
     {key:'apply',lbl:'지원'},
     {key:'settle',lbl:'정산'},
     {key:'scout',lbl:'스카웃'},
@@ -14094,7 +14094,7 @@ function _pgHomeDriver(el){
   // 홈 액션 버튼 2개 (모형: 노란색 + 파란색)
   '<div class="home-act-grid">'+
     '<button type="button" class="btn-act-gold" onclick="_goPage(\\'posts\\')">'+
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>긴급 배차 수락</button>'+
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>긴급 요청 수락</button>'+
     '<button type="button" class="btn-act-blue" onclick="_yOpenNaviModal()">'+
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>내비게이션 시작</button>'+
   '</div>'+
@@ -14173,14 +14173,14 @@ function _pgHomeDriver(el){
   _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').get()
   .then(function(s){
     var badge=document.getElementById('drv-active-badge');
-    if(badge)badge.textContent='진행중 배차 '+s.size+'건';
+    if(badge)badge.textContent='진행중 운행 '+s.size+'건';
   }).catch(function(e){console.error('active badge',e);});
 
   // 오늘 일정 (승인된 배차 목록)
   _db.collection('yongcha_applies').where('driverId','==',_CU.uid).where('status','==','approved').limit(5).get()
   .then(function(snap){
     var sched=document.getElementById('home-sched');if(!sched)return;
-    if(snap.empty){sched.innerHTML='<div style="padding:20px 14px;font-size:13px;color:var(--t3);text-align:center">오늘 예정된 배차가 없어요</div>';return;}
+    if(snap.empty){sched.innerHTML='<div style="padding:20px 14px;font-size:13px;color:var(--t3);text-align:center">오늘 예정된 운행이 없어요</div>';return;}
     sched.innerHTML='';
     snap.docs.slice(0,3).forEach(function(doc,i){
       var a=doc.data();
@@ -14377,7 +14377,7 @@ function _pgHomeAgency(el){
   '</div>'+
 
   // 오늘 배차 현황 — 3컬럼 통계
-  '<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:10px">오늘 배차 현황</div>'+
+  '<div style="font-size:13.5px;font-weight:800;color:var(--tx);margin-bottom:10px">오늘 운행 현황</div>'+
   '<div class="stat-3col">'+
     '<div class="stat3-item"><div class="stat3-val" style="color:var(--ac)" id="kpi-reg">'+_skVal+'</div><div class="stat3-lbl">등록 공고</div></div>'+
     '<div class="stat3-item"><div class="stat3-val" style="color:var(--gn)" id="kpi-done">'+_skVal+'</div><div class="stat3-lbl">배차 완료</div></div>'+
@@ -14395,7 +14395,7 @@ function _pgHomeAgency(el){
   // 긴급 배차 원클릭 버튼 (노란색)
   '<button type="button" class="btn-urgent-flash" onclick="_yUrgentDispatch()">'+
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
-    '긴급 배차 (원클릭 공고)'+
+    '긴급 요청 (원클릭)'+
   '</button>'+
 
   // 현금흐름 예측 위젯
@@ -14409,14 +14409,14 @@ function _pgHomeAgency(el){
 
   // 퀵 액션 그리드
   '<div class="quick-grid">'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">배차 공고</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">단건 요청</button>'+
     '<button type="button" class="quick-btn" onclick="_pfSwitchToYongchaTab()" style="border-color:var(--gnln);color:var(--gn)">용차 찾기</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'settle_reconcile\\')" style="border-color:var(--brln);color:var(--br)">정산 대사</button>'+
   '</div>'+
 
   // 지역별 배차 현황
-  '<div class="sec-head"><span class="sec-title">지역별 배차 현황</span></div>'+
+  '<div class="sec-head"><span class="sec-title">지역별 운행 현황</span></div>'+
   '<div class="region-dispatch-list" id="region-dispatch">'+_skRows(3)+'</div>'+
 
   // 최근 지원자
@@ -14770,7 +14770,7 @@ function _pgPosts(el){
   el.innerHTML=
   '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
-      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 모집':'배차 공고')+'</h1>'+
+      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 모집':'단건 요청')+'</h1>'+
       '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'임시 차용 가능 기사 목록 · 며칠~몇주 단위':'대리점이 올린 단건 배달 업무 공고예요')+'</p></div>'+
       '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_postsMainTab===\\'yongcha\\'?_loadDriverOfferList():_loadFilteredPosts()">↻</button>'+
     '</div>'+
@@ -14781,7 +14781,7 @@ function _pgPosts(el){
     '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\\'route\\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '배차 공고</button>'+
+      '단건 요청</button>'+
     '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\\'yongcha\\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
@@ -14861,7 +14861,7 @@ function _pgPosts(el){
       '<div style="font-size:12.5px;font-weight:800;color:var(--gn);margin-bottom:4px">용차란?</div>'+
       '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+
         '결원 발생·물량 급증 시 대리점이 외부 기사를 <b style="color:var(--tx)">며칠~몇주 단위</b>로 임시 차용하는 것이에요. '+
-        '단건 배차나 정직원 채용과 구별되는 별도 계약이에요.'+
+        '단건 요청이나 정직원 채용과 구별되는 별도 계약이에요.'+
       '</div>'+
     '</div>'+
     (_CU&&_CU.type==='driver'?
@@ -14939,7 +14939,7 @@ function _pfSwitchMainTab(tab){
     if(inner)_loadJobsSection(inner);
   } else {
     routeSec.style.display='block';
-    if(title)title.textContent='배차 공고';
+    if(title)title.textContent='단건 요청';
     if(sub)sub.textContent='대리점이 올린 단건 배달 업무 공고예요';
     if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
     _loadFilteredPosts();
@@ -15477,7 +15477,7 @@ function _makePostCard(d,mini){
   var dayEst=(d.unitPrice&&d.volume)?Math.round(d.unitPrice*d.volume/10000):0;
   var minG=(d.workShift==='야간')?35:30;
 
-  var stLabel=isClosed?'마감':isMatched?'배차완료':d.urgent?'긴급':'모집중';
+  var stLabel=isClosed?'마감':isMatched?'운행완료':d.urgent?'긴급':'모집중';
   var stCls=isClosed?'st-closed':isMatched?'st-matched':d.urgent?'st-urgent':'st-open';
 
   // 지역·택배사 시세 게이지
@@ -15889,7 +15889,7 @@ function _yHandleDeepLink(){
 function _showPostDetail(d){
   var isDriver=_CU.type==='driver';
   var _stC=d.status==='closed'?'st-closed':d.status==='matched'?'st-matched':d.urgent?'st-urgent':'st-open';
-  var _stL=d.status==='closed'?'마감':d.status==='matched'?'배차완료':d.urgent?'긴급':'모집중';
+  var _stL=d.status==='closed'?'마감':d.status==='matched'?'운행완료':d.urgent?'긴급':'모집중';
   window._detailPost=d;
 
   // ── AI 수익 예측 ──
@@ -16293,7 +16293,7 @@ function _applyPost(postId,agencyId,agencyName,btnEl){
     //  과로 방지 — 오늘 12시간 초과면 신규 배차 차단
     return _yLoadFatigue().then(function(f){
       if(f.blocked){
-        fail(' 오늘 누적 '+f.hours+'시간 — 12시간 초과로 추가 배차가 제한됩니다');
+        fail(' 오늘 누적 '+f.hours+'시간 — 12시간 초과로 추가 지원이 제한됩니다');
         return null;
       }
       if(f.hours>=FATIGUE_WARN_H)_yToast('오늘 '+f.hours+'시간 운행 중 — 안전에 유의하세요');
@@ -17464,7 +17464,7 @@ function _pgMyRoutes(el){
 
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title"> 내 노선</div>'+
-  '<div class="page-sub">운행 중인 배차 노선이에요</div></div>'+
+  '<div class="page-sub">운행 중인 노선이에요</div></div>'+
   '<div id="fatigue-banner"></div>'+
   '<div id="myroutes-cal" style="margin-bottom:14px"></div>'+
   '<div id="myroutes-weekly"></div>'+
@@ -18335,7 +18335,7 @@ function _pgJobsAgency(el){
   '<div class="page-hdr"><div class="page-title">구인구직</div>'+
   '<div class="page-sub">소속 기사 장기 채용 · 정직원/계약직 모집</div></div>'+
   '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--pu);font-size:12px;color:var(--t2);line-height:1.6">'+
-  '단건 배차·임시 용차와 달리, <b style="color:var(--tx)">정직원·계약직 소속 기사</b>를 모집하는 채용 공고예요.</div>'+
+  '단건 요청·임시 용차와 달리, <b style="color:var(--tx)">정직원·계약직 소속 기사</b>를 모집하는 채용 공고예요.</div>'+
   '<div class="sub-tab-row">'+
   '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\\'myjobs\\')">내 채용공고</button>'+
   '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\\'resumes\\')">이력서 찾기</button>'+
@@ -18614,7 +18614,7 @@ function _pgDriverOffer(el){
   '<div class="page-hdr"><div class="page-title">용차 등록</div>'+
   '<div class="page-sub">임시 차용 · 대리점 소장이 직접 연락해요</div></div>'+
   '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;border-left:3px solid var(--gn);font-size:12px;color:var(--t2);line-height:1.6">'+
-  '단건 배차 지원과 별개로, <b style="color:var(--tx)">며칠~몇주 단위 임시 용차</b> 가능 여부와 조건을 올려두면 소장님이 연락해요.</div>'+
+  '단건 요청 지원과 별개로, <b style="color:var(--tx)">며칠~몇주 단위 임시 용차</b> 가능 여부와 조건을 올려두면 소장님이 연락해요.</div>'+
 
   // 내 활성 공고 목록
   '<div class="sec-head"><span class="sec-title">내 등록 공고</span></div>'+
@@ -18738,7 +18738,7 @@ function _pgJobsDriver(el){
   '<div class="page-hdr"><div class="page-title">구인구직</div>'+
   '<div class="page-sub">대리점 소속 기사 채용 · 정직원/계약직 지원</div></div>'+
   '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--pu);font-size:12px;color:var(--t2);line-height:1.6">'+
-  '용차(임시) · 배차(단건)와 다른 <b style="color:var(--tx)">정직원·계약직 장기 채용</b>이에요. 이력서를 등록하면 소장님이 직접 연락해요.</div>'+
+  '용차(임시) · 단건 요청과 다른 <b style="color:var(--tx)">정직원·계약직 장기 채용</b>이에요. 이력서를 등록하면 소장님이 직접 연락해요.</div>'+
   '<div class="sub-tab-row">'+
   '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\\'list\\')">채용 공고</button>'+
   '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\\'resume\\')">내 이력서</button>'+
@@ -19681,7 +19681,7 @@ function _yRenderFatigue(el){
     var bgc=lvl==='block'?'var(--rdl)':lvl==='warn'?'var(--brl)':'var(--gnl)';
     var bdc=lvl==='block'?'var(--rdln)':lvl==='warn'?'var(--brln)':'var(--gnln)';
     var ico=lvl==='block'?'차단':lvl==='warn'?'주의':'정상';
-    var msg=lvl==='block'?'12시간 초과 — 오늘은 추가 배차가 제한됩니다'
+    var msg=lvl==='block'?'12시간 초과 — 오늘은 추가 지원이 제한됩니다'
            :lvl==='warn'?'10시간 초과 — 무리한 추가 운행은 피해주세요'
            :'안전 운행 중입니다';
     el.innerHTML=
@@ -21307,7 +21307,7 @@ function _showDetailMap(lat,lng,name){
 function _yUrgentDispatch(){
   var body=document.getElementById('modal-body');
   body.innerHTML=
-    '<div style="font-size:19px;font-weight:900;margin-bottom:4px">긴급 배차 발송</div>'+
+    '<div style="font-size:19px;font-weight:900;margin-bottom:4px">긴급 요청 발송</div>'+
     '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">공고를 선택하면 기사들에게 긴급 알림이 발송돼요</div>'+
     '<div id="ud-posts">'+_skRows(3)+'</div>';
   _openModal();
@@ -21406,7 +21406,7 @@ function _ySubmitComplete(applyId){
 
   var doComplete=function(photoUrl){
     _db.collection('yongcha_applies').doc(applyId).get().then(function(s){
-      if(!s.exists){_yToast('배차 정보 없음');_closeModal();return;}
+      if(!s.exists){_yToast('요청 정보 없음');_closeModal();return;}
       var a=s.data();
       return _db.collection('yongcha_applies').doc(applyId).update({
         step:3,status:'done',completedAt:firebase.firestore.FieldValue.serverTimestamp(),
@@ -21487,7 +21487,7 @@ function _yOpenNaviModal(){
     .where('status','==','approved').limit(5).get()
   .then(function(snap){
     var nb=document.getElementById('navi-modal-body');if(!nb)return;
-    if(snap.empty){nb.innerHTML='<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">진행 중인 배차가 없어요</div>';return;}
+    if(snap.empty){nb.innerHTML='<div style="text-align:center;padding:24px;color:var(--t2);font-size:13px">진행 중인 운행이 없어요</div>';return;}
     nb.innerHTML='';
     snap.docs.forEach(function(doc){
       var a=Object.assign({id:doc.id},doc.data());
@@ -21579,7 +21579,7 @@ function _showWorkCert(applyId){
   body.innerHTML='<div style="text-align:center;padding:32px"><div class="spinner"></div></div>';
   _openModal();
   _db.collection('yongcha_applies').doc(applyId).get().then(function(snap){
-    if(!snap.exists){_yToast('배차 정보 없음');_closeModal();return;}
+    if(!snap.exists){_yToast('요청 정보 없음');_closeModal();return;}
     var a=snap.data();
     var certNo='YC-'+applyId.slice(0,8).toUpperCase();
     var seed=0;
@@ -21711,7 +21711,7 @@ async function handleYongcha(request, env) {
     return new Response(JSON.stringify({
       name: '용차 — 택배 노선 매칭',
       short_name: '용차',
-      description: '택배 대리점 소장과 기사를 잇는 AI 배차 플랫폼',
+      description: '소장·기사 직접 거래 정보 서비스 | AI 기사 추천',
       start_url: '/',
       display: 'standalone',
       background_color: '#1a1a2e',
@@ -22300,7 +22300,7 @@ ${postSummary || '공고 없음'}
         return `id:${p.id}|${p.courier} ${p.region} ${p.area}|단가:${p.unitPrice}원(시세${rp>=0?'+':''}${rp}%)|물량:${p.volume}건|${p.workShift||''}|${p.urgent?'긴급':'일반'}`;
       }).join('\n');
 
-      const prompt = `당신은 한국 택배 기사 배차 최적화 AI입니다. 기사 프로필을 분석해 각 공고에 0-100 매칭 점수를 부여하고 핵심 추천 이유를 제공하세요.
+      const prompt = `당신은 한국 용차 기사 추천 정보 AI입니다. 기사 프로필을 분석해 각 공고에 0-100 매칭 점수를 부여하고 핵심 추천 이유를 제공하세요.
 
 기사 프로필:
 - 이름: ${driver.name||'기사'}
@@ -22363,7 +22363,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
     if (!apiKey) return new Response(JSON.stringify({ok:true,fields:rlParse(text)}),{headers:corsH});
     try {
-      const prompt = `한국 택배 대리점 소장이 입력한 자연어에서 배차 공고 필드를 추출하세요.
+      const prompt = `한국 택배 대리점 소장이 입력한 자연어에서 단건 요청 공고 필드를 추출하세요.
 
 입력: "${text}"
 
