@@ -105,6 +105,7 @@ async function initResumableUpload(caption) {
     upload_type: 'resumable',
     caption,
     share_to_feed: true,
+    thumb_offset: 2000,  // 2초 지점 썸네일 (페이드인 완료 후)
   });
   console.log(`  컨테이너 ID: ${res.id}`);
   console.log(`  업로드 URI: ${res.uri}`);

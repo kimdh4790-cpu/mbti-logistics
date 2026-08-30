@@ -120,6 +120,7 @@ async function main() {
     outputLocation: outFile,
     inputProps: { hasNarration, hasBgm },
     videoBitrate: '8M',
+    backgroundColor: '#08101f',
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
     onProgress: ({ renderedFrames, totalFrames }) => {
       if (renderedFrames % 60 === 0 || renderedFrames === totalFrames) {
