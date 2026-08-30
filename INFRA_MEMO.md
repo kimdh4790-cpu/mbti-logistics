@@ -344,3 +344,8 @@ claude
 | 2026-08-30 | 프론트엔드 디자인 스킬 3개 설치: design-taste-frontend(1206줄, Leonxlnx), image-to-code(1228줄), web-design-guidelines(39줄, Vercel). Awesome Design MD·Playwright CLI는 로컬 설치 필요 |
 | 2026-08-30 | Higgsfield MCP 정보 등록 (로컬 설치 예정). /ad-remix·/ad-brief 광고 커맨드 2개 추가 |
 | 2026-08-30 | Meta Ads 커넥터 URL 확인 (https://mcp.facebook.com/ads). Ollama v0.33 Claude Desktop 공식 지원 정보 추가 (gemma4:e2b 추천, thinking 모드 OFF 필수) |
+| 2026-08-30 | Awesome Design MD 스킬 설치 완료 (74개 브랜드, `.claude/skills/awesome-design-md/`) — 미설치 항목에서 제거 |
+| 2026-08-30 | Higgsfield MCP 커넥터 연결 완료 (claude.ai 설정 → 커넥터 → Higgsfield, 크레딧 없음) |
+| 2026-08-30 | Meta Ads MCP 커넥터 연결 완료 (Facebook OAuth, Mbtico 페이지 연결, 광고계정 1139439201982874 KRW) |
+| 2026-08-30 | social-media.yml 버그 수정: YouTube step exit code 1 → continue-on-error:true + if/fi 형식으로 수정. Instagram step if:always() 추가. Run #29 원인: [ FAILED=0 ] && echo "..." 마지막 명령이 exit 1 반환 |
+| 2026-08-30 | Ollama 0.33.2 로컬 PC 설치 완료. gemma4:e2b 다운로드 중 (7.2GB, ~45분) |
