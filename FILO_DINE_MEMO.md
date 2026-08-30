@@ -174,6 +174,9 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `yongcha-landing.html` / `yongcha.html`: "주선사업자 없는 직접 매칭" → "소장·기사 직접 거래 정보 서비스" 등 정보통신업 포지셔닝으로 마케팅 문구 변경. yongcha.html 프로필 화면 법적 고지 추가
 - `BUSINESS_MEMO.md`: 사업자등록증 업종(정보통신산업/인터넷컨텐츠개발및공급업) 확인 기록 + 용차앱 법적 근거
 - `mbtico-ctrl.js`: `_ctrlSetFiloPlan()` 함수 추가 — prompt로 플랜/개월수 선택 → `companies/{did}` filoPlan·filoPlanExpiry·filoPlanAmount·filoPlanPaidAt 업데이트. 테이블·카드 뷰에 "F플랜" 버튼 추가. `_ctrlOpenDetail` 모달에 FILO플랜·FILO만료 행 표시
+- `filo-order.js:800`: `items.map` 내 `it.name/price/qty` null 가드 추가 (`||''`/`||0`/`||1`) — undefined 시 Firestore 저장 오류 방지
+- `filo-pos-pay.js:80`: FCM 영수증 알림 아이템명 null 가드 (`||'메뉴'`) — "undefined ×N" 표시 방지
+- `_worker.js` / `yongcha-worker.js`: YONGCHA_HTML 동기화 — AI 추천 문구 6곳 + 프로필 법적 고지 문구 (yongcha.html 커밋 aeb8902·01b0a52 반영)
 
 ### 2026-08-30 (15차)
 **Worker API 버그 수정 — 슈퍼어드민 인증·포인트 적립 복구**

@@ -402,6 +402,9 @@ cd mbtico-pages && npx wrangler deploy
 - yongcha-landing.html: 히어로 서브카피 "연결합니다" → "정보를 실시간으로 제공합니다. 소장과 기사가 직접 거래합니다."로 변경 (이전 커밋 반영 확인)
 - yongcha.html: AI매칭→AI추천, 직접선택, 맞춤추천 문구 (이전 커밋 반영 확인)
 - CLAUDE.md 마케팅 메타 용차앱 핵심 메시지 "주선사업자 없는 직접 매칭" → "소장·기사 직접 거래 정보 서비스"로 수정
+- _worker.js / yongcha-worker.js: YONGCHA_HTML 동기화 (AI 추천 문구 6곳 + 법적 고지) — yongcha.html 미반영분 보완
+- filo-order.js / filo-pos-pay.js: null 가드 추가 (Firestore undefined 저장·영수증 "undefined" 표시 방지)
+- INFRA_MEMO.md: Oracle Cloud wrangler deploy 명령어 추가 (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL 조합)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
