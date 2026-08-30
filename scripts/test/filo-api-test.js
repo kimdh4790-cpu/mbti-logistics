@@ -37,22 +37,48 @@ function log(ok, label, detail = '') {
   if (ok) passed++; else failed++;
 }
 
-async function getToken() {
-  const r = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_KEY}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Referer': 'https://filo.ai.kr',  // Firebase API 키 리퍼러 제한 우회
-        'Origin': 'https://filo.ai.kr',
+// fetch는 Referer를 forbidden header로 처리하므로 https.request() 직접 사용
+const https = require('https');
+
+function httpsPost(hostname, path, body, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = JSON.stringify(body);
+    const req = https.request(
+      {
+        hostname,
+        path,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(bodyStr),
+          Referer: 'https://filo.ai.kr',
+          Origin: 'https://filo.ai.kr',
+          ...headers,
+        },
       },
-      body: JSON.stringify({ email: EMAIL, password: PASS, returnSecureToken: true }),
-    }
+      (res) => {
+        let data = '';
+        res.on('data', (d) => (data += d));
+        res.on('end', () => {
+          try { resolve({ status: res.statusCode, json: JSON.parse(data) }); }
+          catch { resolve({ status: res.statusCode, json: {} }); }
+        });
+      }
+    );
+    req.on('error', reject);
+    req.write(bodyStr);
+    req.end();
+  });
+}
+
+async function getToken() {
+  const { json } = await httpsPost(
+    'identitytoolkit.googleapis.com',
+    `/v1/accounts:signInWithPassword?key=${FIREBASE_KEY}`,
+    { email: EMAIL, password: PASS, returnSecureToken: true }
   );
-  const d = await r.json();
-  if (!d.idToken) throw new Error('Firebase 로그인 실패: ' + JSON.stringify(d.error));
-  return d.idToken;
+  if (!json.idToken) throw new Error('Firebase 로그인 실패: ' + JSON.stringify(json.error || json));
+  return json.idToken;
 }
 
 async function req(url, opts = {}) {
