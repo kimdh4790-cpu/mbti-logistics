@@ -4510,7 +4510,7 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">배송구역 우편번호 추가</label>'+
   '<div style="display:flex;gap:8px">'+
   '<input class="inp" id="pw-zip-input" placeholder="우편번호 5자리 입력" maxlength="5" inputmode="numeric" style="flex:1"'+
-  ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();_addZipCodeZone();}">'+
+  ' onkeydown="if(event.keyCode===13){event.preventDefault();_addZipCodeZone();}">'+
   '<button onclick="_addZipCodeZone()" type="button" style="white-space:nowrap;padding:0 18px;background:var(--ac);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">추가</button>'+
   '</div>'+
   '<div id="zip-add-msg" style="font-size:12px;color:#22c55e;margin-top:6px;min-height:18px"></div>'+
