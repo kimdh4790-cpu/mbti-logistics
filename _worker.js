@@ -10493,6 +10493,68 @@ service cloud.firestore {
       return new Response('<script>window.opener&&window.opener.postMessage({type:"toss_fail",reason:'+JSON.stringify(msg)+'},"*");window.close();</script>',{headers:{'Content-Type':'text/html','Access-Control-Allow-Origin':'*'}});
     }
 
+    // ── FILO 구독 결제 성공 콜백 (/filo-subscribe-success) ──
+    if (path === '/filo-subscribe-success' && method === 'GET') {
+      const su = new URL(request.url);
+      const paymentKey = su.searchParams.get('paymentKey') || '';
+      const orderId    = su.searchParams.get('orderId')    || '';
+      const amount     = su.searchParams.get('amount')     || '0';
+      const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FILO 구독 완료</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Pretendard',sans-serif;background:#08101f;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.card{background:#0f1a2e;border:1px solid #1e3a5f;border-radius:16px;padding:32px 24px;max-width:400px;width:100%;text-align:center}
+.icon{width:64px;height:64px;background:#c9a84c20;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
+h1{font-size:22px;font-weight:700;margin-bottom:8px}
+p{font-size:14px;color:#8899aa;line-height:1.6;margin-bottom:24px}
+.btn{display:inline-block;padding:14px 32px;background:#c9a84c;color:#000;font-weight:700;border-radius:10px;text-decoration:none;font-size:15px}
+#status{font-size:13px;color:#c9a84c;margin-bottom:16px}</style></head>
+<body><div class="card">
+<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+<h1>구독이 완료되었습니다</h1>
+<p id="status">결제를 처리하는 중입니다...</p>
+<a href="https://filo.ai.kr/app" class="btn">FILO 앱으로 이동</a>
+</div>
+<script>
+(async function(){
+  var pk=${JSON.stringify(paymentKey)},oid=${JSON.stringify(orderId)},amt=${JSON.stringify(amount)};
+  if(!pk||!oid||!amt){document.getElementById('status').textContent='파라미터 오류. 고객센터로 문의해주세요.';return;}
+  var uid=localStorage.getItem('filo_uid')||'';
+  var token=localStorage.getItem('filo_token')||'';
+  try{
+    var r=await fetch('/toss-confirm',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({paymentKey:pk,orderId:oid,amount:parseInt(amt)})});
+    var d=await r.json();
+    if(d.success){
+      var planNames={basic:'베이직',pro:'프로',premium:'프리미엄',franchise_hq:'프랜차이즈'};
+      var parts=oid.split('-');var plan=parts[parts.length-1]||'';
+      document.getElementById('status').textContent=(planNames[plan]||plan)+' 플랜이 활성화됐습니다. 만료일: '+(d.expireDate||'').slice(0,10);
+    }else{
+      document.getElementById('status').textContent='확인 실패: '+(d.error||'알 수 없는 오류');
+    }
+  }catch(e){document.getElementById('status').textContent='네트워크 오류: '+e.message;}
+})();
+</script></body></html>`;
+      return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    // ── FILO 구독 결제 실패 콜백 (/filo-subscribe-fail) ──
+    if (path === '/filo-subscribe-fail' && method === 'GET') {
+      const fu = new URL(request.url);
+      const msg = fu.searchParams.get('message') || '결제가 취소되었습니다.';
+      const html2 = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>결제 취소</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Pretendard',sans-serif;background:#08101f;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.card{background:#0f1a2e;border:1px solid #3a1e1e;border-radius:16px;padding:32px 24px;max-width:400px;width:100%;text-align:center}
+h1{font-size:20px;font-weight:700;margin-bottom:12px}
+p{font-size:14px;color:#8899aa;margin-bottom:24px}
+.btn{display:inline-block;padding:14px 32px;background:#1e3a5f;color:#fff;font-weight:600;border-radius:10px;text-decoration:none;font-size:14px}</style></head>
+<body><div class="card">
+<h1>결제가 취소되었습니다</h1>
+<p>${msg.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>
+<a href="https://filo.ai.kr/app" class="btn">앱으로 돌아가기</a>
+</div></body></html>`;
+      return new Response(html2, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Access-Control-Allow-Origin': '*' } });
+    }
+
     if (path === '/api/geocode' && method === 'GET') {
       const addr = new URL(request.url).searchParams.get('addr') || '';
       if (!addr) return new Response(JSON.stringify({ok:false}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});

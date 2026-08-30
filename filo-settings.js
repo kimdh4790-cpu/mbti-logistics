@@ -359,6 +359,40 @@ function _filoAiReplyCopy(){
  if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){_filoToast('답글이 복사됐습니다');});}
  else{_filoToast('복사 실패 — 직접 선택하여 복사하세요');}
 }
+var _FILO_PLAN_PRICES={basic:29000,pro:59000,premium:99000,franchise_hq:300000};
+async function _filoSubscribePlan(planId){
+ var price=_FILO_PLAN_PRICES[planId]||29000;
+ var uid=(_CU&&(_CU.dealerId||_CU.uid))||'';
+ if(!uid){_filoToast('로그인 후 이용해주세요.');return;}
+ // Toss SDK 동적 로드
+ if(typeof TossPayments==='undefined'){
+  await new Promise(function(res,rej){
+   var s=document.createElement('script');
+   s.src='https://js.tosspayments.com/v1/payment';
+   s.onload=res;s.onerror=rej;document.head.appendChild(s);
+  });
+ }
+ // 클라이언트 키 조회
+ var ckRes=await fetch('/api/toss-client-key').then(function(r){return r.json();}).catch(function(){return{};});
+ var ck=ckRes.clientKey||'';
+ if(!ck){_filoToast('결제 설정을 불러올 수 없습니다. 고객센터로 문의해주세요.');return;}
+ var orderId='FILO-'+uid.slice(0,8)+'-'+Date.now()+'-'+planId;
+ var planNames={basic:'베이직',pro:'프로',premium:'프리미엄',franchise_hq:'프랜차이즈'};
+ var companyName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'FILO 매장';
+ try{
+  var tp=TossPayments(ck);
+  await tp.requestPayment('카드',{
+   amount:price,
+   orderId:orderId,
+   orderName:'FILO '+planNames[planId]+' 구독',
+   successUrl:location.origin+'/filo-subscribe-success',
+   failUrl:location.origin+'/filo-subscribe-fail',
+   customerName:companyName
+  });
+ }catch(e){
+  if(e.code&&e.code!=='USER_CANCEL')_filoToast('결제 오류: '+e.message);
+ }
+}
 function _filoPageSubscription(el){
  if(!el)el=document.getElementById('mg-content')||document.getElementById('page-content');
  if(!el)return;
@@ -370,15 +404,15 @@ function _filoPageSubscription(el){
   {id:'franchise_hq',name:'프랜차이즈',price:'300,000',features:['프리미엄 전체','가맹점 관제','메뉴 일괄 배포','통합 매출 현황','가맹점당 +₩19,000']}
  ];
  var checkSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
- var btnLabel=(filoPlan==='trial'||filoPlan==='basic')?'시작하기':'업그레이드';
  var cards=plans.map(function(p){
   var isCurrent=filoPlan===p.id;
   var isRec=!!p.recommended;
   var featureList=p.features.map(function(f){
    return '<li style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">'+checkSvg+f+'</li>';
   }).join('');
+  var btnLabel=isCurrent?'':((filoPlan==='trial'||filoPlan==='basic')?'구독하기':'업그레이드');
   var actionBtn=isCurrent?'':
-   '<button onclick="window.open(\'https://pf.kakao.com/_xjkxnxj\',\'_blank\')" style="width:100%;padding:10px;background:'+(isRec?'var(--br)':'var(--b3)')+';color:'+(isRec?'#000':'var(--tx)')+';border:'+(isRec?'none':'1px solid var(--bd)')+';border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">'+btnLabel+'</button>';
+   '<button onclick="_filoSubscribePlan(\''+p.id+'\')" style="width:100%;padding:10px;background:'+(isRec?'var(--br)':'var(--b3)')+';color:'+(isRec?'#000':'var(--tx)')+';border:'+(isRec?'none':'1px solid var(--bd)')+';border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">'+btnLabel+'</button>';
   return '<div style="border:'+(isRec?'2px solid var(--br)':'1px solid var(--bd)')+';border-radius:12px;padding:16px;background:var(--b3);position:relative">'+
    (isRec?'<span style="position:absolute;top:-10px;right:16px;background:var(--br);color:#000;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">추천</span>':'')+
    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
