@@ -388,3 +388,12 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
   - 그외(korean/japanese/chinese/izakaya/other): table_order + reservation + member_crm 기본 활성
 - `filo-auth.js`: `hasFeatureOrIndustry(key)` 헬퍼 추가 → 구독/관제센터 OR 업종 기본값 중 하나라도 해당하면 탭 표시
 - `filo-settings.js`: `_filoSaveTheme()` 저장 후 `_buildFiloNav()` 즉시 호출 → 업종 변경 시 사이드바 탭 즉시 갱신
+
+**FCM 알림 탭 시 빈 화면 버그 수정 + 영수증 공유 버튼 추가**
+- `order.js`: `#done` 복원 시 `_doneStep()` 미호출로 모든 step `display:none` → 빈 화면 버그 수정
+  - pending/ready/served: `_doneStep(3)` 호출 → 픽업 대기 화면 즉시 표시
+  - completed: `_doneStep(1)` 호출 → 주문 확인 화면 표시
+  - `done-title`/`done-sub` 텍스트 복원 추가, `completed` 상태도 허용
+  - `_showPickupAlert()` 빈 div에 🔔 이모지 추가
+- `order.html`: 영수증 카드에 "공유하기" 버튼 추가 (`_shareReceipt()` → Web Share API)
+- `order.js`: `_shareReceipt()` 함수 신규 추가 (미지원 시 스크린샷 안내 토스트)
