@@ -75,6 +75,19 @@ git push -u origin claude/브랜치명
 
 ---
 
+## 기초구역 경계 API
+
+| 항목 | 값 |
+|------|-----|
+| 엔드포인트 | `GET /api/yongcha/basidco?zip=XXXXX` |
+| 응답 | `{ok:true, coords:[{lat,lng},...], lat, lng, source}` |
+| 1순위 | business.juso.go.kr WFS (apikey: `3B63BE88F1A06653075E0C88883B157E`) |
+| 2순위 | vWorld WFS (key: `DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A` / env.VWORLD_API_KEY) |
+| 3순위 | KV `basidco:{zip}` 캐시 |
+| 클라이언트 | `_doUpdateMapZones()` → fetch 후 `kakao.maps.Polygon` 그리기 |
+
+---
+
 ## 주요 전역 변수
 
 | 변수 | 설명 |
@@ -226,6 +239,7 @@ git push -u origin claude/브랜치명
 | 2026-08-30 | _worker.js, yongcha-worker.js | 프로필 화면 로그아웃 버튼 위 부가통신사업자 법적 고지 문구 추가 |
 | 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js, yongcha-landing.html, yongcha-meta.json | 부가통신사업자 포지셔닝 전면 반영: '배차'→'단건 요청/운행/연결', '배차완료'→'운행완료', AI 프롬프트 '배차 최적화'→'기사 추천 정보', 마케팅 메시지 '직접 매칭'→'직접 거래 정보 서비스' |
 | 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js | 공고 등록 지도: 600m Circle → USE_DISTRICT 기초구역 경계 레이어 + CustomOverlay 라벨 표시. zoom level 5→4. Circle 코드 완전 제거. |
+| 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js | 지도 구역 표시: USE_DISTRICT(용도지역 오표시) → /api/yongcha/basidco 호출 후 실제 기초구역 Polygon 그리기로 교체. 기초구역 API 섹션 메모 추가. |
 | 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js | 공고 등록 구역 정보 섹션에 배송지 우편번호(pw-deliveryZip) 입력 필드 추가. Firestore yongcha_posts.deliveryZip 저장. 상차지와 별개 필드. |
 | 2026-08-30 | yongcha-landing.html | 랜딩 페이지 전면 리디자인: 다크 네이비→흰색 테마, 세로 스크롤→가로 슬라이드 5패널 (Hero/기능/요금제/후기/CTA), KV 재배포 필요 |
 | 2026-08-30 | yongcha-landing.html | 랜딩 페이지 삭제 — 허위 수치(2,400+ 기사 등) 포함, 마케팅 미집행 상태라 불필요. git rm + KV 키 삭제 필요 |
