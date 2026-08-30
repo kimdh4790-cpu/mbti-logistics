@@ -119,6 +119,19 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 - `/security-review` — Claude Code 기본 내장 명령, 별도 설치 불필요
 - Superpowers, Claude-Mem — 이미 설치됨 (로컬 PC 기준)
 
+### 커스텀 슬래시 명령어 (2026-08-30, .claude/commands/)
+프롬프트 명령어 40개 중 개발 워크플로에 유용한 5개 커스텀 명령어로 구현:
+
+| 명령어 | 역할 |
+|---|---|
+| `/5whys` | 버그 증상 → 근본 원인 5단계 분석 + 재발 방지 |
+| `/risks` | 기능·변경 전 위험요소·심각도·대비책 표로 정리 |
+| `/blueprint` | 기능 아이디어 → 영향 파일·구현 순서·테스트 계획 |
+| `/critique` | 코드·설계 약점 진단 (HIGH/MEDIUM/LOW 심각도) |
+| `/checklist` | 배포 전 CLAUDE.md 기준 체크리스트 자동 생성 |
+
+출처: 블로그 프롬프트 40개 → 개발 특화 재구성, MBTICO 프로젝트 규칙 반영
+
 ### Motion Graphics 스킬 (2026-08-28 설치, Remotion 기반)
 | 스킬 | 역할 |
 |---|---|
