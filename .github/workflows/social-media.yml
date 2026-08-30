@@ -196,6 +196,7 @@ jobs:
 
       - name: YouTube 업로드 (Data API v3)
         if: ${{ contains(env.STEPS, 'youtube') }}
+        continue-on-error: true
         env:
           DRY_FLAG: ${{ env.DRY_RUN == 'true' && '--dry-run' || '' }}
         run: |
@@ -206,7 +207,9 @@ jobs:
             local p=$1
             if [ "$p" = "filo" ]; then
               MP4="output/filo-promo.mp4"
-              [ ! -f "$MP4" ] && MP4="output/filo-final.mp4"
+              if [ ! -f "$MP4" ]; then
+                MP4="output/filo-final.mp4"
+              fi
             else
               MP4="output/${p}-reels.mp4"
             fi
@@ -224,10 +227,12 @@ jobs:
           else
             upload_yt $PRODUCT || FAILED=1
           fi
-          [ "$FAILED" = "1" ] && echo "::warning::YouTube 업로드 일부 실패 — Actions 로그 확인" || true
+          if [ "$FAILED" = "1" ]; then
+            echo "::warning::YouTube 업로드 일부 실패 — Actions 로그 확인"
+          fi
 
       - name: Instagram Reels 업로드
-        if: ${{ contains(env.STEPS, 'instagram') }}
+        if: ${{ always() && contains(env.STEPS, 'instagram') }}
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
