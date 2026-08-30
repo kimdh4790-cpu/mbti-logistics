@@ -17019,16 +17019,19 @@ function _pgPostWrite(el){
   '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
   '</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">배송지 우편번호</label>'+
-  '<input class="inp" id="pw-deliveryZip" placeholder="예: 48100" maxlength="5" inputmode="numeric">'+
-  '<div style="font-size:11px;color:var(--t3);margin-top:4px">주 배송 구역 우편번호. 여러 구역은 아래 주소검색으로 추가하세요.</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 우편번호 추가</label>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input class="inp" id="pw-zip-input" placeholder="우편번호 5자리 입력" maxlength="5" inputmode="numeric" style="flex:1"'+
+  ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();_addZipCodeZone();}">'+
+  '<button onclick="_addZipCodeZone()" type="button" style="white-space:nowrap;padding:0 18px;background:var(--ac);border:none;border-radius:10px;color:#000;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">추가</button>'+
   '</div>'+
-  '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
+  '<div id="zip-add-msg" style="font-size:12px;color:#22c55e;margin-top:6px;min-height:18px"></div>'+
+  '</div>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
   '<div id="selected-zones" style="display:none"></div>'+
   '<div class="map-wrap" id="post-map-wrap" style="display:none"><div id="post-map"></div></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">구역명 <span style="color:var(--rd)">*</span></label>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송구역 전체 명칭 <span style="color:var(--rd)">*</span></label>'+
   '<input class="inp" id="pw-area" placeholder="예: 해운대구 좌동 일대 (자동입력됨)"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">아파트 비율 (%)</label>'+
   '<input class="inp" id="pw-apt" type="number" placeholder="예: 75" min="0" max="100"></div>'+
@@ -17249,7 +17252,6 @@ function _submitPost(){
   var settleDay=get('pw-settleDay'), endDate=get('pw-enddate');
   var priceType=get('pw-pricetype'), housePrice=get('pw-houseprice');
   var aptRatio=get('pw-apt'), loadingAddr=get('pw-loadingAddr');
-  var deliveryZip=get('pw-deliveryZip');
   var loadingLat=parseFloat(get('pw-loadingLat'))||null;
   var loadingLng=parseFloat(get('pw-loadingLng'))||null;
   var btn=document.getElementById('submit-btn');
@@ -17311,7 +17313,7 @@ function _submitPost(){
         agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
         region:_CU.region, courier:courier, area:area, routeNo:routeNo,
         loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
-        zones:window._zones||[], deliveryZip:deliveryZip||null, areaAptRatio:aptRatio?parseInt(aptRatio):null,
+        zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
         postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
         workHours:hours, startDate:date, endDate:endDate,
         vehicleType:vehicle, plateType:plate,
@@ -21136,8 +21138,40 @@ function _geocodeLoadingAddr(){
   }).open();
 }
 
-// Daum 우편번호 팝업 - 다중 구역 추가
+// 우편번호 직접 입력으로 구역 추가
 window._zones = window._zones || [];
+function _addZipCodeZone(){
+  var input = document.getElementById('pw-zip-input');
+  if(!input) return;
+  var zip = (input.value||'').trim();
+  if(!/^\d{5}$/.test(zip)){_yToast('5자리 우편번호를 입력하세요');return;}
+  _loadKakaoMap(function(){
+    var gc = new kakao.maps.services.Geocoder();
+    gc.addressSearch(zip, function(res, status){
+      if(status !== kakao.maps.services.Status.OK || !res.length){
+        _yToast('해당 우편번호를 찾을 수 없어요');return;
+      }
+      var item = res[0];
+      var lat = parseFloat(item.y), lng = parseFloat(item.x);
+      var addr = item.address||{};
+      var r1 = (addr.region_1depth_name||'').replace(/(특별시|광역시|특별자치도|특별자치시)$/,'').trim();
+      var r2 = addr.region_2depth_name||'';
+      var r3 = addr.region_3depth_name||'';
+      var name = [r1,r2,r3].filter(Boolean).join(' ');
+      if(!name) name = item.address_name||'선택구역';
+      var dup = window._zones.some(function(z){return z.zipcode===zip;});
+      if(dup){_yToast('이미 추가된 우편번호예요');return;}
+      window._zones.push({zipcode:zip, name:name, lat:lat, lng:lng});
+      _renderZoneTags();
+      _updateMapZones();
+      var areaInp = document.getElementById('pw-area');
+      if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+      var msgEl = document.getElementById('zip-add-msg');
+      if(msgEl) msgEl.textContent = zip+' '+name+' 구역이 추가됐어요';
+      input.value = '';
+    });
+  });
+}
 function _openDaumPost(){
   new daum.Postcode({
     oncomplete: function(data){
