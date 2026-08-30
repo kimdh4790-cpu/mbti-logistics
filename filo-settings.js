@@ -15,8 +15,28 @@
 function _filoPageSettings(el){
  var did=_CU.dealerId||_CU.uid;
  var d=_cachedCompanyDoc||{};
+ var filoPlan=(_CU&&_CU.filoPlan)?_CU.filoPlan:'trial';
+ var filoPlanExpiry=(_CU&&_CU.filoPlanExpiry)?_CU.filoPlanExpiry:'';
+ var planLabels={trial:'무료 체험',basic:'베이직',pro:'프로',premium:'프리미엄',franchise_hq:'프랜차이즈'};
+ var planPrices={trial:'무료',basic:'₩29,000/월',pro:'₩59,000/월',premium:'₩99,000/월',franchise_hq:'₩300,000/월'};
+ var planLabel=planLabels[filoPlan]||'무료 체험';
+ var planPrice=planPrices[filoPlan]||'무료';
+ var expiryText=filoPlanExpiry?'만료일: '+filoPlanExpiry:'7일 무료 체험 중';
  el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
  '<div style="font-size:17px;font-weight:900;margin-bottom:16px">설정</div>'+
+ /* 구독 현황 카드 */
+ '<div class="card" style="margin-bottom:16px">'+
+ '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+ '<h3 style="font-size:16px;font-weight:600;color:var(--tx);margin:0">구독 현황</h3>'+
+ '<span style="background:var(--br);color:#000;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">'+planLabel+'</span>'+
+ '</div>'+
+ '<div style="font-size:22px;font-weight:700;color:var(--tx);margin-bottom:4px">'+planPrice+'</div>'+
+ '<div style="font-size:13px;color:var(--t3);margin-bottom:16px">'+expiryText+'</div>'+
+ '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+ (filoPlan!=='premium'&&filoPlan!=='franchise_hq'?'<button onclick="_filoGoPage(\'subscription\')" style="flex:1;min-width:120px;padding:10px;background:var(--br);color:#000;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">업그레이드</button>':'')+
+ '<button onclick="window.open(\'https://pf.kakao.com/_xjkxnxj\',\'_blank\')" style="flex:1;min-width:100px;padding:10px;background:var(--b3);color:var(--tx);border:1px solid var(--bd);border-radius:8px;font-size:14px;cursor:pointer">해지 문의</button>'+
+ '</div>'+
+ '</div>'+
  '<div class="card">'+
  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">회사 정보</div>'+
  '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd)">'+
@@ -340,21 +360,44 @@ function _filoAiReplyCopy(){
  else{_filoToast('복사 실패 — 직접 선택하여 복사하세요');}
 }
 function _filoPageSubscription(el){
- el.innerHTML='<div class="slide-up" style="max-width:600px;margin:0 auto">'+
- '<div style="font-size:17px;font-weight:900;margin-bottom:16px">구독 관리</div>'+
- '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:16px;margin-bottom:20px">'+
- '<div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px">계좌이체 결제 안내</div>'+
- '<div style="font-size:18px;font-weight:900;color:#111;letter-spacing:1px">270-910019-24204</div>'+
- '<div style="font-size:13px;color:#555;margin-top:4px">하나은행 · (유)엠비티아이</div>'+
- '<div style="font-size:11px;color:#e67e00;margin-top:8px">입금자명에 업체명 기재 필수 · 입금 후 051-711-3103 확인 요청</div>'+
- '</div>'+
- '<div class="card">'+
- '<div style="text-align:center;padding:20px">'+
- ''+
- '<div style="font-size:16px;font-weight:800;margin-bottom:6px">FILO 플랜</div>'+
- '<div style="font-size:12px;color:var(--t3);margin-bottom:16px">재고관리 · QR출퇴근 · 키오스크POS 통합 솔루션</div>'+
- '<a href="https://filo.ai.kr" target="_blank" class="btn btn-brand" style="display:inline-block;text-decoration:none">요금제 보기</a>'+
- '</div></div></div>';
+ if(!el)el=document.getElementById('mg-content')||document.getElementById('page-content');
+ if(!el)return;
+ var filoPlan=(_CU&&_CU.filoPlan)?_CU.filoPlan:'trial';
+ var plans=[
+  {id:'basic',name:'베이직',price:'29,000',features:['POS·메뉴 관리','QR 주문','DINE 앱 포함','QR 출퇴근']},
+  {id:'pro',name:'프로',price:'59,000',features:['베이직 전체','AI 매출 예측','급여·근태','재고 관리','예약·웨이팅','다국어 번역'],recommended:true},
+  {id:'premium',name:'프리미엄',price:'99,000',features:['프로 전체','무제한 AI','회계 연동','멀티 매장','전담 CS']},
+  {id:'franchise_hq',name:'프랜차이즈',price:'300,000',features:['프리미엄 전체','가맹점 관제','메뉴 일괄 배포','통합 매출 현황','가맹점당 +₩19,000']}
+ ];
+ var checkSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+ var btnLabel=(filoPlan==='trial'||filoPlan==='basic')?'시작하기':'업그레이드';
+ var cards=plans.map(function(p){
+  var isCurrent=filoPlan===p.id;
+  var isRec=!!p.recommended;
+  var featureList=p.features.map(function(f){
+   return '<li style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">'+checkSvg+f+'</li>';
+  }).join('');
+  var actionBtn=isCurrent?'':
+   '<button onclick="window.open(\'https://pf.kakao.com/_xjkxnxj\',\'_blank\')" style="width:100%;padding:10px;background:'+(isRec?'var(--br)':'var(--b3)')+';color:'+(isRec?'#000':'var(--tx)')+';border:'+(isRec?'none':'1px solid var(--bd)')+';border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">'+btnLabel+'</button>';
+  return '<div style="border:'+(isRec?'2px solid var(--br)':'1px solid var(--bd)')+';border-radius:12px;padding:16px;background:var(--b3);position:relative">'+
+   (isRec?'<span style="position:absolute;top:-10px;right:16px;background:var(--br);color:#000;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">추천</span>':'')+
+   '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
+   '<div>'+
+   '<div style="font-size:16px;font-weight:700;color:var(--tx)">'+p.name+'</div>'+
+   '<div style="font-size:22px;font-weight:800;color:var(--tx);margin-top:2px">₩'+p.price+'<span style="font-size:13px;font-weight:400;color:var(--t3)">/월</span></div>'+
+   '</div>'+
+   (isCurrent?'<span style="background:#22c55e20;color:#22c55e;font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600">현재 플랜</span>':'')+
+   '</div>'+
+   '<ul style="list-style:none;padding:0;margin:0 0 14px;display:flex;flex-direction:column;gap:4px">'+featureList+'</ul>'+
+   actionBtn+
+   '</div>';
+ }).join('');
+ el.innerHTML='<div style="padding:20px 0">'+
+  '<h2 style="font-size:20px;font-weight:700;color:var(--tx);margin-bottom:8px">요금제 선택</h2>'+
+  '<p style="font-size:14px;color:var(--t3);margin-bottom:24px">DINE 직원앱 포함 · 언제든 업그레이드 가능</p>'+
+  '<div style="display:grid;gap:12px">'+cards+'</div>'+
+  '<p style="font-size:12px;color:var(--t3);text-align:center;margin-top:20px">결제 문의: 카카오 채널 · 051-711-3103</p>'+
+  '</div>';
 }
 function _filoPageTaxShare(el){
  var did=_CU.dealerId||_CU.uid;
