@@ -222,3 +222,5 @@ git push -u origin claude/브랜치명
 | 2026-08-17 | yongcha.html, _worker.js | 홈 지도 현위치 버그: watchPosition 실시간 GPS 추적으로 교체 |
 | 2026-08-17 | yongcha.html | 실수령액 계산기 토글 "부가세" → "사업소득세" 수정 |
 | 2026-08-17 | _worker.js | FILO/DINE 로고 base64 임베드 (아이콘 404 → 직접 서빙) |
+| 2026-08-30 | _worker.js, yongcha-worker.js | AI 매칭→AI 추천, 노선 지원·직접 선택 텍스트 동기화 (yongcha.html 커밋 aeb8902·01b0a52 반영) |
+| 2026-08-30 | _worker.js, yongcha-worker.js | 프로필 화면 로그아웃 버튼 위 부가통신사업자 법적 고지 문구 추가 |
