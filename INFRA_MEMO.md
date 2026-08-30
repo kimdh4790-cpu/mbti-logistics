@@ -93,6 +93,15 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | `ANTHROPIC_API_KEY` | (별도 관리) | 등록완료 |
 | `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 등록완료 |
 
+### Oracle Cloud에서 wrangler deploy (yongcha-worker.js 등 수동 배포 시)
+```bash
+CLOUDFLARE_API_KEY="<Global_API_Key>" CLOUDFLARE_EMAIL="kimdh4790@gmail.com" npx wrangler deploy
+# Global API Key 위치: dash.cloudflare.com → My Profile → API Tokens → Global API Key → 보기
+```
+> ⚠️ `CLOUDFLARE_API_TOKEN` (API Token)이 아닌 `CLOUDFLARE_API_KEY` (Global API Key) + `CLOUDFLARE_EMAIL` 조합 사용. 2026-08-30 확인.
+
+---
+
 ### Worker Secrets 등록 방법
 **방법 A — OPC VM에서 wrangler CLI:**
 ```bash
