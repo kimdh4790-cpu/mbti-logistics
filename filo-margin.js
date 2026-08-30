@@ -461,31 +461,244 @@ function _filoRenderMarginAnalysis(did,ym){
 
   /* 인건비 vs 매출 비율 */
   var noCostWarn=Object.keys(costMap).length===0&&totalRev>0?
-  '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:10px;font-size:12px;color:#b45309;font-weight:600">'+
-  '원가 미등록 — 원가 등록 탭에서 메뉴별 원가를 입력해야 마진율이 정확히 계산됩니다</div>':'';
+  '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(245,158,11,.08);border-left:3px solid #f59e0b;border-radius:0 10px 10px 0;font-size:12px;color:#b45309;font-weight:600">'+
+  '원가 미등록 — <span onclick="_filoMgTab(1)" style="text-decoration:underline;cursor:pointer">원가 등록 탭</span>에서 메뉴별 원가를 입력해야 마진율이 정확히 계산됩니다</div>':'';
   html+=noCostWarn;
-  html+='<div class="card">'+
-  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">원가 구조 분석</div>'+
-  '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center">'+
-  [
-   {label:'식재료 원가',val:'₩'+totalCost.toLocaleString(),sub:totalRev>0?Math.round(totalCost/totalRev*100)+'%':'—',c:'#f97316'},
-   {label:'공제이익(식재료)',val:'₩'+Math.max(totalProfit,0).toLocaleString(),sub:marginRate+'%',c:'#22c55e'},
-   {label:'손익분기',val:totalRev>0&&totalProfit<0?'미달':'달성',sub:totalProfit>=0?'달성':'주의',c:totalProfit>=0?'#22c55e':'#ef4444'}
-  ].map(function(s){
-   return '<div style="background:var(--b3);border-radius:12px;padding:14px 10px">'+
-   '<div style="font-size:10px;color:var(--t3);margin-bottom:6px">'+s.label+'</div>'+
-   '<div style="font-size:16px;font-weight:900;color:'+s.c+'">'+s.val+'</div>'+
-   '<div style="font-size:11px;color:var(--t3);margin-top:4px">'+s.sub+'</div></div>';
-  }).join('')+
-  '</div>'+
-  '<div style="margin-top:10px;font-size:10px;color:var(--t3)">※ 식재료 원가만 공제 기준. 인건비·임차료 미포함</div>'+
-  '</div>';
+
+  /* 인건비 실데이터 로드 → 원가 구조 카드에 반영 */
+  var laborPromise=_db.collection('attendance').where('dealerId','==',did).where('date','>=',start).where('date','<=',end).get().catch(function(){return {forEach:function(){}};});
+  Promise.resolve(laborPromise).then(function(attSnap){
+   var laborHours=0;
+   var memberHours={};
+   attSnap.forEach&&attSnap.forEach(function(doc){
+    var d=doc.data();
+    if(d.type==='in'&&d.inTime&&d.outTime){
+     var h=(new Date(d.outTime)-new Date(d.inTime))/3600000;
+     if(h>0&&h<24){laborHours+=h;memberHours[d.uid||d.memberId||doc.id]=(memberHours[d.uid||d.memberId||doc.id]||0)+h;}
+    }
+   });
+   /* 멤버 시급으로 인건비 산출 */
+   var memberIds=Object.keys(memberHours);
+   var laborCostPromise=memberIds.length
+    ?_db.collection('members').where('dealerId','==',did).get().then(function(mSnap){
+     var laborCost=0;
+     mSnap.forEach(function(doc){
+      var d=doc.data();var uid=d.uid||doc.id;
+      if(memberHours[uid])laborCost+=(d.hourlyWage||0)*(memberHours[uid]);
+     });
+     return laborCost;
+    }).catch(function(){return 0;})
+    :Promise.resolve(0);
+
+   Promise.resolve(laborCostPromise).then(function(laborCost){
+    var laborRate=totalRev>0?Math.round(laborCost/totalRev*100):0;
+    var primeCost=Math.round(totalCost/Math.max(totalRev,1)*100)+laborRate;
+    var foodRate=totalRev>0?Math.round(totalCost/totalRev*100):0;
+    var netProfit=totalRev-totalCost-laborCost;
+
+    var costCard='<div class="card" style="margin-top:12px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+    '<div style="font-size:13px;font-weight:800">원가 구조 분석</div>'+
+    '<div style="font-size:10px;color:var(--t3)">'+ym+'</div></div>'+
+    /* 원가율 게이지 바 */
+    '<div style="margin-bottom:12px">'
+    +[
+     {label:'식재료 원가율',rate:foodRate,max:50,color:'#f97316',val:'₩'+totalCost.toLocaleString()},
+     {label:'인건비율',rate:laborRate,max:40,color:'#a78bfa',val:laborCost>0?'₩'+Math.round(laborCost).toLocaleString():'수동 입력 필요'},
+     {label:'프라임코스트',rate:primeCost,max:70,color:primeCost>70?'#ef4444':'#22c55e',val:primeCost+'% (목표 70% 이하)'}
+    ].map(function(r){
+     var barW=Math.min(Math.round(r.rate/r.max*100),100);
+     var barColor=r.rate>r.max?'#ef4444':r.color;
+     return '<div style="margin-bottom:10px">'+
+     '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+     '<span style="font-size:11px;color:var(--t3);font-weight:600">'+r.label+'</span>'+
+     '<span style="font-size:11px;font-weight:800;color:'+barColor+'">'+r.rate+'% · '+r.val+'</span></div>'+
+     '<div style="height:7px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden">'+
+     '<div style="height:100%;width:'+barW+'%;background:'+barColor+';border-radius:99px;transition:width .6s"></div></div>'+
+     '</div>';
+    }).join('')+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+    [{label:'총 매출',val:'₩'+totalRev.toLocaleString(),c:'#a78bfa'},
+     {label:'실제 순이익',val:'₩'+netProfit.toLocaleString(),c:netProfit>=0?'#22c55e':'#ef4444'},
+     {label:'근무 시간',val:Math.round(laborHours)+'h',c:'#f59e0b'},
+     {label:'손익분기',val:netProfit>=0?'달성':'미달',c:netProfit>=0?'#22c55e':'#ef4444'}
+    ].map(function(s){
+     return '<div style="background:var(--b3);border-radius:10px;padding:10px 12px">'+
+     '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px">'+s.label+'</div>'+
+     '<div style="font-size:15px;font-weight:900;color:'+s.c+';margin-top:3px;font-variant-numeric:tabular-nums">'+s.val+'</div></div>';
+    }).join('')+
+    '</div>'+
+    (laborCost===0?'<div style="margin-top:10px;font-size:10px;color:var(--t3)">※ 인건비: 출퇴근 기록 없음 → 급여 설정에서 시급 등록 시 자동 계산</div>':'')+
+    '</div>';
+
+    var c=document.getElementById('mg-content');
+    if(c){
+     /* 기존 원가구조 카드가 없으면 추가 */
+     if(!c.querySelector('.cost-struct-card')){
+      c.innerHTML+=costCard.replace('class="card"','class="card cost-struct-card"');
+     }
+    }
+   });
+  });
 
   content.innerHTML=html;
  }).catch(function(e){
   var c=document.getElementById('mg-content');
   if(c)c.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>';
  });
+}
+
+/* ── 원가 등록 탭 ── */
+var _costEditId=null;
+function _filoRenderCostMgmt(did){
+ var content=document.getElementById('mg-content');
+ if(!content)return;
+ content.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div>';
+ Promise.all([
+  _db.collection('filo_menus').where('dealerId','==',did).get(),
+  _db.collection('menu_costs').where('dealerId','==',did).get(),
+  _db.collection('menu_recipes').where('dealerId','==',did).get()
+ ]).then(function(results){
+  var menuSnap=results[0],costSnap=results[1],recipeSnap=results[2];
+  var costMap={};
+  costSnap.forEach(function(doc){var d=doc.data();costMap[d.name||doc.id]={id:doc.id,name:d.name||doc.id,cost:d.cost||0,price:d.price||0};});
+  var recipeNames=new Set();
+  recipeSnap.forEach(function(doc){var d=doc.data();if(d.menuName)recipeNames.add(d.menuName);});
+  var allMenus=[];
+  menuSnap.forEach(function(doc){var d=doc.data();if(d.name)allMenus.push({name:d.name,price:d.price||0,id:doc.id});});
+
+  var registered=allMenus.filter(function(m){return costMap[m.name];});
+  var unregistered=allMenus.filter(function(m){return !costMap[m.name];});
+  /* 메뉴에 없는데 원가만 있는 항목도 포함 */
+  var menuNames=new Set(allMenus.map(function(m){return m.name;}));
+  Object.values(costMap).forEach(function(c){if(!menuNames.has(c.name))registered.push({name:c.name,price:c.price,_extra:true});});
+
+  var html='';
+  /* 헤더 */
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+   +'<div><div style="font-size:14px;font-weight:800">원가 등록 <span style="color:#6366f1">'+Object.keys(costMap).length+'</span> / '+allMenus.length+'</div>'
+   +'<div style="font-size:11px;color:var(--t3);margin-top:2px">레시피 연동 시 자동 계산 · 직접 입력도 가능</div></div>'
+   +'<button onclick="_filoCostOpenModal(\''+did+'\',null,null,null)" style="display:flex;align-items:center;gap:5px;padding:7px 14px;background:#6366f1;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">'
+   +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>수동 추가</button>'
+   +'</div>';
+
+  /* 원가 미등록 경고 */
+  if(unregistered.length){
+   html+='<div style="margin-bottom:14px;padding:12px 14px;background:rgba(245,158,11,.07);border-left:3px solid #f59e0b;border-radius:0 10px 10px 0">'
+    +'<div style="font-size:12px;font-weight:700;color:#b45309;margin-bottom:8px">미등록 메뉴 '+unregistered.length+'개 — 클릭해서 빠르게 등록</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px">'
+    +unregistered.map(function(m){
+     var price=m.price||0;
+     var autoFromRecipe=recipeNames.has(m.name);
+     return '<button onclick="_filoCostOpenModal(\''+did+'\',null,\''+esc(m.name)+'\','+price+')" '
+      +'style="padding:4px 10px;border-radius:20px;border:1.5px solid rgba(245,158,11,.4);background:transparent;font-size:11px;font-weight:700;color:#b45309;cursor:pointer;position:relative">'
+      +esc(m.name)+(autoFromRecipe?'<span style="position:absolute;top:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:#6366f1"></span>':'')
+      +'</button>';
+    }).join('')
+    +'</div>'
+    +'<div style="font-size:9px;color:var(--t3);margin-top:8px">● 보라 점 = 레시피 연동 메뉴 (자동 계산 가능)</div>'
+    +'</div>';
+  }
+
+  /* 등록된 원가 목록 */
+  if(registered.length){
+   html+='<div style="margin-bottom:8px;font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px">등록된 원가</div>';
+   html+=registered.map(function(m){
+    var c=costMap[m.name]||{};
+    var margin=c.price>0?Math.round((c.price-c.cost)/c.price*100):0;
+    var mc=margin>=60?'#22c55e':margin>=40?'#f59e0b':'#ef4444';
+    var autoTag=recipeNames.has(m.name)?'<span style="font-size:9px;background:rgba(99,102,241,.12);color:#6366f1;padding:1px 5px;border-radius:4px;margin-left:4px">레시피</span>':'';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--b2,rgba(255,255,255,.03));border-radius:10px;margin-bottom:6px">'
+     +'<div style="flex:1;min-width:0">'
+     +'<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+autoTag+'</div>'
+     +'<div style="display:flex;gap:10px;margin-top:3px">'
+     +'<span style="font-size:11px;color:var(--t3)">판매가 <b style="color:var(--tx)">₩'+c.price.toLocaleString()+'</b></span>'
+     +'<span style="font-size:11px;color:var(--t3)">원가 <b style="color:#f97316">₩'+c.cost.toLocaleString()+'</b></span>'
+     +'<span style="font-size:11px;font-weight:800;color:'+mc+'">마진 '+margin+'%</span>'
+     +'</div></div>'
+     +'<div style="display:flex;gap:6px;flex-shrink:0">'
+     +'<button onclick="_filoCostOpenModal(\''+did+'\',\''+c.id+'\',\''+esc(m.name)+'\','+c.price+','+c.cost+')" '
+      +'style="padding:5px 10px;background:rgba(99,102,241,.1);color:#6366f1;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">수정</button>'
+     +'<button onclick="_filoCostDelete(\''+did+'\',\''+c.id+'\')" '
+      +'style="padding:5px 10px;background:rgba(239,68,68,.08);color:#ef4444;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">삭제</button>'
+     +'</div></div>';
+   }).join('');
+  }else{
+   html+='<div style="text-align:center;padding:30px;color:var(--t3);font-size:13px">등록된 원가 없음 — 위 버튼으로 추가하세요</div>';
+  }
+
+  content.innerHTML=html;
+ }).catch(function(e){
+  var c=document.getElementById('mg-content');
+  if(c)c.innerHTML='<div style="color:var(--red);padding:20px">'+e.message+'</div>';
+ });
+}
+
+function _filoCostOpenModal(did,docId,menuName,menuPrice,menuCost){
+ var existing=document.getElementById('cost-modal-wrap');
+ if(existing)existing.remove();
+ var wrap=document.createElement('div');
+ wrap.id='cost-modal-wrap';
+ wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+ wrap.innerHTML='<div style="background:var(--bg,#0b1222);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;box-shadow:0 -8px 32px rgba(0,0,0,.4)">'
+  +'<div style="width:36px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;margin:0 auto 20px"></div>'
+  +'<div style="font-size:16px;font-weight:800;margin-bottom:16px">'+(docId?'원가 수정':'원가 등록')+'</div>'
+  +'<div style="display:flex;flex-direction:column;gap:12px">'
+  +'<div><label style="font-size:11px;color:var(--t3);font-weight:600;display:block;margin-bottom:4px">메뉴명</label>'
+  +'<input id="cost-m-name" type="text" value="'+(menuName?esc(menuName):'')+'" placeholder="메뉴명" '
+  +(docId?'readonly style="padding:10px 12px;border:1.5px solid rgba(0,0,0,.1);border-radius:10px;font-size:13px;width:100%;box-sizing:border-box;background:rgba(0,0,0,.06);color:var(--t3)"':'style="padding:10px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;font-size:13px;width:100%;box-sizing:border-box;background:var(--b2);color:var(--tx)"')+'></div>'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+  +'<div><label style="font-size:11px;color:var(--t3);font-weight:600;display:block;margin-bottom:4px">판매가 (원)</label>'
+  +'<input id="cost-m-price" type="number" value="'+(menuPrice||'')+'" placeholder="0" oninput="_filoCostCalcPreview()" style="padding:10px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;font-size:13px;width:100%;box-sizing:border-box;background:var(--b2);color:var(--tx)"></div>'
+  +'<div><label style="font-size:11px;color:var(--t3);font-weight:600;display:block;margin-bottom:4px">원가 (원)</label>'
+  +'<input id="cost-m-cost" type="number" value="'+(menuCost||'')+'" placeholder="0" style="padding:10px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;font-size:13px;width:100%;box-sizing:border-box;background:var(--b2);color:var(--tx)" oninput="_filoCostCalcPreview()"></div>'
+  +'</div>'
+  +'<div id="cost-preview" style="padding:10px 14px;background:rgba(99,102,241,.07);border-radius:10px;font-size:12px;color:var(--t3)">판매가와 원가를 입력하면 마진율이 계산됩니다</div>'
+  +'</div>'
+  +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px">'
+  +'<button onclick="document.getElementById(\'cost-modal-wrap\').remove()" style="padding:12px;border:1.5px solid rgba(0,0,0,.12);border-radius:12px;font-size:13px;font-weight:700;background:transparent;color:var(--t2);cursor:pointer">취소</button>'
+  +'<button onclick="_filoCostSave(\''+did+'\','+(docId?'\''+docId+'\'':'null')+')" style="padding:12px;background:#6366f1;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">저장</button>'
+  +'</div>'
+  +'</div>';
+ document.body.appendChild(wrap);
+ wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.remove();});
+ setTimeout(function(){_filoCostCalcPreview();},50);
+}
+
+function _filoCostCalcPreview(){
+ var price=Number(document.getElementById('cost-m-price')?.value||0);
+ var cost=Number(document.getElementById('cost-m-cost')?.value||0);
+ var el=document.getElementById('cost-preview');if(!el)return;
+ if(!price&&!cost){el.textContent='판매가와 원가를 입력하면 마진율이 계산됩니다';return;}
+ var margin=price>0?Math.round((price-cost)/price*100):0;
+ var mc=margin>=60?'#22c55e':margin>=40?'#f59e0b':'#ef4444';
+ el.innerHTML='마진율 <b style="color:'+mc+';font-size:15px">'+margin+'%</b> · 공헌이익 <b style="color:'+mc+'">₩'+(price-cost).toLocaleString()+'</b>';
+}
+
+function _filoCostSave(did,docId){
+ var nameEl=document.getElementById('cost-m-name');
+ var name=(nameEl?.value||'').trim();
+ var price=Number(document.getElementById('cost-m-price')?.value||0);
+ var cost=Number(document.getElementById('cost-m-cost')?.value||0);
+ if(!name){_filoToast('메뉴명을 입력하세요');return;}
+ var data={dealerId:did,name:name,price:price,cost:cost,updatedAt:new Date().toISOString()};
+ var p=docId?_db.collection('menu_costs').doc(docId).update(data):_db.collection('menu_costs').add(data);
+ p.then(function(){
+  document.getElementById('cost-modal-wrap')?.remove();
+  _filoToast('원가 저장 완료');
+  _filoRenderCostMgmt(did);
+  /* _marginCostMap도 즉시 갱신 */
+  _marginCostMap[name]={name:name,cost:cost,price:price};
+ }).catch(function(e){_filoToast('저장 실패: '+e.message);});
+}
+
+function _filoCostDelete(did,docId){
+ if(!docId)return;
+ if(!confirm('이 원가 항목을 삭제할까요?'))return;
+ _db.collection('menu_costs').doc(docId).delete().then(function(){
+  _filoToast('삭제 완료');
+  _filoRenderCostMgmt(did);
+ }).catch(function(e){_filoToast('삭제 실패: '+e.message);});
 }
 
 /* ── AI 인사이트 탭 (메뉴 엔지니어링 + 원가율 벤치마크 + AI 분석) ── */
