@@ -215,6 +215,55 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 **연동 흐름**: 클로드 대화 1개 안에서 Meta Ads MCP(광고 조회) + Higgsfield MCP(영상 생성) 연속 실행 가능
 
+### Meta Ads 커넥터 (2026-08-30 신규 확인)
+광고 계정 성과 데이터 조회 → 잘 되는 광고 숫자로 골라서 Higgsfield로 즉시 넘김
+
+**설치 순서**
+1. claude.ai → 설정 → 커넥터(Connectors)
+2. Custom Connector → 이름 "Meta Ads" → URL: `https://mcp.facebook.com/ads` → Add
+3. Connect → Facebook 비즈니스 계정 로그인 → 광고 계정 선택
+
+**바로 쓰는 프롬프트**
+```
+내 광고 계정에서 최근 30일 성과 좋은 영상 광고 3개 뽑아줘. 각각 성과 이유 한 줄씩.
+```
+```
+1번 광고 기준으로 베리에이션 3개 만들어줘. 편집 리듬·음성 유지, 인물·배경만 교체.
+```
+
+**주의**: 광고 계정이 없어도 STEP B(영상 증식)는 레퍼런스 영상만 있으면 가능
+
+---
+
+## Ollama + Claude Desktop 로컬 모델 (2026-08-30 신규)
+Ollama v0.33+에서 Claude Desktop에 로컬 모델 공식 지원 시작 (2026-08-25 발표)
+
+### 설정 (3단계)
+1. Ollama 앱 v0.33+ 설치/업데이트
+2. Ollama 앱 → Claude 선택 → 토글 ON
+3. Claude Desktop 열면 Ollama 모델로 전환됨 (토글 OFF = 원상복구 즉시)
+
+### 터미널 명령
+```bash
+ollama launch claude-desktop    # Claude Desktop에 Ollama 연결
+ollama launch claude            # Claude Code (터미널)에 연결
+```
+
+### 지원 통합 (19개, ollama launch --help 확인)
+Claude Code, ChatGPT, Codex, Cline, Copilot, VSCode, Hermes, Kimi, Qwen 등
+
+### 모델 추천 (GPU 없는 PC 기준 실측, 2026-08-27)
+| 모델 | 용량 | 속도 | 한국어 | 추천 |
+|---|---|---|---|---|
+| gemma4:e2b | 7.2GB | 12.30 tok/s | 가장 정확 | GPU 없으면 이걸 먼저 |
+| qwen3.5:9b | 6.6GB | 3.65 tok/s | 맞지만 느림 | |
+| qwen3.5:4b | 3.4GB | 6.10 tok/s | 상식이 틀림 | |
+| qwen3.5:2b | 2.7GB | 9.82 tok/s | 한자 섞임 | |
+
+**핵심 주의**: 추론(thinking) 모드 OFF 필수 — ON 시 50배 느림 (7분 51초 vs 9초)
+
+**데이터 정책**: Ollama Zero Data Retention (프롬프트 Anthropic/Ollama 미전송)
+
 ---
 
 ## OmniRoute (로컬 PC)
@@ -294,3 +343,4 @@ claude
 | 2026-08-30 | 커스텀 슬래시 명령어 20개 구현: 개발 5개(5whys·risks·blueprint·critique·checklist) + 마케팅 10개(brainstorm·hooks·ghost·tone·story·audience·improve·tweet·expand·proofread) + 비즈니스분석 7개(pros-cons·compare·steelman·devil·tldr·margin·pricing·shorter·rephrase·outline) |
 | 2026-08-30 | 프론트엔드 디자인 스킬 3개 설치: design-taste-frontend(1206줄, Leonxlnx), image-to-code(1228줄), web-design-guidelines(39줄, Vercel). Awesome Design MD·Playwright CLI는 로컬 설치 필요 |
 | 2026-08-30 | Higgsfield MCP 정보 등록 (로컬 설치 예정). /ad-remix·/ad-brief 광고 커맨드 2개 추가 |
+| 2026-08-30 | Meta Ads 커넥터 URL 확인 (https://mcp.facebook.com/ads). Ollama v0.33 Claude Desktop 공식 지원 정보 추가 (gemma4:e2b 추천, thinking 모드 OFF 필수) |
