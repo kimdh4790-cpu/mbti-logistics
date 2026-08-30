@@ -78,30 +78,52 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
     const loginScreenVisible = await page.isVisible('#login-screen').catch(() => false);
     console.log(`   #fl-id 보임: ${flIdVisible}, #login-screen 보임: ${loginScreenVisible}`);
 
-    // 로그인 폼이 안 보이면 #login-screen 강제 노출
-    if (!flIdVisible) {
-      await page.evaluate(() => {
-        const ls = document.getElementById('login-screen');
-        if (ls) { ls.style.display = 'flex'; ls.style.visibility = 'visible'; }
-        const app = document.getElementById('app');
-        if (app) app.style.display = 'none';
-      });
-      await wait(500);
-      await ss(page, '01b-forced-login');
-    }
+    // JS 직접 주입으로 로그인 (waitForSelector 의존 제거)
+    const loginResult = await page.evaluate(async ([email, pass]) => {
+      // 1) 로그인 화면 강제 노출
+      const ls = document.getElementById('login-screen');
+      const app = document.getElementById('app');
+      if (ls) { ls.style.cssText += ';display:flex!important;visibility:visible!important;opacity:1!important;'; }
+      if (app) { app.style.display = 'none'; }
 
-    // 이메일 입력 (filo.html: #fl-id type=text, #fl-pw type=password)
-    await page.waitForSelector('#fl-id', { state: 'attached', timeout: 10000 });
-    await page.fill('#fl-id', EMAIL);
-    await page.fill('#fl-pw', PASS);
+      // 2) 입력 필드 값 세팅 + input 이벤트 트리거
+      const idEl = document.getElementById('fl-id');
+      const pwEl = document.getElementById('fl-pw');
+      if (!idEl || !pwEl) return { ok: false, reason: 'fields-not-found', html: document.body.innerHTML.slice(0, 500) };
+
+      idEl.value = email;
+      pwEl.value = pass;
+      idEl.dispatchEvent(new Event('input', { bubbles: true }));
+      pwEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+      return { ok: true, idVal: idEl.value.slice(0, 10), pwLen: pwEl.value.length };
+    }, [EMAIL, PASS]);
+
+    console.log(`   JS 주입 결과: ${JSON.stringify(loginResult)}`);
     await ss(page, '02-login-filled');
-    await page.press('#fl-pw', 'Enter');
-    await wait(4000);
-    await ss(page, '03-after-login');
 
-    const url = page.url();
-    const appVisible = await page.isVisible('#app').catch(() => false);
-    log('로그인 후 앱 로드', appVisible || url.includes('filo.ai.kr'));
+    if (!loginResult.ok) {
+      // 필드가 없으면 HTML 구조 덤프
+      console.log(`   HTML 샘플: ${loginResult.html}`);
+      log('로그인 필드 없음 — HTML 구조 확인 필요', false);
+    } else {
+      // 3) _filoLogin() 직접 호출 또는 버튼 클릭
+      await page.evaluate(() => {
+        if (typeof _filoLogin === 'function') {
+          _filoLogin();
+        } else {
+          const btn = document.querySelector('#login-screen button');
+          if (btn) btn.click();
+        }
+      });
+      await wait(5000);
+      await ss(page, '03-after-login');
+
+      const url = page.url();
+      const appVisible = await page.isVisible('#app').catch(() => false);
+      const loggedIn = appVisible || (await page.evaluate(() => !!window._CU));
+      log('로그인 후 앱 로드', loggedIn || url.includes('filo.ai.kr'));
+    }
 
     /* ── 2. 마진 분석 탭 ── */
     console.log('\n═══ 2. 마진 분석 탭 ═══');
