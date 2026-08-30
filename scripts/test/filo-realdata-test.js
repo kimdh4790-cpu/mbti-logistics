@@ -49,11 +49,12 @@ async function ss(page, name) {
 async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 (async () => {
-  const browser = await chromium.launch({
-    executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
+  const launchOpts = {
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  };
+  if (process.env.CHROMIUM_PATH) launchOpts.executablePath = process.env.CHROMIUM_PATH;
+  const browser = await chromium.launch(launchOpts);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await ctx.newPage();
 
