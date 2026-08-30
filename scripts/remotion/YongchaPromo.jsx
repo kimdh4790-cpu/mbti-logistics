@@ -49,7 +49,7 @@ function AnimatedCounter(props) {
   return React.createElement(React.Fragment, null, val.toLocaleString() + (props.suffix || ''));
 }
 
-// ── Scene 1: 브랜드 인트로 (0–5s = 0–149f) ────────────────
+// ── Scene 1: 브랜드 인트로 ────────────────────────────────────
 function SceneIntro() {
   var frame = useCurrentFrame();
   var scanY  = interpolate(frame, [0, 80], [-2, 102], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
@@ -61,33 +61,57 @@ function SceneIntro() {
   var textOp = fadeIn(frame, 58, 22);
   var subY   = slideUp(frame, 76, 20);
   var subOp  = fadeIn(frame, 76, 20);
+  var tag1Y  = slideUp(frame, 96, 20);
+  var tag1Op = fadeIn(frame, 96, 20);
+  var tag2Y  = slideUp(frame, 110, 20);
+  var tag2Op = fadeIn(frame, 110, 20);
   var ringSc = interpolate(frame, [24, 100], [0.15, 3], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.quad) });
   var ringOp = interpolate(frame, [24, 100], [0.55, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   var lineW  = interpolate(frame, [86, 138], [0, 234], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: DARK, alignItems: 'center', justifyContent: 'center', opacity: fadeIn(frame, 0, 14) }}>
+    <AbsoluteFill style={{ ...BASE, background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: fadeIn(frame, 0, 14) }}>
       <Particles count={13} />
       <div style={{ position: 'absolute', left: 0, right: 0, top: scanY + '%', height: 2, background: 'linear-gradient(90deg, transparent, ' + GOLD + '77, ' + GOLD + ', ' + GOLD + '77, transparent)', opacity: scanOp, boxShadow: '0 0 18px ' + GOLD + '55' }} />
       <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 390, height: 390, borderRadius: '50%', background: 'radial-gradient(circle, ' + GOLD + '18 0%, transparent 70%)' }} />
       <div style={{ position: 'absolute', top: '48%', left: '50%', transform: 'translate(-50%, -62%) scale(' + ringSc + ')', width: 175, height: 175, borderRadius: '50%', border: '1px solid ' + GOLD, opacity: ringOp }} />
-      <div style={{ transform: 'scale(' + logoSc + ')', opacity: logoOp, marginBottom: 54, textAlign: 'center' }}>
-        <div style={{ fontSize: 72, fontWeight: 900, color: GOLD, letterSpacing: -1, textShadow: '0 0 ' + Math.round(60 * glow) + 'px ' + GOLD + '88, 0 0 ' + Math.round(140 * glow) + 'px ' + GOLD + '22' }}>용차앱</div>
+
+      {/* 로고 */}
+      <div style={{ transform: 'scale(' + logoSc + ')', opacity: logoOp, textAlign: 'center', marginBottom: 40 }}>
+        <div style={{ fontSize: 80, fontWeight: 900, color: GOLD, letterSpacing: -1, textShadow: '0 0 ' + Math.round(60 * glow) + 'px ' + GOLD + '88, 0 0 ' + Math.round(140 * glow) + 'px ' + GOLD + '22' }}>용차앱</div>
         <div style={{ fontSize: 18, color: GOLD + '99', letterSpacing: 6, marginTop: -4, fontWeight: 300 }}>화물 직접 매칭</div>
       </div>
-      <div style={{ transform: 'translateY(' + textY + 'px)', opacity: textOp, textAlign: 'center' }}>
-        <div style={{ fontSize: 42, fontWeight: 900, color: WHITE, lineHeight: 1.2 }}>주선사 없이</div>
-        <div style={{ fontSize: 42, fontWeight: 900, color: LTGLD, lineHeight: 1.2, textShadow: '0 0 26px ' + GOLD + '44' }}>수수료 0원</div>
+
+      {/* 메인 카피 */}
+      <div style={{ transform: 'translateY(' + textY + 'px)', opacity: textOp, textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 48, fontWeight: 900, color: WHITE, lineHeight: 1.2 }}>주선사 없이</div>
+        <div style={{ fontSize: 48, fontWeight: 900, color: LTGLD, lineHeight: 1.2, textShadow: '0 0 26px ' + GOLD + '44' }}>수수료 0원</div>
       </div>
-      <div style={{ transform: 'translateY(' + subY + 'px)', opacity: subOp, marginTop: 20, textAlign: 'center' }}>
-        <div style={{ fontSize: 18, color: WHITE + '77', letterSpacing: 2 }}>AI 매칭 · 루트코치 · 주유소 최저가</div>
+
+      {/* 서브 */}
+      <div style={{ transform: 'translateY(' + subY + 'px)', opacity: subOp, textAlign: 'center', marginBottom: 48 }}>
+        <div style={{ fontSize: 19, color: WHITE + '77', letterSpacing: 2 }}>AI 매칭 · 루트코치 · 주유소 최저가</div>
       </div>
-      <div style={{ position: 'absolute', bottom: 68, left: '50%', transform: 'translateX(-50%)', width: lineW, height: 1, background: 'linear-gradient(90deg, transparent, ' + GOLD + '99, transparent)' }} />
+
+      {/* 특징 태그 */}
+      <div style={{ transform: 'translateY(' + tag1Y + 'px)', opacity: tag1Op, display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 16 }}>
+        {['🚚 직접 매칭', '🤖 AI 루트', '⛽ 주유 최저가'].map(function(t, i) {
+          return <div key={i} style={{ background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 24, padding: '10px 20px', color: GOLD, fontSize: 15, fontWeight: 600, letterSpacing: 0.5 }}>{t}</div>;
+        })}
+      </div>
+
+      {/* 수치 뱃지 */}
+      <div style={{ transform: 'translateY(' + tag2Y + 'px)', opacity: tag2Op, textAlign: 'center' }}>
+        <div style={{ fontSize: 15, color: WHITE + '44', letterSpacing: 2 }}>전국 화물기사 월 평균 수익 향상</div>
+        <div style={{ fontSize: 36, fontWeight: 900, color: LTGLD, marginTop: 8 }}>+420만원</div>
+      </div>
+
+      <div style={{ position: 'absolute', bottom: 90, left: '50%', transform: 'translateX(-50%)', width: lineW, height: 1, background: 'linear-gradient(90deg, transparent, ' + GOLD + '99, transparent)' }} />
     </AbsoluteFill>
   );
 }
 
-// ── Scene 2: 직접 매칭 (5–12s = 150–359f) ──────────────────
+// ── Scene 2: 직접 매칭 ──────────────────────────────────────
 function SceneMatching() {
   var frame = useCurrentFrame();
   var cargos = [
@@ -100,60 +124,84 @@ function SceneMatching() {
   var pingOp    = interpolate(frame % 60, [0, 30, 60], [0.7, 0, 0.7], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: '#070f1c', alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: '#070f1c' }}>
       <Particles count={9} />
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 30%, ' + GOLD + '12 0%, transparent 60%)' }} />
-      <div style={{ position: 'absolute', top: 80, background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
+
+      {/* 배지 */}
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
         <span style={{ color: GOLD, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>FEATURE 01</span>
       </div>
 
-      {/* 실시간 배지 */}
-      <div style={{ position: 'absolute', top: 136, right: 28, display: 'flex', alignItems: 'center', gap: 8, opacity: fadeIn(frame, 10, 16) }}>
-        <div style={{ position: 'relative', width: 10, height: 10 }}>
-          <div style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px ' + GOLD }} />
-          <div style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', border: '1px solid ' + GOLD, transform: 'scale(' + pingScale + ')', opacity: pingOp }} />
+      {/* 메인 콘텐츠 — 수직 균등 배분 */}
+      <div style={{ position: 'absolute', top: 145, bottom: 190, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', padding: '0 36px' }}>
+
+        {/* 타이틀 */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 8, 20), transform: 'translateY(' + slideUp(frame, 8, 22) + 'px)', width: '100%' }}>
+          <div style={{ fontSize: 50, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>주선사<span style={{ color: LTGLD, textShadow: '0 0 22px ' + GOLD + '44' }}> 없이</span><br/>직접 매칭</div>
+          <div style={{ fontSize: 17, color: WHITE + '55', lineHeight: 1.75, marginTop: 12 }}>수수료 0% · 건당 수익 극대화</div>
         </div>
-        <span style={{ color: GOLD, fontSize: 11, fontWeight: 700 }}>실시간 화물 공고</span>
-      </div>
 
-      {/* 화물 목록 */}
-      <div style={{ position: 'absolute', top: 170, right: 28, width: 218, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {cargos.map(function(cargo, i) {
-          var statusColor = cargo.status === '완료' ? '#44cc44' : cargo.status === '매칭중' ? GOLD : WHITE + '44';
-          return (
-            <div key={i} style={{ background: '#0e1c30', borderRadius: 14, padding: '12px 14px', border: '1px solid ' + GOLD + '1e', opacity: fadeIn(frame, 14 + i * 10, 14) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ color: WHITE, fontSize: 12, fontWeight: 700 }}>{cargo.from} → {cargo.to}</span>
-                <span style={{ color: statusColor, fontSize: 9, fontWeight: 800, background: statusColor + '18', borderRadius: 8, padding: '2px 6px' }}>{cargo.status}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: WHITE + '55', fontSize: 10 }}>{cargo.weight}</span>
-                <span style={{ color: LTGLD, fontSize: 12, fontWeight: 700 }}>₩{cargo.fee}</span>
-              </div>
+        {/* 실시간 배지 + 화물 목록 */}
+        <div style={{ width: '100%', opacity: fadeIn(frame, 14, 16) }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, justifyContent: 'flex-end' }}>
+            <div style={{ position: 'relative', width: 10, height: 10 }}>
+              <div style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px ' + GOLD }} />
+              <div style={{ position: 'absolute', width: 10, height: 10, borderRadius: '50%', border: '1px solid ' + GOLD, transform: 'scale(' + pingScale + ')', opacity: pingOp }} />
             </div>
-          );
-        })}
-      </div>
+            <span style={{ color: GOLD, fontSize: 12, fontWeight: 700 }}>실시간 화물 공고</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {cargos.map(function(cargo, i) {
+              var statusColor = cargo.status === '완료' ? '#44cc44' : cargo.status === '매칭중' ? GOLD : WHITE + '44';
+              return (
+                <div key={i} style={{ background: '#0e1c30', borderRadius: 16, padding: '14px 18px', border: '1px solid ' + GOLD + '1e', opacity: fadeIn(frame, 18 + i * 8, 12) }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ color: WHITE, fontSize: 14, fontWeight: 700 }}>{cargo.from} → {cargo.to}</span>
+                    <span style={{ color: statusColor, fontSize: 10, fontWeight: 800, background: statusColor + '18', borderRadius: 8, padding: '2px 8px' }}>{cargo.status}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: WHITE + '55', fontSize: 12 }}>{cargo.weight}</span>
+                    <span style={{ color: LTGLD, fontSize: 14, fontWeight: 700 }}>₩{cargo.fee}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-      {/* 왼쪽 텍스트 */}
-      <div style={{ position: 'absolute', left: 44, top: '30%', opacity: fadeIn(frame, 8, 20), transform: 'translateY(' + slideUp(frame, 8, 22) + 'px)' }}>
-        <div style={{ fontSize: 44, fontWeight: 900, color: WHITE, lineHeight: 1.15, marginBottom: 18 }}>주선사<br/>없이 직접<br/><span style={{ color: LTGLD, textShadow: '0 0 22px ' + GOLD + '44' }}>매칭</span></div>
-        <div style={{ fontSize: 16, color: WHITE + '66', lineHeight: 1.75 }}>수수료 0%<br/>건당 수익 극대화</div>
-      </div>
+        {/* 통계 그리드 */}
+        <div style={{ width: '100%', display: 'flex', gap: 12, opacity: fadeIn(frame, 55, 18) }}>
+          {[
+            { label: '실시간 공고', value: '2,847', unit: '건' },
+            { label: '매칭률', value: '94', unit: '%' },
+            { label: '평균 대기', value: '8', unit: '분' },
+          ].map(function(s, i) {
+            return (
+              <div key={i} style={{ flex: 1, background: '#0d1a28', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid ' + GOLD + '22' }}>
+                <div style={{ color: LTGLD, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{s.value}<span style={{ fontSize: 14 }}>{s.unit}</span></div>
+                <div style={{ color: WHITE + '44', fontSize: 11, marginTop: 6 }}>{s.label}</div>
+              </div>
+            );
+          })}
+        </div>
 
-      {/* 절약 카운터 */}
-      <div style={{ position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)', opacity: fadeIn(frame, 70, 18), background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 24, padding: '12px 32px', whiteSpace: 'nowrap' }}>
-        <span style={{ color: LTGLD, fontSize: 20, fontWeight: 900 }}>월 평균 </span>
-        <span style={{ color: LTGLD, fontSize: 28, fontWeight: 900 }}>
-          <AnimatedCounter from={0} to={420} startFrame={74} suffix="만원" />
-        </span>
-        <span style={{ color: WHITE + '55', fontSize: 14, marginLeft: 4 }}>절약</span>
+        {/* 절약 카운터 */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 72, 18) }}>
+          <div style={{ color: WHITE + '55', fontSize: 15, marginBottom: 8, letterSpacing: 1 }}>월 평균 추가 수입</div>
+          <div style={{ background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 24, padding: '14px 40px', display: 'inline-block' }}>
+            <span style={{ color: LTGLD, fontSize: 22, fontWeight: 900 }}>
+              <AnimatedCounter from={0} to={420} startFrame={76} suffix="만원" />
+            </span>
+            <span style={{ color: WHITE + '55', fontSize: 15, marginLeft: 4 }}>절약</span>
+          </div>
+        </div>
       </div>
     </AbsoluteFill>
   );
 }
 
-// ── Scene 3: AI 루트코치 (12–19s = 360–569f) ───────────────
+// ── Scene 3: AI 루트코치 ───────────────────────────────────
 function SceneAI() {
   var frame = useCurrentFrame();
   var routes = [
@@ -164,98 +212,148 @@ function SceneAI() {
   var aiText = "서해안 고속도로 이용 시\n통행료 포함 연료비가 더 저렴합니다".slice(0, aiTyping);
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: '#06101e', alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: '#06101e' }}>
       <Particles count={8} />
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 70%, ' + GOLD + '10 0%, transparent 60%)' }} />
-      <div style={{ position: 'absolute', top: 80, background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
+
+      {/* 배지 */}
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
         <span style={{ color: GOLD, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>FEATURE 02</span>
       </div>
 
-      {/* AI 아이콘 */}
-      <div style={{ position: 'absolute', top: 148, left: '50%', transform: 'translateX(-50%)', opacity: fadeIn(frame, 8, 18) }}>
-        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, ' + GOLD + ', #deb95a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 36px ' + GOLD + '44', fontSize: 32 }}>🤖</div>
-      </div>
+      {/* 메인 콘텐츠 — 수직 균등 배분 */}
+      <div style={{ position: 'absolute', top: 145, bottom: 190, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', padding: '0 36px' }}>
 
-      {/* AI 텍스트 박스 */}
-      <div style={{ position: 'absolute', top: 240, left: 36, right: 36, background: '#0d1e33', borderRadius: 16, padding: '16px 18px', border: '1px solid ' + GOLD + '33', opacity: fadeIn(frame, 22, 16), minHeight: 68 }}>
-        <div style={{ color: GOLD, fontSize: 11, fontWeight: 700, marginBottom: 6 }}>AI 루트코치</div>
-        <div style={{ color: WHITE + 'cc', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-line' }}>{aiText}{aiTyping < 28 ? <span style={{ opacity: 0.5 }}>|</span> : null}</div>
-      </div>
-
-      {/* 루트 비교 카드 */}
-      <div style={{ position: 'absolute', top: 390, left: 36, right: 36, display: 'flex', gap: 12 }}>
-        {routes.map(function(r, i) {
-          return (
-            <div key={r.label} style={{ flex: 1, background: r.recommended ? GOLD + '14' : '#0d1a28', borderRadius: 16, padding: '16px 14px', border: '1.5px solid ' + (r.recommended ? GOLD + '55' : GOLD + '1e'), opacity: fadeIn(frame, 36 + i * 16, 18) }}>
-              <div style={{ color: r.recommended ? GOLD : WHITE + '55', fontSize: 11, fontWeight: 800, marginBottom: 10, letterSpacing: 1 }}>
-                {r.recommended && '✅ '}{r.label}
-              </div>
-              <div style={{ color: WHITE, fontSize: 13, marginBottom: 4 }}>{r.km}</div>
-              <div style={{ color: WHITE + '77', fontSize: 12, marginBottom: 4 }}>{r.time}</div>
-              <div style={{ color: r.recommended ? LTGLD : WHITE + '55', fontSize: 14, fontWeight: 700 }}>{r.fuel}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 텍스트 */}
-      <div style={{ position: 'absolute', bottom: 112, left: 44, right: 44, opacity: fadeIn(frame, 58, 20), transform: 'translateY(' + slideUp(frame, 58, 20) + 'px)' }}>
-        <div style={{ fontSize: 36, fontWeight: 900, color: WHITE, lineHeight: 1.2, marginBottom: 8, textAlign: 'center' }}>
-          AI가 고르는 <span style={{ color: LTGLD }}>최적 루트</span>
+        {/* AI 아이콘 + 텍스트 */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 8, 18), transform: 'translateY(' + slideUp(frame, 8, 18) + 'px)', width: '100%' }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, ' + GOLD + ', #deb95a)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 36px ' + GOLD + '44', fontSize: 36, margin: '0 auto 18px' }}>🤖</div>
+          <div style={{ fontSize: 46, fontWeight: 900, color: WHITE, lineHeight: 1.2 }}>AI가 고르는<br/><span style={{ color: LTGLD, textShadow: '0 0 22px ' + GOLD + '44' }}>최적 루트</span></div>
         </div>
-        <div style={{ fontSize: 15, color: WHITE + '55', textAlign: 'center', lineHeight: 1.6 }}>주유소 최저가 · 날씨연동 · 세금계산서 자동발행</div>
+
+        {/* AI 텍스트 박스 */}
+        <div style={{ width: '100%', background: '#0d1e33', borderRadius: 18, padding: '20px 20px', border: '1px solid ' + GOLD + '33', opacity: fadeIn(frame, 22, 16), minHeight: 90 }}>
+          <div style={{ color: GOLD, fontSize: 12, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>🤖 AI 루트코치</div>
+          <div style={{ color: WHITE + 'cc', fontSize: 14, lineHeight: 1.65, whiteSpace: 'pre-line' }}>{aiText}{aiTyping < 28 ? <span style={{ opacity: 0.5 }}>|</span> : null}</div>
+        </div>
+
+        {/* 루트 비교 카드 */}
+        <div style={{ width: '100%', display: 'flex', gap: 14 }}>
+          {routes.map(function(r, i) {
+            return (
+              <div key={r.label} style={{ flex: 1, background: r.recommended ? GOLD + '14' : '#0d1a28', borderRadius: 18, padding: '20px 16px', border: '1.5px solid ' + (r.recommended ? GOLD + '55' : GOLD + '1e'), opacity: fadeIn(frame, 36 + i * 16, 18) }}>
+                <div style={{ color: r.recommended ? GOLD : WHITE + '55', fontSize: 12, fontWeight: 800, marginBottom: 12, letterSpacing: 1 }}>
+                  {r.recommended && '✅ '}{r.label}
+                </div>
+                <div style={{ color: WHITE, fontSize: 15, marginBottom: 6, fontWeight: 600 }}>{r.km}</div>
+                <div style={{ color: WHITE + '77', fontSize: 13, marginBottom: 6 }}>⏱ {r.time}</div>
+                <div style={{ color: r.recommended ? LTGLD : WHITE + '55', fontSize: 16, fontWeight: 900 }}>⛽ {r.fuel}</div>
+                {r.recommended && <div style={{ color: '#44cc44', fontSize: 11, marginTop: 8, fontWeight: 700 }}>↓ 6,300원 절약</div>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 절약 통계 */}
+        <div style={{ width: '100%', display: 'flex', gap: 12, opacity: fadeIn(frame, 60, 18) }}>
+          {[
+            { icon: '⛽', label: '연간 주유비 절약', value: '180만원+' },
+            { icon: '🌤', label: '날씨·교통 연동', value: '실시간' },
+            { icon: '📄', label: '세금계산서', value: '자동발행' },
+          ].map(function(s, i) {
+            return (
+              <div key={i} style={{ flex: 1, background: '#0a1628', borderRadius: 16, padding: '16px 10px', textAlign: 'center', border: '1px solid ' + GOLD + '1e' }}>
+                <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
+                <div style={{ color: LTGLD, fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>{s.value}</div>
+                <div style={{ color: WHITE + '44', fontSize: 10, marginTop: 4 }}>{s.label}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 서브텍스트 */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 78, 20), transform: 'translateY(' + slideUp(frame, 78, 20) + 'px)' }}>
+          <div style={{ fontSize: 17, color: WHITE + '55', lineHeight: 1.6 }}>주유소 최저가 · 날씨연동 · 자동발행</div>
+        </div>
       </div>
     </AbsoluteFill>
   );
 }
 
-// ── Scene 4: 요금제 (19–26s = 570–779f) ──────────────────────
+// ── Scene 4: 요금제 ──────────────────────────────────────────
 function ScenePricing() {
   var frame = useCurrentFrame();
   var plans = [
     { role: '기사', price: '150,000', unit: '/월', icon: '🚚', desc: 'AI 매칭 · 루트코치\n주유소 최저가' },
     { role: '소장', price: '50,000',  unit: '/월', icon: '📋', desc: '차량관리 · 기사관리\nDONWAY 구독 시 무료' },
   ];
+  var features = ['수수료 0%', '실시간 화물 공고', 'AI 루트코치', '주유소 최저가', '세금계산서 자동발행', '팝빌 연동'];
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: '#070f1c', alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: '#070f1c' }}>
       <Particles count={12} />
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, ' + GOLD + '0e 0%, transparent 65%)' }} />
-      <div style={{ position: 'absolute', top: 80, background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
+
+      {/* 배지 */}
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
         <span style={{ color: GOLD, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>PRICING</span>
       </div>
 
-      <div style={{ position: 'absolute', top: 155, left: 44, right: 44, opacity: fadeIn(frame, 12, 18), transform: 'translateY(' + slideUp(frame, 12, 18) + 'px)' }}>
-        <div style={{ fontSize: 38, fontWeight: 900, color: WHITE, lineHeight: 1.15, marginBottom: 6, textAlign: 'center' }}>투명한 요금제</div>
-        <div style={{ fontSize: 15, color: WHITE + '44', textAlign: 'center', marginBottom: 36 }}>숨은 수수료 없음 · 월정액 단순 구조</div>
-      </div>
+      {/* 메인 콘텐츠 — 수직 균등 배분 */}
+      <div style={{ position: 'absolute', top: 145, bottom: 190, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', padding: '0 36px' }}>
 
-      <div style={{ position: 'absolute', top: 330, left: 36, right: 36, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {plans.map(function(plan, i) {
-          return (
-            <div key={plan.role} style={{ background: i === 0 ? GOLD + '14' : '#0d1a28', borderRadius: 20, padding: '24px 24px', border: '1.5px solid ' + (i === 0 ? GOLD + '55' : GOLD + '1e'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: fadeIn(frame, 24 + i * 16, 18), transform: 'translateX(' + interpolate(frame, [24 + i * 16, 40 + i * 16], [-30, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) + 'px)' }}>
-              <div>
-                <div style={{ fontSize: 22, marginBottom: 4 }}>{plan.icon}</div>
-                <div style={{ color: i === 0 ? GOLD : WHITE + '99', fontSize: 18, fontWeight: 800 }}>{plan.role}</div>
-                <div style={{ color: WHITE + '44', fontSize: 11, marginTop: 4, whiteSpace: 'pre-line', lineHeight: 1.5 }}>{plan.desc}</div>
+        {/* 타이틀 */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 12, 18), transform: 'translateY(' + slideUp(frame, 12, 18) + 'px)', width: '100%' }}>
+          <div style={{ fontSize: 46, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>투명한 요금제</div>
+          <div style={{ fontSize: 16, color: WHITE + '44', marginTop: 10 }}>숨은 수수료 없음 · 월정액 단순 구조</div>
+        </div>
+
+        {/* 요금 카드 */}
+        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {plans.map(function(plan, i) {
+            return (
+              <div key={plan.role} style={{ background: i === 0 ? GOLD + '14' : '#0d1a28', borderRadius: 22, padding: '26px 24px', border: '1.5px solid ' + (i === 0 ? GOLD + '55' : GOLD + '1e'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: fadeIn(frame, 24 + i * 16, 18), transform: 'translateX(' + interpolate(frame, [24 + i * 16, 40 + i * 16], [-30, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) + 'px)' }}>
+                <div>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>{plan.icon}</div>
+                  <div style={{ color: i === 0 ? GOLD : WHITE + '99', fontSize: 20, fontWeight: 800 }}>{plan.role}</div>
+                  <div style={{ color: WHITE + '44', fontSize: 12, marginTop: 6, whiteSpace: 'pre-line', lineHeight: 1.6 }}>{plan.desc}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ color: i === 0 ? LTGLD : WHITE, fontSize: 30, fontWeight: 900 }}>₩{plan.price}</div>
+                  <div style={{ color: WHITE + '44', fontSize: 14 }}>{plan.unit}</div>
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ color: i === 0 ? LTGLD : WHITE, fontSize: 28, fontWeight: 900 }}>₩{plan.price}</div>
-                <div style={{ color: WHITE + '44', fontSize: 13 }}>{plan.unit}</div>
-              </div>
+            );
+          })}
+        </div>
+
+        {/* 기능 목록 */}
+        <div style={{ width: '100%', opacity: fadeIn(frame, 58, 18) }}>
+          <div style={{ color: GOLD, fontSize: 13, fontWeight: 700, marginBottom: 14, textAlign: 'center', letterSpacing: 1 }}>✅ 모든 요금제 포함 기능</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+            {features.map(function(f, i) {
+              return (
+                <div key={i} style={{ background: '#0d1a28', borderRadius: 20, padding: '8px 16px', border: '1px solid ' + GOLD + '22', color: WHITE + '88', fontSize: 13, opacity: fadeIn(frame, 62 + i * 4, 12) }}>{f}</div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 경쟁사 비교 */}
+        <div style={{ width: '100%', background: '#0a1628', borderRadius: 18, padding: '18px 20px', border: '1px solid ' + GOLD + '22', opacity: fadeIn(frame, 80, 18) }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ color: WHITE + '55', fontSize: 12, marginBottom: 4 }}>타사 주선 앱 대비</div>
+              <div style={{ color: LTGLD, fontSize: 22, fontWeight: 900 }}>연간 3,000만원+ 절약</div>
             </div>
-          );
-        })}
-      </div>
-
-      <div style={{ position: 'absolute', bottom: 72, left: '50%', transform: 'translateX(-50%)', opacity: fadeIn(frame, 66, 18), color: GOLD + '88', fontSize: 13, letterSpacing: 2, whiteSpace: 'nowrap', textAlign: 'center' }}>
-        팝빌 세금계산서 자동발행 포함
+            <div style={{ fontSize: 32 }}>💰</div>
+          </div>
+        </div>
       </div>
     </AbsoluteFill>
   );
 }
 
-// ── Scene 5: CTA (26–30s = 780–899f) ──────────────────────────
+// ── Scene 5: CTA ──────────────────────────────────────────────
 function SceneCTA() {
   var frame = useCurrentFrame();
   var sc = interpolate(frame, [0, 32], [0.68, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.4)) });
@@ -265,7 +363,7 @@ function SceneCTA() {
   var glowHex = glowAlpha.toString(16).padStart(2, '0');
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: DARK, alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <Particles count={18} />
       {[0, 0.34, 0.67].map(function(off, i) {
         var f = (frame + off * 120) % 120;
@@ -273,17 +371,24 @@ function SceneCTA() {
         var o = interpolate(f, [0, 120], [0.4, 0], { extrapolateRight: 'clamp' });
         return <div key={i} style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', border: '1.5px solid ' + GOLD, transform: 'scale(' + s + ')', opacity: o }} />;
       })}
-      <div style={{ transform: 'scale(' + sc + ')', textAlign: 'center' }}>
-        <div style={{ fontSize: 80, fontWeight: 900, color: LTGLD, letterSpacing: -2, textShadow: '0 0 40px ' + GOLD + '88, 0 0 100px ' + GOLD + '22' }}>용차앱</div>
-        <div style={{ fontSize: 22, color: WHITE, fontWeight: 700, marginTop: -4, marginBottom: 38, opacity: fadeIn(frame, 20, 18) }}>지금 바로 시작하세요</div>
-        <div style={{ background: 'linear-gradient(135deg, ' + GOLD + ', #deb95a)', borderRadius: 22, padding: '20px 60px', fontSize: 26, fontWeight: 900, color: '#08101f', opacity: fadeIn(frame, 28, 18), boxShadow: '0 8px 36px ' + GOLD + '55, 0 0 80px ' + GOLD + glowHex, display: 'inline-block', letterSpacing: 0.5, minWidth: 220, textAlign: 'center' }}>
+
+      <div style={{ transform: 'scale(' + sc + ')', textAlign: 'center', padding: '0 40px' }}>
+        <div style={{ fontSize: 86, fontWeight: 900, color: LTGLD, letterSpacing: -2, textShadow: '0 0 40px ' + GOLD + '88, 0 0 100px ' + GOLD + '22' }}>용차앱</div>
+        <div style={{ fontSize: 24, color: WHITE, fontWeight: 700, marginTop: -4, marginBottom: 16, opacity: fadeIn(frame, 20, 18) }}>수수료 0원 · 화물 직접 매칭</div>
+        <div style={{ fontSize: 17, color: WHITE + '44', marginBottom: 48, opacity: fadeIn(frame, 28, 18), lineHeight: 1.6 }}>기사 ₩150,000/월 · 소장 ₩50,000/월<br/>DONWAY 구독 소장 무료</div>
+        <div style={{ background: 'linear-gradient(135deg, ' + GOLD + ', #deb95a)', borderRadius: 24, padding: '22px 64px', fontSize: 28, fontWeight: 900, color: '#08101f', opacity: fadeIn(frame, 34, 18), boxShadow: '0 8px 36px ' + GOLD + '55, 0 0 80px ' + GOLD + glowHex, display: 'inline-block', letterSpacing: 0.5, minWidth: 240, textAlign: 'center', marginBottom: 28 }}>
           {url.slice(0, charsVisible)}{charsVisible < url.length ? <span style={{ opacity: 0.35 }}>|</span> : null}
         </div>
-        <div style={{ marginTop: 22, fontSize: 15, color: WHITE + '44', opacity: fadeIn(frame, 55, 18), letterSpacing: 1 }}>
-          기사 ₩150,000/월 · 소장 ₩50,000/월
+
+        {/* 기능 태그 */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', opacity: fadeIn(frame, 55, 18), flexWrap: 'wrap' }}>
+          {['🤖 AI 루트코치', '⛽ 주유 최저가', '📄 세금계산서'].map(function(t, i) {
+            return <div key={i} style={{ background: GOLD + '14', border: '1px solid ' + GOLD + '33', borderRadius: 20, padding: '8px 16px', color: GOLD + 'cc', fontSize: 13 }}>{t}</div>;
+          })}
         </div>
       </div>
-      <div style={{ position: 'absolute', bottom: 44, left: '50%', transform: 'translateX(-50%)', opacity: fadeIn(frame, 65, 18), color: WHITE + '2a', fontSize: 11, letterSpacing: 5, fontWeight: 300 }}>
+
+      <div style={{ position: 'absolute', bottom: 56, left: '50%', transform: 'translateX(-50%)', opacity: fadeIn(frame, 68, 18), color: WHITE + '2a', fontSize: 11, letterSpacing: 5, fontWeight: 300 }}>
         POWERED BY MBTICO
       </div>
     </AbsoluteFill>
