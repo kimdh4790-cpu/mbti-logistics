@@ -105,8 +105,19 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 - 출처: https://github.com/affaan-m/ECC (ECC v2.2.0, MIT 라이선스)
 - 설치 방식: 프로젝트 직접 복사 (`cp -R skills/<name> /home/user/mbti-logistics/.claude/skills/`)
-- 추가 예정: 사용자가 공유하는 추가 스킬 적용 대기 중
 - 제거: `.claude/skills/<이름>/` 폴더 삭제 후 commit
+
+### ECC 추가 설치 (2026-08-30, 2차)
+| 항목 | 종류 | 역할 | 위치 |
+|---|---|---|---|
+| frontend-design-direction | 스킬 | UI 설계 방향 수립 (목적·톤·디자인 제약 먼저 결정) | `.claude/skills/frontend-design-direction/` |
+| code-reviewer | 에이전트 | git diff 기반 코드 리뷰 (버그·보안·품질 80%+ 확신 항목만) | `.claude/agents/code-reviewer.md` |
+
+**비고**:
+- `frontend-design-direction`은 ECC 커뮤니티 버전. Anthropic 공식 `frontend-design`은 `/plugin install frontend-design@anthropics-claude-code` 필요 (원격 세션에서 불가)
+- `code-reviewer` agent는 코드 수정 후 자동 발동 (`model: sonnet`, `tools: Read, Grep, Glob, Bash`)
+- `/security-review` — Claude Code 기본 내장 명령, 별도 설치 불필요
+- Superpowers, Claude-Mem — 이미 설치됨 (로컬 PC 기준)
 
 ### Motion Graphics 스킬 (2026-08-28 설치, Remotion 기반)
 | 스킬 | 역할 |
