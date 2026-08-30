@@ -4263,6 +4263,7 @@ ${JSON.stringify(postSummary)}
       // ── /api/point-earn — QR 주문 포인트 적립 (FCM 토큰 기반, 가입 불필요)
       if (path === '/api/point-earn' && method === 'POST') {
         try {
+          const corsH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
           const body = await request.json();
           const { did, fcmToken, orderId, total, tableNum, storeName } = body;
           if (!did || !fcmToken || !total) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:corsH});
