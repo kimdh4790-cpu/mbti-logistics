@@ -101,6 +101,32 @@ function _filoTablePay(did, items, total, tableNum, tableName, method, orderIds)
   // 결제완료 알림 + 영수증 발송 버튼
   _filoReceiptNotify(did, tableNum, items, total, methodLabel);
 
+  // 레시피 기반 재고 자동 차감 (non-critical)
+  _db.collection('menu_recipes').where('dealerId','==',did).get().then(function(recSnap){
+   var recipes=[];
+   recSnap.forEach(function(doc){var d=doc.data();recipes.push({menuName:d.menuName||'',ingredients:d.ingredients||[]});});
+   if(!recipes.length)return;
+   var deductions={};
+   items.forEach(function(it){
+    var rec=recipes.find(function(r){return r.menuName===it.name;});
+    if(!rec)return;
+    rec.ingredients.forEach(function(ing){
+     if(!ing.invId||!ing.qty)return;
+     deductions[ing.invId]=(deductions[ing.invId]||0)+ing.qty*(it.qty||1);
+    });
+   });
+   var ids=Object.keys(deductions);
+   if(!ids.length)return;
+   Promise.all(ids.map(function(id){
+    return _db.collection('inventory').doc(id).get().then(function(snap){
+     if(!snap.exists)return;
+     var cur=Number(snap.data().stock||snap.data().qty||0);
+     var next=Math.max(0,cur-deductions[id]);
+     return _db.collection('inventory').doc(id).update({stock:Math.round(next),updatedAt:new Date().toISOString()});
+    }).catch(function(){});
+   })).catch(function(){});
+  }).catch(function(){});
+
  }).catch(function(e){_filoToast('결제 실패: '+e.message);});
 }
 
