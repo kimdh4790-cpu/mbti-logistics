@@ -379,6 +379,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 | 2026-08-28 | YONGCHA YouTube 깨진 영상 ID: eDpowbKedgs (무음+자막가림) — 삭제 필요 |
 | 2026-08-28 | 영상 퀄리티 전면 개선: 자막 노란색 46pt+두꺼운 검은 외곽선(TikTok 스타일), 음성 Neural2-C speedRate 1.0(자연스러운 구어체), 화면 scale+crop으로 꽉 채움(블러배경 제거), 나레이션 4종 전면 재작성 |
 | 2026-08-28 | BGM: ffmpeg 자체 생성 방식 채택 (YouTube 오디오 라이브러리 저작권 우려 → 자체 합성 BGM 사용) |
+| 2026-08-30 | **FiloPromo.jsx + DonwayPromo.jsx 시프티 스타일 리디자인** — ①WEEK_VARIANT 주간 A/B/C/D 로테이션(매주 훅문구·메뉴·스탯 자동 교체), ②로고 frame 0 즉시 노출(opacity fade 제거→썸네일 브랜드 표시), ③씬별 단색 배경(NAVY/BLUE_BG/TEAL_BG/WINE_BG), ④폰 목업 크게 중앙 배치(270×490), ⑤하단 굵은 헤드라인(52px bold), ⑥space-evenly 균등 배치(빈공간 버그 수정). main 자동머지 완료 |
 | 2026-08-28 | FiloPromo.jsx 전면 재작성: Particles/AnimatedCounter 추가, 모든 씬 네이비 배경, 이모지→텍스트, TransitionOverlay Sequence 로컬프레임 버그 수정, hasBgm 지원 |
 | 2026-08-28 | render-filo.js: videoBitrate '8M' 추가 (고화질 H.264) |
 | 2026-08-28 | Oracle Cloud 초기화 완료 (oracle-init.sh 실행, Chromium /usr/bin/chromium 확인) |
