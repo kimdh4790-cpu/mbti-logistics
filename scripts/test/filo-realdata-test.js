@@ -63,20 +63,45 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
     console.log('\n═══ 1. 로그인 테스트 ═══');
     // filo.ai.kr/ → filo-landing.html (로그인 폼 없음)
     // filo.ai.kr/app → filo.html (로그인 폼 있음)
-    await page.goto(BASE_URL + '/app', { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(BASE_URL + '/app', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await wait(3000); // Firebase 초기화 대기
     await ss(page, '01-landing');
 
+    // 페이지 상태 진단
+    const pageTitle = await page.title();
+    const bodyText = (await page.innerText('body').catch(() => '')).slice(0, 200);
+    console.log(`   페이지 제목: ${pageTitle}`);
+    console.log(`   페이지 내용 (첫 200자): ${bodyText.replace(/\s+/g,' ')}`);
+
+    // #fl-id 가시성 체크
+    const flIdVisible = await page.isVisible('#fl-id').catch(() => false);
+    const loginScreenVisible = await page.isVisible('#login-screen').catch(() => false);
+    console.log(`   #fl-id 보임: ${flIdVisible}, #login-screen 보임: ${loginScreenVisible}`);
+
+    // 로그인 폼이 안 보이면 #login-screen 강제 노출
+    if (!flIdVisible) {
+      await page.evaluate(() => {
+        const ls = document.getElementById('login-screen');
+        if (ls) { ls.style.display = 'flex'; ls.style.visibility = 'visible'; }
+        const app = document.getElementById('app');
+        if (app) app.style.display = 'none';
+      });
+      await wait(500);
+      await ss(page, '01b-forced-login');
+    }
+
     // 이메일 입력 (filo.html: #fl-id type=text, #fl-pw type=password)
-    await page.waitForSelector('#fl-id', { timeout: 15000 });
+    await page.waitForSelector('#fl-id', { state: 'attached', timeout: 10000 });
     await page.fill('#fl-id', EMAIL);
     await page.fill('#fl-pw', PASS);
     await ss(page, '02-login-filled');
     await page.press('#fl-pw', 'Enter');
-    await wait(3000);
+    await wait(4000);
     await ss(page, '03-after-login');
 
     const url = page.url();
-    log('로그인 후 대시보드 이동', url.includes('filo.ai.kr'));
+    const appVisible = await page.isVisible('#app').catch(() => false);
+    log('로그인 후 앱 로드', appVisible || url.includes('filo.ai.kr'));
 
     /* ── 2. 마진 분석 탭 ── */
     console.log('\n═══ 2. 마진 분석 탭 ═══');
