@@ -96,6 +96,18 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | claude-mem (thedotmack/claude-mem) | v13.16.1 | 설치완료 | 세션간 기억 유지 |
 | claude-code-setup (anthropics/claude-plugins-official) | v1.0.0 | 설치완료 | 프로젝트 분석·추천 |
 
+### ECC (Everything Claude Code) 스킬 (2026-08-30 설치)
+| 스킬 | 역할 | 설치 위치 |
+|---|---|---|
+| security-review | 인증·입력값·시크릿·결제·API 보안 체크리스트 | `.claude/skills/security-review/` |
+| verification-loop | PR 전 build·typecheck·lint·test·diff 순서 고정 | `.claude/skills/verification-loop/` |
+| api-design | REST API 설계 패턴 (리소스명·상태코드·페이지네이션·오류) | `.claude/skills/api-design/` |
+
+- 출처: https://github.com/affaan-m/ECC (ECC v2.2.0, MIT 라이선스)
+- 설치 방식: 프로젝트 직접 복사 (`cp -R skills/<name> /home/user/mbti-logistics/.claude/skills/`)
+- 추가 예정: 사용자가 공유하는 추가 스킬 적용 대기 중
+- 제거: `.claude/skills/<이름>/` 폴더 삭제 후 commit
+
 ### Motion Graphics 스킬 (2026-08-28 설치, Remotion 기반)
 | 스킬 | 역할 |
 |---|---|
