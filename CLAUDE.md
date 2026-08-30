@@ -405,6 +405,7 @@ cd mbtico-pages && npx wrangler deploy
 - _worker.js / yongcha-worker.js: YONGCHA_HTML 동기화 (AI 추천 문구 6곳 + 법적 고지) — yongcha.html 미반영분 보완
 - filo-order.js / filo-pos-pay.js: null 가드 추가 (Firestore undefined 저장·영수증 "undefined" 표시 방지)
 - INFRA_MEMO.md: Oracle Cloud wrangler deploy 명령어 추가 (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL 조합)
+- yongcha.html / _worker.js / yongcha-worker.js / yongcha-landing.html / yongcha-meta.json: 부가통신사업자 포지셔닝 전면 반영 — '배차'→'단건 요청/운행/연결', '배차완료'→'운행완료', AI 프롬프트 정비, 마케팅 메시지 '직접 매칭'→'직접 거래 정보 서비스', 해시태그 동기화
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
