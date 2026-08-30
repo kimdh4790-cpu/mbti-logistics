@@ -144,6 +144,12 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | `/critique` | 코드·설계 약점 진단 (HIGH/MEDIUM/LOW 심각도) |
 | `/checklist` | 배포 전 CLAUDE.md 기준 체크리스트 자동 생성 |
 
+#### 광고 제작 (3차, 2026-08-30) — Higgsfield 연동
+| 명령어 | 역할 |
+|---|---|
+| `/ad-remix` | 레퍼런스 광고 분석 → 훅·구조·Higgsfield 프롬프트 2버전 기획 |
+| `/ad-brief` | FILO/DONWAY/용차앱/MBTICO 광고 브리프 + 스크립트 즉시 생성 |
+
 #### 마케팅·콘텐츠 (2차, 2026-08-30)
 | 명령어 | 역할 |
 |---|---|
@@ -190,6 +196,24 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | 서버 | 역할 | 상태 |
 |---|---|---|
 | context7 | 최신 라이브러리 문서 실시간 주입 | 2026-08-28 등록 |
+| Higgsfield | AI 광고 영상 생성 (이미지→영상, 비포애프터, UGC, 글로벌 현지화) | 미등록 — 아래 설치법 참고 |
+
+### Higgsfield MCP 설치 (로컬 PC, 2026-08-30 예정)
+광고 영상 AI 생성 도구. 잘 되는 광고를 분석하고 수십 개 버전으로 확장 가능.
+
+**설치 순서**
+1. 힉스필드 가입: https://higgsfield.ai/s/ad-multiplier-claude-ig-biggie_ai-hgjhFF
+2. claude.ai → 설정 → 커넥터(Connectors)
+3. Custom Connector 추가 → 이름 "Higgsfield" → MCP URL 붙여넣기 → Add
+
+**핵심 활용법**
+- Meta Ad Library에서 오래 돌아가는 광고(= 성과 있는 광고) 찾기
+- `/ad-remix` 커맨드로 구조 분석 + 리메이크 브리프 생성
+- Higgsfield MCP에 프롬프트 전달 → 영상 생성
+- 처음엔 720p 2개만 → 방향 확인 후 확장
+- 글로벌: 같은 크리에이티브를 영어/일어로 현지화 (재촬영 없음)
+
+**연동 흐름**: 클로드 대화 1개 안에서 Meta Ads MCP(광고 조회) + Higgsfield MCP(영상 생성) 연속 실행 가능
 
 ---
 
@@ -269,3 +293,4 @@ claude
 | 2026-08-30 | ECC 스킬 2차 설치: frontend-design-direction, code-reviewer 에이전트 |
 | 2026-08-30 | 커스텀 슬래시 명령어 20개 구현: 개발 5개(5whys·risks·blueprint·critique·checklist) + 마케팅 10개(brainstorm·hooks·ghost·tone·story·audience·improve·tweet·expand·proofread) + 비즈니스분석 7개(pros-cons·compare·steelman·devil·tldr·margin·pricing·shorter·rephrase·outline) |
 | 2026-08-30 | 프론트엔드 디자인 스킬 3개 설치: design-taste-frontend(1206줄, Leonxlnx), image-to-code(1228줄), web-design-guidelines(39줄, Vercel). Awesome Design MD·Playwright CLI는 로컬 설치 필요 |
+| 2026-08-30 | Higgsfield MCP 정보 등록 (로컬 설치 예정). /ad-remix·/ad-brief 광고 커맨드 2개 추가 |
