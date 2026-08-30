@@ -447,9 +447,31 @@ function _buildFiloNav(){
 
  // ── 관제센터 services 배열 기반 기능 on/off ──────────────────
  var _services = d.services || [];
+ // FILO 플랜별 허용 기능
+ var FILO_PLAN_FEATURES = {
+  trial:        ['kiosk','table_order','qr_order','qr_attend','member_crm','menu'],
+  basic:        ['kiosk','table_order','qr_order','qr_attend','member_crm','menu'],
+  pro:          ['kiosk','table_order','qr_order','qr_attend','member_crm','menu',
+                 'inventory','payroll','ai_predict','translation','reservation','booking','margin'],
+  premium:      ['kiosk','table_order','qr_order','qr_attend','member_crm','menu',
+                 'inventory','payroll','ai_predict','translation','reservation','booking','margin',
+                 'accounting','multi_store','report'],
+  franchise_hq: ['kiosk','table_order','qr_order','qr_attend','member_crm','menu',
+                 'inventory','payroll','ai_predict','translation','reservation','booking','margin',
+                 'accounting','multi_store','report','franchise_hq','menu_deploy','branch_monitor']
+ };
+ var _filoPlan = (d && d.filoPlan) ? d.filoPlan : 'trial';
+ var _filoPlanExpiry = (d && d.filoPlanExpiry) ? d.filoPlanExpiry : '';
+ var _filoPlanActive = (_filoPlan === 'trial')
+  ? !!(d && d.subscriptions && d.subscriptions.trial && d.subscriptions.trial.active)
+  : (_filoPlanExpiry >= today);
+ var _filoPlanFeats = _filoPlanActive
+  ? (FILO_PLAN_FEATURES[_filoPlan] || FILO_PLAN_FEATURES['trial'])
+  : FILO_PLAN_FEATURES['trial'];
  function hasFeature(key) {
   if(hasAll) return true;           // 슈퍼어드민(비데모)·콤보 구독은 전부 허용
   if(_services.includes(key)) return true;  // 관제센터에서 켠 기능
+  if(_filoPlanFeats.includes(key)) return true;  // 플랜 기반 기능
   return false;
  }
 
