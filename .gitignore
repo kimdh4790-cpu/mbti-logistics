@@ -10,3 +10,5 @@ test-results/
 .oracle-profile/
 test-screenshots/
 output/
+scripts/test/.env.test
+!scripts/test/.env.test.example

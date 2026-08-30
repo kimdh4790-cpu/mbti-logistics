@@ -11,10 +11,20 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
-const BASE_URL = 'https://filo.ai.kr';
-const EMAIL    = 'soungkyekim@naver.com';
-const PASS     = 'khw3103!!!';
-const DID      = '9XD2K3W1tIhIs6XM74YT0xfRFEP2';
+const BASE_URL    = 'https://filo.ai.kr';
+const EMAIL       = process.env.FILO_EMAIL       || '';
+const PASS        = process.env.FILO_PASS        || '';
+const DID         = process.env.FILO_DID         || '';
+const STAFF_PHONE = process.env.FILO_STAFF_PHONE || '';
+const STAFF_PASS  = process.env.FILO_STAFF_PASS  || '';
+const DINE_URL    = 'https://dine.ne.kr';
+
+if (!EMAIL || !PASS || !DID) {
+  console.error('환경변수 누락. scripts/test/.env.test 파일을 만들어서 source 하거나:');
+  console.error('  export FILO_EMAIL=...  FILO_PASS=...  FILO_DID=...');
+  console.error('  export FILO_STAFF_PHONE=...  FILO_STAFF_PASS=...');
+  process.exit(1);
+}
 
 const SS_DIR = path.join(__dirname, '../../output/test-screenshots');
 fs.mkdirSync(SS_DIR, { recursive: true });
@@ -187,6 +197,62 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
     await ss(page, '12-payroll');
     const payrollText = await page.content();
     log('급여 탭 이동', payrollText.includes('급여') || payrollText.includes('근태'));
+
+    /* ── 9. DINE 직원 앱 로그인 ── */
+    console.log('\n═══ 9. DINE 직원 앱 (dine.ne.kr) ═══');
+    const dinePage = await ctx.newPage();
+    try {
+      await dinePage.goto(DINE_URL, { waitUntil: 'networkidle', timeout: 30000 });
+      await ss(dinePage, '13-dine-landing');
+
+      // 전화번호 로그인
+      const phoneInput = dinePage.locator('input[type="tel"], input[placeholder*="전화"], input[placeholder*="번호"]').first();
+      if (await phoneInput.count() > 0) {
+        await phoneInput.fill(STAFF_PHONE);
+        const dinePassInput = dinePage.locator('input[type="password"]').first();
+        await dinePassInput.fill(STAFF_PASS);
+        await ss(dinePage, '14-dine-login-filled');
+        await dinePassInput.press('Enter');
+        await wait(3000);
+        await ss(dinePage, '15-dine-after-login');
+        const dineUrl = dinePage.url();
+        log('DINE 직원 로그인', dineUrl.includes('dine.ne.kr'));
+      } else {
+        // 이메일 폼인 경우
+        const emailInput2 = dinePage.locator('input[type="email"]').first();
+        if (await emailInput2.count() > 0) {
+          await emailInput2.fill(STAFF_PHONE + '@filo.kr');
+        }
+        log('DINE 로그인 폼 감지', false);
+        await ss(dinePage, '14-dine-form-unknown');
+      }
+
+      // 출퇴근 현황 확인
+      const dineContent = await dinePage.content();
+      const hasDineData = dineContent.includes('출근') || dineContent.includes('근태') || dineContent.includes('스케줄') || dineContent.includes('급여');
+      log('DINE 직원 데이터 표시', hasDineData);
+
+      // QR 출퇴근 테스트
+      console.log('\n═══ 10. QR 출퇴근 (filo.ai.kr/qr) ═══');
+      const qrPage = await ctx.newPage();
+      await qrPage.goto(`${BASE_URL}/qr?did=${DID}&action=in`, { waitUntil: 'networkidle', timeout: 20000 });
+      await wait(2000);
+      await ss(qrPage, '16-qr-page');
+      const qrContent = await qrPage.content();
+      log('QR 출퇴근 페이지 로드', qrContent.includes('출근') || qrContent.includes('직원') || qrContent.includes('선택'));
+      // 직원 목록 확인
+      const staffList = qrPage.locator('.staff-item, [onclick*="qr"], button').first();
+      if (await staffList.count() > 0) {
+        const txt = await staffList.textContent();
+        log('직원 목록 표시: ' + (txt?.trim().slice(0, 20) || ''), true);
+      }
+      await qrPage.close();
+    } catch (dineErr) {
+      log('DINE 테스트 오류: ' + dineErr.message, false);
+      await ss(dinePage, '99-dine-error').catch(() => {});
+    } finally {
+      await dinePage.close().catch(() => {});
+    }
 
   } catch (e) {
     log(`테스트 오류: ${e.message}`, false);
