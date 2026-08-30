@@ -163,6 +163,17 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-30 (16차)
+**FILO 플랜 게이팅 + 구독 Toss 결제 플로우 완성 + 용차앱 정보통신업 리포지셔닝**
+- `filo-auth.js`: `FILO_PLAN_FEATURES` 맵(trial/basic/pro/premium/franchise_hq) + `_filoPlanFeats` 변수 + `hasFeature()` 플랜 체크 OR 조건 추가 (기존 hasAll·_services 폴백 유지)
+- `filo-settings.js`: `_filoSubscribePlan()` — Toss SDK 동적 로드 + `/api/toss-client-key` + `requestPayment('카드', {orderId: FILO-{uid8}-{ts}-{plan}, successUrl: /filo-subscribe-success})`
+- `filo-settings.js`: `_filoPageSubscription()` 버튼 onclick → `_filoSubscribePlan()` 연결
+- `_worker.js`: `/toss-confirm` FILO- prefix 분기 추가 — `companies/{uid}` filoPlan·filoPlanExpiry·filoPlanAmount·filoPlanPaidAt 업데이트 + payments 기록
+- `_worker.js`: `/filo-subscribe-success` 성공 콜백 페이지 (인라인 HTML, /toss-confirm 자동 호출)
+- `_worker.js`: `/filo-subscribe-fail` 취소 콜백 페이지 (인라인 HTML)
+- `yongcha-landing.html` / `yongcha.html`: "주선사업자 없는 직접 매칭" → "소장·기사 직접 거래 정보 서비스" 등 정보통신업 포지셔닝으로 마케팅 문구 변경. yongcha.html 프로필 화면 법적 고지 추가
+- `BUSINESS_MEMO.md`: 사업자등록증 업종(정보통신산업/인터넷컨텐츠개발및공급업) 확인 기록 + 용차앱 법적 근거
+
 ### 2026-08-30 (15차)
 **Worker API 버그 수정 — 슈퍼어드민 인증·포인트 적립 복구**
 - `_worker.js` `verifyFirebaseToken`: accounts:lookup fetch에 `Referer: https://filo.ai.kr` / `Origin: https://filo.ai.kr` 헤더 추가 → Firebase API키 HTTP Referrer 제한 우회. 미수정 시 슈퍼어드민 API 전체 401 반환
