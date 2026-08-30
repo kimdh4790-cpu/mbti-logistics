@@ -13,20 +13,32 @@ function _filoPageInventoryDash(el){
  if(!did){el.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--t3)">로그인 후 이용하세요</div>';return;}
 
  el.innerHTML=
-  '<div style="max-width:700px;margin:0 auto" class="slide-up">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-  '<div style="font-size:17px;font-weight:900;color:var(--tx)">재고 현황</div>'+
+  '<div style="max-width:720px;margin:0 auto" class="slide-up">'+
+  /* 헤더 */
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+  '<div>'+
+  '<div style="font-size:18px;font-weight:900;color:var(--tx);letter-spacing:-.3px">재고 관리</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-top:1px">레시피 연동 · 자동 발주 · 실시간 차감</div>'+
+  '</div>'+
   '<div style="display:flex;gap:8px">'+
-  '<button onclick="_filoInvAutoOrder(\''+did+'\')" id="inv-auto-btn" style="padding:7px 14px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">자동발주</button>'+
-  '<button onclick="_filoInvAddModal(\''+did+'\')" style="padding:7px 14px;background:var(--br,#0891b2);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">+ 등록</button>'+
+  '<button onclick="_filoInvAutoOrder(\''+did+'\')" id="inv-auto-btn" style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">'+
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>자동발주</button>'+
+  '<button onclick="_filoInvAddModal(\''+did+'\')" style="display:flex;align-items:center;gap:5px;padding:8px 14px;background:var(--br,#c9a84c);color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">'+
+  '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>재료 추가</button>'+
   '</div></div>'+
   /* KPI 3칸 */
-  '<div id="inv-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>'+
+  '<div id="inv-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px"></div>'+
   /* 탭 */
-  '<div style="display:flex;border-bottom:2px solid var(--bd);margin-bottom:14px">'+
-  '<button id="inv-tab-stock" onclick="_filoInvSwitchTab(\'stock\',\''+did+'\')" style="flex:1;padding:9px;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--tx);border-bottom:2px solid var(--br,#0891b2);margin-bottom:-2px">재고현황</button>'+
-  '<button id="inv-tab-order" onclick="_filoInvSwitchTab(\'order\',\''+did+'\')" style="flex:1;padding:9px;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--t3)">발주현황 <span id="inv-order-badge" style="display:none;background:#f59e0b;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;vertical-align:middle"></span></button>'+
-  '<button id="inv-tab-recipe" onclick="_filoInvSwitchTab(\'recipe\',\''+did+'\')" style="flex:1;padding:9px;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--t3)">메뉴-재고 연동</button>'+
+  '<div style="display:flex;background:var(--b2,rgba(255,255,255,.04));border-radius:12px;padding:4px;gap:2px;margin-bottom:16px">'+
+  '<button id="inv-tab-stock" onclick="_filoInvSwitchTab(\'stock\',\''+did+'\')" style="flex:1;padding:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;border-radius:9px;background:var(--br,#c9a84c);color:#fff;transition:all .2s">재고현황</button>'+
+  '<button id="inv-tab-order" onclick="_filoInvSwitchTab(\'order\',\''+did+'\')" style="flex:1;padding:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;border-radius:9px;background:transparent;color:var(--t3);transition:all .2s">발주현황 <span id="inv-order-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:99px;vertical-align:middle;margin-left:2px"></span></button>'+
+  '<button id="inv-tab-recipe" onclick="_filoInvSwitchTab(\'recipe\',\''+did+'\')" style="flex:1;padding:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;border-radius:9px;background:transparent;color:var(--t3);transition:all .2s">레시피 연동</button>'+
+  '</div>'+
+  /* 검색 */
+  '<div style="position:relative;margin-bottom:14px">'+
+  '<input id="inv-search" type="text" placeholder="재료명 검색..." oninput="_filoInvSearch()" '+
+  'style="width:100%;box-sizing:border-box;padding:10px 14px 10px 36px;background:var(--b2,rgba(255,255,255,.05));border:1px solid var(--bd);border-radius:11px;color:var(--tx);font-size:13px">'+
+  '<svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.4" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
   '</div>'+
   '<div id="inv-list"><div style="text-align:center;padding:40px;color:var(--t3)">로딩 중...</div></div>'+
   '</div>';
@@ -36,16 +48,25 @@ function _filoPageInventoryDash(el){
 
 // ── 탭 전환 ──────────────────────────────────────────────────────────────────
 window._filoInvSwitchTab=function(tab,did){
- var ts=document.getElementById('inv-tab-stock');
- var to=document.getElementById('inv-tab-order');
- var tr=document.getElementById('inv-tab-recipe');
- var act='2px solid var(--br,#0891b2)';
- if(ts){ts.style.color=tab==='stock'?'var(--tx)':'var(--t3)';ts.style.borderBottom=tab==='stock'?act:'none';}
- if(to){to.style.color=tab==='order'?'var(--tx)':'var(--t3)';to.style.borderBottom=tab==='order'?act:'none';}
- if(tr){tr.style.color=tab==='recipe'?'var(--tx)':'var(--t3)';tr.style.borderBottom=tab==='recipe'?act:'none';}
+ ['stock','order','recipe'].forEach(function(t){
+  var btn=document.getElementById('inv-tab-'+t);
+  if(!btn)return;
+  var active=t===tab;
+  btn.style.background=active?'var(--br,#c9a84c)':'transparent';
+  btn.style.color=active?'#fff':'var(--t3)';
+ });
+ var srch=document.getElementById('inv-search');
+ if(srch)srch.style.display=tab==='stock'?'':'none';
  if(tab==='stock') _filoInvLoad(did);
  else if(tab==='order') _filoInvLoadOrders(did);
  else _filoInvLoadRecipes(did);
+};
+
+// ── 재료명 검색 ───────────────────────────────────────────────────────────────
+window._filoInvSearch=function(){
+ var q=(document.getElementById('inv-search')||{}).value||'';
+ var filtered=q?_invAllItems.filter(function(it){return (it.name||'').indexOf(q)>=0;}):_invAllItems;
+ _filoInvRender(filtered,_invAllItems._did||'');
 };
 
 // ── 재고 로드 ─────────────────────────────────────────────────────────────────
@@ -79,17 +100,19 @@ function _filoInvRender(items,did){
  });
 
  /* KPI */
+ var empty=low.filter(function(i){return (i.stock||0)<=0;}).length;
+ var warn=low.filter(function(i){return (i.stock||0)>0;}).length;
  var kpi=document.getElementById('inv-kpi');
- if(kpi) kpi.innerHTML=
-  '<div style="text-align:center;padding:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px">'+
-  '<div style="font-size:22px;font-weight:900;color:#ef4444">'+low.filter(function(i){return (i.stock||0)<=0;}).length+'</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:2px">재고 없음</div></div>'+
-  '<div style="text-align:center;padding:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px">'+
-  '<div style="font-size:22px;font-weight:900;color:#f59e0b">'+low.filter(function(i){return (i.stock||0)>0;}).length+'</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:2px">부족 임박</div></div>'+
-  '<div style="text-align:center;padding:12px;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);border-radius:12px">'+
-  '<div style="font-size:22px;font-weight:900;color:#059669">'+ok.length+'</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:2px">정상</div></div>';
+ if(kpi) kpi.innerHTML=[
+  {n:empty,label:'재고 없음',c:'#ef4444',bg:'rgba(239,68,68,.1)',bd:'rgba(239,68,68,.2)'},
+  {n:warn,label:'부족 임박',c:'#f59e0b',bg:'rgba(245,158,11,.1)',bd:'rgba(245,158,11,.2)'},
+  {n:ok.length,label:'정상',c:'#22c55e',bg:'rgba(34,197,94,.1)',bd:'rgba(34,197,94,.2)'}
+ ].map(function(k){
+  return '<div style="padding:14px 12px;background:'+k.bg+';border:1px solid '+k.bd+';border-radius:14px;border-left:3px solid '+k.c+'">'+
+   '<div style="font-size:26px;font-weight:900;color:'+k.c+';line-height:1;font-variant-numeric:tabular-nums">'+k.n+'</div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-top:4px;font-weight:600;letter-spacing:.3px;text-transform:uppercase">'+k.label+'</div>'+
+   '</div>';
+ }).join('');
 
  /* 자동발주 버튼 뱃지 */
  var autoBtn=document.getElementById('inv-auto-btn');
@@ -104,79 +127,96 @@ function _filoInvRender(items,did){
 
  function itemCard(it,isLow){
   var s=it.stock||0,m=it.minStock||0;
+  var empty=s<=0;
   var pct=m>0?Math.min(Math.round(s/m*100),100):100;
-  var dotColor=s<=0?'#ef4444':isLow?'#f59e0b':'#059669';
-  var barColor=s<=0?'#ef4444':isLow?'#f59e0b':'#22c55e';
+  var accentC=empty?'#ef4444':isLow?'#f59e0b':'#22c55e';
   var phone=it.supplierPhone||'';
-  var cardBg=isLow?'#fff8f8':'#fff';
-  var cardBorder=isLow?'#fecaca':'#e5e7eb';
-  return '<div style="padding:12px 14px;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.06)">'+
-   /* 1행: 상태점 이름 수정버튼 */
-   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-   '<div style="width:9px;height:9px;border-radius:50%;background:'+dotColor+';flex-shrink:0"></div>'+
-   '<div style="font-size:14px;font-weight:800;flex:1;color:#111">'+esc(it.name||'—')+'</div>'+
-   '<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="font-size:10px;padding:3px 8px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:pointer">수정</button>'+
+  var upLabel=it.unitPrice?'₩'+(it.unitPrice||0).toLocaleString()+'/'+(it.unit||'개'):'';
+  return '<div style="position:relative;padding:13px 14px;background:var(--b2,rgba(255,255,255,.04));border:1px solid var(--bd);border-left:3px solid '+accentC+';border-radius:14px;margin-bottom:8px;overflow:hidden">'+
+   /* 1행: 이름 + 단가 + 수정 */
+   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+   '<div style="font-size:14px;font-weight:800;flex:1;color:var(--tx)">'+esc(it.name||'—')+'</div>'+
+   (upLabel?'<div style="font-size:10px;color:var(--t3);background:var(--bg);border:1px solid var(--bd);padding:2px 7px;border-radius:6px">'+upLabel+'</div>':'')+
+   '<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="padding:4px 10px;border:1px solid var(--bd);border-radius:7px;background:transparent;color:var(--t3);font-size:11px;cursor:pointer">수정</button>'+
    '</div>'+
-   /* 2행: 진행바 + 수량 + +/- */
-   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(isLow?'10':'0')+'px">'+
-   '<div style="flex:1;background:#f3f4f6;border-radius:6px;height:7px;overflow:hidden">'+
-   '<div style="background:'+barColor+';width:'+pct+'%;height:100%;border-radius:6px;transition:width .6s"></div></div>'+
-   '<div style="font-size:12px;color:#6b7280;white-space:nowrap">'+s+'<span style="color:#d1d5db">/</span>'+m+(it.unit||'개')+'</div>'+
-   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',-1)" style="width:30px;height:30px;border-radius:8px;background:#fee2e2;color:#ef4444;border:1px solid #fecaca;font-size:16px;cursor:pointer;line-height:1;font-weight:700">−</button>'+
-   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',1)" style="width:30px;height:30px;border-radius:8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;font-size:16px;cursor:pointer;line-height:1;font-weight:700">+</button>'+
+   /* 2행: 진행바 + 수량 숫자 */
+   '<div style="display:flex;align-items:center;gap:10px;margin-bottom:'+(isLow?'11':'0')+'px">'+
+   '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:99px;height:8px;overflow:hidden">'+
+   '<div style="background:'+accentC+';width:'+pct+'%;height:100%;border-radius:99px;transition:width .5s ease"></div></div>'+
+   '<div style="font-size:12px;font-weight:700;color:'+accentC+';white-space:nowrap;font-variant-numeric:tabular-nums;min-width:60px;text-align:right">'+
+   s+'<span style="color:var(--t3);font-weight:400">/</span>'+m+'<span style="font-size:10px;color:var(--t3)"> '+(it.unit||'개')+'</span></div>'+
+   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',-1)" style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);font-size:18px;cursor:pointer;line-height:1;font-weight:700">−</button>'+
+   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',1)" style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);font-size:18px;cursor:pointer;line-height:1;font-weight:700">+</button>'+
    '</div>'+
+   /* 부족 시: 거래처 + 발주/알림 버튼 */
    (isLow?
-    '<div style="border-top:1px solid #f3f4f6;padding-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+    '<div style="display:flex;align-items:center;gap:6px;padding-top:10px;border-top:1px solid var(--bd);flex-wrap:wrap">'+
     '<div style="flex:1;min-width:0">'+
-    (it.supplier?'<div style="font-size:11px;color:#6b7280">거래처: <b style="color:#111">'+esc(it.supplier)+'</b></div>':'<div style="font-size:11px;color:#f59e0b">거래처 미등록 — 수정에서 추가</div>')+
-    (phone?'<div style="font-size:11px;color:#9ca3af">'+phone+'</div>':'')+
+    (it.supplier?
+     '<div style="font-size:11px;color:var(--t3)">거래처 <b style="color:var(--tx);font-weight:700">'+esc(it.supplier)+'</b>'+(phone?' · <span style="font-weight:400">'+phone+'</span>':'')+'</div>':
+     '<div style="font-size:11px;color:#f59e0b">거래처 미등록 — 수정에서 추가하세요</div>')+
     '</div>'+
-    '<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:#fef3c7;color:#d97706;border:1px solid #fde68a;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">발주</button>'+
-    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">앱푸시</button>'+
+    '<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">발주</button>'+
+    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">알림</button>'+
     '</div>':'')+
    '</div>';
  }
 
  function navBtn(fn,pg,label,disabled){
   return '<button onclick="'+fn+'('+pg+')" '+(disabled?'disabled':'')+
-   ' style="padding:6px 14px;border:1px solid #e5e7eb;border-radius:8px;background:'+(disabled?'#f9fafb':'#fff')+';color:'+(disabled?'#d1d5db':'#374151')+';font-size:12px;cursor:'+(disabled?'default':'pointer')+'">'+label+'</button>';
+   ' style="padding:6px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--b2,rgba(255,255,255,.04));color:'+(disabled?'var(--t3)':'var(--tx)')+';font-size:12px;cursor:'+(disabled?'default':'pointer')+';opacity:'+(disabled?.4:1)+'">'+label+'</button>';
  }
 
- function renderSection(arr,isLow,pgGlobal,label,dotColor,pgFn){
+ function sectionHeader(label,count,color){
+  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;margin-top:4px">'+
+   '<div style="width:4px;height:16px;border-radius:2px;background:'+color+'"></div>'+
+   '<div style="font-size:13px;font-weight:800;color:'+color+'">'+label+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);background:var(--b2,rgba(255,255,255,.06));padding:2px 8px;border-radius:99px">'+count+'건</div>'+
+   '</div>';
+ }
+
+ function renderSection(arr,isLow,pgGlobal,label,color,pgFn){
   if(!arr.length) return '';
-  var PAGE=5, pages=Math.ceil(arr.length/PAGE);
+  var PAGE=6, pages=Math.ceil(arr.length/PAGE);
   var pg=Math.min(pgGlobal,pages-1);
   var slice=arr.slice(pg*PAGE,(pg+1)*PAGE);
   var cards=slice.map(function(it){return itemCard(it,isLow);}).join('');
   var nav=pages>1?
-   '<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px">'+
-   navBtn(pgFn,pg-1,'이전',pg===0)+
-   '<span style="font-size:12px;color:#6b7280">'+(pg+1)+' / '+pages+'</span>'+
-   navBtn(pgFn,pg+1,'다음',pg===pages-1)+
+   '<div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 4px">'+
+   navBtn(pgFn,pg-1,'← 이전',pg===0)+
+   '<span style="font-size:12px;color:var(--t3)">'+(pg+1)+' / '+pages+'페이지</span>'+
+   navBtn(pgFn,pg+1,'다음 →',pg===pages-1)+
    '</div>':'';
-  return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-   '<div style="width:10px;height:10px;border-radius:50%;background:'+dotColor+'"></div>'+
-   '<div style="font-size:13px;font-weight:800;color:'+dotColor+'">'+label+' · '+arr.length+'건</div>'+
-   '</div>'+cards+nav;
+  return sectionHeader(label,arr.length,color)+cards+nav;
  }
 
  var lowPg=0, okPg=0;
  function doRender(){
-  var html='<div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb">전체 품목 ('+items.length+'개)</div>';
-  if(low.length) html+=renderSection(low,true,lowPg,'부족','#ef4444','_invLowPage');
-  if(ok.length) html+='<div style="margin-top:'+(low.length?'18':'0')+'px">'+renderSection(ok,false,okPg,'양호','#059669','_invOkPage')+'</div>';
-  list.innerHTML=html||'<div style="text-align:center;padding:40px;color:#9ca3af">등록된 재료가 없습니다</div>';
+  var html='';
+  if(low.length){
+   html+='<div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);border-radius:14px;padding:14px;margin-bottom:16px">'+
+    renderSection(low,true,lowPg,'재고 부족','#ef4444','_invLowPage')+'</div>';
+  }
+  if(ok.length){
+   html+=renderSection(ok,false,okPg,'정상 재고','#22c55e','_invOkPage');
+  }
+  list.innerHTML=html||'<div style="text-align:center;padding:50px 20px;color:var(--t3)">'+
+   '<div style="font-size:32px;margin-bottom:10px">📦</div>'+
+   '<div style="font-size:14px;font-weight:700;color:var(--tx)">등록된 재료가 없습니다</div>'+
+   '<div style="font-size:12px;margin-top:6px">상단 <b>재료 추가</b> 버튼으로 재료를 등록하세요</div>'+
+   '</div>';
  }
  window._invLowPage=function(pg){
-  var pages=Math.ceil(low.length/5);
+  var pages=Math.ceil(low.length/6);
   if(pg<0||pg>=pages)return;
   lowPg=pg; doRender();
  };
  window._invOkPage=function(pg){
-  var pages=Math.ceil(ok.length/5);
+  var pages=Math.ceil(ok.length/6);
   if(pg<0||pg>=pages)return;
   okPg=pg; doRender();
  };
+ _invAllItems._did=did;
  doRender();
 }
 
@@ -401,15 +441,24 @@ function _filoInvLoadOrders(did){
   var badge=document.getElementById('inv-order-badge');
   if(badge){badge.textContent=orders.length;badge.style.display=orders.length?'inline':'none';}
   if(!list) return;
-  if(!orders.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--t3)">대기 중인 발주 없음</div>';return;}
+  if(!orders.length){
+   list.innerHTML='<div style="text-align:center;padding:50px 20px;color:var(--t3)"><div style="font-size:32px;margin-bottom:10px">✅</div><div style="font-size:14px;font-weight:700;color:var(--tx)">대기 중인 발주 없음</div><div style="font-size:12px;margin-top:5px">모든 재고가 충분합니다</div></div>';
+   return;
+  }
   list.innerHTML=orders.map(function(o){
-   return '<div style="padding:14px;background:var(--b2,rgba(255,255,255,.04));border:1px solid var(--bd);border-radius:14px;margin-bottom:8px">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
+   var daysLeft=o.dueDate?Math.ceil((new Date(o.dueDate)-new Date())/(864e5)):null;
+   var urgentC=daysLeft!==null&&daysLeft<=1?'#ef4444':daysLeft!==null&&daysLeft<=3?'#f59e0b':'var(--t3)';
+   return '<div style="padding:14px;background:var(--b2,rgba(255,255,255,.04));border:1px solid var(--bd);border-left:3px solid #f59e0b;border-radius:14px;margin-bottom:8px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+    '<div>'+
     '<div style="font-size:14px;font-weight:800;color:var(--tx)">'+esc(o.itemName||'—')+'</div>'+
-    '<button onclick="_filoInvConfirmReceive(\''+o.id+'\',\''+o.itemId+'\','+o.orderQty+',\''+esc(o.itemName||'')+'\',\''+did+'\')" style="padding:6px 14px;background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">입고 완료</button>'+
+    '<div style="font-size:12px;color:var(--t3);margin-top:2px">발주 <b style="color:var(--tx)">'+o.orderQty+'개</b>'+(o.supplier?' · '+esc(o.supplier):'')+(o.isAuto?' · 자동발주':'')+'</div>'+
     '</div>'+
-    '<div style="font-size:12px;color:var(--t3)">발주 '+o.orderQty+'개'+(o.supplier?' · '+esc(o.supplier):'')+(o.dueDate?' · 예정: '+o.dueDate:'')+(o.isAuto?' · 자동':'')+
-    '</div></div>';
+    '<button onclick="_filoInvConfirmReceive(\''+o.id+'\',\''+o.itemId+'\','+o.orderQty+',\''+esc(o.itemName||'')+'\',\''+did+'\')" style="display:flex;align-items:center;gap:5px;padding:7px 14px;background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer">'+
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>입고 완료</button>'+
+    '</div>'+
+    (o.dueDate?'<div style="font-size:11px;color:'+urgentC+';font-weight:600">예정일 '+o.dueDate+(daysLeft!==null?' ('+daysLeft+'일 후)':'')+'</div>':'')+
+    '</div>';
   }).join('');
  }).catch(function(e){if(list) list.innerHTML='<div style="text-align:center;padding:30px;color:#ef4444">'+e.message+'</div>';});
 }

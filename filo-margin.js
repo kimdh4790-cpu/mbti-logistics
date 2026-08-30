@@ -75,11 +75,36 @@ function _filoMarginLoad(){
  var ymEl=document.getElementById('mg-ym');
  var ym=ymEl?ymEl.value:_monthStr();
 
- /* 원가 맵 먼저 로드 후 실시간 리스너 시작 */
- _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
+ /* 원가 맵 + 레시피 기반 원가 병렬 로드 후 리스너 시작 */
+ Promise.all([
+  _db.collection('menu_costs').where('dealerId','==',did).get(),
+  _db.collection('menu_recipes').where('dealerId','==',did).get(),
+  _db.collection('inventory').where('dealerId','==',did).get()
+ ]).then(function(results){
+  var costSnap=results[0],recipeSnap=results[1],invSnap=results[2];
   _marginCostMap={};
-  snap.forEach(function(doc){var d=doc.data();_marginCostMap[d.name||doc.id]=d;});
+  costSnap.forEach(function(doc){var d=doc.data();_marginCostMap[d.name||doc.id]=d;});
+  /* 재고 단가 맵 */
+  var invPriceMap={};
+  invSnap.forEach(function(doc){var d=doc.data();if(d.unitPrice)invPriceMap[doc.id]=d.unitPrice;});
+  /* 레시피에서 원가 자동 계산 (menu_costs 없는 메뉴 한정) */
+  recipeSnap.forEach(function(doc){
+   var d=doc.data();
+   var mname=d.menuName||'';
+   if(!mname||_marginCostMap[mname])return; // 수동 원가 있으면 스킵
+   var autoCost=0;
+   (d.ingredients||[]).forEach(function(ing){
+    autoCost+=(Number(ing.qty||0))*(invPriceMap[ing.invId]||0);
+   });
+   if(autoCost>0)_marginCostMap[mname]={name:mname,cost:autoCost,price:0,_auto:true};
+  });
   _filoStartMarginLive(did,ym);
+ }).catch(function(){
+  _db.collection('menu_costs').where('dealerId','==',did).get().then(function(snap){
+   _marginCostMap={};
+   snap.forEach(function(doc){var d=doc.data();_marginCostMap[d.name||doc.id]=d;});
+   _filoStartMarginLive(did,ym);
+  });
  });
 }
 
@@ -177,16 +202,16 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   var pulse='<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;animation:pulse 2s infinite"></span>';
   var avgOrder=todayCnt>0?Math.round(todayRev/todayCnt):0;
 
-  var kpiCards='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'+
-  [{label:'오늘 매출',val:'₩'+todayRev.toLocaleString(),color:'#a78bfa',sub:todayCnt+'건'},
-   {label:'오늘 원가',val:'₩'+todayCost.toLocaleString(),color:'#f97316',sub:'식재료'},
-   {label:'공제이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:todayMargin+'%'},
-   {label:'평균 객단가',val:'₩'+avgOrder.toLocaleString(),color:'#f59e0b',sub:'건당 평균'}
+  var kpiCards='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">'+
+  [{label:'오늘 매출',val:'₩'+todayRev.toLocaleString(),color:'#a78bfa',sub:todayCnt+'건',border:'#a78bfa'},
+   {label:'오늘 순이익',val:'₩'+todayProfit.toLocaleString(),color:todayProfit>=0?'#22c55e':'#ef4444',sub:'마진 '+todayMargin+'%',border:todayProfit>=0?'#22c55e':'#ef4444'},
+   {label:'식재료 원가',val:'₩'+todayCost.toLocaleString(),color:'#f97316',sub:todayRev>0?Math.round(todayCost/todayRev*100)+'% 원가율':'—',border:'#f97316'},
+   {label:'평균 객단가',val:'₩'+avgOrder.toLocaleString(),color:'#f59e0b',sub:'건당 평균',border:'#f59e0b'}
   ].map(function(s){
-   return '<div class="kpi-card card-hover" style="text-align:center;padding:14px 10px">'+
-   '<div class="kpi-label">'+s.label+'</div>'+
-   '<div class="kpi-val count-anim" style="color:'+s.color+';font-size:20px">'+s.val+'</div>'+
-   '<div style="font-size:10px;color:var(--t3);margin-top:3px">'+s.sub+'</div></div>';
+   return '<div class="kpi-card card-hover" style="padding:14px 16px;border-left:3px solid '+s.border+'">'+
+   '<div style="font-size:10px;color:var(--t3);font-weight:600;letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px">'+s.label+'</div>'+
+   '<div class="kpi-val count-anim" style="color:'+s.color+';font-size:19px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums">'+s.val+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);margin-top:5px;font-weight:600">'+s.sub+'</div></div>';
   }).join('')+'</div>';
 
   /* 인기 메뉴 TOP5 */
@@ -197,7 +222,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   var payHtml=paySorted.length?
   '<div style="margin-top:14px"><div class="sec-title">결제수단별 매출</div>'+
   paySorted.map(function(m){
-   var pct=totalRev>0?Math.round(m[1]/totalRev*100):0;
+   var pct=monthRev>0?Math.round(m[1]/monthRev*100):0;
    var ic=payIcons[m[0]]||'';
    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
     '<span style="font-size:16px">'+ic+'</span>'+
@@ -220,7 +245,7 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
   '<div><div class="sec-title" style="margin-bottom:10px">인기 메뉴 TOP5</div>'+
   menuEntries.map(function(kv,i){
    var rank=['1위','2위','3위','4위','5위'][i];
-   var pct=totalRev>0?Math.round(kv[1].rev/totalRev*100):0;
+   var pct=monthRev>0?Math.round(kv[1].rev/monthRev*100):0;
    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'+
     '<span style="font-size:15px">'+rank+'</span>'+
     '<div style="flex:1">'+
@@ -403,19 +428,33 @@ function _filoRenderMarginAnalysis(did,ym){
    return mB-mA;
   });
   if(menus.length){
+   var maxQty=Math.max.apply(null,menus.map(function(m){return m.qty;}));
    html+='<div class="card" style="margin-bottom:12px">'+
-   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">메뉴별 마진 분석</div>'+
-   '<div style="display:grid;grid-template-columns:1fr 60px 70px 60px;gap:6px;padding:0 4px 8px;border-bottom:1px solid var(--bd)">'+
-   ['메뉴','판매수','순이익','마진율'].map(function(h){return '<div style="font-size:10px;color:var(--t3);font-weight:700">'+h+'</div>';}).join('')+'</div>'+
+   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+   '<div style="font-size:13px;font-weight:800">메뉴별 마진 분석</div>'+
+   '<div style="font-size:10px;color:var(--t3)">매출 대비 마진율 · 판매량 순</div></div>'+
    menus.map(function(m){
     var profit=m.rev-m.cost;
     var rate=m.rev>0?Math.round(profit/m.rev*100):0;
-    var badge=rate>=60?'high':rate>=40?'mid':'low';
-    return '<div class="menu-cost-row">'+
-    '<div style="font-size:12px;font-weight:700">'+esc(m.name)+'<div style="font-size:10px;color:var(--t3)">판매가 ₩'+m.price.toLocaleString()+' · 원가 ₩'+m.costPer.toLocaleString()+'</div></div>'+
-    '<div style="font-size:12px;font-weight:800;text-align:right">'+m.qty+'개</div>'+
-    '<div style="font-size:12px;font-weight:800;color:'+(profit>=0?'#22c55e':'#ef4444')+';text-align:right">₩'+profit.toLocaleString()+'</div>'+
-    '<div style="text-align:right"><span class="margin-badge '+badge+'">'+rate+'%</span></div>'+
+    var rateC=rate>=60?'#22c55e':rate>=40?'#f59e0b':'#ef4444';
+    var qPct=maxQty>0?Math.round(m.qty/maxQty*100):0;
+    var autoTag=m._auto?'<span style="font-size:9px;background:rgba(99,102,241,.15);color:#6366f1;padding:1px 5px;border-radius:4px;margin-left:4px">레시피 자동</span>':'';
+    return '<div class="menu-cost-row" style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px">'+
+    '<div>'+
+    '<div style="font-size:13px;font-weight:800;color:var(--tx)">'+esc(m.name)+autoTag+'</div>'+
+    '<div style="font-size:10px;color:var(--t3);margin-top:2px">'+
+    (m.price?'판매가 ₩'+m.price.toLocaleString()+' ':'')+(m.costPer?'· 원가 ₩'+m.costPer.toLocaleString():'')+'</div>'+
+    '</div>'+
+    '<div style="text-align:right;flex-shrink:0">'+
+    '<div style="font-size:14px;font-weight:900;color:'+rateC+'">'+rate+'%</div>'+
+    '<div style="font-size:10px;color:var(--t3)">'+m.qty+'개 · ₩'+(profit>=0?'+':'')+profit.toLocaleString()+'</div>'+
+    '</div></div>'+
+    /* 판매량 바 */
+    '<div style="display:flex;align-items:center;gap:6px">'+
+    '<div style="flex:1;background:rgba(255,255,255,.07);border-radius:99px;height:5px;overflow:hidden">'+
+    '<div style="background:'+rateC+';width:'+qPct+'%;height:100%;border-radius:99px"></div></div>'+
+    '<div style="font-size:10px;color:var(--t3);min-width:30px;text-align:right">'+m.qty+'개</div></div>'+
     '</div>';
    }).join('')+'</div>';
   }

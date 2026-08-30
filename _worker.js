@@ -4188,6 +4188,7 @@ ${JSON.stringify(postSummary)}
                   else deductions.push({id:ing.invId,delta:ing.qty*(it.qty||1)});
                 }
               }
+              const lowStockAlerts=[];
               await Promise.all(deductions.map(async({id,delta})=>{
                 try{
                   const dRes=await fetch(`${FS_BASE}/inventory/${id}`,{headers:{'Authorization':'Bearer '+_foTok}});
@@ -4195,12 +4196,40 @@ ${JSON.stringify(postSummary)}
                   if(!dData.fields)return;
                   const cur=Number(dData.fields.stock?.integerValue||dData.fields.qty?.integerValue||0);
                   const next=Math.max(0,cur-delta);
+                  const minStock=Number(dData.fields.minStock?.integerValue||0);
+                  const itemName=dData.fields.name?.stringValue||'재고';
+                  const unit=dData.fields.unit?.stringValue||'개';
                   await fetch(`${FS_BASE}/inventory/${id}?updateMask.fieldPaths=stock&updateMask.fieldPaths=updatedAt`,{
                     method:'PATCH',headers:{'Authorization':'Bearer '+_foTok,'Content-Type':'application/json'},
                     body:JSON.stringify({fields:{stock:{integerValue:String(Math.round(next))},updatedAt:{stringValue:new Date().toISOString()}}})
                   });
+                  // 차감 후 minStock 이하로 떨어지면 즉시 알림 대상 등록
+                  if(minStock>0&&next<=minStock&&cur>minStock){
+                    lowStockAlerts.push({itemName,next:Math.round(next),minStock,unit});
+                  }
                 }catch(e){}
               }));
+              // 재고 부족 → 사장님 FCM 즉시 푸시
+              if(lowStockAlerts.length){
+                try{
+                  const compRes=await fetch(`${FS_BASE}/companies/${dealerId}`,{headers:{'Authorization':'Bearer '+_foTok}});
+                  const compData=await compRes.json();
+                  const fcmTokens=[...new Set([
+                    ...(compData.fields?.fcmTokens?.arrayValue?.values||[]).map(v=>v.stringValue).filter(Boolean),
+                    compData.fields?.fcmToken?.stringValue
+                  ].filter(Boolean))];
+                  if(fcmTokens.length){
+                    const alertAcc=await getAccessToken(env);
+                    const alertBody=lowStockAlerts.map(a=>`${a.itemName} ${a.next}${a.unit} (기준: ${a.minStock}${a.unit})`).join(' · ');
+                    await Promise.all(fcmTokens.map(tok=>sendAdminFCM(env,tok,{
+                      title:'⚠️ 재고 부족 알림',
+                      body:alertBody,
+                      type:'inventory_low',
+                      url:'https://filo.ai.kr'
+                    })));
+                  }
+                }catch(e){}
+              }
             }
           }catch(e){}
           return new Response(JSON.stringify({ok:true,id:docId}),{headers:_foCors});
