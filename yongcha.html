@@ -3508,13 +3508,13 @@ function _showPostDetail(d){
     '</div>';
   })():'')+
 
-  // ── 플랫폼 최소보장 ──
+  // ── 소장 최소보장 안내 ──
   '<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,170,.08));'+
     'border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">'+
     '<div>'+
-      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">플랫폼 최소보장</div>'+
+      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">소장 제시 최소보장</div>'+
       '<div style="font-size:22px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
-      '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시에도 보장액 지급 의무</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시 소장이 제시한 보장액 (계약 조건에 따름)</div>'+
     '</div>'+
     '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(16,185,129,.4)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'+
   '</div>'+
@@ -4472,9 +4472,9 @@ function _pgPostWrite(el){
   '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
   '</div>'+
   '<div style="padding:12px;background:var(--acl);border-radius:10px;margin-bottom:8px">'+
-  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:4px">플랫폼 최소보장 (고정)</div>'+
+  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:4px">최소보장 안내 (소장 설정)</div>'+
   '<div style="font-size:13px;font-weight:800" id="pw-guarantee-display">주간: 일 30만원 / 야간: 일 35만원</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:4px">실건수×단가 < 최소보장액 시 최소보장액 지급 의무</div>'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:4px">실건수×단가 미달 시 소장이 보장액 지급 (소장·기사 간 계약 조건에 따름)</div>'+
   '</div>'+
   '</div>'+
 
@@ -4641,7 +4641,7 @@ function _selType(btn, val, hiddenId){
   // 최소보장 표시 업데이트
   if(hiddenId==='pw-shift'){
     var g=document.getElementById('pw-guarantee-display');
-    if(g) g.textContent=val==='야간'?'야간: 일 35만원 보장 (플랫폼 고정)':'주간: 일 30만원 보장 (플랫폼 고정)';
+    if(g) g.textContent=val==='야간'?'야간: 일 35만원 (소장 설정)':'주간: 일 30만원 (소장 설정)';
   }
 }
 
