@@ -9002,6 +9002,43 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const uid    = _tossUser.localId || _tossUser.uid || '';
         if (!uid) throw new Error('uid 누락 — 로그인 후 다시 시도해주세요');
 
+        // 2-1. FILO- prefix: 매장 관리 SaaS 구독
+        if (orderId.startsWith('FILO-')) {
+          const filoPlan = parts[parts.length - 1] || 'basic';
+          const FILO_PLAN_PRICES = { basic: 29000, pro: 59000, premium: 99000, franchise_hq: 300000 };
+          const filoToken = await getAccessToken(env);
+          const filoNow   = new Date();
+          const existDoc  = await fsGet(filoToken, 'companies', uid);
+          const existExpiry = existDoc.fields?.filoPlanExpiry?.stringValue || '';
+          const filoBase = (existExpiry && existExpiry >= filoNow.toISOString().slice(0, 10))
+            ? new Date(existExpiry) : filoNow;
+          const filoExpire   = new Date(filoBase.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const filoExpireStr = filoExpire.toISOString().slice(0, 10);
+          await fsPatch(filoToken, `${FS_BASE}/companies/${uid}`, {
+            filoPlan:       { stringValue: filoPlan },
+            filoPlanExpiry: { stringValue: filoExpireStr },
+            filoPlanAmount: { integerValue: String(FILO_PLAN_PRICES[filoPlan] || 29000) },
+            filoPlanPaidAt: { stringValue: filoNow.toISOString() }
+          });
+          await fsAdd(filoToken, 'payments', {
+            dealerId:   { stringValue: uid },
+            type:       { stringValue: 'toss' },
+            product:    { stringValue: 'filo' },
+            plan:       { stringValue: filoPlan },
+            months:     { integerValue: '1' },
+            amount:     { integerValue: String(amount) },
+            paymentKey: { stringValue: paymentKey },
+            orderId:    { stringValue: orderId },
+            expireDate: { timestampValue: filoExpire.toISOString() },
+            note:       { stringValue: 'FILO 구독 토스페이먼츠 결제' },
+            createdAt:  { timestampValue: filoNow.toISOString() }
+          });
+          return new Response(JSON.stringify({
+            success: true, plan: filoPlan, months: 1,
+            expireDate: filoExpire.toISOString()
+          }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        }
+
         // 3. Firestore 구독 업데이트
         const token  = await getAccessToken(env);
         const now    = new Date();
