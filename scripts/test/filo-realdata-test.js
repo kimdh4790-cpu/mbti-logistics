@@ -61,7 +61,9 @@ async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
   try {
     /* ── 1. 로그인 ── */
     console.log('\n═══ 1. 로그인 테스트 ═══');
-    await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
+    // filo.ai.kr/ → filo-landing.html (로그인 폼 없음)
+    // filo.ai.kr/app → filo.html (로그인 폼 있음)
+    await page.goto(BASE_URL + '/app', { waitUntil: 'networkidle', timeout: 30000 });
     await ss(page, '01-landing');
 
     // 이메일 입력 (filo.html: #fl-id type=text, #fl-pw type=password)
