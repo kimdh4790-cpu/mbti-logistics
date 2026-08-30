@@ -379,3 +379,12 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `filo-pos-ui.js` (감축 ~15KB): 모드 전환(`_filoPosMode`/`_filoPosSetMode`) + 키오스크 렌더링(`_filoPageKiosk`/`_loadKioskTableBar`/`_filoRenderKiosk`/`_filoFilterKiosk`) + 영수증 업로드(`_filoReceiptSelected`)
 - `filo-pos-pay.js` (신규 ~28KB): 테이블 결제(`_filoTablePay`) + 각자계산(`_filoTableSelfPay`) + 영수증 모달(`_filoShowReceipt`) + 영수증 알림팝업(`_filoReceiptNotify`) + 고객화면(`_posCustomerDisplay`/`_posCustRender`)
 - `filo.html`: filo-pos-ui.js?v=1 → v=2, filo-pos-pay.js?v=1 추가 (filo-pos-ui.js 다음)
+
+### 2026-08-30
+**업종별 탭 활성화 시스템**
+- `filo-auth.js`: `_INDUSTRY_DEFAULTS` 매트릭스 추가 (업종별 기본 표시 탭 정의)
+  - cafe: bakery_qr + table_order + reservation + member_crm 기본 활성
+  - fastfood: 테이블·예약 탭 비활성 (구독 명시 시 표시)
+  - 그외(korean/japanese/chinese/izakaya/other): table_order + reservation + member_crm 기본 활성
+- `filo-auth.js`: `hasFeatureOrIndustry(key)` 헬퍼 추가 → 구독/관제센터 OR 업종 기본값 중 하나라도 해당하면 탭 표시
+- `filo-settings.js`: `_filoSaveTheme()` 저장 후 `_buildFiloNav()` 즉시 호출 → 업종 변경 시 사이드바 탭 즉시 갱신
