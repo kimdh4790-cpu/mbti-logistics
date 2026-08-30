@@ -162,6 +162,17 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-30 (13차)
+**재고 자동 차감 시스템 + filo-inventory.js 메뉴-재고 연동 탭**
+- `_worker.js`: `/api/filo-order` POST 핸들러 — 주문 완료 직후 `menu_recipes` 컬렉션 조회 → 주문 아이템별 레시피 매칭 → `inventory` 컬렉션 stock 자동 차감 (non-critical try/catch 처리)
+- `filo-inventory.js`: "메뉴-재고 연동" 3번째 탭 추가
+  - `_filoInvLoadRecipes(did)` — menu_recipes + filo_menus + inventory 병렬 Firestore 조회
+  - `_filoInvRenderRecipes()` — 연동된 메뉴 / 미연동 메뉴 섹션 구분 렌더링
+  - `_filoInvAddRecipeModal()` — 바텀시트 레시피 등록/수정 (재료 행 동적 추가)
+  - `_filoSaveRecipe()` / `_filoInvEditRecipe()` / `_filoInvDeleteRecipe()` — CRUD 완성
+  - `_escHtml()`, `_escAttr()` — XSS 방지 헬퍼 추가
+- commit: `2b5fa02`
+
 ### 2026-08-29 (12차)
 **DINE 근태·급여 화면 디자인 전면 개선**
 - `dine-staff.js`: 출퇴근 현황 KPI 카드 — 아이콘+border-left 컬러 강조, font-variant-numeric:tabular-nums 적용
