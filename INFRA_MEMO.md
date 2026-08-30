@@ -89,9 +89,9 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 ### Worker Secrets 등록 현황
 | Secret | 값 | 상태 |
 |---|---|---|
-| `FIREBASE_API_KEY` | `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0` | **미등록 — 등록 필요** |
-| `ANTHROPIC_API_KEY` | (별도 관리) | 확인 필요 |
-| `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 확인 필요 |
+| `FIREBASE_API_KEY` | `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0` | **등록완료** (Cloudflare 대시보드 확인 2026-08-30) |
+| `ANTHROPIC_API_KEY` | (별도 관리) | 등록완료 |
+| `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 등록완료 |
 
 ### Worker Secrets 등록 방법
 **방법 A — OPC VM에서 wrangler CLI:**
@@ -369,3 +369,4 @@ claude
 | 2026-08-30 | Meta Ads MCP 커넥터 연결 완료 (Facebook OAuth, Mbtico 페이지 연결, 광고계정 1139439201982874 KRW) |
 | 2026-08-30 | social-media.yml 버그 수정: YouTube step exit code 1 → continue-on-error:true + if/fi 형식으로 수정. Instagram step if:always() 추가. Run #29 원인: [ FAILED=0 ] && echo "..." 마지막 명령이 exit 1 반환 |
 | 2026-08-30 | Ollama 0.33.2 로컬 PC 설치 완료. gemma4:e2b 다운로드 중 (7.2GB, ~45분) |
+| 2026-08-30 | FIREBASE_API_KEY Worker Secret 상태 정정: "미등록" → "등록완료" (Cloudflare 대시보드 스크린샷으로 확인). ANTHROPIC_API_KEY·GOOGLE_TRANSLATE_KEY도 등록완료로 정정. |

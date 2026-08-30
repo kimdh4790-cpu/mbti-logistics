@@ -112,9 +112,10 @@ _kioskMenus       — filo_menus 캐시 (POS 탭 진입 시 1회 로드)
 | tableNum String/int 혼재 | filo_orders 저장 시 tableNum이 문자열·숫자 둘 다 존재 → 쿼리 2번 필요 | 의도적 유지 (변경 시 전체 수정) |
 | inventory stock/qty 필드 | legacy qty 필드와 신규 stock 필드 혼재 | 유지 (신규는 stock 사용) |
 | filo_sales status 두 값 | 'cancel'과 'cancelled' 모두 사용 중 | 유지 (필터링 시 둘 다 체크) |
-| FCM 영수증 푸시 | order.js reqReceiptFCM undefined — KV 캐시 문제 | 미수정 |
+| FCM 영수증 푸시 | 실 기기 동작 확인 필요 (KV 캐시 문제는 v=14 캐시버스터로 해결) | 실기기 테스트 미완 |
 | 번역 KV 오염 캐시 | 과거 버그로 한국어가 KV에 캐시됨 → _worker.js에서 한글 검증 추가로 우회 | 해결(2026-08-16) |
-| table-order.html 선결제/후불 모달 | 미구현 | 최우선 미완료 |
+| table-order.html 선결제/후불 모달 | 구현 완료 (2026-08-29) | 완료 |
+| /api/point-earn corsH ReferenceError | 핸들러 내 corsH 미정의 → 모든 포인트 적립 요청 ReferenceError | 해결(2026-08-30) |
 
 ---
 
@@ -161,6 +162,13 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 ---
 
 ## 📋 수정 이력
+
+### 2026-08-30 (15차)
+**Worker API 버그 수정 — 슈퍼어드민 인증·포인트 적립 복구**
+- `_worker.js` `verifyFirebaseToken`: accounts:lookup fetch에 `Referer: https://filo.ai.kr` / `Origin: https://filo.ai.kr` 헤더 추가 → Firebase API키 HTTP Referrer 제한 우회. 미수정 시 슈퍼어드민 API 전체 401 반환
+- `_worker.js` `/api/point-earn`: 핸들러 try 블록 내 `corsH` 미정의 버그 수정 → QR 주문 포인트 적립 정상화
+- `scripts/test/filo-api-test.js`: 번역 API 테스트 파라미터 수정 (`text`→`name`, `target`→`lang`)
+- `INFRA_MEMO.md`: FIREBASE_API_KEY 상태 "미등록" → "등록완료" 수정 (Cloudflare 대시보드 확인)
 
 ### 2026-08-30 (14차)
 **재고 부족 FCM 즉시 알림 + 재고·마진 UI 전면 리디자인 + 레시피 기반 원가 자동 계산**
