@@ -13408,7 +13408,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
       <div class="type-card on" id="t-agency" onclick="_setType('agency')">
         <div class="type-ico">🏢</div>
         <div class="type-lbl">대리점</div>
-        <div class="type-desc">공고 등록 · 기사 채용</div>
+        <div class="type-desc">공고 등록 · 기사 모집</div>
       </div>
       <div class="type-card" id="t-driver" onclick="_setType('driver')">
         <div class="type-ico">🚗</div>
@@ -13908,7 +13908,7 @@ var _NOTIF_TYPES={
   scout:{lbl:'스카웃',
     ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
     bg:'rgba(139,92,246,.12)',col:'#8b5cf6'},
-  hire:{lbl:'채용',
+  hire:{lbl:'공고',
     ico:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
     bg:'rgba(16,185,129,.1)',col:'var(--gn)'},
   contract:{lbl:'계약',
@@ -13939,7 +13939,7 @@ function _pgNotifications(el){
     {key:'apply',lbl:'지원'},
     {key:'settle',lbl:'정산'},
     {key:'scout',lbl:'스카웃'},
-    {key:'hire',lbl:'채용'},
+    {key:'hire',lbl:'공고'},
     {key:'contract',lbl:'계약'},
     {key:'chat',lbl:'채팅'},
     {key:'work',lbl:'운행'},
@@ -14106,7 +14106,7 @@ function _pgHomeDriver(el){
     '<button type="button" class="quick-btn" onclick="_goPage(\\'bookmarks\\')">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>찜한 공고</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">'+
-      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>구인구직</button>'+
+      '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>공고/이력서</button>'+
     '<button type="button" class="quick-btn" onclick="_yOpenCalc()">'+
       '<span><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg></span>실수령액</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'my_applies\\')">'+
@@ -14411,7 +14411,7 @@ function _pgHomeAgency(el){
   '<div class="quick-grid">'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'post_write\\')">단건 요청</button>'+
     '<button type="button" class="quick-btn" onclick="_pfSwitchToYongchaTab()" style="border-color:var(--gnln);color:var(--gn)">용차 찾기</button>'+
-    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">구인구직</button>'+
+    '<button type="button" class="quick-btn" onclick="_goPage(\\'jobs\\')">공고/이력서</button>'+
     '<button type="button" class="quick-btn" onclick="_goPage(\\'settle_reconcile\\')" style="border-color:var(--brln);color:var(--br)">정산 대사</button>'+
   '</div>'+
 
@@ -14861,7 +14861,7 @@ function _pgPosts(el){
       '<div style="font-size:12.5px;font-weight:800;color:var(--gn);margin-bottom:4px">용차란?</div>'+
       '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+
         '결원 발생·물량 급증 시 대리점이 외부 기사를 <b style="color:var(--tx)">며칠~몇주 단위</b>로 임시 차용하는 것이에요. '+
-        '단건 요청이나 정직원 채용과 구별되는 별도 계약이에요.'+
+        '단건 요청이나 장기 계약과 구별되는 별도 조건이에요.'+
       '</div>'+
     '</div>'+
     (_CU&&_CU.type==='driver'?
@@ -14933,7 +14933,7 @@ function _pfSwitchMainTab(tab){
     if(jobsSec)jobsSec.style.display='block';
     var isDriver=_CU&&_CU.type==='driver';
     if(title)title.textContent=isDriver?'구직 게시판':'구인 게시판';
-    if(sub)sub.textContent=isDriver?'대리점 소속 채용 공고 · 이력서 등록':'기사 채용공고 등록 · 이력서 검색';
+    if(sub)sub.textContent=isDriver?'대리점 소속 공고 · 이력서 등록':'기사 공고 등록 · 이력서 검색';
     if(btnJ){btnJ.style.background='var(--br)';btnJ.style.color='#fff';btnJ.style.borderColor='var(--br)';}
     var inner=document.getElementById('posts-jobs-inner');
     if(inner)_loadJobsSection(inner);
@@ -15260,7 +15260,7 @@ function _yPurgeMyDup(coll,keyFn,label,reloadFn){
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
 function _yPurgeMyDupJobs(){
-  _yPurgeMyDup('yongcha_jobs',_yJobKey,'채용공고',function(){
+  _yPurgeMyDup('yongcha_jobs',_yJobKey,'공고',function(){
     _pgJobsAgency(document.getElementById('content'));
   });
 }
@@ -16810,7 +16810,7 @@ function _showContract(contractId){
       '<div><span style="color:var(--t3)">기사</span> <strong>'+_esc(c.driverName)+'</strong></div>'+
       '<div><span style="color:var(--t3)">택배사</span> <strong>'+_esc(t.courier||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">구역</span> <strong>'+_esc(t.area||'—')+'</strong></div>'+
-      '<div><span style="color:var(--t3)">건당 단가</span> <strong>'+(t.unitPrice?(t.unitPrice).toLocaleString()+'원':'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">건당 금액</span> <strong>'+(t.unitPrice?(t.unitPrice).toLocaleString()+'원':'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">최소보장</span> <strong>'+(t.minGuarantee?(t.minGuarantee/10000)+'만원/일':'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">근무 시간대</span> <strong>'+(t.workShift||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">근무 요일</span> <strong>'+(t.workDays||'—')+'</strong></div>'+
@@ -16956,10 +16956,10 @@ function _pgPostWrite(el){
   '<input type="hidden" id="pw-pricetype">'+
   '<div class="inp-wrap">'+
   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-    '<label class="inp-lbl" style="margin-bottom:0">건당 단가 (원) <span style="color:var(--rd)">*</span></label>'+
+    '<label class="inp-lbl" style="margin-bottom:0">건당 금액 (원) <span style="color:var(--rd)">*</span></label>'+
     '<div style="display:flex;gap:6px;align-items:center">'+
       '<button type="button" id="settle-badge" onclick="_toggleSettleBadge()" style="padding:3px 10px;border-radius:var(--r-full);border:1.5px solid var(--acln);background:var(--acl);color:var(--ac);font-size:11px;font-weight:900;cursor:pointer" title="클릭하면 당일즉시정산 활성화">당일즉시정산</button>'+
-      '<button type="button" onclick="_pwAiPrice()" style="padding:3px 10px;border-radius:var(--r-full);border:1.5px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--br);font-size:11px;font-weight:900;cursor:pointer">AI 단가 추천</button>'+
+      '<button type="button" onclick="_pwAiPrice()" style="padding:3px 10px;border-radius:var(--r-full);border:1.5px solid rgba(245,158,11,.4);background:rgba(245,158,11,.1);color:var(--br);font-size:11px;font-weight:900;cursor:pointer">AI 금액 추천</button>'+
       '<input type="hidden" id="pw-instant-settle" value="0">'+
     '</div>'+
   '</div>'+
@@ -16967,7 +16967,7 @@ function _pgPostWrite(el){
   '</div>'+
   '<div id="pw-region-stats" style="display:none;margin:6px 0;padding:10px 12px;background:var(--bg3);border-radius:10px;font-size:11px"></div>'+
   '<div class="inp-wrap" id="pw-houseprice-wrap" style="display:none">'+
-  '<label class="inp-lbl">가구당 단가 (원)</label>'+
+  '<label class="inp-lbl">가구당 금액 (원)</label>'+
   '<input class="inp" id="pw-houseprice" type="number" placeholder="예: 1200"></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">VAT</label>'+
   '<div style="display:flex;gap:8px" id="pw-vat-group">'+
@@ -17149,7 +17149,7 @@ function _selType(btn, val, hiddenId){
   btn.style.borderColor='var(--ac)';
   var h=document.getElementById(hiddenId);
   if(h) h.value=val;
-  // 가구당 단가 필드 토글
+  // 가구당 금액 필드 토글
   if(hiddenId==='pw-pricetype'){
     var wrap=document.getElementById('pw-houseprice-wrap');
     if(wrap) wrap.style.display=(val==='가구당'||val==='건당+가구당')?'block':'none';
@@ -17721,7 +17721,7 @@ function _yOpenCalc(prefill){
     '<div class="form-section" style="margin-bottom:18px">'+
     '<div class="form-section-title">수입</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
-      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">건당 단가(원)</label>'+
+      '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">건당 금액(원)</label>'+
       '<input class="inp" id="cal-price" type="number" inputmode="numeric" value="'+_esc(v('price',900))+'" oninput="_yCalcRun()"></div>'+
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">일 물량(건)</label>'+
       '<input class="inp" id="cal-vol" type="number" inputmode="numeric" value="'+_esc(v('vol',150))+'" oninput="_yCalcRun()"></div>'+
@@ -17891,7 +17891,7 @@ function _pgProfile(el){
 
   // 구인구직 바로가기 (대리점)
   (type==='agency'?
-  '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">소속 기사 채용 공고 (구인구직)</button>':'')+
+  '<button onclick="_goPage(\\'jobs\\')" style="width:100%;padding:13px;background:var(--acl);color:var(--ac);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">소속 기사 공고 (공고/이력서)</button>':'')+
 
   // 공고 등록 (대리점)
   (type==='agency'?
@@ -18267,7 +18267,7 @@ function _yCountPlaywrightPosts(){
   var el=document.getElementById('cleanup-pw-info');
   if(el)el.textContent='검사 중…';
   _yScanTestDocs().then(function(r){
-    if(el)el.textContent='테스트 공고 '+r.posts.length+'건 · 테스트 채용공고 '+r.jobs.length+'건 (계정 '+r.accounts+'개 기준)';
+    if(el)el.textContent='테스트 공고 '+r.posts.length+'건 · 테스트 공고 '+r.jobs.length+'건 (계정 '+r.accounts+'개 기준)';
   }).catch(function(e){ if(el)el.textContent='검사 실패: '+e.message; });
 }
 
@@ -18275,7 +18275,7 @@ function _yCleanPlaywrightPosts(){
   _yScanTestDocs().then(function(r){
     var total=r.posts.length+r.jobs.length;
     if(!total){_yToast('삭제할 테스트 데이터가 없어요');return;}
-    if(!confirm('테스트 공고 '+r.posts.length+'건, 테스트 채용공고 '+r.jobs.length+'건을 삭제할까요?'))return;
+    if(!confirm('테스트 공고 '+r.posts.length+'건, 테스트 공고 '+r.jobs.length+'건을 삭제할까요?'))return;
     var batch=_db.batch();
     r.posts.slice(0,225).forEach(function(id){batch.delete(_db.collection('yongcha_posts').doc(id));});
     r.jobs.slice(0,225).forEach(function(id){batch.delete(_db.collection('yongcha_jobs').doc(id));});
@@ -18307,7 +18307,7 @@ function _yCountDupPosts(){
   if(el)el.textContent='중복 검사 중…';
   Promise.all([_yScanDup('yongcha_posts',_yPostKey),_yScanDup('yongcha_jobs',_yJobKey)])
   .then(function(r){
-    if(el)el.textContent='중복 공고 '+r[0].length+'건 · 중복 채용공고 '+r[1].length+'건 (삭제 대상)';
+    if(el)el.textContent='중복 공고 '+r[0].length+'건 · 중복 공고 '+r[1].length+'건 (삭제 대상)';
   }).catch(function(e){ if(el)el.textContent='검사 실패: '+e.message; });
 }
 
@@ -18316,7 +18316,7 @@ function _yCleanDupPosts(){
   .then(function(r){
     var posts=r[0],jobs=r[1];
     if(!posts.length&&!jobs.length){_yToast('중복 항목이 없어요');return;}
-    if(!confirm('중복 공고 '+posts.length+'건, 중복 채용공고 '+jobs.length+'건을 삭제할까요?\\n각 그룹의 최신 1건은 남습니다.'))return;
+    if(!confirm('중복 공고 '+posts.length+'건, 중복 공고 '+jobs.length+'건을 삭제할까요?\\n각 그룹의 최신 1건은 남습니다.'))return;
     var batch=_db.batch(),n=0;
     posts.slice(0,225).forEach(function(id){batch.delete(_db.collection('yongcha_posts').doc(id));n++;});
     jobs.slice(0,225).forEach(function(id){batch.delete(_db.collection('yongcha_jobs').doc(id));n++;});
@@ -18339,12 +18339,12 @@ function _pgJobs(el){
 function _pgJobsAgency(el){
   var activeTab=_jSubTab==='resumes'?'resumes':'myjobs';
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">구인구직</div>'+
-  '<div class="page-sub">소속 기사 장기 채용 · 정직원/계약직 모집</div></div>'+
+  '<div class="page-hdr"><div class="page-title">공고/이력서</div>'+
+  '<div class="page-sub">소속 기사 모집 · 장기 거래 공고</div></div>'+
   '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--pu);font-size:12px;color:var(--t2);line-height:1.6">'+
-  '단건 요청·임시 용차와 달리, <b style="color:var(--tx)">정직원·계약직 소속 기사</b>를 모집하는 채용 공고예요.</div>'+
+  '단건 요청·임시 용차와 달리, <b style="color:var(--tx)">소속 기사</b>를 모집하는 공고예요.</div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\\'myjobs\\')">내 채용공고</button>'+
+  '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\\'myjobs\\')">내 공고</button>'+
   '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\\'resumes\\')">이력서 찾기</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
@@ -18366,7 +18366,7 @@ function _jSwitchAgency(tab){
 
 function _loadMyJobs(el){
   el.innerHTML=
-  '<button onclick="_showJobWriteModal()" style="width:100%;padding:13px;background:var(--pul);color:var(--pu);border:1.5px dashed var(--pu);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 채용 공고 등록하기</button>'+
+  '<button onclick="_showJobWriteModal()" style="width:100%;padding:13px;background:var(--pul);color:var(--pu);border:1.5px dashed var(--pu);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 공고 등록하기</button>'+
   '<div id="myjobs-list">'+_skRows(3)+'</div>';
 
   var q=_CU.type==='admin'
@@ -18375,12 +18375,12 @@ function _loadMyJobs(el){
 
   q.get().then(function(snap){
     var list=document.getElementById('myjobs-list');if(!list)return;
-    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 채용공고가 없어요</div></div>';return;}
+    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록한 공고가 없어요</div></div>';return;}
     var _jAll=(_CU.type==='admin'?snap.docs:snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}))
       .map(function(doc){return Object.assign({id:doc.id},doc.data());});
-    // ★ "내 채용공고"도 중복 접기 — 기사용 목록만 처리하고 여기를 빠뜨려 중복이 그대로 보였다
+    // ★ "내 공고"도 중복 접기 — 기사용 목록만 처리하고 여기를 빠뜨려 중복이 그대로 보였다
     var _jdd2=_yDedupe(_jAll,_yJobKey);
-    list.innerHTML=_yDupNotice(_jdd2.hidden,'채용공고')+
+    list.innerHTML=_yDupNotice(_jdd2.hidden,'공고')+
       (_jdd2.hidden?'<button onclick="_yPurgeMyDupJobs()" style="width:100%;min-height:44px;margin-bottom:12px;background:var(--rdl);color:var(--rd);border:1px solid var(--rdln);border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">🗑 중복 '+_jdd2.hidden+'건 영구 삭제</button>':'');
     _jdd2.items.forEach(function(d){
       var card=document.createElement('div');card.className='job-card';
@@ -18388,7 +18388,7 @@ function _loadMyJobs(el){
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
         '<div><span class="job-type-badge">'+d.jobType+'</span>'+
         '<span style="font-size:10px;color:var(--t2)">🚚 '+(d.courier||'')+'</span></div>'+
-        '<span class="status-badge '+(d.status==='open'?'badge-open':'badge-closed')+'">'+(d.status==='open'?'채용중':'마감')+'</span>'+
+        '<span class="status-badge '+(d.status==='open'?'badge-open':'badge-closed')+'">'+(d.status==='open'?'모집중':'마감')+'</span>'+
         '</div>'+
         '<div style="font-size:17px;font-weight:800;letter-spacing:-.4px;margin-bottom:7px">'+_esc(d.jobTitle)+
           (d.dupCount>1?' <span style="font-size:11px;font-weight:800;color:var(--t3);vertical-align:middle">+'+(d.dupCount-1)+'건 중복</span>':'')+'</div>'+
@@ -18481,7 +18481,7 @@ function _replyScout(scoutId, accept){
 function _toggleJobStatus(id, status){
   var next=status==='open'?'closed':'open';
   _db.collection('yongcha_jobs').doc(id).update({status:next}).then(function(){
-    _yToast(next==='open'?'채용공고 재오픈됐어요':'채용공고 마감됐어요');
+    _yToast(next==='open'?'공고 재오픈됐어요':'공고 마감됐어요');
     _pgJobsAgency(document.getElementById('content'));
   });
 }
@@ -18519,8 +18519,8 @@ function _judgeJobApply(applyId, status, name, driverId){
   }).then(function(){
     _yToast(status==='approved'?name+'님 승인 처리했어요!':'미선발 처리했어요');
     if(driverId){
-      if(status==='approved') _yNotify(driverId,'채용 승인 🎉','축하해요! '+_CU.name+'에서 승인 통보가 왔어요!','hire');
-      else _yNotify(driverId,'채용 결과 안내',_CU.name+'에서 채용 검토가 완료됐어요','hire');
+      if(status==='approved') _yNotify(driverId,'수락 통보 🎉','축하해요! '+_CU.name+'에서 수락 통보가 왔어요!','hire');
+      else _yNotify(driverId,'공고 결과 안내',_CU.name+'에서 공고 검토가 완료됐어요','hire');
     }
     _closeModal();
   });
@@ -18742,12 +18742,12 @@ function _submitDriverOffer(){
 function _pgJobsDriver(el){
   var activeTab=(_jSubTab==='resume'?'resume':'list');
   el.innerHTML=
-  '<div class="page-hdr"><div class="page-title">구인구직</div>'+
-  '<div class="page-sub">대리점 소속 기사 채용 · 정직원/계약직 지원</div></div>'+
+  '<div class="page-hdr"><div class="page-title">공고/이력서</div>'+
+  '<div class="page-sub">대리점 소속 기사 모집 · 장기 거래 지원</div></div>'+
   '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--pu);font-size:12px;color:var(--t2);line-height:1.6">'+
-  '용차(임시) · 단건 요청과 다른 <b style="color:var(--tx)">정직원·계약직 장기 채용</b>이에요. 이력서를 등록하면 소장님이 직접 연락해요.</div>'+
+  '용차(임시) · 단건 요청과 다른 <b style="color:var(--tx)">장기 거래·소속 기사 모집</b>이에요. 이력서를 등록하면 소장님이 직접 연락해요.</div>'+
   '<div class="sub-tab-row">'+
-  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\\'list\\')">채용 공고</button>'+
+  '<button class="sub-tab '+(activeTab==='list'?'on':'')+'" onclick="_jSwitchDriver(\\'list\\')">공고 목록</button>'+
   '<button class="sub-tab '+(activeTab==='resume'?'on':'')+'" onclick="_jSwitchDriver(\\'resume\\')">내 이력서</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
@@ -18772,12 +18772,12 @@ function _loadJobList(el){
   _db.collection('yongcha_jobs').where('status','==','open').limit(120).get()
   .then(function(snap){
     var list=document.getElementById('job-list');if(!list)return;
-    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록된 채용공고가 없어요</div></div>';return;}
+    if(snap.empty){list.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-msg">등록된 공고가 없어요</div></div>';return;}
     var _jlAll=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);})
       .map(function(doc){return Object.assign({id:doc.id},doc.data());});
-    // 중복 채용공고 접기 — 최신 1건만 노출
+    // 중복 공고 접기 — 최신 1건만 노출
     var _jdd=_yDedupe(_jlAll,_yJobKeyContent);
-    list.innerHTML=_yDupNotice(_jdd.hidden,'채용공고');
+    list.innerHTML=_yDupNotice(_jdd.hidden,'공고');
     var _jlDocs=_jdd.items.slice(0,80);
     _jlDocs.forEach(function(d){
       var card=document.createElement('div');card.className='job-card';
@@ -18785,7 +18785,7 @@ function _loadJobList(el){
       card.innerHTML=
         '<div style="display:flex;align-items:center;margin-bottom:8px">'+
         '<span class="job-type-badge">'+d.jobType+'</span>'+
-        (d.openEnded?'<span style="font-size:10px;background:var(--gnl);color:var(--gn);padding:3px 8px;border-radius:20px;font-weight:700">상시채용</span>':'')+
+        (d.openEnded?'<span style="font-size:10px;background:var(--gnl);color:var(--gn);padding:3px 8px;border-radius:20px;font-weight:700">상시모집</span>':'')+
         '</div>'+
         '<div style="font-size:17px;font-weight:800;letter-spacing:-.4px;margin-bottom:7px">'+_esc(d.jobTitle)+'</div>'+
         '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">'+
@@ -18819,7 +18819,7 @@ function _showJobDetail(d){
   var body=document.getElementById('modal-body');
   body.innerHTML=
   '<span class="job-type-badge">'+d.jobType+'</span>'+
-  (d.openEnded?'<span style="font-size:10px;background:var(--gnl);color:var(--gn);padding:3px 8px;border-radius:20px;font-weight:700;margin-left:4px">상시채용</span>':'')+
+  (d.openEnded?'<span style="font-size:10px;background:var(--gnl);color:var(--gn);padding:3px 8px;border-radius:20px;font-weight:700;margin-left:4px">상시모집</span>':'')+
   '<div style="font-size:23px;font-weight:900;letter-spacing:-.9px;margin:10px 0 14px">'+_esc(d.jobTitle)+'</div>'+
   '<div class="card" style="margin-bottom:14px">'+
   '<div style="font-weight:800;font-size:15px;margin-bottom:6px">🏢 '+_esc(d.agencyName)+'</div>'+
@@ -18831,7 +18831,7 @@ function _showJobDetail(d){
     [' 고용형태',d.jobType||'—'],
     ['🚗 차량',d.vehicleType||'무관'],
     ['📜 경력',_careerLabel(d.careerReq)],
-    ['👥 채용인원',(d.headcount||1)+'명'],
+    ['👥 모집인원',(d.headcount||1)+'명'],
     ['📅 근무요일',d.workDays||'협의'],
     ['근무시간',d.workHours||'협의'],
     ['💳 정산일',d.settleDay||'협의']
@@ -18867,7 +18867,7 @@ function _applyJob(jobId, agencyId, agencyName){
     appliedAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     _yToast('지원 완료! 대리점 연락을 기다려주세요');
-    _yNotify(agencyId,'배차 지원자 도착! 🚗',_CU.name+'님이 채용공고에 지원했어요','apply');
+    _yNotify(agencyId,'배차 지원자 도착! 🚗',_CU.name+'님이 공고에 지원했어요','apply');
     _closeModal();
   }).catch(function(e){
     if(btn){btn.textContent='🙋 지원하기';btn.disabled=false;}
@@ -18986,10 +18986,10 @@ function _submitResume(docId){
 function _showJobWriteModal(){
   var body=document.getElementById('modal-body');
   body.innerHTML=
-  '<div style="font-size:20px;font-weight:900;margin-bottom:16px"> 채용 공고 등록</div>'+
+  '<div style="font-size:20px;font-weight:900;margin-bottom:16px"> 공고 등록</div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">공고 제목 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="jw-title" placeholder="예: CJ대한통운 정규기사 채용"></div>'+
+  '<input class="inp" id="jw-title" placeholder="예: CJ대한통운 정규기사 모집"></div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">고용형태 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="jw-type-group">'+
@@ -19029,11 +19029,11 @@ function _showJobWriteModal(){
   '<div class="inp-wrap"><label class="inp-lbl">근무 요일</label>'+
   '<input class="inp" id="jw-days" placeholder="예: 월~금, 주 5일"></div>'+
 
-  '<div class="inp-wrap"><label class="inp-lbl">채용 인원</label>'+
+  '<div class="inp-wrap"><label class="inp-lbl">모집 인원</label>'+
   '<input class="inp" id="jw-headcount" type="number" placeholder="1" value="1"></div>'+
 
   '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg3);border-radius:var(--r);margin-bottom:12px">'+
-  '<div><div style="font-size:13px;font-weight:700">상시 채용</div>'+
+  '<div><div style="font-size:13px;font-weight:700">상시 모집</div>'+
   '<div style="font-size:11px;color:var(--t2)">종료일 없이 계속 모집</div></div>'+
   '<button class="toggle" id="jw-openended-toggle" onclick="this.classList.toggle(\\'on\\')"></button>'+
   '</div>'+
@@ -19041,7 +19041,7 @@ function _showJobWriteModal(){
   '<div class="inp-wrap"><label class="inp-lbl">공고 상세</label>'+
   '<textarea class="inp" id="jw-desc" rows="3" placeholder="우대사항, 복지, 기타 안내" style="resize:none"></textarea></div>'+
 
-  '<button onclick="_submitJob()" id="jw-submit" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--pu),#6d28d9);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit"> 채용공고 등록</button>';
+  '<button onclick="_submitJob()" id="jw-submit" style="width:100%;padding:15px;background:linear-gradient(135deg,var(--pu),#6d28d9);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit"> 공고 등록</button>';
 
   _openModal();
 }
@@ -19052,11 +19052,11 @@ function _submitJob(){
   if(!title||!jobType||!salary){_yToast('제목/고용형태/급여는 필수입니다');return;}
   var btn=document.getElementById('jw-submit');
 
-  // ★ 재진입 잠금 + 중복 채용공고 방지 (기존에는 둘 다 없어서 같은 공고가 계속 쌓였다)
+  // ★ 재진입 잠금 + 중복 공고 방지 (기존에는 둘 다 없어서 같은 공고가 계속 쌓였다)
   if(window._yJobSubmitLock){_yToast('처리 중이에요…');return;}
   window._yJobSubmitLock=true;
   var _unlockJ=function(){window._yJobSubmitLock=false;};
-  var _resetBtn=function(){btn.textContent=' 채용공고 등록';btn.disabled=false;_unlockJ();};
+  var _resetBtn=function(){btn.textContent=' 공고 등록';btn.disabled=false;_unlockJ();};
 
   btn.textContent='확인 중...';btn.disabled=true;
   var openEnded=document.getElementById('jw-openended-toggle')&&document.getElementById('jw-openended-toggle').classList.contains('on');
@@ -19074,7 +19074,7 @@ function _submitJob(){
 
   _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid).limit(100).get()
   .then(function(snap){
-    // 모집 중(open)인 동일 채용공고가 이미 있으면 막는다 — 마감된 공고 재등록은 허용
+    // 모집 중(open)인 동일 공고가 이미 있으면 막는다 — 마감된 공고 재등록은 허용
     var dup=snap.docs.some(function(d){
       var v=d.data();
       return v.status==='open'&&_yJobKey(v)===myKey;
@@ -19085,14 +19085,14 @@ function _submitJob(){
   })
   .then(function(){
     _unlockJ();
-    _yToast('채용공고가 등록됐어요!');
+    _yToast('공고가 등록됐어요!');
     _closeModal();
     _jSubTab='myjobs';
     _pgJobsAgency(document.getElementById('content'));
   }).catch(function(e){
     _resetBtn();
     _yToast(e.message==='__DUP__'
-      ? '동일한 채용공고가 이미 모집 중이에요'
+      ? '동일한 공고가 이미 모집 중이에요'
       : '오류: '+e.message);
   });
 }
@@ -20700,7 +20700,7 @@ function _pwNlParse(){
   }).catch(function(e){if(st)st.textContent='오류: '+e.message;});
 }
 
-// ── AI 단가 추천 (소장용) ─────────────────────────────────────────
+// ── AI 금액 추천 (소장용) ─────────────────────────────────────────
 function _pwAiPrice(){
   var courier=(document.getElementById('pw-courier')||{}).value||'';
   var region=(document.getElementById('pw-region')||{}).value||_CU.region||'';
@@ -20718,7 +20718,7 @@ function _pwAiPrice(){
     var d=res.data;
     var body=document.getElementById('modal-body');
     body.innerHTML=
-      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">AI 단가 추천</div>'+
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">AI 금액 추천</div>'+
       '<div style="font-size:12px;color:var(--t2);margin-bottom:16px">'+_esc(courier)+' '+_esc(region)+' · '+volume+'건 기준</div>'+
       '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
         '<div style="text-align:center;padding:12px;background:var(--bg3);border-radius:var(--r)">'+
