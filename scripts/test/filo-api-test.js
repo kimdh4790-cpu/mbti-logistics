@@ -42,7 +42,11 @@ async function getToken() {
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_KEY}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Referer': 'https://filo.ai.kr',  // Firebase API 키 리퍼러 제한 우회
+        'Origin': 'https://filo.ai.kr',
+      },
       body: JSON.stringify({ email: EMAIL, password: PASS, returnSecureToken: true }),
     }
   );
