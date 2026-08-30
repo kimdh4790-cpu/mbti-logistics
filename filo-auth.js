@@ -453,6 +453,25 @@ function _buildFiloNav(){
   return false;
  }
 
+ // ── 업종별 기본 탭 가시성 ──────────────────────────────────────
+ var _industryType = (d.theme || 'other');
+ // 업종별로 구독 없이도 기본 표시할 기능 목록
+ var _INDUSTRY_DEFAULTS = {
+  cafe:     ['table_order','reservation','member_crm','bakery_qr'],
+  korean:   ['table_order','reservation','member_crm'],
+  japanese: ['table_order','reservation','member_crm'],
+  chinese:  ['table_order','reservation','member_crm'],
+  fastfood: ['member_crm'],
+  izakaya:  ['table_order','reservation','member_crm'],
+  other:    ['table_order','reservation','member_crm'],
+ };
+ var _indDefaults = _INDUSTRY_DEFAULTS[_industryType] || _INDUSTRY_DEFAULTS.other;
+ // 구독·관제센터 활성 OR 업종 기본값에 포함
+ function hasFeatureOrIndustry(key) {
+  if(hasFeature(key)) return true;
+  return _indDefaults.indexOf(key) >= 0;
+ }
+
  var menus=[];
 
  /* ── 홈 (항상) ── */
@@ -469,13 +488,14 @@ function _buildFiloNav(){
 
  /* ── 메뉴·테이블 ── */
  var _menuTable=[];
- if(isAdmin&&(hasAll||hasSub('kiosk')||hasFeature('kiosk')||hasFeature('table_order'))){
+ if(isAdmin&&(hasAll||hasSub('kiosk')||hasFeature('kiosk')||hasFeatureOrIndustry('table_order'))){
   _menuTable.push({ic:'utensils',l:'메뉴 관리',p:'menu_mgmt'});
  }
- if(hasAll||hasFeature('table_order')||hasSub('kiosk')){
+ if(hasAll||hasFeatureOrIndustry('table_order')||hasSub('kiosk')){
   _menuTable.push({ic:'grid',l:'테이블 현황',p:'table_qr'});
   _menuTable.push({ic:'qr-code',l:'테이블 QR',p:'qr_mgmt'});
-  if(hasAll||hasFeature('bakery_qr'))_menuTable.push({ic:'archive',l:'빵·디저트 QR',p:'bakery_qr_mgmt'});
+  // bakery_qr: cafe 업종이거나 명시적으로 활성화된 경우만 표시
+  if(hasFeatureOrIndustry('bakery_qr'))_menuTable.push({ic:'archive',l:'빵·디저트 QR',p:'bakery_qr_mgmt'});
  }
  if(_menuTable.length)menus.push({s:'메뉴·테이블',items:_menuTable});
 
@@ -496,9 +516,7 @@ function _buildFiloNav(){
 
  /* ── 회원·예약 ── */
  var _crm=[];
- if(hasAll||hasFeature('member_crm')){
- }
- if(hasAll||hasFeature('reservation')){
+ if(hasAll||hasFeatureOrIndustry('reservation')){
   _crm.push({ic:'calendar',l:'예약·달력',p:'schedule'});
   _crm.push({ic:'clock',l:'웨이팅',p:'waiting'});
  }
