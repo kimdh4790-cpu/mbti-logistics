@@ -244,3 +244,4 @@ git push -u origin claude/브랜치명
 | 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js | 공고 등록 구역 정보 섹션에 배송지 우편번호(pw-deliveryZip) 입력 필드 추가. Firestore yongcha_posts.deliveryZip 저장. 상차지와 별개 필드. |
 | 2026-08-30 | yongcha-landing.html | 랜딩 페이지 전면 리디자인: 다크 네이비→흰색 테마, 세로 스크롤→가로 슬라이드 5패널 (Hero/기능/요금제/후기/CTA), KV 재배포 필요 |
 | 2026-08-30 | yongcha-landing.html | 랜딩 페이지 삭제 — 허위 수치(2,400+ 기사 등) 포함, 마케팅 미집행 상태라 불필요. git rm + KV 키 삭제 필요 |
+| 2026-08-30 | yongcha.html, _worker.js, yongcha-worker.js | 샌드박스(부가통신사업자) 대비 표현 추가 교체: '건당 단가'→'건당 금액', '가구당 단가'→'가구당 금액', 'AI 단가 추천'→'AI 금액 추천', '채용공고'→'공고', '채용중'→'모집중', '채용인원'→'모집인원', '채용 승인'→'수락 통보', '구인구직' 탭→'공고/이력서', '정직원 채용과 구별'→'장기 계약과 구별' |
