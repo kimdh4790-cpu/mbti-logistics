@@ -224,7 +224,7 @@ jobs:
           else
             upload_yt $PRODUCT || FAILED=1
           fi
-          [ "$FAILED" = "1" ] && echo "::warning::YouTube 업로드 일부 실패 — Actions 로그 확인"
+          [ "$FAILED" = "1" ] && echo "::warning::YouTube 업로드 일부 실패 — Actions 로그 확인" || true
 
       - name: Instagram Reels 업로드
         if: ${{ contains(env.STEPS, 'instagram') }}
