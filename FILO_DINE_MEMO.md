@@ -162,6 +162,17 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-30 (14차)
+**재고 부족 FCM 즉시 알림 + 재고·마진 UI 전면 리디자인 + 레시피 기반 원가 자동 계산**
+- `_worker.js`: `/api/filo-order` 재고 차감 후 stock ≤ minStock 시 FCM 즉시 발송 (companies/{dealerId} fcmTokens 조회 → `sendAdminFCM` 호출, lowStockAlerts 배열)
+- `filo-inventory.js`: 재고현황·발주현황·레시피 탭 pill 스타일로 통합. 검색바 + SVG 아이콘 버튼 헤더
+  - KPI 카드: left-border accent + uppercase label + tabular-nums
+  - 아이템 카드: 단가 뱃지·8px 재고바·부족 시 빨강 border. 발주현황 날짜 urgency 색상
+- `filo-margin.js`: menu_costs + menu_recipes + inventory 병렬 로드, invPriceMap으로 레시피 기반 원가 자동 계산 (`_auto:true` 플래그 → "레시피 자동" 보라 뱃지)
+  - `totalRev` → `monthRev` 버그 수정 (결제수단·인기메뉴 비중 계산 오류)
+  - 오늘 실시간 KPI: 4열 → 2×2 그리드, left-border accent. 메뉴별 마진율 색상 bar + 판매량 진행바
+- commit: `7073601`
+
 ### 2026-08-30 (13차)
 **재고 자동 차감 시스템 + filo-inventory.js 메뉴-재고 연동 탭**
 - `_worker.js`: `/api/filo-order` POST 핸들러 — 주문 완료 직후 `menu_recipes` 컬렉션 조회 → 주문 아이템별 레시피 매칭 → `inventory` 컬렉션 stock 자동 차감 (non-critical try/catch 처리)
