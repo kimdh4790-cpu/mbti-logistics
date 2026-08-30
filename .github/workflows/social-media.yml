@@ -12,28 +12,28 @@ on:
         description: '제품 선택'
         required: true
         type: choice
-        default: yongcha
+        default: all
         options:
-          - yongcha
-          - filo
-          - dine
-          - donway
-          - mbtico
           - all
+          - filo
+          - donway
+          - yongcha
+          - dine
+          - mbtico
       steps:
         description: '실행 단계 (콤마 구분)'
         required: true
-        default: 'record,compose,youtube'
+        default: 'record,compose,youtube,instagram'
         type: choice
         options:
-          - 'record,compose'
-          - 'record,compose,youtube'
           - 'record,compose,youtube,instagram'
-          - 'record'
-          - 'compose'
+          - 'record,compose,youtube'
+          - 'record,compose'
+          - 'youtube,instagram'
           - 'youtube'
           - 'instagram'
-          - 'youtube,instagram'
+          - 'record'
+          - 'compose'
       dry_run:
         description: '업로드 없이 테스트만'
         type: boolean
@@ -78,7 +78,7 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ]; then
             DOW=$(date +%u)  # 1=월 2=화 3=수 4=목
             case $DOW in
-              1) PRODUCT="yongcha"; STEPS="record,compose,youtube" ;;
+              1) PRODUCT="yongcha"; STEPS="record,compose,youtube,instagram" ;;
               2) PRODUCT="filo";    STEPS="record,compose,youtube,instagram" ;;
               4) PRODUCT="donway";  STEPS="record,compose,youtube,instagram" ;;
               *) PRODUCT="none";    STEPS="" ;;
@@ -218,11 +218,13 @@ jobs:
             fi
           }
 
+          FAILED=0
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo dine donway yongcha mbtico; do upload_yt $p; done
+            for p in filo donway yongcha; do upload_yt $p || FAILED=1; done
           else
-            upload_yt $PRODUCT
+            upload_yt $PRODUCT || FAILED=1
           fi
+          [ "$FAILED" = "1" ] && echo "::warning::YouTube 업로드 일부 실패 — Actions 로그 확인"
 
       - name: Instagram Reels 업로드
         if: ${{ contains(env.STEPS, 'instagram') }}
