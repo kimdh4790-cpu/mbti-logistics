@@ -153,9 +153,10 @@ async function req(url, opts = {}) {
     const tr = await req(`${BASE}/api/translate`, {
       method: 'POST',
       headers: auth,
-      body: JSON.stringify({ text: '아메리카노', target: 'en', dealerId: DID }),
+      body: JSON.stringify({ name: '아메리카노', lang: 'en' }),
     });
-    const trOk = tr.status === 200 && tr.text.length > 0;
+    let trOk = false;
+    try { const trJson = JSON.parse(tr.text); trOk = tr.status === 200 && !!trJson.translated; } catch(_) {}
     log(trOk, '번역 API (/api/translate)', `HTTP ${tr.status}, 결과: ${tr.text.slice(0, 60)}`);
   } else {
     log(false, '/api/errors', '토큰 없음');
