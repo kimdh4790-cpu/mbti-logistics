@@ -4507,6 +4507,10 @@ function _pgPostWrite(el){
   '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
   '</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">배송지 우편번호</label>'+
+  '<input class="inp" id="pw-deliveryZip" placeholder="예: 48100" maxlength="5" inputmode="numeric">'+
+  '<div style="font-size:11px;color:var(--t3);margin-top:4px">주 배송 구역 우편번호. 여러 구역은 아래 주소검색으로 추가하세요.</div>'+
+  '</div>'+
   '<button onclick="_openDaumPost()" style="width:100%;padding:12px;background:var(--ac);color:#000;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 주소검색으로 구역 추가 (우편번호)</button>'+
   '<div id="zone-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>'+
   '<div id="addr-result"></div>'+
@@ -4733,6 +4737,7 @@ function _submitPost(){
   var settleDay=get('pw-settleDay'), endDate=get('pw-enddate');
   var priceType=get('pw-pricetype'), housePrice=get('pw-houseprice');
   var aptRatio=get('pw-apt'), loadingAddr=get('pw-loadingAddr');
+  var deliveryZip=get('pw-deliveryZip');
   var loadingLat=parseFloat(get('pw-loadingLat'))||null;
   var loadingLng=parseFloat(get('pw-loadingLng'))||null;
   var btn=document.getElementById('submit-btn');
@@ -4794,7 +4799,7 @@ function _submitPost(){
         agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
         region:_CU.region, courier:courier, area:area, routeNo:routeNo,
         loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
-        zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
+        zones:window._zones||[], deliveryZip:deliveryZip||null, areaAptRatio:aptRatio?parseInt(aptRatio):null,
         postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
         workHours:hours, startDate:date, endDate:endDate,
         vehicleType:vehicle, plateType:plate,
