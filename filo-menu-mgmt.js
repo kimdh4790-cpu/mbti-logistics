@@ -210,7 +210,7 @@ function _filoMenuAddModal(did, menu, cat){
 
  /* 이미지 미리보기 */
  var imgPreview=document.createElement('div');
- imgPreview.style.cssText='width:100%;height:140px;background:var(--surface2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:14px;cursor:pointer;border:2px dashed var(--bd2);overflow:hidden;position:relative';
+ imgPreview.style.cssText='width:100%;height:140px;background:var(--surface2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:4px;cursor:pointer;border:2px dashed var(--bd2);overflow:hidden;position:relative';
  imgPreview.innerHTML=menu?(menu.emoji||_svgIcon('utensils')):_svgIcon('utensils');
  if(menu&&menu.imageUrl){
   var pimg=document.createElement('img');
@@ -220,12 +220,59 @@ function _filoMenuAddModal(did, menu, cat){
   imgPreview.appendChild(pimg);
  }
 
+ // 로딩 오버레이
+ var imgLoading=document.createElement('div');
+ imgLoading.style.cssText='display:none;position:absolute;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;flex-direction:column;gap:6px;z-index:2';
+ imgLoading.innerHTML='<div style="width:28px;height:28px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div><div style="font-size:11px;color:#fff">이미지 검색 중...</div>';
+ imgPreview.appendChild(imgLoading);
+
+ // ↺ 새 이미지 버튼 (우하단 오버레이)
+ var refreshBtn=document.createElement('button');
+ refreshBtn.style.cssText='display:none;position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.65);border:none;border-radius:20px;color:#fff;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;z-index:3;backdrop-filter:blur(4px)';
+ refreshBtn.textContent='↺ 새 이미지';
+ imgPreview.appendChild(refreshBtn);
+ if(menu&&menu.imageUrl)refreshBtn.style.display='block';
+
+ /* 이미지 자동 검색 공통 함수 */
+ var _imageUrl=menu?menu.imageUrl||'':'';
+ var _imgAutoTimer=null;
+
+ function _fetchAndSetImage(name,category,emoji,force){
+  if(_imageUrl&&!force)return; // 이미 이미지 있으면 skip (force=true면 재검색)
+  if(!name)return;
+  imgLoading.style.display='flex';
+  refreshBtn.style.display='none';
+  _filoAutoImageUrl(name,category||'',emoji||'').then(function(url){
+   imgLoading.style.display='none';
+   if(!url){refreshBtn.style.display=_imageUrl?'block':'none';return;}
+   _imageUrl=url;
+   imgPreview.innerHTML='';
+   var ni=document.createElement('img');
+   ni.src=url;ni.style.cssText='width:100%;height:100%;object-fit:cover';
+   imgPreview.appendChild(imgLoading);
+   imgPreview.appendChild(refreshBtn);
+   imgPreview.insertBefore(ni,imgLoading);
+   refreshBtn.style.display='block';
+  }).catch(function(){
+   imgLoading.style.display='none';
+   refreshBtn.style.display=_imageUrl?'block':'none';
+  });
+ }
+
+ refreshBtn.onclick=function(e){
+  e.stopPropagation();
+  var n=box.querySelector('#menu-name-inp');
+  var c=box.querySelector('#menu-cat-inp');
+  var em=box.querySelector('#menu-emoji-inp');
+  _imageUrl=''; // force re-fetch
+  _fetchAndSetImage(n?n.value:'',c?c.value:'',em?em.value:'',true);
+ };
+
  /* 이미지 업로드 */
  var fileInp=document.createElement('input');
  fileInp.type='file';fileInp.accept='image/*';fileInp.style.display='none';
  var uploadProgress=document.createElement('div');
- uploadProgress.style.cssText='font-size:11px;color:var(--t3);text-align:center;margin-top:4px';
- var _imageUrl=menu?menu.imageUrl||'':'';
+ uploadProgress.style.cssText='font-size:11px;color:var(--t3);text-align:center;margin-top:2px;margin-bottom:8px';
 
  fileInp.onchange=function(){
   var file=this.files[0];
@@ -243,19 +290,23 @@ function _filoMenuAddModal(did, menu, cat){
      imgPreview.innerHTML='';
      var ni=document.createElement('img');
      ni.src=url;ni.style.cssText='width:100%;height:100%;object-fit:cover';
-     imgPreview.appendChild(ni);
-     uploadProgress.textContent='이미지 업로드 완료';
+     imgPreview.appendChild(imgLoading);
+     imgPreview.appendChild(refreshBtn);
+     imgPreview.insertBefore(ni,imgLoading);
+     refreshBtn.style.display='block';
+     uploadProgress.textContent='업로드 완료';
     });
    }
   );
  };
- imgPreview.onclick=function(){fileInp.click();};
+ imgPreview.onclick=function(e){if(e.target===refreshBtn||refreshBtn.contains(e.target))return;fileInp.click();};
 
- // 메뉴명 입력 시 이모지 자동 매핑
+ // 메뉴명 입력 시 이모지 자동 매핑 + 이미지 자동 검색
  setTimeout(function(){
   var nameInp=box.querySelector('#menu-name-inp');
   var emojiInp=box.querySelector('#menu-emoji-inp');
   if(!nameInp||!emojiInp)return;
+  // 신규 등록이면 포커스 직후 빈 상태에서 이미 이미지 없으면 placeholder 유지
   nameInp.addEventListener('input',function(){
    var nm=this.value;
    var _nm=[
@@ -289,6 +340,15 @@ function _filoMenuAddModal(did, menu, cat){
      break;
     }
    }
+   // 이미지 없으면 1초 debounce 후 자동 검색
+   if(!_imageUrl && nm.length >= 2){
+    clearTimeout(_imgAutoTimer);
+    _imgAutoTimer=setTimeout(function(){
+     var c=box.querySelector('#menu-cat-inp');
+     var em=box.querySelector('#menu-emoji-inp');
+     _fetchAndSetImage(nm, c?c.value:'', em?em.value:'', false);
+    }, 1000);
+   }
   });
  },100);
 
@@ -301,7 +361,18 @@ function _filoMenuAddModal(did, menu, cat){
  var rmBtn=document.createElement('button');
  rmBtn.style.cssText='width:100%;padding:6px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-bottom:10px';
  rmBtn.textContent='이미지 제거';
- rmBtn.onclick=function(){_imageUrl='';imgPreview.innerHTML='';imgPreview.innerHTML=document.getElementById('menu-emoji-inp').value||_svgIcon('utensils');uploadProgress.textContent='';};
+ rmBtn.onclick=function(){
+  _imageUrl='';
+  var em=document.getElementById('menu-emoji-inp');
+  imgPreview.innerHTML='';
+  imgPreview.appendChild(imgLoading);
+  imgPreview.appendChild(refreshBtn);
+  var ph=document.createElement('div');ph.style.cssText='font-size:48px;display:flex;align-items:center;justify-content:center;width:100%;height:100%';
+  ph.textContent=em?em.value||'🍽':'🍽';
+  imgPreview.insertBefore(ph,imgLoading);
+  refreshBtn.style.display='none';
+  uploadProgress.textContent='';
+ };
  box.appendChild(rmBtn);
 
  /* 필드들 */
@@ -380,12 +451,6 @@ function _filoMenuAddModal(did, menu, cat){
    if(stock!=null && stockMin>0 && stock<=stockMin) _filoStockLowAlert(name, stock, stockMin);
    // 메뉴 저장 후 자동 번역 → Firestore에 저장
    var docId=isEdit?menu._id:(ref&&ref.id);
-   // 이미지 없으면 비동기로 Pexels 이미지 가져와 업데이트
-   if(docId && !_imageUrl && typeof _filoAutoImageUrl==='function'){
-    _filoAutoImageUrl(name,category,emoji).then(function(url){
-     if(url) _db.collection('filo_menus').doc(docId).update({imageUrl:url}).catch(function(){});
-    });
-   }
    if(docId && name){
     var langs=['en','zh','ja'];
     var translations={};
