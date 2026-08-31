@@ -155,37 +155,67 @@ async function inputSubtitle(page, content) {
 
 // ── 이미지 블록 입력 ────────────────────────────────────────────────────
 async function inputImage(page, block) {
-  // 툴바 사진 버튼 (셀렉터 복수 시도)
+  const absPath = path.resolve(block.path);
+  if (!fs.existsSync(absPath)) {
+    console.warn(`⚠️  이미지 파일 없음: ${absPath} — 수동 추가 필요`);
+    return;
+  }
+
+  // filechooser 이벤트를 먼저 리스닝 (버튼 클릭 전)
+  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 20000 });
+
+  // 툴바 사진 버튼 클릭
   const imgSelectors = [
     'button[class*="se-photo"]',
     'button[class*="se-image"]',
     'button[title*="사진"]',
     'button[aria-label*="사진"]',
     'button[data-se-type*="photo"]',
-    'button[data-se-type*="image"]',
     'button[class*="photo"]',
   ];
-  let imgBtn = null;
+  let clicked = false;
   for (const sel of imgSelectors) {
-    imgBtn = await page.$(sel);
-    if (imgBtn) break;
+    const btn = await page.$(sel);
+    if (btn) { await btn.click(); clicked = true; break; }
   }
-  if (!imgBtn) { console.warn('⚠️  사진 버튼 못 찾음 — probe_selectors로 확인하세요'); return; }
-  await imgBtn.click();
-  await page.waitForTimeout(800);
+  if (!clicked) {
+    console.warn('⚠️  사진 버튼 못 찾음 — 이미지 수동 추가 필요');
+    return;
+  }
+  await page.waitForTimeout(1000);
 
-  // 팝업 내 "내 PC" or "파일 선택" 버튼
-  const [fileChooser] = await Promise.all([
-    page.waitForEvent('filechooser', { timeout: 5000 }).catch(() => null),
-    page.click('button[class*="pc"], button[class*="upload"], input[type="file"]').catch(() => {}),
-  ]);
-  if (!fileChooser) { console.warn('⚠️  파일 선택창 열기 실패'); return; }
-  await fileChooser.setFiles(path.resolve(block.path));
-  await page.waitForTimeout(3000); // 업로드 대기
+  // Naver 팝업 내 "내 PC" 버튼 클릭 시도
+  const pcSelectors = [
+    'button[class*="pc"]',
+    'button[class*="computer"]',
+    'button[class*="local"]',
+    'button:has-text("내 PC")',
+    'button:has-text("내 컴퓨터")',
+    'button:has-text("사진 추가")',
+    'button:has-text("파일 선택")',
+    'label[class*="file"]',
+  ];
+  for (const sel of pcSelectors) {
+    const btn = await page.$(sel).catch(() => null);
+    if (btn) { await btn.click().catch(() => {}); break; }
+  }
 
-  // 캡션 입력 (전체 사진의 절반 정도만 — JSON에 caption 있는 경우만)
+  // filechooser 캡처
+  const fileChooser = await fileChooserPromise.catch(() => null);
+  if (!fileChooser) {
+    console.warn('⚠️  파일 선택창 캡처 실패 — 이미지 수동 추가 필요');
+    // 열린 팝업 닫기
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(500);
+    return;
+  }
+
+  await fileChooser.setFiles(absPath);
+  await page.waitForTimeout(3000);
+
+  // 캡션 입력
   if (block.caption) {
-    const captionEl = await page.$('.se-image-caption, [class*="caption"]');
+    const captionEl = await page.$('.se-image-caption, [class*="caption"]').catch(() => null);
     if (captionEl) {
       await captionEl.click();
       await insertText(page, block.caption);
