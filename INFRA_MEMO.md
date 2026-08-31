@@ -13,13 +13,19 @@
 | 인스턴스명 | filo-a1-2c12g |
 | 스펙 | A1.Flex 4코어/24GB (Always Free) |
 | 리전 | Tokyo AD-1 |
-| SSH 키 | ssh-key-2026-08-02 (등록 완료 2026-08-28) |
+| SSH 키 | 로컬 PC 기본 키 (`C:\Users\82104\.ssh\id_rsa`, 코멘트: `82104@DESKTOP-2MP10VJ`) |
 | 로그인 | kimdh4790@gmail.com / khw3103!! |
 
-### SSH 접속
-```bash
-ssh -i ~/ssh-key-2026-08-02 opc@161.33.136.154
+### SSH 접속 (2026-08-31 확인)
+```powershell
+# 로컬 PC PowerShell에서 (기본 키 자동 사용)
+ssh opc@161.33.136.154
+
+# 또는 명시적으로
+ssh -i C:\Users\82104\.ssh\id_rsa opc@161.33.136.154
 ```
+> ⚠️ `ssh-key-2026-08-02` 등 Cloud Shell에 있는 키 파일들은 Oracle VM 접속에 사용 불가.
+> 인스턴스에 등록된 키는 로컬 PC의 기본 키(`82104@DESKTOP-2MP10VJ`)임. 로컬 PC에서만 접속 가능.
 
 ### Oracle Cloud Console (SSH 없이 브라우저 접속)
 1. cloud.oracle.com → kimdh4790@gmail.com 로그인
@@ -55,16 +61,15 @@ YOUTUBE_REFRESH_TOKEN=등록완료
 
 > SSH 접속 확인: 2026-08-31. Oracle VM(`opc@161.33.136.154`)에서 완전 동작.
 
-### SSH 키 목록 (Oracle VM 내부)
-```
-~/ssh-key-2026-08-02.key       ← Oracle VM 접속용 개인 키 (사용 중)
-~/oracle_cloud_key              ← 구형 키 (사용 안 함)
-```
+### SSH 키 정보 (2026-08-31 확인)
+- Oracle VM에 등록된 키: **로컬 PC** `C:\Users\82104\.ssh\id_rsa` (코멘트: `82104@DESKTOP-2MP10VJ`)
+- Cloud Shell 내 `~/ssh-key-2026-08-02*` 파일들은 접속 불가 (Permission denied 확인)
+- 반드시 **로컬 PC PowerShell**에서 접속해야 함
 
 ### Oracle VM에서 naver-blog 실행
 ```bash
-# SSH 접속
-ssh -i ~/ssh-key-2026-08-02 opc@161.33.136.154
+# SSH 접속 (로컬 PC PowerShell에서)
+ssh opc@161.33.136.154
 
 # 저장소 최신화 (필수)
 cd ~/mbti-logistics && git pull origin main
