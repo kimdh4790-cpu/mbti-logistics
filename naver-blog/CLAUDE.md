@@ -31,7 +31,7 @@ Claude Code 원격 컨테이너에서는 Playwright 브라우저 외부 접근 �
 
 ## 블로그 설정
 - .env 파일의 BLOG_ID = 네이버 블로그 ID (blog.naver.com/[여기])
-- soungkyekim@naver.com 계정, 표시명 HYUN
+- soungkyekim@naver.com 계정, 표시명 HYUN, 블로그 ID: donway_, 블로그명: donway_님의 블로그, 별명: MBTICO
 
 ## 초안 JSON 포맷
 ```json
