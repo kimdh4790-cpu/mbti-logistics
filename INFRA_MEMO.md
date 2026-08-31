@@ -51,6 +51,61 @@ YOUTUBE_REFRESH_TOKEN=등록완료
 
 ---
 
+## 네이버 블로그 자동화 (Oracle VM 실행)
+
+> SSH 접속 확인: 2026-08-31. Oracle VM(`opc@161.33.136.154`)에서 완전 동작.
+
+### SSH 키 목록 (Oracle VM 내부)
+```
+~/ssh-key-2026-08-02.key       ← Oracle VM 접속용 개인 키 (사용 중)
+~/oracle_cloud_key              ← 구형 키 (사용 안 함)
+```
+
+### Oracle VM에서 naver-blog 실행
+```bash
+# SSH 접속
+ssh -i ~/ssh-key-2026-08-02 opc@161.33.136.154
+
+# 저장소 최신화 (필수)
+cd ~/mbti-logistics && git pull origin main
+
+# 의존성 (최초 1회)
+cd naver-blog && npm install
+
+# 임시저장 (headless 자동 감지 — DISPLAY 없으면 headless로 실행)
+node scripts/naver_draft.js --draft "drafts/20260831_donway_배달대행정산자동화.json"
+
+# 자동 발행
+node scripts/naver_draft.js --draft "drafts/20260831_donway_배달대행정산자동화.json" --publish
+
+# xvfb-run 방식 (headless가 아닌 headful로 Oracle VM에서 실행 시 — bot 감지 우회)
+xvfb-run node scripts/naver_draft.js --draft "drafts/post.json" --publish
+```
+
+### DISPLAY 자동 감지 로직 (naver_draft.js v2, 2026-08-31)
+- `process.env.DISPLAY` 없거나 `--headless` 플래그 → `headless: true` 자동 전환
+- Windows/macOS → `headless: false` (기존 동작 유지)
+- 로컬 PC(Windows)에서는 항상 headful 실행 → 로그인 세션 유지
+
+### 로그인 세션 (naver-profile/)
+- 로컬 PC에서 `npm run login` 실행 후 생성된 `naver-profile/` 디렉토리를 Oracle VM에 복사
+```bash
+# 로컬 PC에서 실행 (PowerShell)
+scp -r ./naver-profile opc@161.33.136.154:~/mbti-logistics/naver-blog/naver-profile
+```
+- Oracle VM에서 직접 로그인 시: xvfb-run + headful 모드 필요 (또는 로컬 로그인 후 복사 권장)
+
+### 이미지 경로 주의
+- 초안 JSON의 `"path": "input/photos/파일.jpg"` — Oracle VM에도 동일 경로에 파일 있어야 함
+- 이미지 없으면 `[이미지: 파일명]` 텍스트로 폴백 (자동)
+
+### 발행 버튼 진단 (--publish 실패 시)
+- 실패 시 `drafts/초안명_publish_diag.png` 스크린샷 자동 저장
+- 버튼 목록 (text | class | visible | disabled) 콘솔 출력
+- 위 정보 보고 셀렉터 수정 후 재실행
+
+---
+
 ## GitHub Actions
 
 ### 워크플로우
@@ -379,3 +434,4 @@ claude
 | 2026-08-30 | social-media.yml 버그 수정: YouTube step exit code 1 → continue-on-error:true + if/fi 형식으로 수정. Instagram step if:always() 추가. Run #29 원인: [ FAILED=0 ] && echo "..." 마지막 명령이 exit 1 반환 |
 | 2026-08-30 | Ollama 0.33.2 로컬 PC 설치 완료. gemma4:e2b 다운로드 중 (7.2GB, ~45분) |
 | 2026-08-30 | FIREBASE_API_KEY Worker Secret 상태 정정: "미등록" → "등록완료" (Cloudflare 대시보드 스크린샷으로 확인). ANTHROPIC_API_KEY·GOOGLE_TRANSLATE_KEY도 등록완료로 정정. |
+| 2026-08-31 | Oracle VM SSH 접속 확인 완료 (opc@161.33.136.154, ssh-key-2026-08-02.key). naver-blog npm install 완료. naver_draft.js: DISPLAY 없으면 자동 headless 전환 + --headless 플래그 추가. 발행 버튼 셀렉터 개선 (waitForSelector + 진단 스크린샷 자동 저장). naver-blog Oracle VM 실행 방법 INFRA_MEMO 등록. |

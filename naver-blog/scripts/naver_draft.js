@@ -20,6 +20,8 @@ const PROFILE_DIR = path.join(__dirname, '..', 'naver-profile');
 const BLOG_ID = process.env.BLOG_ID || 'soungkyekim';
 const DRY_RUN = process.argv.includes('--dry-run');
 const AUTO_PUBLISH = process.argv.includes('--publish');
+// Oracle VM 등 디스플레이 없는 환경에서 --headless 플래그 또는 DISPLAY 미설정 시 자동 headless
+const HEADLESS = process.argv.includes('--headless') || (!process.env.DISPLAY && process.platform !== 'win32' && process.platform !== 'darwin');
 
 // --draft 플래그 또는 첫 번째 포지셔널 인수 모두 허용
 const draftArgIdx = process.argv.indexOf('--draft');
@@ -406,8 +408,9 @@ async function inputPlace(page, placeInfo) {
   console.log('📄 초안:', draftPath);
   console.log('📝 제목:', title);
 
+  if (HEADLESS) console.log('🖥️  headless 모드 (DISPLAY 없음 또는 --headless 플래그)');
   const context = await chromium.launchPersistentContext(PROFILE_DIR, {
-    headless: false,
+    headless: HEADLESS,
     viewport: { width: 1600, height: 1000 },
     locale: 'ko-KR',
   });
@@ -547,25 +550,29 @@ async function inputPlace(page, placeInfo) {
   if (DRY_RUN) {
     console.log('🔍 DRY-RUN: 저장 생략');
   } else if (AUTO_PUBLISH) {
-    // 최종 발행 확인 버튼 셀렉터
-    const publishDoneSels = [
-      'button[data-testid="seOnePublishDoneBtn"]',
-      'button[class*="publishDone"]',
-      'button[class*="publish-done"]',
-      'button[class*="publish-submit"]',
-      'button:has-text("발행하기")',
-      'button:has-text("게시하기")',
+    // ── 발행 패널이 열려 있는지 확인 ────────────────────────────────────
+    // inputTags()에서 AUTO_PUBLISH=true면 패널을 열린 채로 두므로
+    // 이미 열려 있을 가능성이 높음. 패널 닫힌 경우만 다시 열기.
+    const panelOpenSelectors = [
+      '[class*="publish-panel"]',
+      '[class*="publishPanel"]',
+      '[class*="se-publish"]',
+      '[class*="CategoryArea"]',
+      '[class*="publish_layer"]',
+      '.se_pub_wrap',
     ];
-
-    // 패널이 열려 있는지 먼저 확인
-    let doneBtn = null;
-    for (const sel of publishDoneSels) {
-      doneBtn = await page.$(sel).catch(() => null);
-      if (doneBtn) break;
+    let panelVisible = false;
+    for (const sel of panelOpenSelectors) {
+      const el = await page.$(sel).catch(() => null);
+      if (el && await el.isVisible().catch(() => false)) {
+        panelVisible = true;
+        break;
+      }
     }
 
-    // 패널이 닫혀 있으면 열기 (태그를 직접 입력 경로로 처리한 경우)
-    if (!doneBtn) {
+    if (!panelVisible) {
+      console.log('📋 발행 패널 열기...');
+      // 발행 버튼 클릭 — 패널이 닫혀 있을 때만
       const panelBtnSels = [
         'button[data-testid="seOnePublishBtn"]',
         'button[class*="publish"]:not([class*="Done"]):not([class*="done"]):not([class*="submit"])',
@@ -575,47 +582,76 @@ async function inputPlace(page, placeInfo) {
         const btn = await page.$(sel).catch(() => null);
         if (btn) {
           await btn.click({ force: true }).catch(() => {});
-          await page.waitForTimeout(1500);
+          await page.waitForTimeout(2500);
           break;
         }
       }
-      // 패널 열린 후 다시 탐색
-      for (const sel of publishDoneSels) {
-        doneBtn = await page.$(sel).catch(() => null);
-        if (doneBtn) break;
-      }
     }
 
-    if (doneBtn) {
-      await doneBtn.click();
-      await page.waitForTimeout(3000);
-      console.log('🚀 발행 완료');
-    } else {
-      // 폴백: JS로 모든 버튼 텍스트 스캔해서 발행 버튼 직접 클릭
+    // ── 발행 확인 버튼 대기 및 클릭 ─────────────────────────────────────
+    // waitForSelector 사용 — $() 대비 렌더링 타이밍에 강건함
+    const publishDoneSels = [
+      'button[data-testid="seOnePublishDoneBtn"]',
+      'button[class*="publishDone"]',
+      'button[class*="publish-done"]',
+      'button[class*="publish-submit"]',
+      'button[class*="confirmPublish"]',
+      'button:has-text("발행하기")',
+      'button:has-text("게시하기")',
+      'button:has-text("확인하기")',
+    ];
+
+    let publishDone = false;
+    for (const sel of publishDoneSels) {
+      try {
+        await page.waitForSelector(sel, { state: 'visible', timeout: 3000 });
+        await page.click(sel, { force: true });
+        publishDone = true;
+        break;
+      } catch (_) {}
+    }
+
+    if (!publishDone) {
+      // JS 폴백 — 모든 버튼 텍스트 스캔 (visibility 무시)
       const clicked = await page.evaluate(() => {
-        const candidates = ['발행하기', '게시하기', '발행', '게시'];
+        const candidates = ['발행하기', '게시하기', '확인하기', '발행', '게시', '확인'];
         for (const text of candidates) {
           const btn = [...document.querySelectorAll('button')].find(
             b => b.textContent.trim() === text || b.textContent.trim().startsWith(text)
           );
-          if (btn) { btn.click(); return text; }
+          if (btn && !btn.disabled) { btn.click(); return text; }
         }
         return null;
       });
       if (clicked) {
+        publishDone = true;
         await page.waitForTimeout(3000);
         console.log(`🚀 발행 완료 (JS 폴백: "${clicked}" 버튼)`);
-      } else {
-        // 진단: 현재 페이지의 버튼 목록 출력
-        const btnTexts = await page.evaluate(() =>
-          [...document.querySelectorAll('button')]
-            .map(b => b.textContent.trim())
-            .filter(t => t.length > 0 && t.length < 20)
-        );
-        console.warn('⚠️  발행 버튼 못 찾음. 현재 버튼 목록:');
-        console.warn(btnTexts.join(' | '));
-        console.warn('→ 위 목록을 공유하시면 셀렉터 수정 가능합니다.');
       }
+    } else {
+      await page.waitForTimeout(3000);
+      console.log('🚀 발행 완료');
+    }
+
+    if (!publishDone) {
+      // 진단 스크린샷 + 버튼 목록 출력
+      const diagPath = draftPath.replace('.json', '_publish_diag.png');
+      await page.screenshot({ path: diagPath, fullPage: false });
+      console.warn(`⚠️  발행 버튼 못 찾음. 진단 스크린샷: ${diagPath}`);
+
+      const btnInfo = await page.evaluate(() =>
+        [...document.querySelectorAll('button')]
+          .map(b => ({
+            text: b.textContent.trim().slice(0, 30),
+            cls: b.className.slice(0, 60),
+            visible: b.offsetParent !== null,
+            disabled: b.disabled,
+          }))
+          .filter(b => b.text.length > 0)
+      );
+      console.warn('현재 버튼 목록 (text | class | visible | disabled):');
+      btnInfo.forEach(b => console.warn(`  "${b.text}" | ${b.cls} | visible:${b.visible} | disabled:${b.disabled}`));
+      console.warn('→ 위 목록을 공유하시면 셀렉터를 정확히 수정할 수 있습니다.');
     }
   } else {
     const saveBtn = await page.$('button[data-testid="seOneTempBtn"], button:has-text("임시저장"), button[class*="temp"]');

@@ -29,6 +29,13 @@
 스크립트는 반드시 로컬 PC 또는 Oracle Cloud(161.33.136.154)에서 실행
 Claude Code 원격 컨테이너에서는 Playwright 브라우저 외부 접근 불가
 
+### Oracle VM 실행 (2026-08-31 확인)
+- SSH 접속: `ssh -i ~/ssh-key-2026-08-02 opc@161.33.136.154`
+- DISPLAY 미설정 시 naver_draft.js가 자동으로 headless 모드 전환
+- 명시적 headless: `node scripts/naver_draft.js --draft ... --publish --headless`
+- headful(xvfb): `xvfb-run node scripts/naver_draft.js --draft ... --publish`
+- 로그인 세션(naver-profile/)은 로컬 PC에서 scp로 복사 권장
+
 ## 블로그 설정
 - .env 파일의 BLOG_ID = 네이버 블로그 ID (blog.naver.com/[여기])
 - soungkyekim@naver.com 계정, 표시명 HYUN, 블로그 ID: donway_, 블로그명: donway_님의 블로그, 별명: MBTICO
@@ -72,3 +79,4 @@ Claude Code 원격 컨테이너에서는 Playwright 브라우저 외부 접근 �
 | 날짜 | 내용 |
 |---|---|
 | 2026-08-31 | 초기 패키지 생성 (FILO+DINE 테스트용) |
+| 2026-08-31 | naver_draft.js: 이미지 업로드(setInputFiles), 태그 10개, 임시저장 완전 동작 확인 (로컬 PC). HEADLESS 자동 감지 추가 (Oracle VM 대응). 발행 버튼 셀렉터 개선 + 진단 스크린샷 자동 저장. naver_login.js: URL 폴링 방식으로 로그인 감지 개선. |
