@@ -337,7 +337,9 @@ async function inputPlace(page, placeInfo) {
   });
 
   // 로그인 체크
-  if (page.url().includes('nidlogin')) {
+  const currentUrl = page.url();
+  console.log('🌐 현재 URL:', currentUrl);
+  if (currentUrl.includes('nidlogin') || currentUrl.includes('nid.naver.com') || currentUrl.includes('/login')) {
     console.error('❌ 로그인 안 됨. npm run login 먼저 실행하세요.');
     await context.close();
     process.exit(1);
