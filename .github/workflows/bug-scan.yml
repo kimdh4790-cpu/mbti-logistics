@@ -1,0 +1,62 @@
+name: 자동 버그 스캔+수정
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # 매주 월요일 09:00 KST (00:00 UTC)
+  workflow_dispatch:
+
+jobs:
+  bug-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 브랜치 생성
+        run: |
+          BRANCH="claude/bug-scan-$(date +%Y%m%d)"
+          git checkout -b "$BRANCH"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: alert() → _filoToast() (filo-*.js, filo-common.js 제외)
+        run: |
+          for f in filo-*.js; do
+            [ "$f" = "filo-common.js" ] && continue
+            [ -f "$f" ] || continue
+            sed -i 's/\balert(/_filoToast(/g' "$f"
+          done
+
+      - name: alert() → _dineToast() (dine-*.js)
+        run: |
+          for f in dine-*.js; do
+            [ -f "$f" ] || continue
+            sed -i 's/\balert(/_dineToast(/g' "$f"
+          done
+
+      - name: 변경사항 확인
+        id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "스캔 완료 — 수정 사항 없음"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "## 수정된 파일" >> $GITHUB_STEP_SUMMARY
+            git diff --name-only >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## 변경 내용" >> $GITHUB_STEP_SUMMARY
+            git diff >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: 커밋 + 푸시
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(auto-scan): 자동 버그 스캔 수정 $(date +%Y-%m-%d)"
+          git push -u origin "$BRANCH"

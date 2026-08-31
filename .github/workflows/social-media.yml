@@ -1,11 +1,7 @@
 name: 소셜미디어 홍보 영상 제작
 
 on:
-  schedule:
-    # KST 09:00 = UTC 00:00
-    - cron: '0 0 * * 1'   # 월요일 09:00 KST — 용차앱 YouTube
-    - cron: '0 0 * * 2'   # 화요일 09:00 KST — FILO YouTube+Instagram
-    - cron: '0 0 * * 4'   # 목요일 09:00 KST — DONWAY YouTube+Instagram
+  # 자동 스케줄은 social-media-schedule.yml 에서 관리 (중복 방지)
   workflow_dispatch:
     inputs:
       product:
