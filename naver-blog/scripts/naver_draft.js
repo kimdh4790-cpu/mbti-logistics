@@ -13,6 +13,8 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const sharp = require('sharp');
 
 const PROFILE_DIR = path.join(__dirname, '..', 'naver-profile');
 const BLOG_ID = process.env.BLOG_ID || 'soungkyekim';
@@ -141,12 +143,21 @@ async function inputSubtitle(page, content) {
 
 // ── 이미지 블록 입력 ────────────────────────────────────────────────────
 // 숨겨진 input[type=file]을 직접 찾아 setInputFiles()로 업로드
+// Sharp로 1/3 리사이즈 후 임시파일 → 업로드 → 삭제
 async function inputImage(page, block) {
   const absPath = path.resolve(block.path);
   if (!fs.existsSync(absPath)) {
     console.warn(`⚠️  이미지 파일 없음: ${absPath}`);
     return;
   }
+
+  // 1/3 크기로 리사이즈
+  const meta = await sharp(absPath).metadata();
+  const tmpPath = path.join(os.tmpdir(), `nb_${Date.now()}_${path.basename(absPath)}`);
+  await sharp(absPath)
+    .resize(Math.round(meta.width / 3), Math.round(meta.height / 3))
+    .toFile(tmpPath);
+  const uploadPath = tmpPath;
 
   // 이미지 툴바 버튼 클릭
   const imgBtnSels = [
@@ -171,7 +182,7 @@ async function inputImage(page, block) {
   // 숨겨진 file input에 직접 파일 설정 (filechooser 이벤트 우회)
   const fileInput = await page.$('input[type="file"]').catch(() => null);
   if (fileInput) {
-    await fileInput.setInputFiles(absPath);
+    await fileInput.setInputFiles(uploadPath);
     await page.waitForTimeout(3000);
 
     // 삽입 확인 버튼
@@ -191,7 +202,7 @@ async function inputImage(page, block) {
         await page.waitForTimeout(300);
       }
     }
-    console.log(`  📸 이미지 업로드 완료: ${path.basename(block.path)}`);
+    console.log(`  📸 이미지 업로드 완료: ${path.basename(block.path)} (1/3 리사이즈)`);
   } else {
     // 파일 input 못 찾으면 플레이스홀더로 폴백
     console.warn(`⚠️  file input 못 찾음 — 플레이스홀더 삽입: ${block.path}`);
@@ -202,6 +213,9 @@ async function inputImage(page, block) {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(200);
   }
+
+  // 임시파일 삭제
+  fs.unlink(uploadPath, () => {});
 }
 
 // ── 동영상 업로드 ───────────────────────────────────────────────────────
