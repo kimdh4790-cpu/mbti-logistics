@@ -50,7 +50,14 @@ const PROFILE_DIR = path.join(__dirname, '..', 'naver-profile');
   // 블로그 접근 확인
   await page.goto('https://blog.naver.com', { waitUntil: 'networkidle', timeout: 15000 })
     .catch(() => {});
+
+  // 쿠키 JSON 저장 (Oracle VM 등 타 OS에서 사용)
+  const cookies = await context.cookies(['https://naver.com', 'https://blog.naver.com', 'https://nid.naver.com']);
+  const cookiesFile = path.join(PROFILE_DIR, 'cookies.json');
+  fs.writeFileSync(cookiesFile, JSON.stringify(cookies, null, 2));
+
   console.log('\n✅ 로그인 세션 저장 완료!');
+  console.log('   쿠키 파일:', cookiesFile);
   console.log('   이제 다음 명령으로 글을 작성하세요:');
   console.log('   node scripts/naver_draft.js --draft drafts/파일.json --dry-run');
 

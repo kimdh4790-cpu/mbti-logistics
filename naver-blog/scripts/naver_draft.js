@@ -409,11 +409,25 @@ async function inputPlace(page, placeInfo) {
   console.log('📝 제목:', title);
 
   if (HEADLESS) console.log('🖥️  headless 모드 (DISPLAY 없음 또는 --headless 플래그)');
-  const context = await chromium.launchPersistentContext(PROFILE_DIR, {
+
+  // Linux(Oracle VM)에서는 쿠키 기반 세션 사용 (Windows 프로필 바이너리 비호환)
+  const COOKIES_FILE = path.join(PROFILE_DIR, 'cookies.json');
+  const useLinuxProfile = process.platform === 'linux' && fs.existsSync(COOKIES_FILE);
+  const profileDir = useLinuxProfile
+    ? path.join(PROFILE_DIR, 'linux-profile')
+    : PROFILE_DIR;
+
+  const context = await chromium.launchPersistentContext(profileDir, {
     headless: HEADLESS,
     viewport: { width: 1600, height: 1000 },
     locale: 'ko-KR',
   });
+
+  if (useLinuxProfile) {
+    const cookies = JSON.parse(fs.readFileSync(COOKIES_FILE, 'utf-8'));
+    await context.addCookies(cookies);
+    console.log('🍪 쿠키 세션 복원 완료');
+  }
 
   const page = context.pages()[0] || await context.newPage();
 
