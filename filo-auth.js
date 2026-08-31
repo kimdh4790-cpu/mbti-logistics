@@ -905,15 +905,14 @@ function _filoPageHome(el){
   ]
  };
  var _qa=_quickActions[_itype]||_quickActions.other;
- var _qaHtml='<div class="card-cascade" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
+ var _qaHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'+
   _qa.map(function(q){
    return '<button onclick="_filoGoPage(\''+q.p+'\')" title="'+esc(q.hint)+'" '+
-    'style="padding:14px 6px 12px;background:var(--surface);border:1px solid var(--bd2);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s;position:relative;overflow:hidden" '+
-    'onmouseover="this.style.borderColor=\'rgba(200,163,86,.55)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(200,163,86,.12)\'" '+
-    'onmouseout="this.style.borderColor=\'var(--bd2)\';this.style.transform=\'\';this.style.boxShadow=\'\'">'+
-    '<div style="display:flex;justify-content:center;margin-bottom:7px;color:var(--br)">'+_svgIcon(q.ic)+'</div>'+
-    '<div style="font-size:11px;font-weight:800;color:var(--tx);letter-spacing:-.1px">'+esc(q.l)+'</div>'+
-    '<div style="font-size:9px;color:var(--t3);margin-top:2px">'+esc(q.hint)+'</div>'+
+    'style="padding:16px 8px 14px;background:var(--surface,#fff);border:1.5px solid var(--bd);border-radius:14px;cursor:pointer;text-align:center;transition:all .18s;active:scale(.97)" '+
+    'onmouseover="this.style.borderColor=\'rgba(200,163,86,.6)\';this.style.boxShadow=\'0 4px 16px rgba(200,163,86,.1)\';this.style.transform=\'translateY(-1px)\'" '+
+    'onmouseout="this.style.borderColor=\'var(--bd)\';this.style.boxShadow=\'\';this.style.transform=\'\'">'+
+    '<div style="width:36px;height:36px;border-radius:10px;background:rgba(200,163,86,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--br,#c9a84c)">'+_svgIcon(q.ic)+'</div>'+
+    '<div style="font-size:12px;font-weight:800;color:var(--tx);letter-spacing:-.1px;line-height:1.3">'+esc(q.l)+'</div>'+
     '</button>';
   }).join('')+
  '</div>';
@@ -931,38 +930,38 @@ function _filoPageHome(el){
   '<div style="font-size:12px;color:var(--t3);font-weight:600">'+todayKr+'</div>'+
   '</div>'+
 
-  /* 오늘 매출 히어로 */
-  '<div class="hero-card" style="margin-bottom:16px">'+
+  /* 벤토 그리드: 히어로(2/3) + 사이드 타일(1/3) */
+  '<div style="display:grid;grid-template-columns:1fr 82px;gap:10px;margin-bottom:10px;align-items:start">'+
+  '<div class="hero-card" style="margin-bottom:0">'+
   '<div style="position:relative;z-index:1">'+
-  /* 헤더 행: 브랜드 레이블 + 매장 날짜 */
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-  '<div style="display:flex;align-items:center;gap:6px">'+
-  '<div style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#C8A356,#D4B46E);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#0B1F3A\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'2\' y=\'3\' width=\'20\' height=\'14\' rx=\'2\'/><line x1=\'8\' y1=\'21\' x2=\'16\' y2=\'21\'/><line x1=\'12\' y1=\'17\' x2=\'12\' y2=\'21\'/></svg></div>'+
-  '<span style="font-size:9px;font-weight:800;color:rgba(200,163,86,.7);letter-spacing:1.8px;text-transform:uppercase">오늘 영업 현황</span>'+
-  '</div>'+
-  '<span id="hm-dot-hero" style="width:6px;height:6px;border-radius:50%;background:#C8A356;animation:_hpulse 2s infinite;flex-shrink:0;box-shadow:0 0 6px rgba(200,163,86,.5)"></span>'+
-  '</div>'+
-  /* 매출 수치 */
-  '<div id="hm-sales" style="font-size:36px;font-weight:900;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:#fff;line-height:1">₩ —</div>'+
-  /* 서브 스탯 3개 */
-  '<div style="display:flex;gap:0;margin-top:16px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px">'+
-  '<div style="flex:1;padding-right:16px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">주문 건수</div>'+
-  '<div id="hm-cnt" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
-  '<div style="flex:1;padding:0 16px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">평균 단가</div>'+
-  '<div id="hm-avg" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
-  '<div style="flex:1;padding-left:16px"><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">미처리 주문</div>'+
-  '<div id="hm-pending" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:#FB923C">—</div></div>'+
+  '<div style="font-size:9px;font-weight:800;color:rgba(200,163,86,.6);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:8px">오늘 매출</div>'+
+  '<div id="hm-sales" style="font-size:32px;font-weight:900;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:#fff;line-height:1;margin-bottom:14px">₩ —</div>'+
+  '<div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.08);padding-top:12px">'+
+  '<div style="flex:1;padding-right:10px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">주문</div>'+
+  '<div id="hm-cnt" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
+  '<div style="flex:1;padding:0 10px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">평균</div>'+
+  '<div id="hm-avg" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
+  '<div style="flex:1;padding-left:10px"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">미처리</div>'+
+  '<div id="hm-pending" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.3)">—</div></div>'+
   '</div></div></div>'+
+  /* 사이드: 직원 + 웨이팅 타일 */
+  '<div style="display:flex;flex-direction:column;gap:10px">'+
+  _hmTileHtml('hm-t-staff','직원','명')+
+  _hmTileHtml('hm-t-wait','대기','팀')+
+  '</div>'+
+  '</div>'+
+
+  /* 재고 배너 (full-width) */
+  '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--surface,#fff);border:1px solid var(--bd);border-radius:12px;margin-bottom:12px;transition:border-color .3s" id="hm-inv-banner">'+
+  '<div style="display:flex;align-items:center;gap:8px;color:var(--t3)">'+
+  _svgIcon('package','13')+
+  '<span style="font-size:12px;font-weight:700">재고 부족 <span id="hm-t-inv" style="font-weight:900;color:var(--t3)">0</span>개</span>'+
+  '</div>'+
+  '<button onclick="_filoGoPage(\'inventory\')" style="font-size:11px;color:var(--br,#c9a84c);background:none;border:none;cursor:pointer;font-weight:800;padding:4px 8px">확인 ›</button>'+
+  '</div>'+
 
   /* 업종별 퀵액션 */
   _qaHtml+
-
-  /* 타일 3개 */
-  '<div class="card-cascade" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
-  _hmTileHtml('hm-t-staff','직원 출근','명')+
-  _hmTileHtml('hm-t-wait','웨이팅 대기','팀')+
-  _hmTileHtml('hm-t-inv','재고 부족','개')+
-  '</div>'+
 
   /* 최근 주문 5개 */
   '<div class="card" style="margin-bottom:14px">'+
@@ -1077,7 +1076,13 @@ function _hmTileHtml(id,label,unit){
 function _hmTileSet(el,val,flag){
  if(!el)return;
  el.textContent=val;
- el.style.color=flag==='warn'&&val>0?'#ef4444':val===0?'var(--t3)':'var(--tx)';
+ var isWarn=flag==='warn'&&val>0;
+ el.style.color=isWarn?'#ef4444':val===0?'var(--t3)':'var(--tx)';
+ // inv 배너 테두리 색도 경고 시 변경
+ if(el.id==='hm-t-inv'){
+  var banner=document.getElementById('hm-inv-banner');
+  if(banner)banner.style.borderColor=isWarn?'rgba(239,68,68,.4)':'var(--bd)';
+ }
 }
 
 function _hmRenderPage(){

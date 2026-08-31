@@ -99,7 +99,7 @@ function _filoPageKiosk(el){
  var mode = _filoPosMode();
  // 모드 전환 버튼
  var modeBtn = '<button onclick="_filoPosSetMode(\''+( mode==='simple'?'pro':'simple' )+'\');_filoPageKiosk(document.getElementById(\'content\'))" '+
-   'style="padding:4px 12px;border-radius:20px;border:1px solid #ddd;font-size:11px;cursor:pointer;background:'+(mode==='simple'?'#0066ff':'#f1f5f9')+';color:'+(mode==='simple'?'#fff':'#333')+'">'+
+   'style="padding:6px 14px;border-radius:20px;border:1px solid var(--bd);font-size:11px;font-weight:700;cursor:pointer;background:var(--surface,#fff);color:var(--t2)">'+
    (mode==='simple'?'심플 모드':'프로 모드')+'</button>';
 
  // 모바일 하단 고정 결제 바 (기존 것 제거 후 재생성)
@@ -131,17 +131,18 @@ function _filoPageKiosk(el){
  '</div>'+
  '<div class="pos-wrap">'+
  '<div style="display:flex;flex-direction:column;overflow:hidden;min-height:0">'+
- '<div style="padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0" id="kiosk-cats"></div>'+
- '<div class="menu-grid" id="kiosk-menu">'+
+ '<div style="display:flex;height:100%;overflow:hidden;min-height:0">'+
+ '<div id="kiosk-cats" style="width:76px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--bd);display:flex;flex-direction:column;gap:3px;padding:8px 5px;background:var(--surface,#fff)"></div>'+
+ '<div class="menu-grid" id="kiosk-menu" style="flex:1;overflow-y:auto">'+
  '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3);display:flex;align-items:center;justify-content:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>메뉴 로딩 중...</div>'+
- '</div></div>'+
+ '</div></div></div>'+
  '<div class="cart-panel">'+
  '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900">주문 내역</div>'+
  '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
  '<div style="padding:14px 16px;border-top:1px solid var(--bd)">'+
  '<div style="display:flex;justify-content:space-between;margin-bottom:10px">'+
  '<span style="font-size:13px;font-weight:700">합계</span>'+
- '<span id="cart-total" style="font-size:18px;font-weight:900;color:#22c55e">₩0</span></div>'+
+ '<span id="cart-total" style="font-size:18px;font-weight:900;color:var(--br,#c9a84c)">₩0</span></div>'+
  '<button class="pay-btn" onclick="_filoPay()">결제하기</button>'+
  '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
  '</div></div></div>';
@@ -337,8 +338,8 @@ function _filoRenderKiosk(menus){
  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
  var catEl=document.getElementById('kiosk-cats');
  if(catEl){
- catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-sm" style="border-radius:100px;background:#c9a84c;color:#0f172a;font-weight:800;border:none">전체</button>'+
- cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:#F1F5F9;color:#475569;font-weight:700;border:1.5px solid rgba(0,0,0,.08)">'+c+'</button>';}).join('');
+ catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" style="padding:11px 4px;border-radius:10px;background:var(--br,#c9a84c);color:#fff;font-size:10px;font-weight:900;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">전체</button>'+
+ cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" style="padding:11px 4px;border-radius:10px;background:transparent;color:var(--t2);font-size:10px;font-weight:700;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">'+c+'</button>';}).join('');
  }
  var menuEl=document.getElementById('kiosk-menu');
  if(menuEl){
@@ -352,8 +353,8 @@ function _filoRenderKiosk(menus){
   :'<div style="width:40px;height:40px;border-radius:12px;background:'+_c+'1a;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:18px;font-weight:900;color:'+_c+';flex-shrink:0">'+_init+'</div>';
  return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="display:flex;flex-direction:column;align-items:stretch">'+
  _emIcon+
- '<div style="font-size:12px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word;color:#1a1a2e">'+esc(m.name)+'</div>'+
- '<div style="font-size:13px;font-weight:900;color:#059669;letter-spacing:-.3px;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
+ '<div style="font-size:12px;font-weight:800;margin-bottom:4px;letter-spacing:-.2px;line-height:1.35;word-break:keep-all;overflow-wrap:break-word;color:var(--tx)">'+esc(m.name)+'</div>'+
+ '<div style="font-size:13px;font-weight:900;color:var(--br,#c9a84c);letter-spacing:-.3px;margin-top:auto">₩'+m.price.toLocaleString()+'</div>'+
  (m.stock!=null?'<div style="font-size:9px;color:var(--t3);margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+'</div>';
  }).join('');
  }
@@ -365,8 +366,8 @@ function _filoRenderKioskSimple(menus){
  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
  var catEl=document.getElementById('kiosk-cats');
  if(catEl){
-  catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="btn btn-sm" style="border-radius:100px;background:#c9a84c;color:#0f172a;font-weight:800;border:none">전체</button>'+
-  cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" class="btn btn-sm" style="border-radius:100px;background:#F1F5F9;color:#475569;font-weight:700;border:1.5px solid rgba(0,0,0,.08)">'+c+'</button>';}).join('');
+  catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" style="padding:11px 4px;border-radius:10px;background:var(--br,#c9a84c);color:#fff;font-size:10px;font-weight:900;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">전체</button>'+
+  cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" style="padding:11px 4px;border-radius:10px;background:transparent;color:var(--t2);font-size:10px;font-weight:700;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">'+c+'</button>';}).join('');
  }
  var menuEl=document.getElementById('kiosk-menu');
  if(menuEl){
@@ -378,12 +379,12 @@ function _filoRenderKioskSimple(menus){
    var imgHtml=m.imageUrl
     ?'<img src="'+esc(m.imageUrl)+'" style="width:100%;height:88px;object-fit:cover;display:block;border-radius:14px 14px 0 0" loading="lazy" onerror="this.style.display=\'none\'">'
     :'<div style="width:100%;height:88px;border-radius:14px 14px 0 0;background:'+_c+'1a;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:'+_c+'">'+_init+'</div>';
-   return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;cursor:pointer;display:block">'+
+   return '<div class="menu-item pop-in stagger-'+Math.min(i+1,4)+'" data-cat="'+(m.category||'기타')+'" data-id="'+m._id+'" data-name="'+esc(m.name)+'" data-price="'+m.price+'" onclick="_cartAddFromEl(this)" style="background:var(--surface,#fff);border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;cursor:pointer;display:block">'+
    imgHtml+
    '<div style="padding:10px 12px 12px">'+
-   '<div style="font-size:14px;font-weight:800;color:#1a1a2e;line-height:1.35;margin-bottom:4px;word-break:keep-all">'+esc(m.name)+'</div>'+
-   '<div style="font-size:16px;font-weight:900;color:#059669">₩'+m.price.toLocaleString()+'</div>'+
-   (m.stock!=null?'<div style="font-size:10px;color:#94a3b8;margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+
+   '<div style="font-size:14px;font-weight:800;color:var(--tx);line-height:1.35;margin-bottom:4px;word-break:keep-all">'+esc(m.name)+'</div>'+
+   '<div style="font-size:16px;font-weight:900;color:var(--br,#c9a84c)">₩'+m.price.toLocaleString()+'</div>'+
+   (m.stock!=null?'<div style="font-size:10px;color:var(--t3);margin-top:3px;font-weight:700">재고 '+m.stock+'</div>':'')+
    '</div></div>';
   }).join('');
  }
@@ -392,11 +393,10 @@ function _filoRenderKioskSimple(menus){
 
 
 function _filoFilterKiosk(cat,btn){
- document.querySelectorAll('#kiosk-cats .btn').forEach(function(b){
-  b.style.background=b===btn?'#c9a84c':'#F1F5F9';
-  b.style.color=b===btn?'#0f172a':'#475569';
-  b.style.border=b===btn?'none':'1.5px solid rgba(0,0,0,.08)';
-  b.style.fontWeight=b===btn?'800':'700';
+ document.querySelectorAll('#kiosk-cats button').forEach(function(b){
+  b.style.background=b===btn?'rgba(201,168,76,.18)':'transparent';
+  b.style.color=b===btn?'var(--br,#c9a84c)':'var(--t2)';
+  b.style.fontWeight=b===btn?'900':'700';
  });
  /* pos-hidden 클래스로 토글 — display:flex!important CSS를 클래스로 우선 순위 확보 */
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
