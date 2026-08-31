@@ -21324,7 +21324,11 @@ function _doUpdateMapZones(){
   _markers = [];
   (window._polygons||[]).forEach(function(p){p.setMap(null);});
   window._polygons = [];
-  if(!window._zones||!window._zones.length) return;
+  if(!window._zones||!window._zones.length){
+    try{_map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);}catch(e){}
+    return;
+  }
+  try{_map.addOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);}catch(e){}
   window._zones.forEach(function(z){
     var pos = new kakao.maps.LatLng(z.lat, z.lng);
     var content = '<div style="background:rgba(0,212,170,.92);color:#000;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)">'+z.zipcode+' '+z.name+'</div>';
