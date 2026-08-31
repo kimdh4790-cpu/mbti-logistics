@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/*)",
+      "Bash(npm run *)",
+      "Bash(ls *)",
+      "Bash(cat drafts/*)",
+      "Read(data/*)",
+      "Read(drafts/*)",
+      "Read(input/*)",
+      "Write(drafts/*)",
+      "Write(data/*)"
+    ]
+  }
+}

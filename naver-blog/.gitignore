@@ -1,0 +1,7 @@
+node_modules/
+naver-profile/
+.env
+input/photos/_mosaic/
+drafts/*_screenshot.png
+drafts/*_dump.txt
+drafts/probe_dump.json

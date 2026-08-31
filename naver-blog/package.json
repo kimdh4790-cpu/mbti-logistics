@@ -1,0 +1,16 @@
+{
+  "name": "naver-blog-bot",
+  "version": "1.0.0",
+  "description": "FILO·DINE·DONWAY 네이버 블로그 자동 임시저장 툴",
+  "scripts": {
+    "login": "node scripts/naver_login.js",
+    "draft": "node scripts/naver_draft.js",
+    "probe": "node scripts/probe_selectors.js",
+    "mosaic": "node scripts/mosaic.js"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0",
+    "sharp": "^0.33.5",
+    "dotenv": "^16.4.5"
+  }
+}
