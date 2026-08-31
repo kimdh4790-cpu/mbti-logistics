@@ -46,15 +46,21 @@ const results = {
 };
 
 // ── 발행 차단 가드 (절대 규칙 2 — 코드로 보장) ──────────────────────────
+// 발행 패널 열기(태그용)는 허용, 실제 발행 확인 버튼만 차단
 async function installPublishGuard(page) {
   await page.evaluate(() => {
     const block = (e) => {
-      const btn = e.target.closest('button[data-testid="seOnePublishBtn"], [class*="publish"]');
+      // "발행하기" 최종 확인 버튼만 차단 (패널 열기 버튼은 통과)
+      const btn = e.target.closest(
+        'button[data-testid="seOnePublishDoneBtn"], ' +
+        'button[class*="publishDone"], ' +
+        'button[class*="publish-done"], ' +
+        'button[class*="publish-submit"]'
+      );
       if (btn) {
         e.stopImmediatePropagation();
         e.preventDefault();
-        console.warn('[PublishGuard] 발행 차단!');
-        alert('[자동화 안전장치] 발행은 사람이 직접 해주세요.');
+        console.warn('[PublishGuard] 발행 최종 확인 차단!');
       }
     };
     document.addEventListener('click', block, true);
@@ -279,21 +285,32 @@ async function inputVideo(page, videoInfo) {
 async function inputTags(page, tagList) {
   if (!tagList || tagList.length === 0) return;
 
-  // 발행 패널 열기 (태그 입력란이 여기 있음)
-  const publishBtn = await page.$('button[data-testid="seOnePublishBtn"], button:has-text("발행"), button[class*="publish"]');
-  if (!publishBtn) { console.warn('⚠️  발행 버튼 못 찾음 (태그 입력 실패)'); return; }
-  await publishBtn.click();
-  await page.waitForTimeout(1500);
+  // 1차: 에디터 하단 태그 입력란 직접 탐색 (패널 열기 불필요)
+  let tagInput = await page.$('input#tag-input, input[placeholder*="태그"], input[class*="tag-input"]');
 
-  // 태그 입력란
-  const tagInput = await page.$('input#tag-input, input[placeholder*="태그"], input[class*="tag"]');
-  if (!tagInput) { console.warn('⚠️  태그 입력란 못 찾음'); await page.press('Escape'); return; }
+  // 2차: 발행 패널 열기로 태그 입력란 접근
+  if (!tagInput) {
+    const publishBtn = await page.$(
+      'button[data-testid="seOnePublishBtn"], button:has-text("발행"), button[class*="publish"]'
+    ).catch(() => null);
+    if (publishBtn) {
+      await publishBtn.click();
+      await page.waitForTimeout(2000);
+      tagInput = await page.$('input#tag-input, input[placeholder*="태그"], input[class*="tag"]').catch(() => null);
+    }
+  }
+
+  if (!tagInput) {
+    console.warn('⚠️  태그 입력란 못 찾음 — 태그 수동 입력 필요');
+    await page.keyboard.press('Escape').catch(() => {});
+    return;
+  }
 
   let inserted = 0;
   for (const rawTag of tagList.slice(0, 30)) {
     const tag = rawTag.replace(/^#/, '').trim();
     if (!tag) continue;
-    await tagInput.click();
+    await tagInput.click().catch(() => {});
     await page.keyboard.insertText(tag);
     await page.waitForTimeout(200);
     await page.keyboard.press('Enter');
@@ -301,20 +318,18 @@ async function inputTags(page, tagList) {
     inserted++;
   }
 
-  // 검증: 칩 개수 세기 (#으로 나누는 방식)
   await page.waitForTimeout(500);
   const tagAreaText = await page.$eval('[class*="tag"]', el => el.textContent).catch(() => '');
   const chipCount = tagAreaText.split('#').length - 1;
   results.tags = { ok: chipCount > 0, count: chipCount || inserted };
 
-  // Escape로 패널만 닫기 (발행 버튼 절대 클릭 금지)
-  await page.keyboard.press('Escape');
+  // 패널 닫기 (발행 버튼 절대 클릭 금지)
+  await page.keyboard.press('Escape').catch(() => {});
   await page.waitForTimeout(500);
-  // dim 잔류 확인 및 제거
   await page.evaluate(() => {
-    const dim = document.querySelector('[class*="dim"][style*="block"], [class*="overlay"][style*="block"]');
-    if (dim) dim.style.display = 'none';
-  });
+    document.querySelectorAll('[class*="dim"][style*="block"], [class*="overlay"][style*="block"]')
+      .forEach(el => { if (el.style) el.style.display = 'none'; });
+  }).catch(() => {});
 }
 
 // ── 지도(플레이스) 첨부 ─────────────────────────────────────────────────
