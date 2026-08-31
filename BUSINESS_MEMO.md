@@ -179,3 +179,4 @@
 |---|---|
 | 2026-08-28 | 최초 생성 (기존 흩어진 비즈니스 정보 통합) |
 | 2026-08-28 | BEXCO 박람회 완료 → "박람회 이후 예정" 딱지 제거, 용차앱 저작권·벤처 인증 "진행 필요"로 상태 변경 |
+| 2026-08-31 | DONWAY 아이디지원 기능 3건 수정 (donway-pages/index.html): ① 인센티브 표시 추가 → 엑셀 freshIncAmt/addIncAmt 기준으로 비율 배분, 사유에 '인센티브 ₩X,XXX' 표기 ② 기타(+/-)/파손 사유 payload 누락 수정 (etcMinusReason·etcPlusReason·dmgReason 추가) ③ 사유 input oninput 핸들러 누락 수정 → autosave 트리거 연결 |
