@@ -82,14 +82,44 @@ async function clickBody(page) {
   await page.click('.se-section-text p.se-text-paragraph', { timeout: 15000 });
 }
 
+// ── 포맷 드롭다운 열기 (셀렉터 복수 시도) ──────────────────────────────
+async function openFormatDropdown(page) {
+  // Naver SE1 포맷 버튼 후보 순서대로 시도
+  const fmtSelectors = [
+    'button.se-text-format-toolbar-button',
+    'button[class*="se-text-format"]',
+    'button[class*="format-toolbar"]',
+    'button[data-name="textType"]',
+    '.se-toolbar button:first-child',
+  ];
+  for (const sel of fmtSelectors) {
+    const btn = await page.$(sel);
+    if (btn) {
+      await btn.click();
+      // 팝업 대기
+      const popup = await page.waitForSelector(
+        '.se-popup-list, [class*="se-popup"] ul, [class*="text-style"] ul',
+        { state: 'visible', timeout: 8000 }
+      ).catch(() => null);
+      if (popup) return popup;
+    }
+  }
+  return null;
+}
+
 // ── 소제목 블록 입력 ────────────────────────────────────────────────────
 async function inputSubtitle(page, content) {
   // 1. 포맷 드롭다운 열기
-  await page.click('button.se-text-format-toolbar-button');
-  await page.waitForSelector('.se-popup-list', { state: 'visible', timeout: 3000 });
+  const popup = await openFormatDropdown(page);
+  if (!popup) {
+    console.warn('⚠️  포맷 드롭다운 못 찾음 — 소제목 없이 본문으로 입력');
+    await insertText(page, content);
+    await page.keyboard.press('Enter');
+    return;
+  }
 
-  // 2. "소제목" 옵션 클릭 (텍스트 기준)
-  const items = await page.$$('.se-popup-list li');
+  // 2. "소제목" 옵션 클릭
+  const items = await page.$$('.se-popup-list li, [class*="se-popup"] ul li');
   let clicked = false;
   for (const item of items) {
     const txt = await item.textContent();
@@ -99,36 +129,50 @@ async function inputSubtitle(page, content) {
       break;
     }
   }
-  if (!clicked) await page.press('Escape');
+  if (!clicked) await page.keyboard.press('Escape');
 
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(400);
 
   // 3. 텍스트 입력
   await insertText(page, content);
   await page.keyboard.press('Enter');
 
-  // 4. 다음 블록은 본문으로 복귀
-  await page.click('button.se-text-format-toolbar-button');
-  await page.waitForSelector('.se-popup-list', { state: 'visible', timeout: 3000 }).catch(() => {});
-  const items2 = await page.$$('.se-popup-list li');
-  for (const item of items2) {
-    const txt = await item.textContent();
-    if (txt && (txt.includes('본문') || txt.includes('기본'))) {
-      await item.click();
-      break;
+  // 4. 본문으로 복귀
+  const popup2 = await openFormatDropdown(page);
+  if (popup2) {
+    const items2 = await page.$$('.se-popup-list li, [class*="se-popup"] ul li');
+    for (const item of items2) {
+      const txt = await item.textContent();
+      if (txt && (txt.includes('본문') || txt.includes('기본'))) {
+        await item.click();
+        break;
+      }
     }
   }
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(300);
   results.subtitles.ok++;
 }
 
 // ── 이미지 블록 입력 ────────────────────────────────────────────────────
 async function inputImage(page, block) {
-  // 툴바 사진 버튼
-  const imgBtn = await page.$('button[class*="se-photo"], button[class*="se-image"], button[title*="사진"]');
+  // 툴바 사진 버튼 (셀렉터 복수 시도)
+  const imgSelectors = [
+    'button[class*="se-photo"]',
+    'button[class*="se-image"]',
+    'button[title*="사진"]',
+    'button[aria-label*="사진"]',
+    'button[data-se-type*="photo"]',
+    'button[data-se-type*="image"]',
+    'button[class*="photo"]',
+  ];
+  let imgBtn = null;
+  for (const sel of imgSelectors) {
+    imgBtn = await page.$(sel);
+    if (imgBtn) break;
+  }
   if (!imgBtn) { console.warn('⚠️  사진 버튼 못 찾음 — probe_selectors로 확인하세요'); return; }
   await imgBtn.click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(800);
 
   // 팝업 내 "내 PC" or "파일 선택" 버튼
   const [fileChooser] = await Promise.all([
