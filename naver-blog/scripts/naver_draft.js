@@ -161,16 +161,68 @@ async function inputSubtitle(page, content) {
 }
 
 // ── 이미지 블록 입력 ────────────────────────────────────────────────────
-// Naver 에디터 이미지 업로드는 filechooser 인터셉트 불가 → 수동 추가 필요
+// 숨겨진 input[type=file]을 직접 찾아 setInputFiles()로 업로드
 async function inputImage(page, block) {
   const absPath = path.resolve(block.path);
-  console.warn(`⚠️  이미지 수동 추가 필요: ${block.path}`);
-  if (block.caption) console.warn(`    캡션: ${block.caption}`);
-  // 이미지 위치에 플레이스홀더 텍스트 삽입 (수동 교체용)
-  await page.click('.se-section-text p.se-text-paragraph', { timeout: 5000 }).catch(() => {});
-  await page.keyboard.insertText(`[이미지: ${path.basename(block.path)}]`);
-  await page.keyboard.press('Enter');
-  await page.waitForTimeout(200);
+  if (!fs.existsSync(absPath)) {
+    console.warn(`⚠️  이미지 파일 없음: ${absPath}`);
+    return;
+  }
+
+  // 이미지 툴바 버튼 클릭
+  const imgBtnSels = [
+    'button[class*="image"]:not([class*="video"]):not([class*="gif"])',
+    'button[title*="사진"]',
+    'button[aria-label*="사진"]',
+    'button[aria-label*="이미지"]',
+    '.se-toolbar button:nth-child(3)',
+  ];
+  let clicked = false;
+  for (const sel of imgBtnSels) {
+    const btn = await page.$(sel).catch(() => null);
+    if (btn) {
+      await btn.click().catch(() => {});
+      clicked = true;
+      break;
+    }
+  }
+
+  await page.waitForTimeout(800);
+
+  // 숨겨진 file input에 직접 파일 설정 (filechooser 이벤트 우회)
+  const fileInput = await page.$('input[type="file"]').catch(() => null);
+  if (fileInput) {
+    await fileInput.setInputFiles(absPath);
+    await page.waitForTimeout(3000);
+
+    // 삽입 확인 버튼
+    await page.click(
+      'button:has-text("확인"), button:has-text("삽입"), button[class*="confirm"], button[class*="ok"]'
+    ).catch(() => {});
+    await page.waitForTimeout(1000);
+
+    // 캡션 입력
+    if (block.caption) {
+      const captionInput = await page.$(
+        'input[placeholder*="캡션"], textarea[placeholder*="캡션"], [class*="caption"] input, [class*="caption"] textarea'
+      ).catch(() => null);
+      if (captionInput) {
+        await captionInput.click().catch(() => {});
+        await captionInput.fill(block.caption);
+        await page.waitForTimeout(300);
+      }
+    }
+    console.log(`  📸 이미지 업로드 완료: ${path.basename(block.path)}`);
+  } else {
+    // 파일 input 못 찾으면 플레이스홀더로 폴백
+    console.warn(`⚠️  file input 못 찾음 — 플레이스홀더 삽입: ${block.path}`);
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(300);
+    await page.click('.se-section-text p.se-text-paragraph', { timeout: 5000 }).catch(() => {});
+    await page.keyboard.insertText(`[이미지: ${path.basename(block.path)}]`);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+  }
 }
 
 // ── 동영상 업로드 ───────────────────────────────────────────────────────
