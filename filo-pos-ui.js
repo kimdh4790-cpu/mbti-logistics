@@ -55,10 +55,11 @@ function _offlineBanner(){
  var banner=document.getElementById('filo-offline-banner');
  if(!banner)return;
  // navigator.onLine은 부정확할 수 있으므로 실제 fetch로 연결 확인
+ // KV 정적 파일로 실제 연결 확인 (HEAD보다 GET이 Worker에서 안정적)
  var ctrl=new AbortController();
- var tid=setTimeout(function(){ctrl.abort();},3000);
- fetch('/?_='+Date.now(),{method:'HEAD',cache:'no-store',signal:ctrl.signal})
-  .then(function(){clearTimeout(tid);banner.hidden=true;})
+ var tid=setTimeout(function(){ctrl.abort();},8000);
+ fetch('/filo-common.js?_='+Date.now(),{cache:'no-store',signal:ctrl.signal})
+  .then(function(r){clearTimeout(tid);if(r.ok||r.status<500)banner.hidden=true;else _offlineBannerShow(banner);})
   .catch(function(){clearTimeout(tid);_offlineBannerShow(banner);});
 }
 // 초기 상태 반영 + 네트워크 변화 실시간 감지
