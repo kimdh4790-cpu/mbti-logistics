@@ -302,14 +302,19 @@ DONWAY 정산 자동화 — 기사 정산 완료
 
 | 항목 | 우선순위 | 방법 |
 |------|----------|------|
-| 바로고 Gorela API 파트너 신청 | 높음 | developer.gorelas.com → "주문 제휴사" 신청 |
-| 소진공 바우처 공고 북마크 | 높음 | sbiz.or.kr/smst → 12월 공고 캐치 후 2027년 1월 신청 |
-| 월 2.5만원 소상공인 플랜 설계 | 높음 | 바우처용 기능 제한판 요금제 기획 |
+| **[POS HW] Sunany Vicky 답장 발송** | 긴급 | kimdh4790@gmail.com → vicky@sunany.com / EU 플러그 확인 + FILO APK + 로고(1920×1080 JPG) |
+| **[POS HW] Sunany A100-156 샘플 주문 결제** | 높음 | Alibaba Trade Assurance ~$573 결제 |
+| **[POS HW] CARAV 견적 문의 이메일** | 높음 | vivien@carav.cn — Android11, RK3568, OEM 가능 여부 확인 |
+| **[POS HW] OCOM 견적 문의** | 중간 | info@ocominc.com — 스펙·MOQ·OEM 조건 문의 |
+| **[법무] 용차앱 저작권 등록** | 높음 | cros.or.kr — BUSINESS_MEMO.md ④항목 |
+| **[법무] 벤처기업 인증** | 높음 | 기보 부산지점 방문 신청 |
+| **[연동] 네이버 스마트플레이스 파트너 신청** | 중간 | partner.naver.com → POS 파트너 신청 (심사 수개월 걸림, 빨리 넣을수록 좋음) |
+| 바로고 Gorela API 파트너 신청 | 중간 | developer.gorelas.com → "주문 제휴사" 신청 |
+| 소진공 바우처 공고 북마크 | 중간 | sbiz.or.kr/smst → 12월 공고 캐치 후 2027년 1월 신청 |
 | 소진공 사전 문의 | 중간 | 042-363-6821 (등록 요건 구체적 확인) |
-| 네이버 스마트플레이스 파트너 신청 | 중간 | 네이버 파트너센터 신청 |
-| Sunany Vicky 회신 | 중간 | EU Type F 플러그 확인 + FILO APK + 로고(1920×1080 JPG) |
 | FCM 실폰 테스트 | 중간 | order-done.html QR 스캔 → 픽업 알림 수신 확인 |
 | Oracle SSH smoke 파이프라인 세팅 | 중간 | ssh opc@161.33.136.154 → GitHub webhook 설정 |
+| 월 2.5만원 소상공인 플랜 설계 | 낮음 | 바우처용 기능 제한판 요금제 기획 |
 | Playwright E2E 테스트 | 낮음 | 로컬에서만: node filo-e2e-test-win.js |
 | 재무제표 2024·2025년 발급 | 낮음 | 국세청 홈택스 발급 (바우처 신청 서류) |
 
