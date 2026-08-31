@@ -42,7 +42,7 @@ function _filoHotspotTip(){
 
 // ── 오프라인 상태 배너 ────────────────────────────────────────────────────────
 function _offlineBannerShow(banner){
- banner.hidden=false;
+ banner.style.display='flex';
  if(typeof _offlinePendingCount==='function'){
   _offlinePendingCount().then(function(n){
    var badge=document.getElementById('filo-pending-badge');
@@ -54,11 +54,11 @@ function _offlineBannerShow(banner){
 function _offlineBanner(){
  var banner=document.getElementById('filo-offline-banner');
  if(!banner)return;
- if(navigator.onLine){banner.hidden=true;}else{_offlineBannerShow(banner);}
+ if(navigator.onLine){banner.style.display='none';}else{_offlineBannerShow(banner);}
 }
-// 배너는 HTML에서 hidden으로 시작 — DOMContentLoaded 트리거 제거 (false positive 방지)
+// 배너는 display:none으로 시작 (hidden 속성 제거 — display:flex 인라인에 의해 무시됐던 버그 수정)
 // 실제 offline 이벤트에서만 표시, online 이벤트에서 즉시 숨김
-window.addEventListener('online',function(){var b=document.getElementById('filo-offline-banner');if(b)b.hidden=true;});
+window.addEventListener('online',function(){var b=document.getElementById('filo-offline-banner');if(b)b.style.display='none';});
 window.addEventListener('offline',_offlineBanner);
 
 function _filoReceiptSelected(input){
