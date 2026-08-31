@@ -11254,53 +11254,43 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
-        const apiKey   = env.ALIGO_KEY;
-        const userId   = env.ALIGO_USER_ID;
-        const senderKey = env.ALIGO_SENDER_KEY;
-        const sender   = env.ALIGO_SENDER || '05171133103';
-        if (!apiKey || !userId || !senderKey) {
-          return new Response(JSON.stringify({ ok: false, error: 'Aligo 키 없음 (ALIGO_KEY/ALIGO_USER_ID/ALIGO_SENDER_KEY 확인)' }), {
+        const solapiKey    = env.SOLAPI_KEY;
+        const solapiSecret = env.SOLAPI_SECRET;
+        const sender       = env.ALIGO_SENDER || '05171133103';
+        const PF_ID        = 'KA01PF260618094439788FzuY2GxDiSW';
+        if (!solapiKey || !solapiSecret) {
+          return new Response(JSON.stringify({ ok: false, error: 'Solapi 키 없음 (SOLAPI_KEY/SOLAPI_SECRET 확인)' }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
-        // 템플릿 본문 (Aligo 등록 텍스트와 일치해야 발송됨)
-        const nl = '\n';
-        const TPL_BODY = {
-          'KA01TP260618101225825DuJHXpoC4kY':
-            `안녕하세요, #{이름}님.${nl}${nl}#{고객회사명} #{월} 정산 명세서가 도착했습니다.${nl}${nl}아래 링크에서 확인하세요.${nl}#{명세서링크}${nl}${nl}정산 문의: #{담당자명} 대표${nl}☎ #{문의전화}${nl}${nl}모바일에서 확인해 주세요.`,
-          'KA01TP260623201919874SBFmHTNdNft':
-            `안녕하세요, #{이름}님.${nl}${nl}#{회사명} #{월} 급여명세서가 도착했습니다.${nl}실지급액: #{실지급}원${nl}${nl}명세서: #{명세서링크}${nl}${nl}문의사항은 관리자에게 연락해 주세요.`,
-          'KA01TP260623201607025LtxVxj2AoHI':
-            `[재고 발주 알림]${nl}#{내용}`
-        };
-        let tplBase = TPL_BODY[templateCode] || fallbackText || '';
-        if (variables) {
-          Object.entries(variables).forEach(([k, v]) => { tplBase = tplBase.split(k).join(String(v)); });
-        }
-        const msg = tplBase;
-        const params = new URLSearchParams({
-          apikey: apiKey,
-          userid: userId,
-          senderkey: senderKey,
-          tpl_code: templateCode || '',
-          sender: sender,
-          receiver_1: to.replace(/[^0-9]/g, ''),
-          message_1: msg,
-          cnt: '1'
-        });
-        if (fallbackText) {
-          params.set('failover', 'Y');
-          params.set('fmessage_1', fallbackText);
-          params.set('fsender_1', sender);
-          params.set('freceiver_1', to.replace(/[^0-9]/g, ''));
-        }
-        const aligoRes = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
+        // Solapi HMAC-SHA256 인증
+        const dt  = new Date().toISOString();
+        const sl  = Math.random().toString(36).slice(2);
+        const enc = new TextEncoder();
+        const ck  = await crypto.subtle.importKey('raw', enc.encode(solapiSecret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+        const sg  = await crypto.subtle.sign('HMAC', ck, enc.encode(dt + sl));
+        const sig = Array.from(new Uint8Array(sg)).map(b => b.toString(16).padStart(2,'0')).join('');
+        const solapiRes = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params.toString()
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `HMAC-SHA256 apiKey=${solapiKey}, date=${dt}, salt=${sl}, signature=${sig}`
+          },
+          body: JSON.stringify({
+            messages: [{
+              to: to.replace(/[^0-9]/g, ''),
+              from: sender,
+              kakaoOptions: {
+                pfId: PF_ID,
+                templateId: templateCode || '',
+                variables: variables || {},
+                disableSms: false
+              }
+            }]
+          })
         });
-        const result = await aligoRes.json();
-        const ok = result.result_code == 1;
+        const result = await solapiRes.json();
+        const ok = !result.errorCode;
         return new Response(JSON.stringify({ ok, result }), {
           headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
         });
