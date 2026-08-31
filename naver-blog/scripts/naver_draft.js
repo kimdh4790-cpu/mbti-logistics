@@ -84,8 +84,9 @@ async function insertText(page, text) {
 }
 
 // ── 본문 클릭 (제목 오염 방지 — 본문 전용 셀렉터) ──────────────────────
+// force:true — SVG 캐럿 레이어가 포인터 이벤트를 가로막는 경우 우회
 async function clickBody(page) {
-  await page.click('.se-section-text p.se-text-paragraph', { timeout: 15000 });
+  await page.click('.se-section-text p.se-text-paragraph', { force: true, timeout: 15000 });
 }
 
 // ── 포맷 드롭다운 열기 (셀렉터 복수 시도) ──────────────────────────────
