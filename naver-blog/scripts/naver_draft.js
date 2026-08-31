@@ -336,13 +336,33 @@ async function inputPlace(page, placeInfo) {
     timeout: 60000,
   });
 
-  // 로그인 체크
+  // 로그인 체크 — 필요하면 로그인 페이지로 이동 후 자동 감지
   const currentUrl = page.url();
-  console.log('🌐 현재 URL:', currentUrl);
-  if (currentUrl.includes('nidlogin') || currentUrl.includes('nid.naver.com') || currentUrl.includes('/login')) {
-    console.error('❌ 로그인 안 됨. npm run login 먼저 실행하세요.');
-    await context.close();
-    process.exit(1);
+  const needLogin = currentUrl.includes('nidlogin') || currentUrl.includes('nid.naver.com') || currentUrl.includes('/login');
+  if (needLogin) {
+    console.log('🔑 로그인 필요 — 브라우저에서 네이버 로그인을 완료해 주세요...');
+    await page.goto('https://nid.naver.com/nidlogin.login', { waitUntil: 'networkidle' });
+    let loggedIn = false;
+    for (let i = 0; i < 36; i++) {
+      await page.waitForTimeout(5000);
+      const url = page.url();
+      if (!url.includes('nid.naver.com') && !url.includes('nidlogin')) {
+        loggedIn = true;
+        break;
+      }
+      process.stdout.write(`\r   ⏳ 대기 중... (${(i + 1) * 5}초)`);
+    }
+    console.log('');
+    if (!loggedIn) {
+      console.error('❌ 3분 내에 로그인이 감지되지 않았습니다.');
+      await context.close();
+      process.exit(1);
+    }
+    console.log('✅ 로그인 감지 — 에디터로 이동 중...');
+    await page.goto(`https://blog.naver.com/PostWriteForm.naver?blogId=${BLOG_ID}`, {
+      waitUntil: 'networkidle',
+      timeout: 60000,
+    });
   }
 
   // 발행 차단 가드 설치 (절대 규칙 2)
