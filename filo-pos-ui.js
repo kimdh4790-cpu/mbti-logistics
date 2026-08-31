@@ -869,99 +869,244 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
 
 
 
-// ── 고객 확인 화면 (양면 POS — 고객이 볼 수 있는 주문 현황) ─────────────────────
+// ── 고객 확인 화면 (양면 POS — 터치/비터치·결제 방식 선택) ───────────────────────
+var _posCustMode=false;
+var _posCustTouchMode=false;
+var _posCustTab='order';      // 'order'|'menu'
+var _posCustPayState=null;    // null|'card'|'cash'|'qr'
+var _posCustTimer=null;
+
 function _posCustomerDisplay(){
- var el=document.getElementById('pos-cust-disp');if(el){el.remove();_posCustMode=false;_posCustSyncStop();return;}
+ var el=document.getElementById('pos-cust-disp');
+ if(el){el.remove();_posCustMode=false;_posCustTouchMode=false;_posCustTab='order';_posCustPayState=null;_posCustSyncStop();return;}
  _posCustMode=true;
  var overlay=document.createElement('div');
  overlay.id='pos-cust-disp';
  overlay.style.cssText='position:fixed;inset:0;z-index:850;background:#050e1a;display:flex;flex-direction:column;font-family:Pretendard,-apple-system,sans-serif;color:#e2e8f0;overflow:hidden';
 
- var tbl=window._selectedTableName||'';
- var tblLabel=tbl?tbl+' 주문':'주문 내역';
+ var hdr=document.createElement('div');hdr.id='cust-hdr';
+ hdr.style.cssText='flex-shrink:0;padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06);background:#060f1f';
 
- // 헤더
- var hdr=document.createElement('div');
- hdr.style.cssText='flex-shrink:0;padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between';
- hdr.innerHTML='<div>'+
-  '<div style="font-size:11px;font-weight:900;letter-spacing:2px;color:#475569;text-transform:uppercase;margin-bottom:4px">CUSTOMER DISPLAY</div>'+
-  '<div style="font-size:18px;font-weight:900;color:#e2e8f0">'+tblLabel+'</div>'+
-  '</div>'+
-  '<button id="cust-close" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;padding:8px 16px;display:flex;align-items:center;gap:6px">'+
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>닫기</button>';
+ var tabBar=document.createElement('div');tabBar.id='cust-tabbar';
+ tabBar.style.cssText='flex-shrink:0;display:none;border-bottom:1px solid rgba(255,255,255,.06);background:#060f1f';
 
- // 주문 목록 영역
- var listWrap=document.createElement('div');
- listWrap.style.cssText='flex:1;overflow-y:auto;padding:20px 24px';
- listWrap.id='cust-item-list';
+ var content=document.createElement('div');content.id='cust-content';
+ content.style.cssText='flex:1;overflow-y:auto;padding:20px';
 
- // 합계 바
- var foot=document.createElement('div');
- foot.style.cssText='flex-shrink:0;padding:20px 24px 32px;border-top:1px solid rgba(255,255,255,.08);background:#0a1628';
- foot.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-end">'+
-  '<div>'+
-  '<div id="cust-item-count" style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px">0개 항목</div>'+
-  '<div style="font-size:13px;color:#64748b">합계</div>'+
-  '</div>'+
-  '<div id="cust-total" style="font-size:38px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px">₩0</div>'+
-  '</div>'+
-  '<div style="margin-top:16px;padding:14px 18px;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.2);border-radius:12px;text-align:center">'+
-  '<div style="font-size:12px;color:#94a3b8">메뉴를 선택하시면 직원이 바로 처리해 드립니다</div>'+
-  '</div>';
+ var foot=document.createElement('div');foot.id='cust-foot';
+ foot.style.cssText='flex-shrink:0;border-top:1px solid rgba(255,255,255,.08);background:#0a1628';
 
- overlay.appendChild(hdr);
- overlay.appendChild(listWrap);
- overlay.appendChild(foot);
+ overlay.appendChild(hdr);overlay.appendChild(tabBar);overlay.appendChild(content);overlay.appendChild(foot);
  document.body.appendChild(overlay);
 
- overlay.querySelector('#cust-close').onclick=function(){overlay.remove();_posCustMode=false;_posCustSyncStop();};
-
+ _posCustBuildHeader();
+ _posCustBuildFoot();
  _posCustRender();
  _posCustSyncStart();
 }
 
-var _posCustMode=false;
-var _posCustTimer=null;
-
-function _posCustSyncStart(){
- _posCustTimer=setInterval(_posCustRender,300);
+function _posCustBuildHeader(){
+ var hdr=document.getElementById('cust-hdr');if(!hdr)return;
+ var tbl=window._selectedTableName||'';
+ var tblLabel=tbl?tbl+' 주문':'주문 내역';
+ var payBtn=_posCustPayState?'<button id="cust-pay-confirm" style="background:#22c55e;border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;padding:9px 16px;white-space:nowrap">결제완료</button>':'';
+ hdr.innerHTML=
+  '<div style="flex:1;min-width:0">'+
+  '<div style="font-size:10px;font-weight:900;letter-spacing:2px;color:#334155;text-transform:uppercase;margin-bottom:2px">CUSTOMER DISPLAY</div>'+
+  '<div style="font-size:15px;font-weight:900;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(tblLabel)+'</div>'+
+  '</div>'+
+  payBtn+
+  '<button id="cust-touch-toggle" style="background:'+(_posCustTouchMode?'rgba(201,168,76,.2)':'rgba(255,255,255,.07)')+';border:1px solid '+(_posCustTouchMode?'rgba(201,168,76,.5)':'rgba(255,255,255,.1)')+';border-radius:10px;color:'+(_posCustTouchMode?'#c9a84c':'#64748b')+';font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">'+(_posCustTouchMode?'터치 ON':'터치 OFF')+'</button>'+
+  '<button id="cust-close" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">닫기</button>';
+ var overlay=document.getElementById('pos-cust-disp');
+ var tog=document.getElementById('cust-touch-toggle');
+ if(tog)tog.onclick=function(){
+  _posCustTouchMode=!_posCustTouchMode;_posCustTab='order';
+  _posCustBuildHeader();
+  var tb=document.getElementById('cust-tabbar');
+  if(tb){tb.style.display=_posCustTouchMode?'flex':'none';if(_posCustTouchMode)_posCustBuildTabBar();}
+  _posCustRender();_posCustBuildFoot();
+ };
+ var cl=document.getElementById('cust-close');
+ if(cl)cl.onclick=function(){if(overlay)overlay.remove();_posCustMode=false;_posCustTouchMode=false;_posCustTab='order';_posCustPayState=null;_posCustSyncStop();};
+ var pc=document.getElementById('cust-pay-confirm');
+ if(pc)pc.onclick=function(){_posCustConfirmPay();};
 }
-function _posCustSyncStop(){
- if(_posCustTimer){clearInterval(_posCustTimer);_posCustTimer=null;}
+
+function _posCustBuildTabBar(){
+ var tb=document.getElementById('cust-tabbar');if(!tb)return;
+ tb.style.cssText='flex-shrink:0;display:flex;border-bottom:1px solid rgba(255,255,255,.06);background:#060f1f';
+ var oAct=_posCustTab==='order';
+ tb.innerHTML=
+  '<button id="ctab-order" style="flex:1;padding:14px;background:none;border:none;border-bottom:2px solid '+(oAct?'#c9a84c':'transparent')+';color:'+(oAct?'#c9a84c':'#64748b')+';font-size:14px;font-weight:800;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif">주문내역</button>'+
+  '<button id="ctab-menu" style="flex:1;padding:14px;background:none;border:none;border-bottom:2px solid '+(!oAct?'#c9a84c':'transparent')+';color:'+(!oAct?'#c9a84c':'#64748b')+';font-size:14px;font-weight:800;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif">메뉴선택</button>';
+ var to=document.getElementById('ctab-order');
+ var tm=document.getElementById('ctab-menu');
+ if(to)to.onclick=function(){_posCustTab='order';_posCustBuildTabBar();_posCustRender();};
+ if(tm)tm.onclick=function(){_posCustTab='menu';_posCustBuildTabBar();_posCustRender();};
 }
 
-function _posCustRender(){
- var listEl=document.getElementById('cust-item-list');
- var totalEl=document.getElementById('cust-total');
- var countEl=document.getElementById('cust-item-count');
- if(!listEl)return;
+function _posCustBuildFoot(){
+ var foot=document.getElementById('cust-foot');if(!foot)return;
  var items=window._cartItems||[];
- if(!items.length){
-  listEl.innerHTML='<div style="text-align:center;padding:60px 20px;color:#334155">'+
-   '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'+
-   '<div style="font-size:16px;color:#475569;font-weight:700">선택된 메뉴가 없습니다</div></div>';
-  if(totalEl)totalEl.textContent='₩0';
-  if(countEl)countEl.textContent='0개 항목';
-  return;
- }
  var total=items.reduce(function(s,c){return s+c.price*c.qty;},0);
  var disc=window._posDiscount||0;
  var finalTotal=Math.max(0,total-disc);
  var totalQty=items.reduce(function(s,c){return s+c.qty;},0);
- listEl.innerHTML=items.map(function(c){
-  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-   '<div style="flex:1">'+
-   '<div style="font-size:16px;font-weight:800;color:#e2e8f0;margin-bottom:4px">'+esc(c.name)+'</div>'+
-   '<div style="font-size:13px;color:#64748b">₩'+c.price.toLocaleString()+' × '+c.qty+'</div>'+
-   '</div>'+
-   '<div style="font-size:18px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums">₩'+(c.price*c.qty).toLocaleString()+'</div>'+
+ var payArea='';
+ if(_posCustPayState==='card'){
+  payArea='<div style="text-align:center;padding:13px;background:rgba(59,130,246,.12);border-radius:12px;border:1px solid rgba(59,130,246,.3);margin-top:12px">'+
+   '<div style="font-size:15px;font-weight:800;color:#60a5fa;margin-bottom:3px">카드 단말기에 카드를 올려주세요</div>'+
+   '<div style="font-size:12px;color:#94a3b8">결제 승인 대기 중 — 직원이 확인 후 완료 처리합니다</div></div>';
+ }else if(_posCustPayState==='cash'){
+  payArea='<div style="text-align:center;padding:13px;background:rgba(34,197,94,.1);border-radius:12px;border:1px solid rgba(34,197,94,.3);margin-top:12px">'+
+   '<div style="font-size:15px;font-weight:800;color:#4ade80;margin-bottom:3px">현금 결제 대기 중</div>'+
+   '<div style="font-size:12px;color:#94a3b8">현금 ₩'+finalTotal.toLocaleString()+' 준비 후 직원에게 전달해 주세요</div></div>';
+ }else if(_posCustPayState==='qr'){
+  payArea='<div style="text-align:center;padding:13px;background:rgba(168,85,247,.1);border-radius:12px;border:1px solid rgba(168,85,247,.3);margin-top:12px">'+
+   '<div style="font-size:15px;font-weight:800;color:#c084fc;margin-bottom:8px">QR 코드 결제</div>'+
+   '<canvas id="cust-qr-canvas" width="130" height="130" style="display:block;margin:0 auto 8px;border-radius:8px;background:#fff"></canvas>'+
+   '<div style="font-size:12px;color:#94a3b8">카카오페이·네이버페이 QR 스캔 또는 직원에게 문의</div></div>';
+ }else{
+  payArea='<div style="display:flex;gap:8px;margin-top:12px">'+
+   '<button id="cust-pay-card" style="flex:1;padding:11px 8px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:12px;color:#60a5fa;font-size:12px;font-weight:800;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif;line-height:1.4">카드 단말기<br><span style="font-size:10px;font-weight:600;opacity:.7">단말기 결제</span></button>'+
+   '<button id="cust-pay-cash" style="flex:1;padding:11px 8px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:12px;color:#4ade80;font-size:12px;font-weight:800;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif;line-height:1.4">현금<br><span style="font-size:10px;font-weight:600;opacity:.7">현금 결제</span></button>'+
+   '<button id="cust-pay-qr" style="flex:1;padding:11px 8px;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);border-radius:12px;color:#c084fc;font-size:12px;font-weight:800;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif;line-height:1.4">QR 결제<br><span style="font-size:10px;font-weight:600;opacity:.7">카카오페이 등</span></button>'+
    '</div>';
- }).join('')+
- (disc>0?'<div style="display:flex;justify-content:space-between;padding:12px 0;color:#f87171">'+
-  '<span style="font-size:14px;font-weight:700">할인</span>'+
-  '<span style="font-size:16px;font-weight:900">-₩'+disc.toLocaleString()+'</span></div>':'');
- if(totalEl)totalEl.textContent='₩'+finalTotal.toLocaleString();
- if(countEl)countEl.textContent=totalQty+'개 항목 선택됨';
+ }
+ var cancelBtn=_posCustPayState?'<button id="cust-pay-cancel" style="margin-top:8px;width:100%;padding:9px;background:none;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#475569;font-size:13px;font-weight:700;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif">결제 취소</button>':'';
+ foot.innerHTML='<div style="padding:14px 18px 26px">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'+
+  '<span style="font-size:13px;color:#64748b;font-weight:700">'+totalQty+'개 항목 선택됨</span>'+
+  '<div style="text-align:right">'+
+  (disc>0?'<div style="font-size:12px;color:#f87171;margin-bottom:1px">할인 -₩'+disc.toLocaleString()+'</div>':'')+
+  '<span style="font-size:32px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px">₩'+finalTotal.toLocaleString()+'</span>'+
+  '</div></div>'+
+  payArea+cancelBtn+'</div>';
+ if(_posCustPayState==='qr'){
+  setTimeout(function(){
+   var cv=document.getElementById('cust-qr-canvas');if(!cv)return;
+   var ctx=cv.getContext('2d');
+   ctx.fillStyle='#fff';ctx.fillRect(0,0,130,130);
+   ctx.fillStyle='#111';
+   for(var r=0;r<13;r++)for(var c=0;c<13;c++){
+    var skip=(r<7&&c<7)||(r<7&&c>5)||(r>5&&c<7);
+    if(!skip&&((r*11+c*7+r+c)%2===0))ctx.fillRect(c*10,r*10,9,9);
+   }
+   function fp(x,y){ctx.fillStyle='#111';ctx.fillRect(x,y,60,60);ctx.fillStyle='#fff';ctx.fillRect(x+8,y+8,44,44);ctx.fillStyle='#111';ctx.fillRect(x+16,y+16,28,28);}
+   fp(0,0);fp(70,0);fp(0,70);
+  },40);
+ }
+ var pb=document.getElementById('cust-pay-card');if(pb)pb.onclick=function(){_posCustRequestPay('card');};
+ var pbc=document.getElementById('cust-pay-cash');if(pbc)pbc.onclick=function(){_posCustRequestPay('cash');};
+ var pbq=document.getElementById('cust-pay-qr');if(pbq)pbq.onclick=function(){_posCustRequestPay('qr');};
+ var pcn=document.getElementById('cust-pay-cancel');if(pcn)pcn.onclick=function(){_posCustCancelPay();};
+}
+
+function _posCustRequestPay(method){
+ if(!(window._cartItems||[]).length){_filoToast('주문 내역이 없습니다');return;}
+ _posCustPayState=method;_posCustBuildFoot();_posCustBuildHeader();
+}
+function _posCustCancelPay(){
+ _posCustPayState=null;_posCustBuildFoot();_posCustBuildHeader();
+}
+function _posCustConfirmPay(){
+ var items=window._cartItems||[];if(!items.length){_filoToast('주문 내역이 없습니다');return;}
+ var total=items.reduce(function(s,c){return s+c.price*c.qty;},0);
+ var disc=window._posDiscount||0;var finalTotal=Math.max(0,total-disc);
+ var did=window._curDealerId||'';
+ var tableNum=window._selectedTableNum||0;
+ var tableName=window._selectedTableName||'';
+ var method=_posCustPayState==='card'?'card':_posCustPayState==='qr'?'kakao':'cash';
+ var overlay=document.getElementById('pos-cust-disp');
+ if(overlay)overlay.remove();
+ _posCustMode=false;_posCustTouchMode=false;_posCustTab='order';_posCustPayState=null;_posCustSyncStop();
+ _filoTablePay(did,items,finalTotal,tableNum,tableName,method,[]);
+}
+
+function _posCustSyncStart(){
+ _posCustTimer=setInterval(function(){
+  if(!document.getElementById('pos-cust-disp')){_posCustSyncStop();return;}
+  _posCustRender();_posCustBuildFoot();
+ },400);
+}
+function _posCustSyncStop(){if(_posCustTimer){clearInterval(_posCustTimer);_posCustTimer=null;}}
+
+function _posCustRender(){
+ var content=document.getElementById('cust-content');if(!content)return;
+ if(_posCustTouchMode&&_posCustTab==='menu'){_posCustRenderMenu(content);}
+ else{_posCustRenderOrder(content);}
+}
+
+function _posCustRenderOrder(content){
+ var items=window._cartItems||[];
+ if(!items.length){
+  content.innerHTML='<div style="text-align:center;padding:60px 20px;color:#334155">'+
+   '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'+
+   '<div style="font-size:16px;color:#475569;font-weight:700">선택된 메뉴가 없습니다</div>'+
+   (_posCustTouchMode?'<div style="font-size:13px;color:#334155;margin-top:8px">위 메뉴선택 탭을 눌러 주문하세요</div>':'')+
+   '</div>';return;
+ }
+ content.innerHTML=items.map(function(c){
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+   '<div style="flex:1;min-width:0">'+
+   '<div style="font-size:16px;font-weight:800;color:#e2e8f0;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.name)+'</div>'+
+   '<div style="font-size:13px;color:#64748b">₩'+c.price.toLocaleString()+' × '+c.qty+'</div></div>'+
+   '<div style="display:flex;align-items:center;gap:10px">'+
+   (_posCustTouchMode?
+    '<div style="display:flex;align-items:center;gap:8px">'+
+    '<button onclick="_posCustChangeQty(\''+esc(c.id)+'\',-1)" style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
+    '<span style="font-size:16px;font-weight:800;min-width:18px;text-align:center">'+c.qty+'</span>'+
+    '<button onclick="_posCustChangeQty(\''+esc(c.id)+'\',1)" style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'+
+    '</div>':'')+
+   '<div style="font-size:18px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;white-space:nowrap">₩'+(c.price*c.qty).toLocaleString()+'</div></div>'+
+   '</div>';
+ }).join('');
+}
+
+function _posCustRenderMenu(content){
+ var menus=window._kioskMenus||[];
+ if(!menus.length){
+  content.innerHTML='<div style="text-align:center;padding:60px 20px"><div style="font-size:15px;color:#475569;font-weight:700">메뉴를 불러오는 중...</div></div>';return;
+ }
+ var groups={};var order=[];
+ menus.forEach(function(m){var cat=m.category||'기타';if(!groups[cat]){groups[cat]=[];order.push(cat);}groups[cat].push(m);});
+ var html='';
+ order.forEach(function(cat){
+  html+='<div style="margin-bottom:20px"><div style="font-size:11px;font-weight:900;letter-spacing:1px;color:#475569;text-transform:uppercase;margin-bottom:10px">'+esc(cat)+'</div>'+
+   '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">';
+  groups[cat].forEach(function(m){
+   var imgBg=m.imageUrl?'background-image:url('+esc(m.imageUrl)+');background-size:cover;background-position:center':'background:#1e293b';
+   html+='<div onclick="_posCustAddItem(\''+esc(m.id)+'\')" style="border-radius:12px;overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,.08)">'+
+    '<div style="height:80px;'+imgBg+'"></div>'+
+    '<div style="padding:8px 10px 10px">'+
+    '<div style="font-size:12px;font-weight:800;color:#e2e8f0;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
+    '<div style="font-size:13px;font-weight:900;color:#c9a84c">₩'+Number(m.price||0).toLocaleString()+'</div></div></div>';
+  });
+  html+='</div></div>';
+ });
+ content.innerHTML=html;
+}
+
+function _posCustAddItem(menuId){
+ var menus=window._kioskMenus||[];
+ var m=menus.find(function(x){return x.id===menuId;});if(!m)return;
+ var items=window._cartItems||[];
+ var ex=items.find(function(x){return x.id===menuId;});
+ if(ex){ex.qty++;}else{items.push({id:m.id,name:m.name,price:Number(m.price||0),qty:1});}
+ window._cartItems=items;
+ _posCustTab='order';_posCustBuildTabBar();_posCustRender();_posCustBuildFoot();
+ if(typeof _filoRenderCart==='function')_filoRenderCart();
+}
+
+function _posCustChangeQty(itemId,delta){
+ var items=window._cartItems||[];
+ var idx=items.findIndex(function(x){return x.id===itemId;});if(idx<0)return;
+ items[idx].qty+=delta;
+ if(items[idx].qty<=0)items.splice(idx,1);
+ window._cartItems=items;
+ _posCustRender();_posCustBuildFoot();
+ if(typeof _filoRenderCart==='function')_filoRenderCart();
 }
 
 // 결제 완료 처리
