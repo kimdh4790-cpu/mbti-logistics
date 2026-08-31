@@ -293,7 +293,23 @@ function _filoPageKiosk(el){
   });
   menus.sort(function(a,b){return (a.category||'').localeCompare(b.category||'');});
   window._kioskMenus=menus;
-  if(typeof _offlineCacheMenus==='function')_offlineCacheMenus(menus,did);
+  // 빈 배열로 캐시 덮어쓰기 방지 (오프라인 시 Firestore가 빈 배열 반환 가능)
+  if(menus.length>0&&typeof _offlineCacheMenus==='function')_offlineCacheMenus(menus,did);
+  // 오프라인 + Firestore가 빈 배열 반환 시 우리 캐시 시도
+  if(menus.length===0&&typeof _offlineGetMenus==='function'&&!navigator.onLine){
+   _offlineGetMenus(did).then(function(cached){
+    if(cached&&cached.length){
+     _filoToast('오프라인 — 캐시 메뉴로 표시합니다');
+     window._kioskMenus=cached;
+     if(_filoPosMode()==='simple')_filoRenderKioskSimple(cached);
+     else _filoRenderKiosk(cached);
+    } else {
+     if(_filoPosMode()==='simple')_filoRenderKioskSimple([]);
+     else _filoRenderKiosk([]);
+    }
+   });
+   return;
+  }
   if(_filoPosMode()==='simple') _filoRenderKioskSimple(menus);
   else _filoRenderKiosk(menus);
  }).catch(function(e){
