@@ -2177,6 +2177,13 @@ function parseCoupangExcel(inp){
 
 
 // ── 카카오 알림톡 발송 ──
+async function _alimtalkFetch(payload){
+  var headers={'Content-Type':'application/json'};
+  if(_auth&&_auth.currentUser){
+    try{var tk=await _auth.currentUser.getIdToken();if(tk)headers['Authorization']='Bearer '+tk;}catch(e){}
+  }
+  return fetch('/api/send-alimtalk',{method:'POST',headers:headers,body:JSON.stringify(payload)});
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📧 Resend 이메일 발송
@@ -16339,8 +16346,7 @@ async function _sendPayslip(uid, name, ym, payData) {
     if(phone){
       var coName=(window._cachedCompanyDoc&&window._cachedCompanyDoc.companyName)||'';
       var stmtLink='https://donway.ai.kr/stmt?uid='+uid+'&ym='+ym;
-      await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
+      await _alimtalkFetch({
           to:phone.replace(/[^0-9]/g,''),
           templateCode:'KA01TP260623201919874SBFmHTNdNft',
           variables:{
@@ -16354,8 +16360,7 @@ async function _sendPayslip(uid, name, ym, payData) {
             '#{연락처}':(window._cachedCompanyDoc&&window._cachedCompanyDoc.settlementPhone)||'051-711-3103'
           },
           fallbackText:'['+coName+'] '+ym+' 급여명세서\n'+name+'님 실수령액: '+fmt(payData.netPay)+'원\n확인: '+stmtLink
-        })
-      }).catch(function(){});
+        }).catch(function(){});
     }
     return true;
   } catch(e){console.warn('payslip send:',e.message);return false;}
@@ -16990,8 +16995,7 @@ async function _msgSendAll() {
         var tpl=ALIMTALK_TEMPLATES[tplKey];
         if(tpl&&tpl.code){
           // fallbackText 포함 → 톡 실패 시 SMS 자동 대체 (disableSms:false)
-          var kRes=await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({to:r.phone,templateCode:tpl.code,
+          var kRes=await _alimtalkFetch({to:r.phone,templateCode:tpl.code,
               variables:{
                 '#{이름}': r.name||'',
                 '#{회사명}': coName,
@@ -16999,7 +17003,7 @@ async function _msgSendAll() {
                 '#{월}': new Date().toISOString().slice(0,7)
               },
               fallbackText:msg
-            })});
+            });
           var kData=await kRes.json();
           ok++;
         } else {
@@ -17317,10 +17321,7 @@ function _sendInventoryAlert(did, item) {
       +'현재재고: '+item.stock+'개 (최소 '+item.minStock+'개)'+String.fromCharCode(10)
       +'발주일시: '+new Date().toLocaleString('ko-KR');
 
-    fetch('/api/send-alimtalk', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
+    _alimtalkFetch({
         to: item.supplierPhone,
         templateCode: 'KA01TP260623201607025LtxVxj2AoHI',
         variables: {
@@ -17332,9 +17333,8 @@ function _sendInventoryAlert(did, item) {
           '#{연락처}': (window._cachedCompanyDoc&&window._cachedCompanyDoc.settlementPhone)||'051-711-3103'
         },
         fallbackText: orderMsg
-      })
-    }).then(function(r){ return r.json(); })
-      .then(function(r){ 
+      }).then(function(r){ return r.json(); })
+      .then(function(r){
         if(r.ok) toast('📦 '+item.supplierName+' 발주 알림톡 발송 완료');
       }).catch(function(){});
 
@@ -20568,11 +20568,10 @@ window._payrollBulkAlimtalk=function(rows){
       // stmt 생성 후 발송
       var stmtRef=_db.collection('statement_share').doc();
       stmtRef.set({dealerId:did,userId:r.uid,name:r.name,month:ym,netPay:r.net,details:{days:r.days,hours:r.hours,lateCount:r.lateCount,earlyCount:r.earlyCount,lateDed:r.lateDed||0,earlyDed:r.earlyDed||0},createdAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){
-        fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',
+        _alimtalkFetch({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',
             variables:{'#{회사명}':coName,'#{이름}':r.name,'#{월}':ym,'#{실지급}':r.net.toLocaleString(),'#{명세서링크}':stmtRef.id},
             fallbackText:'['+coName+'] '+r.name+'님 '+ym+' 급여: '+r.net.toLocaleString()+'원'})
-        }).then(function(){sent++;doNext(i+1);}).catch(function(){failed++;doNext(i+1);});
+          .then(function(){sent++;doNext(i+1);}).catch(function(){failed++;doNext(i+1);});
       });
     }).catch(function(){failed++;doNext(i+1);});
   }
@@ -24292,7 +24291,11 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
     var fallbackText='['+coName+'] '+name+'님 '+month+' 정산명세서'+nl+'실지급: ₩'+Math.round(net||0).toLocaleString()+'원'+nl+'명세서 확인: '+stmtUrl;
     try{
       toast('📨 알림톡 발송 중...');
-      var res2=await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
+      var _fbTk='';
+      if(_auth&&_auth.currentUser){try{_fbTk=await _auth.currentUser.getIdToken();}catch(e){}}
+      var _atHeaders={'Content-Type':'application/json'};
+      if(_fbTk)_atHeaders['Authorization']='Bearer '+_fbTk;
+      var res2=await fetch('/api/send-alimtalk',{method:'POST',headers:_atHeaders,
         body:JSON.stringify({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',variables:variables,fallbackText:fallbackText})});
       var data2=await res2.json();
       if(data2.ok){toast('✅ 알림톡 발송 완료 — '+name+'님');}
@@ -33963,14 +33966,13 @@ function _saveNoticeAlimtalk(){
       var d=doc.data();
       var phone=d.phone||'';
       if(!phone){failed++;if(sent+failed===total)toast('✅ 완료 '+sent+'건 / 실패 '+failed+'건');return;}
-      fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
+      _alimtalkFetch({
           to:phone,
           templateCode:'KA01TP260618101225825DuJHXpoC4kY',
           variables:{'#{회사명}':coName,'#{이름}':d.name||d.driverName||'직원','#{월}':new Date().toISOString().slice(0,7),'#{실지급}':title,'#{명세서링크}':body.slice(0,40)},
           fallbackText:'['+coName+'] '+title+(body?' '+body:'')
         })
-      }).then(function(){sent++;if(sent+failed===total)toast('✅ 알림톡 완료 '+sent+'건 / 실패 '+failed+'건');})
+        .then(function(){sent++;if(sent+failed===total)toast('✅ 알림톡 완료 '+sent+'건 / 실패 '+failed+'건');})
         .catch(function(){failed++;if(sent+failed===total)toast('완료 '+sent+'건 실패 '+failed+'건');});
     });
   }).catch(function(e){toast('❌ '+e.message);});

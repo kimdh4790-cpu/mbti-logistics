@@ -796,6 +796,83 @@ async function runExpireJob(env) {
   return { expired, warned, renewed };
 }
 
+// ── Cron: alimtalk_queue 처리 (Aligo SMS/알림톡) ─────────────────────────────
+async function processAlimtalkQueue(env) {
+  const token = await getAccessToken(env);
+  const sender = env.ALIGO_SENDER || '05171133103';
+  if (!env.ALIGO_KEY || !env.ALIGO_USER_ID) {
+    console.log('[alimtalk-queue] Aligo 키 미설정, 건너뜀');
+    return;
+  }
+  // pending 항목 조회
+  const rawRows = await fsQuery(token, 'alimtalk_queue', [
+    { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'pending' } } }
+  ]).catch(() => []);
+  const rows = (Array.isArray(rawRows) ? rawRows : []).filter(r => r.document);
+  if (!rows.length) return;
+  console.log(`[alimtalk-queue] ${rows.length}건 처리`);
+
+  async function aligoSms(phone, text) {
+    const p = new URLSearchParams({
+      key: env.ALIGO_KEY, user_id: env.ALIGO_USER_ID,
+      sender, receiver: phone.replace(/[^0-9]/g, ''),
+      msg: text, msg_type: text.length > 90 ? 'LMS' : 'SMS'
+    });
+    return fetch('https://apis.aligo.in/send/', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: p.toString()
+    }).then(r => r.json()).catch(() => ({ result_code: -1 }));
+  }
+
+  async function getCompanyPhone(companyId) {
+    const doc = await fsGet(token, 'companies', companyId).catch(() => null);
+    if (!doc) return '';
+    const f = doc.fields || {};
+    return (f.phone?.stringValue || f.settlementPhone?.stringValue || '').replace(/[^0-9]/g, '');
+  }
+
+  for (const row of rows) {
+    const docId = row.document.name.split('/').pop();
+    const f = row.document.fields || {};
+    const type = f.type?.stringValue || f.type || '';
+    const companyName = f.companyName?.stringValue || f.companyName || '';
+    const companyId = f.companyId?.stringValue || f.companyId || '';
+    let ok = false;
+    try {
+      const phone = await getCompanyPhone(companyId);
+      let text = '';
+      if (type === 'sub_expired') {
+        const product = f.product?.stringValue || f.product || 'DONWAY';
+        text = `[DONWAY] ${companyName}님, ${product} 구독이 만료되었습니다. 서비스 이용을 위해 구독을 갱신해 주세요.\n갱신: https://donway.ai.kr/settle`;
+      } else if (type === 'sub_renew_warning') {
+        const product = f.product?.stringValue || f.product || 'DONWAY';
+        const daysLeft = f.daysLeft?.integerValue || f.daysLeft || 7;
+        const expiry = f.expiry?.stringValue || f.expiry || '';
+        text = `[DONWAY] ${companyName}님, ${product} 구독이 ${daysLeft}일 후(${expiry}) 만료됩니다. 만료 전 갱신을 권장드립니다.\n갱신: https://donway.ai.kr/settle`;
+      } else if (type === 'new_payment') {
+        const plan = f.plan?.stringValue || f.plan || '';
+        const amount = f.amount?.integerValue || f.amount || 0;
+        const expireDate = f.expireDate?.stringValue || f.expireDate || '';
+        text = `[DONWAY] ${companyName}님, 결제가 완료되었습니다.\n플랜: ${plan}\n금액: ${Number(amount).toLocaleString()}원\n만료일: ${expireDate}\n이용해 주셔서 감사합니다.`;
+      }
+      if (text && phone) {
+        const res = await aligoSms(phone, text);
+        ok = res.result_code == 1;
+      } else {
+        ok = true; // 전화번호 없으면 건너뜀 (이메일로 대체됨)
+      }
+    } catch(e) {
+      console.error('[alimtalk-queue]', type, e.message);
+    }
+    // 상태 업데이트
+    await fsPatch(token, `${FS_BASE}/alimtalk_queue/${docId}`, {
+      status: { stringValue: ok ? 'sent' : 'failed' },
+      processedAt: { stringValue: new Date().toISOString() }
+    }).catch(() => {});
+  }
+  console.log(`[alimtalk-queue] 처리 완료`);
+}
+
 
 // ── Fetch Handler ─────────────────────────────────────────────────────────────
 
@@ -11172,8 +11249,8 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
 
     // ── 카카오 알림톡 (/api/send-alimtalk) — Aligo ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
-      const _atAdmin = await requireAdmin(request, env);
-      if (!_atAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      const _atUser = await verifyFirebaseToken(request, env);
+      if (!_atUser) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
@@ -12504,7 +12581,8 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
     ctx.waitUntil(Promise.all([
       runExpireJob(env).catch(e => console.error('[cron-expire]', e.message)),
       runNoShowPenaltyJob(env).catch(e => console.error('[cron-noshow]', e.message)),
-      runSettlementAlertJob(env).catch(e => console.error('[cron-settle]', e.message))
+      runSettlementAlertJob(env).catch(e => console.error('[cron-settle]', e.message)),
+      processAlimtalkQueue(env).catch(e => console.error('[cron-alimtalk]', e.message))
     ]));
   }
 };
