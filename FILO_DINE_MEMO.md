@@ -163,6 +163,11 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (21차)
+**전가맹점 현황 랭킹 테이블 + 랜딩 프랜차이즈 섹션**
+- `filo-auth.js`: `_filoPageBranchMonitor()` 전면 개선 — Promise.all 병렬 집계 후 매출 내림차순 정렬, 🥇🥈🥉 메달 + 상대 바 차트, 4개 요약 카드(가맹점수/총매출/총주문/활성매장), 새로고침 버튼
+- `filo-landing.html`: FRANCHISE HQ 섹션 추가 (footer 위) — 5개 기능 소개 카드 + 도입 문의 CTA
+
 ### 2026-08-31 (20차)
 **프랜차이즈 HQ 완전 구현 + 모바일 하단 탭바**
 - `filo.html`: 모바일 하단 탭바 추가 — 홈/영업/메뉴/AIVO/설정 5탭, max-width:768px에서 표시, safe-area-inset-bottom 지원
