@@ -52,15 +52,18 @@
 
 // ── JS 파일 동적 로드 후 콜백 실행 ─────────────────────────────
 function _filoLoadAndRun(jsFile, callback) {
-  // 이미 로드됐으면 바로 실행
-  if(document.querySelector('script[data-filo="'+jsFile+'"]')) {
+  // 이미 성공 로드됐으면 바로 실행
+  var existing = document.querySelector('script[data-filo="'+jsFile+'"]');
+  if(existing && existing.dataset.filoOk === '1') {
     if(typeof callback === 'function') callback();
     return;
   }
+  // 실패했거나 없으면 재시도 (실패한 태그 제거)
+  if(existing) existing.parentNode.removeChild(existing);
   var s = document.createElement('script');
   s.src = '/' + jsFile + '?v=' + Date.now();
   s.setAttribute('data-filo', jsFile);
-  s.onload = function() { if(typeof callback === 'function') callback(); };
+  s.onload = function() { s.dataset.filoOk='1'; if(typeof callback === 'function') callback(); };
   s.onerror = function() { console.error('로드 실패:', jsFile); };
   document.head.appendChild(s);
 }
