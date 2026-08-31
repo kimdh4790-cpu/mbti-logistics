@@ -163,6 +163,13 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (17차)
+**오프라인 POS 모드 10점 업그레이드**
+- `filo-pos-core.js`: IndexedDB v1→v2, `menu_cache` 스토어 추가. `_offlineCacheMenus(menus,did)` / `_offlineGetMenus(did)` / `_offlinePendingCount()` 함수 추가. `_offlineSync()` → `_collection` 필드 라우팅 (filo_sales/orders/payments 3컬렉션 자동 분기)
+- `filo-payment.js`: 오프라인 현금결제 시 테이블 주문 → filo_orders, 선불 → filo_payments도 IndexedDB 큐에 저장. 온라인 복구 시 전체 자동 동기화
+- `filo-pos-ui.js`: 메뉴 로드 성공 후 `_offlineCacheMenus()` 자동 호출. catch 블록 오프라인 폴백 → `_offlineGetMenus()` 캐시 메뉴로 POS 즉시 렌더. `_offlineBanner()` 미동기화 건수 뱃지 업데이트. `_filoHotspotTip()` 모달 추가 (iPhone/Android 핫스팟 단계 안내)
+- `filo.html`: 배너에 미동기화 뱃지(`#filo-pending-badge`) + "핫스팟 안내" 버튼 추가. 스크립트 버전 범프 (pos-core v3, pos-ui v4, payment v3)
+
 ### 2026-08-30 (16차)
 **FILO 플랜 게이팅 + 구독 Toss 결제 플로우 완성 + 용차앱 정보통신업 리포지셔닝**
 - `filo-auth.js`: `FILO_PLAN_FEATURES` 맵(trial/basic/pro/premium/franchise_hq) + `_filoPlanFeats` 변수 + `hasFeature()` 플랜 체크 OR 조건 추가 (기존 hasAll·_services 폴백 유지)
