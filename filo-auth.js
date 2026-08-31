@@ -883,10 +883,12 @@ function _filoPageHome(el){
  var _qaHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
   _qa.map(function(q){
    return '<button onclick="_filoGoPage(\''+q.p+'\')" title="'+esc(q.hint)+'" '+
-    'style="padding:12px 6px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;cursor:pointer;text-align:center;transition:border-color .2s" '+
-    'onmouseover="this.style.borderColor=\'rgba(201,168,76,.5)\'" onmouseout="this.style.borderColor=\'var(--bd)\'">'+
-    '<div style="display:flex;justify-content:center;margin-bottom:5px;color:var(--t2)">'+_svgIcon(q.ic)+'</div>'+
-    '<div style="font-size:11px;font-weight:700;color:var(--tx)">'+esc(q.l)+'</div>'+
+    'style="padding:14px 6px 12px;background:var(--surface);border:1px solid var(--bd2);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s;position:relative;overflow:hidden" '+
+    'onmouseover="this.style.borderColor=\'rgba(200,163,86,.55)\';this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(200,163,86,.12)\'" '+
+    'onmouseout="this.style.borderColor=\'var(--bd2)\';this.style.transform=\'\';this.style.boxShadow=\'\'">'+
+    '<div style="display:flex;justify-content:center;margin-bottom:7px;color:var(--br)">'+_svgIcon(q.ic)+'</div>'+
+    '<div style="font-size:11px;font-weight:800;color:var(--tx);letter-spacing:-.1px">'+esc(q.l)+'</div>'+
+    '<div style="font-size:9px;color:var(--t3);margin-top:2px">'+esc(q.hint)+'</div>'+
     '</button>';
   }).join('')+
  '</div>';
@@ -907,15 +909,24 @@ function _filoPageHome(el){
   /* 오늘 매출 히어로 */
   '<div class="hero-card" style="margin-bottom:16px">'+
   '<div style="position:relative;z-index:1">'+
-  '<div style="font-size:10px;color:rgba(201,168,76,.65);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px">오늘 매출</div>'+
-  '<div id="hm-sales" style="font-size:34px;font-weight:900;letter-spacing:-1px;font-variant-numeric:tabular-nums;color:#fff">₩ —</div>'+
-  '<div style="display:flex;gap:24px;margin-top:14px">'+
-  '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">주문 건수</div>'+
-  '<div id="hm-cnt" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
-  '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">평균 단가</div>'+
-  '<div id="hm-avg" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
-  '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">미처리</div>'+
-  '<div id="hm-pending" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
+  /* 헤더 행: 브랜드 레이블 + 매장 날짜 */
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+  '<div style="display:flex;align-items:center;gap:6px">'+
+  '<div style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#C8A356,#D4B46E);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'#0B1F3A\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'2\' y=\'3\' width=\'20\' height=\'14\' rx=\'2\'/><line x1=\'8\' y1=\'21\' x2=\'16\' y2=\'21\'/><line x1=\'12\' y1=\'17\' x2=\'12\' y2=\'21\'/></svg></div>'+
+  '<span style="font-size:9px;font-weight:800;color:rgba(200,163,86,.7);letter-spacing:1.8px;text-transform:uppercase">오늘 영업 현황</span>'+
+  '</div>'+
+  '<span id="hm-dot-hero" style="width:6px;height:6px;border-radius:50%;background:#C8A356;animation:_hpulse 2s infinite;flex-shrink:0;box-shadow:0 0 6px rgba(200,163,86,.5)"></span>'+
+  '</div>'+
+  /* 매출 수치 */
+  '<div id="hm-sales" style="font-size:36px;font-weight:900;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:#fff;line-height:1">₩ —</div>'+
+  /* 서브 스탯 3개 */
+  '<div style="display:flex;gap:0;margin-top:16px;border-top:1px solid rgba(255,255,255,.07);padding-top:14px">'+
+  '<div style="flex:1;padding-right:16px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">주문 건수</div>'+
+  '<div id="hm-cnt" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
+  '<div style="flex:1;padding:0 16px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">평균 단가</div>'+
+  '<div id="hm-avg" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
+  '<div style="flex:1;padding-left:16px"><div style="font-size:9px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase">미처리 주문</div>'+
+  '<div id="hm-pending" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:#FB923C">—</div></div>'+
   '</div></div></div>'+
 
   /* 업종별 퀵액션 */
@@ -1029,10 +1040,10 @@ function _filoPageHome(el){
 }
 
 function _hmTileHtml(id,label,unit){
- return '<div class="card" style="text-align:center;padding:16px 8px">'+
-  '<div style="font-size:10px;color:var(--t3);margin-bottom:6px;letter-spacing:.4px">'+label+'</div>'+
-  '<div id="'+id+'" style="font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--t3)">—</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:4px">'+unit+'</div>'+
+ return '<div class="card" style="text-align:center;padding:16px 8px;border-top:2px solid rgba(200,163,86,.15);position:relative;overflow:hidden">'+
+  '<div style="font-size:9px;font-weight:800;color:var(--t3);margin-bottom:8px;letter-spacing:.8px;text-transform:uppercase">'+label+'</div>'+
+  '<div id="'+id+'" style="font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--t3);letter-spacing:-1px;line-height:1">—</div>'+
+  '<div style="font-size:9px;color:var(--t3);margin-top:5px;font-weight:600">'+unit+'</div>'+
   '</div>';
 }
 

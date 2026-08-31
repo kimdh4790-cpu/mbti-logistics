@@ -201,7 +201,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 #sidebar::-webkit-scrollbar{display:none}
 .sidebar-profile{padding:16px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:6px}
 #nav-company{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.85)}
-.sidebar-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366F1,#10B981);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;margin-bottom:8px}
+.sidebar-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#C8A356,#D4B46E);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#0B1F3A;margin-bottom:8px;box-shadow:0 2px 10px rgba(200,163,86,.3)}
 .ns-label{font-size:9px;font-weight:800;color:rgba(255,255,255,.32);letter-spacing:1.2px;padding:12px 16px 5px;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;transition:color .2s;border-radius:8px;margin:0 4px}
 .ns-label:hover{color:rgba(255,255,255,.6);background:rgba(255,255,255,.04)}
 .ns-label .ns-arrow{display:flex;align-items:center;transition:transform .25s cubic-bezier(.4,0,.2,1);opacity:.5}
@@ -217,8 +217,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .ni.active .ni-icon{filter:drop-shadow(0 0 4px rgba(16,185,129,.5));opacity:1}
 /* ── 사이드바 하단 업그레이드 버튼 ── */
 .sidebar-bottom{padding:10px 8px 14px;border-top:1px solid rgba(255,255,255,.08)}
-.sb-upgrade-btn{width:100%;padding:9px 12px;background:rgba(99,102,241,.18);color:#A5B4FC;border:1px solid rgba(99,102,241,.28);border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.3px;transition:all .2s cubic-bezier(.4,0,.2,1)}
-.sb-upgrade-btn:hover{background:rgba(99,102,241,.30);border-color:rgba(99,102,241,.45);color:#fff;transform:translateY(-1px);box-shadow:0 4px 18px rgba(99,102,241,.2)}
+.sb-upgrade-btn{width:100%;padding:9px 12px;background:rgba(200,163,86,.12);color:#D4B46E;border:1px solid rgba(200,163,86,.28);border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.3px;transition:all .2s cubic-bezier(.4,0,.2,1)}
+.sb-upgrade-btn:hover{background:rgba(200,163,86,.22);border-color:rgba(200,163,86,.5);color:#fff;transform:translateY(-1px);box-shadow:0 4px 18px rgba(200,163,86,.2)}
 
 /* ── 메인 콘텐츠 ── */
 #content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);overflow-x:hidden;min-width:0;width:calc(100% - var(--sidebar-w));transition:margin-left .25s cubic-bezier(.4,0,.2,1),width .25s cubic-bezier(.4,0,.2,1)}
@@ -1066,8 +1066,11 @@ input:focus,select:focus,textarea:focus{
   background:linear-gradient(135deg,rgba(200,163,86,.10),rgba(212,180,110,.05))!important;
   border-color:rgba(200,163,86,.20)!important}
 
-/* 탑바 */
-.topbar{background:rgba(245,241,235,.95)!important;border-bottom-color:rgba(200,163,86,.12)!important}
+/* ── 탑바 — 다크 크롬 (FILO 브랜드 크롬) ── */
+.topbar{background:linear-gradient(90deg,#091628 0%,#0C1E38 100%)!important;border-bottom:1px solid rgba(200,163,86,.18)!important;box-shadow:0 2px 16px rgba(0,0,0,.28)!important}
+.topbar-logo{color:#C8A356!important;font-size:20px!important;letter-spacing:-1px!important;text-shadow:0 0 16px rgba(200,163,86,.3)!important}
+#topbar-title{color:rgba(255,255,255,.42)!important}
+#topbar-clock{color:rgba(255,255,255,.28)!important}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1270,22 +1273,29 @@ input:focus,select:focus,textarea:focus{
 <div id="filo-offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;font-size:12px;font-weight:700;text-align:center;padding:7px 16px;align-items:center;justify-content:center;gap:8px;letter-spacing:.3px;flex-wrap:wrap"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>오프라인 모드 — 현금 결제만 가능<span id="filo-pending-badge" hidden style="background:rgba(255,255,255,.25);border-radius:100px;padding:1px 8px;margin-left:4px">미동기화 <strong id="filo-pending-count">0</strong>건</span><button onclick="_filoHotspotTip()" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);border-radius:100px;color:#fff;font-size:11px;font-weight:800;padding:2px 10px;cursor:pointer;margin-left:4px">핫스팟 안내</button></div>
 <div id="app">
  <div class="topbar">
-  <button id="sidebar-toggle" onclick="_toggleSidebar()" style="background:none;border:none;color:#0f172a;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s;width:36px;justify-content:center" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='none'"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-  <div class="topbar-logo">FILO</div>
-  <div style="width:1px;height:18px;background:var(--bd2);margin:0 2px"></div>
-  <div id="topbar-title" style="font-size:13px;font-weight:700;color:var(--tx)">대시보드</div>
+  <button id="sidebar-toggle" onclick="_toggleSidebar()" style="background:none;border:none;color:rgba(255,255,255,.65);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;transition:.15s;width:36px;justify-content:center" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='none'"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+  <div class="topbar-logo">FILO<span style="font-size:10px;font-weight:700;color:rgba(200,163,86,.5);letter-spacing:1.5px;margin-left:4px;vertical-align:middle">POS</span></div>
+  <div style="width:1px;height:16px;background:rgba(255,255,255,.1);margin:0 2px"></div>
+  <div id="topbar-title" style="font-size:13px;font-weight:700;color:rgba(255,255,255,.42)">대시보드</div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
-   <div id="topbar-clock" style="font-size:12px;font-weight:700;color:var(--t3);letter-spacing:.8px;font-variant-numeric:tabular-nums"></div>
-   <button id="rotate-btn" onclick="_toggleOrientation()" title="화면 회전" style="background:none;border:none;color:var(--t3);cursor:pointer;padding:4px;display:flex;align-items:center;border-radius:8px;transition:.15s" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background='none'"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 8"/></svg></button>
-   <button onclick="_filoGoPage('orders')" style="background:none;border:none;cursor:pointer;color:var(--tx);position:relative;padding:4px;display:flex;align-items:center" title="주문 대기">
+   <div id="topbar-clock" style="font-size:12px;font-weight:700;color:rgba(255,255,255,.28);letter-spacing:.8px;font-variant-numeric:tabular-nums"></div>
+   <button id="rotate-btn" onclick="_toggleOrientation()" title="화면 회전" style="background:none;border:none;color:rgba(255,255,255,.42);cursor:pointer;padding:4px;display:flex;align-items:center;border-radius:8px;transition:.15s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='none'"><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 8"/></svg></button>
+   <button onclick="_filoGoPage('orders')" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,.65);position:relative;padding:4px;display:flex;align-items:center" title="주문 대기">
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><span id="topbar-order-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:800;align-items:center;justify-content:center;line-height:16px"></span>
    </button>
    <div id="topbar-right" style="display:flex;gap:6px"></div>
-   <button onclick="_filoGoDine()" style="padding:5px 10px;background:rgba(8,145,178,.15);border:1px solid rgba(8,145,178,.3);border-radius:8px;color:#38bdf8;font-size:11px;font-weight:700;cursor:pointer">DINE</button>
-   <button onclick="_filoLogout()" style="background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:5px 10px;border:1px solid var(--bd2);border-radius:8px;transition:.15s" onmouseover="this.style.color='var(--tx)'" onmouseout="this.style.color='var(--t3)' ">로그아웃</button>
+   <button onclick="_filoGoDine()" style="padding:5px 10px;background:rgba(200,163,86,.12);border:1px solid rgba(200,163,86,.3);border-radius:8px;color:#D4B46E;font-size:11px;font-weight:700;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(200,163,86,.22)'" onmouseout="this.style.background='rgba(200,163,86,.12)'">DINE</button>
+   <button onclick="_filoLogout()" style="background:none;border:none;color:rgba(255,255,255,.38);font-size:11px;cursor:pointer;padding:5px 10px;border:1px solid rgba(255,255,255,.15);border-radius:8px;transition:.15s" onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.38)'" >로그아웃</button>
   </div>
  </div>
  <div id="sidebar">
+ <div style="padding:12px 14px 10px;border-bottom:1px solid rgba(200,163,86,.1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+  <div style="display:flex;align-items:center;gap:7px">
+   <div style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#C8A356,#D4B46E);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0B1F3A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+   <span style="font-size:13px;font-weight:900;color:#C8A356;letter-spacing:-.4px">FILO<span style="font-size:9px;color:rgba(200,163,86,.5);letter-spacing:.8px;margin-left:3px;font-weight:700">POS</span></span>
+  </div>
+  <span style="font-size:8px;color:rgba(255,255,255,.18);font-weight:700;letter-spacing:.8px;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px">PRO</span>
+ </div>
  <div id="sidebar-profile"></div>
  <div id="nav-menu"></div>
  <div class="sidebar-bottom">
