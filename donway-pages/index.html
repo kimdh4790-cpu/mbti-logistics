@@ -5145,16 +5145,23 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               // 금액 계산
               var tot = 0;
               var pts = [];
-              var _totalInc = 0;
+              // ★ 인센티브: 엑셀 freshIncAmt/addIncAmt 기준 — localStorage 기본값 사용 안 함
+              var _fdFinc = fd.freshIncAmt || 0;
+              if(!_fdFinc && fd.addIncAmt > 0){
+                var _anyRouteOff = false;
+                if(typeof _getIncSetting==='function' && fd.routes){
+                  Object.keys(fd.routes).forEach(function(r){ if(!_getIncSetting(fid,r).on) _anyRouteOff=true; });
+                }
+                if(!_anyRouteOff) _fdFinc = fd.addIncAmt;
+              }
+              var _fdTotalCnt = fd.routes ? Object.keys(fd.routes).reduce(function(s,r){ return s+(fd.routes[r].cnt||0); },0) : 0;
+              var _idTotalCnt = Object.keys(_rtAgg).reduce(function(s,r){ return s+_rtAgg[r].cnt; },0);
+              var _totalInc = (_fdFinc>0 && _fdTotalCnt>0) ? Math.round(_fdFinc*_idTotalCnt/_fdTotalCnt) : 0;
               Object.keys(_rtAgg).sort().forEach(function(rt){
                 var a = _rtAgg[rt];
                 var amt = (a.cnt * a.price) - (a.ret * a.price);
                 tot += amt;
-                var incS = typeof _getIncSetting==='function' ? _getIncSetting(fid, rt) : {on:false, rate:0};
-                var incAmt = (incS.on && incS.rate > 0) ? a.cnt * incS.rate : 0;
-                _totalInc += incAmt;
                 var s = rt+'*'+a.cnt+'건';
-                if(incS.on && incS.rate > 0) s += '(×'+incS.rate+')';
                 if(a.ret > 0) s += ' 반품*'+a.ret+'건';
                 pts.push(s);
               });
