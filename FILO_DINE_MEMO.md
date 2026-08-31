@@ -163,6 +163,12 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (18차)
+**오프라인 카드(단말기 직접) 결제 지원**
+- `filo-pos.js`: 오프라인 시 카드 버튼 활성화 (amber 강조, "단말기 직접" 서브텍스트). `_posCardDirectArea()` 3단계 안내 UI 추가. `_posSelectMethod()` 오프라인 카드 선택 → `card_direct` 자동 전환. `_posConfirmBtn()` card_direct 전용 골드 버튼
+- `filo-payment.js`: 오프라인 허용 조건 `cash` → `cash|card_direct`. card_direct도 IndexedDB 큐잉 후 온라인 시 Firestore 동기화
+- 키오스크(고객용)는 VAN 단말기 없어 card_direct 미지원 / POS(직원용)만 적용
+
 ### 2026-08-31 (17차)
 **오프라인 POS 모드 10점 업그레이드**
 - `filo-pos-core.js`: IndexedDB v1→v2, `menu_cache` 스토어 추가. `_offlineCacheMenus(menus,did)` / `_offlineGetMenus(did)` / `_offlinePendingCount()` 함수 추가. `_offlineSync()` → `_collection` 필드 라우팅 (filo_sales/orders/payments 3컬렉션 자동 분기)
