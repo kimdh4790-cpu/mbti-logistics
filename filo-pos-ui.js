@@ -57,8 +57,10 @@ function _offlineBanner(){
   }
  }
 }
-// 초기 상태 반영
+// 초기 상태 반영 + 네트워크 변화 실시간 감지
 document.addEventListener('DOMContentLoaded',_offlineBanner);
+window.addEventListener('online',_offlineBanner);
+window.addEventListener('offline',_offlineBanner);
 
 function _filoReceiptSelected(input){
  var file=input.files&&input.files[0];
