@@ -25971,13 +25971,18 @@ function _saveSECurrent(){
   var workIns=Math.floor(monthlyWage*0.0088/10)*10;
   var deductTotal=empIns+workIns+dmg+etcMinus+adv;
   var netPay=taxBase-deductTotal;
+  var etcMinusReason=(document.getElementById('se-etc-minus-reason')||{value:''}).value.trim();
+  var etcPlusReason=(document.getElementById('se-etc-plus-reason')||{value:''}).value.trim();
+  var dmgReason=(document.getElementById('se-dmg-reason')||{value:''}).value.trim();
   var payload={
     driver:driver,userId:cached?cached.userId||driver:driver,
     month:month,dcnt:dcnt,rcnt:rcnt,
     damt:newDamt,ramt:newRamt,
     fresh:fresh,finc:finc,inc:inc,
-    etcPlus:etcPlus,etcMinus:etcMinus,
-    dmg:dmg,adv:adv,nocont:nocont,
+    etcPlus:etcPlus,etcPlusReason:etcPlusReason,
+    etcMinus:etcMinus,etcMinusReason:etcMinusReason,
+    dmg:dmg,dmgReason:dmgReason,
+    adv:adv,nocont:nocont,
     totalAmt:taxBase,supplyAmt:supplyAmt,monthlyWage:monthlyWage,
     emp:empIns,work:workIns,deduct:deductTotal,net:netPay,
     status:status,dealerId:_CU.dealerId,
