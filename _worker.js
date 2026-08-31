@@ -16605,7 +16605,7 @@ function _showApplicants(postId){
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'+
           '<button onclick="_openChatRoom(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\')" style="padding:10px;background:var(--bg2);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">💬 채팅하기</button>'+
           '<button onclick="_showReviewModal(\\''+a.driverId+'\\',\\''+_jsq(a.driverName)+'\\',\\'driver\\',\\''+a.id+'\\')" style="padding:10px;background:'+(a.agencyReviewed?'var(--gnl)':'var(--acl)')+';color:'+(a.agencyReviewed?'var(--gn)':'var(--ac)')+';border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(a.agencyReviewed?'평가완료':'평가하기')+'</button>'+
-          (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 계약서 보기</button>':'')+
+          (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="padding:10px;background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">📝 합의서 보기</button>':'')+
           '</div>'
           :'');
         body.appendChild(card);
@@ -16668,7 +16668,7 @@ function _yAutoChat(driverId,driverName,applyData,postTitle,unitPrice,startDate)
   var types={};types[_CU.uid]='agency';types[driverId]='driver';
   var unread={};unread[_CU.uid]=0;unread[driverId]=1;
   var phones={};phones[driverId]=applyData.driverPhone||'';phones[_CU.uid]=_CU.phone||'';
-  var firstMsg=' 배차 확정되었습니다! 출근 일정을 조율해주세요 😊\\n📍 노선: '+postTitle+'\\n💰 단가: '+unitPrice+'원/건\\n📅 시작일: '+startDate;
+  var firstMsg=' 연결 확정되었습니다! 운행 시작 일정을 조율해주세요 😊\\n📍 노선: '+postTitle+'\\n💰 건당 금액: '+unitPrice+'원/건\\n📅 시작일: '+startDate;
   chatRef.set({
     participants:[_CU.uid,driverId],
     participantNames:names,participantTypes:types,participantPhones:phones,
@@ -16686,11 +16686,11 @@ function _yConfirmStart(applyId,postId){
   var today=new Date().toISOString().split('T')[0];
   var body=document.getElementById('modal-body');
   body.innerHTML=
-    '<div style="font-size:18px;font-weight:900;margin-bottom:4px">📅 출근 확정</div>'+
-    '<div style="font-size:12px;color:var(--t2);margin-bottom:20px">노선 시작일을 선택해주세요</div>'+
+    '<div style="font-size:18px;font-weight:900;margin-bottom:4px">📅 운행 시작 확정</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:20px">운행 시작일을 선택해주세요</div>'+
     '<div class="inp-wrap"><label class="inp-lbl">시작일</label>'+
     '<input class="inp" id="confirm-start-date" type="date" value="'+today+'"></div>'+
-    '<button class="btn-main" onclick="_doConfirmStart(\\''+applyId+'\\',\\''+postId+'\\')">출근 확정</button>';
+    '<button class="btn-main" onclick="_doConfirmStart(\\''+applyId+'\\',\\''+postId+'\\')">운행 시작 확정</button>';
   _openModal();
 }
 function _doConfirmStart(applyId,postId){
@@ -16707,7 +16707,7 @@ function _doConfirmStart(applyId,postId){
   }
   batch.commit().then(function(){
     _closeModal();
-    _yToast('📅 출근 확정됐어요! 시작일: '+d);
+    _yToast('📅 운행 시작 확정됐어요! 시작일: '+d);
     _pgMyApplies(document.getElementById('content'));
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -16855,16 +16855,16 @@ function _signContract(contractId, role){
         _db.collection('yongcha_contracts').doc(contractId).update({
           status:'signed',signedAt:firebase.firestore.FieldValue.serverTimestamp()
         }).then(function(){
-          _yToast('🤝 계약이 완료됐어요!');
+          _yToast('🤝 합의가 완료됐어요!');
           // 상대방에게 알림
           var otherId=role==='agency'?c.driverId:c.agencyId;
           var otherName=role==='agency'?c.driverName:c.agencyName;
-          _yNotify(otherId,'계약 완료 🤝',_CU.name+'과 계약이 완료됐어요!','contract');
+          _yNotify(otherId,'합의 완료 🤝',_CU.name+'과 합의 메모가 완료됐어요!','contract');
         });
       } else {
-        _yToast('서명했어요. 상대방의 서명을 기다리는 중이에요.');
+        _yToast('확인했어요. 상대방 확인을 기다리는 중이에요.');
         var otherId=role==='agency'?c.driverId:c.agencyId;
-        _yNotify(otherId,'계약 서명 요청 📝',_CU.name+'이 계약서에 서명했어요. 서명해주세요!','contract');
+        _yNotify(otherId,'합의서 확인 요청 📝',_CU.name+'이 합의 메모를 확인했어요. 확인해주세요!','contract');
       }
     });
   }).catch(function(e){_yToast('오류: '+e.message);});
@@ -16872,16 +16872,17 @@ function _signContract(contractId, role){
 
 function _showContract(contractId){
   _db.collection('yongcha_contracts').doc(contractId).get().then(function(snap){
-    if(!snap.exists){_yToast('계약서를 찾을 수 없어요');return;}
+    if(!snap.exists){_yToast('합의서를 찾을 수 없어요');return;}
     var c=snap.data();
     var t=c.terms||{};
     var myRole=_CU.uid===c.agencyId?'agency':'driver';
     var mySigned=myRole==='agency'?c.agencySigned:c.driverSigned;
     var body=document.getElementById('modal-body');
     body.innerHTML=
-      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">📝 계약서</div>'+
-      '<div style="font-size:11px;color:var(--t2);margin-bottom:16px">'+
-      (c.status==='signed'?'계약 완료':'서명 대기 중')+'</div>'+
+      '<div style="font-size:18px;font-weight:900;margin-bottom:4px">📝 합의 메모</div>'+
+      '<div style="font-size:11px;color:var(--t2);margin-bottom:8px">'+
+      (c.status==='signed'?'합의 완료':'확인 대기 중')+'</div>'+
+      '<div style="font-size:10px;color:var(--t3);background:var(--bg3);padding:8px 10px;border-radius:8px;margin-bottom:12px;line-height:1.5">이 합의 메모는 소장과 기사가 직접 작성한 내용이며, 플랫폼은 기록 보관만 제공합니다. 플랫폼은 계약의 당사자가 아닙니다.</div>'+
 
       '<div style="background:var(--bg3);border-radius:12px;padding:14px;margin-bottom:14px;font-size:12px;line-height:2">'+
       '<div><span style="color:var(--t3)">대리점</span> <strong>'+_esc(c.agencyName)+'</strong></div>'+
@@ -16899,14 +16900,14 @@ function _showContract(contractId){
 
       '<div style="display:flex;gap:8px;margin-bottom:12px">'+
       '<div style="flex:1;padding:8px;border-radius:10px;background:'+(c.agencySigned?'var(--gnl)':'var(--bg3)')+';text-align:center;font-size:11px;font-weight:700;color:'+(c.agencySigned?'var(--gn)':'var(--t3)')+'">'+
-      (c.agencySigned?'대리점 서명':'대리점 서명 대기')+'</div>'+
+      (c.agencySigned?'대리점 확인':'대리점 확인 대기')+'</div>'+
       '<div style="flex:1;padding:8px;border-radius:10px;background:'+(c.driverSigned?'var(--gnl)':'var(--bg3)')+';text-align:center;font-size:11px;font-weight:700;color:'+(c.driverSigned?'var(--gn)':'var(--t3)')+'">'+
-      (c.driverSigned?'기사 서명':'기사 서명 대기')+'</div>'+
+      (c.driverSigned?'기사 확인':'기사 확인 대기')+'</div>'+
       '</div>'+
 
       (!mySigned&&c.status!=='signed'?
-      '<button onclick="_signContract(\\''+contractId+'\\',\\''+myRole+'\\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">서명하기</button>':
-      '<div style="text-align:center;padding:12px;color:var(--gn);font-weight:700">서명 완료</div>');
+      '<button onclick="_signContract(\\''+contractId+'\\',\\''+myRole+'\\')" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--gn),#16a34a);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">내용 확인</button>':
+      '<div style="text-align:center;padding:12px;color:var(--gn);font-weight:700">확인 완료</div>');
     _openModal();
   });
 }
@@ -17527,9 +17528,9 @@ function _pgMyApplies(el){
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
           '<button type="button" onclick="_openChatRoom(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\')" style="'+btnS+'background:var(--bg3);color:var(--t2);border:1px solid var(--bd)">💬 채팅</button>'+
           '<button type="button" onclick="_showReviewModal(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\',\\''+a.id+'\\')" style="'+btnS+'background:'+(a.driverReviewed?'var(--gnl)':'var(--acl)')+';color:'+(a.driverReviewed?'var(--gn)':'var(--ac)')+'">'+(a.driverReviewed?'평가완료':'평가하기')+'</button>'+
-          (!a.startConfirmed?'<button type="button" onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="'+btnS+'background:var(--brl);color:var(--br);border:1px solid var(--brln);grid-column:span 2">📅 출근 확정</button>':
+          (!a.startConfirmed?'<button type="button" onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="'+btnS+'background:var(--brl);color:var(--br);border:1px solid var(--brln);grid-column:span 2">📅 운행 시작 확정</button>':
           '<button type="button" onclick="_yInputDaily(\\''+a.id+'\\','+(a.unitPrice||0)+')" style="'+btnS+'background:var(--gnl);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📦 오늘 건수 입력</button>')+
-          (a.contractId?'<button type="button" onclick="_showContract(\\''+a.contractId+'\\')" style="'+btnS+'background:var(--bg3);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📝 계약서 보기</button>':'')+
+          (a.contractId?'<button type="button" onclick="_showContract(\\''+a.contractId+'\\')" style="'+btnS+'background:var(--bg3);color:var(--gn);border:1px solid var(--gnln);grid-column:span 2">📝 합의서 보기</button>':'')+
           '</div>'
           :'');
         apDiv.appendChild(card);
@@ -17647,8 +17648,8 @@ function _pgMyRoutes(el){
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
         '<button onclick="_openChatRoom(\\''+a.agencyId+'\\',\\''+_jsq(a.agencyName)+'\\',\\'agency\\')" style="min-height:var(--tap);background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">채팅</button>'+
         '<button onclick="_yInputDaily(\\''+a.id+'\\','+(a.unitPrice||0)+')" style="min-height:var(--tap);background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">건수 입력</button>'+
-        (!a.startConfirmed?'<button onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="min-height:var(--tap);background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">출근 확정</button>':'')+
-        (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="min-height:var(--tap);background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">계약서 보기</button>':'')+
+        (!a.startConfirmed?'<button onclick="_yConfirmStart(\\''+a.id+'\\',\\''+(a.postId||'')+'\\')" style="min-height:var(--tap);background:var(--brl);color:var(--br);border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">운행 시작 확정</button>':'')+
+        (a.contractId?'<button onclick="_showContract(\\''+a.contractId+'\\')" style="min-height:var(--tap);background:var(--bg3);border:1.5px solid var(--gn);border-radius:10px;color:var(--gn);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;grid-column:span 2">합의서 보기</button>':'')+
         (step===1?'<button onclick="_yCancelNoShowTimer(\\''+a.id+'\\');_yArriveWork(\\''+a.id+'\\')" style="min-height:54px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;grid-column:span 2;box-shadow:0 8px 24px -8px rgba(37,99,235,.6)">현장 도착 확인</button>':'')+
         (step===2?'<button onclick="_yCompleteWork(\\''+a.id+'\\')" style="min-height:54px;background:linear-gradient(135deg,var(--gn),#059669);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:900;cursor:pointer;font-family:inherit;grid-column:span 2;box-shadow:0 8px 24px -8px rgba(16,185,129,.6)">완료 사진 업로드 + 정산 요청</button>':'')+
         (step>=3?'<button onclick="_showWorkCert(\\''+a.id+'\\')" style="min-height:var(--tap);background:var(--pul);border:1px solid var(--puln);border-radius:10px;color:var(--pu);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;grid-column:span 2">전자 확인서 보기</button>':'')+
@@ -18906,7 +18907,7 @@ function _showJobDetail(d){
   '<div class="detail-grid">'+
   [
     ['💰 월 급여',Number(d.salary||0).toLocaleString()+'원'],
-    [' 고용형태',d.jobType||'—'],
+    [' 계약유형',d.jobType||'—'],
     ['🚗 차량',d.vehicleType||'무관'],
     ['📜 경력',_careerLabel(d.careerReq)],
     ['👥 모집인원',(d.headcount||1)+'명'],
@@ -19069,9 +19070,9 @@ function _showJobWriteModal(){
   '<div class="inp-wrap"><label class="inp-lbl">공고 제목 <span style="color:var(--rd)">*</span></label>'+
   '<input class="inp" id="jw-title" placeholder="예: CJ대한통운 정규기사 모집"></div>'+
 
-  '<div class="inp-wrap"><label class="inp-lbl">고용형태 <span style="color:var(--rd)">*</span></label>'+
+  '<div class="inp-wrap"><label class="inp-lbl">계약유형 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="jw-type-group">'+
-  ['정규직','계약직','프리랜서'].map(function(t){
+  ['장기계약','단기계약','건별계약'].map(function(t){
     return '<button onclick="_selType(this,\\''+t+'\\',\\'jw-type\\')" style="padding:9px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer">'+t+'</button>';
   }).join('')+
   '</div><input type="hidden" id="jw-type"></div>'+
@@ -19127,7 +19128,7 @@ function _showJobWriteModal(){
 function _submitJob(){
   var get=function(id){return(document.getElementById(id)||{}).value||'';};
   var title=get('jw-title'), jobType=get('jw-type'), salary=get('jw-salary');
-  if(!title||!jobType||!salary){_yToast('제목/고용형태/급여는 필수입니다');return;}
+  if(!title||!jobType||!salary){_yToast('제목/계약유형/급여는 필수입니다');return;}
   var btn=document.getElementById('jw-submit');
 
   // ★ 재진입 잠금 + 중복 공고 방지 (기존에는 둘 다 없어서 같은 공고가 계속 쌓였다)
