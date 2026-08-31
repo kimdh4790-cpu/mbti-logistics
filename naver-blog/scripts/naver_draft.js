@@ -533,25 +533,52 @@ async function inputPlace(page, placeInfo) {
   if (DRY_RUN) {
     console.log('🔍 DRY-RUN: 저장 생략');
   } else if (AUTO_PUBLISH) {
-    // 발행 패널이 열려 있는 상태 — 최종 발행 버튼 클릭
+    // 최종 발행 확인 버튼 셀렉터
     const publishDoneSels = [
       'button[data-testid="seOnePublishDoneBtn"]',
       'button[class*="publishDone"]',
       'button[class*="publish-done"]',
       'button[class*="publish-submit"]',
       'button:has-text("발행하기")',
+      'button:has-text("게시하기")',
     ];
-    let published = false;
+
+    // 패널이 열려 있는지 먼저 확인
+    let doneBtn = null;
     for (const sel of publishDoneSels) {
-      const btn = await page.$(sel).catch(() => null);
-      if (btn) {
-        await btn.click();
-        published = true;
-        break;
+      doneBtn = await page.$(sel).catch(() => null);
+      if (doneBtn) break;
+    }
+
+    // 패널이 닫혀 있으면 열기 (태그를 직접 입력 경로로 처리한 경우)
+    if (!doneBtn) {
+      const panelBtnSels = [
+        'button[data-testid="seOnePublishBtn"]',
+        'button[class*="publish"]:not([class*="Done"]):not([class*="done"]):not([class*="submit"])',
+        'button:has-text("발행")',
+      ];
+      for (const sel of panelBtnSels) {
+        const btn = await page.$(sel).catch(() => null);
+        if (btn) {
+          await btn.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(1500);
+          break;
+        }
+      }
+      // 패널 열린 후 다시 탐색
+      for (const sel of publishDoneSels) {
+        doneBtn = await page.$(sel).catch(() => null);
+        if (doneBtn) break;
       }
     }
-    await page.waitForTimeout(3000);
-    console.log(published ? '🚀 발행 완료' : '⚠️  발행 버튼 못 찾음 — 수동 발행 필요');
+
+    if (doneBtn) {
+      await doneBtn.click();
+      await page.waitForTimeout(3000);
+      console.log('🚀 발행 완료');
+    } else {
+      console.warn('⚠️  발행 버튼 못 찾음 — 수동 발행 필요');
+    }
   } else {
     const saveBtn = await page.$('button[data-testid="seOneTempBtn"], button:has-text("임시저장"), button[class*="temp"]');
     if (saveBtn) {
