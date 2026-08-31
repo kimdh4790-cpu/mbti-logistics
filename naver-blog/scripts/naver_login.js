@@ -6,6 +6,7 @@
  */
 const { chromium } = require('playwright');
 const path = require('path');
+const fs = require('fs');
 
 const PROFILE_DIR = path.join(__dirname, '..', 'naver-profile');
 
