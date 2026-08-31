@@ -81,7 +81,17 @@ function _filoConfirmPay(method, methodLabel){
  // 오프라인 시 IndexedDB 큐에 저장
  if(!navigator.onLine){
   if(method!=='cash'){_filoToast('오프라인 상태에서는 현금 결제만 가능합니다');return;}
-  if(typeof _offlineQueueSale==='function')_offlineQueueSale(saveData);
+  if(typeof _offlineQueueSale==='function'){
+   _offlineQueueSale(Object.assign({_collection:'filo_sales'},saveData));
+   if(tableId){
+    _offlineQueueSale(Object.assign({},saveData,{type:'table',source:'pos',_collection:'filo_orders'}));
+    if(payType==='prepay'){
+     _offlineQueueSale({_collection:'filo_payments',dealerId:did,tableNum:parseInt(tableId)||tableId,tableName:tableName,
+      items:items,amount:total,method:method,methodLabel:methodLabel||method,
+      payType:'table',orderIds:[],date:now.toISOString().slice(0,10),paidAt:now.toISOString()});
+    }
+   }
+  }
   _filoToast('오프라인 주문 저장됨 — 인터넷 연결 시 자동 동기화됩니다');
   window._selectedTableId=null;window._selectedTableName=null;
   _cartClear();

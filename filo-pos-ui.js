@@ -26,6 +26,20 @@
  * 최종수정: 2026-07-17 | 리팩토링 분리 + 심플모드 추가
  */
 
+// ── 오프라인 핫스팟 안내 ──────────────────────────────────────────────────────
+function _filoHotspotTip(){
+ if(typeof _filoShowModal==='function'){
+  _filoShowModal('<div style="padding:24px 20px"><div style="font-size:16px;font-weight:900;margin-bottom:16px">핫스팟으로 카드결제 연결하기</div>'+
+   '<div style="font-size:13px;color:var(--t2);line-height:1.8">'+
+   '<div style="margin-bottom:10px"><strong style="color:var(--tx)">① iPhone</strong><br>설정 → 개인용 핫스팟 → 허용</div>'+
+   '<div style="margin-bottom:10px"><strong style="color:var(--tx)">② 안드로이드</strong><br>설정 → 연결 → 모바일 핫스팟 → 켜기</div>'+
+   '<div style="margin-bottom:16px"><strong style="color:var(--tx)">③ POS에서</strong><br>Wi-Fi 설정 → 핫스팟 이름 선택 → 연결</div>'+
+   '<div style="background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:12px;padding:10px 14px;font-size:12px;color:#b8860b">'+
+   '핫스팟 연결 시 카드·카카오페이 결제가 즉시 가능합니다. 오프라인 임시 저장된 현금 주문도 자동 동기화됩니다.</div></div>'+
+   '<button onclick="this.closest(\'.mo\').remove()" style="width:100%;margin-top:16px;padding:12px;background:#c9a84c;border:none;border-radius:12px;color:#0f172a;font-weight:800;font-size:14px;cursor:pointer">확인</button></div>');
+ }
+}
+
 // ── 오프라인 상태 배너 ────────────────────────────────────────────────────────
 function _offlineBanner(){
  var banner=document.getElementById('filo-offline-banner');
@@ -34,6 +48,13 @@ function _offlineBanner(){
   banner.hidden=true;
  }else{
   banner.hidden=false;
+  if(typeof _offlinePendingCount==='function'){
+   _offlinePendingCount().then(function(n){
+    var badge=document.getElementById('filo-pending-badge');
+    var cnt=document.getElementById('filo-pending-count');
+    if(badge&&cnt){badge.hidden=n===0;cnt.textContent=n;}
+   });
+  }
  }
 }
 // 초기 상태 반영
@@ -270,9 +291,25 @@ function _filoPageKiosk(el){
    menus.push(Object.assign({_id:doc.id},doc.data()));
   });
   menus.sort(function(a,b){return (a.category||'').localeCompare(b.category||'');});
+  window._kioskMenus=menus;
+  if(typeof _offlineCacheMenus==='function')_offlineCacheMenus(menus,did);
   if(_filoPosMode()==='simple') _filoRenderKioskSimple(menus);
   else _filoRenderKiosk(menus);
  }).catch(function(e){
+  if(typeof _offlineGetMenus==='function'&&!navigator.onLine){
+   _offlineGetMenus(did).then(function(cached){
+    if(cached&&cached.length){
+     _filoToast('오프라인 — 캐시 메뉴로 표시합니다');
+     window._kioskMenus=cached;
+     if(_filoPosMode()==='simple') _filoRenderKioskSimple(cached);
+     else _filoRenderKiosk(cached);
+    } else {
+     var menuEl=document.getElementById('kiosk-menu');
+     if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--red)">오프라인 상태입니다. 캐시된 메뉴가 없습니다.</div>';
+    }
+   });
+   return;
+  }
   var menuEl=document.getElementById('kiosk-menu');
   if(menuEl) menuEl.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--red);display:flex;flex-direction:column;align-items:center;gap:8px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>메뉴 로드 실패: '+e.message+'</div>';
  });

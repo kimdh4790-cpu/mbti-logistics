@@ -272,17 +272,19 @@ document.addEventListener('click',function(e){
  if(db)_filoDeleteMember(db.dataset.id, db.dataset.name||'');
 });
 
-// ── 오프라인 모드 — IndexedDB 큐 ────────────────────────────────────────────
+// ── 오프라인 모드 — IndexedDB 큐 + 메뉴 캐시 ──────────────────────────────
 var _offlineDB=null;
 
 function _offlineInit(){
  if(_offlineDB)return;
  try{
-  var req=indexedDB.open('filo_offline',1);
+  var req=indexedDB.open('filo_offline',2);
   req.onupgradeneeded=function(e){
    var db=e.target.result;
    if(!db.objectStoreNames.contains('pending_sales'))
     db.createObjectStore('pending_sales',{autoIncrement:true});
+   if(e.oldVersion<2&&!db.objectStoreNames.contains('menu_cache'))
+    db.createObjectStore('menu_cache',{keyPath:'did'});
   };
   req.onsuccess=function(e){
    _offlineDB=e.target.result;
@@ -299,6 +301,35 @@ function _offlineQueueSale(data){
  }catch(e){console.warn('[offline queue]',e);}
 }
 
+function _offlineCacheMenus(menus,did){
+ if(!_offlineDB||!did)return;
+ try{
+  _offlineDB.transaction('menu_cache','readwrite').objectStore('menu_cache').put({did:did,menus:menus,ts:Date.now()});
+ }catch(e){console.warn('[offline menu cache]',e);}
+}
+
+function _offlineGetMenus(did){
+ return new Promise(function(resolve){
+  if(!_offlineDB||!did){resolve(null);return;}
+  try{
+   var req=_offlineDB.transaction('menu_cache','readonly').objectStore('menu_cache').get(did);
+   req.onsuccess=function(e){resolve(e.target.result?e.target.result.menus:null);};
+   req.onerror=function(){resolve(null);};
+  }catch(e){resolve(null);}
+ });
+}
+
+function _offlinePendingCount(){
+ return new Promise(function(resolve){
+  if(!_offlineDB){resolve(0);return;}
+  try{
+   var req=_offlineDB.transaction('pending_sales','readonly').objectStore('pending_sales').count();
+   req.onsuccess=function(e){resolve(e.target.result||0);};
+   req.onerror=function(){resolve(0);};
+  }catch(e){resolve(0);}
+ });
+}
+
 function _offlineSync(){
  if(!navigator.onLine||!_offlineDB||typeof _db==='undefined')return;
  try{
@@ -308,9 +339,14 @@ function _offlineSync(){
    var cursor=e.target.result;
    if(!cursor)return;
    var key=cursor.key, data=cursor.value;
-   _db.collection('filo_sales').add(data).then(function(){
+   var coll=data._collection||'filo_sales';
+   var saveObj=Object.assign({},data);
+   delete saveObj._collection;
+   _db.collection(coll).add(saveObj).then(function(){
     try{_offlineDB.transaction('pending_sales','readwrite').objectStore('pending_sales').delete(key);}catch(err){}
-    _filoToast('오프라인 주문 동기화 완료');
+    _offlinePendingCount().then(function(n){
+     if(n===0)_filoToast('오프라인 주문 동기화 완료');
+    });
    }).catch(function(err){console.warn('[offline sync]',err.message);});
    cursor.continue();
   };
