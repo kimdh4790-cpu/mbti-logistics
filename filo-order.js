@@ -494,7 +494,7 @@ function _filoRenderDeliveryCards(did,orders,wrap){
   // 승인대기 (store.html에서 온 주문)
   if(st==='pending'){
    var acceptBtn=document.createElement('button');
-   acceptBtn.style.cssText='padding:7px 14px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+   acceptBtn.style.cssText='padding:7px 14px;background:var(--br,#c9a84c);border:none;border-radius:8px;color:#0f172a;font-size:12px;font-weight:700;cursor:pointer';
    acceptBtn.innerHTML='승인';
    (function(id,c,phone,name,items,total){
     acceptBtn.onclick=function(){
@@ -531,7 +531,7 @@ function _filoRenderDeliveryCards(did,orders,wrap){
   // 접수됨 → 조리중
   if(st==='accepted'){
    var cookBtn=document.createElement('button');
-   cookBtn.style.cssText='padding:7px 14px;background:#0891b2;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer';
+   cookBtn.style.cssText='padding:7px 14px;background:var(--br,#c9a84c);border:none;border-radius:8px;color:#0f172a;font-size:12px;font-weight:700;cursor:pointer';
    cookBtn.innerHTML='조리 시작';
    (function(id,c){cookBtn.onclick=function(){_db.collection(c).doc(id).update({deliveryStatus:'cooking',status:'cooking',updatedAt:new Date().toISOString()}).then(function(){_filoToast('조리 시작');});};})(o._id,col);
    btnArea.appendChild(cookBtn);

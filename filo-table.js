@@ -100,7 +100,7 @@ function _filoTableLoad(did){
       btns.style.cssText='display:flex;gap:5px;flex-shrink:0;margin-left:8px';
       var ok=document.createElement('button');
       ok.textContent='승인';
-      ok.style.cssText='padding:3px 10px;background:#0891b2;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
+      ok.style.cssText='padding:3px 10px;background:var(--br,#c9a84c);color:#0f172a;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';
       var no=document.createElement('button');
       no.textContent='거절';
       no.style.cssText='padding:3px 10px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer';

@@ -163,6 +163,24 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (24차)
+**POS 좌측 사이드바 + 대시보드 벤토 그리드 + 색상 전면 정비**
+- `filo-pos-ui.js`:
+  - 카테고리 바: 상단 수평 필 → 고정 좌측 사이드바 (76px, 수직 버튼)
+  - 카테고리 활성 스타일: 배경 하이라이트 gold
+  - 메뉴 이름·가격: 하드코딩 → `var(--tx)`/`var(--br)` CSS 변수
+  - 장바구니 합계: `#22c55e` → `var(--br,#c9a84c)`
+  - 모드 전환 버튼: 하드코딩 blue → CSS 변수
+  - 영수증 발송 버튼: `#0891b2` teal → `var(--br,#c9a84c)` gold
+- `filo-auth.js`:
+  - 홈 대시보드 벤토 그리드: 히어로 카드 + 직원/대기 사이드 타일 (2-col grid)
+  - 재고 부족: 별도 타일 → full-width 배너 (경고 시 빨간 테두리)
+  - 퀵 액션 버튼: 아이콘 원형 배경 + hover 개선
+  - `_hmTileSet`: inv 배너 테두리 색도 함께 업데이트
+- `filo-order.js`: 승인/조리 버튼 `#0891b2` → `var(--br,#c9a84c)`
+- `filo-table.js`: 확정 버튼 `#0891b2` → `var(--br,#c9a84c)`
+- `filo-pos-pay.js`: 영수증 발송 버튼 `#0891b2` → `var(--br,#c9a84c)`
+
 ### 2026-08-31 (23차)
 **페이지 내부 디자인 개선 + 애니메이션 시스템 + 네비게이션 정리**
 - `filo-margin.js`:
