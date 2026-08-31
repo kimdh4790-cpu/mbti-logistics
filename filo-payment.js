@@ -80,7 +80,7 @@ function _filoConfirmPay(method, methodLabel){
  };
  // 오프라인 시 IndexedDB 큐에 저장
  if(!navigator.onLine){
-  if(method!=='cash'){_filoToast('오프라인 상태에서는 현금 결제만 가능합니다');return;}
+  if(method!=='cash'&&method!=='card_direct'){_filoToast('오프라인 상태에서는 현금·카드(단말기) 결제만 가능합니다');return;}
   if(typeof _offlineQueueSale==='function'){
    _offlineQueueSale(Object.assign({_collection:'filo_sales'},saveData));
    if(tableId){

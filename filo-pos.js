@@ -127,19 +127,20 @@ var _POS_METHODS=[
 
 function _posMethodGrid(){
  var online=navigator.onLine;
- return (online?'':'<div style="margin-bottom:10px;padding:8px 12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;display:flex;align-items:center;gap:8px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><span style="font-size:11px;color:#ef4444;font-weight:700">오프라인 — 현금 결제만 가능</span></div>')+
+ return (online?'':'<div style="margin-bottom:10px;padding:8px 12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:8px;display:flex;align-items:center;gap:8px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><span style="font-size:11px;color:#ef4444;font-weight:700">오프라인 — 현금·카드(단말기) 결제 가능</span></div>')+
   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'+
   _POS_METHODS.map(function(m){
-   var disabled=!online&&m.key!=='cash'&&m.key!=='service';
+   var isCardOffline=!online&&m.key==='card';
+   var disabled=!online&&m.key!=='cash'&&m.key!=='service'&&m.key!=='card';
    return '<button class="pos-method-btn" data-method="'+m.key+'" '+
     (disabled?'disabled ':'')+
-    'style="background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.08);border-radius:12px;'+
+    'style="background:'+(isCardOffline?'rgba(201,168,76,.12)':'rgba(255,255,255,.04)')+';border:1.5px solid '+(isCardOffline?'rgba(201,168,76,.5)':'rgba(255,255,255,.08)')+';border-radius:12px;'+
     'padding:14px 8px 12px;cursor:'+(disabled?'not-allowed':'pointer')+';display:flex;flex-direction:column;align-items:center;gap:6px;'+
     'min-height:80px;transition:all .18s;touch-action:manipulation;'+(disabled?'opacity:.35;':'')+'">'+
     '<div style="width:36px;height:36px;border-radius:10px;background:'+m.bg+'22;display:flex;align-items:center;justify-content:center;color:'+m.bg+'">'+
     _svgIcon(m.icon)+'</div>'+
-    '<div style="font-size:12px;font-weight:900;color:#cbd5e1">'+m.label+'</div>'+
-    '<div style="font-size:9px;color:#334155;font-weight:600">'+(disabled?'인터넷 필요':m.sub)+'</div>'+
+    '<div style="font-size:12px;font-weight:900;color:'+(isCardOffline?'#c9a84c':'#cbd5e1')+'">'+m.label+'</div>'+
+    '<div style="font-size:9px;color:'+(isCardOffline?'#a08030':'#334155')+';font-weight:600">'+(isCardOffline?'단말기 직접':(disabled?'인터넷 필요':m.sub))+'</div>'+
     '</button>';
   }).join('')+
   '</div>';
@@ -175,8 +176,11 @@ function _posSelectMethod(m,total,raw,disc){
  // 다이나믹 영역 업데이트
  var dyn=document.getElementById('pos-dynamic');
  if(!dyn)return;
+ // 오프라인 카드 → card_direct 모드
+ if(m==='card'&&!navigator.onLine){_posPayMethod='card_direct';m='card_direct';}
  if(m==='cash') dyn.innerHTML=_posCashArea(total);
  else if(m==='card') dyn.innerHTML=_posCardArea();
+ else if(m==='card_direct') dyn.innerHTML=_posCardDirectArea(total);
  else if(m==='kakao'||m==='naver') dyn.innerHTML=_posQrArea(m,total);
  else if(m==='toss') dyn.innerHTML=_posTossArea(total);
  else dyn.innerHTML='';
@@ -263,6 +267,22 @@ function _posUpdateCashDisplay(total){
   conf.style.cursor=ok?'pointer':'not-allowed';
   conf.style.background=ok?'#22c55e':'rgba(34,197,94,.25)';
  }
+}
+
+// ── 카드 단말기 직접 결제 영역 (오프라인 전용) ────────────────────────────────
+function _posCardDirectArea(total){
+ return '<div style="background:rgba(201,168,76,.08);border:1.5px solid rgba(201,168,76,.35);border-radius:14px;padding:18px 16px">'+
+  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'+
+  '<div style="width:32px;height:32px;border-radius:8px;background:rgba(201,168,76,.2);display:flex;align-items:center;justify-content:center">'+
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>'+
+  '</div><div style="font-size:14px;font-weight:900;color:#c9a84c">카드 단말기 직접 결제</div></div>'+
+  '<div style="font-size:12px;color:var(--t2);line-height:2;margin-bottom:12px">'+
+  '<div><strong style="color:var(--tx)">① </strong>카드 단말기에 <strong style="color:#c9a84c">₩'+total.toLocaleString()+'</strong> 입력 후 카드를 긁어주세요</div>'+
+  '<div><strong style="color:var(--tx)">② </strong>단말기에서 승인이 완료되면</div>'+
+  '<div><strong style="color:var(--tx)">③ </strong>아래 <strong style="color:#c9a84c">확인 버튼</strong>을 눌러주세요</div>'+
+  '</div>'+
+  '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t3)">'+
+  '단말기 승인 금액과 POS 금액이 일치하는지 꼭 확인하세요</div></div>';
 }
 
 // ── 카드 영역 (단말기 애니메이션) ────────────────────────────────────────────
@@ -390,6 +410,13 @@ function _posApplyDiscount(total){
 
 // ── 확인 버튼 ────────────────────────────────────────────────────────────────
 function _posConfirmBtn(method,total){
+ if(method==='card_direct'){
+  return '<button id="pos-confirm-btn" onclick="_posDo()" '+
+   'style="width:100%;height:56px;background:#c9a84c;border:none;border-radius:14px;'+
+   'font-size:15px;font-weight:900;color:#0f172a;cursor:pointer;letter-spacing:.3px;'+
+   'box-shadow:0 4px 20px rgba(201,168,76,.4);transition:.2s">'+
+   '단말기 결제 완료 확인   ₩'+total.toLocaleString()+'</button>';
+ }
  var mCfg=method?_POS_METHODS.find(function(x){return x.key===method;}):null;
  var bg=mCfg?mCfg.bg:'rgba(200,163,86,.3)';
  var tc=mCfg?(mCfg.tc||'#fff'):'rgba(200,163,86,.5)';
