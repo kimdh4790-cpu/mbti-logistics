@@ -577,7 +577,31 @@ async function inputPlace(page, placeInfo) {
       await page.waitForTimeout(3000);
       console.log('🚀 발행 완료');
     } else {
-      console.warn('⚠️  발행 버튼 못 찾음 — 수동 발행 필요');
+      // 폴백: JS로 모든 버튼 텍스트 스캔해서 발행 버튼 직접 클릭
+      const clicked = await page.evaluate(() => {
+        const candidates = ['발행하기', '게시하기', '발행', '게시'];
+        for (const text of candidates) {
+          const btn = [...document.querySelectorAll('button')].find(
+            b => b.textContent.trim() === text || b.textContent.trim().startsWith(text)
+          );
+          if (btn) { btn.click(); return text; }
+        }
+        return null;
+      });
+      if (clicked) {
+        await page.waitForTimeout(3000);
+        console.log(`🚀 발행 완료 (JS 폴백: "${clicked}" 버튼)`);
+      } else {
+        // 진단: 현재 페이지의 버튼 목록 출력
+        const btnTexts = await page.evaluate(() =>
+          [...document.querySelectorAll('button')]
+            .map(b => b.textContent.trim())
+            .filter(t => t.length > 0 && t.length < 20)
+        );
+        console.warn('⚠️  발행 버튼 못 찾음. 현재 버튼 목록:');
+        console.warn(btnTexts.join(' | '));
+        console.warn('→ 위 목록을 공유하시면 셀렉터 수정 가능합니다.');
+      }
     }
   } else {
     const saveBtn = await page.$('button[data-testid="seOneTempBtn"], button:has-text("임시저장"), button[class*="temp"]');
