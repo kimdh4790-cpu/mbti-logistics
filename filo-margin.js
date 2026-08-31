@@ -54,7 +54,12 @@ function _filoMgTab(idx){
  _mgTabIdx=idx;
  [0,1,2].forEach(function(i){
   var b=document.getElementById('mgt-'+i);
-  if(b){b.style.background=i===idx?'var(--br)':'var(--b3)';b.style.color=i===idx?'#fff':'var(--t2)';}
+  if(b){
+   b.style.borderBottom=i===idx?'2.5px solid #c9a84c':'2px solid transparent';
+   b.style.color=i===idx?'#c9a84c':'var(--t3)';
+   b.style.fontWeight=i===idx?'800':'600';
+   b.style.background='transparent';
+  }
  });
  var did=(_cachedCompanyDoc||{}).dealerId||(_cachedCompanyDoc||{}).uid||'';
  var ymEl=document.getElementById('mg-ym');
@@ -1334,24 +1339,24 @@ function _filoPageMargin(el){
   /* ── 헤더 ── */
   +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">'
   +'<div>'
-  +'<div style="display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.6px;margin-bottom:8px">'
+  +'<div style="display:inline-flex;align-items:center;gap:5px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);color:#c9a84c;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.6px;margin-bottom:8px">'
   +'<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>'
   +'AIVO 마진 분석</div>'
-  +'<div style="font-size:24px;font-weight:900;color:#0F172A;letter-spacing:-1px;line-height:1.1">마진 분석</div>'
-  +'<div id="hero-sub" style="font-size:12px;color:#64748B;margin-top:4px">실시간 연동 중...</div>'
+  +'<div style="font-size:24px;font-weight:900;color:var(--tx);letter-spacing:-1px;line-height:1.1">마진 분석</div>'
+  +'<div id="hero-sub" style="font-size:12px;color:var(--t3);margin-top:4px">실시간 연동 중...</div>'
   +'</div>'
   +'<input type="month" id="mg-ym" value="'+ym+'" onchange="_filoMgTab(_mgTabIdx)" '
-  +'style="padding:8px 14px;border:1.5px solid rgba(99,102,241,.25);border-radius:10px;font-size:13px;font-weight:600;color:#0F172A;background:#fff;cursor:pointer;box-shadow:0 1px 4px rgba(99,102,241,.1)">'
+  +'style="padding:8px 14px;border:1.5px solid var(--bd2);border-radius:10px;font-size:13px;font-weight:600;color:var(--tx);background:var(--surface2);cursor:pointer">'
   +'</div>'
 
   /* ── 월 KPI 4개 ── */
-  +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">'
+  +'<div class="card-cascade" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px">'
   +kpiDefs.map(function(k){
-   return '<div style="background:#fff;border:1.5px solid rgba(0,0,0,.06);border-radius:16px;padding:16px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);position:relative;overflow:hidden">'
+   return '<div style="background:var(--surface);border:1px solid var(--bd2);border-radius:16px;padding:16px 14px;position:relative;overflow:hidden;transition:.2s">'
     +'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+k.color+';border-radius:16px 16px 0 0"></div>'
     +'<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;color:'+k.color+'">'+k.ic
-    +'<span style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.4px">'+k.label+'</span></div>'
-    +'<div id="'+k.id+'" style="font-size:20px;font-weight:900;color:'+k.color+';letter-spacing:-.5px">-</div>'
+    +'<span style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.4px">'+k.label+'</span></div>'
+    +'<div id="'+k.id+'" class="count-anim" style="font-size:20px;font-weight:900;color:'+k.color+';letter-spacing:-.5px">-</div>'
     +'</div>';
   }).join('')
   +'</div>'
@@ -1360,17 +1365,17 @@ function _filoPageMargin(el){
   +'<div id="margin-live" style="margin-bottom:14px"></div>'
 
   /* ── 탭 바 ── */
-  +'<div style="display:flex;gap:0;margin-bottom:14px;border-bottom:1.5px solid rgba(0,0,0,.07)">'
+  +'<div style="display:flex;gap:0;margin-bottom:14px;border-bottom:1.5px solid var(--bd2)">'
   +[['마진 분석','mgt-0'],['원가 등록','mgt-1'],['AI 인사이트','mgt-2']].map(function(t,i){
    var act=i===0;
    return '<button id="'+t[1]+'" onclick="_filoMgTab('+i+')" '
-    +'style="padding:10px 16px;border:none;border-bottom:'+(act?'2.5px solid #6366f1':'2px solid transparent')+';cursor:pointer;font-size:13px;font-weight:'+(act?'800':'600')+';background:transparent;color:'+(act?'#6366f1':'#94A3B8')+';transition:.15s">'+t[0]+'</button>';
+    +'style="padding:10px 16px;border:none;border-bottom:'+(act?'2.5px solid #c9a84c':'2px solid transparent')+';cursor:pointer;font-size:13px;font-weight:'+(act?'800':'600')+';background:transparent;color:'+(act?'#c9a84c':'var(--t3)')+';transition:.15s">'+t[0]+'</button>';
   }).join('')
   +'</div>'
 
   /* ── 탭 콘텐츠 ── */
-  +'<div id="mg-content" style="background:#fff;border:1.5px solid rgba(0,0,0,.06);border-radius:16px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);min-height:200px">'
-  +'<div style="text-align:center;padding:30px;color:#94A3B8;font-size:13px">데이터 로딩 중...</div>'
+  +'<div id="mg-content" style="background:var(--surface);border:1px solid var(--bd2);border-radius:16px;padding:20px;min-height:200px">'
+  +'<div style="text-align:center;padding:30px;color:var(--t3);font-size:13px">데이터 로딩 중...</div>'
   +'</div>'
   +'</div>';
 

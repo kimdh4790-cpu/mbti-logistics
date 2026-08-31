@@ -402,6 +402,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .count-anim{animation:countUp .45s cubic-bezier(.34,1.56,.64,1) both}
 .pop-in{animation:countUp .35s cubic-bezier(.34,1.56,.64,1) both}
 .stagger-1{animation-delay:.05s}.stagger-2{animation-delay:.1s}.stagger-3{animation-delay:.15s}.stagger-4{animation-delay:.2s}
+.stagger-5{animation-delay:.25s}.stagger-6{animation-delay:.3s}.stagger-7{animation-delay:.35s}.stagger-8{animation-delay:.4s}
+/* typewriter */
+@keyframes typewriter{from{width:0;opacity:1}to{width:100%;opacity:1}}
+@keyframes blinkCaret{0%,100%{border-color:transparent}50%{border-color:#c9a84c}}
+.typewriter{overflow:hidden;white-space:nowrap;border-right:2px solid transparent;animation:typewriter .7s steps(32,end) both,blinkCaret .8s step-end 3;display:inline-block;max-width:100%}
+/* card slide-in cascade */
+.card-cascade>*{opacity:0;animation:slideUp .38s cubic-bezier(.34,1.4,.64,1) both}
+.card-cascade>*:nth-child(1){animation-delay:.04s}.card-cascade>*:nth-child(2){animation-delay:.1s}
+.card-cascade>*:nth-child(3){animation-delay:.16s}.card-cascade>*:nth-child(4){animation-delay:.22s}
+.card-cascade>*:nth-child(5){animation-delay:.28s}.card-cascade>*:nth-child(6){animation-delay:.34s}
+/* number roll */
+.num-roll{display:inline-block;animation:numberRoll .55s cubic-bezier(.34,1.56,.64,1) both}
 
 /* ── 출퇴근 ── */
 .attend-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--r);background:var(--surface2);border:1px solid var(--bd);margin-bottom:6px;transition:.15s}

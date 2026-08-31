@@ -599,11 +599,11 @@ function _dineDashboard(el){
 
  /* ── KPI 카드 (스켈레톤 → 실데이터) ── */
  var kpiDefs=[
-  {id:'kpi-sales',  label:'오늘 매출', color:'#38bdf8', ic:_DINE_IC.trending},
-  {id:'kpi-profit', label:'오늘 순이익',color:'#22c55e', ic:_DINE_IC.bar2},
-  {id:'kpi-margin', label:'마진율',    color:'#a78bfa', ic:_DINE_IC.pct},
-  {id:'kpi-orders', label:'주문 건수', color:'#8b5cf6', ic:_DINE_IC.cart},
-  {id:'kpi-staff',  label:'출근 인원', color:'#38bdf8', ic:_DINE_IC.users},
+  {id:'kpi-sales',  label:'오늘 매출', color:'#10B981', ic:_DINE_IC.trending},
+  {id:'kpi-profit', label:'오늘 순이익',color:'#34D399', ic:_DINE_IC.bar2},
+  {id:'kpi-margin', label:'마진율',    color:'#10B981', ic:_DINE_IC.pct},
+  {id:'kpi-orders', label:'주문 건수', color:'#C8A356', ic:_DINE_IC.cart},
+  {id:'kpi-staff',  label:'출근 인원', color:'#34D399', ic:_DINE_IC.users},
   {id:'kpi-labor',  label:'인건비율',  color:'#f59e0b', ic:_DINE_IC.brief}
  ];
  var kpi=document.createElement('div');

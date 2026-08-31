@@ -24,6 +24,37 @@
  */
 // filo-common.js에서 분리됨 (리팩토링 2026-07-13)
 
+// ── 애니메이션 유틸리티 ───────────────────────────────────────────────────
+window._filoTypewriter=function(el,text,speed){
+ if(!el)return;
+ speed=speed||28;
+ el.textContent='';
+ el.classList.add('typewriter-text');
+ var i=0;
+ function tick(){
+  if(i<text.length){el.textContent+=text[i++];setTimeout(tick,speed);}
+ }
+ tick();
+};
+window._filoCountUp=function(el,target,prefix,suffix){
+ if(!el)return;
+ prefix=prefix||'';suffix=suffix||'';
+ var start=0,dur=700,t0=performance.now();
+ function frame(now){
+  var p=Math.min((now-t0)/dur,1);
+  var ease=1-Math.pow(1-p,3);
+  el.textContent=prefix+Math.round(start+(target-start)*ease).toLocaleString()+suffix;
+  if(p<1)requestAnimationFrame(frame);
+ }
+ requestAnimationFrame(frame);
+};
+window._filoCascade=function(container){
+ if(!container)return;
+ Array.from(container.children).forEach(function(c,i){
+  c.style.cssText+='opacity:0;animation:slideUp .36s cubic-bezier(.34,1.4,.64,1) '+(i*0.07)+'s both';
+ });
+};
+
 // ── 전역 오류 탐지 (FILO 대시보드 전체 커버) ──────────────────────────────
 (function(){
  function _sendErr(data){
@@ -502,7 +533,7 @@ function _buildFiloNav(){
  /* ── 홈 (항상) ── */
  menus.push({s:'홈',items:[{ic:'home',l:'대시보드',p:'home'}]});
 
- /* ── 지금 영업 (POS·주문·테이블·웨이팅) ── */
+ /* ── 지금 영업 (POS·주문·테이블) ── */
  var _now=[];
  if(hasAll||hasSub('kiosk')||hasFeature('kiosk')){
   _now.push({ic:'monitor',l:'POS 결제',p:'kiosk'});
@@ -511,9 +542,6 @@ function _buildFiloNav(){
  if(hasAll||hasFeatureOrIndustry('table_order')||hasSub('kiosk')){
   _now.push({ic:'grid',l:'테이블 현황',p:'table_qr'});
   _now.push({ic:'qr-code',l:'테이블 QR',p:'qr_mgmt'});
- }
- if(hasAll||hasFeatureOrIndustry('reservation')){
-  _now.push({ic:'clock',l:'웨이팅',p:'waiting'});
  }
  if(_now.length)menus.push({s:'지금 영업',items:_now});
 
@@ -529,22 +557,19 @@ function _buildFiloNav(){
  }
  if(_menuInv.length)menus.push({s:'메뉴·재고',items:_menuInv});
 
- /* ── 팀 관리 (근태 QR · 예약·달력) ── */
+ /* ── 팀·손님 (근태 QR · 예약+웨이팅) ── */
  var _team=[];
  if(hasAll||hasFeature('qr_attend')){
   _team.push({ic:'qr-code',l:'STAFFIQ 근태 QR',p:'qr_staff',badge:'STAFFIQ'});
  }
  if(hasAll||hasFeatureOrIndustry('reservation')){
-  _team.push({ic:'calendar',l:'예약·달력',p:'schedule'});
+  _team.push({ic:'calendar',l:'예약·웨이팅',p:'schedule'});
  }
- if(_team.length)menus.push({s:'팀 관리',items:_team});
+ if(_team.length)menus.push({s:'팀·손님',items:_team});
 
  /* ── AI·분석 ── */
  var _aiNav=[];
  _aiNav.push({ic:'sparkles',l:'AIVO 어시스턴트',p:'ai',badge:'AIVO'});
- if(hasAll||hasFeature('sales_analytics')){
-  _aiNav.push({ic:'pie-chart',l:'AIVO 마진 분석',p:'margin',badge:'AIVO'});
- }
  if(isAdmin)_aiNav.push({ic:'briefcase',l:'세무사 연동',p:'tax_share'});
  menus.push({s:'AI·분석',items:_aiNav});
 
@@ -880,7 +905,7 @@ function _filoPageHome(el){
   ]
  };
  var _qa=_quickActions[_itype]||_quickActions.other;
- var _qaHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
+ var _qaHtml='<div class="card-cascade" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
   _qa.map(function(q){
    return '<button onclick="_filoGoPage(\''+q.p+'\')" title="'+esc(q.hint)+'" '+
     'style="padding:14px 6px 12px;background:var(--surface);border:1px solid var(--bd2);border-radius:12px;cursor:pointer;text-align:center;transition:all .2s;position:relative;overflow:hidden" '+
@@ -933,7 +958,7 @@ function _filoPageHome(el){
   _qaHtml+
 
   /* 타일 3개 */
-  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
+  '<div class="card-cascade" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
   _hmTileHtml('hm-t-staff','직원 출근','명')+
   _hmTileHtml('hm-t-wait','웨이팅 대기','팀')+
   _hmTileHtml('hm-t-inv','재고 부족','개')+
@@ -973,11 +998,13 @@ function _filoPageHome(el){
    var pend=all.filter(function(o){return o.status==='pending'||o.status==='confirmed';}).length;
 
    var eS=document.getElementById('hm-sales');
-   if(eS){ if(typeof _countUp==='function')_countUp(eS,tot,700,'₩ ',''); else eS.textContent='₩ '+tot.toLocaleString(); }
-   var eC=document.getElementById('hm-cnt'); if(eC) eC.textContent=cnt+'건';
-   var eA=document.getElementById('hm-avg'); if(eA) eA.textContent=avg?'₩'+avg.toLocaleString():'—';
+   if(eS){ if(typeof _filoCountUp==='function')_filoCountUp(eS,tot,'₩ ',''); else eS.textContent='₩ '+tot.toLocaleString(); }
+   var eC=document.getElementById('hm-cnt');
+   if(eC){ if(typeof _filoCountUp==='function')_filoCountUp(eC,cnt,'','건'); else eC.textContent=cnt+'건'; }
+   var eA=document.getElementById('hm-avg');
+   if(eA){ if(avg&&typeof _filoCountUp==='function')_filoCountUp(eA,avg,'₩',''); else eA.textContent=avg?'₩'+avg.toLocaleString():'—'; }
    var eP=document.getElementById('hm-pending');
-   if(eP){eP.textContent=pend;eP.style.color=pend>0?'#ef4444':'rgba(255,255,255,.45)';}
+   if(eP){if(typeof _filoCountUp==='function')_filoCountUp(eP,pend,'','');else eP.textContent=pend;eP.style.color=pend>0?'#ef4444':'rgba(255,255,255,.45)';}
 
    var sw=document.getElementById('hm-status-wrap'),sd=document.getElementById('hm-dot'),st=document.getElementById('hm-status');
    if(cnt>0){

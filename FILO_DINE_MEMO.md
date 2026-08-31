@@ -163,6 +163,32 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (23차)
+**페이지 내부 디자인 개선 + 애니메이션 시스템 + 네비게이션 정리**
+- `filo-margin.js`:
+  - `_filoPageMargin()` 전체 HTML — `background:#fff`·`color:#0F172A`·`border:rgba(0,0,0,.06)` → CSS 변수 (`var(--surface)`·`var(--tx)`·`var(--bd2)`) 일괄 교체 (다크/라이트 테마 호환)
+  - AIVO 배지 색상: 퍼플/인디고 → FILO 골드 (`rgba(201,168,76,.12)` 배경 + `rgba(201,168,76,.3)` 테두리)
+  - 탭 바 활성 색상: 인디고(`#6366f1`) → FILO 골드 (`#c9a84c`)
+  - `_filoMgTab()`: 탭 전환 시 채워진 배경 방식 → 언더라인 방식으로 변경 (초기 HTML과 통일)
+  - KPI 그리드에 `card-cascade` 클래스 추가 → 카드 순차 슬라이드인 애니메이션
+  - KPI 값에 `count-anim` 클래스 추가
+- `dine.js`:
+  - 대시보드 KPI 색상 — 레인보우(sky/purple/violet) → DINE 에메랄드 팔레트 (`#10B981`/`#34D399`) + 주문 건수 FILO 골드 (`#C8A356`) + 인건비율 amber 유지
+- `filo-auth.js`:
+  - 애니메이션 유틸리티 추가: `_filoTypewriter()`, `_filoCountUp()`, `_filoCascade()`
+  - 홈 대시보드 수치 업데이트 → `_filoCountUp()` 적용 (매출·건수·평균단가·미처리 모두)
+  - 퀵액션 그리드 + 타일 그리드 → `card-cascade` 클래스 추가
+  - 네비게이션 정리:
+    - `지금 영업`에서 `웨이팅` 항목 제거
+    - `AIVO 마진 분석` nav 항목 제거 (AIVO 어시스턴트 탭 내부로 통합)
+    - `팀 관리` → `팀·손님` 으로 리네임
+    - `예약·달력` → `예약·웨이팅`으로 리네임
+- `filo.html`:
+  - `.typewriter` CSS 클래스 추가 (타이핑 효과 애니메이션)
+  - `.card-cascade` CSS 클래스 추가 (카드 순차 슬라이드인, nth-child 기반 딜레이)
+  - `.num-roll` CSS 클래스 추가
+  - `.stagger-5`~`.stagger-8` 추가 (기존 1~4에서 확장)
+
 ### 2026-08-31 (22차)
 **FILO·DINE 브랜드 정체성 전면 개편 — 다크 크롬 + 브랜드 차별화**
 - `filo.html`:
