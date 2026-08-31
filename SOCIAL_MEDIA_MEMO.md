@@ -363,9 +363,46 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 
 ---
 
+## 네이버 블로그 자동화 (2026-08-31 완료)
+
+### 자동 발행 스케줄
+| 요일 | 제품 | 방식 |
+|---|---|---|
+| 월요일 09:00 | FILO | Windows 작업 스케줄러 (로컬 PC) |
+| 수요일 09:00 | DONWAY | Windows 작업 스케줄러 (로컬 PC) |
+| 금요일 09:00 | 용차앱 | Windows 작업 스케줄러 (로컬 PC) |
+
+- 작업 스케줄러 이름: `NaverBlogPost`
+- 실행 경로: `C:\Users\82104\Desktop\mbti-logistics\naver-blog`
+- Oracle VM 크론에도 동일 등록되어 있으나 **Naver 쿠키 IP 바인딩 문제로 로컬 PC만 정상 동작**
+
+### 초안 파일 현황 (drafts/)
+| 제품 | 파일 | 상태 |
+|---|---|---|
+| DONWAY | `20260831_donway_배달대행정산자동화.json` | ✅ 발행 완료 |
+| DONWAY | `20260903_donway_알림톡자동발송.json` | 대기 |
+| DONWAY | `20260910_donway_세금계산서자동발행.json` | 미생성 |
+| DONWAY | `20260917_donway_요금제비교.json` | 미생성 |
+| FILO | `20260831_filo_dine_카페직원관리.json` | 대기 |
+| FILO | `20260907_filo_직원근태관리.json` | 대기 |
+| FILO | `20260914_filo_POS주문통합.json` | 미생성 |
+| FILO | `20260921_filo_매출분석AI.json` | 미생성 |
+| 용차앱 | `20260905_yongcha_소장기사직접거래.json` | 대기 |
+| 용차앱 | `20260912_yongcha_AI기사추천.json` | 미생성 |
+| 용차앱 | `20260919_yongcha_단가제안.json` | 미생성 |
+| 용차앱 | `20260926_yongcha_수수료없는거래.json` | 미생성 |
+
+### 로그인 세션 관리
+- 로컬 PC: `naver-profile/` 디렉토리 (Chromium 세션)
+- Oracle VM: `naver-profile/cookies.json` 복사됨 (IP 바인딩으로 미사용)
+- 세션 만료 시: 로컬에서 `node scripts/naver_login.js` 재실행
+
+---
+
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-08-31 | **네이버 블로그 자동화 완료** — naver_schedule.js 생성 (요일별 제품 순환), 초안 3개 신규 생성(DONWAY 알림톡/FILO 근태관리/용차앱 직접거래), naver_login.js fs require 버그 수정, Windows 작업 스케줄러 NaverBlogPost 등록(월수금 09:00), Oracle VM cron 등록 완료 |
 | 2026-08-29 | **DONWAY·용차앱 Remotion 코드 영상 추가** — DonwayPromo.jsx(5씬 파티클·카운터·자막), YongchaPromo.jsx(5씬 AI타이핑·루트비교). render-donway.js·render-yongcha.js 신규 생성. social-media.yml Remotion 렌더 범위 확장(FILO→FILO·DONWAY·용차앱), Playwright 녹화·FFmpeg 편집은 dine·mbtico만으로 변경. 비용 없이 코드 기반 고품질 영상 자동 생성 |
 | 2026-08-29 | **DONWAY Instagram Reels 업로드 완료** — Oracle Cloud Playwright, `[role="button"]:has-text("공유")` 셀렉터 수정으로 해결 |
 | 2026-08-29 | **Instagram 공유 버튼 셀렉터 강화** — upload-instagram.js: role=button 포함 8가지 순차 시도, 실패 시 스크린샷 저장 |
