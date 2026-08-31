@@ -232,14 +232,18 @@ async function inputTags(page, tagList) {
 
   // 2차: 발행 패널 열기로 태그 입력란 접근
   if (!tagInput) {
-    const publishBtn = await page.$(
-      'button[data-testid="seOnePublishBtn"], button:has-text("발행"), button[class*="publish"]'
-    ).catch(() => null);
-    if (publishBtn) {
-      await publishBtn.click();
-      await page.waitForTimeout(2000);
-      tagInput = await page.$('input#tag-input, input[placeholder*="태그"], input[class*="tag"]').catch(() => null);
+    // 발행 패널 열기 (force 클릭으로 visibility 무시)
+    const publishBtnSels = [
+      'button[data-testid="seOnePublishBtn"]',
+      'button:has-text("발행")',
+      'button[class*="publish"]',
+    ];
+    for (const sel of publishBtnSels) {
+      const ok = await page.click(sel, { force: true, timeout: 5000 }).then(() => true).catch(() => false);
+      if (ok) break;
     }
+    await page.waitForTimeout(2000);
+    tagInput = await page.$('input#tag-input, input[placeholder*="태그"], input[class*="tag"]').catch(() => null);
   }
 
   if (!tagInput) {
@@ -252,7 +256,7 @@ async function inputTags(page, tagList) {
   for (const rawTag of tagList.slice(0, 30)) {
     const tag = rawTag.replace(/^#/, '').trim();
     if (!tag) continue;
-    await tagInput.click().catch(() => {});
+    await tagInput.click({ force: true }).catch(() => {});
     await page.keyboard.insertText(tag);
     await page.waitForTimeout(200);
     await page.keyboard.press('Enter');
