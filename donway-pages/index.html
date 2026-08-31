@@ -24299,7 +24299,10 @@ async function _sendAlimtalkWithStmt(x,r,name,month,net,phone,coName){
         body:JSON.stringify({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',variables:variables,fallbackText:fallbackText})});
       var data2=await res2.json();
       if(data2.ok){toast('✅ 알림톡 발송 완료 — '+name+'님');}
-      else{toast('⚠️ SMS로 대체 발송됨');}
+      else{
+        var _atErr=(data2.result&&(data2.result.message||data2.result.msg))||data2.error||'알 수 없는 오류';
+        toast('❌ 알림톡 실패: '+_atErr);
+      }
       if(_db)_db.collection('message_history').add({dealerId:did,to:phone,name:name,channel:'alimtalk',
         text:fallbackText,stmtUrl:stmtUrl,sentAt:new Date().toISOString()}).catch(function(){});
     }catch(e){toast('❌ 발송 오류: '+e.message);}

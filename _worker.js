@@ -11259,15 +11259,25 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         const senderKey = env.ALIGO_SENDER_KEY;
         const sender   = env.ALIGO_SENDER || '05171133103';
         if (!apiKey || !userId || !senderKey) {
-          return new Response(JSON.stringify({ error: 'Aligo 키 없음' }), {
+          return new Response(JSON.stringify({ ok: false, error: 'Aligo 키 없음 (ALIGO_KEY/ALIGO_USER_ID/ALIGO_SENDER_KEY 확인)' }), {
             status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
           });
         }
-        // 변수 치환으로 메시지 렌더링
-        let msg = fallbackText || '';
+        // 템플릿 본문 (Aligo 등록 텍스트와 일치해야 발송됨)
+        const nl = '\n';
+        const TPL_BODY = {
+          'KA01TP260618101225825DuJHXpoC4kY':
+            `안녕하세요, #{이름}님.${nl}${nl}#{고객회사명} #{월} 정산 명세서가 도착했습니다.${nl}${nl}아래 링크에서 확인하세요.${nl}#{명세서링크}${nl}${nl}정산 문의: #{담당자명} 대표${nl}☎ #{문의전화}${nl}${nl}모바일에서 확인해 주세요.`,
+          'KA01TP260623201919874SBFmHTNdNft':
+            `안녕하세요, #{이름}님.${nl}${nl}#{회사명} #{월} 급여명세서가 도착했습니다.${nl}실지급액: #{실지급}원${nl}${nl}명세서: #{명세서링크}${nl}${nl}문의사항은 관리자에게 연락해 주세요.`,
+          'KA01TP260623201607025LtxVxj2AoHI':
+            `[재고 발주 알림]${nl}#{내용}`
+        };
+        let tplBase = TPL_BODY[templateCode] || fallbackText || '';
         if (variables) {
-          Object.entries(variables).forEach(([k, v]) => { msg = msg.split(k).join(String(v)); });
+          Object.entries(variables).forEach(([k, v]) => { tplBase = tplBase.split(k).join(String(v)); });
         }
+        const msg = tplBase;
         const params = new URLSearchParams({
           apikey: apiKey,
           userid: userId,
