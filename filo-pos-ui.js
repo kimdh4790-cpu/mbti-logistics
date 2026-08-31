@@ -54,17 +54,18 @@ function _offlineBannerShow(banner){
 function _offlineBanner(){
  var banner=document.getElementById('filo-offline-banner');
  if(!banner)return;
- // navigator.onLine은 부정확할 수 있으므로 실제 fetch로 연결 확인
- // KV 정적 파일로 실제 연결 확인 (HEAD보다 GET이 Worker에서 안정적)
+ // navigator.onLine=true면 즉시 숨김 (fetch 불필요)
+ if(navigator.onLine){banner.hidden=true;return;}
+ // onLine=false일 때만 fetch로 재확인 — HTTP 응답 있으면 온라인, 네트워크 에러·타임아웃만 오프라인
  var ctrl=new AbortController();
- var tid=setTimeout(function(){ctrl.abort();},8000);
+ var tid=setTimeout(function(){ctrl.abort();},5000);
  fetch('/filo-common.js?_='+Date.now(),{cache:'no-store',signal:ctrl.signal})
-  .then(function(r){clearTimeout(tid);if(r.ok||r.status<500)banner.hidden=true;else _offlineBannerShow(banner);})
+  .then(function(){clearTimeout(tid);banner.hidden=true;})
   .catch(function(){clearTimeout(tid);_offlineBannerShow(banner);});
 }
 // 초기 상태 반영 + 네트워크 변화 실시간 감지
 document.addEventListener('DOMContentLoaded',_offlineBanner);
-window.addEventListener('online',_offlineBanner);
+window.addEventListener('online',function(){var b=document.getElementById('filo-offline-banner');if(b)b.hidden=true;});
 window.addEventListener('offline',_offlineBanner);
 
 function _filoReceiptSelected(input){
