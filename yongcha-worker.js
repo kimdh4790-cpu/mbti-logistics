@@ -8736,33 +8736,13 @@ function _doUpdateMapZones(){
   _markers = [];
   (window._polygons||[]).forEach(function(p){p.setMap(null);});
   window._polygons = [];
-  try{_map.removeOverlayMapTypeId(kakao.maps.MapTypeId.USE_DISTRICT);}catch(e){}
-  var pending = window._zones.length;
-  if(!pending) return;
+  if(!window._zones||!window._zones.length) return;
   window._zones.forEach(function(z){
-    fetch('/api/yongcha/basidco?zip='+z.zipcode)
-      .then(function(r){return r.json();})
-      .then(function(d){
-        if(d.ok && d.coords && d.coords.length >= 3){
-          var path = d.coords.map(function(c){return new kakao.maps.LatLng(c.lat, c.lng);});
-          var poly = new kakao.maps.Polygon({path:path,strokeWeight:2.5,strokeColor:'#00d4aa',strokeOpacity:1,fillColor:'#00d4aa',fillOpacity:0.15,map:_map});
-          window._polygons.push(poly);
-          var pos = new kakao.maps.LatLng(d.lat, d.lng);
-          var content = '<div style="background:rgba(0,212,170,.92);color:#000;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)">'+z.zipcode+' '+z.name+'</div>';
-          var overlay = new kakao.maps.CustomOverlay({content:content, position:pos, yAnchor:2.2});
-          overlay.setMap(_map);
-          _markers.push(overlay);
-        } else {
-          var pos2 = new kakao.maps.LatLng(z.lat, z.lng);
-          var m = new kakao.maps.Marker({position:pos2, map:_map});
-          _markers.push(m);
-        }
-      })
-      .catch(function(){
-        var pos3 = new kakao.maps.LatLng(z.lat, z.lng);
-        var m2 = new kakao.maps.Marker({position:pos3, map:_map});
-        _markers.push(m2);
-      });
+    var pos = new kakao.maps.LatLng(z.lat, z.lng);
+    var content = '<div style="background:rgba(0,212,170,.92);color:#000;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)">'+z.zipcode+' '+z.name+'</div>';
+    var overlay = new kakao.maps.CustomOverlay({content:content, position:pos, yAnchor:2.5});
+    overlay.setMap(_map);
+    _markers.push(overlay);
   });
   var last = window._zones[window._zones.length-1];
   _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
