@@ -330,10 +330,10 @@ async function inputPlace(page, placeInfo) {
 
   const page = context.pages()[0] || await context.newPage();
 
-  // 에디터 진입
-  await page.goto(`https://blog.naver.com/BlogTitleEditView.naver?blogId=${BLOG_ID}`, {
+  // 에디터 진입 (새 글 작성 URL)
+  await page.goto(`https://blog.naver.com/PostWriteForm.naver?blogId=${BLOG_ID}`, {
     waitUntil: 'networkidle',
-    timeout: 30000,
+    timeout: 60000,
   });
 
   // 로그인 체크
