@@ -163,6 +163,15 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (20차)
+**프랜차이즈 HQ 완전 구현 + 모바일 하단 탭바**
+- `filo.html`: 모바일 하단 탭바 추가 — 홈/영업/메뉴/AIVO/설정 5탭, max-width:768px에서 표시, safe-area-inset-bottom 지원
+- `filo-auth.js`: `_filoGoPage()` 탭바 활성 동기화 추가 (`_tabPages` 맵 — 페이지→탭 매핑)
+- `filo-auth.js`: 본사 HQ 섹션에 가맹점관리·공지일괄발송·QSC체크리스트 3개 항목 추가
+- `filo-auth.js`: `_filoPageBranchMgmt()` 신규 — dealerId 입력→hqDealerId 설정·해제·목록 조회
+- `filo-auth.js`: `_filoPageHqNotice()` 신규 — 전가맹점 공지 일괄 발송 (일반/긴급/이벤트), `hq_notices` 컬렉션 저장, 이력 조회
+- `filo-auth.js`: `_filoPageQSC()` 신규 — Q(품질)/S(서비스)/C(청결) 9항목 5점 체크리스트, `hq_qsc` 컬렉션 저장, 이력 %점수 표시
+
 ### 2026-08-31 (19차)
 **FILO 구조 전면 개편: nav 4그룹 재편 + 프랜차이즈 HQ + 업종별 홈 위젯 + AIVO 채팅**
 - `filo-auth.js`: `_buildFiloNav()` 그룹명 재편 (주문매출/메뉴테이블/재고/직원급여/회원예약 → 지금영업/메뉴재고/팀관리/AI분석). 웨이팅을 "지금 영업"으로 이동. `franchise_hq` 플랜 전용 "본사 HQ" 섹션 추가 (전가맹점현황·메뉴일괄배포)

@@ -552,6 +552,9 @@ function _buildFiloNav(){
  if(hasAll||hasFeature('franchise_hq')){
   menus.push({s:'본사 HQ',items:[
    {ic:'building',l:'전가맹점 현황',p:'branch_monitor'},
+   {ic:'user-plus',l:'가맹점 관리',p:'branch_mgmt'},
+   {ic:'megaphone',l:'공지 일괄 발송',p:'hq_notice'},
+   {ic:'clipboard-check',l:'QSC 체크리스트',p:'hq_qsc'},
    {ic:'send',l:'메뉴 일괄 배포',p:'menu_deploy'},
   ]});
  }
@@ -720,6 +723,12 @@ function _filoGoPage(p){
  }
  document.getElementById('sidebar').classList.remove('open');
 
+ /* 모바일 하단 탭바 활성 동기화 */
+ var _tabPages={home:'home',kiosk:'kiosk',orders:'kiosk',table_qr:'kiosk',waiting:'kiosk',qr_mgmt:'kiosk',menu_mgmt:'menu_mgmt',bakery_qr_mgmt:'menu_mgmt',inventory:'menu_mgmt',auto_order:'menu_mgmt',ai:'ai',margin:'ai',settings:'settings',subscription:'settings'};
+ var _activeTab=_tabPages[p]||null;
+ document.querySelectorAll('.tab-item').forEach(function(t){t.classList.remove('active');});
+ if(_activeTab){var _tb=document.getElementById('tab-'+_activeTab);if(_tb)_tb.classList.add('active');}
+
  var el=document.getElementById('content');
  var titles={home:'대시보드',members:'직원 관리',schedule:'달력',
  inventory:'재고 대시보드',stock_in:'입고 등록',stock_out:'출고 등록',
@@ -729,7 +738,7 @@ function _filoGoPage(p){
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리',
  ai:'AIVO 어시스턴트',waiting:'웨이팅 관리',menu_mgmt:'메뉴 관리',qr_mgmt:'테이블 QR 관리',qr_staff:'STAFFIQ 근태 QR',
  bakery_qr_mgmt:'빵·디저트 QR',inv_dash:'재고 대시보드',margin:'마진 분석',sales:'매출 리포트',expiry:'유통기한 관리',
- branch_monitor:'전가맹점 현황',menu_deploy:'메뉴 일괄 배포'};
+ branch_monitor:'전가맹점 현황',menu_deploy:'메뉴 일괄 배포',branch_mgmt:'가맹점 관리',hq_notice:'공지 일괄 발송',hq_qsc:'QSC 체크리스트'};
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
  /* 라우팅 처리 여부 — 미처리 페이지는 아래에서 '준비 중' 안내를 그린다 */
@@ -775,6 +784,9 @@ function _filoGoPage(p){
  else if(p==='margin') _filoPageMargin(el);
  else if(p==='branch_monitor') _filoPageBranchMonitor(el);
  else if(p==='menu_deploy') _filoPageMenuDeploy(el);
+ else if(p==='branch_mgmt') _filoPageBranchMgmt(el);
+ else if(p==='hq_notice') _filoPageHqNotice(el);
+ else if(p==='hq_qsc') _filoPageQSC(el);
  else _routed=false;
 
  /* 라우팅되지 않은 페이지 안내 (이전 화면이 그대로 남는 것을 막는다) */
@@ -1594,3 +1606,229 @@ window._filoHqDeploy=function(){
    next(0);
   }).catch(function(e){_filoToast('메뉴 로드 실패');console.error(e);});
 };
+
+/* ──────────────────────────────────────────────────────────
+   프랜차이즈 HQ — 가맹점 관리
+   ────────────────────────────────────────────────────────── */
+function _filoPageBranchMgmt(el){
+ if(!el)el=document.getElementById('content');
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ var loadList=function(){
+  var listEl=document.getElementById('branch-list');if(!listEl)return;
+  listEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">불러오는 중...</div>';
+  _db.collection('companies').where('hqDealerId','==',did).get()
+   .then(function(snap){
+    if(!snap.size){listEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">등록된 가맹점이 없습니다</div>';return;}
+    var html='';
+    snap.forEach(function(d){
+     var b=d.data();
+     html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">'+
+      '<div><div style="font-size:13px;font-weight:700">'+(b.name||d.id)+'</div>'+
+      '<div style="font-size:11px;color:var(--t3)">'+(b.email||d.id)+'</div></div>'+
+      '<button onclick="_filoHqRemoveBranch(\''+esc(d.id)+'\')" style="padding:4px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;font-size:11px;cursor:pointer">해제</button></div>';
+    });
+    listEl.innerHTML=html;
+   }).catch(function(){listEl.innerHTML='<div style="color:#ef4444;font-size:12px;text-align:center;padding:16px">로드 실패</div>';});
+ };
+ el.innerHTML=
+  '<div class="slide-up" style="max-width:680px;margin:0 auto;padding-bottom:32px">'+
+  '<div style="margin-bottom:20px">'+
+  '<div style="font-size:12px;color:var(--t3);letter-spacing:.5px;margin-bottom:4px">본사 HQ</div>'+
+  '<div style="font-size:22px;font-weight:900">가맹점 관리</div>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:8px">가맹점 추가</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:8px">가맹점 딜러 ID를 입력하면 본사 HQ에 연결됩니다.</div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input id="branch-add-id" placeholder="가맹점 dealerId 입력" style="flex:1;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:13px;outline:none">'+
+  '<button onclick="_filoHqAddBranch()" style="padding:10px 16px;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:13px;font-weight:800;cursor:pointer">추가</button>'+
+  '</div></div>'+
+  '<div class="card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">등록된 가맹점</div>'+
+  '<div id="branch-list"><div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">불러오는 중...</div></div>'+
+  '</div></div>';
+ loadList();
+ window._filoHqAddBranch=function(){
+  var inp=document.getElementById('branch-add-id');
+  var bId=(inp&&inp.value.trim())||'';
+  if(!bId){_filoToast('가맹점 ID를 입력하세요.');return;}
+  _filoToast('연결 중...');
+  _db.collection('companies').doc(bId).get()
+   .then(function(doc){
+    if(!doc.exists){_filoToast('존재하지 않는 가맹점 ID입니다.');return Promise.resolve();}
+    return doc.ref.update({hqDealerId:did,hqLinkedAt:new Date().toISOString()})
+     .then(function(){_filoToast('가맹점 연결 완료!');if(inp)inp.value='';loadList();});
+   }).catch(function(e){_filoToast('연결 실패: '+e.message);});
+ };
+ window._filoHqRemoveBranch=function(bId){
+  if(!confirm('가맹점 연결을 해제하시겠습니까?'))return;
+  _db.collection('companies').doc(bId).update({hqDealerId:firebase.firestore.FieldValue.delete()})
+   .then(function(){_filoToast('연결 해제 완료');loadList();})
+   .catch(function(e){_filoToast('해제 실패: '+e.message);});
+ };
+}
+
+/* ──────────────────────────────────────────────────────────
+   프랜차이즈 HQ — 공지 일괄 발송
+   ────────────────────────────────────────────────────────── */
+function _filoPageHqNotice(el){
+ if(!el)el=document.getElementById('content');
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ el.innerHTML=
+  '<div class="slide-up" style="max-width:680px;margin:0 auto;padding-bottom:32px">'+
+  '<div style="margin-bottom:20px">'+
+  '<div style="font-size:12px;color:var(--t3);letter-spacing:.5px;margin-bottom:4px">본사 HQ</div>'+
+  '<div style="font-size:22px;font-weight:900">공지 일괄 발송</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-top:6px">전 가맹점에 공지사항을 즉시 발송합니다.</div>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">공지 작성</div>'+
+  '<input id="hq-ntc-title" placeholder="제목" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box">'+
+  '<textarea id="hq-ntc-body" placeholder="공지 내용을 입력하세요..." rows="5" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:13px;outline:none;resize:vertical;box-sizing:border-box;margin-bottom:10px"></textarea>'+
+  '<div style="display:flex;gap:8px">'+
+  '<select id="hq-ntc-type" style="padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:12px">'+
+  '<option value="info">일반 공지</option><option value="urgent">긴급 공지</option><option value="event">이벤트</option></select>'+
+  '<button onclick="_filoHqSendNotice()" style="flex:1;padding:10px 16px;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:13px;font-weight:800;cursor:pointer">전체 발송</button>'+
+  '</div></div>'+
+  '<div class="card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">발송 이력</div>'+
+  '<div id="hq-ntc-history"><div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">불러오는 중...</div></div>'+
+  '</div></div>';
+ _db.collection('hq_notices').where('hqDealerId','==',did).where('dealerId','==',null).orderBy('createdAt','desc').limit(10).get()
+  .catch(function(){return _db.collection('hq_notices').where('hqDealerId','==',did).orderBy('createdAt','desc').limit(10).get();})
+  .then(function(snap){
+   var hEl=document.getElementById('hq-ntc-history');if(!hEl)return;
+   if(!snap.size){hEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">발송 이력 없음</div>';return;}
+   var html='';
+   snap.forEach(function(d){
+    var n=d.data();
+    var dt=n.createdAt?(new Date(n.createdAt)).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    var typeC=n.type==='urgent'?'#ef4444':n.type==='event'?'#c9a84c':'var(--t3)';
+    html+='<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
+     '<span style="font-size:10px;color:'+typeC+';font-weight:700">'+(n.type==='urgent'?'긴급':n.type==='event'?'이벤트':'공지')+'</span>'+
+     '<span style="font-size:13px;font-weight:700">'+esc(n.title||'')+'</span>'+
+     '<span style="font-size:11px;color:var(--t3);margin-left:auto">'+dt+'</span></div>'+
+     '<div style="font-size:12px;color:var(--t2)">'+esc((n.body||'').slice(0,80))+(n.body&&n.body.length>80?'...':'')+'</div>'+
+     (n.branchCount?'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+n.branchCount+'개 가맹점 수신</div>':'')+'</div>';
+   });
+   hEl.innerHTML=html;
+  }).catch(function(e){var hEl=document.getElementById('hq-ntc-history');if(hEl)hEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">이력 없음</div>';});
+ window._filoHqSendNotice=function(){
+  var t=(document.getElementById('hq-ntc-title')&&document.getElementById('hq-ntc-title').value.trim())||'';
+  var b=(document.getElementById('hq-ntc-body')&&document.getElementById('hq-ntc-body').value.trim())||'';
+  var tp=(document.getElementById('hq-ntc-type')&&document.getElementById('hq-ntc-type').value)||'info';
+  if(!t||!b){_filoToast('제목과 내용을 입력하세요.');return;}
+  _db.collection('companies').where('hqDealerId','==',did).get()
+   .then(function(snap){
+    if(!snap.size){_filoToast('등록된 가맹점이 없습니다.');return Promise.resolve();}
+    var batch=_db.batch();var now=new Date().toISOString();
+    var master=_db.collection('hq_notices').doc();
+    batch.set(master,{hqDealerId:did,title:t,body:b,type:tp,createdAt:now,branchCount:snap.size});
+    snap.forEach(function(d){
+     batch.set(_db.collection('hq_notices').doc(),{hqDealerId:did,dealerId:d.id,title:t,body:b,type:tp,read:false,createdAt:now});
+    });
+    return batch.commit();
+   })
+   .then(function(){
+    _filoToast('공지 발송 완료!');
+    if(document.getElementById('hq-ntc-title'))document.getElementById('hq-ntc-title').value='';
+    if(document.getElementById('hq-ntc-body'))document.getElementById('hq-ntc-body').value='';
+    _filoGoPage('hq_notice');
+   }).catch(function(e){_filoToast('발송 실패: '+e.message);});
+ };
+}
+
+/* ──────────────────────────────────────────────────────────
+   프랜차이즈 HQ — QSC 체크리스트
+   ────────────────────────────────────────────────────────── */
+function _filoPageQSC(el){
+ if(!el)el=document.getElementById('content');
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ var _qscItems=[
+  {id:'c_floor',cat:'C',label:'바닥·테이블 청결'},
+  {id:'c_kitchen',cat:'C',label:'주방 위생 상태'},
+  {id:'c_restroom',cat:'C',label:'화장실 청결'},
+  {id:'s_greeting',cat:'S',label:'직원 인사 서비스'},
+  {id:'s_time',cat:'S',label:'주문~제공 대기시간'},
+  {id:'s_uniform',cat:'S',label:'유니폼·용모 단정'},
+  {id:'q_taste',cat:'Q',label:'음식·음료 맛 품질'},
+  {id:'q_portion',cat:'Q',label:'양 기준 준수'},
+  {id:'q_temp',cat:'Q',label:'온도·신선도 유지'},
+ ];
+ var catC={Q:'#3b82f6',S:'#22c55e',C:'#f59e0b'};
+ var scoreHtml=function(id){
+  return '<div id="qsc-g-'+id+'" data-sel="0" style="display:flex;gap:4px">'+
+   [1,2,3,4,5].map(function(n){
+    return '<button onclick="var g=document.getElementById(\'qsc-g-'+id+'\');g.dataset.sel=\''+n+'\';g.querySelectorAll(\'button\').forEach(function(b){b.style.background=\'var(--b3)\';b.style.color=\'var(--t1)\'});this.style.background=\'#c9a84c\';this.style.color=\'#0f172a\'" '+
+     'style="width:32px;height:32px;border:1px solid var(--bd);border-radius:6px;background:var(--b3);color:var(--t1);font-size:12px;font-weight:700;cursor:pointer">'+n+'</button>';
+   }).join('')+'</div>';
+ };
+ var itemsHtml=_qscItems.map(function(it){
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">'+
+   '<div style="display:flex;align-items:center;gap:8px">'+
+   '<span style="width:20px;height:20px;border-radius:4px;background:'+catC[it.cat]+';color:#fff;font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center">'+it.cat+'</span>'+
+   '<span style="font-size:13px">'+esc(it.label)+'</span></div>'+
+   scoreHtml(it.id)+'</div>';
+ }).join('');
+ el.innerHTML=
+  '<div class="slide-up" style="max-width:680px;margin:0 auto;padding-bottom:32px">'+
+  '<div style="margin-bottom:20px">'+
+  '<div style="font-size:12px;color:var(--t3);letter-spacing:.5px;margin-bottom:4px">본사 HQ</div>'+
+  '<div style="font-size:22px;font-weight:900">QSC 체크리스트</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-top:6px">Q(품질) · S(서비스) · C(청결) — 5점 만점</div>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:8px">점검 가맹점</div>'+
+  '<select id="qsc-branch" style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:13px">'+
+  '<option value="">-- 가맹점 선택 --</option></select>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  itemsHtml+
+  '<div style="margin-top:12px">'+
+  '<div style="font-size:12px;font-weight:700;margin-bottom:6px">특이사항 메모</div>'+
+  '<textarea id="qsc-memo" rows="3" placeholder="현장 메모..." style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>'+
+  '</div></div>'+
+  '<button onclick="_filoQscSubmit()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:10px;color:#0f172a;font-size:14px;font-weight:900;cursor:pointer">점검 결과 제출</button>'+
+  '<div id="qsc-history" style="margin-top:24px"></div>'+
+  '</div>';
+ _db.collection('companies').where('hqDealerId','==',did).get()
+  .then(function(snap){
+   var sel=document.getElementById('qsc-branch');if(!sel)return;
+   snap.forEach(function(d){var b=d.data();var opt=document.createElement('option');opt.value=d.id;opt.textContent=b.name||d.id;sel.appendChild(opt);});
+  }).catch(function(){});
+ _db.collection('hq_qsc').where('hqDealerId','==',did).orderBy('createdAt','desc').limit(5).get()
+  .then(function(snap){
+   var hEl=document.getElementById('qsc-history');if(!hEl||!snap.size)return;
+   var html='<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:12px">최근 점검 이력</div>';
+   snap.forEach(function(d){
+    var q=d.data();var sc=q.scores||{};
+    var tot=Object.values(sc).reduce(function(a,b){return a+(b||0);},0);
+    var max=Object.keys(sc).length*5||9*5;
+    var pct=Math.round(tot/max*100);
+    var dt=q.createdAt?(new Date(q.createdAt)).toLocaleDateString('ko-KR'):'';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:var(--b3);border-radius:8px;margin-bottom:8px">'+
+     '<div><div style="font-size:13px;font-weight:700">'+(q.branchName||q.branchId||'?')+'</div>'+
+     '<div style="font-size:11px;color:var(--t3)">'+dt+'</div></div>'+
+     '<div style="font-size:20px;font-weight:900;color:'+(pct>=80?'#22c55e':pct>=60?'#f59e0b':'#ef4444')+'">'+pct+'<span style="font-size:11px;font-weight:400">%</span></div></div>';
+   });
+   hEl.innerHTML=html+'</div>';
+  }).catch(function(){});
+ window._filoQscSubmit=function(){
+  var bId=(document.getElementById('qsc-branch')&&document.getElementById('qsc-branch').value)||'';
+  if(!bId){_filoToast('가맹점을 선택하세요.');return;}
+  var scores={};
+  _qscItems.forEach(function(it){
+   var g=document.getElementById('qsc-g-'+it.id);
+   scores[it.id]=g?parseInt(g.dataset.sel||'0',10):0;
+  });
+  var total=Object.values(scores).reduce(function(a,b){return a+b;},0);
+  if(total===0){_filoToast('최소 한 항목 이상 점수를 입력하세요.');return;}
+  var memo=(document.getElementById('qsc-memo')&&document.getElementById('qsc-memo').value.trim())||'';
+  var selEl=document.getElementById('qsc-branch');
+  var branchName=selEl&&selEl.selectedIndex>=0?selEl.options[selEl.selectedIndex].textContent:'';
+  _db.collection('hq_qsc').add({hqDealerId:did,branchId:bId,branchName:branchName,scores:scores,memo:memo,inspector:(_CU&&_CU.email)||'',createdAt:new Date().toISOString()})
+   .then(function(){_filoToast('점검 결과 제출 완료!');_filoGoPage('hq_qsc');})
+   .catch(function(e){_filoToast('제출 실패: '+e.message);});
+ };
+}

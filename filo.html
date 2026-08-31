@@ -224,12 +224,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 #content-wrap{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);overflow-x:hidden;min-width:0;width:calc(100% - var(--sidebar-w));transition:margin-left .25s cubic-bezier(.4,0,.2,1),width .25s cubic-bezier(.4,0,.2,1)}
 #content{padding:16px;min-height:calc(100dvh - var(--topbar-h));box-sizing:border-box;padding-top:calc(var(--topbar-h) + 16px);overflow-x:hidden;margin-left:var(--sidebar-w);width:calc(100% - var(--sidebar-w))}
 
+/* ── 모바일 하단 탭바 ── */
+#mobile-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--b2);border-top:1px solid var(--bd);z-index:150;align-items:stretch;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--t3);transition:color .15s;padding:4px 2px;font-size:9px;font-weight:700;border:none;background:none;letter-spacing:.2px}
+.tab-item.active{color:#c9a84c}
+.tab-item svg{flex-shrink:0}
+.tab-badge{position:relative;display:flex;justify-content:center}
+.tab-badge::after{content:'';display:none;position:absolute;top:-2px;right:-4px;width:6px;height:6px;border-radius:50%;background:#ef4444}
+.tab-badge.has-badge::after{display:block}
+
 @media(max-width:768px){
   #sidebar{transform:translateX(-100%);position:fixed;z-index:200;box-shadow:none}
   #sidebar.open{transform:translateX(0);box-shadow:4px 0 32px rgba(0,0,0,.3)}
   #content-wrap{margin-left:0!important;width:100%!important}
-  #content{margin-left:0!important;width:100%!important;padding:12px!important}
+  #content{margin-left:0!important;width:100%!important;padding:12px!important;padding-bottom:68px!important}
   #app.logged-in{display:block!important}
+  #mobile-tabbar{display:flex}
   .kpi-grid{grid-template-columns:repeat(2,1fr)!important}
   .pos-wrap{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;height:auto!important;overflow:visible!important}
   .cart-panel{max-height:50dvh!important;overflow-y:auto!important}
@@ -239,6 +249,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
   .section-header{flex-wrap:wrap!important;gap:8px!important}
   table{font-size:11px!important}
   .pay-card{flex-direction:column!important}
+  /* 모바일에서 topbar 간소화 */
+  #rotate-btn{display:none!important}
+  .topbar .dine-btn{display:none!important}
 }
 
 /* ── 카드 컴포넌트 ── */
@@ -1282,6 +1295,32 @@ input:focus,select:focus,textarea:focus{
  </div>
  </div>
  <div class="main" id="content" style="padding-top:calc(var(--topbar-h) + 16px);overflow-x:hidden;min-width:0;box-sizing:border-box;padding-left:16px;padding-right:16px;padding-bottom:16px"></div>
+</div>
+
+<!-- ── 모바일 하단 탭바 ── -->
+<div id="mobile-tabbar">
+ <button class="tab-item active" id="tab-home" onclick="_filoGoPage('home')">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  <span>홈</span>
+ </button>
+ <button class="tab-item" id="tab-kiosk" onclick="_filoGoPage('kiosk')">
+  <div class="tab-badge" id="tab-badge-orders">
+   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+  </div>
+  <span>영업</span>
+ </button>
+ <button class="tab-item" id="tab-menu_mgmt" onclick="_filoGoPage('menu_mgmt')">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
+  <span>메뉴</span>
+ </button>
+ <button class="tab-item" id="tab-ai" onclick="_filoGoPage('ai')">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5z"/></svg>
+  <span>AIVO</span>
+ </button>
+ <button class="tab-item" id="tab-settings" onclick="_filoGoPage('settings')">
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+  <span>설정</span>
+ </button>
 </div>
 
 <div id="toast" class="toast"></div>

@@ -413,6 +413,11 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: `_filoPageBranchMonitor()` + `_filoPageMenuDeploy()` + `_filoHqDeploy()` 프랜차이즈 HQ 페이지 신규 구현
 - filo-margin.js: `_filoPageAI()` AIVO 채팅 패널 추가 (매장데이터 컨텍스트, 퀵칩 4개)
 - _worker.js: `/api/ai-chat` 엔드포인트 신규 (최근 7일 매출+재고 주입, claude-haiku-4-5)
+- filo.html: 모바일 하단 탭바 추가 (홈/영업/메뉴/AIVO/설정, max-width:768px)
+- filo-auth.js: `_filoGoPage()` 탭바 활성 동기화 + 본사HQ 3개 항목 추가 (가맹점관리/공지발송/QSC)
+- filo-auth.js: `_filoPageBranchMgmt()` 가맹점 등록·관리·해제 신규 구현
+- filo-auth.js: `_filoPageHqNotice()` 전가맹점 공지 일괄 발송 신규 구현 (hq_notices 컬렉션)
+- filo-auth.js: `_filoPageQSC()` QSC 체크리스트 신규 구현 (hq_qsc 컬렉션, 9항목 5점 채점)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
