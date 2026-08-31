@@ -708,8 +708,8 @@ function _filoReceiptNotify(did, tableNum, items, total, methodLabel) {
 
   // 영수증 발송 버튼
   var sendBtn = document.createElement('button');
-  sendBtn.style.cssText = 'flex:1;padding:9px;background:#0891b2;border:none;' +
-    'border-radius:10px;color:#fff;font-size:13px;font-weight:800;cursor:pointer';
+  sendBtn.style.cssText = 'flex:1;padding:9px;background:var(--br,#c9a84c);border:none;' +
+    'border-radius:10px;color:#0f172a;font-size:13px;font-weight:800;cursor:pointer';
   sendBtn.textContent = '\ud83e\uddfe \uc601\uc218\uc99d \ubc1c\uc1a1';
   row.appendChild(sendBtn);
 
