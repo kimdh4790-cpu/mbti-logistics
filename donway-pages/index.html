@@ -25653,6 +25653,7 @@ function _showSEModal(s){
       var rRow=document.createElement('div');rRow.style.cssText='padding:2px 0 5px 24px';
       var rInp=document.createElement('input');rInp.id=it.reasonId;rInp.value=it.reasonVal||'';
       rInp.placeholder='사유 입력';rInp.style.cssText='width:100%;padding:3px 8px;border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--text3);background:var(--bg)';
+      rInp.oninput=function(){_debounce('se-autosave',function(){if(window._currentSEData&&(window._currentSEData.id||window._currentSEData.fbId))_saveSECurrent();},2000);};
       rRow.appendChild(rInp);itemSec.appendChild(rRow);
     }
   });
