@@ -49,7 +49,7 @@ function _filoPageMenuMgmt(el){
  // ★ 이미지 일괄 갱신 버튼 (Pollinations → Pexels)
  var imgBtn=document.createElement('button');
  imgBtn.className='btn btn-sm';
- imgBtn.style.cssText='background:#0891b2;color:#fff;font-size:12px';
+ imgBtn.style.cssText='background:var(--b2,rgba(0,0,0,.06));color:var(--tx);font-size:12px;border:1px solid var(--bd)';
  imgBtn.textContent='이미지 일괄 갱신';
  (function(b){imgBtn.onclick=function(){
   if(typeof _filoRefreshAllMenuImages==='function'){_filoRefreshAllMenuImages(did,b);}
@@ -60,7 +60,7 @@ function _filoPageMenuMgmt(el){
  // ★ 번역 일괄생성 버튼
  var trBtn=document.createElement('button');
  trBtn.className='btn btn-sm';
- trBtn.style.cssText='background:#7c3aed;color:#fff;font-size:12px';
+ trBtn.style.cssText='background:var(--br,#c9a84c);color:#fff;font-size:12px';
  trBtn.textContent='번역 일괄생성';
  (function(b){trBtn.onclick=function(){
   if(typeof _filoBatchTranslate==='function'){_filoBatchTranslate(did,b);}
@@ -72,8 +72,8 @@ function _filoPageMenuMgmt(el){
 
  /* 카테고리 관리 */
  var catCard=document.createElement('div');
- catCard.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)';
- catCard.innerHTML='<div class="sec-title" style="margin-bottom:10px;color:#1e293b">카테고리</div>'+
+ catCard.style.cssText='background:var(--surface,#fff);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.05)';
+ catCard.innerHTML='<div class="sec-title" style="margin-bottom:12px">카테고리</div>'+
   '<div id="cat-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px"></div>'+
   '<div style="display:flex;gap:8px">'+
   '<input id="new-cat-inp" type="text" placeholder="새 카테고리명" style="flex:1;padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:var(--r);color:#1e293b;font-size:13px;outline:none">'+
@@ -83,8 +83,8 @@ function _filoPageMenuMgmt(el){
 
  /* 메뉴 목록 */
  var menuCard=document.createElement('div');
- menuCard.style.cssText='background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.06)';
- menuCard.innerHTML='<div class="sec-title" style="margin-bottom:12px;color:#1e293b">메뉴 목록</div>'+
+ menuCard.style.cssText='background:var(--surface,#fff);border:1px solid var(--bd);border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)';
+ menuCard.innerHTML='<div class="sec-title" style="margin-bottom:14px">메뉴 목록</div>'+
   '<div id="menu-mgmt-list"><div style="text-align:center;padding:30px;color:var(--t3)">로딩 중...</div></div>';
  wrap.appendChild(menuCard);
 
@@ -111,7 +111,7 @@ function _filoLoadMenuMgmt(did){
   var catList=document.getElementById('cat-list');
   if(catList){
    catList.innerHTML=cats.map(function(c){
-    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:700;color:#475569">'+
+    return '<div style="display:flex;align-items:center;gap:4px;padding:5px 12px;background:var(--surface2,#f1f5f9);border:1px solid var(--bd);border-radius:20px;font-size:12px;font-weight:700;color:var(--t2,#475569)">'+
      c+
      '<button onclick="_filoDeleteCategory(\''+did+'\',\''+c+'\')" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;line-height:1;padding:0 0 0 4px">×</button>'+
      '</div>';

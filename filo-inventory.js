@@ -29,10 +29,10 @@ function _filoPageInventoryDash(el){
   /* KPI 3칸 */
   '<div id="inv-kpi" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px"></div>'+
   /* 탭 */
-  '<div style="display:flex;background:var(--b2,rgba(255,255,255,.04));border-radius:12px;padding:4px;gap:2px;margin-bottom:16px">'+
-  '<button id="inv-tab-stock" onclick="_filoInvSwitchTab(\'stock\',\''+did+'\')" style="flex:1;padding:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;border-radius:9px;background:var(--br,#c9a84c);color:#fff;transition:all .2s">재고현황</button>'+
-  '<button id="inv-tab-order" onclick="_filoInvSwitchTab(\'order\',\''+did+'\')" style="flex:1;padding:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;border-radius:9px;background:transparent;color:var(--t3);transition:all .2s">발주현황 <span id="inv-order-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:99px;vertical-align:middle;margin-left:2px"></span></button>'+
-  '<button id="inv-tab-recipe" onclick="_filoInvSwitchTab(\'recipe\',\''+did+'\')" style="flex:1;padding:8px;font-size:12px;font-weight:700;border:none;cursor:pointer;border-radius:9px;background:transparent;color:var(--t3);transition:all .2s">레시피 연동</button>'+
+  '<div style="display:flex;border-bottom:2px solid var(--bd);margin-bottom:20px">'+
+  '<button id="inv-tab-stock" onclick="_filoInvSwitchTab(\'stock\',\''+did+'\')" style="flex:1;padding:13px 8px;font-size:13px;font-weight:800;border:none;border-bottom:2px solid var(--br,#c9a84c);cursor:pointer;background:transparent;color:var(--br,#c9a84c);margin-bottom:-2px;transition:all .2s;letter-spacing:-.2px">재고현황</button>'+
+  '<button id="inv-tab-order" onclick="_filoInvSwitchTab(\'order\',\''+did+'\')" style="flex:1;padding:13px 8px;font-size:13px;font-weight:700;border:none;border-bottom:2px solid transparent;cursor:pointer;background:transparent;color:var(--t3);margin-bottom:-2px;transition:all .2s">발주현황 <span id="inv-order-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:99px;vertical-align:middle;margin-left:2px"></span></button>'+
+  '<button id="inv-tab-recipe" onclick="_filoInvSwitchTab(\'recipe\',\''+did+'\')" style="flex:1;padding:13px 8px;font-size:13px;font-weight:700;border:none;border-bottom:2px solid transparent;cursor:pointer;background:transparent;color:var(--t3);margin-bottom:-2px;transition:all .2s">레시피 연동</button>'+
   '</div>'+
   /* 검색 */
   '<div style="position:relative;margin-bottom:14px">'+
@@ -52,8 +52,9 @@ window._filoInvSwitchTab=function(tab,did){
   var btn=document.getElementById('inv-tab-'+t);
   if(!btn)return;
   var active=t===tab;
-  btn.style.background=active?'var(--br,#c9a84c)':'transparent';
-  btn.style.color=active?'#fff':'var(--t3)';
+  btn.style.borderBottom=active?'2px solid var(--br,#c9a84c)':'2px solid transparent';
+  btn.style.color=active?'var(--br,#c9a84c)':'var(--t3)';
+  btn.style.fontWeight=active?'800':'700';
  });
  var srch=document.getElementById('inv-search');
  if(srch)srch.style.display=tab==='stock'?'':'none';
@@ -104,13 +105,13 @@ function _filoInvRender(items,did){
  var warn=low.filter(function(i){return (i.stock||0)>0;}).length;
  var kpi=document.getElementById('inv-kpi');
  if(kpi) kpi.innerHTML=[
-  {n:empty,label:'재고 없음',c:'#ef4444',bg:'rgba(239,68,68,.1)',bd:'rgba(239,68,68,.2)'},
-  {n:warn,label:'부족 임박',c:'#f59e0b',bg:'rgba(245,158,11,.1)',bd:'rgba(245,158,11,.2)'},
-  {n:ok.length,label:'정상',c:'#22c55e',bg:'rgba(34,197,94,.1)',bd:'rgba(34,197,94,.2)'}
+  {n:empty,label:'재고 없음',c:'#ef4444'},
+  {n:warn,label:'부족 임박',c:'#f59e0b'},
+  {n:ok.length,label:'정상',c:'#22c55e'}
  ].map(function(k){
-  return '<div style="padding:14px 12px;background:'+k.bg+';border:1px solid '+k.bd+';border-radius:14px;border-left:3px solid '+k.c+'">'+
-   '<div style="font-size:26px;font-weight:900;color:'+k.c+';line-height:1;font-variant-numeric:tabular-nums">'+k.n+'</div>'+
-   '<div style="font-size:10px;color:var(--t3);margin-top:4px;font-weight:600;letter-spacing:.3px;text-transform:uppercase">'+k.label+'</div>'+
+  return '<div style="padding:20px 14px;background:var(--surface,#fff);border:1px solid var(--bd);border-radius:16px;border-top:3px solid '+k.c+';text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05)">'+
+   '<div style="font-size:36px;font-weight:900;color:'+k.c+';line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:-1px">'+k.n+'</div>'+
+   '<div style="font-size:11px;color:var(--t3);margin-top:6px;font-weight:600;letter-spacing:.4px">'+k.label+'</div>'+
    '</div>';
  }).join('');
 
@@ -157,7 +158,7 @@ function _filoInvRender(items,did){
      '<div style="font-size:11px;color:#f59e0b">거래처 미등록 — 수정에서 추가하세요</div>')+
     '</div>'+
     '<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">발주</button>'+
-    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(124,58,237,.12);color:#a78bfa;border:1px solid rgba(124,58,237,.25);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">알림</button>'+
+    '<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:6px 12px;background:rgba(201,168,76,.12);color:var(--br,#c9a84c);border:1px solid rgba(201,168,76,.3);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">알림</button>'+
     '</div>':'')+
    '</div>';
  }
