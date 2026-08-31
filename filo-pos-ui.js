@@ -41,21 +41,25 @@ function _filoHotspotTip(){
 }
 
 // ── 오프라인 상태 배너 ────────────────────────────────────────────────────────
+function _offlineBannerShow(banner){
+ banner.hidden=false;
+ if(typeof _offlinePendingCount==='function'){
+  _offlinePendingCount().then(function(n){
+   var badge=document.getElementById('filo-pending-badge');
+   var cnt=document.getElementById('filo-pending-count');
+   if(badge&&cnt){badge.hidden=n===0;cnt.textContent=n;}
+  });
+ }
+}
 function _offlineBanner(){
  var banner=document.getElementById('filo-offline-banner');
  if(!banner)return;
- if(navigator.onLine){
-  banner.hidden=true;
- }else{
-  banner.hidden=false;
-  if(typeof _offlinePendingCount==='function'){
-   _offlinePendingCount().then(function(n){
-    var badge=document.getElementById('filo-pending-badge');
-    var cnt=document.getElementById('filo-pending-count');
-    if(badge&&cnt){badge.hidden=n===0;cnt.textContent=n;}
-   });
-  }
- }
+ // navigator.onLine은 부정확할 수 있으므로 실제 fetch로 연결 확인
+ var ctrl=new AbortController();
+ var tid=setTimeout(function(){ctrl.abort();},3000);
+ fetch('/?_='+Date.now(),{method:'HEAD',cache:'no-store',signal:ctrl.signal})
+  .then(function(){clearTimeout(tid);banner.hidden=true;})
+  .catch(function(){clearTimeout(tid);_offlineBannerShow(banner);});
 }
 // 초기 상태 반영 + 네트워크 변화 실시간 감지
 document.addEventListener('DOMContentLoaded',_offlineBanner);
