@@ -1458,62 +1458,84 @@ function _filoDemoInit(){
 }
 
 /* ──────────────────────────────────────────────────────────
-   프랜차이즈 HQ — 전가맹점 현황
+   프랜차이즈 HQ — 전가맹점 현황 (랭킹 테이블)
    ────────────────────────────────────────────────────────── */
 function _filoPageBranchMonitor(el){
  if(!el)el=document.getElementById('content');
  var did=_CU&&(_CU.dealerId||_CU.uid);
+ var medals=['🥇','🥈','🥉'];
  el.innerHTML=
   '<div class="slide-up" style="max-width:860px;margin:0 auto;padding-bottom:32px">'+
-  '<div style="margin-bottom:20px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">'+
+  '<div>'+
   '<div style="font-size:12px;color:var(--t3);letter-spacing:.5px;margin-bottom:4px">본사 HQ</div>'+
   '<div style="font-size:22px;font-weight:900">전가맹점 현황</div>'+
   '</div>'+
-  '<div id="hq-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">'+
-  '<div class="card" style="text-align:center;padding:20px 8px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">가맹점 수</div><div id="hq-cnt" style="font-size:28px;font-weight:900">—</div></div>'+
-  '<div class="card" style="text-align:center;padding:20px 8px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">오늘 총매출</div><div id="hq-sales" style="font-size:28px;font-weight:900;font-variant-numeric:tabular-nums">₩ —</div></div>'+
-  '<div class="card" style="text-align:center;padding:20px 8px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">알림·이슈</div><div id="hq-issues" style="font-size:28px;font-weight:900;color:#ef4444">—</div></div>'+
+  '<button onclick="_filoPageBranchMonitor()" style="padding:7px 14px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t2);font-size:12px;cursor:pointer">새로고침</button>'+
   '</div>'+
-  '<div class="card"><div id="hq-branches"><div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">가맹점 데이터 불러오는 중...</div></div></div>'+
-  '</div>';
+  '<div id="hq-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px">'+
+  '<div class="card" style="text-align:center;padding:18px 6px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">가맹점 수</div><div id="hq-cnt" style="font-size:26px;font-weight:900">—</div></div>'+
+  '<div class="card" style="text-align:center;padding:18px 6px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">오늘 총매출</div><div id="hq-sales" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums">— </div></div>'+
+  '<div class="card" style="text-align:center;padding:18px 6px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">총 주문</div><div id="hq-orders" style="font-size:26px;font-weight:900">—</div></div>'+
+  '<div class="card" style="text-align:center;padding:18px 6px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">활성 매장</div><div id="hq-active" style="font-size:26px;font-weight:900;color:#22c55e">—</div></div>'+
+  '</div>'+
+  '<div class="card">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:14px">오늘 매출 랭킹</div>'+
+  '<div id="hq-branches"><div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">데이터 집계 중...</div></div>'+
+  '</div></div>';
  if(!did)return;
  var today=new Date().toISOString().slice(0,10);
  _db.collection('companies').where('hqDealerId','==',did).get()
   .then(function(snap){
-   var branches=[];snap.forEach(function(d){branches.push(Object.assign({id:d.id},d.data()));});
-   var e=document.getElementById('hq-cnt');if(e)e.textContent=branches.length;
+   var branches=[];
+   snap.forEach(function(d){branches.push(Object.assign({id:d.id,sales:0,orderCnt:0},d.data()));});
+   var cnt=document.getElementById('hq-cnt');if(cnt)cnt.textContent=branches.length;
    if(!branches.length){
     var bEl=document.getElementById('hq-branches');
-    if(bEl)bEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">등록된 가맹점이 없습니다.<br>설정 → 가맹점 등록에서 추가하세요.</div>';
+    if(bEl)bEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">등록된 가맹점이 없습니다.<br><button onclick="_filoGoPage(\'branch_mgmt\')" style="margin-top:10px;padding:7px 16px;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:12px;font-weight:800;cursor:pointer">가맹점 추가하기</button></div>';
     return;
    }
-   var salesTotal=0;var issues=0;
-   var rows=branches.map(function(b){
-    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)">'+
-     '<div style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>'+
-     '<div style="flex:1;min-width:0">'+
-     '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.name||b.id)+'</div>'+
-     '<div style="font-size:11px;color:var(--t3)">'+(b.address||'주소 없음')+'</div>'+
-     '</div>'+
-     '<div style="text-align:right;flex-shrink:0">'+
-     '<div id="hq-br-s-'+b.id+'" style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums">집계 중...</div>'+
-     '<div style="font-size:10px;color:var(--t3)">오늘 매출</div>'+
-     '</div>'+
-     '</div>';
-   }).join('');
-   var bEl2=document.getElementById('hq-branches');if(bEl2)bEl2.innerHTML=rows;
-   var salesProm=branches.map(function(b){
+   var proms=branches.map(function(b,i){
     return _db.collection('filo_orders')
-     .where('dealerId','==',b.id).where('date','==',today).where('status','!=','cancelled').get()
+     .where('dealerId','==',b.id).where('date','==',today).get()
      .then(function(os){
-      var tot=0;os.forEach(function(d){var v=d.data();tot+=(v.totalPrice||v.total||0);});
-      salesTotal+=tot;
-      var el2=document.getElementById('hq-br-s-'+b.id);if(el2)el2.textContent='₩'+tot.toLocaleString();
+      os.forEach(function(d){
+       var v=d.data();
+       if((v.status||'')!=='cancelled'){b.sales+=(v.totalPrice||v.total||0)*1;b.orderCnt++;}
+      });
      }).catch(function(){});
    });
-   Promise.all(salesProm).then(function(){
-    var eS=document.getElementById('hq-sales');if(eS)eS.textContent='₩'+salesTotal.toLocaleString();
-    var eI=document.getElementById('hq-issues');if(eI){eI.textContent=issues;eI.style.color=issues>0?'#ef4444':'#22c55e';}
+   Promise.all(proms).then(function(){
+    branches.sort(function(a,b2){return b2.sales-a.sales;});
+    var totalSales=branches.reduce(function(a,b2){return a+b2.sales;},0);
+    var totalOrders=branches.reduce(function(a,b2){return a+b2.orderCnt;},0);
+    var activeCnt=branches.filter(function(b2){return b2.sales>0;}).length;
+    var maxSales=branches[0]?branches[0].sales:0;
+    var eS=document.getElementById('hq-sales');if(eS)eS.textContent='₩'+totalSales.toLocaleString();
+    var eO=document.getElementById('hq-orders');if(eO)eO.textContent=totalOrders;
+    var eA=document.getElementById('hq-active');if(eA)eA.textContent=activeCnt;
+    var rows=branches.map(function(b2,i){
+     var pct=maxSales>0?Math.max(4,Math.round(b2.sales/maxSales*100)):4;
+     var rank=i<3?medals[i]:'<span style="font-size:13px;font-weight:900;color:var(--t3)">'+(i+1)+'</span>';
+     var barColor=i===0?'#c9a84c':i===1?'#94a3b8':i===2?'#b45309':'var(--t3)';
+     var statusColor=b2.sales>0?'#22c55e':'#64748b';
+     return '<div style="display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)">'+
+      '<div style="text-align:center;font-size:18px">'+rank+'</div>'+
+      '<div style="min-width:0">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+      '<span style="width:7px;height:7px;border-radius:50%;background:'+statusColor+';flex-shrink:0"></span>'+
+      '<span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b2.name||b2.id)+'</span>'+
+      '</div>'+
+      '<div style="height:6px;background:var(--b3);border-radius:3px;overflow:hidden">'+
+      '<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px;transition:width .4s ease"></div></div>'+
+      '</div>'+
+      '<div style="text-align:right;flex-shrink:0">'+
+      '<div style="font-size:13px;font-weight:900;font-variant-numeric:tabular-nums">₩'+b2.sales.toLocaleString()+'</div>'+
+      '<div style="font-size:10px;color:var(--t3)">'+b2.orderCnt+'건</div>'+
+      '</div></div>';
+    }).join('');
+    var bEl2=document.getElementById('hq-branches');
+    if(bEl2)bEl2.innerHTML=rows||'<div style="color:var(--t3);text-align:center;padding:20px;font-size:12px">오늘 매출 없음</div>';
    });
   }).catch(function(e){console.error('branch_monitor:',e);});
 }
