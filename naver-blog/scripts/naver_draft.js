@@ -79,7 +79,7 @@ async function insertText(page, text) {
 
 // ── 본문 클릭 (제목 오염 방지 — 본문 전용 셀렉터) ──────────────────────
 async function clickBody(page) {
-  await page.click('.se-section-text p.se-text-paragraph', { timeout: 5000 });
+  await page.click('.se-section-text p.se-text-paragraph', { timeout: 15000 });
 }
 
 // ── 소제목 블록 입력 ────────────────────────────────────────────────────
@@ -357,6 +357,14 @@ async function inputPlace(page, placeInfo) {
   }
 
   await page.waitForTimeout(1500);
+
+  // 에디터 완전 로딩 대기 (SmartEditor ONE 초기화까지 최대 30초)
+  await page.waitForSelector('.se-section-text p.se-text-paragraph', { timeout: 30000 })
+    .catch(async () => {
+      console.error('❌ 에디터 로딩 실패. 브라우저 창을 확인하고 npm run probe 로 DOM을 점검하세요.');
+      await context.close();
+      process.exit(1);
+    });
 
   // ── 본문 블록 입력 (제목은 맨 마지막에!) ─────────────────────────────
   let isFirstTextBlock = true;
