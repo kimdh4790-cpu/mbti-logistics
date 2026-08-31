@@ -18,13 +18,18 @@ const PROFILE_DIR = path.join(__dirname, '..', 'naver-profile');
 const BLOG_ID = process.env.BLOG_ID || 'soungkyekim';
 const DRY_RUN = process.argv.includes('--dry-run');
 
+// --draft 플래그 또는 첫 번째 포지셔널 인수 모두 허용
 const draftArgIdx = process.argv.indexOf('--draft');
-if (draftArgIdx === -1 || !process.argv[draftArgIdx + 1]) {
+const rawPath = draftArgIdx !== -1
+  ? process.argv[draftArgIdx + 1]
+  : process.argv.find((a, i) => i >= 2 && !a.startsWith('--') && a.endsWith('.json'));
+
+if (!rawPath) {
   console.error('사용법: node scripts/naver_draft.js --draft drafts/post.json [--dry-run]');
   process.exit(1);
 }
 
-const draftPath = path.resolve(process.argv[draftArgIdx + 1]);
+const draftPath = path.resolve(rawPath);
 if (!fs.existsSync(draftPath)) {
   console.error('초안 파일 없음:', draftPath);
   process.exit(1);
