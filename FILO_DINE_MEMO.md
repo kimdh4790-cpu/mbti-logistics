@@ -163,6 +163,15 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-08-31 (19차)
+**FILO 구조 전면 개편: nav 4그룹 재편 + 프랜차이즈 HQ + 업종별 홈 위젯 + AIVO 채팅**
+- `filo-auth.js`: `_buildFiloNav()` 그룹명 재편 (주문매출/메뉴테이블/재고/직원급여/회원예약 → 지금영업/메뉴재고/팀관리/AI분석). 웨이팅을 "지금 영업"으로 이동. `franchise_hq` 플랜 전용 "본사 HQ" 섹션 추가 (전가맹점현황·메뉴일괄배포)
+- `filo-auth.js`: `_filoPageHome()` 업종별 퀵액션 3버튼 추가 (cafe→즉시결제/포인트적립/예약추가, izakaya→테이블열기/POS/주문대기, fastfood→빠른결제/주문대기/재고확인, other→POS/예약/주문대기)
+- `filo-auth.js`: `_filoPageBranchMonitor()` 신규 — 전가맹점 일일 매출 집계 뷰 (hqDealerId 기반 companies 조회)
+- `filo-auth.js`: `_filoPageMenuDeploy()` + `_filoHqDeploy()` 신규 — 본사 메뉴 가맹점 일괄 배포 (신규추가·가격동기화·삭제 옵션)
+- `filo-margin.js`: `_filoPageAI()` AIVO 채팅 패널 추가 — 매장 데이터 기반 채팅 UI (퀵칩 4개, `_aiChatSend()` 구현)
+- `_worker.js`: `/api/ai-chat` POST 엔드포인트 추가 — 최근 7일 매출+재고 데이터 컨텍스트 주입 후 claude-haiku-4-5 응답
+
 ### 2026-08-31 (18차)
 **오프라인 카드(단말기 직접) 결제 지원**
 - `filo-pos.js`: 오프라인 시 카드 버튼 활성화 (amber 강조, "단말기 직접" 서브텍스트). `_posCardDirectArea()` 3단계 안내 UI 추가. `_posSelectMethod()` 오프라인 카드 선택 → `card_direct` 자동 전환. `_posConfirmBtn()` card_direct 전용 골드 버튼

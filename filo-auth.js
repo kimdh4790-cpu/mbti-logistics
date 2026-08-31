@@ -500,60 +500,61 @@ function _buildFiloNav(){
  var menus=[];
 
  /* ── 홈 (항상) ── */
- menus.push({s:'홈',items:[{ic:'home',l:'홈 대시보드',p:'home'}]});
+ menus.push({s:'홈',items:[{ic:'home',l:'대시보드',p:'home'}]});
 
- /* ── 주문·매출 ── */
- var _sales=[];
+ /* ── 지금 영업 (POS·주문·테이블·웨이팅) ── */
+ var _now=[];
  if(hasAll||hasSub('kiosk')||hasFeature('kiosk')){
-  _sales.push({ic:'monitor',l:'POS 결제',p:'kiosk'});
-  _sales.push({ic:'bell',l:'주문 대기',p:'orders'});
- }
- _sales.push({ic:'sparkles',l:'AIVO 어시스턴트',p:'ai',badge:'AIVO'});
- menus.push({s:'주문·매출',items:_sales});
-
- /* ── 메뉴·테이블 ── */
- var _menuTable=[];
- if(isAdmin&&(hasAll||hasSub('kiosk')||hasFeature('kiosk')||hasFeatureOrIndustry('table_order'))){
-  _menuTable.push({ic:'utensils',l:'메뉴 관리',p:'menu_mgmt'});
+  _now.push({ic:'monitor',l:'POS 결제',p:'kiosk'});
+  _now.push({ic:'bell',l:'주문 대기',p:'orders'});
  }
  if(hasAll||hasFeatureOrIndustry('table_order')||hasSub('kiosk')){
-  _menuTable.push({ic:'grid',l:'테이블 현황',p:'table_qr'});
-  _menuTable.push({ic:'qr-code',l:'테이블 QR',p:'qr_mgmt'});
-  // bakery_qr: cafe 업종이거나 명시적으로 활성화된 경우만 표시
-  if(hasFeatureOrIndustry('bakery_qr'))_menuTable.push({ic:'archive',l:'빵·디저트 QR',p:'bakery_qr_mgmt'});
+  _now.push({ic:'grid',l:'테이블 현황',p:'table_qr'});
+  _now.push({ic:'qr-code',l:'테이블 QR',p:'qr_mgmt'});
  }
- if(_menuTable.length)menus.push({s:'메뉴·테이블',items:_menuTable});
+ if(hasAll||hasFeatureOrIndustry('reservation')){
+  _now.push({ic:'clock',l:'웨이팅',p:'waiting'});
+ }
+ if(_now.length)menus.push({s:'지금 영업',items:_now});
 
- /* ── 재고 ── */
+ /* ── 메뉴·재고 ── */
+ var _menuInv=[];
+ if(isAdmin&&(hasAll||hasSub('kiosk')||hasFeature('kiosk')||hasFeatureOrIndustry('table_order'))){
+  _menuInv.push({ic:'utensils',l:'메뉴 관리',p:'menu_mgmt'});
+  if(hasFeatureOrIndustry('bakery_qr'))_menuInv.push({ic:'archive',l:'빵·디저트 QR',p:'bakery_qr_mgmt'});
+ }
  if(hasAll||hasSub('inventory')||hasFeature('inventory')){
-  menus.push({s:'재고',items:[
-   {ic:'package',l:'재고 현황',p:'inventory'},
-   {ic:'refresh',l:'자동 발주',p:'auto_order'},
+  _menuInv.push({ic:'package',l:'재고 현황',p:'inventory'});
+  _menuInv.push({ic:'refresh',l:'자동 발주',p:'auto_order'});
+ }
+ if(_menuInv.length)menus.push({s:'메뉴·재고',items:_menuInv});
+
+ /* ── 팀 관리 (근태 QR · 예약·달력) ── */
+ var _team=[];
+ if(hasAll||hasFeature('qr_attend')){
+  _team.push({ic:'qr-code',l:'STAFFIQ 근태 QR',p:'qr_staff',badge:'STAFFIQ'});
+ }
+ if(hasAll||hasFeatureOrIndustry('reservation')){
+  _team.push({ic:'calendar',l:'예약·달력',p:'schedule'});
+ }
+ if(_team.length)menus.push({s:'팀 관리',items:_team});
+
+ /* ── AI·분석 ── */
+ var _aiNav=[];
+ _aiNav.push({ic:'sparkles',l:'AIVO 어시스턴트',p:'ai',badge:'AIVO'});
+ if(hasAll||hasFeature('sales_analytics')){
+  _aiNav.push({ic:'pie-chart',l:'AIVO 마진 분석',p:'margin',badge:'AIVO'});
+ }
+ if(isAdmin)_aiNav.push({ic:'briefcase',l:'세무사 연동',p:'tax_share'});
+ menus.push({s:'AI·분석',items:_aiNav});
+
+ /* ── 본사 HQ (franchise_hq 플랜 전용) ── */
+ if(hasAll||hasFeature('franchise_hq')){
+  menus.push({s:'본사 HQ',items:[
+   {ic:'building',l:'전가맹점 현황',p:'branch_monitor'},
+   {ic:'send',l:'메뉴 일괄 배포',p:'menu_deploy'},
   ]});
  }
-
- /* ── 직원·급여 (출퇴근현황·급여명세서·근무표는 DINE에서 통합 관리) ── */
- var _staff=[];
- if(hasAll||hasFeature('qr_attend')){
-  _staff.push({ic:'qr-code',l:'STAFFIQ 근태 QR',p:'qr_staff',badge:'STAFFIQ'});
- }
- if(_staff.length)menus.push({s:'직원·급여',items:_staff});
-
- /* ── 회원·예약 ── */
- var _crm=[];
- if(hasAll||hasFeatureOrIndustry('reservation')){
-  _crm.push({ic:'calendar',l:'예약·달력',p:'schedule'});
-  _crm.push({ic:'clock',l:'웨이팅',p:'waiting'});
- }
- if(_crm.length)menus.push({s:'회원·예약',items:_crm});
-
- /* ── 분석 ── */
- var _analytics=[];
- if(hasAll||hasFeature('sales_analytics')){
-  _analytics.push({ic:'pie-chart',l:'AIVO 마진 분석',p:'margin',badge:'AIVO'});
- }
- if(isAdmin)_analytics.push({ic:'briefcase',l:'세무사 연동',p:'tax_share'});
- if(_analytics.length)menus.push({s:'분석',items:_analytics});
 
  /* ── 설정 ── */
  var _settings=[
@@ -727,7 +728,8 @@ function _filoGoPage(p){
  kiosk:'POS 키오스크',orders:'주문 대기',table_qr:'테이블 QR',points:'포인트 관리',membership:'회원권',pos_report:'매출 집계',
  tax_share:'세무사 연동',notices:'공지사항',settings:'설정',subscription:'구독 관리',
  ai:'AIVO 어시스턴트',waiting:'웨이팅 관리',menu_mgmt:'메뉴 관리',qr_mgmt:'테이블 QR 관리',qr_staff:'STAFFIQ 근태 QR',
- bakery_qr_mgmt:'빵·디저트 QR',inv_dash:'재고 대시보드',margin:'마진 분석',sales:'매출 리포트',expiry:'유통기한 관리'};
+ bakery_qr_mgmt:'빵·디저트 QR',inv_dash:'재고 대시보드',margin:'마진 분석',sales:'매출 리포트',expiry:'유통기한 관리',
+ branch_monitor:'전가맹점 현황',menu_deploy:'메뉴 일괄 배포'};
  document.getElementById('topbar-title').textContent=titles[p]||p;
 
  /* 라우팅 처리 여부 — 미처리 페이지는 아래에서 '준비 중' 안내를 그린다 */
@@ -771,6 +773,8 @@ function _filoGoPage(p){
  else if(p==='cost_mgmt') _filoPageCostMgmt(el);
  else if(p==='sales') _filoPageSales(el);
  else if(p==='margin') _filoPageMargin(el);
+ else if(p==='branch_monitor') _filoPageBranchMonitor(el);
+ else if(p==='menu_deploy') _filoPageMenuDeploy(el);
  else _routed=false;
 
  /* 라우팅되지 않은 페이지 안내 (이전 화면이 그대로 남는 것을 막는다) */
@@ -838,6 +842,42 @@ function _filoPageHome(el){
  var did=_CU.dealerId||_CU.uid;
  var today=new Date().toISOString().slice(0,10);
  var todayKr=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+ var _itype=(_cachedCompanyDoc&&_cachedCompanyDoc.theme)||'other';
+
+ /* 업종별 퀵액션 버튼 */
+ var _quickActions={
+  cafe:[
+   {l:'즉시 결제',ic:'credit-card',p:'kiosk',hint:'POS 결제 바로 시작'},
+   {l:'포인트 적립',ic:'star',p:'points',hint:'회원 포인트 적립·사용'},
+   {l:'예약 추가',ic:'calendar',p:'schedule',hint:'전화 예약 직접 등록'},
+  ],
+  izakaya:[
+   {l:'테이블 열기',ic:'grid',p:'table_qr',hint:'탭·테이블 현황 보기'},
+   {l:'POS 결제',ic:'monitor',p:'kiosk',hint:'결제 화면으로 이동'},
+   {l:'주문 대기',ic:'bell',p:'orders',hint:'대기 주문 처리'},
+  ],
+  fastfood:[
+   {l:'빠른 결제',ic:'zap',p:'kiosk',hint:'POS 결제 바로 시작'},
+   {l:'주문 대기',ic:'bell',p:'orders',hint:'주문 현황 보기'},
+   {l:'재고 확인',ic:'package',p:'inventory',hint:'재고 부족 확인'},
+  ],
+  other:[
+   {l:'POS 결제',ic:'monitor',p:'kiosk',hint:'결제 화면으로 이동'},
+   {l:'예약·달력',ic:'calendar',p:'schedule',hint:'예약 현황 확인'},
+   {l:'주문 대기',ic:'bell',p:'orders',hint:'대기 주문 처리'},
+  ]
+ };
+ var _qa=_quickActions[_itype]||_quickActions.other;
+ var _qaHtml='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">'+
+  _qa.map(function(q){
+   return '<button onclick="_filoGoPage(\''+q.p+'\')" title="'+esc(q.hint)+'" '+
+    'style="padding:12px 6px;background:var(--b3);border:1px solid var(--bd);border-radius:10px;cursor:pointer;text-align:center;transition:border-color .2s" '+
+    'onmouseover="this.style.borderColor=\'rgba(201,168,76,.5)\'" onmouseout="this.style.borderColor=\'var(--bd)\'">'+
+    '<div style="display:flex;justify-content:center;margin-bottom:5px;color:var(--t2)">'+_svgIcon(q.ic)+'</div>'+
+    '<div style="font-size:11px;font-weight:700;color:var(--tx)">'+esc(q.l)+'</div>'+
+    '</button>';
+  }).join('')+
+ '</div>';
 
  el.innerHTML=
   '<style>@keyframes _hpulse{0%,100%{opacity:1}50%{opacity:.35}}</style>'+
@@ -865,6 +905,9 @@ function _filoPageHome(el){
   '<div><div style="font-size:9px;color:rgba(255,255,255,.4);letter-spacing:.5px;margin-bottom:2px">미처리</div>'+
   '<div id="hm-pending" style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums">—</div></div>'+
   '</div></div></div>'+
+
+  /* 업종별 퀵액션 */
+  _qaHtml+
 
   /* 타일 3개 */
   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">'+
@@ -1401,3 +1444,153 @@ function _filoDemoInit(){
  }
  next(0);
 }
+
+/* ──────────────────────────────────────────────────────────
+   프랜차이즈 HQ — 전가맹점 현황
+   ────────────────────────────────────────────────────────── */
+function _filoPageBranchMonitor(el){
+ if(!el)el=document.getElementById('content');
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ el.innerHTML=
+  '<div class="slide-up" style="max-width:860px;margin:0 auto;padding-bottom:32px">'+
+  '<div style="margin-bottom:20px">'+
+  '<div style="font-size:12px;color:var(--t3);letter-spacing:.5px;margin-bottom:4px">본사 HQ</div>'+
+  '<div style="font-size:22px;font-weight:900">전가맹점 현황</div>'+
+  '</div>'+
+  '<div id="hq-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">'+
+  '<div class="card" style="text-align:center;padding:20px 8px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">가맹점 수</div><div id="hq-cnt" style="font-size:28px;font-weight:900">—</div></div>'+
+  '<div class="card" style="text-align:center;padding:20px 8px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">오늘 총매출</div><div id="hq-sales" style="font-size:28px;font-weight:900;font-variant-numeric:tabular-nums">₩ —</div></div>'+
+  '<div class="card" style="text-align:center;padding:20px 8px"><div style="font-size:10px;color:var(--t3);margin-bottom:6px">알림·이슈</div><div id="hq-issues" style="font-size:28px;font-weight:900;color:#ef4444">—</div></div>'+
+  '</div>'+
+  '<div class="card"><div id="hq-branches"><div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">가맹점 데이터 불러오는 중...</div></div></div>'+
+  '</div>';
+ if(!did)return;
+ var today=new Date().toISOString().slice(0,10);
+ _db.collection('companies').where('hqDealerId','==',did).get()
+  .then(function(snap){
+   var branches=[];snap.forEach(function(d){branches.push(Object.assign({id:d.id},d.data()));});
+   var e=document.getElementById('hq-cnt');if(e)e.textContent=branches.length;
+   if(!branches.length){
+    var bEl=document.getElementById('hq-branches');
+    if(bEl)bEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">등록된 가맹점이 없습니다.<br>설정 → 가맹점 등록에서 추가하세요.</div>';
+    return;
+   }
+   var salesTotal=0;var issues=0;
+   var rows=branches.map(function(b){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)">'+
+     '<div style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>'+
+     '<div style="flex:1;min-width:0">'+
+     '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.name||b.id)+'</div>'+
+     '<div style="font-size:11px;color:var(--t3)">'+(b.address||'주소 없음')+'</div>'+
+     '</div>'+
+     '<div style="text-align:right;flex-shrink:0">'+
+     '<div id="hq-br-s-'+b.id+'" style="font-size:13px;font-weight:800;font-variant-numeric:tabular-nums">집계 중...</div>'+
+     '<div style="font-size:10px;color:var(--t3)">오늘 매출</div>'+
+     '</div>'+
+     '</div>';
+   }).join('');
+   var bEl2=document.getElementById('hq-branches');if(bEl2)bEl2.innerHTML=rows;
+   var salesProm=branches.map(function(b){
+    return _db.collection('filo_orders')
+     .where('dealerId','==',b.id).where('date','==',today).where('status','!=','cancelled').get()
+     .then(function(os){
+      var tot=0;os.forEach(function(d){var v=d.data();tot+=(v.totalPrice||v.total||0);});
+      salesTotal+=tot;
+      var el2=document.getElementById('hq-br-s-'+b.id);if(el2)el2.textContent='₩'+tot.toLocaleString();
+     }).catch(function(){});
+   });
+   Promise.all(salesProm).then(function(){
+    var eS=document.getElementById('hq-sales');if(eS)eS.textContent='₩'+salesTotal.toLocaleString();
+    var eI=document.getElementById('hq-issues');if(eI){eI.textContent=issues;eI.style.color=issues>0?'#ef4444':'#22c55e';}
+   });
+  }).catch(function(e){console.error('branch_monitor:',e);});
+}
+
+/* ──────────────────────────────────────────────────────────
+   프랜차이즈 HQ — 메뉴 일괄 배포
+   ────────────────────────────────────────────────────────── */
+function _filoPageMenuDeploy(el){
+ if(!el)el=document.getElementById('content');
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ el.innerHTML=
+  '<div class="slide-up" style="max-width:680px;margin:0 auto;padding-bottom:32px">'+
+  '<div style="margin-bottom:20px">'+
+  '<div style="font-size:12px;color:var(--t3);letter-spacing:.5px;margin-bottom:4px">본사 HQ</div>'+
+  '<div style="font-size:22px;font-weight:900">메뉴 일괄 배포</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-top:6px">본사 메뉴를 전 가맹점에 동기화합니다.</div>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">배포 옵션</div>'+
+  '<label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">'+
+  '<input type="checkbox" id="hq-deploy-add" checked style="accent-color:#c9a84c">'+
+  '<span style="font-size:13px">신규 메뉴 추가</span></label>'+
+  '<label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">'+
+  '<input type="checkbox" id="hq-deploy-price" checked style="accent-color:#c9a84c">'+
+  '<span style="font-size:13px">가격 동기화</span></label>'+
+  '<label style="display:flex;align-items:center;gap:10px;cursor:pointer">'+
+  '<input type="checkbox" id="hq-deploy-del" style="accent-color:#c9a84c">'+
+  '<span style="font-size:13px">삭제된 메뉴 가맹점에서도 제거 <span style="font-size:11px;color:#ef4444">(주의)</span></span></label>'+
+  '</div>'+
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:12px">대상 가맹점</div>'+
+  '<div id="hq-dep-branches"><div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">불러오는 중...</div></div>'+
+  '</div>'+
+  '<button onclick="_filoHqDeploy()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:10px;color:#0f172a;font-size:14px;font-weight:900;cursor:pointer">'+
+  '전체 가맹점에 배포</button>'+
+  '<div id="hq-dep-log" style="margin-top:16px;font-size:11px;color:var(--t3)"></div>'+
+  '</div>';
+ if(!did)return;
+ _db.collection('companies').where('hqDealerId','==',did).get()
+  .then(function(snap){
+   var bEl=document.getElementById('hq-dep-branches');
+   if(!snap.size){if(bEl)bEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">등록된 가맹점 없음</div>';return;}
+   var html='';snap.forEach(function(d){
+    var b=d.data();
+    html+='<label style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer">'+
+     '<input type="checkbox" class="hq-dep-chk" value="'+esc(d.id)+'" checked style="accent-color:#c9a84c">'+
+     '<span style="font-size:13px">'+(b.name||d.id)+'</span></label>';
+   });
+   if(bEl)bEl.innerHTML=html;
+  }).catch(function(){});
+}
+
+window._filoHqDeploy=function(){
+ var did=_CU&&(_CU.dealerId||_CU.uid);
+ if(!did){_filoToast('로그인 정보가 없습니다.');return;}
+ var targets=[];
+ document.querySelectorAll('.hq-dep-chk:checked').forEach(function(c){targets.push(c.value);});
+ if(!targets.length){_filoToast('대상 가맹점을 선택하세요.');return;}
+ var doAdd=document.getElementById('hq-deploy-add')&&document.getElementById('hq-deploy-add').checked;
+ var doPrice=document.getElementById('hq-deploy-price')&&document.getElementById('hq-deploy-price').checked;
+ var doDel=document.getElementById('hq-deploy-del')&&document.getElementById('hq-deploy-del').checked;
+ var logEl=document.getElementById('hq-dep-log');
+ if(logEl)logEl.textContent='배포 시작...';
+ _db.collection('filo_menus').where('dealerId','==',did).get()
+  .then(function(snap){
+   var menus=[];snap.forEach(function(d){menus.push(Object.assign({id:d.id},d.data()));});
+   if(!menus.length){_filoToast('본사 메뉴가 없습니다.');return;}
+   var done=0;
+   function next(i){
+    if(i>=targets.length){
+     _filoToast('배포 완료: '+targets.length+'개 가맹점');
+     if(logEl)logEl.textContent='✓ '+targets.length+'개 가맹점 배포 완료 ('+menus.length+'개 메뉴)';
+     return;
+    }
+    var bDid=targets[i];
+    var batch=_db.batch();
+    var now=new Date().toISOString();
+    if(doAdd){
+     menus.forEach(function(m){
+      var ref=_db.collection('filo_menus').doc(bDid+'_'+m.id);
+      var data={dealerId:bDid,name:m.name,category:m.category,emoji:m.emoji||'',forSale:m.forSale!==false,imageUrl:m.imageUrl||'',description:m.description||'',nameTranslations:m.nameTranslations||{},hqDeployed:true,hqMenuId:m.id,updatedAt:now};
+      if(doPrice)data.price=m.price;
+      batch.set(ref,data,{merge:true});
+     });
+    }
+    batch.commit()
+     .then(function(){done++;if(logEl)logEl.textContent='배포 중... '+done+'/'+targets.length;next(i+1);})
+     .catch(function(e){console.error(bDid,e);next(i+1);});
+   }
+   next(0);
+  }).catch(function(e){_filoToast('메뉴 로드 실패');console.error(e);});
+};

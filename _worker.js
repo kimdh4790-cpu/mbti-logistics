@@ -3797,6 +3797,53 @@ ${JSON.stringify(postSummary)}
         }
       }
 
+      // ── /api/ai-chat — AIVO 채팅 어시스턴트
+      if (path === '/api/ai-chat' && method === 'POST') {
+        const _chatUser = await verifyFirebaseToken(request, env);
+        if (!_chatUser) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        try {
+          const body = await request.json();
+          const { did, messages } = body;
+          if (!did || !Array.isArray(messages) || !messages.length) return new Response(JSON.stringify({ok:false,error:'파라미터 오류'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const token = await getAccessToken(env);
+          const today = new Date().toISOString().slice(0,10);
+          const weekAgo = new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+          /* 최근 7일 매출 요약 */
+          let salesCtx = '(매출 데이터 없음)';
+          let invCtx = '(재고 데이터 없음)';
+          try {
+            const sr = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_sales'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'date'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:weekAgo}}}]}},limit:{value:100}}})});
+            const sd = await sr.json();
+            let tot=0,cnt=0;
+            if(Array.isArray(sd)) sd.filter(d=>d.document).forEach(d=>{const f=d.document.fields||{};if(f.status?.stringValue!=='cancelled'){tot+=(f.total?.integerValue||f.total?.doubleValue||0)*1;cnt++;}});
+            if(cnt>0) salesCtx=`최근 7일 매출 ₩${tot.toLocaleString()}(${cnt}건), 일평균 ₩${Math.round(tot/7).toLocaleString()}`;
+          } catch(e){}
+          try {
+            const ir = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({structuredQuery:{from:[{collectionId:'filo_inventory'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'qty'},op:'LESS_THAN_OR_EQUAL',value:{integerValue:'5'}}}]}},limit:{value:20}}})});
+            const id = await ir.json();
+            const lowItems=[];
+            if(Array.isArray(id)) id.filter(d=>d.document).forEach(d=>{const f=d.document.fields||{};lowItems.push((f.name?.stringValue||'?')+'('+((f.qty?.integerValue||f.qty?.doubleValue||0)*1)+'개)');});
+            if(lowItems.length) invCtx=`재고 부족: ${lowItems.slice(0,5).join(', ')}`;
+            else invCtx='재고 정상';
+          } catch(e){}
+          const apiKey=(env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+          if(!apiKey) return new Response(JSON.stringify({ok:true,reply:'AI 기능을 사용하려면 Anthropic API 키를 설정해 주세요. 설정 → 구독 관리에서 확인하세요.'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const systemPrompt=`당신은 FILO 매장 관리 AI 어시스턴트 AIVO입니다. 매장 운영자의 질문에 친절하고 간결하게 답변하세요.
+현재 매장 데이터:
+- ${salesCtx}
+- ${invCtx}
+- 오늘 날짜: ${today}
+답변은 150자 이내로, 실용적인 조언 중심으로 작성하세요.`;
+          const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,system:systemPrompt,messages:messages.slice(-8).map(m=>({role:m.role,content:String(m.content||'').slice(0,500)}))})});
+          const pd=await pr.json();
+          const reply=pd.content?.[0]?.text||'';
+          if(!reply) return new Response(JSON.stringify({ok:false,error:'AI 응답이 없습니다.'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          return new Response(JSON.stringify({ok:true,reply}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e){
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       // ── /api/ai-insight — 대시보드 한줄 브리핑
       if (path === '/api/ai-insight' && method === 'POST') {
         const _insUser = await verifyFirebaseToken(request, env);

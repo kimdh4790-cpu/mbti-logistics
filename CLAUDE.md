@@ -407,6 +407,13 @@ cd mbtico-pages && npx wrangler deploy
 - INFRA_MEMO.md: Oracle Cloud wrangler deploy 명령어 추가 (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL 조합)
 - yongcha.html / _worker.js / yongcha-worker.js / yongcha-landing.html / yongcha-meta.json: 부가통신사업자 포지셔닝 전면 반영 — '배차'→'단건 요청/운행/연결', '배차완료'→'운행완료', AI 프롬프트 정비, 마케팅 메시지 '직접 매칭'→'직접 거래 정보 서비스', 해시태그 동기화
 
+### ✅ 완료 (2026-08-31)
+- filo-auth.js: `_buildFiloNav()` 그룹 재편 → 지금영업/메뉴재고/팀관리/AI분석/본사HQ(franchise_hq 전용)/설정
+- filo-auth.js: 홈 대시보드 업종별 퀵액션 3버튼 (cafe/izakaya/fastfood/other 분기)
+- filo-auth.js: `_filoPageBranchMonitor()` + `_filoPageMenuDeploy()` + `_filoHqDeploy()` 프랜차이즈 HQ 페이지 신규 구현
+- filo-margin.js: `_filoPageAI()` AIVO 채팅 패널 추가 (매장데이터 컨텍스트, 퀵칩 4개)
+- _worker.js: `/api/ai-chat` 엔드포인트 신규 (최근 7일 매출+재고 주입, claude-haiku-4-5)
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 

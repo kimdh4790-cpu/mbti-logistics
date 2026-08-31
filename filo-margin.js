@@ -1008,11 +1008,31 @@ function _aiErr(el, msg, retryFn) {
 /* ═════════════════════════════════════════════════════════════
    1. AI 인사이트 허브 페이지 — 벤또박스 그리드 (2026 트렌드)
    ═════════════════════════════════════════════════════════════ */
+var _aiChatHistory = [];
+
 function _filoPageAI(el) {
   if (!el) el = document.getElementById('content');
   if (!el) return;
+  _aiChatHistory = [];
 
   el.innerHTML =
+  '<style>' +
+  '.ai-chat-wrap{display:flex;gap:16px;align-items:flex-start;margin-bottom:20px}' +
+  '@media(max-width:680px){.ai-chat-wrap{flex-direction:column}}' +
+  '.ai-chat-panel{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--b2);border:1px solid var(--bd);border-radius:16px;overflow:hidden}' +
+  '.ai-chat-msgs{flex:1;padding:16px;overflow-y:auto;max-height:340px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}' +
+  '.ai-msg{max-width:82%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5}' +
+  '.ai-msg.ai{align-self:flex-start;background:var(--b3);border-bottom-left-radius:4px;color:var(--tx)}' +
+  '.ai-msg.user{align-self:flex-end;background:#c9a84c;color:#0f172a;font-weight:600;border-bottom-right-radius:4px}' +
+  '.ai-msg.thinking{opacity:.6}' +
+  '.ai-chat-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--bd);background:var(--b3)}' +
+  '.ai-chat-input input{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-size:13px;padding:6px 0}' +
+  '.ai-chat-input button{flex-shrink:0;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:12px;font-weight:800;padding:8px 14px;cursor:pointer}' +
+  '.ai-quick-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}' +
+  '.ai-quick-chip{background:var(--b3);border:1px solid var(--bd);border-radius:99px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;color:var(--t2);transition:border-color .15s}' +
+  '.ai-quick-chip:hover{border-color:rgba(201,168,76,.5);color:#c9a84c}' +
+  '</style>' +
+
   '<div class="ai-page">' +
 
     /* 히어로 */
@@ -1020,42 +1040,112 @@ function _filoPageAI(el) {
       '<div class="ai-hero-glow"></div>' +
       '<div style="position:relative;z-index:1">' +
         '<div class="ai-hero-eyebrow">FILO AI · 2026</div>' +
-        '<div class="ai-hero-title">AI 어시스턴트</div>' +
+        '<div class="ai-hero-title">AIVO 어시스턴트</div>' +
         '<div class="ai-hero-sub" id="ai-briefing">' +
           '<span class="ai-typing">매장 데이터를 읽는 중</span>' +
         '</div>' +
       '</div>' +
     '</div>' +
 
-    /* 벤또 그리드 */
-    '<div class="bento">' +
+    /* 채팅 + 벤또 2열 */
+    '<div class="ai-chat-wrap">' +
 
-      /* ① 매출 예측 — 2×2 */
-      '<section class="bento-item bento-lg fade-up-2" id="ai-card-forecast">' +
-        '<header class="bento-head">' +
-          '<div><h3>AI 매출 예측</h3></div>' +
-          '<button class="ai-chip" onclick="_filoAiForecast()">새로고침</button>' +
-        '</header>' +
-        '<div class="bento-body" id="ai-forecast-body">' + _aiSkeleton(4) + '</div>' +
-      '</section>' +
+      /* 채팅 패널 */
+      '<div class="ai-chat-panel">' +
+        '<div style="padding:12px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span>' +
+          '<span style="font-size:12px;font-weight:800">AIVO 채팅</span>' +
+          '<span style="font-size:11px;color:var(--t3);margin-left:auto">매장 데이터 기반</span>' +
+        '</div>' +
+        '<div class="ai-chat-msgs" id="ai-chat-msgs">' +
+          '<div class="ai-msg ai">안녕하세요! 매장 운영에 대해 무엇이든 물어보세요. 매출, 메뉴, 직원 관리 등 도와드립니다.</div>' +
+        '</div>' +
+        '<div class="ai-quick-chips" style="padding:8px 12px 0">' +
+          '<span class="ai-quick-chip" onclick="_aiChatSend(\'오늘 매출 어때?\')">오늘 매출 어때?</span>' +
+          '<span class="ai-quick-chip" onclick="_aiChatSend(\'어떤 메뉴가 잘 팔려?\')">인기 메뉴는?</span>' +
+          '<span class="ai-quick-chip" onclick="_aiChatSend(\'이번 주 매출 예측해줘\')">이번 주 예측</span>' +
+          '<span class="ai-quick-chip" onclick="_aiChatSend(\'재고 부족한 거 알려줘\')">재고 부족</span>' +
+        '</div>' +
+        '<div class="ai-chat-input">' +
+          '<input id="ai-chat-inp" placeholder="매장 운영에 대해 물어보세요..." ' +
+            'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();_aiChatSend();}">' +
+          '<button onclick="_aiChatSend()">전송</button>' +
+        '</div>' +
+      '</div>' +
 
-      /* ② 메뉴 추천 — 1×2 */
-      '<section class="bento-item bento-tall fade-up-2" id="ai-card-menu">' +
-        '<header class="bento-head">' +
-          '<div><h3>AI 메뉴 추천</h3></div>' +
-          '<button class="ai-chip" onclick="_filoAiMenuRec()">새로고침</button>' +
-        '</header>' +
-        '<div class="bento-body" id="ai-menu-body">' + _aiSkeleton(5) + '</div>' +
-      '</section>' +
+      /* 벤또 카드 영역 */
+      '<div style="display:flex;flex-direction:column;gap:12px;width:300px;flex-shrink:0">' +
 
+        /* ① 매출 예측 */
+        '<section class="bento-item fade-up-2" id="ai-card-forecast" style="width:100%">' +
+          '<header class="bento-head">' +
+            '<div><h3>AI 매출 예측</h3></div>' +
+            '<button class="ai-chip" onclick="_filoAiForecast()">새로고침</button>' +
+          '</header>' +
+          '<div class="bento-body" id="ai-forecast-body">' + _aiSkeleton(4) + '</div>' +
+        '</section>' +
 
+        /* ② 메뉴 추천 */
+        '<section class="bento-item fade-up-2" id="ai-card-menu" style="width:100%">' +
+          '<header class="bento-head">' +
+            '<div><h3>AI 메뉴 추천</h3></div>' +
+            '<button class="ai-chip" onclick="_filoAiMenuRec()">새로고침</button>' +
+          '</header>' +
+          '<div class="bento-body" id="ai-menu-body">' + _aiSkeleton(5) + '</div>' +
+        '</section>' +
+
+      '</div>' +
     '</div>' +
+
   '</div>';
 
   _filoAiBriefing('ai-briefing');
   _filoAiForecast();
   _filoAiMenuRec();
 }
+
+/* ═════════════════════════════════════════════════════════════
+   AI 채팅 전송 / 응답 처리
+   ═════════════════════════════════════════════════════════════ */
+window._aiChatSend = function(preset) {
+  var inp = document.getElementById('ai-chat-inp');
+  var msgs = document.getElementById('ai-chat-msgs');
+  if (!msgs) return;
+  var text = preset || (inp && inp.value.trim()) || '';
+  if (!text) return;
+  if (inp) inp.value = '';
+
+  /* 사용자 메시지 */
+  var uDiv = document.createElement('div');
+  uDiv.className = 'ai-msg user';
+  uDiv.textContent = text;
+  msgs.appendChild(uDiv);
+
+  /* 로딩 버블 */
+  var thinkDiv = document.createElement('div');
+  thinkDiv.className = 'ai-msg ai thinking';
+  thinkDiv.textContent = '생각 중...';
+  msgs.appendChild(thinkDiv);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  _aiChatHistory.push({role:'user', content:text});
+
+  var did = _aiDid();
+  _aiPost('/api/ai-chat', {did: did, messages: _aiChatHistory.slice(-8)})
+    .then(function(r) {
+      thinkDiv.classList.remove('thinking');
+      if (!r.ok) {
+        thinkDiv.textContent = r.error || '응답을 가져오지 못했습니다.';
+        return;
+      }
+      thinkDiv.textContent = r.reply;
+      _aiChatHistory.push({role:'assistant', content:r.reply});
+      msgs.scrollTop = msgs.scrollHeight;
+    })
+    .catch(function() {
+      thinkDiv.textContent = '네트워크 오류가 발생했습니다.';
+    });
+};
 
 /* ═════════════════════════════════════════════════════════════
    2. AI 매출 예측
