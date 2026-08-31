@@ -1,12 +1,12 @@
 /**
- * 네이버 블로그 자동 임시저장 스크립트
- * - 절대 발행하지 않음 (installPublishGuard로 코드로도 보장)
+ * 네이버 블로그 자동 임시저장 / 자동 발행 스크립트
  * - 입력 순서: 본문 전체 → 제목 (마지막)
  * - 한글: keyboard.insertText() 사용 (keyboard.type() IME 버그 방지)
  *
  * Usage:
- *   node scripts/naver_draft.js --draft drafts/post.json
- *   node scripts/naver_draft.js --draft drafts/post.json --dry-run
+ *   node scripts/naver_draft.js --draft drafts/post.json            # 임시저장
+ *   node scripts/naver_draft.js --draft drafts/post.json --publish  # 자동 발행
+ *   node scripts/naver_draft.js --draft drafts/post.json --dry-run  # 테스트
  */
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
@@ -17,6 +17,7 @@ const fs = require('fs');
 const PROFILE_DIR = path.join(__dirname, '..', 'naver-profile');
 const BLOG_ID = process.env.BLOG_ID || 'soungkyekim';
 const DRY_RUN = process.argv.includes('--dry-run');
+const AUTO_PUBLISH = process.argv.includes('--publish');
 
 // --draft 플래그 또는 첫 번째 포지셔널 인수 모두 허용
 const draftArgIdx = process.argv.indexOf('--draft');
@@ -45,28 +46,6 @@ const results = {
   subtitles: { ok: 0, total: blocks.filter(b => b.type === 'subtitle').length },
 };
 
-// ── 발행 차단 가드 (절대 규칙 2 — 코드로 보장) ──────────────────────────
-// 발행 패널 열기(태그용)는 허용, 실제 발행 확인 버튼만 차단
-async function installPublishGuard(page) {
-  await page.evaluate(() => {
-    const block = (e) => {
-      // "발행하기" 최종 확인 버튼만 차단 (패널 열기 버튼은 통과)
-      const btn = e.target.closest(
-        'button[data-testid="seOnePublishDoneBtn"], ' +
-        'button[class*="publishDone"], ' +
-        'button[class*="publish-done"], ' +
-        'button[class*="publish-submit"]'
-      );
-      if (btn) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        console.warn('[PublishGuard] 발행 최종 확인 차단!');
-      }
-    };
-    document.addEventListener('click', block, true);
-    window.__publishGuardInstalled = true;
-  });
-}
 
 // ── 한글/이모지 혼합 안전 입력 ─────────────────────────────────────────
 async function insertText(page, text) {
@@ -322,13 +301,16 @@ async function inputTags(page, tagList) {
   const chipCount = tagAreaText.split('#').length - 1;
   results.tags = { ok: chipCount > 0, count: chipCount || inserted };
 
-  // 패널 닫기 (발행 버튼 절대 클릭 금지)
-  await page.keyboard.press('Escape').catch(() => {});
-  await page.waitForTimeout(500);
-  await page.evaluate(() => {
-    document.querySelectorAll('[class*="dim"][style*="block"], [class*="overlay"][style*="block"]')
-      .forEach(el => { if (el.style) el.style.display = 'none'; });
-  }).catch(() => {});
+  // AUTO_PUBLISH: 패널 열린 채로 유지 (발행 버튼 클릭 예정)
+  // 임시저장: 패널 닫기
+  if (!AUTO_PUBLISH) {
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      document.querySelectorAll('[class*="dim"][style*="block"], [class*="overlay"][style*="block"]')
+        .forEach(el => { if (el.style) el.style.display = 'none'; });
+    }).catch(() => {});
+  }
 }
 
 // ── 지도(플레이스) 첨부 ─────────────────────────────────────────────────
@@ -453,9 +435,9 @@ async function inputPlace(page, placeInfo) {
     });
   }
 
-  // 발행 차단 가드 설치 (절대 규칙 2)
-  await installPublishGuard(page);
-  console.log('🔒 발행 차단 가드 설치 완료');
+  if (AUTO_PUBLISH) {
+    console.log('🚀 자동 발행 모드');
+  }
 
   // "작성 중인 글" 팝업 → 새로 쓰기 선택
   await page.waitForTimeout(2000);
@@ -547,8 +529,30 @@ async function inputPlace(page, placeInfo) {
     await inputPlace(page, place);
   }
 
-  // ── 임시저장 ───────────────────────────────────────────────────────
-  if (!DRY_RUN) {
+  // ── 임시저장 / 발행 ─────────────────────────────────────────────────
+  if (DRY_RUN) {
+    console.log('🔍 DRY-RUN: 저장 생략');
+  } else if (AUTO_PUBLISH) {
+    // 발행 패널이 열려 있는 상태 — 최종 발행 버튼 클릭
+    const publishDoneSels = [
+      'button[data-testid="seOnePublishDoneBtn"]',
+      'button[class*="publishDone"]',
+      'button[class*="publish-done"]',
+      'button[class*="publish-submit"]',
+      'button:has-text("발행하기")',
+    ];
+    let published = false;
+    for (const sel of publishDoneSels) {
+      const btn = await page.$(sel).catch(() => null);
+      if (btn) {
+        await btn.click();
+        published = true;
+        break;
+      }
+    }
+    await page.waitForTimeout(3000);
+    console.log(published ? '🚀 발행 완료' : '⚠️  발행 버튼 못 찾음 — 수동 발행 필요');
+  } else {
     const saveBtn = await page.$('button[data-testid="seOneTempBtn"], button:has-text("임시저장"), button[class*="temp"]');
     if (saveBtn) {
       await saveBtn.click();
@@ -557,8 +561,6 @@ async function inputPlace(page, placeInfo) {
     } else {
       console.warn('⚠️  임시저장 버튼 못 찾음 — 수동 저장 필요');
     }
-  } else {
-    console.log('🔍 DRY-RUN: 저장 생략');
   }
 
   // ── 이중 검증: 스크린샷 + 텍스트 덤프 ───────────────────────────────
@@ -581,10 +583,11 @@ async function inputPlace(page, placeInfo) {
   console.log(`동영상 : ${results.video.ok ? '✅' : video ? '❗수동 필요' : '⏭️  없음'}`);
   console.log(`소제목 : ${results.subtitles.ok}/${results.subtitles.total} ✅`);
   console.log('════════════════════════════════════════════\n');
-  console.log('📋 수동 확인 필요:');
-  console.log('   - 발행은 사람이 직접 (자동 발행 금지)');
-  console.log('   - 발행 후 24시간 수정 금지');
-  console.log('   - 타겟 활동 시간대에 발행');
+  if (!AUTO_PUBLISH) {
+    console.log('📋 수동 확인 필요:');
+    console.log('   - 발행은 사람이 직접 (또는 --publish 플래그 사용)');
+    console.log('   - 발행 후 24시간 수정 금지');
+  }
   if (draft.sponsored) console.log('   - ⚠️  협찬 표기 육안 확인 필수');
 
   await context.close();
