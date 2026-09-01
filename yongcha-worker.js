@@ -5688,11 +5688,18 @@ function _admLoadCleanup(){
     '<div id="cleanup-dup-info" style="font-size:12px;color:var(--t3);margin-bottom:10px">중복 분석 중...</div>'+
     '<button onclick="_yCleanDupPosts()" style="padding:10px 16px;background:rgba(109,40,217,.12);color:var(--pu);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 중복 공고 삭제</button>'+
   '</div>'+
+  '<div class="card" style="border-left:3px solid #dc2626">'+
+    '<div style="font-weight:800;margin-bottom:6px">전체 공고 초기화</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">yongcha_posts · yongcha_jobs 전체 삭제. 실 서비스 전 테스트 데이터 정리용</div>'+
+    '<div id="cleanup-all-info" style="font-size:12px;color:var(--t3);margin-bottom:10px">분석 중...</div>'+
+    '<button onclick="_yCleanAllPosts()" style="padding:10px 16px;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">전체 삭제 (주의)</button>'+
+  '</div>'+
   '</div>';
 
   _yCountTestAccounts();
   _yCountPlaywrightPosts();
   _yCountDupPosts();
+  _yCountAllPosts();
 }
 
 function _yIsTestEmail(email){
@@ -5714,10 +5721,22 @@ function _yCleanTestAccounts(){
     var toDelete=[];
     snap.forEach(function(doc){if(_yIsTestEmail(doc.data().email))toDelete.push(doc.id);});
     if(!toDelete.length){_yToast('삭제할 테스트 계정이 없어요');return;}
-    var batch=_db.batch();
-    toDelete.forEach(function(id){batch.delete(_db.collection('yongcha_users').doc(id));});
-    batch.commit().then(function(){
-      _yToast('테스트 계정 '+toDelete.length+'개 삭제 완료');
+    var idSet={};
+    toDelete.forEach(function(id){idSet[id]=1;});
+    // 계정 + 소유 공고·지원 일괄 삭제
+    Promise.all([
+      _db.collection('yongcha_posts').get(),
+      _db.collection('yongcha_jobs').get(),
+      _db.collection('yongcha_applies').get()
+    ]).then(function(results){
+      var batch=_db.batch();
+      toDelete.forEach(function(id){batch.delete(_db.collection('yongcha_users').doc(id));});
+      results[0].docs.forEach(function(d){if(idSet[d.data().agencyId])batch.delete(d.ref);});
+      results[1].docs.forEach(function(d){if(idSet[d.data().agencyId]||idSet[d.data().driverId])batch.delete(d.ref);});
+      results[2].docs.forEach(function(d){if(idSet[d.data().agencyId]||idSet[d.data().driverId])batch.delete(d.ref);});
+      return batch.commit();
+    }).then(function(){
+      _yToast('테스트 계정 '+toDelete.length+'개 + 관련 공고·지원 삭제 완료');
       _yCountTestAccounts();
     }).catch(function(e){_yToast('오류: '+e.message);});
   });
@@ -5818,6 +5837,32 @@ function _yCleanDupPosts(){
     return batch.commit().then(function(){
       _yToast('중복 '+n+'건 삭제 완료');
       _yCountDupPosts();
+    });
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _yCountAllPosts(){
+  var el=document.getElementById('cleanup-all-info');
+  Promise.all([
+    _db.collection('yongcha_posts').get(),
+    _db.collection('yongcha_jobs').get()
+  ]).then(function(r){
+    if(el)el.textContent='공고 '+r[0].size+'건 · 채용공고 '+r[1].size+'건';
+  }).catch(function(){});
+}
+
+function _yCleanAllPosts(){
+  if(!confirm('yongcha_posts·yongcha_jobs 전체를 삭제합니다.\n실 사용 데이터가 있으면 복구 불가.\n계속할까요?'))return;
+  Promise.all([
+    _db.collection('yongcha_posts').get(),
+    _db.collection('yongcha_jobs').get()
+  ]).then(function(r){
+    var batch=_db.batch(),n=0;
+    r[0].docs.forEach(function(d){if(n<450){batch.delete(d.ref);n++;}});
+    r[1].docs.forEach(function(d){if(n<450){batch.delete(d.ref);n++;}});
+    return batch.commit().then(function(){
+      _yToast('공고 전체 '+n+'건 삭제 완료');
+      _yCountAllPosts();
     });
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
