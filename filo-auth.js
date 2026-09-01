@@ -229,14 +229,14 @@ function _showApp(){
   prof.innerHTML=
   '<div style="padding:16px 14px 14px">'+
    '<div style="display:flex;align-items:center;gap:11px">'+
-    '<div style="width:38px;height:38px;border-radius:11px;background:#08101f;border:1px solid rgba(201,168,76,.4);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#c9a84c;flex-shrink:0">'+esc(company.slice(0,1))+'</div>'+
+    '<div style="width:38px;height:38px;border-radius:11px;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#e11d48;flex-shrink:0">'+esc(company.slice(0,1))+'</div>'+
     '<div style="min-width:0;flex:1">'+
      '<div style="font-size:13px;font-weight:800;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px">'+esc(company)+'</div>'+
-     '<span style="display:inline-flex;align-items:center;margin-top:4px;padding:1px 7px;border-radius:99px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);font-size:9px;font-weight:800;color:#c9a84c;letter-spacing:.6px">'+role+'</span>'+
+     '<span style="display:inline-flex;align-items:center;margin-top:4px;padding:1px 7px;border-radius:99px;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);font-size:9px;font-weight:800;color:#e11d48;letter-spacing:.6px">'+role+'</span>'+
     '</div>'+
     '<div style="font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.5px;font-variant-numeric:tabular-nums;flex-shrink:0">'+hh+':'+mi2+'</div>'+
    '</div>'+
-   '<div style="margin-top:14px;height:1px;background:linear-gradient(90deg,rgba(201,168,76,.3),rgba(201,168,76,.1),transparent)"></div>'+
+   '<div style="margin-top:14px;height:1px;background:linear-gradient(90deg,rgba(244,63,94,.2),rgba(244,63,94,.08),transparent)"></div>'+
   '</div>';
  }
  _buildFiloNav();
@@ -455,9 +455,9 @@ function _buildFiloNav(){
   if(!_saBar){
    _saBar=document.createElement('div');
    _saBar.id='sa-topbar';
-   _saBar.style.cssText='display:flex;align-items:center;gap:5px;border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:3px 8px;background:rgba(201,168,76,.08)';
+   _saBar.style.cssText='display:flex;align-items:center;gap:5px;border:1px solid rgba(244,63,94,.3);border-radius:8px;padding:3px 8px;background:rgba(244,63,94,.07)';
    _saBar.innerHTML=
-    '<span style="color:#c9a84c;font-size:10px;font-weight:800;flex-shrink:0;letter-spacing:.5px">SA</span>'+
+    '<span style="color:#f43f5e;font-size:10px;font-weight:800;flex-shrink:0;letter-spacing:.5px">SA</span>'+
     '<select id="demo-dealer-sel" onchange="_switchDemoDealer(this.value)" '+
      'style="background:transparent;border:none;color:#0f172a;font-size:11px;cursor:pointer;outline:none;max-width:72px">'+
      '<option value="">데모</option>'+
@@ -470,11 +470,11 @@ function _buildFiloNav(){
     '</select>'+
     '<input id="sa-did-input" placeholder="딜러ID" '+
      'onkeydown="if(event.key===\'Enter\')_switchDemoDealer(this.value.trim())" '+
-     'style="width:90px;background:transparent;border:none;border-bottom:1px solid rgba(201,168,76,.4);color:#0f172a;font-size:11px;padding:1px 4px;outline:none">'+
+     'style="width:90px;background:transparent;border:none;border-bottom:1px solid rgba(244,63,94,.35);color:#0f172a;font-size:11px;padding:1px 4px;outline:none">'+
     '<button onclick="_switchDemoDealer(document.getElementById(\'sa-did-input\').value.trim())" '+
-     'style="background:rgba(201,168,76,.2);border:none;border-radius:4px;color:#c9a84c;font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;flex-shrink:0">이동</button>'+
+     'style="background:rgba(244,63,94,.15);border:none;border-radius:4px;color:#f43f5e;font-size:10px;font-weight:700;padding:2px 7px;cursor:pointer;flex-shrink:0">이동</button>'+
     '<button onclick="_filoDemoInit()" '+
-     'style="background:transparent;border:1px solid rgba(201,168,76,.3);border-radius:4px;color:#c9a84c;font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0">초기화</button>';
+     'style="background:transparent;border:1px solid rgba(244,63,94,.25);border-radius:4px;color:#f43f5e;font-size:10px;padding:2px 7px;cursor:pointer;flex-shrink:0">초기화</button>';
    var _trEl=document.getElementById('topbar-right');
    if(_trEl) _trEl.appendChild(_saBar);
   } else {
@@ -913,9 +913,9 @@ function _filoPageHome(el){
   _qa.map(function(q){
    return '<button onclick="_filoGoPage(\''+q.p+'\')" title="'+esc(q.hint)+'" '+
     'style="padding:16px 8px 14px;background:var(--surface,#fff);border:1.5px solid var(--bd);border-radius:14px;cursor:pointer;text-align:center;transition:all .18s;active:scale(.97)" '+
-    'onmouseover="this.style.borderColor=\'rgba(200,163,86,.6)\';this.style.boxShadow=\'0 4px 16px rgba(200,163,86,.1)\';this.style.transform=\'translateY(-1px)\'" '+
+    'onmouseover="this.style.borderColor=\'rgba(244,63,94,.5)\';this.style.boxShadow=\'0 4px 16px rgba(244,63,94,.1)\';this.style.transform=\'translateY(-1px)\'" '+
     'onmouseout="this.style.borderColor=\'var(--bd)\';this.style.boxShadow=\'\';this.style.transform=\'\'">'+
-    '<div style="width:36px;height:36px;border-radius:10px;background:rgba(200,163,86,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--br,#c9a84c)">'+_svgIcon(q.ic)+'</div>'+
+    '<div style="width:36px;height:36px;border-radius:10px;background:rgba(244,63,94,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:var(--br,#f43f5e)">'+_svgIcon(q.ic)+'</div>'+
     '<div style="font-size:12px;font-weight:800;color:var(--tx);letter-spacing:-.1px;line-height:1.3">'+esc(q.l)+'</div>'+
     '</button>';
   }).join('')+
@@ -942,9 +942,9 @@ function _filoPageHome(el){
   '<div id="hm-sales" style="font-size:32px;font-weight:900;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:#fff;line-height:1;margin-bottom:14px">₩ —</div>'+
   '<div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.08);padding-top:12px">'+
   '<div style="flex:1;padding-right:10px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">주문</div>'+
-  '<div id="hm-cnt" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
+  '<div id="hm-cnt" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.9)">—</div></div>'+
   '<div style="flex:1;padding:0 10px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">평균</div>'+
-  '<div id="hm-avg" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:#E2CA96">—</div></div>'+
+  '<div id="hm-avg" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.9)">—</div></div>'+
   '<div style="flex:1;padding-left:10px"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">미처리</div>'+
   '<div id="hm-pending" style="font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.3)">—</div></div>'+
   '</div></div></div>'+
@@ -1045,10 +1045,10 @@ function _filoPageHome(el){
    var el2=document.getElementById('hm-bookings'); if(!el2)return;
    if(!items.length){el2.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">오늘 예약·웨이팅 없음</div>';return;}
    el2.innerHTML=items.map(function(b){
-    var sc=b.status==='confirmed'?'#22c55e':b.status==='cancelled'?'#ef4444':'#c9a84c';
+    var sc=b.status==='confirmed'?'#22c55e':b.status==='cancelled'?'#ef4444':'#f43f5e';
     var sl=b.status==='confirmed'?'확정':b.status==='cancelled'?'취소':'대기';
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
-     '<div style="font-size:13px;font-weight:900;color:#c9a84c;min-width:44px;font-variant-numeric:tabular-nums">'+(b.time||'—')+'</div>'+
+     '<div style="font-size:13px;font-weight:900;color:#f43f5e;min-width:44px;font-variant-numeric:tabular-nums">'+(b.time||'—')+'</div>'+
      '<div style="flex:1;min-width:0">'+
      '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.guestName||b.name||'이름 없음')+'</div>'+
      '<div style="font-size:11px;color:var(--t3)">'+(b.partySize||1)+'명'+(b.phone?' · '+b.phone:'')+'</div>'+
@@ -1070,7 +1070,7 @@ function _filoPageHome(el){
 }
 
 function _hmTileHtml(id,label,unit){
- return '<div class="card" style="text-align:center;padding:16px 8px;border-top:2px solid rgba(200,163,86,.15);position:relative;overflow:hidden">'+
+ return '<div class="card" style="text-align:center;padding:16px 8px;border-top:2px solid rgba(244,63,94,.15);position:relative;overflow:hidden">'+
   '<div style="font-size:9px;font-weight:800;color:var(--t3);margin-bottom:8px;letter-spacing:.8px;text-transform:uppercase">'+label+'</div>'+
   '<div id="'+id+'" style="font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--t3);letter-spacing:-1px;line-height:1">—</div>'+
   '<div style="font-size:9px;color:var(--t3);margin-top:5px;font-weight:600">'+unit+'</div>'+
@@ -1103,7 +1103,7 @@ function _hmRenderPage(){
  if(pgEl)pgEl.textContent=(_homeOrderPage+1)+'/'+pages;
  var slice=_homeOrdersAll.slice(_homeOrderPage*5,_homeOrderPage*5+5);
  listEl.innerHTML=slice.map(function(o){
-  var sc=o.status==='completed'?'#22c55e':o.status==='cancelled'?'#ef4444':'#c9a84c';
+  var sc=o.status==='completed'?'#22c55e':o.status==='cancelled'?'#ef4444':'#f43f5e';
   var sl=o.status==='completed'?'완료':o.status==='cancelled'?'취소':o.status==='confirmed'?'진행':'대기';
   var names=(o.items||[]).slice(0,2).map(function(i){return i.name||'';}).join(', ');
   if((o.items||[]).length>2)names+=' 외 '+((o.items||[]).length-2)+'개';
@@ -1542,7 +1542,7 @@ function _filoPageBranchMonitor(el){
    var cnt=document.getElementById('hq-cnt');if(cnt)cnt.textContent=branches.length;
    if(!branches.length){
     var bEl=document.getElementById('hq-branches');
-    if(bEl)bEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">등록된 가맹점이 없습니다.<br><button onclick="_filoGoPage(\'branch_mgmt\')" style="margin-top:10px;padding:7px 16px;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:12px;font-weight:800;cursor:pointer">가맹점 추가하기</button></div>';
+    if(bEl)bEl.innerHTML='<div style="color:var(--t3);font-size:12px;text-align:center;padding:30px">등록된 가맹점이 없습니다.<br><button onclick="_filoGoPage(\'branch_mgmt\')" style="margin-top:10px;padding:7px 16px;background:#f43f5e;border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:800;cursor:pointer">가맹점 추가하기</button></div>';
     return;
    }
    var proms=branches.map(function(b,i){
@@ -1567,7 +1567,7 @@ function _filoPageBranchMonitor(el){
     var rows=branches.map(function(b2,i){
      var pct=maxSales>0?Math.max(4,Math.round(b2.sales/maxSales*100)):4;
      var rank=i<3?medals[i]:'<span style="font-size:13px;font-weight:900;color:var(--t3)">'+(i+1)+'</span>';
-     var barColor=i===0?'#c9a84c':i===1?'#94a3b8':i===2?'#b45309':'var(--t3)';
+     var barColor=i===0?'#f43f5e':i===1?'#94a3b8':i===2?'#f97316':'var(--t3)';
      var statusColor=b2.sales>0?'#22c55e':'#64748b';
      return '<div style="display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--bd)">'+
       '<div style="text-align:center;font-size:18px">'+rank+'</div>'+
@@ -1606,20 +1606,20 @@ function _filoPageMenuDeploy(el){
   '<div class="card" style="margin-bottom:16px">'+
   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">배포 옵션</div>'+
   '<label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">'+
-  '<input type="checkbox" id="hq-deploy-add" checked style="accent-color:#c9a84c">'+
+  '<input type="checkbox" id="hq-deploy-add" checked style="accent-color:#f43f5e">'+
   '<span style="font-size:13px">신규 메뉴 추가</span></label>'+
   '<label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">'+
-  '<input type="checkbox" id="hq-deploy-price" checked style="accent-color:#c9a84c">'+
+  '<input type="checkbox" id="hq-deploy-price" checked style="accent-color:#f43f5e">'+
   '<span style="font-size:13px">가격 동기화</span></label>'+
   '<label style="display:flex;align-items:center;gap:10px;cursor:pointer">'+
-  '<input type="checkbox" id="hq-deploy-del" style="accent-color:#c9a84c">'+
+  '<input type="checkbox" id="hq-deploy-del" style="accent-color:#f43f5e">'+
   '<span style="font-size:13px">삭제된 메뉴 가맹점에서도 제거 <span style="font-size:11px;color:#ef4444">(주의)</span></span></label>'+
   '</div>'+
   '<div class="card" style="margin-bottom:16px">'+
   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">대상 가맹점</div>'+
   '<div id="hq-dep-branches"><div style="color:var(--t3);font-size:12px;text-align:center;padding:16px">불러오는 중...</div></div>'+
   '</div>'+
-  '<button onclick="_filoHqDeploy()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:10px;color:#0f172a;font-size:14px;font-weight:900;cursor:pointer">'+
+  '<button onclick="_filoHqDeploy()" style="width:100%;padding:14px;background:#f43f5e;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:900;cursor:pointer">'+
   '전체 가맹점에 배포</button>'+
   '<div id="hq-dep-log" style="margin-top:16px;font-size:11px;color:var(--t3)"></div>'+
   '</div>';
@@ -1631,7 +1631,7 @@ function _filoPageMenuDeploy(el){
    var html='';snap.forEach(function(d){
     var b=d.data();
     html+='<label style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer">'+
-     '<input type="checkbox" class="hq-dep-chk" value="'+esc(d.id)+'" checked style="accent-color:#c9a84c">'+
+     '<input type="checkbox" class="hq-dep-chk" value="'+esc(d.id)+'" checked style="accent-color:#f43f5e">'+
      '<span style="font-size:13px">'+(b.name||d.id)+'</span></label>';
    });
    if(bEl)bEl.innerHTML=html;
@@ -1713,7 +1713,7 @@ function _filoPageBranchMgmt(el){
   '<div style="font-size:12px;color:var(--t3);margin-bottom:8px">가맹점 딜러 ID를 입력하면 본사 HQ에 연결됩니다.</div>'+
   '<div style="display:flex;gap:8px">'+
   '<input id="branch-add-id" placeholder="가맹점 dealerId 입력" style="flex:1;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:13px;outline:none">'+
-  '<button onclick="_filoHqAddBranch()" style="padding:10px 16px;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:13px;font-weight:800;cursor:pointer">추가</button>'+
+  '<button onclick="_filoHqAddBranch()" style="padding:10px 16px;background:#f43f5e;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:800;cursor:pointer">추가</button>'+
   '</div></div>'+
   '<div class="card">'+
   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">등록된 가맹점</div>'+
@@ -1760,7 +1760,7 @@ function _filoPageHqNotice(el){
   '<div style="display:flex;gap:8px">'+
   '<select id="hq-ntc-type" style="padding:8px 10px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:12px">'+
   '<option value="info">일반 공지</option><option value="urgent">긴급 공지</option><option value="event">이벤트</option></select>'+
-  '<button onclick="_filoHqSendNotice()" style="flex:1;padding:10px 16px;background:#c9a84c;border:none;border-radius:8px;color:#0f172a;font-size:13px;font-weight:800;cursor:pointer">전체 발송</button>'+
+  '<button onclick="_filoHqSendNotice()" style="flex:1;padding:10px 16px;background:#f43f5e;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:800;cursor:pointer">전체 발송</button>'+
   '</div></div>'+
   '<div class="card">'+
   '<div style="font-size:13px;font-weight:800;margin-bottom:12px">발송 이력</div>'+
@@ -1775,7 +1775,7 @@ function _filoPageHqNotice(el){
    snap.forEach(function(d){
     var n=d.data();
     var dt=n.createdAt?(new Date(n.createdAt)).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    var typeC=n.type==='urgent'?'#ef4444':n.type==='event'?'#c9a84c':'var(--t3)';
+    var typeC=n.type==='urgent'?'#ef4444':n.type==='event'?'#f97316':'var(--t3)';
     html+='<div style="padding:10px 0;border-bottom:1px solid var(--bd)">'+
      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'+
      '<span style="font-size:10px;color:'+typeC+';font-weight:700">'+(n.type==='urgent'?'긴급':n.type==='event'?'이벤트':'공지')+'</span>'+
@@ -1832,7 +1832,7 @@ function _filoPageQSC(el){
  var scoreHtml=function(id){
   return '<div id="qsc-g-'+id+'" data-sel="0" style="display:flex;gap:4px">'+
    [1,2,3,4,5].map(function(n){
-    return '<button onclick="var g=document.getElementById(\'qsc-g-'+id+'\');g.dataset.sel=\''+n+'\';g.querySelectorAll(\'button\').forEach(function(b){b.style.background=\'var(--b3)\';b.style.color=\'var(--t1)\'});this.style.background=\'#c9a84c\';this.style.color=\'#0f172a\'" '+
+    return '<button onclick="var g=document.getElementById(\'qsc-g-'+id+'\');g.dataset.sel=\''+n+'\';g.querySelectorAll(\'button\').forEach(function(b){b.style.background=\'var(--b3)\';b.style.color=\'var(--t1)\'});this.style.background=\'#f43f5e\';this.style.color=\'#fff\'" '+
      'style="width:32px;height:32px;border:1px solid var(--bd);border-radius:6px;background:var(--b3);color:var(--t1);font-size:12px;font-weight:700;cursor:pointer">'+n+'</button>';
    }).join('')+'</div>';
  };
@@ -1861,7 +1861,7 @@ function _filoPageQSC(el){
   '<div style="font-size:12px;font-weight:700;margin-bottom:6px">특이사항 메모</div>'+
   '<textarea id="qsc-memo" rows="3" placeholder="현장 메모..." style="width:100%;padding:10px 12px;background:var(--b3);border:1px solid var(--bd);border-radius:8px;color:var(--t1);font-size:12px;resize:vertical;box-sizing:border-box"></textarea>'+
   '</div></div>'+
-  '<button onclick="_filoQscSubmit()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:10px;color:#0f172a;font-size:14px;font-weight:900;cursor:pointer">점검 결과 제출</button>'+
+  '<button onclick="_filoQscSubmit()" style="width:100%;padding:14px;background:#f43f5e;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:900;cursor:pointer">점검 결과 제출</button>'+
   '<div id="qsc-history" style="margin-top:24px"></div>'+
   '</div>';
  _db.collection('companies').where('hqDealerId','==',did).get()
