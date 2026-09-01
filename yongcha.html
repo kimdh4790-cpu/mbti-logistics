@@ -7486,38 +7486,10 @@ function _pgDashboardAgency(el){
 
 /* ══ 대리점/관리자 — 배차 현황 ══════════════════════════════ */
 
-function _pgDispatchLocations(){
-  if(!_CU||_CU.type==='driver')return;
-  // 리얼타임 위치 구독 (배치현황 나가면 자동 해제)
-  _db.collection('yongcha_locations')
-    .where('isActive','==',true).onSnapshot(function(snap){
-      var existing=document.getElementById('dispatch-locations');
-      if(!existing)return;
-      if(snap.empty){existing.innerHTML='<p style="font-size:12px;color:var(--t3);text-align:center;padding:10px">현재 위치 공유 중인 기사가 없어요</p>';return;}
-      var html='';
-      snap.forEach(function(doc){
-        var d=doc.data();
-        var mapHref=d.lat&&d.lng?'https://map.kakao.com/link/map/'+encodeURIComponent(d.driverName||'기사')+','+d.lat+','+d.lng:'';
-        html+='<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bd)">'+
-          '<span class="loc-dot" style="flex-shrink:0;color:var(--gn)"></span>'+
-          '<div style="flex:1">'+
-          '<div style="font-size:13px;font-weight:800">'+_esc(d.driverName||'기사')+'</div>'+
-          (d.updatedAt?'<div style="font-size:10.5px;color:var(--t3)">'+_ago(d.updatedAt)+'</div>':'')+
-          '</div>'+
-          (mapHref?'<a href="'+_esc(mapHref)+'" target="_blank" rel="noopener" style="font-size:12px;font-weight:800;color:var(--ac);padding:6px 12px;background:var(--acl);border-radius:8px;text-decoration:none">지도</a>':'')+
-          '</div>';
-      });
-      existing.innerHTML=html;
-    });
-}
 function _pgDispatchBoard(el){
   el.innerHTML=
     '<div class="page-hdr"><h1 class="page-title">운행 현황</h1>'+
-    '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:14px">'+
-    '<div style="font-size:12.5px;font-weight:800;color:var(--t2);margin-bottom:8px">기사 현위치 (실시간)</div>'+
-    '<div id="dispatch-locations" style="min-height:30px"><div class="spinner"></div></div>'+
-    '</div>'+
-    '<p class="page-sub">승인한 기사들의 운행 상태예요</p></div>'+
+    '<p class="page-sub">연결 확정된 기사들의 운행 상태예요</p></div>'+
     '<div id="dispatch-list">'+_skRows(3)+'</div>';
 
   var q=_CU.type==='admin'
