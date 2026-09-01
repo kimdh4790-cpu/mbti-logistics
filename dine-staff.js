@@ -486,7 +486,7 @@ function _dineLoadAttend(did){
     var tbl=document.getElementById('att-table');if(!tbl)return;
     var allIds=[...new Set([...allMem.map(function(m){return m.id;}),...Object.keys(ins)])];
     if(!allIds.length){tbl.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">'+date+' 직원 없음</div>';return;}
-    var ATT_PAGE_SIZE=5;
+    var ATT_PAGE_SIZE=25;
     if(window._attPage===undefined)window._attPage=0;
 
     /* 퇴직자 제외된 id 목록 */
@@ -553,12 +553,14 @@ function _dineLoadAttend(did){
        '</td></tr>';
      });
      html+='</tbody></table></div>';
-     /* 페이지네이션 */
-     html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 6px 4px;border-top:1px solid var(--bd);margin-top:4px">'+
-      '<button onclick="if(window._attPage>0){window._attPage--;window._attRenderPage(window._attPage);}" style="padding:7px 16px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;'+(page===0?'opacity:.35;pointer-events:none':'')+'">← 이전</button>'+
-      '<span style="font-size:12px;color:var(--t3);font-weight:700">'+(activeIds.length?(page+1)+' / '+totalPages+' 페이지 (총 '+activeIds.length+'명)':'')+'</span>'+
-      '<button onclick="if(window._attPage<'+(totalPages-1)+'){window._attPage++;window._attRenderPage(window._attPage);}" style="padding:7px 16px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;'+(page>=totalPages-1?'opacity:.35;pointer-events:none':'')+'">다음 →</button>'+
-      '</div>';
+     /* 페이지네이션: 2페이지 이상일 때만 표시 */
+     if(totalPages>1){
+      html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 6px 4px;border-top:1px solid var(--bd);margin-top:4px">'+
+       '<button onclick="if(window._attPage>0){window._attPage--;window._attRenderPage(window._attPage);}" style="padding:7px 16px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;'+(page===0?'opacity:.35;pointer-events:none':'')+'">← 이전</button>'+
+       '<span style="font-size:12px;color:var(--t3);font-weight:700">'+(page+1)+' / '+totalPages+' (총 '+activeIds.length+'명)</span>'+
+       '<button onclick="if(window._attPage<'+(totalPages-1)+'){window._attPage++;window._attRenderPage(window._attPage);}" style="padding:7px 16px;border:1px solid var(--bd);border-radius:8px;background:transparent;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;'+(page>=totalPages-1?'opacity:.35;pointer-events:none':'')+'">다음 →</button>'+
+       '</div>';
+     }
      tbl.innerHTML=html;
 
      /* 스와이프 지원 */
