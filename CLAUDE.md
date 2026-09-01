@@ -197,7 +197,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 - Firebase mbti-logistics 프로젝트 설정
 - GitHub Actions secrets (CF_GLOBAL_KEY)
 - 슈퍼어드민 UID·dealerId
-- deploy.yml 수정 금지 (GitHub App 권한 없음 → auto-merge 실패)
+- deploy.yml 수정 가능 (단, workflow 파일 변경 시 auto-merge 안 됨 → GitHub에서 수동 Merge 필요)
 - filo-common.js 직접 수정 금지
 - DONWAY preFreshback/dateFresh 로직 수정 금지
 
@@ -250,7 +250,7 @@ cd mbtico-pages && npx wrangler deploy
 - wrangler login은 로컬 또는 Oracle Cloud에서만
 - Playwright 테스트  반드시 로컬에서 실행
 - 배포 확인 필수: push 후 GitHub Actions 워크플로우 완료(success) 확인 → KV 업로드 + Worker 배포 + 캐시 퍼지 3단계 모두 success 여야 배포 완료
-- deploy.yml 수정 금지: GitHub App이 워크플로우 파일 수정 권한 없어서 auto-merge 실패 발생함
+- deploy.yml 수정 가능: workflow 파일 변경 시 auto-merge 안 됨 → GitHub에서 수동 Merge 필요 (2026-09-01 PR #50으로 yongcha 자동배포 추가 완료)
 
 ---
 
@@ -406,6 +406,10 @@ cd mbtico-pages && npx wrangler deploy
 - filo-order.js / filo-pos-pay.js: null 가드 추가 (Firestore undefined 저장·영수증 "undefined" 표시 방지)
 - INFRA_MEMO.md: Oracle Cloud wrangler deploy 명령어 추가 (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL 조합)
 - yongcha.html / _worker.js / yongcha-worker.js / yongcha-landing.html / yongcha-meta.json: 부가통신사업자 포지셔닝 전면 반영 — '배차'→'단건 요청/운행/연결', '배차완료'→'운행완료', AI 프롬프트 정비, 마케팅 메시지 '직접 매칭'→'직접 거래 정보 서비스', 해시태그 동기화
+
+### ✅ 완료 (2026-09-01)
+- yongcha-worker.js 자동배포 설정: wrangler.yongcha.toml 신규 생성 + deploy.yml에 "Deploy Yongcha Worker" 스텝 추가 (PR #50 머지)
+- yongcha-worker.js 테스트 계정 삭제 범위 확장: @yongcha.app 이메일도 _yCleanTestAccounts()·_yTestOwnerIds() 대상에 포함
 
 ### ✅ 완료 (2026-08-31)
 - filo-auth.js: `_buildFiloNav()` 그룹 재편 → 지금영업/메뉴재고/팀관리/AI분석/본사HQ(franchise_hq 전용)/설정
