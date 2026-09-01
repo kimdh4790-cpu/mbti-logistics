@@ -62,17 +62,6 @@ button{font-family:inherit;cursor:pointer;border:none;outline:none}
 .hero-sub{font-size:clamp(14px,1.9vw,17px);color:var(--t2);line-height:1.8;max-width:440px;margin:0 auto 28px}
 .hero-sub strong{color:var(--tx);font-weight:700}
 
-.cost-strip{
-  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
-  padding:14px 20px;border-radius:14px;
-  background:var(--s1);border:1px solid var(--bd2);
-  max-width:500px;margin:0 auto 32px
-}
-.cpill{padding:6px 11px;border-radius:8px;font-size:12px;font-weight:700;color:var(--t2);background:var(--s2)}
-.csep{font-size:14px;font-weight:700;color:var(--t3)}
-.cbad{padding:6px 12px;border-radius:8px;font-size:13px;font-weight:900;color:var(--rd);background:rgba(224,85,85,.1);border:1px solid rgba(224,85,85,.2)}
-.carr{font-size:20px;color:var(--t3);margin:0 2px}
-.cgood{padding:8px 16px;border-radius:8px;font-size:14px;font-weight:900;color:#08101f;background:var(--br)}
 
 .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:44px}
 .btn-p{
@@ -224,20 +213,8 @@ footer{background:var(--s1);border-top:1px solid var(--bd2);padding:44px 20px;te
     <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     전업종 매장 운영 플랫폼
   </div>
-  <h1 class="hero-h1">매달 <em>14만원</em>을<br>버리고 있나요?</h1>
-  <p class="hero-sub">테이블링·티오더·POS 따로 쓰면<br><strong>월 14.8만원</strong>이 나갑니다.<br>FILO 하나로 전부 해결하세요.</p>
-
-  <div class="cost-strip">
-    <span class="cpill">테이블링 9.9만</span>
-    <span class="csep">+</span>
-    <span class="cpill">티오더 1.9만</span>
-    <span class="csep">+</span>
-    <span class="cpill">POS 3만</span>
-    <span class="csep">=</span>
-    <span class="cbad">월 14.8만원</span>
-    <span class="carr">→</span>
-    <span class="cgood">FILO 하나로</span>
-  </div>
+  <h1 class="hero-h1">매장 앱이<br><em>너무 많지</em> 않나요?</h1>
+  <p class="hero-sub">테이블링·티오더·POS, 앱마다 따로 로그인하고<br>데이터는 따로 관리하고 있나요?<br>FILO 하나로 <strong>전부 통합</strong>하세요.</p>
 
   <div class="hero-btns">
     <button class="btn-p" onclick="location.href='https://filo.ai.kr/signup'">
@@ -268,13 +245,13 @@ footer{background:var(--s1);border-top:1px solid var(--bd2);padding:44px 20px;te
 <!-- COMPARE -->
 <section id="compare">
   <div class="inner" style="text-align:center">
-    <div class="sbadge">비용 비교</div>
-    <h2 class="sh2">따로따로 쓰면<br><em>이만큼</em> 나갑니다</h2>
-    <p class="ssub">기능마다 다른 앱, 매달 나가는 구독료 — FILO는 다릅니다.</p>
+    <div class="sbadge">기능 비교</div>
+    <h2 class="sh2">앱 3개 대신<br><em>FILO 하나로</em></h2>
+    <p class="ssub">지금 쓰는 앱들의 기능을 FILO 하나가 전부 대체합니다.</p>
 
     <div class="cmp-wrap">
       <div class="cmp-card bad">
-        <div class="cmp-lbl">지금 내는 돈</div>
+        <div class="cmp-lbl">따로따로 쓰면</div>
         <div class="cmp-rows">
           <div class="cmp-row">
             <span class="cmp-rname">테이블링 (QR주문)</span>
@@ -297,12 +274,7 @@ footer{background:var(--s1);border-top:1px solid var(--bd2);padding:44px 20px;te
             <span class="cmp-rprice">별도</span>
           </div>
         </div>
-        <hr class="cmp-hr">
-        <div class="cmp-total">
-          <span class="cmp-tlbl">매월 합계</span>
-          <span class="cmp-tval-bad">148,000원</span>
-        </div>
-        <div class="cmp-note">앱마다 따로 로그인 · 데이터 연동 안 됨</div>
+        <div class="cmp-note" style="margin-top:8px">앱마다 따로 로그인 · 데이터 연동 안 됨</div>
       </div>
 
       <div class="cmp-card good">
