@@ -602,7 +602,7 @@ function _dineDashboard(el){
   {id:'kpi-sales',  label:'오늘 매출', color:'#10B981', ic:_DINE_IC.trending},
   {id:'kpi-profit', label:'오늘 순이익',color:'#34D399', ic:_DINE_IC.bar2},
   {id:'kpi-margin', label:'마진율',    color:'#10B981', ic:_DINE_IC.pct},
-  {id:'kpi-orders', label:'주문 건수', color:'#C8A356', ic:_DINE_IC.cart},
+  {id:'kpi-orders', label:'주문 건수', color:'#84cc16', ic:_DINE_IC.cart},
   {id:'kpi-staff',  label:'출근 인원', color:'#34D399', ic:_DINE_IC.users},
   {id:'kpi-labor',  label:'인건비율',  color:'#f59e0b', ic:_DINE_IC.brief}
  ];
@@ -647,12 +647,12 @@ function _dineDashboard(el){
  /* ── AI 오늘의 조언 ── */
  var aiWrap=document.createElement('div');aiWrap.style.marginTop='12px';
  aiWrap.innerHTML=
-  '<div class="card" id="dash-ai-card" style="border-left:3px solid #C8A356">'+
+  '<div class="card" id="dash-ai-card" style="border-left:3px solid #84cc16">'+
   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
-  '<div style="width:28px;height:28px;border-radius:8px;background:rgba(200,163,86,.15);display:flex;align-items:center;justify-content:center;color:#C8A356">'+
+  '<div style="width:28px;height:28px;border-radius:8px;background:rgba(132,204,22,.15);display:flex;align-items:center;justify-content:center;color:#4d7c0f">'+
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L9.27 9.27 3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"/></svg>'+
   '</div>'+
-  '<span style="font-size:12px;font-weight:800;color:#C8A356">AIVO AI 오늘의 조언</span>'+
+  '<span style="font-size:12px;font-weight:800;color:#4d7c0f">AIVO AI 오늘의 조언</span>'+
   '<span style="flex:1"></span>'+
   '<span style="font-size:10px;color:var(--t3)" id="dash-ai-time"></span>'+
   '</div>'+
@@ -840,12 +840,12 @@ function _dineGenAiAdvice(d){
  else if(h>=16&&h<=17) tips.push({icon:'⏰',color:'#38bdf8',text:'저녁 피크 1시간 전이야. 재료 보충이랑 홀 정리 지금 해두면 나중에 편해.'});
  else if(h>=11&&h<14) tips.push({icon:'🕛',color:'#f97316',text:'지금 점심 피크야. 잘 되고 있지? 직원들 틈틈이 챙겨줘.'});
  /* 베스트 메뉴 */
- if(d.bestMenu) tips.push({icon:'🏆',color:'#C8A356',text:'"'+d.bestMenu+'" 오늘 제일 많이 나가고 있어. 재료 충분한지 확인해봐.'});
+ if(d.bestMenu) tips.push({icon:'🏆',color:'#84cc16',text:'"'+d.bestMenu+'" 오늘 제일 많이 나가고 있어. 재료 충분한지 확인해봐.'});
  /* 기본 */
  if(tips.length<1) tips.push({icon:'💡',color:'#a78bfa',text:'아직 데이터가 별로 없어. 주문이 쌓이면 더 자세하게 볼 수 있어.'});
  tips=tips.slice(0,3);
  el.innerHTML=tips.map(function(t){
-  return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px;border-left:2px solid '+t.color+'">'+
+  return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--s2);border-radius:10px;border-left:2px solid '+t.color+'">'+
    '<span style="font-size:16px;flex-shrink:0;line-height:1.3">'+t.icon+'</span>'+
    '<span style="font-size:12px;line-height:1.6;color:var(--tx)">'+t.text+'</span>'+
   '</div>';
@@ -908,7 +908,7 @@ function _dineWatchOrderChannels(did,today){
     if(o.items&&o.items.length>2)items+=' 외 '+(o.items.length-2)+'건';
     var timeStr='';
     if(o.createdAt){try{var dt=new Date(o.createdAt);timeStr=dt.getHours()+':'+String(dt.getMinutes()).padStart(2,'0');}catch(e){}}
-    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid var(--bd)">'+
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--s2);border:1px solid var(--bd)">'+
      '<span style="font-size:10px;font-weight:800;color:'+tc2+';background:rgba(0,0,0,.2);padding:2px 7px;border-radius:20px;flex-shrink:0">'+tl+'</span>'+
      '<span style="flex:1;font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+items+'</span>'+
      '<span style="font-size:11px;font-weight:800;color:var(--tx)">₩'+(o.total||0).toLocaleString()+'</span>'+
@@ -968,7 +968,7 @@ function _dineCrm(el){
   /* 등급 카드 4개 */
   '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'+
   [
-   {cls:'crm-tier-vip',  label:'VIP',  desc:'10회+ 방문',     color:'#C8A356', id:'crm-vip-cnt'},
+   {cls:'crm-tier-vip',  label:'VIP',  desc:'10회+ 방문',     color:'#84cc16', id:'crm-vip-cnt'},
    {cls:'crm-tier-regular',label:'단골',desc:'4~9회 방문',    color:'#a78bfa', id:'crm-reg-cnt'},
    {cls:'crm-tier-normal', label:'일반',desc:'1~3회 방문',    color:'#38bdf8', id:'crm-nor-cnt'},
    {cls:'crm-tier-new',    label:'신규',desc:'이번달 가입',    color:'#22c55e', id:'crm-new-cnt'},
@@ -981,12 +981,12 @@ function _dineCrm(el){
   }).join('')+
   '</div>'+
   /* AI 프로모션 추천 */
-  '<div class="card" style="border-left:3px solid #C8A356;margin-bottom:14px">'+
+  '<div class="card" style="border-left:3px solid #84cc16;margin-bottom:14px">'+
   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-  '<div style="width:24px;height:24px;border-radius:7px;background:rgba(200,163,86,.15);display:flex;align-items:center;justify-content:center;color:#C8A356">'+
+  '<div style="width:24px;height:24px;border-radius:7px;background:rgba(132,204,22,.15);display:flex;align-items:center;justify-content:center;color:#4d7c0f">'+
   '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L9.27 9.27 3 12l6.27 2.73L12 21l2.73-6.27L21 12l-6.27-2.73z"/></svg>'+
   '</div>'+
-  '<span style="font-size:12px;font-weight:800;color:#C8A356">AI 프로모션 추천</span>'+
+  '<span style="font-size:12px;font-weight:800;color:#4d7c0f">AI 프로모션 추천</span>'+
   '</div>'+
   '<div id="crm-promo" style="display:flex;flex-direction:column;gap:7px"></div>'+
   '</div>'+
@@ -1036,7 +1036,7 @@ function _dineLoadCrm(did){
    var ord=orderByPhone[ph]||{cnt:m.visitCount||0,spend:m.totalSpend||0};
    var cnt=ord.cnt;var spend=ord.spend;
    var tier,tierColor,tierCls;
-   if(cnt>=10){tier='VIP';tierColor='#C8A356';tierCls='crm-tier-vip';vipCnt++;}
+   if(cnt>=10){tier='VIP';tierColor='#84cc16';tierCls='crm-tier-vip';vipCnt++;}
    else if(cnt>=4){tier='단골';tierColor='#a78bfa';tierCls='crm-tier-regular';regCnt++;}
    else if(cnt>=1){tier='일반';tierColor='#38bdf8';tierCls='crm-tier-normal';norCnt++;}
    else{
@@ -1063,10 +1063,10 @@ function _dineLoadCrm(did){
 
   /* AI 프로모션 추천 */
   var promos=[];
-  if(vipCnt>0) promos.push({color:'#C8A356',bg:'rgba(200,163,86,.1)',text:'VIP '+vipCnt+'명에게 프리미엄 서비스 쿠폰 발송 — 재방문율 유지에 효과적입니다.'});
+  if(vipCnt>0) promos.push({color:'#84cc16',bg:'rgba(132,204,22,.1)',text:'VIP '+vipCnt+'명에게 프리미엄 서비스 쿠폰 발송 — 재방문율 유지에 효과적입니다.'});
   if(regCnt>0) promos.push({color:'#a78bfa',bg:'rgba(167,139,250,.1)',text:'단골 '+regCnt+'명에게 10% 할인 쿠폰 발송 — VIP 전환 촉진 타이밍입니다.'});
   if(newCnt>0) promos.push({color:'#22c55e',bg:'rgba(34,197,94,.1)',text:'신규 '+newCnt+'명에게 웰컴 혜택 발송 — 첫 재방문을 이끌어 단골화하세요.'});
-  if(!promos.length) promos.push({color:'#C8A356',bg:'rgba(200,163,86,.1)',text:'회원 데이터가 쌓이면 맞춤 프로모션을 추천합니다. 회원 등록을 유도해 보세요.'});
+  if(!promos.length) promos.push({color:'#84cc16',bg:'rgba(132,204,22,.1)',text:'회원 데이터가 쌓이면 맞춤 프로모션을 추천합니다. 회원 등록을 유도해 보세요.'});
   var pr=document.getElementById('crm-promo');
   if(pr)pr.innerHTML=promos.map(function(p){
    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:'+p.bg+';border-radius:9px;border-left:2px solid '+p.color+'">'+

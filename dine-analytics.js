@@ -271,7 +271,7 @@ function _dineLoadAnalytics(did,from,to){
 
   /* ── 추이 차트 ── */
   _dineEnsureChart(function(){
-   var CS=['#C8A356','#38bdf8','#22c55e','#a78bfa','#f97316'];
+   var CS=['#84cc16','#38bdf8','#22c55e','#a78bfa','#f97316'];
    var tc=document.getElementById('ch-trend');
    if(tc&&window.Chart){
     if(tc._ch)tc._ch.destroy();
@@ -282,20 +282,20 @@ function _dineLoadAnalytics(did,from,to){
     var tMax=Math.max.apply(null,tData)||1;
     var ctx=tc.getContext('2d');
     var grad=ctx.createLinearGradient(0,0,0,165);
-    grad.addColorStop(0,'rgba(200,163,86,.35)');grad.addColorStop(.6,'rgba(200,163,86,.06)');grad.addColorStop(1,'rgba(200,163,86,0)');
+    grad.addColorStop(0,'rgba(132,204,22,.35)');grad.addColorStop(.6,'rgba(132,204,22,.06)');grad.addColorStop(1,'rgba(132,204,22,0)');
     tc._ch=new Chart(tc,{type:'line',data:{labels:tLabels,datasets:[{
-     data:tData,borderColor:'#C8A356',borderWidth:2.5,backgroundColor:grad,fill:true,
+     data:tData,borderColor:'#84cc16',borderWidth:2.5,backgroundColor:grad,fill:true,
      tension:.42,pointRadius:tData.length<=7?5:2,
-     pointBackgroundColor:'#C8A356',pointBorderColor:'#0C0E18',pointBorderWidth:2,
+     pointBackgroundColor:'#84cc16',pointBorderColor:'#fff',pointBorderWidth:2,
      hoverPointRadius:7,hoverPointBorderWidth:3
     }]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:1100,easing:'easeOutQuart'},
      plugins:{legend:{display:false},tooltip:{
-      backgroundColor:'rgba(12,14,24,.92)',titleColor:'#C8A356',bodyColor:'#EDE6D6',
-      borderColor:'rgba(200,163,86,.3)',borderWidth:1,padding:10,cornerRadius:10,
+      backgroundColor:'rgba(255,255,255,.97)',titleColor:'#4d7c0f',bodyColor:'#1e293b',
+      borderColor:'rgba(132,204,22,.3)',borderWidth:1,padding:10,cornerRadius:10,
       callbacks:{label:function(c){return '₩'+c.raw.toLocaleString();}}}},
      scales:{
-      x:{grid:{display:false},border:{display:false},ticks:{color:'#3A4156',font:{size:9},maxTicksLimit:10}},
-      y:{grid:{color:'rgba(255,255,255,.035)',lineWidth:.5},border:{display:false},ticks:{color:'#3A4156',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v>=1000?(v/1000).toFixed(0)+'천':v;}}}
+      x:{grid:{display:false},border:{display:false},ticks:{color:'#64748b',font:{size:9},maxTicksLimit:10}},
+      y:{grid:{color:'rgba(15,23,42,.08)',lineWidth:.5},border:{display:false},ticks:{color:'#64748b',font:{size:9},callback:function(v){return v>=10000?(v/10000).toFixed(0)+'만':v>=1000?(v/1000).toFixed(0)+'천':v;}}}
      }}});
     var ts=document.getElementById('ana-trend-sub');if(ts)ts.textContent=allDates.length+'일 · 최고 ₩'+tMax.toLocaleString();
     var tp=document.getElementById('av2-trend-peak');if(tp&&hPeak)tp.textContent='피크 '+hPeak[0]+'시';
@@ -306,7 +306,7 @@ function _dineLoadAnalytics(did,from,to){
    var meth=Object.entries(methods).sort(function(a,b){return b[1]-a[1];});
    if(pc&&window.Chart&&meth.length){
     if(pc._ch)pc._ch.destroy();
-    var pC=['#C8A356','#38bdf8','#22c55e','#a78bfa','#f97316'];
+    var pC=['#84cc16','#38bdf8','#22c55e','#a78bfa','#f97316'];
     var pColors=meth.map(function(_,i){return pC[i%pC.length];});
     pc._ch=new Chart(pc,{type:'doughnut',data:{
      labels:meth.map(function(e){return e[0];}),
@@ -315,8 +315,8 @@ function _dineLoadAnalytics(did,from,to){
     },options:{responsive:true,maintainAspectRatio:false,
      animation:{animateRotate:true,animateScale:true,duration:1200},cutout:'70%',
      plugins:{legend:{display:false},tooltip:{
-      backgroundColor:'rgba(12,14,24,.92)',titleColor:'#C8A356',bodyColor:'#EDE6D6',
-      borderColor:'rgba(200,163,86,.3)',borderWidth:1,cornerRadius:10,
+      backgroundColor:'rgba(255,255,255,.97)',titleColor:'#4d7c0f',bodyColor:'#1e293b',
+      borderColor:'rgba(132,204,22,.3)',borderWidth:1,cornerRadius:10,
       callbacks:{label:function(c){return c.label+' '+Math.round(c.raw/(total||1)*100)+'%';}}}}}});
     var pleg=document.getElementById('av2-pay-leg');
     if(pleg)pleg.innerHTML=meth.map(function(e,i){
@@ -344,9 +344,9 @@ function _dineLoadAnalytics(did,from,to){
     var intensity=hMax>0?v/hMax:0;
     var alpha=Math.round(intensity*100);
     var isPeak=hPeak&&parseInt(hPeak[0])===h;
-    var border=isPeak?'box-shadow:0 0 0 2px #C8A356;':'';
+    var border=isPeak?'box-shadow:0 0 0 2px #84cc16;':'';
     return '<div class="av2-hmc" title="'+h+'시 ₩'+(hours[h]||0).toLocaleString()+'" '+
-     'style="background:rgba(200,163,86,'+intensity.toFixed(2)+');'+border+'"></div>';
+     'style="background:rgba(132,204,22,'+intensity.toFixed(2)+');'+border+'"></div>';
    }).join('');
    if(hmLbl)hmLbl.innerHTML=hmHours.map(function(h){return '<span>'+(h<10?'0':'')+h+'</span>';}).join('');
    var pt2=document.getElementById('ana-peak-txt');
@@ -399,8 +399,8 @@ function _dineLoadAnalytics(did,from,to){
   if(mEl){
    var top5=Object.entries(menus).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
    var mmax2=top5[0]?top5[0][1]:1;
-   var rankColors=['#C8A356','#94a3b8','#b87333','#38bdf8','#a78bfa'];
-   var rankBg=['rgba(200,163,86,.15)','rgba(148,163,184,.1)','rgba(184,115,51,.1)','rgba(56,189,248,.1)','rgba(167,139,250,.1)'];
+   var rankColors=['#84cc16','#94a3b8','#b87333','#38bdf8','#a78bfa'];
+   var rankBg=['rgba(132,204,22,.15)','rgba(148,163,184,.1)','rgba(184,115,51,.1)','rgba(56,189,248,.1)','rgba(167,139,250,.1)'];
    if(!top5.length){mEl.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:12px">주문 데이터가 없습니다</div>';return;}
    mEl.innerHTML=top5.map(function(m,i){
     return '<div class="av2-mr">'+
@@ -749,7 +749,7 @@ function _dineSchedule(el){
      if(att&&att.in){
       var inT=new Date(att.in).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'});
       var isWorking=!att.out;
-      var outDisplay=isWorking?'<span style="display:inline-flex;align-items:center;gap:2px;color:#c9a84c;font-weight:700"><span style="width:4px;height:4px;border-radius:50%;background:#c9a84c;animation:pulse 1.5s infinite;display:inline-block"></span>중</span>':'<span style="color:#38bdf8">'+new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>';
+      var outDisplay=isWorking?'<span style="display:inline-flex;align-items:center;gap:2px;color:#4d7c0f;font-weight:700"><span style="width:4px;height:4px;border-radius:50%;background:#84cc16;animation:pulse 1.5s infinite;display:inline-block"></span>중</span>':'<span style="color:#38bdf8">'+new Date(att.out).toLocaleTimeString('ko',{hour:'2-digit',minute:'2-digit'})+'</span>';
       rowsHtml+='<div style="padding:3px;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.18);border-radius:6px;text-align:center;font-size:9px;cursor:pointer;min-height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.6'+(isColToday?';box-shadow:0 0 0 1.5px rgba(201,168,76,.35)':'')+'" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')"><span style="color:#22c55e;font-weight:700">'+inT+'</span>'+outDisplay+'</div>';
      } else {
       rowsHtml+='<div style="padding:4px;text-align:center;cursor:pointer;min-height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px dashed rgba(15,23,42,.1);color:var(--bd2)'+(isColToday?';background:rgba(201,168,76,.04)':'')+'" onclick="_dineScheduleAddDay(\''+item.id+'\',\''+m.name+'\',\''+dateStr+'\',\''+did+'\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>';

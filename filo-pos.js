@@ -111,7 +111,7 @@ function _posLeftCol(raw,disc,sub,vat,total){
   '<span style="font-size:11px;color:#334155">₩'+vat.toLocaleString()+'</span></div>'+
   '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 0;border-top:1px solid rgba(255,255,255,.08);margin-top:6px">'+
   '<span style="font-size:13px;font-weight:900;color:#94a3b8;letter-spacing:.5px">합계</span>'+
-  '<span style="font-size:26px;font-weight:900;color:#c8a356;letter-spacing:-1px">₩'+total.toLocaleString()+'</span></div>'+
+  '<span style="font-size:26px;font-weight:900;color:#f87171;letter-spacing:-1px">₩'+total.toLocaleString()+'</span></div>'+
   '</div>';
 }
 
@@ -134,13 +134,13 @@ function _posMethodGrid(){
    var disabled=!online&&m.key!=='cash'&&m.key!=='service'&&m.key!=='card';
    return '<button class="pos-method-btn" data-method="'+m.key+'" '+
     (disabled?'disabled ':'')+
-    'style="background:'+(isCardOffline?'rgba(201,168,76,.12)':'rgba(255,255,255,.04)')+';border:1.5px solid '+(isCardOffline?'rgba(201,168,76,.5)':'rgba(255,255,255,.08)')+';border-radius:12px;'+
+    'style="background:'+(isCardOffline?'rgba(244,63,94,.12)':'rgba(255,255,255,.04)')+';border:1.5px solid '+(isCardOffline?'rgba(244,63,94,.5)':'rgba(255,255,255,.08)')+';border-radius:12px;'+
     'padding:14px 8px 12px;cursor:'+(disabled?'not-allowed':'pointer')+';display:flex;flex-direction:column;align-items:center;gap:6px;'+
     'min-height:80px;transition:all .18s;touch-action:manipulation;'+(disabled?'opacity:.35;':'')+'">'+
     '<div style="width:36px;height:36px;border-radius:10px;background:'+m.bg+'22;display:flex;align-items:center;justify-content:center;color:'+m.bg+'">'+
     _svgIcon(m.icon)+'</div>'+
-    '<div style="font-size:12px;font-weight:900;color:'+(isCardOffline?'#c9a84c':'#cbd5e1')+'">'+m.label+'</div>'+
-    '<div style="font-size:9px;color:'+(isCardOffline?'#a08030':'#334155')+';font-weight:600">'+(isCardOffline?'단말기 직접':(disabled?'인터넷 필요':m.sub))+'</div>'+
+    '<div style="font-size:12px;font-weight:900;color:'+(isCardOffline?'#f87171':'#cbd5e1')+'">'+m.label+'</div>'+
+    '<div style="font-size:9px;color:'+(isCardOffline?'#fda4af':'#334155')+';font-weight:600">'+(isCardOffline?'단말기 직접':(disabled?'인터넷 필요':m.sub))+'</div>'+
     '</button>';
   }).join('')+
   '</div>';
@@ -215,7 +215,7 @@ function _posCashArea(total){
    return '<button onclick="_posSetCash('+a+')" style="flex:1;min-width:60px;height:36px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:8px;color:#22c55e;font-size:12px;font-weight:700;cursor:pointer">'+
     '₩'+(a/10000)+'만</button>';
   }).join('')+
-  '<button onclick="_posSetCash('+total+')" style="flex:1;min-width:60px;height:36px;background:rgba(200,163,86,.12);border:1px solid rgba(200,163,86,.25);border-radius:8px;color:#c8a356;font-size:12px;font-weight:700;cursor:pointer">정확히</button>'+
+  '<button onclick="_posSetCash('+total+')" style="flex:1;min-width:60px;height:36px;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.25);border-radius:8px;color:#f87171;font-size:12px;font-weight:700;cursor:pointer">정확히</button>'+
   '</div>'+
   '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;flex:1">'+
   ['7','8','9','4','5','6','1','2','3','00','0','⌫'].map(function(k){
@@ -271,15 +271,15 @@ function _posUpdateCashDisplay(total){
 
 // ── 카드 단말기 직접 결제 영역 (오프라인 전용) ────────────────────────────────
 function _posCardDirectArea(total){
- return '<div style="background:rgba(201,168,76,.08);border:1.5px solid rgba(201,168,76,.35);border-radius:14px;padding:18px 16px">'+
+ return '<div style="background:rgba(244,63,94,.08);border:1.5px solid rgba(244,63,94,.35);border-radius:14px;padding:18px 16px">'+
   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'+
-  '<div style="width:32px;height:32px;border-radius:8px;background:rgba(201,168,76,.2);display:flex;align-items:center;justify-content:center">'+
-  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>'+
-  '</div><div style="font-size:14px;font-weight:900;color:#c9a84c">카드 단말기 직접 결제</div></div>'+
+  '<div style="width:32px;height:32px;border-radius:8px;background:rgba(244,63,94,.2);display:flex;align-items:center;justify-content:center">'+
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>'+
+  '</div><div style="font-size:14px;font-weight:900;color:#f87171">카드 단말기 직접 결제</div></div>'+
   '<div style="font-size:12px;color:var(--t2);line-height:2;margin-bottom:12px">'+
-  '<div><strong style="color:var(--tx)">① </strong>카드 단말기에 <strong style="color:#c9a84c">₩'+total.toLocaleString()+'</strong> 입력 후 카드를 긁어주세요</div>'+
+  '<div><strong style="color:var(--tx)">① </strong>카드 단말기에 <strong style="color:#f87171">₩'+total.toLocaleString()+'</strong> 입력 후 카드를 긁어주세요</div>'+
   '<div><strong style="color:var(--tx)">② </strong>단말기에서 승인이 완료되면</div>'+
-  '<div><strong style="color:var(--tx)">③ </strong>아래 <strong style="color:#c9a84c">확인 버튼</strong>을 눌러주세요</div>'+
+  '<div><strong style="color:var(--tx)">③ </strong>아래 <strong style="color:#f87171">확인 버튼</strong>을 눌러주세요</div>'+
   '</div>'+
   '<div style="background:rgba(255,255,255,.04);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--t3)">'+
   '단말기 승인 금액과 POS 금액이 일치하는지 꼭 확인하세요</div></div>';
@@ -359,7 +359,7 @@ function _posDiscountModal(total){
  mo.innerHTML='<div style="padding:24px;width:100%;max-width:380px;background:#0f1929;border-radius:22px;border:1px solid rgba(255,255,255,.08)">'+
   '<div style="font-size:15px;font-weight:900;color:#e2e8f0;margin-bottom:16px">할인 적용</div>'+
   '<div style="display:flex;gap:6px;margin-bottom:14px">'+
-  '<button id="disc-tab-amt" onclick="_posDiscTab(\'amt\')" style="flex:1;height:36px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#c8a356;color:#000">정액 (₩)</button>'+
+  '<button id="disc-tab-amt" onclick="_posDiscTab(\'amt\')" style="flex:1;height:36px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#f43f5e;color:#fff">정액 (₩)</button>'+
   '<button id="disc-tab-pct" onclick="_posDiscTab(\'pct\')" style="flex:1;height:36px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.06);color:#64748b">정률 (%)</button>'+
   '</div>'+
   '<input id="disc-input" type="number" min="0" placeholder="할인 금액 입력" value="'+discVal+'" '+
@@ -376,7 +376,7 @@ function _posDiscountModal(total){
   _cartItems.reduce(function(s,c){return s+c.price*c.qty;},0)+');" '+
   'style="flex:1;height:44px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#f87171;font-size:13px;font-weight:700;cursor:pointer">할인 제거</button>'+
   '<button onclick="_posApplyDiscount('+total+')" '+
-  'style="flex:2;height:44px;background:#c8a356;border:none;border-radius:10px;color:#000;font-size:14px;font-weight:900;cursor:pointer">적용</button>'+
+  'style="flex:2;height:44px;background:#f43f5e;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:900;cursor:pointer">적용</button>'+
   '</div>'+
   '</div>';
  mo.onclick=function(e){if(e.target===mo)mo.remove();};
@@ -387,10 +387,10 @@ function _posDiscTab(t){
  var pct=document.getElementById('disc-tab-pct');
  if(!amt||!pct)return;
  if(t==='amt'){
-  amt.style.background='#c8a356';amt.style.color='#000';
+  amt.style.background='#f43f5e';amt.style.color='#fff';
   pct.style.background='rgba(255,255,255,.06)';pct.style.color='#64748b';
  } else {
-  pct.style.background='#c8a356';pct.style.color='#000';
+  pct.style.background='#f43f5e';pct.style.color='#fff';
   amt.style.background='rgba(255,255,255,.06)';amt.style.color='#64748b';
  }
 }
@@ -412,14 +412,14 @@ function _posApplyDiscount(total){
 function _posConfirmBtn(method,total){
  if(method==='card_direct'){
   return '<button id="pos-confirm-btn" onclick="_posDo()" '+
-   'style="width:100%;height:56px;background:#c9a84c;border:none;border-radius:14px;'+
-   'font-size:15px;font-weight:900;color:#0f172a;cursor:pointer;letter-spacing:.3px;'+
-   'box-shadow:0 4px 20px rgba(201,168,76,.4);transition:.2s">'+
+   'style="width:100%;height:56px;background:#f43f5e;border:none;border-radius:14px;'+
+   'font-size:15px;font-weight:900;color:#fff;cursor:pointer;letter-spacing:.3px;'+
+   'box-shadow:0 4px 20px rgba(244,63,94,.4);transition:.2s">'+
    '단말기 결제 완료 확인   ₩'+total.toLocaleString()+'</button>';
  }
  var mCfg=method?_POS_METHODS.find(function(x){return x.key===method;}):null;
- var bg=mCfg?mCfg.bg:'rgba(200,163,86,.3)';
- var tc=mCfg?(mCfg.tc||'#fff'):'rgba(200,163,86,.5)';
+ var bg=mCfg?mCfg.bg:'rgba(244,63,94,.3)';
+ var tc=mCfg?(mCfg.tc||'#fff'):'rgba(244,63,94,.5)';
  var label=mCfg?mCfg.label:'결제 수단을 선택하세요';
  var disabled=!method;
  return '<button id="pos-confirm-btn" onclick="_posDo()" '+

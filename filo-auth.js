@@ -938,7 +938,7 @@ function _filoPageHome(el){
   '<div style="display:grid;grid-template-columns:1fr 82px;gap:10px;margin-bottom:10px;align-items:start">'+
   '<div class="hero-card" style="margin-bottom:0">'+
   '<div style="position:relative;z-index:1">'+
-  '<div style="font-size:9px;font-weight:800;color:rgba(200,163,86,.6);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:8px">오늘 매출</div>'+
+  '<div style="font-size:9px;font-weight:800;color:rgba(255,255,255,.55);letter-spacing:1.8px;text-transform:uppercase;margin-bottom:8px">오늘 매출</div>'+
   '<div id="hm-sales" style="font-size:32px;font-weight:900;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:#fff;line-height:1;margin-bottom:14px">₩ —</div>'+
   '<div style="display:flex;gap:0;border-top:1px solid rgba(255,255,255,.08);padding-top:12px">'+
   '<div style="flex:1;padding-right:10px;border-right:1px solid rgba(255,255,255,.07)"><div style="font-size:8px;color:rgba(255,255,255,.35);letter-spacing:.5px;margin-bottom:3px">주문</div>'+

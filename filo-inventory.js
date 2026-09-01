@@ -233,7 +233,7 @@ window._filoInvAdjust=function(itemId,did,delta){
    'style="width:100%;box-sizing:border-box;padding:14px;border:1px solid var(--bd);border-radius:12px;background:var(--bg);color:var(--tx);font-size:22px;font-weight:900;text-align:center;margin-bottom:14px">'+
   '<div style="display:flex;gap:8px">'+
   '<button onclick="document.getElementById(\'inv-adj-pop\').remove()" '+
-   'style="flex:1;padding:13px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
+   'style="flex:1;padding:13px;background:var(--surface2,#f4f4f5);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
   '<button onclick="_filoInvDoAdj(\''+itemId+'\',\''+did+'\','+delta+')" '+
    'style="flex:2;padding:13px;background:'+(delta>0?'#22c55e':'#ef4444')+';color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">'+(delta>0?'입고 확인':'출고 확인')+'</button>'+
   '</div></div>';
@@ -367,7 +367,7 @@ window._filoInvAutoOrder=function(did){
   '<div style="overflow-y:auto;flex:1;margin-bottom:14px">'+rows+'</div>'+
   '<div style="display:flex;gap:8px">'+
   '<button onclick="document.getElementById(\'inv-auto-pop\').remove()" '+
-   'style="flex:1;padding:13px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
+   'style="flex:1;padding:13px;background:var(--surface2,#f4f4f5);border:1px solid var(--bd);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)">취소</button>'+
   '<button id="inv-auto-confirm-btn" onclick="_filoInvDoAutoOrder(\''+did+'\',\''+storeName+'\')" '+
    'style="flex:2;padding:13px;background:#f59e0b;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer">'+
    (hasAlimtalk?'발주 + 알림톡 발송':'발주 등록')+'</button>'+
@@ -589,7 +589,7 @@ function _filoInvRenderRecipes(did,recipes,menus,invItems){
     '<button onclick="_filoInvDeleteRecipe(\''+rec.id+'\',\''+did+'\')" style="padding:4px 10px;font-size:11px;font-weight:700;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);border-radius:8px;cursor:pointer">삭제</button>'+
     '</div></div>'+
     '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-    ings.map(function(ig){return '<span style="padding:4px 10px;background:rgba(255,255,255,.06);border:1px solid var(--bd);border-radius:20px;font-size:11px;color:var(--t2)">'+_escHtml(ig.invName)+' '+ig.qty+(ig.unit||'개')+'</span>';}).join('')+
+    ings.map(function(ig){return '<span style="padding:4px 10px;background:var(--surface2,#f4f4f5);border:1px solid var(--bd);border-radius:20px;font-size:11px;color:var(--t2)">'+_escHtml(ig.invName)+' '+ig.qty+(ig.unit||'개')+'</span>';}).join('')+
     '</div></div>';
   });
  }

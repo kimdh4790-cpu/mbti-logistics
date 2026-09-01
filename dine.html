@@ -89,7 +89,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Got
 .nav-group-title{font-size:9px;font-weight:800;color:var(--t3);letter-spacing:1px;text-transform:uppercase;padding:6px 16px 4px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--t2);transition:.2s;border-radius:0}
 .nav-item:hover{background:rgba(15,23,42,.05);color:var(--tx)}
-.nav-item.active{background:rgba(200,163,86,.15);color:#9A6F23;border-right:2px solid var(--br)}
+.nav-item.active{background:rgba(132,204,22,.12);color:#4d7c0f;border-right:2px solid var(--br)}
 .nav-item .ic{font-size:16px;width:20px;text-align:center;flex-shrink:0}
 .nav-group-title{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 4px;font-size:10px;font-weight:800;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;user-select:none}
 .nav-group-title:hover{color:var(--t2)}
@@ -147,8 +147,8 @@ body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Got
 
 /* ── 버튼 ── */
 .btn{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:.2s}
-.btn-primary{background:linear-gradient(135deg,#C8A356,#A8823A);color:#0F172A}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(200,163,86,.35)}
+.btn-primary{background:linear-gradient(135deg,#84cc16,#65a30d);color:#fff}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(132,204,22,.4)}
 .btn-sm{padding:5px 12px;font-size:11px;border-radius:8px}
 .btn-ghost{background:transparent;border:1px solid var(--bd2);color:var(--t2)}
 .btn-ghost:hover{border-color:var(--br);color:var(--tx)}
@@ -195,7 +195,7 @@ select.inp option{background:var(--s2)}
 /* ── 사이드바 SVG 아이콘 ── */
 .nav-svg{width:16px;height:16px;flex-shrink:0;opacity:.75;transition:opacity .2s}
 .nav-item:hover .nav-svg,.nav-item.active .nav-svg{opacity:1}
-.nav-item.active{background:rgba(200,163,86,.15);color:#9A6F23;border-right:2px solid var(--br)}
+.nav-item.active{background:rgba(132,204,22,.12);color:#4d7c0f;border-right:2px solid var(--br)}
 .nav-badge-wrap{margin-left:auto}
 
 /* ── 반응형 ── */
@@ -243,7 +243,7 @@ select.inp option{background:var(--s2)}
 /* ── 로그인 화면 ── */
 #login-wrap{display:flex;align-items:center;justify-content:center;height:100vh;background:radial-gradient(ellipse at 30% 40%,rgba(8,145,178,.15) 0%,transparent 55%),var(--bg)}
 .login-box{background:var(--s2);border:1px solid var(--bd2);border-radius:24px;padding:32px;width:100%;max-width:360px;text-align:center}
-.login-logo{font-size:32px;font-weight:900;background:linear-gradient(135deg,#E2CA96,#C8A356);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.login-logo{font-size:32px;font-weight:900;background:linear-gradient(135deg,#a3e635,#84cc16);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .login-sub{font-size:13px;color:var(--t3);margin-bottom:24px}
 
 /* 모바일 하단 탭바 */
@@ -251,7 +251,7 @@ select.inp option{background:var(--s2)}
 #mobile-tabs .mt-bar{display:flex;align-items:stretch}
 #mobile-tabs .mt-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;cursor:pointer;font-size:9px;color:var(--t2);gap:3px;min-height:56px;border:none;background:transparent;-webkit-tap-highlight-color:transparent}
 #mobile-tabs .mt-item .mt-ico{font-size:20px;line-height:1}
-#mobile-tabs .mt-item.on{color:#C8A356}
+#mobile-tabs .mt-item.on{color:#84cc16}
 #mobile-tabs .mt-more{position:relative}
 #mobile-tabs .mt-more-menu{display:none;position:fixed;bottom:60px;left:0;right:0;background:var(--s1);border-top:1px solid var(--bd);padding:8px 0;z-index:1001}
 #mobile-tabs .mt-more-menu.open{display:block}
@@ -430,7 +430,7 @@ document.addEventListener('touchstart',function(e){
   <div class="tb-right">
    <div class="attend-live"><span class="live-dot"></span><span id="tb-attend-cnt">0명 출근중</span></div>
    <div class="tb-user" id="tb-user-name"></div>
-   <button onclick="_dineGoFilo()" style="padding:5px 10px;background:rgba(200,163,86,.12);border:1px solid rgba(200,163,86,.3);border-radius:8px;color:#D4B46E;font-size:11px;font-weight:700;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(200,163,86,.22)'" onmouseout="this.style.background='rgba(200,163,86,.12)'">FILO</button>
+   <button onclick="_dineGoFilo()" style="padding:5px 10px;background:rgba(132,204,22,.12);border:1px solid rgba(132,204,22,.3);border-radius:8px;color:#4d7c0f;font-size:11px;font-weight:700;cursor:pointer;transition:.15s" onmouseover="this.style.background='rgba(132,204,22,.22)'" onmouseout="this.style.background='rgba(132,204,22,.12)'">FILO</button>
    <button id="dine-install-btn" onclick="_dineInstallApp()" style="display:none;padding:5px 10px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;align-items:center;gap:4px">📲 앱설치</button>
    <button class="tb-logout btn" onclick="_dineLogout()">로그아웃</button>
   </div>
@@ -439,9 +439,9 @@ document.addEventListener('touchstart',function(e){
   <!-- 사이드바 -->
   <div id="sidebar">
    <!-- 매장명 -->
-   <div style="padding:14px 16px;border-bottom:1px solid var(--bd);background:linear-gradient(135deg,rgba(8,145,178,.04),rgba(201,168,76,.04))">
+   <div style="padding:14px 16px;border-bottom:1px solid var(--bd);background:linear-gradient(135deg,rgba(8,145,178,.04),rgba(132,204,22,.04))">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-     <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0891b2,#c9a84c);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0">D</div>
+     <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0891b2,#84cc16);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0">D</div>
      <div>
       <div style="font-size:12px;font-weight:800;color:var(--tx);line-height:1.2" id="sb-store-name">내 매장</div>
       <div style="font-size:9px;color:var(--t3);margin-top:1px" id="sb-store-sub">외식업 관리 플랫폼</div>
@@ -506,7 +506,7 @@ document.addEventListener('touchstart',function(e){
      </div>
      <div class="nav-item" onclick="_dinePage('crm',this)" ontouchend="event.preventDefault();event.stopPropagation();_dinePage('crm',this)">
       <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><polyline points="22 7 13.5 15.5 8.5 10.5 1 18"/></svg>단골 CRM
-      <span class="nav-badge-wrap"><span class="dine-ai-badge" style="font-size:8px;padding:2px 6px;background:rgba(200,163,86,.15);color:#C8A356;border:1px solid rgba(200,163,86,.3)">AI</span></span>
+      <span class="nav-badge-wrap"><span class="dine-ai-badge" style="font-size:8px;padding:2px 6px;background:rgba(132,204,22,.15);color:#4d7c0f;border:1px solid rgba(132,204,22,.3)">AI</span></span>
      </div>
     </div>
    </div>
@@ -557,7 +557,7 @@ document.addEventListener('touchstart',function(e){
    <!-- FILO 바로가기 -->
    <div style="padding:12px;margin-top:auto;border-top:1px solid var(--bd)">
     <div id="dine-stock-badge" style="display:none;font-size:10px;color:#f59e0b;font-weight:700;padding:4px 8px;background:rgba(245,158,11,.1);border-radius:6px;margin-bottom:8px;text-align:center"></div>
-    <button onclick="_dineGoFilo()" style="width:100%;padding:11px;background:rgba(200,163,86,.1);border:1px solid rgba(200,163,86,.25);border-radius:10px;color:#C8A356;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s" onmouseover="this.style.background='rgba(200,163,86,.18)'" onmouseout="this.style.background='rgba(200,163,86,.1)'">
+    <button onclick="_dineGoFilo()" style="width:100%;padding:11px;background:rgba(132,204,22,.1);border:1px solid rgba(132,204,22,.3);border-radius:10px;color:#4d7c0f;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s" onmouseover="this.style.background='rgba(132,204,22,.2)'" onmouseout="this.style.background='rgba(132,204,22,.1)'">
      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
      <span>FILO 현장 운영</span><span style="font-size:10px;opacity:.7">↗</span>
     </button>
