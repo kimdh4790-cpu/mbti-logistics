@@ -898,7 +898,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
       <div class="type-card on" id="t-agency" onclick="_setType('agency')">
         <div class="type-ico">🏢</div>
         <div class="type-lbl">대리점</div>
-        <div class="type-desc">공고 등록 · 기사 채용</div>
+        <div class="type-desc">공고 등록 · 기사 연결</div>
       </div>
       <div class="type-card" id="t-driver" onclick="_setType('driver')">
         <div class="type-ico">🚗</div>
@@ -5974,7 +5974,7 @@ function _yCountAllPosts(){
     _db.collection('yongcha_posts').get(),
     _db.collection('yongcha_jobs').get()
   ]).then(function(r){
-    if(el)el.textContent='공고 '+r[0].size+'건 / 채용공고 '+r[1].size+'건';
+    if(el)el.textContent='공고 '+r[0].size+'건 / 구인공고 '+r[1].size+'건';
   }).catch(function(){});
 }
 
@@ -8376,8 +8376,11 @@ function _pwAiPrice(){
       '<div style="font-size:11px;color:var(--t3);margin-bottom:8px">시세 기준: '+_esc(courier)+' '+(d.marketRate||0).toLocaleString()+'원</div>'+
       (d.analysis?'<div style="font-size:13px;line-height:1.6;color:var(--t2);margin-bottom:10px">'+_esc(d.analysis)+'</div>':'')+
       (d.tip?'<div style="padding:10px;background:rgba(245,158,11,.1);border-radius:var(--r);font-size:12px;color:var(--br);font-weight:700;margin-bottom:14px">'+_esc(d.tip)+'</div>':'')+
-      '<button type="button" onclick="var p=document.getElementById(\\'pw-price\\');if(p){p.value='+d.recommended+';_calcEst();_loadRegionStats();}_closeModal();_yToast(\\'단가 적용됨\\');" '+
-        'style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--r-lg);font-size:14px;font-weight:900;cursor:pointer">추천 단가 적용</button>';
+      '<div style="font-size:10px;color:var(--t3);line-height:1.5;margin-bottom:10px;padding:8px 10px;background:var(--bg3);border-radius:8px">'+
+        '위 금액은 시세 기반 참고 정보입니다. 실제 단가는 소장과 기사가 직접 협의하여 결정합니다.'+
+      '</div>'+
+      '<button type="button" onclick="var p=document.getElementById(\\'pw-price\\');if(p){p.value='+d.recommended+';_calcEst();_loadRegionStats();}_closeModal();_yToast(\\'참고 단가 입력됨\\');" '+
+        'style="width:100%;padding:13px;background:var(--ac);color:#fff;border:none;border-radius:var(--r-lg);font-size:14px;font-weight:900;cursor:pointer">참고 단가 적용</button>';
     _openModal();
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
