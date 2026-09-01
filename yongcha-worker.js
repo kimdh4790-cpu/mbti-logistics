@@ -5648,20 +5648,28 @@ function _admUserDetail(u){
   var subExpiry=u.subExpiry&&u.subExpiry.toDate?u.subExpiry.toDate().toLocaleDateString('ko-KR'):'없음';
   var sheet=document.createElement('div');
   sheet.style.cssText='position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end';
-  sheet.innerHTML=
-    '<div onclick="this.parentNode.remove()" style="flex:1;background:rgba(0,0,0,.45)"></div>'+
-    '<div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;max-height:80vh;overflow-y:auto">'+
+
+  var overlay=document.createElement('div');
+  overlay.style.cssText='flex:1;background:rgba(0,0,0,.45)';
+  overlay.addEventListener('click',function(){sheet.remove();});
+  sheet.appendChild(overlay);
+
+  var panel=document.createElement('div');
+  panel.style.cssText='background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;max-height:80vh;overflow-y:auto';
+  panel.innerHTML=
     '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px;"></div>'+
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
       '<div>'+
         '<div style="font-weight:900;font-size:20px">'+_esc(u.name||'이름 없음')+'</div>'+
         '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+
-          '<span style="background:'+(u.type==='agency'?'rgba(234,88,12,.15)':'rgba(22,163,74,.15)')+';color:'+(u.type==='agency'?'var(--br)':'var(--gn)')+';padding:2px 8px;border-radius:20px;font-weight:700">'+
-          (u.type==='agency'?'대리점':'기사')+'</span>'+
+          '<span style="background:'+(u.type==='agency'?'rgba(234,88,12,.15)':'rgba(22,163,74,.15)')+
+            ';color:'+(u.type==='agency'?'var(--br)':'var(--gn)')+
+            ';padding:2px 8px;border-radius:20px;font-weight:700">'+
+            (u.type==='agency'?'대리점':'기사')+'</span>'+
           (isSus?' <span style="background:var(--rdl);color:var(--rd);padding:2px 8px;border-radius:20px;font-weight:700">정지</span>':'')+
         '</div>'+
       '</div>'+
-      '<button onclick="this.closest(\'div[style*=z-index]\').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;color:var(--t2)">×</button>'+
+      '<button class="adm-close-x" style="background:var(--bg3);border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;color:var(--t2)">x</button>'+
     '</div>'+
     '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'+
       _admInfoRow('이메일',u.email||'—')+
@@ -5676,11 +5684,18 @@ function _admUserDetail(u){
       (u.rating?_admInfoRow('평점',Number(u.rating).toFixed(1)+'점 ('+(u.reviewCount||0)+'건)'):'')+
     '</div>'+
     '<div style="display:flex;gap:8px">'+
-    '<button onclick="_toggleSuspendFromDetail(\''+u.id+'\','+isSus+',this.closest(\'div[style*=z-index]\'))" '+
-      'style="flex:1;min-height:44px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">'+
-      (isSus?'정지 해제':'정지')+'</button>'+
-    '</div>'+
+      '<button class="adm-suspend-btn" style="flex:1;min-height:44px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+
+        ';color:'+(isSus?'var(--gn)':'var(--rd)')+
+        ';border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">'+
+        (isSus?'정지 해제':'정지')+'</button>'+
     '</div>';
+
+  panel.querySelector('.adm-close-x').addEventListener('click',function(){sheet.remove();});
+  panel.querySelector('.adm-suspend-btn').addEventListener('click',function(){
+    _toggleSuspendFromDetail(u.id,isSus,sheet);
+  });
+
+  sheet.appendChild(panel);
   document.body.appendChild(sheet);
 }
 function _admInfoRow(label,val){
