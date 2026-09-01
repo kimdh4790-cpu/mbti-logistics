@@ -17,13 +17,6 @@
  * ══════════════════════════════════════════════════════
  */
 
-// ── 날짜 유틸 (filo-common.js 미로드 환경용) ──────────────────────────────────
-function _today(){return new Date().toISOString().slice(0,10);}
-function _nowISO(){return new Date().toISOString();}
-function _toDateStr(iso){return iso?iso.slice(0,10):'';}
-function _monthStr(){return new Date().toISOString().slice(0,7);}
-
-
 function _dineScheduleAdd(did){
  _db.collection('members').where('dealerId','==',did).get().then(function(snap){
   if(snap.empty){_dineToast('등록된 직원이 없습니다');return;}

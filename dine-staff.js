@@ -399,7 +399,7 @@ function _dineStaffDetail(id){
  });
 }
 
-var _dineAttUnsub=null;
+window._dineAttendUnsub=null;
 
 function _dineAttend(el){
  var did=_CU.dealerId;
@@ -444,7 +444,7 @@ function _dineAttendTab(tab){
 
 function _dineLoadAttend(did){
  var date=document.getElementById('att-date')?.value||_today();
- if(_dineAttUnsub){_dineAttUnsub();_dineAttUnsub=null;}
+ if(window._dineAttendUnsub){window._dineAttendUnsub();window._dineAttendUnsub=null;}
  var kpi=document.getElementById('att-kpi');
  var table=document.getElementById('att-table');
  if(table)table.innerHTML='<div style="text-align:center;padding:30px;color:var(--t3)">로딩중...</div>';
@@ -455,7 +455,7 @@ function _dineLoadAttend(did){
   var _seenK={};
   allMem=allMem.filter(function(m){var k=(m.data.phone||'')+'|'+(m.data.name||'');if(_seenK[k])return false;_seenK[k]=true;return true;});
   allMem=allMem.filter(function(m){return (m.data.status||'active')!=='resigned';});
-  _dineAttUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','==',date)
+  window._dineAttendUnsub=_db.collection('attendance').where('dealerId','==',did).where('date','==',date)
    .onSnapshot(function(attSnap){
     var ins={},outs={};
     attSnap.forEach(function(doc){var d=doc.data();if(d.type==='in')ins[d.memberId]=d;else outs[d.memberId]=d;});

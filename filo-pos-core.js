@@ -59,7 +59,6 @@ function _cartRender(){
  var rawTotal=_cartItems.reduce(function(s,c){return s+c.price*c.qty;},0);
  var discount=window._posDiscount||0;
  var total=Math.max(0,rawTotal-discount);
- window._posDiscount=0;
  list.innerHTML=_cartItems.map(function(c,i){
   return '<div class="cart-item">'+
   '<div style="flex:1">'+
@@ -224,13 +223,6 @@ function _filoSplitPay(total){
 
 
 // ── 각자 계산 ──
-
-
-
-   function getSelTotal(){
-    return allItems.reduce(function(s,it,i){return s+(checkedMap[i]?(it.price||0)*(it.qty||1):0);},0);
-   }
-
 
 function _toUpdateCart(){
  var items=Object.values(_toCart).filter(function(it){return it.qty>0;});

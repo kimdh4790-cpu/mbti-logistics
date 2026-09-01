@@ -180,6 +180,7 @@ function _filoTableSelfPay(did,order,tableNum,tableName){
 
    var checkedMap={};
    allItems.forEach(function(_,i){checkedMap[i]=false;});
+   function getSelTotal(){return allItems.reduce(function(s,it,i){return s+(checkedMap[i]?(it.price||0)*(it.qty||1):0);},0);}
 
 
 function _filoShowReceipt(orderId, items, total, method, methodLabel, now){

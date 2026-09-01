@@ -635,27 +635,11 @@ async function _filoGenReviewReply(type){
  if(outputEl)outputEl.value='AI가 답글을 작성 중입니다...';
 
  try{
-  var res=await fetch('https://api.anthropic.com/v1/messages',{
-   method:'POST',
-   headers:{'Content-Type':'application/json','x-api-key':window._anthropicKey||'','anthropic-version':'2023-06-01'},
-   body:JSON.stringify({
-    model:'claude-haiku-4-5-20251001',
-    max_tokens:300,
-    messages:[{role:'user',content:'다음 고객 리뷰에 대한 '+typeLabel+' 답글을 작성해줘. 매장명: '+compName+'. 답글만 출력해. 2~4문장으로 간결하게.\n\n리뷰: '+review}]
-   })
-  });
-  var d=await res.json();
-  var reply=(d.content&&d.content[0]&&d.content[0].text)||'답글 생성에 실패했습니다.';
-  if(outputEl)outputEl.value=reply;
+  var res2=await fetch('/api/review-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review:review,type:type,compName:compName})});
+  var d2=await res2.json();
+  if(outputEl)outputEl.value=d2.reply||'답글 생성에 실패했습니다.';
  } catch(e){
-  // API 키 없으면 Worker 프록시 사용
-  try{
-   var res2=await fetch('/api/review-reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({review:review,type:type,compName:compName})});
-   var d2=await res2.json();
-   if(outputEl)outputEl.value=d2.reply||'답글 생성에 실패했습니다.';
-  } catch(e2){
-   if(outputEl)outputEl.value='답글 생성에 실패했습니다. 잠시 후 다시 시도하세요.';
-  }
+  if(outputEl)outputEl.value='답글 생성에 실패했습니다. 잠시 후 다시 시도하세요.';
  }
 }
 

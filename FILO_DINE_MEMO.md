@@ -163,6 +163,20 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-01 (29차)
+**전기능 코드 감사 — 보안·런타임 크래시·중복·로직 버그 일괄 수정**
+- `filo-settings.js`: `_filoGenReviewReply()` 브라우저 직접 Anthropic API 키 노출 제거 → 항상 `/api/review-reply` 프록시 경유
+- `filo-pos-core.js`: `_cartRender()` 내부 `window._posDiscount=0` 리셋 제거 (할인 금액 렌더마다 초기화 버그) + 외부 스코프 참조하는 고아 `getSelTotal` 함수 제거
+- `filo-pos-pay.js`: `_filoTableSelfPay` 내부에 `getSelTotal` 로컬 함수로 재추가 (스코프 수정)
+- `filo-pos-ui.js`: 409-868번줄 `filo-pos-pay.js` 전체 복붙 블록(결제함수+구버전 고객화면) 제거 (460줄, 1111→652줄)
+- `filo-payroll2.js`: 178-291번줄 POS 결제 모달 코드(`var _cartItems=[]`, `_filoPay`, `_filoSelfPay` 미존재 호출) 오염 블록 제거 (114줄, 761→647줄)
+- `filo-margin.js`: 시간별 매출 차트 `hourEntries`를 배열 원소로 잘못 인덱스(`h[0]`/`h[1]`) → 숫자 직접 접근(`h`, `hourStats[h]`)으로 수정 (차트 항상 빈 칸 버그)
+- `dine-schedule.js`: `_today()`·`_nowISO()`·`_toDateStr()`·`_monthStr()` 4개 함수 중복 선언 제거 (dine.js에 이미 존재)
+- `dine-staff.js`: `_dineAttUnsub` 모듈-로컬 변수명 → `window._dineAttendUnsub`으로 교체 (dine.js `_dineReleaseListeners` 리스너 해제 키 불일치 수정)
+- `dine-member.js`: `esc()` (filo-auth.js 전용 함수) → `_de()` (dine-member.js 내부 함수)로 교체
+- `dine-payroll.js`: `_dineSendPayslip` 내 `_calcPayFull(m,att,1,ym)` 하드코딩 `empCnt=1` → 실제 직원 수 조회 후 전달 (5인 이상 야간·연장수당 계산 오류 수정)
+- `_worker.js`: `/api/ctrl-notify` POST 핸들러 중복 제거 (line 21978: `verifyYongchaToken` 버전 — 첫 번째 핸들러(line 10854)가 항상 응답을 반환하므로 도달 불가 dead code)
+
 ### 2026-09-01 (28차)
 **메뉴 NFC 카테고리 accordion + SA 상단바 모바일 수정 + 요금제 전체 문의 전환**
 - `filo-settings.js`:

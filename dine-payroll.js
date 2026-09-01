@@ -420,14 +420,17 @@ function _dineSendPayslip(memberId,ym){
     var phone=m.phone||'';
     // payroll 없으면 attendance에서 즉석 계산
     if(!pData){
-     return _db.collection('attendance').where('dealerId','==',did).where('memberId','==',memberId)
-      .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get()
-      .then(function(attSnap){
-       var att={ins:[],outs:[],breaks:[]};
-       attSnap.forEach(function(doc){var d=doc.data();if(d.type==='in')att.ins.push(d);else if(d.type==='out')att.outs.push(d);else att.breaks.push(d);});
-       var r=_calcPayFull(m,att,1,ym);
-       return {name:name,phone:phone,netSalary:r.netSalary,basePay:r.basePay};
-      });
+     return Promise.all([
+      _db.collection('attendance').where('dealerId','==',did).where('memberId','==',memberId)
+       .where('date','>=',ym+'-01').where('date','<=',ym+'-31').get(),
+      _db.collection('members').where('dealerId','==',did).get()
+     ]).then(function(results){
+      var attSnap=results[0],empCnt=results[1].size;
+      var att={ins:[],outs:[],breaks:[]};
+      attSnap.forEach(function(doc){var d=doc.data();if(d.type==='in')att.ins.push(d);else if(d.type==='out')att.outs.push(d);else att.breaks.push(d);});
+      var r=_calcPayFull(m,att,empCnt,ym);
+      return {name:name,phone:phone,netSalary:r.netSalary,basePay:r.basePay};
+     });
     }
     return {name:name,phone:phone,netSalary:pData.netSalary||0,basePay:pData.basePay||0};
    });

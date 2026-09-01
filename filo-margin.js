@@ -295,8 +295,8 @@ function _filoCalcAndRender(posSnap,manSnap,today,ym,did){
    /* 시간대별 막대차트 */
    var hCanvas=document.getElementById('hour-chart-canvas');
    if(hCanvas&&window.Chart){
-    var hLabels=hourEntries.map(function(h){return h[0]+'시';});
-    var hData=hourEntries.map(function(h){return h[1];});
+    var hLabels=hourEntries.map(function(h){return h+'시';});
+    var hData=hourEntries.map(function(h){return hourStats[h];});
     if(hCanvas._chart)hCanvas._chart.destroy();
     hCanvas._chart=new Chart(hCanvas,{
      type:'bar',

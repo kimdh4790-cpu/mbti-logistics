@@ -365,7 +365,7 @@ function _dineLoadReviews(did){
      '<span style="color:#facc15;font-size:13px">'+stars+'</span>'+
      '<span style="font-size:10px;color:var(--t3);margin-left:auto">'+((d.createdAt||'').slice(0,10))+'</span>'+
      '</div>'+
-     '<div style="font-size:13px;color:var(--tx)">'+esc(d.content||'')+'</div>'+
+     '<div style="font-size:13px;color:var(--tx)">'+_de(d.content||'')+'</div>'+
     '</div>');
    });
    list.innerHTML=rows.join('');

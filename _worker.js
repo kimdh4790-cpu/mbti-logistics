@@ -21974,26 +21974,6 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
     }
   }
 
-  // FCM 알림 (FCM v1 OAuth2)
-  if (path === '/api/ctrl-notify' && method === 'POST') {
-    const cnUser = await verifyYongchaToken(request, env);
-    if (!cnUser) return new Response(JSON.stringify({ok:false,error:'인증이 필요해요'}),{status:401,headers:{'Content-Type':'application/json'}});
-    try {
-      const body = await request.json();
-      if (body.token) {
-        await sendAdminFCM(env, body.token, {
-          title: body.title || '용차',
-          body: body.body || '',
-          type: (body.data && body.data.type) || 'alert',
-          url: (body.data && body.data.url) || undefined
-        });
-      }
-      return new Response(JSON.stringify({ok:true}), { headers: {'Content-Type':'application/json'} });
-    } catch(e) {
-      return new Response(JSON.stringify({ok:false}), { headers: {'Content-Type':'application/json'} });
-    }
-  }
-
   // ── 팝빌 전자세금계산서 역발행 요청 ──────────────────────────────────
   if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
