@@ -1083,6 +1083,30 @@ input:focus,select:focus,textarea:focus{
 .topbar-logo{color:#C8A356!important;font-size:20px!important;letter-spacing:-1px!important;text-shadow:0 0 16px rgba(200,163,86,.3)!important}
 #topbar-title{color:rgba(255,255,255,.42)!important}
 #topbar-clock{color:rgba(255,255,255,.28)!important}
+
+/* ── 모바일 상단 Safe Area 보정 ── */
+.topbar{
+  padding-top:env(safe-area-inset-top,0px)!important;
+  height:calc(var(--topbar-h) + env(safe-area-inset-top,0px))!important}
+#sidebar{top:calc(var(--topbar-h) + env(safe-area-inset-top,0px))!important}
+#content,#content.main,.main{padding-top:calc(var(--topbar-h) + env(safe-area-inset-top,0px) + 16px)!important}
+@media(max-width:768px){
+  #content{padding-top:calc(var(--topbar-h) + env(safe-area-inset-top,0px) + 12px)!important}
+}
+
+/* ── 가로 모드 (landscape) 대응 ── */
+@media(orientation:landscape) and (max-height:600px){
+  :root{--topbar-h:44px}
+  .topbar{height:calc(44px + env(safe-area-inset-top,0px))!important;padding-left:calc(12px + env(safe-area-inset-left,0px))!important;padding-right:calc(12px + env(safe-area-inset-right,0px))!important}
+  .topbar-logo{font-size:16px!important}
+  #topbar-clock{display:none!important}
+  #mobile-tabbar{display:none!important}
+  #sidebar{display:none!important}
+  #content-wrap,#content,#content.main,.main{margin-left:0!important;width:100%!important;padding-left:calc(12px + env(safe-area-inset-left,0px))!important;padding-right:calc(12px + env(safe-area-inset-right,0px))!important;padding-bottom:12px!important}
+  .pos-wrap{display:grid!important;grid-template-columns:1fr 280px!important;grid-template-rows:1fr!important;height:calc(100dvh - 44px - env(safe-area-inset-top,0px))!important;overflow:hidden!important}
+  .menu-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))!important}
+  .cart-panel{max-height:calc(100dvh - 44px - env(safe-area-inset-top,0px))!important;overflow-y:auto!important}
+}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1316,7 +1340,7 @@ input:focus,select:focus,textarea:focus{
  </button>
  </div>
  </div>
- <div class="main" id="content" style="padding-top:calc(var(--topbar-h) + 16px);overflow-x:hidden;min-width:0;box-sizing:border-box;padding-left:16px;padding-right:16px;padding-bottom:16px"></div>
+ <div class="main" id="content" style="padding-top:calc(var(--topbar-h) + env(safe-area-inset-top,0px) + 16px);overflow-x:hidden;min-width:0;box-sizing:border-box;padding-left:16px;padding-right:16px;padding-bottom:16px"></div>
 </div>
 
 <!-- ── 모바일 하단 탭바 ── -->
