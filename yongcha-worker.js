@@ -5760,6 +5760,7 @@ function _admUserDetail(u){
       (u.rating?_admInfoRow('평점',Number(u.rating).toFixed(1)+'점 ('+(u.reviewCount||0)+'건)'):'')+
     '</div>'+
     '<div style="display:flex;gap:8px">'+
+      '<button class="adm-chat-btn" style="flex:1;min-height:44px;background:var(--acl);color:var(--ac);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">채팅 내역</button>'+
       '<button class="adm-suspend-btn" style="flex:1;min-height:44px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+
         ';color:'+(isSus?'var(--gn)':'var(--rd)')+
         ';border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">'+
@@ -5769,6 +5770,9 @@ function _admUserDetail(u){
   panel.querySelector('.adm-close-x').addEventListener('click',function(){sheet.remove();});
   panel.querySelector('.adm-suspend-btn').addEventListener('click',function(){
     _toggleSuspendFromDetail(u.id,isSus,sheet);
+  });
+  panel.querySelector('.adm-chat-btn').addEventListener('click',function(){
+    _admViewChats(u.id,u.name);
   });
 
   sheet.appendChild(panel);
@@ -5780,6 +5784,110 @@ function _admInfoRow(label,val){
     '<span style="font-size:13px;font-weight:600;color:var(--tx);text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(String(val))+'</span>'+
     '</div>';
 }
+// ── 관리자 채팅 내역 조회 (분쟁·증거 목적) ──────────────────────
+function _admViewChats(uid,name){
+  if(!confirm(name+' 님의 채팅 내역을 조회합니다. 분쟁·민원 해결 목적으로만 사용하세요. 열람 기록이 저장됩니다.')) return;
+  _db.collection('yongcha_admin_logs').add({
+    type:'chat_view',targetUid:uid,targetName:name,
+    adminUid:_CU.uid,adminName:_CU.name,
+    at:firebase.firestore.FieldValue.serverTimestamp()
+  });
+  var sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;z-index:9100;display:flex;flex-direction:column;justify-content:flex-end';
+  var overlay=document.createElement('div');
+  overlay.style.cssText='flex:1;background:rgba(0,0,0,.5)';
+  overlay.addEventListener('click',function(){sheet.remove();});
+  sheet.appendChild(overlay);
+  var panel=document.createElement('div');
+  panel.style.cssText='background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;max-height:82vh;overflow-y:auto';
+  panel.innerHTML=
+    '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 16px"></div>'+
+    '<div style="font-weight:900;font-size:17px;margin-bottom:4px">채팅 내역 조회</div>'+
+    '<div style="font-size:12px;color:var(--rd);margin-bottom:16px;font-weight:600">분쟁·민원 해결 목적 전용 · 열람 기록 저장됨</div>'+
+    '<div id="adm-chat-rooms">'+_skRows(3)+'</div>';
+  sheet.appendChild(panel);
+  document.body.appendChild(sheet);
+  _db.collection('yongcha_chats').where('participants','array-contains',uid).limit(30).get()
+  .then(function(snap){
+    var el=document.getElementById('adm-chat-rooms');if(!el)return;
+    if(snap.empty){el.innerHTML='<div style="text-align:center;color:var(--t3);padding:32px">채팅 내역이 없습니다</div>';return;}
+    el.innerHTML='';
+    snap.docs.sort(function(a,b){
+      var at=a.data().lastAt,bt=b.data().lastAt;
+      return (bt&&bt.seconds||0)-(at&&at.seconds||0);
+    }).forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var otherUid=(d.participants||[]).filter(function(p){return p!==uid;})[0]||'';
+      var otherName=(d.participantNames||{})[otherUid]||'상대방';
+      var otherType=(d.participantTypes||{})[otherUid]||'';
+      var lastAt='';
+      if(d.lastAt&&d.lastAt.seconds){
+        var dt=new Date(d.lastAt.seconds*1000);
+        lastAt=dt.toLocaleDateString('ko-KR')+' '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2);
+      }
+      var row=document.createElement('div');
+      row.className='chat-row';
+      row.innerHTML=
+        '<div class="chat-av">'+(otherType==='agency'?'🏢':'🚗')+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:14px;font-weight:800;margin-bottom:3px">'+_esc(name)+' ↔ '+_esc(otherName)+'</div>'+
+        '<div style="font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(d.lastMessage||'')+'</div>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--t3);flex-shrink:0">'+lastAt+'</div>';
+      row.addEventListener('click',function(){_admViewChatRoom(doc.id,name+' ↔ '+otherName);});
+      el.appendChild(row);
+    });
+  }).catch(function(e){
+    var el=document.getElementById('adm-chat-rooms');
+    if(el)el.innerHTML='<div style="color:var(--rd);padding:12px">불러오기 실패: '+_esc(e.message)+'</div>';
+  });
+}
+
+function _admViewChatRoom(chatId,title){
+  var sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;z-index:9200;background:var(--bg);display:flex;flex-direction:column';
+  sheet.innerHTML=
+    '<div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--bd)">'+
+    '<button class="crb-back" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--tx);padding:0;min-width:36px;line-height:1">&#8592;</button>'+
+    '<div style="flex:1;min-width:0">'+
+    '<div style="font-weight:800;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(title)+'</div>'+
+    '<div style="font-size:11px;color:var(--rd);font-weight:600">열람 기록 저장됨</div>'+
+    '</div>'+
+    '</div>'+
+    '<div id="adm-msg-list" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">'+
+    _skRows(5)+
+    '</div>';
+  sheet.querySelector('.crb-back').addEventListener('click',function(){sheet.remove();});
+  document.body.appendChild(sheet);
+  _db.collection('yongcha_chats').doc(chatId).collection('messages')
+    .orderBy('createdAt','asc').limit(300).get()
+  .then(function(snap){
+    var el=document.getElementById('adm-msg-list');if(!el)return;
+    if(snap.empty){el.innerHTML='<div style="text-align:center;color:var(--t3);padding:32px">메시지가 없습니다</div>';return;}
+    el.innerHTML='';
+    snap.forEach(function(doc){
+      var m=doc.data();
+      var timeStr='';
+      if(m.createdAt&&m.createdAt.seconds){
+        var dt=new Date(m.createdAt.seconds*1000);
+        timeStr=dt.toLocaleDateString('ko-KR')+' '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2);
+      }
+      var wrap=document.createElement('div');
+      wrap.innerHTML=
+        '<div style="font-size:10px;color:var(--t3);margin-bottom:3px;font-weight:600">'+_esc(m.senderName||'알수없음')+'</div>'+
+        '<div style="display:flex;align-items:flex-end;gap:8px">'+
+        '<div style="background:var(--bg2);border:1px solid var(--bd);border-radius:0 12px 12px 12px;padding:9px 13px;max-width:78%;font-size:14px;line-height:1.55;word-break:break-all;white-space:pre-wrap">'+_esc(m.text||'')+'</div>'+
+        '<div style="font-size:10px;color:var(--t3);flex-shrink:0;white-space:nowrap">'+timeStr+'</div>'+
+        '</div>';
+      el.appendChild(wrap);
+    });
+    el.scrollTop=el.scrollHeight;
+  }).catch(function(e){
+    var el=document.getElementById('adm-msg-list');
+    if(el)el.innerHTML='<div style="color:var(--rd);padding:12px">불러오기 실패: '+_esc(e.message)+'</div>';
+  });
+}
+
 function _toggleSuspendFromDetail(uid,isSus,sheet){
   _db.collection('yongcha_users').doc(uid).update({suspended:!isSus}).then(function(){
     _yToast(isSus?'정지가 해제되었습니다':'회원이 정지되었습니다');
