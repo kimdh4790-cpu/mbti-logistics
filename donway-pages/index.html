@@ -5154,11 +5154,12 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 var incAmt = (incS.on && incS.rate > 0) ? a.cnt * incS.rate : 0;
                 _totalInc += incAmt;
                 var s = rt+'*'+a.cnt+'건';
+                if(incS.on && incS.rate > 0) s += '×'+incS.rate;
                 if(a.ret > 0) s += ' 반품*'+a.ret+'건';
                 pts.push(s);
               });
               if(_totalFresh > 0){ tot += _totalFresh; pts.push('프레시백 ₩'+_totalFresh.toLocaleString()); }
-              // ★ 인센티브는 금액·사유 모두 제외 (지원간 기사 본인 건수 기준 finc에 자동 포함됨)
+              if(_totalInc > 0){ tot += _totalInc; pts.push('인센티브 ₩'+_totalInc.toLocaleString()); }
               if(!tot) return;
 
               // ③ fromId(앞=대신배송기사): routeDetails 건수차감 + 프레시백 차감 + 사유 기록
@@ -5188,7 +5189,8 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 // ★ etcMinus 사유만 기록 (금액 차감 없음 — 건수 차감으로 이미 배송금액에서 빠짐)
                 if(tot > 0){
                   var _minusPv = (fs.etcMinusReason||'').split(' / ').filter(function(s){return s.indexOf('아이디지원('+tid+')')!==0;}).join(' / ');
-                  fs.etcMinusReason = (_minusPv?_minusPv+' / ':'') + '아이디지원('+tid+') '+pts.join('·');
+                  var _ptsNoInc = pts.filter(function(p){return p.indexOf('인센티브')!==0;});
+                  fs.etcMinusReason = (_minusPv?_minusPv+' / ':'') + '아이디지원('+tid+') '+_ptsNoInc.join('·');
                 }
               }
 
