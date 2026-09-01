@@ -572,3 +572,14 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
   - `_showPickupAlert()` 빈 div에 🔔 이모지 추가
 - `order.html`: 영수증 카드에 "공유하기" 버튼 추가 (`_shareReceipt()` → Web Share API)
 - `order.js`: `_shareReceipt()` 함수 신규 추가 (미지원 시 스크린샷 안내 토스트)
+
+### 2026-09-01
+**FILO·DINE 전면 색상·가시성 개선 — 골드→라임/로즈**
+- `dine-analytics.js`: 차트 기본색 `#C8A356` → `#84cc16`, 툴팁 다크 배경 → 라이트(`rgba(255,255,255,.97)`), 그리드선 `rgba(255,255,255,.035)` → `rgba(15,23,42,.08)`, 히트맵·랭크 색상·출근중 표시 라임으로 통일
+- `dine-payroll.js`: 실시간 버튼·사업주 KPI 카드·직원 카드 사업주 행·급여명세서 뱃지·실수령액 섹션 `#c9a84c` → `#4d7c0f`, 미정의 `var(--cyan)` → `#0891b2`
+- `dine-staff.js`: 예상급여 KPI·스케줄 오늘 강조·합계 컬럼·진행바·월급날 카드 `#c9a84c` → `#4d7c0f/#84cc16`
+- `dine.html`: nav-item 활성·btn-primary·로그인 로고·AI 뱃지·사이드바 인라인 골드 → 라임
+- `dine.js`: 대시보드 KPI 주문·AI 카드·VIP 티어·베스트메뉴·주문행 배경 `#C8A356` → `#84cc16`
+- `filo-auth.js`: 히어로 카드 "오늘 매출" 라벨 `rgba(200,163,86,.6)` → `rgba(255,255,255,.55)` (다크 로즈 배경에 적합)
+- `filo-inventory.js`: 취소 버튼 `rgba(255,255,255,.06)` → `var(--surface2,#f4f4f5)` (흰 배경 불가시 버그 수정)
+- `filo-pos.js`: 결제 오버레이 합계 금액·카드 직접결제 섹션·할인 탭·확인 버튼 `#c8a356` → `#f43f5e/#f87171`
