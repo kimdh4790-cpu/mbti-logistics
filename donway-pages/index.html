@@ -5144,7 +5144,7 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
               // 금액 계산
               var tot = 0;
               var pts = [];
-              // ★ 인센티브: 라우트별 ON/OFF + 설정단가(×10/15/25) 기준
+              // ★ 인센티브: finc 차감액 계산용으로만 사용 (tot·pts 제외 — 지원간 기사 finc에 자동 반영)
               var _totalInc = 0;
               Object.keys(_rtAgg).sort().forEach(function(rt){
                 var a = _rtAgg[rt];
@@ -5154,12 +5154,11 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
                 var incAmt = (incS.on && incS.rate > 0) ? a.cnt * incS.rate : 0;
                 _totalInc += incAmt;
                 var s = rt+'*'+a.cnt+'건';
-                if(incS.on && incS.rate > 0) s += '×'+incS.rate;
                 if(a.ret > 0) s += ' 반품*'+a.ret+'건';
                 pts.push(s);
               });
               if(_totalFresh > 0){ tot += _totalFresh; pts.push('프레시백 ₩'+_totalFresh.toLocaleString()); }
-              if(_totalInc > 0){ tot += _totalInc; pts.push('인센티브 ₩'+_totalInc.toLocaleString()); }
+              // ★ 인센티브는 금액·사유 모두 제외 (지원간 기사 본인 건수 기준 finc에 자동 포함됨)
               if(!tot) return;
 
               // ③ fromId(앞=대신배송기사): routeDetails 건수차감 + 프레시백 차감 + 사유 기록
