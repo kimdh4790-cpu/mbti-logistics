@@ -249,30 +249,46 @@ function _filoLoadNFCSection(did){
   if(el) el.innerHTML='<div style="font-size:12px;color:var(--t3)">테이블 로드 실패</div>';
  });
 
- // 메뉴 목록 로드
+ // 메뉴 목록 로드 — 카테고리별 접기/펼치기
  _db.collection('filo_menus').where('dealerId','==',did).orderBy('category').get().then(function(snap){
   var el=document.getElementById('nfc-menus-list');
   if(!el) return;
   if(snap.empty){el.innerHTML='<div style="font-size:12px;color:var(--t3)">등록된 메뉴 없음</div>';return;}
-  var rows='';
+  var cats={};
+  var catOrder=[];
   snap.forEach(function(doc){
    var d=doc.data();
    if(d.forSale===false) return;
-   var name=d.name||'';
-   var emoji=d.emoji||'🍽';
-   var price=(d.price||0).toLocaleString();
-   var safeId='nfc-m-'+doc.id;
-   rows+='<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--b3);border-radius:10px">'+
-    '<div style="font-size:20px;width:28px;text-align:center">'+emoji+'</div>'+
-    '<div style="flex:1;min-width:0">'+
-    '<div style="font-size:12px;font-weight:700">'+name+'</div>'+
-    '<div style="font-size:11px;color:var(--t3)">₩'+price+'</div>'+
-    '</div>'+
-    '<button id="'+safeId+'" class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 10px" onclick="_filoNFCWriteMenu(\''+name.replace(/'/g,"\\'")+"',this)\">NFC 기록</button>"+
-    '<button class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 10px;background:var(--b3);color:var(--t2);border:1px solid var(--bd)" onclick="_filoNFCCopyMenu(\''+name.replace(/'/g,"\\'")+'\')">복사</button>'+
+   var cat=d.category||'기타';
+   if(!cats[cat]){cats[cat]=[];catOrder.push(cat);}
+   cats[cat].push({id:doc.id,name:d.name||'',emoji:d.emoji||'🍽',price:d.price||0});
+  });
+  var html='';
+  catOrder.forEach(function(cat,idx){
+   var items=cats[cat];
+   var cid='nfc-cat-'+idx;
+   var itemsHtml=items.map(function(m){
+    var safeN=m.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff;border:1px solid var(--bd);border-radius:10px;margin-top:4px">'+
+     '<div style="font-size:18px;width:26px;text-align:center;flex-shrink:0">'+m.emoji+'</div>'+
+     '<div style="flex:1;min-width:0">'+
+     '<div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+m.name+'</div>'+
+     '<div style="font-size:10px;color:var(--t3)">₩'+(m.price||0).toLocaleString()+'</div>'+
+     '</div>'+
+     '<button id="nfc-m-'+m.id+'" class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 8px;flex-shrink:0" onclick="_filoNFCWriteMenu(\''+safeN+'\',this)">NFC</button>'+
+     '<button class="btn btn-sm" style="white-space:nowrap;font-size:11px;padding:5px 8px;background:var(--b3);color:var(--t2);border:1px solid var(--bd);flex-shrink:0" onclick="_filoNFCCopyMenu(\''+safeN+'\')">복사</button>'+
+     '</div>';
+   }).join('');
+   html+='<div style="margin-bottom:6px">'+
+    '<button onclick="(function(b){var c=document.getElementById(\''+cid+'\');var o=c.style.display!==\'none\';c.style.display=o?\'none\':\'block\';b.querySelector(\'.cat-arrow\').textContent=o?\'▼\':\'▲\';})(this)" '+
+    'style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface2,#F4F0E8);border:1px solid var(--bd);border-radius:10px;cursor:pointer;color:var(--tx);text-align:left">'+
+    '<span style="font-size:12px;font-weight:800">'+cat+' <span style="font-size:11px;color:var(--t3);font-weight:400">('+items.length+')</span></span>'+
+    '<span class="cat-arrow" style="font-size:10px;color:var(--t3)">▼</span>'+
+    '</button>'+
+    '<div id="'+cid+'" style="display:none;padding:0 2px">'+itemsHtml+'</div>'+
     '</div>';
   });
-  el.innerHTML=rows||'<div style="font-size:12px;color:var(--t3)">메뉴 없음</div>';
+  el.innerHTML=html||'<div style="font-size:12px;color:var(--t3)">메뉴 없음</div>';
  }).catch(function(){
   var el=document.getElementById('nfc-menus-list');
   if(el) el.innerHTML='<div style="font-size:12px;color:var(--t3)">메뉴 로드 실패</div>';
