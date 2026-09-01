@@ -5847,7 +5847,7 @@ function _yCountAllPosts(){
     _db.collection('yongcha_posts').get(),
     _db.collection('yongcha_jobs').get()
   ]).then(function(r){
-    if(el)el.textContent='공고 '+r[0].size+'건 · 채용공고 '+r[1].size+'건';
+    if(el)el.textContent='공고 '+r[0].size+'건 / 채용공고 '+r[1].size+'건';
   }).catch(function(){});
 }
 
