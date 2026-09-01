@@ -161,12 +161,12 @@ function _filoRenderCalendar(did){
     var bookings=bookingMap[dateStr]||[];
     var dow=new Date(year,month,day).getDay();
     html+='<div onclick="_filoCalDayClick(\''+did+'\',\''+dateStr+'\')" style="'+
-     'min-height:60px;padding:4px;border-radius:8px;cursor:pointer;border:1px solid '+(isToday?'var(--br)':'var(--bd)')+';'+
-     'background:'+(isToday?'rgba(201,168,76,.1)':'var(--surface2)')+';transition:.15s" '+
-     'onmouseover="this.style.borderColor=\'rgba(201,168,76,.4)\'" onmouseout="this.style.borderColor=\''+(isToday?'var(--br)':'var(--bd)')+'\'">'+
-     '<div style="font-size:12px;font-weight:700;color:'+(isToday?'#a78bfa':dow===0?'#ef4444':dow===6?'#60a5fa':'var(--tx)')+'">'+day+'</div>'+
+     'min-height:60px;padding:4px;border-radius:8px;cursor:pointer;border:1px solid '+(isToday?'var(--br)':'#e2e8f0')+';'+
+     'background:'+(isToday?'rgba(244,63,94,.08)':'#ffffff')+';transition:.15s" '+
+     'onmouseover="this.style.background=\'#fff5f5\'" onmouseout="this.style.background=\''+(isToday?'rgba(244,63,94,.08)':'#ffffff')+'\'">'+
+     '<div style="font-size:12px;font-weight:700;color:'+(isToday?'#f43f5e':dow===0?'#ef4444':dow===6?'#60a5fa':'var(--tx)')+'">'+day+'</div>'+
      bookings.slice(0,2).map(function(b){
-      return '<div style="font-size:9px;background:rgba(201,168,76,.15);border-radius:4px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a78bfa">'+
+      return '<div style="font-size:9px;background:rgba(244,63,94,.12);border-radius:4px;padding:1px 4px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#e11d48">'+
        (b.time?b.time+' ':'')+esc(b.customerName||b.title||'예약')+'</div>';
      }).join('')+
      (bookings.length>2?'<div style="font-size:9px;color:var(--t3);margin-top:1px">+'+(bookings.length-2)+'건</div>':'')+

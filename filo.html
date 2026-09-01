@@ -112,8 +112,8 @@
   /* ── 텍스트 ── */
   --tx:#0F172A;--t2:#475569;--t3:#94A3B8;--t4:#CBD5E1;
   /* ── 브랜드 컬러 ── */
-  --br:#C8A356;--br-l:#D4B46E;--br-ll:#E2CA96;--br-d:#A8823A;
-  --br-glow:rgba(200,163,86,.35);--br-glow2:rgba(200,163,86,.15);
+  --br:#f43f5e;--br-l:#fb7185;--br-ll:#fda4af;--br-d:#e11d48;
+  --br-glow:rgba(244,63,94,.35);--br-glow2:rgba(244,63,94,.15);
   --br2:#10B981;--br2-l:#34D399;--br2-glow:rgba(16,185,129,.3);
   /* ── 시맨틱 ── */
   --green:#10B981;--green-l:#34D399;--green-bg:rgba(16,185,129,.08);--green-bd:rgba(16,185,129,.2);
@@ -130,7 +130,7 @@
   --shadow:0 2px 12px rgba(0,0,0,.08);
   --shadow-lg:0 8px 32px rgba(0,0,0,.12);
   --shadow-xl:0 16px 56px rgba(0,0,0,.16);
-  --shadow-brand:0 4px 20px rgba(99,102,241,.28);
+  --shadow-brand:0 4px 20px rgba(244,63,94,.28);
   --shadow-green:0 4px 20px rgba(16,185,129,.22);
   /* ── 별칭 ── */
   --b2:var(--surface);--b3:var(--surface2);--b4:var(--surface3);
@@ -1049,42 +1049,42 @@ input:focus,select:focus,textarea:focus{
 ::-webkit-scrollbar-thumb{background:rgba(200,163,86,.35)!important;border-radius:4px}
 
 /* ── 선택 효과 ── */
-::selection{background:rgba(200,163,86,.22)!important}
+::selection{background:rgba(244,63,94,.22)!important}
 
 /* ── 인사이트 카드 ── */
 .insight-card{
-  background:linear-gradient(135deg,rgba(200,163,86,.07),rgba(212,180,110,.03))!important;
-  border-color:rgba(200,163,86,.16)!important}
+  background:linear-gradient(135deg,rgba(244,63,94,.07),rgba(251,113,133,.03))!important;
+  border-color:rgba(244,63,94,.16)!important}
 
 /* ── hero-card ── */
 .hero-card{
-  background:linear-gradient(135deg,#08101f 0%,#0B1F3A 55%,#0D2244 100%)!important;
-  border-color:rgba(200,163,86,.28)!important;
-  box-shadow:0 8px 32px rgba(8,16,31,.4),inset 0 1px 0 rgba(200,163,86,.12)!important}
-.hero-card::before{background:radial-gradient(circle,rgba(200,163,86,.30),transparent 70%)!important}
-.hero-card::after{background:radial-gradient(circle,rgba(8,145,178,.18),transparent 70%)!important}
+  background:linear-gradient(135deg,#e11d48 0%,#f43f5e 55%,#be123c 100%)!important;
+  border-color:rgba(244,63,94,.35)!important;
+  box-shadow:0 8px 32px rgba(225,29,72,.28),inset 0 1px 0 rgba(255,255,255,.12)!important}
+.hero-card::before{background:radial-gradient(circle,rgba(253,164,175,.35),transparent 70%)!important}
+.hero-card::after{background:radial-gradient(circle,rgba(251,113,133,.18),transparent 70%)!important}
 
 /* ── 대시보드 히어로 ── */
 .dash-hero{
-  background:linear-gradient(135deg,#08101f 0%,#0B1F3A 55%,#0D2244 100%)!important;
-  border-color:rgba(200,163,86,.28)!important;
-  box-shadow:0 8px 32px rgba(8,16,31,.4),inset 0 1px 0 rgba(200,163,86,.12)!important}
-.dash-hero::before{background:radial-gradient(circle,rgba(200,163,86,.28) 0%,transparent 70%)!important}
-.dash-hero::after{background:radial-gradient(circle,rgba(8,145,178,.18) 0%,transparent 70%)!important}
+  background:linear-gradient(135deg,#e11d48 0%,#f43f5e 55%,#be123c 100%)!important;
+  border-color:rgba(244,63,94,.35)!important;
+  box-shadow:0 8px 32px rgba(225,29,72,.28),inset 0 1px 0 rgba(255,255,255,.12)!important}
+.dash-hero::before{background:radial-gradient(circle,rgba(253,164,175,.35) 0%,transparent 70%)!important}
+.dash-hero::after{background:radial-gradient(circle,rgba(251,113,133,.18) 0%,transparent 70%)!important}
 
 /* ── topbar badge ── */
-.topbar-badge{background:linear-gradient(135deg,#C8A356,#D4B46E)!important;color:#0F172A!important}
+.topbar-badge{background:linear-gradient(135deg,#f43f5e,#fb7185)!important;color:#fff!important}
 
 /* ── 카드 브랜드 ── */
 .card-brand{
-  background:linear-gradient(135deg,rgba(200,163,86,.10),rgba(212,180,110,.05))!important;
-  border-color:rgba(200,163,86,.20)!important}
+  background:linear-gradient(135deg,rgba(244,63,94,.08),rgba(251,113,133,.04))!important;
+  border-color:rgba(244,63,94,.18)!important}
 
-/* ── 탑바 — 다크 크롬 (FILO 브랜드 크롬) ── */
-.topbar{background:linear-gradient(90deg,#091628 0%,#0C1E38 100%)!important;border-bottom:1px solid rgba(200,163,86,.18)!important;box-shadow:0 2px 16px rgba(0,0,0,.28)!important}
-.topbar-logo{color:#C8A356!important;font-size:20px!important;letter-spacing:-1px!important;text-shadow:0 0 16px rgba(200,163,86,.3)!important}
-#topbar-title{color:rgba(255,255,255,.42)!important}
-#topbar-clock{color:rgba(255,255,255,.28)!important}
+/* ── 탑바 — 화이트 크롬 (FILO 로즈 브랜드) ── */
+.topbar{background:#ffffff!important;border-bottom:1px solid rgba(244,63,94,.18)!important;box-shadow:0 2px 12px rgba(244,63,94,.08)!important}
+.topbar-logo{color:#f43f5e!important;font-size:20px!important;letter-spacing:-1px!important;text-shadow:0 0 12px rgba(244,63,94,.2)!important}
+#topbar-title{color:rgba(15,23,42,.45)!important}
+#topbar-clock{color:rgba(15,23,42,.30)!important}
 
 /* ── 모바일 상단 Safe Area 보정 ── */
 .topbar{

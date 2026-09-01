@@ -63,7 +63,7 @@ FILO=매장운영(POS/재고/주문/QR출퇴근) | DINE=인사/정산
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
  --bg:#F5F7FA;--s1:#FFFFFF;--s2:#F8FAFC;--s3:#EEF2F7;
- --br:#C8A356;--br2:#4A6FA5;--gr:#16a34a;--yl:#d97706;--rd:#dc2626;
+ --br:#84cc16;--br2:#4A6FA5;--gr:#16a34a;--yl:#d97706;--rd:#dc2626;
  --tx:#0F172A;--t2:#475569;--t3:#94A3B8;
  --bd:rgba(15,23,42,.08);--bd2:rgba(15,23,42,.14);
  --r:12px;--topbar-h:56px;--sidebar-w:220px;
@@ -73,7 +73,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Pretendard','Apple SD Got
 
 /* ── 탑바 ── */
 #topbar{height:var(--topbar-h);background:var(--s1);border-bottom:1px solid var(--bd);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:50;position:relative}
-.tb-logo{font-size:18px;font-weight:900;background:linear-gradient(135deg,#E2CA96,#C8A356);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.5px}
+.tb-logo{font-size:18px;font-weight:900;background:linear-gradient(135deg,#a3e635,#84cc16);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.5px}
 .tb-sub{font-size:11px;color:var(--t3);font-weight:600}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
 .tb-user{font-size:12px;color:var(--t2);font-weight:600}
@@ -263,82 +263,81 @@ select.inp option{background:var(--s2)}
 }
 
 /* ══════════════════════════════════════════════════════
-   DINE 브랜드 크롬 — 다크 네이비 사이드바 + 탑바
-   FILO 패밀리 느낌, 에메랄드 액센트로 차별화
+   DINE 브랜드 크롬 — 화이트 사이드바 + 라임그린 액센트
    ══════════════════════════════════════════════════════ */
 
-/* CSS 변수 오버라이드 — 사이드바 내부 요소에 상속됨 */
+/* CSS 변수 오버라이드 — 사이드바 */
 #sidebar{
-  background:linear-gradient(180deg,#0B1F3A 0%,#091628 100%)!important;
-  border-right:1px solid rgba(16,185,129,.08)!important;
-  box-shadow:2px 0 16px rgba(0,0,0,.22)!important;
-  --tx:rgba(255,255,255,.88);
-  --t2:rgba(255,255,255,.6);
-  --t3:rgba(255,255,255,.35);
-  --bd:rgba(255,255,255,.07);
-  --bd2:rgba(255,255,255,.12);
-  --s2:rgba(255,255,255,.04);
-  --br:#34D399;
+  background:#ffffff!important;
+  border-right:1px solid rgba(132,204,22,.15)!important;
+  box-shadow:2px 0 12px rgba(132,204,22,.06)!important;
+  --tx:#0F172A;
+  --t2:#475569;
+  --t3:#94A3B8;
+  --bd:rgba(15,23,42,.08);
+  --bd2:rgba(15,23,42,.14);
+  --s2:#F0FDF4;
+  --br:#84cc16;
 }
 
 /* 사이드바 내 배경/테두리 요소 */
 #sidebar > div:first-child{
-  background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(200,163,86,.04))!important;
-  border-bottom-color:rgba(255,255,255,.07)!important;
+  background:linear-gradient(135deg,rgba(132,204,22,.06),rgba(163,230,53,.03))!important;
+  border-bottom-color:rgba(132,204,22,.12)!important;
 }
-#sb-store-name{color:rgba(255,255,255,.9)!important}
-#sb-store-sub{color:rgba(255,255,255,.35)!important}
+#sb-store-name{color:#0F172A!important}
+#sb-store-sub{color:#94A3B8!important}
 
 /* 네비게이션 아이템 */
-.nav-group-title{color:rgba(255,255,255,.3)!important}
-.nav-group-title:hover{color:rgba(255,255,255,.65)!important;background:rgba(255,255,255,.04)!important}
+.nav-group-title{color:#94A3B8!important}
+.nav-group-title:hover{color:#475569!important;background:rgba(132,204,22,.05)!important}
 .nav-item{
-  color:rgba(255,255,255,.52)!important;
+  color:#475569!important;
   border-radius:8px;
   margin:1px 6px!important;
   padding:8px 10px!important;
 }
-.nav-item:hover{background:rgba(255,255,255,.07)!important;color:rgba(255,255,255,.9)!important}
+.nav-item:hover{background:rgba(132,204,22,.08)!important;color:#0F172A!important}
 .nav-item.active{
-  background:rgba(16,185,129,.12)!important;
-  color:#34D399!important;
+  background:rgba(132,204,22,.12)!important;
+  color:#5a7a06!important;
   border-right:none!important;
-  border-left:3px solid #10B981!important;
+  border-left:3px solid #84cc16!important;
   padding-left:7px!important;
 }
-.nav-item.active .nav-svg{opacity:1;filter:drop-shadow(0 0 4px rgba(16,185,129,.5))}
-.nav-arrow{color:rgba(255,255,255,.25)!important}
+.nav-item.active .nav-svg{opacity:1;filter:drop-shadow(0 0 4px rgba(132,204,22,.4))}
+.nav-arrow{color:#CBD5E1!important}
 
 /* 사이드바 하단 FILO 바로가기 */
 #sidebar > div[style*="margin-top:auto"]{
-  border-top-color:rgba(255,255,255,.07)!important;
+  border-top-color:rgba(132,204,22,.12)!important;
 }
 
-/* 탑바 다크 크롬 */
+/* 탑바 화이트 크롬 */
 #topbar{
-  background:linear-gradient(90deg,#091628 0%,#0C1E38 100%)!important;
-  border-bottom:1px solid rgba(16,185,129,.15)!important;
-  box-shadow:0 2px 16px rgba(0,0,0,.28)!important;
+  background:#ffffff!important;
+  border-bottom:1px solid rgba(132,204,22,.18)!important;
+  box-shadow:0 2px 12px rgba(132,204,22,.07)!important;
 }
 .tb-logo{
   font-size:20px!important;
   font-weight:900!important;
-  background:linear-gradient(135deg,#34D399,#10B981)!important;
+  background:linear-gradient(135deg,#a3e635,#84cc16)!important;
   -webkit-background-clip:text!important;
   -webkit-text-fill-color:transparent!important;
   letter-spacing:-1px!important;
   text-shadow:none!important;
 }
-.tb-sub{color:rgba(255,255,255,.28)!important;font-size:10px!important}
-.tb-user{color:rgba(255,255,255,.55)!important}
+.tb-sub{color:#94A3B8!important;font-size:10px!important}
+.tb-user{color:#475569!important}
 .tb-logout{
-  color:rgba(255,255,255,.38)!important;
-  border-color:rgba(255,255,255,.15)!important;
+  color:#94A3B8!important;
+  border-color:rgba(15,23,42,.14)!important;
 }
-.tb-logout:hover{border-color:#10B981!important;color:#34D399!important}
-.attend-live{color:#34D399!important}
-.live-dot{background:#10B981!important;box-shadow:0 0 6px rgba(16,185,129,.5)}
-#dine-sidebar-btn{color:rgba(255,255,255,.65)!important}
+.tb-logout:hover{border-color:#84cc16!important;color:#5a7a06!important}
+.attend-live{color:#84cc16!important}
+.live-dot{background:#84cc16!important;box-shadow:0 0 6px rgba(132,204,22,.5)}
+#dine-sidebar-btn{color:#475569!important}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 function _mtGo(page, btn){
