@@ -163,6 +163,16 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-01 (25차)
+**filo-landing.html 네이비+골드 전면 재작성**
+- `filo-landing.html`:
+  - 구 blue 테마(`#0891b2`) → 네이비(`#08101f`) + 골드(`#c9a84c`) 완전 전환
+  - 슬라이드 방식(6 수평 슬라이드 + 화살표/도트) → 단일 스크롤 페이지
+  - 이모지 전부 제거 → Lucide SVG 아이콘 (CLAUDE.md 기준 준수)
+  - 히어로: 테이블링/티오더/POS 비용 비교 스트립 (14.8만원 → FILO 하나로)
+  - 피처 벤토 그리드: QR주문·POS·급여·재고·AI·예약·회원 7개 카드
+  - AI(AIVO) 섹션, DINE 직원앱 섹션, 전업종 섹션, CTA, Footer
+
 ### 2026-08-31 (24차)
 **POS 좌측 사이드바 + 대시보드 벤토 그리드 + 색상 전면 정비**
 - `filo-pos-ui.js`:
