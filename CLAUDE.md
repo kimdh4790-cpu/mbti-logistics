@@ -164,7 +164,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 
 **용차앱 절대 금지**
 - KV 업로드로 배포 불가. 반드시 `npx wrangler deploy` 사용
-- 현재 버그: 접속 시 DONWAY 랜딩으로 라우팅됨 (미수정)
+- 라우트 yongcha.app/*: wrangler.yongcha.toml에서 관리 (2026-09-01 wrangler.toml에서 분리, PR #51)
 
 ---
 
@@ -409,6 +409,7 @@ cd mbtico-pages && npx wrangler deploy
 
 ### ✅ 완료 (2026-09-01)
 - yongcha-worker.js 자동배포 설정: wrangler.yongcha.toml 신규 생성 + deploy.yml에 "Deploy Yongcha Worker" 스텝 추가 (PR #50 머지)
+- wrangler.toml에서 yongcha.app/* 라우트 제거 → wrangler.yongcha.toml로 이전 (PR #51 머지, DONWAY 라우팅 버그 해소)
 - yongcha-worker.js 테스트 계정 삭제 범위 확장: @yongcha.app 이메일도 _yCleanTestAccounts()·_yTestOwnerIds() 대상에 포함
 
 ### ✅ 완료 (2026-08-31)
