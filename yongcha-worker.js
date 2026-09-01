@@ -5779,7 +5779,9 @@ function _admUserDetail(u){
       _admInfoRow('전화번호',u.phone||'—')+
       _admInfoRow('지역',u.region||'—')+
       (u.type==='driver'?_admInfoRow('차량번호',u.plateNo||'—'):'')+
-      (u.type==='driver'?_admInfoRow('사업자등록번호',u.bizNo||'—'):'')+
+      ((u.bizNo)?_admInfoRow('사업자등록번호',u.bizNo):'')+
+      (u.type==='agency'&&u.couriers&&u.couriers.length?_admInfoRow('소속 택배사',u.couriers.join(', ')):'')+
+      (u.type==='agency'&&u.courier&&!u.couriers?_admInfoRow('소속 택배사',u.courier):'')+
       _admInfoRow('UID',u.id)+
     '</div>'+
     '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'+
@@ -5788,9 +5790,10 @@ function _admUserDetail(u){
       _admInfoRow('구독 플랜',u.subPlan||'없음')+
       (u.rating?_admInfoRow('평점',Number(u.rating).toFixed(1)+'점 ('+(u.reviewCount||0)+'건)'):'')+
     '</div>'+
-    '<div style="display:flex;gap:8px">'+
-      '<button class="adm-chat-btn" style="flex:1;min-height:44px;background:var(--acl);color:var(--ac);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">채팅 내역</button>'+
-      '<button class="adm-suspend-btn" style="flex:1;min-height:44px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="adm-chat-btn" style="flex:1;min-width:calc(50% - 4px);min-height:44px;background:var(--acl);color:var(--ac);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">채팅 내역</button>'+
+      '<button class="adm-posts-btn" style="flex:1;min-width:calc(50% - 4px);min-height:44px;background:rgba(234,88,12,.1);color:var(--br);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">공고 목록</button>'+
+      '<button class="adm-suspend-btn" style="flex:1;min-width:100%;min-height:44px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+
         ';color:'+(isSus?'var(--gn)':'var(--rd)')+
         ';border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">'+
         (isSus?'정지 해제':'정지')+'</button>'+
@@ -5803,6 +5806,9 @@ function _admUserDetail(u){
   panel.querySelector('.adm-chat-btn').addEventListener('click',function(){
     _admViewChats(u.id,u.name);
   });
+  panel.querySelector('.adm-posts-btn').addEventListener('click',function(){
+    _admViewUserPosts(u.id,u.name,u.type);
+  });
 
   sheet.appendChild(panel);
   document.body.appendChild(sheet);
@@ -5813,6 +5819,61 @@ function _admInfoRow(label,val){
     '<span style="font-size:13px;font-weight:600;color:var(--tx);text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(String(val))+'</span>'+
     '</div>';
 }
+// ── 관리자 공고 목록 조회 ──────────────────────────────────────
+function _admViewUserPosts(uid,name,utype){
+  var sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;z-index:9100;display:flex;flex-direction:column;justify-content:flex-end';
+  var overlay=document.createElement('div');
+  overlay.style.cssText='flex:1;background:rgba(0,0,0,.5)';
+  overlay.addEventListener('click',function(){sheet.remove();});
+  sheet.appendChild(overlay);
+  var panel=document.createElement('div');
+  panel.style.cssText='background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;max-height:82vh;overflow-y:auto';
+  panel.innerHTML=
+    '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 16px"></div>'+
+    '<div style="font-weight:900;font-size:17px;margin-bottom:4px">'+_esc(name)+'님 공고 목록</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:16px">'+
+      (utype==='agency'?'등록한 공고':'지원한 공고')+' 최근 50건</div>'+
+    '<div id="adm-user-posts">'+_skRows(3)+'</div>';
+  sheet.appendChild(panel);
+  document.body.appendChild(sheet);
+  var q=utype==='agency'
+    ? _db.collection('yongcha_posts').where('ownerId','==',uid).orderBy('createdAt','desc').limit(50)
+    : _db.collection('yongcha_applications').where('driverId','==',uid).orderBy('createdAt','desc').limit(50);
+  q.get().then(function(snap){
+    var el=document.getElementById('adm-user-posts');if(!el)return;
+    if(snap.empty){el.innerHTML='<div style="text-align:center;color:var(--t3);padding:32px">없음</div>';return;}
+    el.innerHTML='';
+    snap.docs.forEach(function(doc){
+      var d=doc.data();
+      var dt=d.createdAt&&d.createdAt.toDate?d.createdAt.toDate().toLocaleDateString('ko-KR'):'';
+      var row=document.createElement('div');
+      row.style.cssText='background:var(--bg2);border-radius:10px;padding:12px 14px;margin-bottom:8px';
+      if(utype==='agency'){
+        row.innerHTML=
+          '<div style="font-weight:700;font-size:14px;margin-bottom:4px">'+_esc(d.region||'지역 없음')+' · '+_esc(d.courier||'')+'</div>'+
+          '<div style="font-size:12px;color:var(--t2);display:flex;gap:10px;flex-wrap:wrap">'+
+            '<span>'+_esc(d.type||'')+'</span>'+
+            '<span>'+_esc(String(d.unitPrice?Number(d.unitPrice).toLocaleString()+'원':'—'))+'</span>'+
+            '<span style="color:'+(d.status==='active'?'var(--gn)':d.status==='closed'?'var(--rd)':'var(--t3)')+'">'+_esc(d.status||'')+'</span>'+
+            '<span style="margin-left:auto">'+dt+'</span>'+
+          '</div>';
+      } else {
+        row.innerHTML=
+          '<div style="font-weight:700;font-size:14px;margin-bottom:4px">공고ID: '+_esc(d.postId||doc.id)+'</div>'+
+          '<div style="font-size:12px;color:var(--t2);display:flex;gap:10px;flex-wrap:wrap">'+
+            '<span style="color:'+(d.status==='accepted'?'var(--gn)':d.status==='rejected'?'var(--rd)':'var(--t3)')+'">'+_esc(d.status||'대기')+'</span>'+
+            '<span style="margin-left:auto">'+dt+'</span>'+
+          '</div>';
+      }
+      el.appendChild(row);
+    });
+  }).catch(function(){
+    var el=document.getElementById('adm-user-posts');
+    if(el)el.innerHTML='<div style="text-align:center;color:var(--rd);padding:32px">조회 실패</div>';
+  });
+}
+
 // ── 관리자 채팅 내역 조회 (분쟁·증거 목적) ──────────────────────
 function _admViewChats(uid,name){
   if(!confirm(name+' 님의 채팅 내역을 조회합니다. 분쟁·민원 해결 목적으로만 사용하세요. 열람 기록이 저장됩니다.')) return;
