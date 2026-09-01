@@ -948,6 +948,14 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option value="전기">전기</option>
       </select>
     </div>
+    <div class="inp-wrap" id="r-plate-wrap" style="display:none">
+      <label class="inp-lbl">차량번호 <span style="font-size:11px;color:var(--t3)">(영업용 번호판만 가입 가능)</span></label>
+      <input class="inp" id="r-plate" placeholder="예) 12가 3456" autocomplete="off">
+    </div>
+    <div class="inp-wrap" id="r-bizno-wrap" style="display:none">
+      <label class="inp-lbl">사업자등록번호</label>
+      <input class="inp" id="r-bizno" placeholder="000-00-00000" maxlength="12" autocomplete="off">
+    </div>
     <div class="inp-wrap">
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
@@ -1196,6 +1204,10 @@ function _setType(t){
   if(cw)cw.style.display=(t==='driver')?'block':'none';
   var fw=document.getElementById('r-carfuel-wrap');
   if(fw)fw.style.display=(t==='driver')?'block':'none';
+  var pw=document.getElementById('r-plate-wrap');
+  if(pw)pw.style.display=(t==='driver')?'block':'none';
+  var bw=document.getElementById('r-bizno-wrap');
+  if(bw)bw.style.display=(t==='driver')?'block':'none';
 }
 
 /* ══ 차종 — 하이탑 / 로우탑 두 가지로 통일 ══════════════════════
@@ -1243,16 +1255,24 @@ function _yRegister(){
   var ph=(document.getElementById('r-phone').value||'').trim();
   var rg=(document.getElementById('r-region').value||'').trim();
   var p=(document.getElementById('r-pw').value||'').trim();
+  var plate=((document.getElementById('r-plate')||{}).value||'').trim();
+  var bizno=((document.getElementById('r-bizno')||{}).value||'').replace(/[^0-9]/g,'');
   var err=document.getElementById('r-err');
   var btn=document.getElementById('r-btn');
   if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  if(_regType==='driver'){
+    if(!plate){err.textContent='차량번호를 입력하세요';err.style.display='block';return;}
+    if(bizno.length!==10){err.textContent='사업자등록번호 10자리를 입력하세요';err.style.display='block';return;}
+  }
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
     var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
+    var biznoFmt=bizno.length===10?bizno.slice(0,3)+'-'+bizno.slice(3,5)+'-'+bizno.slice(5):'';
     var _doc={
       uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
+      plateNo:plate||'',bizNo:biznoFmt||'',
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -5675,6 +5695,8 @@ function _admUserDetail(u){
       _admInfoRow('이메일',u.email||'—')+
       _admInfoRow('전화번호',u.phone||'—')+
       _admInfoRow('지역',u.region||'—')+
+      (u.type==='driver'?_admInfoRow('차량번호',u.plateNo||'—'):'')+
+      (u.type==='driver'?_admInfoRow('사업자등록번호',u.bizNo||'—'):'')+
       _admInfoRow('UID',u.id)+
     '</div>'+
     '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'+
