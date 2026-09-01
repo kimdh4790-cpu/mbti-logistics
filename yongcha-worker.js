@@ -1359,6 +1359,7 @@ function _goPage(p){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
   if(p!=='chat'&&_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   if(p!=='posts'&&_postsUnsub){_postsUnsub();_postsUnsub=null;}
+  if(p!=='posts')_stopAutoRef();
   _yStopHomeWatch();               // 관리자 홈 실시간 리스너 해제 (누수 방지)
   _curPage=p;
   var el=document.getElementById('content');
@@ -2277,6 +2278,47 @@ function _srSubmit(){
 var _pf={courier:'전체',region:'전체',urgentOnly:false,verifiedOnly:false,priceRange:'',statusFilter:'open',q:'',matchTab:'all'};
 var _allPosts=[];
 var _postsMainTab='route'; // 'route' | 'yongcha'
+
+// ── 자동새로고침 ──────────────────────────────────────────────
+var _autoRefOn=false;
+var _autoRefTimer=null;
+function _toggleAutoRef(){
+  _autoRefOn=!_autoRefOn;
+  var btn=document.getElementById('auto-ref-btn');
+  if(btn){
+    btn.textContent=_autoRefOn?'자동갱신 ON':'자동갱신 OFF';
+    btn.style.background=_autoRefOn?'var(--gnl)':'var(--bg3)';
+    btn.style.color=_autoRefOn?'var(--gn)':'var(--t3)';
+    btn.style.borderColor=_autoRefOn?'var(--gn)':'var(--bd)';
+  }
+  if(_autoRefOn){
+    _autoRefTimer=setInterval(function(){
+      if(_postsMainTab==='route')_loadFilteredPosts(true);
+    },30000);
+  } else {
+    clearInterval(_autoRefTimer);_autoRefTimer=null;
+  }
+}
+function _stopAutoRef(){clearInterval(_autoRefTimer);_autoRefTimer=null;_autoRefOn=false;}
+
+// ── 공고 숨기기 ──────────────────────────────────────────────
+var _hiddenPostIds=(function(){
+  try{return JSON.parse(localStorage.getItem('yc_hidden_posts')||'[]');}catch(e){return [];}
+})();
+function _hidePost(id){
+  if(_hiddenPostIds.indexOf(id)===-1)_hiddenPostIds.push(id);
+  try{localStorage.setItem('yc_hidden_posts',JSON.stringify(_hiddenPostIds));}catch(e){}
+  var card=document.getElementById('pc-'+id);
+  if(card){card.style.transition='opacity .2s';card.style.opacity='0';setTimeout(function(){card.remove();},200);}
+  var cnt=document.getElementById('pf-count');
+  if(cnt){var m=cnt.textContent.match(/\d+/);if(m)cnt.textContent='검색 결과 '+(parseInt(m[0])-1)+'건';}
+}
+function _clearHiddenPosts(){
+  _hiddenPostIds=[];
+  try{localStorage.removeItem('yc_hidden_posts');}catch(e){}
+  _renderPostList();
+  _yToast('숨긴 공고를 모두 복원했어요');
+}
 var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
 
@@ -2361,9 +2403,14 @@ function _pgPosts(el){
   '</div>'+
   '</div>'+
 
-  '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 10px">'+
     '<span id="pf-count" style="font-size:12.5px;color:var(--t2);font-weight:700"></span>'+
-    '<button type="button" onclick="_pfReset()" style="background:none;border:none;color:var(--t3);font-size:12px;font-weight:700;min-height:36px">필터 초기화</button>'+
+    '<div style="display:flex;gap:6px;align-items:center">'+
+      '<button id="auto-ref-btn" type="button" onclick="_toggleAutoRef()" '+
+        'style="border:1px solid var(--bd);background:var(--bg3);color:var(--t3);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;min-height:30px;cursor:pointer;font-family:inherit">자동갱신 OFF</button>'+
+      (_hiddenPostIds.length?'<button type="button" onclick="_clearHiddenPosts()" style="border:none;background:none;color:var(--t3);font-size:11px;min-height:30px;cursor:pointer">숨김 '+_hiddenPostIds.length+'건 복원</button>':'')+
+      '<button type="button" onclick="_pfReset()" style="background:none;border:none;color:var(--t3);font-size:12px;font-weight:700;min-height:36px">초기화</button>'+
+    '</div>'+
   '</div>'+
 
   '<div id="posts-list">'+_skeletonCards(3)+'</div>'+
@@ -2849,6 +2896,7 @@ function _renderPostList(){
   var priceRanges=[[0,700],[700,900],[900,1100],[1100,99999]];
   var q=(_pf.q||'').trim().toLowerCase();
   var filtered=_allPosts.filter(function(p){
+    if(_hiddenPostIds.indexOf(p.id)!==-1)return false;
     // 맞춤공고 탭 — 기사 프리퍼런스 점수 1 이상만
     if(_pf.matchTab==='matched'&&_CU&&_CU.type==='driver'&&_prefs){
       if((_yMatchScore(p)||0)<1)return false;
@@ -3060,6 +3108,7 @@ function _makePostCard(d,mini){
 
   var isDriver=_CU&&_CU.type==='driver';
   var marked=!!_bookmarks[d.id];
+  card.id='pc-'+d.id;
 
   // 등록일시 (우측 하단 작게)
   var timeStr=d.createdAt?_ago(d.createdAt):'';
@@ -3108,6 +3157,7 @@ function _makePostCard(d,mini){
         (isDriver?'<button type="button" class="bm-btn'+(marked?' on':'')+'" id="bm-'+d.id+'" aria-label="찜" onclick="event.stopPropagation();_toggleBookmark(\\''+d.id+'\\')">'+(marked?'★':'☆')+'</button>':'')+
         '<button type="button" class="pc-act txt" aria-label="공유" onclick="event.stopPropagation();_sharePost(\\''+d.id+'\\',\\''+_jsq(d.area)+'\\')">공유</button>'+
         (mapHref?'<a class="pc-act txt" href="'+_esc(mapHref)+'" target="_blank" rel="noopener" aria-label="지도" onclick="event.stopPropagation()">지도</a>':'')+
+        '<button type="button" class="pc-act txt" style="color:var(--t3)" aria-label="숨기기" onclick="event.stopPropagation();_hidePost(\\''+d.id+'\\')">숨김</button>'+
         (!isClosed&&isDriver?
           '<button type="button" class="pc-apply" onclick="event.stopPropagation();_applyPost(\\''+d.id+'\\',\\''+d.agencyId+'\\',\\''+_jsq(d.agencyName)+'\\',this)">지원</button>':'')+
       '</span>'+
