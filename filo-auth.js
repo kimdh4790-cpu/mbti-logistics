@@ -1201,9 +1201,12 @@ function _filoTogglePw(id,btn){
 }
 
 function _filoLogin(){
- var id=(document.getElementById('fl-id').value||'').trim();
- var pw=(document.getElementById('fl-pw').value||'').trim();
+ var idEl=document.getElementById('fl-id')||document.querySelector('#form-login input[type=text],#form-login input[type=email]');
+ var pwEl=document.getElementById('fl-pw')||document.querySelector('#form-login input[type=password]');
  var errEl=document.getElementById('fl-err');
+ if(!idEl||!pwEl){if(errEl){errEl.textContent='페이지를 새로고침(F5) 후 다시 시도해주세요';errEl.style.display='block';}return;}
+ var id=(idEl.value||'').trim();
+ var pw=(pwEl.value||'').trim();
  if(!id||!pw){errEl.textContent='아이디와 비밀번호를 입력해 주세요';errEl.style.display='block';return;}
  errEl.style.display='none';
  var email=id.indexOf('@')>0?id:null;
