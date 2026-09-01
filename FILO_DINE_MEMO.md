@@ -163,6 +163,14 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-01 (26차)
+**FILO 로그인 입력 필드 가시성 + 토스트 텍스트 색상 수정**
+- `filo.html`:
+  - `#fl-id`(이메일), `#fl-pw`(비밀번호) 인라인 `background:#F4F0E8;border:1px solid rgba(0,0,0,.18)` 추가 (흰 배경에 흰 입력칸 invisible 버그)
+  - `#toast` `color:var(--tx)` → `color:rgba(255,255,255,.95)` 수정 (어두운 토스트 배경에 검정 텍스트 보이지 않던 버그)
+- `yongcha-worker.js` / `yongcha.html`: `color:#fff'>` → `color:#fff">` 따옴표 수정 (SyntaxError 해결, 이전 커밋)
+- `filo-auth.js`: 로그인 로고 base64 IIFE로 이전 (filo.html 28KB 인라인 제거, 이전 커밋)
+
 ### 2026-09-01 (25차)
 **filo-landing.html 네이비+골드 전면 재작성**
 - `filo-landing.html`:
