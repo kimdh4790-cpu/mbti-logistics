@@ -18,7 +18,7 @@ function _filoPageSettings(el){
  var filoPlan=(_CU&&_CU.filoPlan)?_CU.filoPlan:'trial';
  var filoPlanExpiry=(_CU&&_CU.filoPlanExpiry)?_CU.filoPlanExpiry:'';
  var planLabels={trial:'무료 체험',basic:'베이직',pro:'프로',premium:'프리미엄',franchise_hq:'프랜차이즈'};
- var planPrices={trial:'무료',basic:'₩29,000/월',pro:'₩59,000/월',premium:'₩99,000/월',franchise_hq:'₩300,000/월'};
+ var planPrices={trial:'무료',basic:'문의',pro:'문의',premium:'문의',franchise_hq:'문의'};
  var planLabel=planLabels[filoPlan]||'무료 체험';
  var planPrice=planPrices[filoPlan]||'무료';
  var expiryText=filoPlanExpiry?'만료일: '+filoPlanExpiry:'7일 무료 체험 중';
@@ -414,10 +414,10 @@ function _filoPageSubscription(el){
  if(!el)return;
  var filoPlan=(_CU&&_CU.filoPlan)?_CU.filoPlan:'trial';
  var plans=[
-  {id:'basic',name:'베이직',price:'29,000',features:['POS·메뉴 관리','QR 주문','DINE 앱 포함','QR 출퇴근']},
-  {id:'pro',name:'프로',price:'59,000',features:['베이직 전체','AI 매출 예측','급여·근태','재고 관리','예약·웨이팅','다국어 번역'],recommended:true},
-  {id:'premium',name:'프리미엄',price:'99,000',features:['프로 전체','무제한 AI','회계 연동','멀티 매장','전담 CS']},
-  {id:'franchise_hq',name:'프랜차이즈',price:'300,000',features:['프리미엄 전체','가맹점 관제','메뉴 일괄 배포','통합 매출 현황','가맹점당 +₩19,000']}
+  {id:'basic',name:'베이직',features:['POS·메뉴 관리','QR 주문','DINE 앱 포함','QR 출퇴근']},
+  {id:'pro',name:'프로',features:['베이직 전체','AI 매출 예측','급여·근태','재고 관리','예약·웨이팅','다국어 번역'],recommended:true},
+  {id:'premium',name:'프리미엄',features:['프로 전체','무제한 AI','회계 연동','멀티 매장','전담 CS']},
+  {id:'franchise_hq',name:'프랜차이즈',features:['프리미엄 전체','가맹점 관제','메뉴 일괄 배포','통합 매출 현황']}
  ];
  var checkSvg='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--br)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
  var cards=plans.map(function(p){
@@ -426,17 +426,16 @@ function _filoPageSubscription(el){
   var featureList=p.features.map(function(f){
    return '<li style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">'+checkSvg+f+'</li>';
   }).join('');
-  var btnLabel=isCurrent?'':((filoPlan==='trial'||filoPlan==='basic')?'구독하기':'업그레이드');
-  var actionBtn=isCurrent?'':
-   '<button onclick="_filoSubscribePlan(\''+p.id+'\')" style="width:100%;padding:10px;background:'+(isRec?'var(--br)':'var(--b3)')+';color:'+(isRec?'#000':'var(--tx)')+';border:'+(isRec?'none':'1px solid var(--bd)')+';border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">'+btnLabel+'</button>';
-  return '<div style="border:'+(isRec?'2px solid var(--br)':'1px solid var(--bd)')+';border-radius:12px;padding:16px;background:var(--b3);position:relative">'+
-   (isRec?'<span style="position:absolute;top:-10px;right:16px;background:var(--br);color:#000;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">추천</span>':'')+
+  var actionBtn=isCurrent?
+   '<div style="padding:10px;text-align:center;border-radius:8px;background:#22c55e20;color:#22c55e;font-size:13px;font-weight:700">현재 플랜</div>':
+   '<a href="tel:051-711-3103" style="display:block;width:100%;box-sizing:border-box;padding:11px;text-align:center;background:'+(isRec?'var(--br)':'transparent')+';color:'+(isRec?'#fff':'var(--br)')+';border:2px solid var(--br);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none">도입 문의</a>';
+  return '<div style="border:'+(isRec?'2px solid var(--br)':'1px solid var(--bd)')+';border-radius:12px;padding:16px;background:'+(isRec?'rgba(244,63,94,.03)':'var(--b3)')+';position:relative">'+
+   (isRec?'<span style="position:absolute;top:-10px;right:16px;background:var(--br);color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">추천</span>':'')+
    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
    '<div>'+
    '<div style="font-size:16px;font-weight:700;color:var(--tx)">'+p.name+'</div>'+
-   '<div style="font-size:22px;font-weight:800;color:var(--tx);margin-top:2px">₩'+p.price+'<span style="font-size:13px;font-weight:400;color:var(--t3)">/월</span></div>'+
+   '<div style="font-size:13px;color:var(--t3);margin-top:3px">요금 문의 · 업종별 맞춤 제안</div>'+
    '</div>'+
-   (isCurrent?'<span style="background:#22c55e20;color:#22c55e;font-size:12px;padding:4px 10px;border-radius:20px;font-weight:600">현재 플랜</span>':'')+
    '</div>'+
    '<ul style="list-style:none;padding:0;margin:0 0 14px;display:flex;flex-direction:column;gap:4px">'+featureList+'</ul>'+
    actionBtn+
@@ -444,9 +443,14 @@ function _filoPageSubscription(el){
  }).join('');
  el.innerHTML='<div style="padding:20px 0">'+
   '<h2 style="font-size:20px;font-weight:700;color:var(--tx);margin-bottom:8px">요금제 선택</h2>'+
-  '<p style="font-size:14px;color:var(--t3);margin-bottom:24px">DINE 직원앱 포함 · 언제든 업그레이드 가능</p>'+
+  '<p style="font-size:14px;color:var(--t3);margin-bottom:24px">DINE 직원앱 포함 · 업종·규모별 맞춤 제안</p>'+
   '<div style="display:grid;gap:12px">'+cards+'</div>'+
-  '<p style="font-size:12px;color:var(--t3);text-align:center;margin-top:20px">결제 문의: 카카오 채널 · 051-711-3103</p>'+
+  '<div style="margin-top:20px;padding:14px;background:rgba(244,63,94,.04);border:1px solid rgba(244,63,94,.15);border-radius:12px;text-align:center">'+
+  '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">요금 문의</div>'+
+  '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
+  '<a href="tel:051-711-3103" style="padding:8px 16px;background:var(--br);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">전화 051-711-3103</a>'+
+  '<a href="mailto:help@filo.ai.kr" style="padding:8px 16px;border:1px solid var(--bd2);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">이메일 문의</a>'+
+  '</div></div>'+
   '</div>';
 }
 function _filoPageTaxShare(el){

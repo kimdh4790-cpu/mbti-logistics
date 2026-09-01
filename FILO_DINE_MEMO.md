@@ -163,6 +163,17 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-01 (28차)
+**메뉴 NFC 카테고리 accordion + SA 상단바 모바일 수정 + 요금제 전체 문의 전환**
+- `filo-settings.js`:
+  - NFC 메뉴 목록: 카테고리별 접기/펼치기 accordion UI로 전환 (flat list → 카테고리 헤더)
+  - 요금제 카드: 가격(₩29,000·₩59,000·₩99,000·₩300,000) → "문의" 표시 + "도입 문의" 버튼 (tel:051-711-3103)
+  - planPrices 맵: 모든 플랜 → '문의'로 통일
+- `filo.html`:
+  - 모바일 CSS: `#sa-did-input`, `#sa-topbar button` 숨김으로 SA 상단바 우측 넘침 해소
+- `filo-pages/index.html`:
+  - 랜딩 요금제 섹션: ₩9만·₩29만 → "문의 필요", 버튼 "시작하기·30일 무료 체험" → "도입 문의"
+
 ### 2026-09-01 (27차)
 **FILO 전체 로즈 테마 전환 (골드→로즈 완전 제거)**
 - `filo.html`:
