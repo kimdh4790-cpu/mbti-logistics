@@ -439,4 +439,5 @@ claude
 | 2026-08-30 | social-media.yml 버그 수정: YouTube step exit code 1 → continue-on-error:true + if/fi 형식으로 수정. Instagram step if:always() 추가. Run #29 원인: [ FAILED=0 ] && echo "..." 마지막 명령이 exit 1 반환 |
 | 2026-08-30 | Ollama 0.33.2 로컬 PC 설치 완료. gemma4:e2b 다운로드 중 (7.2GB, ~45분) |
 | 2026-08-30 | FIREBASE_API_KEY Worker Secret 상태 정정: "미등록" → "등록완료" (Cloudflare 대시보드 스크린샷으로 확인). ANTHROPIC_API_KEY·GOOGLE_TRANSLATE_KEY도 등록완료로 정정. |
+| 2026-09-01 | **Firebase 프로젝트 분리 계획 (미착수)**: DONWAY·용차앱을 별도 Firebase 프로젝트로 분리 → Firestore 무료 읽기 50,000/일 × 4프로젝트 = 200,000/일 확보. FILO+DINE은 컬렉션 공유(members·attendance 등) 구조상 분리 불가 → 동일 프로젝트 유지. 작업 내용: _worker.js 앱별 SA키 분기, Cloudflare Secrets 추가 등록, 기존 데이터 마이그레이션. 예상 기간 1~2주. 우선순위: 시간 날 때 진행 |
 | 2026-08-31 | Oracle VM SSH 접속 확인 완료 (opc@161.33.136.154, ssh-key-2026-08-02.key). naver-blog npm install 완료. naver_draft.js: DISPLAY 없으면 자동 headless 전환 + --headless 플래그 추가. 발행 버튼 셀렉터 개선 (waitForSelector + 진단 스크린샷 자동 저장). naver-blog Oracle VM 실행 방법 INFRA_MEMO 등록. |
