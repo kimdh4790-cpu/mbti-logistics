@@ -956,6 +956,18 @@ select.inp option{background:#24243d;color:#f0f1f8}
       <label class="inp-lbl">사업자등록번호</label>
       <input class="inp" id="r-bizno" placeholder="000-00-00000" maxlength="12" autocomplete="off">
     </div>
+    <div class="inp-wrap" id="r-courier-wrap" style="display:none">
+      <label class="inp-lbl">소속 택배사 <span style="font-size:11px;color:var(--t3)">(복수 선택 가능)</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="CJ대한통운" style="width:16px;height:16px;accent-color:var(--ac)">CJ대한통운</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="한진택배" style="width:16px;height:16px;accent-color:var(--ac)">한진택배</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="롯데택배" style="width:16px;height:16px;accent-color:var(--ac)">롯데택배</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="우체국" style="width:16px;height:16px;accent-color:var(--ac)">우체국</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="로젠택배" style="width:16px;height:16px;accent-color:var(--ac)">로젠택배</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="쿠팡로지스틱스" style="width:16px;height:16px;accent-color:var(--ac)">쿠팡</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;grid-column:span 2"><input type="checkbox" class="r-courier-cb" value="컬리" style="width:16px;height:16px;accent-color:var(--ac)">컬리(마켓컬리)</label>
+      </div>
+    </div>
     <div class="inp-wrap">
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
@@ -1208,6 +1220,8 @@ function _setType(t){
   if(pw)pw.style.display=(t==='driver')?'block':'none';
   var bw=document.getElementById('r-bizno-wrap');
   if(bw)bw.style.display=(t==='driver')?'block':'none';
+  var crw=document.getElementById('r-courier-wrap');
+  if(crw)crw.style.display=(t==='agency')?'block':'none';
 }
 
 /* ══ 차종 — 하이탑 / 로우탑 두 가지로 통일 ══════════════════════
@@ -1277,6 +1291,7 @@ function _yRegister(){
       uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       plateNo:plate||'',bizNo:biznoFmt||'',
+      couriers:(function(){var cbs=document.querySelectorAll('.r-courier-cb:checked');return Array.prototype.map.call(cbs,function(cb){return cb.value;});})(),
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -2319,7 +2334,15 @@ function _clearHiddenPosts(){
   _renderPostList();
   _yToast('숨긴 공고를 모두 복원했어요');
 }
-var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
+var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스','컬리'];
+
+function _getSelectedCouriers(){
+  var cbs=document.querySelectorAll('.pw-courier-cb:checked');
+  return Array.prototype.map.call(cbs,function(cb){return cb.value;});
+}
+function _onCourierChange(){
+  _loadRegionStats();
+}
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
 
 function _pgPosts(el){
@@ -2909,7 +2932,10 @@ function _renderPostList(){
         .filter(Boolean).join(' ').toLowerCase();
       if(hay.indexOf(q)===-1)return false;
     }
-    if(_pf.courier!=='전체'&&p.courier!==_pf.courier)return false;
+    if(_pf.courier!=='전체'){
+      var _pCouriers=p.couriers&&p.couriers.length?p.couriers:[p.courier];
+      if(_pCouriers.indexOf(_pf.courier)===-1)return false;
+    }
     if(_pf.region!=='전체'&&p.region!==_pf.region)return false;
     if(_pf.urgentOnly&&!p.urgent)return false;
     if(_pf.verifiedOnly){
@@ -3005,9 +3031,9 @@ function _trustGrade(rating,reviewCount,fakeCount){
 }
 
 function _courierIcon(courier){
-  // 이모지 제거 — 텍스트 약어만 반환
-  var abbr={'CJ대한통운':'CJ','한진택배':'한진','롯데택배':'롯데','우체국':'우체국','로젠택배':'로젠','쿠팡로지스틱스':'쿠팡'};
-  return abbr[courier]||'택배';
+  var abbr={'CJ대한통운':'CJ','한진택배':'한진','롯데택배':'롯데','우체국':'우체국','로젠택배':'로젠','쿠팡로지스틱스':'쿠팡','컬리':'컬리'};
+  if(Array.isArray(courier))return courier.map(function(c){return abbr[c]||c;}).join('+');
+  return abbr[courier]||courier||'택배';
 }
 // 택배사별 좌측 컬러라인 색상 (CSS --rail 변수로 주입)
 function _courierRail(courier){
@@ -3117,7 +3143,7 @@ function _makePostCard(d,mini){
     (isPremium?'<div class="pc-ribbon">PREMIUM</div>':'')+
     // ── 헤드
     '<div class="pc-head">'+
-      '<span class="courier-badge">'+_courierIcon(d.courier)+'</span>'+
+      '<span class="courier-badge">'+_courierIcon((d.couriers&&d.couriers.length)?d.couriers:d.courier)+'</span>'+
       '<span class="trust-chip" style="font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:'+grade.bg+';color:'+grade.color+'">'+grade.label+'</span>'+
       '<span class="st '+stCls+'" style="margin-left:auto">'+stLabel+'</span>'+
     '</div>'+
@@ -3491,7 +3517,7 @@ function _showPostDetail(d){
 
   // ── 배지 줄 ──
   '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding-right:48px">'+
-    '<span class="courier-badge">'+_courierIcon(d.courier)+' '+_esc(d.courier||'')+'</span>'+
+    '<span class="courier-badge">'+_courierIcon((d.couriers&&d.couriers.length)?d.couriers:d.courier)+' '+_esc((d.couriers&&d.couriers.length)?d.couriers.join(', '):(d.courier||''))+'</span>'+
     '<span class="st '+_stC+'">'+_stL+'</span>'+
     _yDayBadge(d.startDate)+
   '</div>'+
@@ -4436,10 +4462,13 @@ function _pgPostWrite(el){
   // 택배사
   '<div class="form-section">'+
   '<div class="form-section-title">기본 정보</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">택배사 <span style="color:var(--rd)">*</span></label>'+
-  '<select class="inp" id="pw-courier"><option value="">선택</option>'+
-  ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'].map(function(c){return '<option>'+c+'</option>';}).join('')+
-  '</select></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">택배사 <span style="color:var(--rd)">*</span> <span style="font-size:11px;color:var(--t3);font-weight:500">복수 선택 가능</span></label>'+
+  '<div id="pw-courier-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">'+
+  ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스','컬리'].map(function(c){
+    return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:border-color .15s">'+
+      '<input type="checkbox" class="pw-courier-cb" value="'+c+'" style="width:16px;height:16px;accent-color:var(--ac);flex-shrink:0" onchange="_onCourierChange()">'+c+'</label>';
+  }).join('')+
+  '</div></div>'+
   '<div class="inp-wrap"><label class="inp-lbl">노선번호</label>'+
   '<input class="inp" id="pw-routeNo" placeholder="예: 부산-해운대-001"></div>'+
   '</div>'+
@@ -4671,8 +4700,7 @@ var _POST_TEMPLATES={
 function _applyPostTemplate(key){
   var t=_POST_TEMPLATES[key];
   if(!t)return;
-  var courier=document.getElementById('pw-courier');
-  if(courier)courier.value=t.courier||'';
+  document.querySelectorAll('.pw-courier-cb').forEach(function(cb){cb.checked=cb.value===(t.courier||'');});
   var type=document.getElementById('pw-type');
   if(type){type.value=t.type||'';
     document.querySelectorAll('#pw-type-group button').forEach(function(b){
@@ -4766,7 +4794,7 @@ var _regionStatsTimer=null;
 function _loadRegionStats(){
   clearTimeout(_regionStatsTimer);
   _regionStatsTimer=setTimeout(function(){
-    var courier=(document.getElementById('pw-courier')||{}).value||'';
+    var courier=(_getSelectedCouriers()[0])||'';
     var region=_CU&&_CU.region||'';
     if(!courier||!region)return;
     var statsKey=region+'_'+courier;
@@ -4807,7 +4835,8 @@ function _calcEst(){
 
 function _submitPost(){
   var get=function(id){return(document.getElementById(id)||{}).value||'';};
-  var courier=get('pw-courier'), area=get('pw-area'), volume=get('pw-volume');
+  var couriers=_getSelectedCouriers(), courier=couriers[0]||'';
+  var area=get('pw-area'), volume=get('pw-volume');
   var price=get('pw-price'), areaType=get('pw-areaType'), date=get('pw-date');
   var hours=get('pw-hours'), desc=get('pw-desc'), routeNo=get('pw-routeNo');
   var postType=get('pw-type'), workShift=get('pw-shift'), vatIncluded=get('pw-vat');
@@ -4874,7 +4903,7 @@ function _submitPost(){
       btn.textContent='등록 중...';
       return _db.collection('yongcha_posts').add({
         agencyId:_CU.uid, agencyName:_CU.name, agencyRating:_CU.rating||0,
-        region:_CU.region, courier:courier, area:area, routeNo:routeNo,
+        region:_CU.region, courier:courier, couriers:couriers, area:area, routeNo:routeNo,
         loadingAddr:loadingAddr, loadingLat:loadingLat, loadingLng:loadingLng,
         zones:window._zones||[], areaAptRatio:aptRatio?parseInt(aptRatio):null,
         postType:postType, workShift:workShift, workDays:_selectedDays.join(','),
@@ -8480,7 +8509,7 @@ function _pwNlParse(){
   }).then(function(r){return r.json();}).then(function(res){
     if(!res.ok||!res.fields){if(st)st.textContent='파싱 실패. 직접 입력해주세요.';return;}
     var f=res.fields;
-    if(f.courier){var s=document.getElementById('pw-courier');if(s){for(var i=0;i<s.options.length;i++)if(s.options[i].value===f.courier){s.selectedIndex=i;break;}}}
+    if(f.courier){document.querySelectorAll('.pw-courier-cb').forEach(function(cb){cb.checked=cb.value===f.courier;});}
     if(f.volume){var v=document.getElementById('pw-volume');if(v)v.value=f.volume;}
     if(f.unitPrice){var p=document.getElementById('pw-price');if(p){p.value=f.unitPrice;_calcEst();_loadRegionStats();}}
     if(f.urgent&&!_isUrgent){var ub=document.getElementById('toggle-urgent');if(ub)ub.click();}
@@ -8499,7 +8528,7 @@ function _pwNlParse(){
 
 // ── AI 금액 추천 (소장용) ─────────────────────────────────────────
 function _pwAiPrice(){
-  var courier=(document.getElementById('pw-courier')||{}).value||'';
+  var courier=(_getSelectedCouriers()[0])||'';
   var region=(document.getElementById('pw-region')||{}).value||_CU.region||'';
   var volume=parseInt((document.getElementById('pw-volume')||{}).value||'100')||100;
   var shift=(document.getElementById('pw-shift')||{}).value||'주간';
