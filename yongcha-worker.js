@@ -5852,7 +5852,7 @@ function _yCountAllPosts(){
 }
 
 function _yCleanAllPosts(){
-  if(!confirm('yongcha_posts·yongcha_jobs 전체를 삭제합니다.\n실 사용 데이터가 있으면 복구 불가.\n계속할까요?'))return;
+  if(!confirm('yongcha_posts/yongcha_jobs 전체 삭제. 복구 불가. 계속?'))return;
   Promise.all([
     _db.collection('yongcha_posts').get(),
     _db.collection('yongcha_jobs').get()
