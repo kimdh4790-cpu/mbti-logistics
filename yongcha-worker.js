@@ -5672,7 +5672,7 @@ function _admLoadCleanup(){
   '<div style="display:flex;flex-direction:column;gap:14px;padding-bottom:40px">'+
   '<div class="card" style="border-left:3px solid var(--rd)">'+
     '<div style="font-weight:800;margin-bottom:6px">🧪 테스트 계정 삭제</div>'+
-    '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">ytest.io 이메일 계정을 모두 삭제합니다</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">ytest.io · yongcha.app 이메일 계정을 모두 삭제합니다</div>'+
     '<div id="cleanup-test-info" style="font-size:12px;color:var(--t3);margin-bottom:10px">계정 수 확인 중...</div>'+
     '<button onclick="_yCleanTestAccounts()" style="padding:10px 16px;background:var(--rdl);color:var(--rd);border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🗑 테스트 계정 삭제</button>'+
   '</div>'+
@@ -5695,10 +5695,15 @@ function _admLoadCleanup(){
   _yCountDupPosts();
 }
 
+function _yIsTestEmail(email){
+  var em=(email||'').toLowerCase();
+  return em.endsWith('@ytest.io')||em.endsWith('@yongcha.app');
+}
+
 function _yCountTestAccounts(){
   _db.collection('yongcha_users').limit(500).get().then(function(snap){
     var count=0;
-    snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))count++;});
+    snap.forEach(function(doc){if(_yIsTestEmail(doc.data().email))count++;});
     var el=document.getElementById('cleanup-test-info');
     if(el)el.textContent='발견된 테스트 계정: '+count+'개';
   }).catch(function(){});
@@ -5707,7 +5712,7 @@ function _yCountTestAccounts(){
 function _yCleanTestAccounts(){
   _db.collection('yongcha_users').get().then(function(snap){
     var toDelete=[];
-    snap.forEach(function(doc){if((doc.data().email||'').endsWith('@ytest.io'))toDelete.push(doc.id);});
+    snap.forEach(function(doc){if(_yIsTestEmail(doc.data().email))toDelete.push(doc.id);});
     if(!toDelete.length){_yToast('삭제할 테스트 계정이 없어요');return;}
     var batch=_db.batch();
     toDelete.forEach(function(id){batch.delete(_db.collection('yongcha_users').doc(id));});
@@ -5728,8 +5733,9 @@ function _yTestOwnerIds(){
     var ids={};
     snap.forEach(function(d){
       var u=d.data(),em=(u.email||'').toLowerCase(),nm=(u.name||'');
-      if(em.indexOf('@ytest.io')!==-1||em.indexOf('playwright')!==-1||
-         nm.indexOf('Playwright')!==-1||nm.indexOf('테스트')!==-1)ids[d.id]=1;
+      if(em.indexOf('@ytest.io')!==-1||em.indexOf('@yongcha.app')!==-1||
+         em.indexOf('playwright')!==-1||nm.indexOf('Playwright')!==-1||
+         nm.indexOf('테스트')!==-1)ids[d.id]=1;
     });
     return ids;
   });
