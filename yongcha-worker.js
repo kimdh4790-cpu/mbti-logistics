@@ -92,7 +92,7 @@ button{cursor:pointer}
 /* ── 로그인 / 가입 ── */
 #login-screen{position:fixed;inset:0;z-index:1;display:none;flex-direction:column;align-items:center;justify-content:flex-start;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
-  background:radial-gradient(760px 440px at 50% 8%,#142040,#090e1d 68%);
+  background:#f0f4fc;
   padding:calc(env(safe-area-inset-top) + 34px) var(--gut) calc(env(safe-area-inset-bottom) + 40px)}
 .login-card{width:100%;max-width:420px;margin:auto}
 .login-logo{text-align:center;margin-bottom:26px}
@@ -959,13 +959,13 @@ select.inp option{background:#24243d;color:#f0f1f8}
     <div class="inp-wrap" id="r-courier-wrap" style="display:none">
       <label class="inp-lbl">소속 택배사 <span style="font-size:11px;color:var(--t3)">(복수 선택 가능)</span></label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="CJ대한통운" style="width:16px;height:16px;accent-color:var(--ac)">CJ대한통운</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="한진택배" style="width:16px;height:16px;accent-color:var(--ac)">한진택배</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="롯데택배" style="width:16px;height:16px;accent-color:var(--ac)">롯데택배</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="우체국" style="width:16px;height:16px;accent-color:var(--ac)">우체국</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="로젠택배" style="width:16px;height:16px;accent-color:var(--ac)">로젠택배</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700"><input type="checkbox" class="r-courier-cb" value="쿠팡로지스틱스" style="width:16px;height:16px;accent-color:var(--ac)">쿠팡</label>
-        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;grid-column:span 2"><input type="checkbox" class="r-courier-cb" value="컬리" style="width:16px;height:16px;accent-color:var(--ac)">컬리(마켓컬리)</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="CJ대한통운" style="width:16px;height:16px;accent-color:var(--ac)">CJ대한통운</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="한진택배" style="width:16px;height:16px;accent-color:var(--ac)">한진택배</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="롯데택배" style="width:16px;height:16px;accent-color:var(--ac)">롯데택배</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="우체국" style="width:16px;height:16px;accent-color:var(--ac)">우체국</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="로젠택배" style="width:16px;height:16px;accent-color:var(--ac)">로젠택배</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="쿠팡로지스틱스" style="width:16px;height:16px;accent-color:var(--ac)">쿠팡</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;grid-column:span 2;background:#fff;color:#0d1833"><input type="checkbox" class="r-courier-cb" value="컬리" style="width:16px;height:16px;accent-color:var(--ac)">컬리(마켓컬리)</label>
       </div>
     </div>
     <div class="inp-wrap">
@@ -4465,7 +4465,7 @@ function _pgPostWrite(el){
   '<div class="inp-wrap"><label class="inp-lbl">택배사 <span style="color:var(--rd)">*</span> <span style="font-size:11px;color:var(--t3);font-weight:500">복수 선택 가능</span></label>'+
   '<div id="pw-courier-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">'+
   ['CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스','컬리'].map(function(c){
-    return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:border-color .15s">'+
+    return '<label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:border-color .15s;background:#fff;color:#0d1833">'+
       '<input type="checkbox" class="pw-courier-cb" value="'+c+'" style="width:16px;height:16px;accent-color:var(--ac);flex-shrink:0" onchange="_onCourierChange()">'+c+'</label>';
   }).join('')+
   '</div></div>'+
