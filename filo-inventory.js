@@ -133,30 +133,33 @@ function _filoInvRender(items,did){
   var empty=s<=0;
   var pct=m>0?Math.min(Math.round(s/m*100),100):100;
   var accentC=empty?'#ef4444':isLow?'#f59e0b':'#22c55e';
-  var accentBg=empty?'rgba(239,68,68,.08)':isLow?'rgba(245,158,11,.08)':'rgba(34,197,94,.06)';
-  var phone=it.supplierPhone||'';
-  var upLabel=it.unitPrice?'₩'+(it.unitPrice||0).toLocaleString()+'/'+(it.unit||'개'):'';
-  return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border:1px solid var(--bd);border-left:3px solid '+accentC+';border-radius:12px;margin-bottom:6px">'+
-   /* 이름 + 진행바 (좌측 flex-1) */
-   '<div style="flex:1;min-width:0">'+
-   '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
-   '<div style="font-size:13px;font-weight:800;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+esc(it.name||'—')+'</div>'+
-   (upLabel?'<div style="font-size:10px;color:var(--t3);white-space:nowrap;flex-shrink:0">'+upLabel+'</div>':'')+
+  var statusLabel=empty?'소진':isLow?'부족':'정상';
+  var statusBg=empty?'rgba(239,68,68,.1)':isLow?'rgba(245,158,11,.1)':'rgba(34,197,94,.1)';
+  return '<div style="padding:12px 14px;background:#fff;border:1px solid var(--bd);border-left:4px solid '+accentC+';border-radius:12px;margin-bottom:8px">'+
+   /* 상단 행: 이름 + 재고 숫자 크게 */
+   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+    '<div style="min-width:0;flex:1;margin-right:10px">'+
+     '<div style="font-size:14px;font-weight:900;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.name||'—')+'</div>'+
+     (it.supplier?'<div style="font-size:11px;color:var(--t3);margin-top:2px">'+esc(it.supplier)+'</div>':'') +
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
+     '<div style="text-align:right">'+
+      '<div style="font-size:22px;font-weight:900;color:'+accentC+';line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-1px">'+s+'</div>'+
+      '<div style="font-size:9px;color:var(--t3);font-weight:600">최소 '+m+(it.unit||'개')+'</div>'+
+     '</div>'+
+     '<div style="font-size:9px;font-weight:800;padding:3px 7px;background:'+statusBg+';color:'+accentC+';border-radius:99px;white-space:nowrap">'+statusLabel+'</div>'+
+    '</div>'+
    '</div>'+
-   '<div style="display:flex;align-items:center;gap:7px">'+
-   '<div style="flex:1;background:var(--s3,#EEF2F7);border-radius:99px;height:4px;overflow:hidden">'+
-   '<div style="background:'+accentC+';width:'+pct+'%;height:100%;border-radius:99px;transition:width .4s ease"></div></div>'+
-   '<div style="font-size:11px;font-weight:700;color:'+accentC+';white-space:nowrap;font-variant-numeric:tabular-nums">'+s+'<span style="color:var(--t3);font-weight:400">/'+m+'</span><span style="font-size:9px;color:var(--t3)"> '+(it.unit||'개')+'</span></div>'+
-   (it.supplier&&isLow?'<div style="font-size:10px;color:var(--t3);white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis">'+esc(it.supplier)+'</div>':'')+
+   /* 중간 행: 진행바 */
+   '<div style="background:var(--surface3,#EAE6DD);border-radius:99px;height:7px;overflow:hidden;margin-bottom:9px">'+
+    '<div style="background:'+accentC+';width:'+pct+'%;height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)"></div>'+
    '</div>'+
-   '</div>'+
-   /* 액션 버튼들 (우측) */
-   '<div style="display:flex;gap:4px;align-items:center;flex-shrink:0">'+
-   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',-1)" style="width:28px;height:28px;border-radius:7px;background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);font-size:16px;cursor:pointer;line-height:1;font-weight:700">−</button>'+
-   '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',1)" style="width:28px;height:28px;border-radius:7px;background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.2);font-size:16px;cursor:pointer;line-height:1;font-weight:700">+</button>'+
-   (isLow?'<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="padding:5px 9px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">발주</button>':'')+
-   (isLow?'<button onclick="_filoInvSendPush(\''+it.id+'\',\''+did+'\')" style="padding:5px 9px;background:rgba(201,168,76,.1);color:var(--br,#c9a84c);border:1px solid rgba(201,168,76,.25);border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">알림</button>':'')+
-   '<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="width:28px;height:28px;border-radius:7px;background:transparent;color:var(--t3);border:1px solid var(--bd);font-size:13px;cursor:pointer;line-height:1">✎</button>'+
+   /* 하단 행: 액션 버튼 */
+   '<div style="display:flex;gap:5px;align-items:center">'+
+    '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',-1)" style="flex:1;height:30px;border-radius:8px;background:rgba(239,68,68,.09);color:#ef4444;border:1px solid rgba(239,68,68,.18);font-size:15px;cursor:pointer;font-weight:700">−</button>'+
+    '<button onclick="_filoInvAdjust(\''+it.id+'\',\''+did+'\',1)" style="flex:1;height:30px;border-radius:8px;background:rgba(34,197,94,.09);color:#22c55e;border:1px solid rgba(34,197,94,.18);font-size:15px;cursor:pointer;font-weight:700">+</button>'+
+    (isLow?'<button onclick="_filoInvOrderInline(\''+it.id+'\',\''+did+'\')" style="flex:1.5;height:30px;padding:0 6px;background:rgba(245,158,11,.11);color:#f59e0b;border:1px solid rgba(245,158,11,.22);border-radius:8px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap">📦 발주</button>':'')+
+    '<button onclick="_filoInvEditModal(\''+it.id+'\',\''+did+'\')" style="width:30px;height:30px;border-radius:8px;background:transparent;color:var(--t3);border:1px solid var(--bd);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
    '</div>'+
    '</div>';
  }
