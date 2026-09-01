@@ -949,8 +949,8 @@ select.inp option{background:#24243d;color:#f0f1f8}
       </select>
     </div>
     <div class="inp-wrap" id="r-plate-wrap" style="display:none">
-      <label class="inp-lbl">차량번호 <span style="font-size:11px;color:var(--t3)">(영업용 번호판만 가입 가능)</span></label>
-      <input class="inp" id="r-plate" placeholder="예) 12가 3456" autocomplete="off">
+      <label class="inp-lbl">차량번호 <span style="font-size:11px;color:var(--t3)">(아·바·사·자 영업용만 가입 가능)</span></label>
+      <input class="inp" id="r-plate" placeholder="예) 12아 3456" autocomplete="off">
     </div>
     <div class="inp-wrap" id="r-bizno-wrap" style="display:none">
       <label class="inp-lbl">사업자등록번호</label>
@@ -1263,6 +1263,10 @@ function _yRegister(){
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
   if(_regType==='driver'){
     if(!plate){err.textContent='차량번호를 입력하세요';err.style.display='block';return;}
+    var _plateKo=(plate.replace(/\s/g,'').match(/[가-힣]+/)||[''])[0];
+    if(['아','바','사','자'].indexOf(_plateKo)===-1){
+      err.textContent='영업용 번호판(아·바·사·자)만 가입 가능합니다';err.style.display='block';return;
+    }
     if(bizno.length!==10){err.textContent='사업자등록번호 10자리를 입력하세요';err.style.display='block';return;}
   }
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
