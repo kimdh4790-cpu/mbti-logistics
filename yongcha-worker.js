@@ -5554,61 +5554,147 @@ function _admSwitch(tab){
   else _admLoadCleanup();
 }
 
+var _admAgencyPage=0,_admDriverPage=0;
+var _admAgencies=[],_admDrivers=[];
+var ADM_PAGE_SIZE=5;
+
 function _admLoadMembers(){
   var el=document.getElementById('adm-content');if(!el)return;
   el.innerHTML=
   '<div class="kpi-grid col2" style="margin-bottom:14px">'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)" id="adm-agency">—</div><div class="kpi-lbl">대리점</div></div>'+
   '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)" id="adm-driver">—</div><div class="kpi-lbl">기사</div></div>'+
-  '<div class="kpi-card" style="grid-column:span 2"><div class="kpi-val" style="color:var(--rd)" id="adm-suspended">—</div><div class="kpi-lbl">정지 회원</div></div>'+
   '</div>'+
-  '<div id="members-list">'+_skRows(3)+'</div>';
+  '<div style="font-weight:800;font-size:14px;margin:4px 0 8px;color:var(--br)">대리점</div>'+
+  '<div id="adm-agency-list">'+_skRows(2)+'</div>'+
+  '<div id="adm-agency-more" style="display:none;text-align:center;margin:4px 0 12px">'+
+    '<button onclick="_admMoreAgency()" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);border-radius:var(--r);padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">더 보기</button>'+
+  '</div>'+
+  '<div style="font-weight:800;font-size:14px;margin:12px 0 8px;color:var(--gn)">기사</div>'+
+  '<div id="adm-driver-list">'+_skRows(2)+'</div>'+
+  '<div id="adm-driver-more" style="display:none;text-align:center;margin:4px 0 12px">'+
+    '<button onclick="_admMoreDriver()" style="background:var(--bg3);border:1px solid var(--bd);color:var(--tx);border-radius:var(--r);padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">더 보기</button>'+
+  '</div>';
+
+  _admAgencyPage=0;_admDriverPage=0;_admAgencies=[];_admDrivers=[];
 
   _db.collection('yongcha_users').get().then(function(snap){
-    var agencies=0,drivers=0,suspended=0;
-    snap.forEach(function(doc){
-      var t=doc.data().type,d=doc.data();
-      if(t==='agency')agencies++;
-      else if(t==='driver')drivers++;
-      if(d.suspended)suspended++;
-    });
-    var e1=document.getElementById('adm-agency');
-    var e2=document.getElementById('adm-driver');
-    var e3=document.getElementById('adm-suspended');
-    if(e1)e1.textContent=agencies+'명';
-    if(e2)e2.textContent=drivers+'명';
-    if(e3)e3.textContent=suspended+'명';
-
-    var list=document.getElementById('members-list');if(!list)return;
-    list.innerHTML='';
     snap.forEach(function(doc){
       var u=Object.assign({id:doc.id},doc.data());
       if(u.type==='admin')return;
-      var isSus=!!u.suspended;
-      var card=document.createElement('div');card.className='card';
-      card.style.borderLeft='3px solid '+(isSus?'var(--rd)':u.type==='agency'?'var(--br)':'var(--gn)');
-      card.innerHTML=
-        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">'+
-        '<div style="flex:1;min-width:0">'+
-        '<div style="font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+_esc(u.name)+
-          (isSus?'<span style="font-size:10px;background:var(--rdl);color:var(--rd);padding:2px 6px;border-radius:20px;font-weight:700">정지</span>':'')+
-        '</div>'+
-        '<div style="font-size:11.5px;color:var(--t2);margin-top:3px;overflow:hidden;text-overflow:ellipsis">'+_esc(u.email)+'</div>'+
-        '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+
-          (u.region||'지역 없음')+
-          (u.rating&&u.reviewCount?' · '+Number(u.rating).toFixed(1)+'점'+' ('+u.reviewCount+'건)':'')+
-        '</div>'+
-        '</div>'+
-        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">'+
-        '<span class="status-badge '+(u.type==='agency'?'badge-agency':'badge-driver')+'" style="font-size:11px">'+
-          (u.type==='agency'?'대리점':'기사')+'</span>'+
-        '<button onclick="_toggleSuspend(\\''+u.id+'\\','+isSus+')" style="padding:5px 10px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
-          (isSus?'정지 해제':'정지')+'</button>'+
-        '</div>'+
-        '</div>';
-      list.appendChild(card);
+      if(u.type==='agency')_admAgencies.push(u);
+      else _admDrivers.push(u);
     });
+    var e1=document.getElementById('adm-agency');
+    var e2=document.getElementById('adm-driver');
+    if(e1)e1.textContent=_admAgencies.length+'명';
+    if(e2)e2.textContent=_admDrivers.length+'명';
+    _admRenderAgencyPage();
+    _admRenderDriverPage();
   });
+}
+
+function _admRenderAgencyPage(){
+  var list=document.getElementById('adm-agency-list');if(!list)return;
+  var start=_admAgencyPage*ADM_PAGE_SIZE;
+  var slice=_admAgencies.slice(0,start+ADM_PAGE_SIZE);
+  list.innerHTML='';
+  if(!slice.length){list.innerHTML='<div style="color:var(--t3);font-size:13px;padding:8px 0">대리점 회원 없음</div>';return;}
+  slice.forEach(function(u){list.appendChild(_admUserCard(u,'agency'));});
+  var more=document.getElementById('adm-agency-more');
+  if(more)more.style.display=(_admAgencies.length>start+ADM_PAGE_SIZE)?'block':'none';
+}
+function _admRenderDriverPage(){
+  var list=document.getElementById('adm-driver-list');if(!list)return;
+  var start=_admDriverPage*ADM_PAGE_SIZE;
+  var slice=_admDrivers.slice(0,start+ADM_PAGE_SIZE);
+  list.innerHTML='';
+  if(!slice.length){list.innerHTML='<div style="color:var(--t3);font-size:13px;padding:8px 0">기사 회원 없음</div>';return;}
+  slice.forEach(function(u){list.appendChild(_admUserCard(u,'driver'));});
+  var more=document.getElementById('adm-driver-more');
+  if(more)more.style.display=(_admDrivers.length>start+ADM_PAGE_SIZE)?'block':'none';
+}
+function _admMoreAgency(){_admAgencyPage++;_admRenderAgencyPage();}
+function _admMoreDriver(){_admDriverPage++;_admRenderDriverPage();}
+
+function _admUserCard(u,type){
+  var isSus=!!u.suspended;
+  var card=document.createElement('div');card.className='card';
+  card.style.cssText='border-left:3px solid '+(isSus?'var(--rd)':type==='agency'?'var(--br)':'var(--gn)')+';margin-bottom:8px;cursor:pointer';
+  card.onclick=function(){_admUserDetail(u);};
+  card.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+    '<div style="flex:1;min-width:0">'+
+    '<div style="font-weight:800;font-size:15px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+_esc(u.name||'이름 없음')+
+      (isSus?'<span style="font-size:10px;background:var(--rdl);color:var(--rd);padding:2px 6px;border-radius:20px;font-weight:700">정지</span>':'')+
+    '</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+_esc(u.email||'')+'</div>'+
+    '<div style="font-size:11px;color:var(--t3);margin-top:2px">'+_esc(u.region||'지역 미설정')+
+      (u.phone?' | '+_esc(u.phone):'')+
+    '</div>'+
+    '</div>'+
+    '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">'+
+    '<span class="status-badge '+(type==='agency'?'badge-agency':'badge-driver')+'">'+
+      (type==='agency'?'대리점':'기사')+'</span>'+
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'+
+    '</div>'+
+    '</div>';
+  return card;
+}
+
+function _admUserDetail(u){
+  var isSus=!!u.suspended;
+  var joinDate=u.createdAt&&u.createdAt.toDate?u.createdAt.toDate().toLocaleDateString('ko-KR'):(u.createdAt||'');
+  var subExpiry=u.subExpiry&&u.subExpiry.toDate?u.subExpiry.toDate().toLocaleDateString('ko-KR'):'없음';
+  var sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;justify-content:flex-end';
+  sheet.innerHTML=
+    '<div onclick="this.parentNode.remove()" style="flex:1;background:rgba(0,0,0,.45)"></div>'+
+    '<div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;max-height:80vh;overflow-y:auto">'+
+    '<div style="width:40px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 20px;"></div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+      '<div>'+
+        '<div style="font-weight:900;font-size:20px">'+_esc(u.name||'이름 없음')+'</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-top:2px">'+
+          '<span style="background:'+(u.type==='agency'?'rgba(234,88,12,.15)':'rgba(22,163,74,.15)')+';color:'+(u.type==='agency'?'var(--br)':'var(--gn)')+';padding:2px 8px;border-radius:20px;font-weight:700">'+
+          (u.type==='agency'?'대리점':'기사')+'</span>'+
+          (isSus?' <span style="background:var(--rdl);color:var(--rd);padding:2px 8px;border-radius:20px;font-weight:700">정지</span>':'')+
+        '</div>'+
+      '</div>'+
+      '<button onclick="this.closest(\'div[style*=z-index]\').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;color:var(--t2)">×</button>'+
+    '</div>'+
+    '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'+
+      _admInfoRow('이메일',u.email||'—')+
+      _admInfoRow('전화번호',u.phone||'—')+
+      _admInfoRow('지역',u.region||'—')+
+      _admInfoRow('UID',u.id)+
+    '</div>'+
+    '<div style="background:var(--bg2);border-radius:12px;padding:16px;margin-bottom:12px">'+
+      _admInfoRow('가입일',joinDate||'—')+
+      _admInfoRow('구독 만료',subExpiry)+
+      _admInfoRow('구독 플랜',u.subPlan||'없음')+
+      (u.rating?_admInfoRow('평점',Number(u.rating).toFixed(1)+'점 ('+(u.reviewCount||0)+'건)'):'')+
+    '</div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="_toggleSuspendFromDetail(\''+u.id+'\','+isSus+',this.closest(\'div[style*=z-index]\'))" '+
+      'style="flex:1;min-height:44px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">'+
+      (isSus?'정지 해제':'정지')+'</button>'+
+    '</div>'+
+    '</div>';
+  document.body.appendChild(sheet);
+}
+function _admInfoRow(label,val){
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bd)">'+
+    '<span style="font-size:12px;color:var(--t2)">'+label+'</span>'+
+    '<span style="font-size:13px;font-weight:600;color:var(--tx);text-align:right;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_esc(String(val))+'</span>'+
+    '</div>';
+}
+function _toggleSuspendFromDetail(uid,isSus,sheet){
+  _db.collection('yongcha_users').doc(uid).update({suspended:!isSus}).then(function(){
+    _yToast(isSus?'정지가 해제되었습니다':'회원이 정지되었습니다');
+    if(sheet)sheet.remove();
+    _admLoadMembers();
+  }).catch(function(e){_yToast('오류: '+e.message);});
 }
 
 function _toggleSuspend(uid, isSus){
