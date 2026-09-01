@@ -538,6 +538,15 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 - `filo-pos-pay.js` (신규 ~28KB): 테이블 결제(`_filoTablePay`) + 각자계산(`_filoTableSelfPay`) + 영수증 모달(`_filoShowReceipt`) + 영수증 알림팝업(`_filoReceiptNotify`) + 고객화면(`_posCustomerDisplay`/`_posCustRender`)
 - `filo.html`: filo-pos-ui.js?v=1 → v=2, filo-pos-pay.js?v=1 추가 (filo-pos-ui.js 다음)
 
+### 2026-09-01
+**로그인 화면 3D 메탈릭 로고 교체 (FILO·DINE)**
+- `filo.html`: 로그인 로고 → 핑크 3D 메탈릭 JPEG 인라인 교체 (280×380px, ba140f66-image.jpg 원본 기반, b64 28528자). 검은 배경 합성 후 JPEG quality=85 저장.
+- `dine.html`: 로그인 로고 → 초록 3D 메탈릭 JPEG 인라인 교체 (280×364px, 8ff7720c-image.png 원본 기반, b64 31776자). 이전에 FILO 핑크 로고가 잘못 삽입돼 있던 것 교체.
+- `dine.html`: 파비콘 `<link rel="icon">` — 구 180×180 PNG → 신규 192×192 PNG (초록 3D DINE 아이콘, b64 68152자). 파일 총 크기 144KB.
+- `_worker.js`: DINE PWA 아이콘 3종 (`/dine-icon-192.png`, `/dine-icon-512.png`, `/dine-apple-icon.png`) — 8ff7720c-image.png(786×1024 RGBA) 기반 초록 3D 로고로 전면 교체.
+- `_worker.js`: FILO PWA 아이콘 (`/filo-icon-192.png` 등) — ba140f66-image.jpg 기반 핑크 3D 로고 유지 확인.
+- **임베딩 방식**: PNG 파일은 KV 업로드 불가(텍스트 전용) → 모든 로고·아이콘을 base64 data URI로 HTML/JS에 인라인 삽입이 유일한 해결책.
+
 ### 2026-08-30
 **업종별 탭 활성화 시스템**
 - `filo-auth.js`: `_INDUSTRY_DEFAULTS` 매트릭스 추가 (업종별 기본 표시 탭 정의)
