@@ -163,6 +163,27 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-01 (27차)
+**FILO 전체 로즈 테마 전환 (골드→로즈 완전 제거)**
+- `filo.html`:
+  - "FILO BRASS GOLD v4" 오버라이드 블록(L922~L1049) 전체 → "FILO ROSE v5"로 교체
+  - `.hero-card`: 다크 네이비 `#0B1F3A` → 로즈 그라디언트 `#f43f5e→#be123c`
+  - `.dash-hero`: 다크 네이비 → 로즈 그라디언트
+  - `.btn-primary`, `.btn-brand`, `.sb-upgrade-btn`, `.cat-scroll button.active`: 골드 → 로즈
+  - `.ni.active`, `.ai-hero`, `.ai-note`, `.ai-chat-head`, `.ai-msg.me`: 골드 → 로즈
+  - `.login-card`, `#demo-admin-bar`, scrollbar: 골드 → 로즈
+  - `.ai-hero` 배경: 다크 브라운 `#1A1408` → 연한 크림로즈 `#fff1f2,#ffe4e6`
+- `filo-auth.js`:
+  - 사이드바 아바타·역할 배지·구분선: 골드 `#c9a84c` → 로즈 `#e11d48`
+  - 퀵액션 hover·아이콘 배경: 골드 → 로즈
+  - 히어로 카드 stats(hm-cnt·hm-avg): `#E2CA96` → `rgba(255,255,255,.9)`
+  - SA 바 border·bg·text: 골드 → 로즈
+  - 예약/주문 status 기본색: `#c9a84c` → `#f43f5e`
+  - 프랜차이즈 HQ 배포·가맹점추가·공지발송 버튼: 골드 → 로즈 (text `#0f172a` → `#fff`)
+  - QSC 점수·제출 버튼: 골드 → 로즈
+  - `barColor` 1위 색: `#c9a84c` → `#f43f5e`
+  - 모든 `accent-color:#c9a84c` → `accent-color:#f43f5e`
+
 ### 2026-09-01 (26차)
 **FILO 로그인 입력 필드 가시성 + 토스트 텍스트 색상 수정**
 - `filo.html`:
