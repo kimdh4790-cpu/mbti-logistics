@@ -8305,9 +8305,10 @@ function _riqMatch(el){
     '<div id="riq-match-body">'+_skRows(4)+'</div>';
 
   var recentRegions=[],avgPrice=0,preferredCouriers=[];
-  _db.collection('yongcha_records').where('driverId','==',_CU.uid)
-    .orderBy('createdAt','desc').limit(20).get()
-  .then(function(recSnap){
+  // 과거 기록 조회 실패(권한 없음 등) 시 빈 결과로 폴백 — 공고 기반 매칭만 진행
+  var recordPromise=_db.collection('yongcha_records').where('driverId','==',_CU.uid)
+    .orderBy('createdAt','desc').limit(20).get().catch(function(){return {forEach:function(){}};});
+  recordPromise.then(function(recSnap){
     var priceSum=0,cnt=0,courierMap={};
     recSnap.forEach(function(d){
       var r=d.data();
@@ -8317,6 +8318,10 @@ function _riqMatch(el){
     });
     avgPrice=cnt>0?Math.round(priceSum/cnt):0;
     preferredCouriers=Object.keys(courierMap).sort(function(a,b){return courierMap[b]-courierMap[a];}).slice(0,3);
+    // 기사 선호 설정에서도 보완
+    var prefs=(_CU.preferences)||{};
+    if(!preferredCouriers.length&&prefs.courier)preferredCouriers=[prefs.courier];
+    if(!recentRegions.length&&(_CU.region||prefs.region))recentRegions=[_CU.region||prefs.region];
     return _db.collection('yongcha_posts').where('status','in',['open','urgent'])
       .orderBy('createdAt','desc').limit(30).get();
   }).then(function(postsSnap){
