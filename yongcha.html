@@ -1394,14 +1394,27 @@ function _buildNav(){
       '</button>';
   }).join('');
   _yStartChatBadge();
+  // PWA 뒤로가기 앱 종료 방지: 홈 진입 시 스택 보호
+  history.replaceState({page:'home'}, '');
+  history.pushState({page:'home'}, '');  // 뒤로가기 1회 여유
+  window.addEventListener('popstate', function(e){
+    var p = (e.state&&e.state.page) || 'home';
+    _goPage(p, true);
+    // 항상 현재 페이지 state를 스택에 유지 (앱이 닫히지 않도록)
+    if(p==='home') history.pushState({page:'home'}, '');
+  }, {once: false});
 }
 
-function _goPage(p){
+function _goPage(p, _fromPopstate){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
   if(p!=='chat'&&_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   if(p!=='posts'&&_postsUnsub){_postsUnsub();_postsUnsub=null;}
   _yStopHomeWatch();               // 관리자 홈 실시간 리스너 해제 (누수 방지)
   _curPage=p;
+  if(!_fromPopstate){
+    if(p==='home') history.replaceState({page:'home'}, '');
+    else history.pushState({page:p}, '');
+  }
   var el=document.getElementById('content');
   el.removeAttribute('style');     // 채팅방 인라인 스타일 초기화
   el.scrollTop=0;
