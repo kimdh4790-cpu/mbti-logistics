@@ -1003,18 +1003,19 @@ select.inp option{background:#24243d;color:#f0f1f8}
 <!-- 카카오맵 미리 로드 -->
 <script>
 (function(){
-  var key='3d5a58a3e1099aa2b6b221c3db2b0d13';
-  window._kakaoKey=key;
-  var s=document.createElement('script');
-  s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+key+'&libraries=services&autoload=false';
-  s.onload=function(){
-    kakao.maps.load(function(){
-      window._kakaoReady=true;
-      console.log('[용차] 카카오맵 로드 완료');
-    });
-  };
-  s.onerror=function(){ console.warn('[용차] 카카오맵 스크립트 로드 실패'); };
-  document.head.appendChild(s);
+  function _doLoad(key){
+    window._kakaoKey=key;
+    var s=document.createElement('script');
+    s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+key+'&libraries=services&autoload=false';
+    s.onload=function(){kakao.maps.load(function(){window._kakaoReady=true;console.log('[용차] 카카오맵 로드 완료');});};
+    s.onerror=function(){console.warn('[용차] 카카오맵 스크립트 로드 실패');};
+    document.head.appendChild(s);
+  }
+  fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
+    _doLoad(d.key||'3d5a58a3e1099aa2b6b221c3db2b0d13');
+  }).catch(function(){
+    _doLoad('3d5a58a3e1099aa2b6b221c3db2b0d13');
+  });
 })();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -9422,6 +9423,21 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
       return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY || '' }), {
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });
+    }
+
+    // 기초구역 경계 — filo.ai.kr 워커로 프록시 (KV 바인딩 공유)
+    if (path === '/api/yongcha/basidco' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const zip = url.searchParams.get('zip') || '';
+        const pr = await fetch('https://filo.ai.kr/api/yongcha/basidco?zip=' + encodeURIComponent(zip), {
+          signal: AbortSignal.timeout(15000)
+        });
+        const data = await pr.text();
+        return new Response(data, { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+      }
     }
 
     if (path === '/api/ctrl-notify' && method === 'POST') {
