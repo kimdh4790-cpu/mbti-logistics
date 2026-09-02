@@ -14,9 +14,25 @@
 
 | 파일 | 역할 | 수정 방식 |
 |------|------|----------|
-| `yongcha.html` | 소스 오브 트루스 (전체 앱 UI+JS) | 수정 후 _worker.js 동기화 필수 |
-| `_worker.js` | 실제 배포 파일 — `YONGCHA_HTML_YONGCHA` 상수에 yongcha.html 임베드 | push → auto-deploy |
-| `yongcha-worker.js` | yongcha.app 전용 API worker (별도 wrangler) | `npx wrangler deploy`만 가능 (KV 무효) |
+| `yongcha.html` | 소스 오브 트루스 (전체 앱 UI+JS) | 수정 후 yongcha-worker.js 동기화 **필수** |
+| `yongcha-worker.js` | yongcha.app 전용 worker — `YONGCHA_HTML` 상수에 yongcha.html 전체 임베드 | yongcha.html 수정 → YONGCHA_HTML 동기화 → push → wrangler deploy |
+
+### ⚠️ yongcha.html 수정 후 동기화 방법 (필수)
+```js
+// scripts/sync-yongcha.js (또는 아래 Node 한 줄 명령)
+node -e "
+const fs=require('fs');
+const w=fs.readFileSync('yongcha-worker.js','utf8');
+const h=fs.readFileSync('yongcha.html','utf8');
+const mk='const YONGCHA_HTML = \`';
+const s=w.indexOf(mk);
+let p=s+mk.length;
+while(p<w.length){const n=w.indexOf('\n',p);if(n===-1)break;if(w.substring(p,n)==='\`;'){
+  fs.writeFileSync('yongcha-worker.js',w.substring(0,s+mk.length)+h+'\n'+w.substring(p),'utf8');
+  console.log('동기화 완료');break;}p=n+1;}
+"
+```
+KV 업로드는 yongcha.app에 **전혀 효과 없음** — `yongcha-worker.js`가 YONGCHA_HTML 상수를 직접 서빙하기 때문.
 | `yongcha-landing.html` | ~~랜딩 페이지~~ **삭제됨 (2026-08-30)** | — |
 
 ---
