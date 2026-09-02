@@ -354,34 +354,52 @@ function _loadKioskTableGrid(did){
    });
 }
 
-// ── 클래식 뷰 레이아웃 (기존) ───────────────────────────────────────────────
+// ── 클래식 뷰 레이아웃 (프로 POS 스타일) ───────────────────────────────────
 function _filoPageKioskClassic(el,did,dual){
-  var custPanelHtml=dual?'<div class="pos-cust-panel" id="pos-cust-panel" style="border-left:2px solid rgba(201,168,76,.3)"></div>':'';
+  var custPanelHtml=dual?'<div class="pos-cust-panel" id="pos-cust-panel"></div>':'';
   var oldBar=document.getElementById('pos-pay-bar');if(oldBar)oldBar.remove();
+  // 모바일 하단 결제 바 (max-width:900px 에서만 표시)
   var payBar=document.createElement('div');
   payBar.id='pos-pay-bar';
-  payBar.style.cssText='display:none;position:fixed;bottom:0;left:0;right:0;z-index:700;padding:12px 16px 20px;background:#0f172a;border-top:2px solid #c9a84c;box-shadow:0 -8px 32px rgba(0,0,0,.6);flex-direction:row;align-items:center;gap:12px';
-  payBar.innerHTML='<div style="flex:1;min-width:0"><div id="ppb-count" style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:.5px">장바구니 비어 있음</div><div id="ppb-total" style="font-size:22px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;line-height:1.2">₩0</div></div>'+
-    '<button onclick="_cartRemoveSheet()" style="width:44px;height:44px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:12px;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'+
-    '<button onclick="_filoPay()" style="height:44px;padding:0 24px;background:#c9a84c;border:none;border-radius:12px;color:#0a0a0a;font-size:15px;font-weight:900;cursor:pointer;flex-shrink:0">결제하기</button>';
+  payBar.style.cssText='display:none;position:fixed;bottom:0;left:0;right:0;z-index:700;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:#040c18;border-top:1px solid rgba(201,168,76,.35);box-shadow:0 -6px 24px rgba(0,0,0,.7);flex-direction:row;align-items:center;gap:10px';
+  payBar.innerHTML=
+    '<div style="flex:1;min-width:0">'+
+      '<div id="ppb-count" style="font-size:10px;color:#475569;font-weight:700;letter-spacing:.5px;text-transform:uppercase">장바구니 비어 있음</div>'+
+      '<div id="ppb-total" style="font-size:20px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;line-height:1.2">₩0</div>'+
+    '</div>'+
+    '<button onclick="_cartRemoveSheet()" style="width:40px;height:40px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);border-radius:10px;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>'+
+    '<button onclick="_filoPay()" style="height:40px;padding:0 22px;background:#c9a84c;border:none;border-radius:10px;color:#0a0a0a;font-size:14px;font-weight:900;cursor:pointer;flex-shrink:0;letter-spacing:-.3px">결제하기</button>';
   document.body.appendChild(payBar);
 
   el.innerHTML=_filoPosTopBar(did)+
-    '<div id="kiosk-table-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>'+
-    '<div style="display:flex;gap:0;height:calc(100dvh - var(--topbar-h) - 80px);overflow:hidden;border:1px solid var(--bd2);border-radius:var(--r-lg);box-shadow:var(--shadow)">'+
-    '<div id="kiosk-cats" style="width:76px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--bd);display:flex;flex-direction:column;gap:3px;padding:8px 5px;background:var(--surface,#fff)"></div>'+
-    '<div class="menu-grid" id="kiosk-menu" style="flex:1;overflow-y:auto">'+
-    '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--t3);display:flex;align-items:center;justify-content:center;gap:10px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>메뉴 로딩 중...</div>'+
-    '</div>'+
-    '<div class="cart-panel" style="width:300px;flex-shrink:0;border-radius:0;border:none;border-left:1px solid var(--bd)">'+
-    '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900">주문 내역</div>'+
-    '<div id="cart-list" style="flex:1;overflow-y:auto"></div>'+
-    '<div style="padding:14px 16px;border-top:1px solid var(--bd)">'+
-    '<div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:13px;font-weight:700">합계</span><span id="cart-total" style="font-size:18px;font-weight:900;color:var(--br,#c9a84c)">₩0</span></div>'+
-    '<button class="pay-btn" onclick="_filoPay()">결제하기</button>'+
-    '<button onclick="_cartClear()" class="btn" style="width:100%;margin-top:6px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">'+_svgIcon('x')+' 초기화</button>'+
-    '</div></div>'+
-    custPanelHtml+
+    // 테이블 탭바 — 수평 스크롤
+    '<div id="kiosk-table-bar" class="pos-table-bar"></div>'+
+    // 메인 패널 래퍼
+    '<div class="pos-classic-wrap">'+
+      // 왼쪽 62%: 카테고리 탭 + 메뉴 그리드
+      '<div class="pos-classic-left">'+
+        '<div id="kiosk-cats" class="pos-cat-row"><div class="pos-cat-loading">메뉴 로딩 중...</div></div>'+
+        '<div class="menu-grid pos-menu-grid" id="kiosk-menu" style="flex:1;overflow-y:auto;padding:10px;align-content:start;min-height:0"></div>'+
+      '</div>'+
+      // 오른쪽 38%: 주문 내역
+      '<div class="pos-classic-cart">'+
+        '<div class="pos-cart-hdr">'+
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'+
+          '<span id="cart-title-txt" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">주문 내역</span>'+
+        '</div>'+
+        '<div id="cart-list" style="flex:1;overflow-y:auto;min-height:0"></div>'+
+        '<div class="pos-cart-footer">'+
+          '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">'+
+            '<span style="font-size:11px;font-weight:700;color:#475569;letter-spacing:.8px;text-transform:uppercase">합계</span>'+
+            '<span id="cart-total" style="font-size:22px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums">₩0</span>'+
+          '</div>'+
+          '<button class="pay-btn pos-pay-full" onclick="_filoPay()">결제하기</button>'+
+          '<button onclick="_cartClear()" class="pos-clear-btn">'+
+            '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> 초기화'+
+          '</button>'+
+        '</div>'+
+      '</div>'+
+      custPanelHtml+
     '</div>';
 
   _loadKioskTableBar(did);
@@ -515,8 +533,8 @@ function _filoRenderKiosk(menus){
  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
  var catEl=document.getElementById('kiosk-cats');
  if(catEl){
- catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" style="padding:11px 4px;border-radius:10px;background:var(--br,#c9a84c);color:#fff;font-size:10px;font-weight:900;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">전체</button>'+
- cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" style="padding:11px 4px;border-radius:10px;background:transparent;color:var(--t2);font-size:10px;font-weight:700;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">'+c+'</button>';}).join('');
+  catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="pos-cat-btn pos-cat-active">전체</button>'+
+  cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+esc(c)+'" class="pos-cat-btn">'+esc(c)+'</button>';}).join('');
  }
  var menuEl=document.getElementById('kiosk-menu');
  if(menuEl){
@@ -543,8 +561,8 @@ function _filoRenderKioskSimple(menus){
  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
  var catEl=document.getElementById('kiosk-cats');
  if(catEl){
-  catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" style="padding:11px 4px;border-radius:10px;background:var(--br,#c9a84c);color:#fff;font-size:10px;font-weight:900;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">전체</button>'+
-  cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+c+'" style="padding:11px 4px;border-radius:10px;background:transparent;color:var(--t2);font-size:10px;font-weight:700;border:none;cursor:pointer;text-align:center;line-height:1.3;word-break:keep-all;width:100%;transition:all .15s">'+c+'</button>';}).join('');
+  catEl.innerHTML='<button onclick="_filoFilterKiosk(&quot;전체&quot;,this)" class="pos-cat-btn pos-cat-active">전체</button>'+
+  cats.map(function(c){return '<button onclick="_filoFilterKiosk(this.dataset.cat,this)" data-cat="'+esc(c)+'" class="pos-cat-btn">'+esc(c)+'</button>';}).join('');
  }
  var menuEl=document.getElementById('kiosk-menu');
  if(menuEl){
@@ -570,12 +588,9 @@ function _filoRenderKioskSimple(menus){
 
 
 function _filoFilterKiosk(cat,btn){
- document.querySelectorAll('#kiosk-cats button').forEach(function(b){
-  b.style.background=b===btn?'rgba(201,168,76,.18)':'transparent';
-  b.style.color=b===btn?'var(--br,#c9a84c)':'var(--t2)';
-  b.style.fontWeight=b===btn?'900':'700';
+ document.querySelectorAll('#kiosk-cats .pos-cat-btn').forEach(function(b){
+  b.classList.toggle('pos-cat-active',b===btn);
  });
- /* pos-hidden 클래스로 토글 — display:flex!important CSS를 클래스로 우선 순위 확보 */
  document.querySelectorAll('#kiosk-menu .menu-item').forEach(function(el){
   el.classList.toggle('pos-hidden',cat!=='전체'&&el.dataset.cat!==cat);
  });

@@ -60,14 +60,15 @@ function _cartRender(){
  var discount=window._posDiscount||0;
  var total=Math.max(0,rawTotal-discount);
  list.innerHTML=_cartItems.map(function(c,i){
-  return '<div class="cart-item">'+
-  '<div style="flex:1">'+
-  '<div style="font-size:13px;font-weight:700">'+esc(c.name)+'</div>'+
-  '<div style="font-size:12px;color:var(--t3)">₩'+c.price.toLocaleString()+'</div></div>'+
-  '<div style="display:flex;align-items:center;gap:6px">'+
-  '<button class="qty-btn" onclick="_cartQty('+i+',-1)">−</button>'+
-  '<span style="font-size:14px;font-weight:900;min-width:20px;text-align:center">'+c.qty+'</span>'+
-  '<button class="qty-btn" onclick="_cartQty('+i+',1)">+</button></div></div>';
+  return '<div class="pos-cart-row">'+
+  '<span class="pos-cart-name">'+esc(c.name)+'</span>'+
+  '<span class="pos-cart-qty">'+
+    '<button onclick="_cartQty('+i+',-1)">−</button>'+
+    '<span style="font-size:13px;font-weight:900;min-width:18px;text-align:center;color:#e2e8f0">'+c.qty+'</span>'+
+    '<button onclick="_cartQty('+i+',1)">+</button>'+
+  '</span>'+
+  '<span class="pos-cart-price">₩'+( c.price*c.qty).toLocaleString()+'</span>'+
+  '</div>';
  }).join('');
  if(totalEl){
   totalEl.textContent='₩'+total.toLocaleString();
