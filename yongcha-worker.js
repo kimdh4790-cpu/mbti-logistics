@@ -8715,23 +8715,12 @@ function _addZipCodeZone(){
   if(zip.length !== 5){_yToast('5자리 우편번호를 입력하세요');return;}
   var dup = window._zones.some(function(z){return z.zipcode===zip;});
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
-  _loadKakaoMap(function(){
-    var gc = new kakao.maps.services.Geocoder();
-    gc.addressSearch(zip, function(res, status){
-      var matched = [];
-      if(status === kakao.maps.services.Status.OK){
-        matched = res.filter(function(r){
-          return (r.address&&r.address.zip_code===zip)||(r.road_address&&r.road_address.zone_no===zip);
-        });
-        if(!matched.length) matched = res;
-      }
-      if(!matched.length){_yToast('좌표를 찾을 수 없어요: '+zip);return;}
-      var centLat=0, centLng=0;
-      matched.forEach(function(r){centLat+=parseFloat(r.y);centLng+=parseFloat(r.x);});
-      centLat/=matched.length; centLng/=matched.length;
-      var ra=matched[0].road_address||{};
-      var zipName=[ra.region_1depth_name,ra.region_2depth_name,ra.region_3depth_name].filter(Boolean).join(' ')||zip;
-      window._zones.push({zipcode:zip, name:zipName, lat:centLat, lng:centLng});
+  fetch('/api/yongcha/basidco?zip='+zip)
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(!data.ok){_yToast('구역 정보를 찾을 수 없어요: '+zip);return;}
+      var zipName = data.zipName || zip;
+      window._zones.push({zipcode:zip, name:zipName, lat:data.lat, lng:data.lng, coords:data.coords||[]});
       _renderZoneTags();
       _updateMapZones();
       var areaInp=document.getElementById('pw-area');
@@ -8739,8 +8728,8 @@ function _addZipCodeZone(){
       var msgEl=document.getElementById('zip-add-msg');
       if(msgEl) msgEl.textContent=zip+' '+zipName+' 구역이 추가됐어요';
       input.value='';
-    });
-  });
+    })
+    .catch(function(){_yToast('우편번호 조회 중 오류가 발생했어요');});
 }
 function _openDaumPost(){
   new daum.Postcode({
@@ -9445,49 +9434,84 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
       }
     }
 
-    // 기초구역 중심 좌표 — Kakao REST(키 있으면) → Nominatim 폴백 (KV 불필요)
+    // 기초구역 중심 좌표 — juso.go.kr WFS → vWorld WFS → vWorld REST 순 폴백
     if (path === '/api/yongcha/basidco' && method === 'GET') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
       const zip = url.searchParams.get('zip') || '';
       if (!/^[0-9]{5}$/.test(zip)) {
         return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
       }
+      function _ringToCoords(ring) { return ring.map(c => ({ lat: c[1], lng: c[0] })); }
+      function _centroid(coords) {
+        const s = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
+        return { lat: s.lat / coords.length, lng: s.lng / coords.length };
+      }
+      // ① business.juso.go.kr WFS
       try {
-        // ① Kakao REST — zone_no 매칭 (env.KAKAO_REST_KEY 있을 때)
-        const kakaoKey = env.KAKAO_REST_KEY || '';
-        if (kakaoKey) {
+        const jusoBase='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
+        const jusoHdrs={'Referer':'https://business.juso.go.kr/addrlink/jusoSpatial.do','Origin':'https://business.juso.go.kr','User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'};
+        let jFeats=null;
+        for (const prop of ['KARB_CD','BAS_ID','BASEID','ZONE_NO']) {
           try {
-            const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
-            const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(8000) });
-            if (kRes.ok) {
-              const kData = await kRes.json();
-              const docs = (kData.documents || []).filter(d => (d.address?.zone_no || d.road_address?.zone_no || '') === zip);
-              if (docs.length) {
-                const centLat = docs.reduce((s,d)=>s+parseFloat(d.y),0)/docs.length;
-                const centLng = docs.reduce((s,d)=>s+parseFloat(d.x),0)/docs.length;
-                const ra = docs[0].road_address || {};
-                const zipName = [ra.region_1depth_name,ra.region_2depth_name,ra.region_3depth_name].filter(Boolean).join(' ')||zip;
-                return new Response(JSON.stringify({ ok:true, coords:[], zipName, lat:centLat, lng:centLng }), { headers: corsH });
-              }
-            }
-          } catch(_) {}
+            const jr=await fetch(`${jusoBase}&CQL_FILTER=${encodeURIComponent(`${prop}='${zip}'`)}`,{headers:jusoHdrs,signal:AbortSignal.timeout(12000)});
+            if (jr.ok){const jfc=await jr.json();if((jfc.features||[]).length){jFeats=jfc.features;break;}}
+          } catch(_){}
         }
-        // ② Nominatim — 키 없이 사용 가능
-        const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`;
-        const nRes = await fetch(nUrl, { headers: { 'User-Agent': 'yongcha-delivery-app/1.0 (contact@yongcha.app)' }, signal: AbortSignal.timeout(10000) });
-        if (nRes.ok) {
-          const nData = await nRes.json();
-          if (nData.length) {
-            const centLat = parseFloat(nData[0].lat);
-            const centLng = parseFloat(nData[0].lon);
-            const zipName = (nData[0].display_name||'').split(',')[0].trim()||zip;
-            return new Response(JSON.stringify({ ok:true, coords:[], zipName, lat:centLat, lng:centLng }), { headers: corsH });
+        if (jFeats&&jFeats.length) {
+          const feat=jFeats[0];
+          if (feat?.geometry) {
+            const ring=feat.geometry.type==='Polygon'?feat.geometry.coordinates[0]:feat.geometry.type==='MultiPolygon'?feat.geometry.coordinates[0][0]:[];
+            const coords=ring.map(c=>({lat:c[1],lng:c[0]}));
+            if (coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124) {
+              const cen=_centroid(coords);
+              const zipName = zip;
+              return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,zipName,source:'juso'}),{headers:corsH});
+            }
           }
         }
-        return new Response(JSON.stringify({ ok: false, error: '좌표를 찾을 수 없어요' }), { headers: corsH });
-      } catch(e) {
-        return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
+      } catch(_) {}
+      // ② vWorld WFS
+      const _vwKeys = ['DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A', env.VWORLD_API_KEY].filter(Boolean);
+      for (const vKey of _vwKeys) {
+        try {
+          const vUrl = `https://api.vworld.kr/req/wfs?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME=lt_c_basidco&output=application/json&key=${vKey}&CQL_FILTER=${encodeURIComponent(`BAS_ID='${zip}'`)}&SRSNAME=EPSG:4326&MAXFEATURES=1`;
+          const vr = await fetch(vUrl, { signal: AbortSignal.timeout(10000) });
+          if (vr.ok) {
+            const fc = await vr.json();
+            const feat = fc?.features?.[0];
+            if (feat?.geometry) {
+              const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                         : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+              const coords = _ringToCoords(ring);
+              if (coords.length >= 4) {
+                const cen = _centroid(coords);
+                return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, zipName: zip, source: 'vworld' }), { headers: corsH });
+              }
+            }
+          }
+        } catch (_) {}
       }
+      // ③ vWorld REST API
+      for (const vKey of _vwKeys) {
+        try {
+          const vdUrl = `https://api.vworld.kr/req/data?service=data&request=GetFeature&data=LT_C_BASIDCO&key=${vKey}&attrFilter=BAS_ID:=:${zip}&pageSize=1&geometry=true&srsName=EPSG:4326`;
+          const vdr = await fetch(vdUrl, { signal: AbortSignal.timeout(10000) });
+          if (vdr.ok) {
+            const vd = await vdr.json();
+            const feat = vd?.response?.result?.featureCollection?.features?.[0];
+            if (feat?.geometry) {
+              const ring = feat.geometry.type === 'Polygon' ? feat.geometry.coordinates[0]
+                         : feat.geometry.type === 'MultiPolygon' ? feat.geometry.coordinates[0][0] : [];
+              const coords = _ringToCoords(ring);
+              if (coords.length >= 4) {
+                const cen = _centroid(coords);
+                return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, zipName: zip, source: 'vworld-data' }), { headers: corsH });
+              }
+            }
+          }
+        } catch (_) {}
+      }
+      return new Response(JSON.stringify({ ok: false, error: '좌표를 찾을 수 없어요' }), { headers: corsH });
     }
 
     if (path === '/api/ctrl-notify' && method === 'POST') {
