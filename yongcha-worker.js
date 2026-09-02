@@ -9434,16 +9434,46 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
       }
     }
 
-    // 기초구역 경계 — filo.ai.kr 워커로 프록시 (KV 바인딩 공유)
+    // 기초구역 중심 좌표 — Kakao REST(키 있으면) → Nominatim 폴백 (KV 불필요)
     if (path === '/api/yongcha/basidco' && method === 'GET') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const zip = url.searchParams.get('zip') || '';
+      if (!/^[0-9]{5}$/.test(zip)) {
+        return new Response(JSON.stringify({ ok: false, error: 'invalid_zip' }), { headers: corsH });
+      }
       try {
-        const zip = url.searchParams.get('zip') || '';
-        const pr = await fetch('https://filo.ai.kr/api/yongcha/basidco?zip=' + encodeURIComponent(zip), {
-          signal: AbortSignal.timeout(15000)
-        });
-        const data = await pr.text();
-        return new Response(data, { headers: corsH });
+        // ① Kakao REST — zone_no 매칭 (env.KAKAO_REST_KEY 있을 때)
+        const kakaoKey = env.KAKAO_REST_KEY || '';
+        if (kakaoKey) {
+          try {
+            const kUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(zip)}&size=15&analyze_type=similar`;
+            const kRes = await fetch(kUrl, { headers: { 'Authorization': `KakaoAK ${kakaoKey}` }, signal: AbortSignal.timeout(8000) });
+            if (kRes.ok) {
+              const kData = await kRes.json();
+              const docs = (kData.documents || []).filter(d => (d.address?.zone_no || d.road_address?.zone_no || '') === zip);
+              if (docs.length) {
+                const centLat = docs.reduce((s,d)=>s+parseFloat(d.y),0)/docs.length;
+                const centLng = docs.reduce((s,d)=>s+parseFloat(d.x),0)/docs.length;
+                const ra = docs[0].road_address || {};
+                const zipName = [ra.region_1depth_name,ra.region_2depth_name,ra.region_3depth_name].filter(Boolean).join(' ')||zip;
+                return new Response(JSON.stringify({ ok:true, coords:[], zipName, lat:centLat, lng:centLng }), { headers: corsH });
+              }
+            }
+          } catch(_) {}
+        }
+        // ② Nominatim — 키 없이 사용 가능
+        const nUrl = `https://nominatim.openstreetmap.org/search?postalcode=${zip}&country=KR&format=json&limit=1`;
+        const nRes = await fetch(nUrl, { headers: { 'User-Agent': 'yongcha-delivery-app/1.0 (contact@yongcha.app)' }, signal: AbortSignal.timeout(10000) });
+        if (nRes.ok) {
+          const nData = await nRes.json();
+          if (nData.length) {
+            const centLat = parseFloat(nData[0].lat);
+            const centLng = parseFloat(nData[0].lon);
+            const zipName = (nData[0].display_name||'').split(',')[0].trim()||zip;
+            return new Response(JSON.stringify({ ok:true, coords:[], zipName, lat:centLat, lng:centLng }), { headers: corsH });
+          }
+        }
+        return new Response(JSON.stringify({ ok: false, error: '좌표를 찾을 수 없어요' }), { headers: corsH });
       } catch(e) {
         return new Response(JSON.stringify({ ok: false, error: e.message }), { headers: corsH });
       }
