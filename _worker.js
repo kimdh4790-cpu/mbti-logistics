@@ -3150,7 +3150,7 @@ footer{text-align:center;padding:36px 24px;border-top:1px solid var(--bd);font-s
 <section>
 <h2><span class="ic ic-in"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.87a16 16 0 0 0 6 6l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16a2 2 0 0 1 .27.92z"/></svg></span>고객센터 및 취소 요청</h2>
 <p>환불·취소 요청은 주문한 매장에 직접 연락하시거나, 아래 운영사 고객센터로 문의하시기 바랍니다.</p>
-<div class="note" style="margin-top:12px">운영사: <strong>유한회사 엠비티아이</strong><br>이메일: kimdh4790@gmail.com<br>사업자번호: 373-86-02536 &nbsp;·&nbsp; 대표자: 김형우</div>
+<div class="note" style="margin-top:12px">운영사: <strong>유한회사 엠비티아이</strong><br>이메일: filo-dine@donway.ai.kr<br>사업자번호: 373-86-02536 &nbsp;·&nbsp; 대표자: 김형우</div>
 </section>
 </main>
 <footer>

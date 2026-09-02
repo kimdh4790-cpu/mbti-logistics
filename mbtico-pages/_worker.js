@@ -2918,7 +2918,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         await fetch('https://api.resend.com/emails', {
           method:'POST',
           headers:{'Authorization':`Bearer ${emailKey}`,'Content-Type':'application/json'},
-          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['kimdh4790@gmail.com'], subject:`[DONWAY 문의] ${name}`, html})
+          body:JSON.stringify({from:'DONWAY <all@donway.ai.kr>', to:['filo-dine@donway.ai.kr'], subject:`[DONWAY 문의] ${name}`, html})
         });
         return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       } catch(e) {

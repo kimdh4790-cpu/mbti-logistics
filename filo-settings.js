@@ -449,7 +449,7 @@ function _filoPageSubscription(el){
   '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">요금 문의</div>'+
   '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
   '<a href="tel:051-711-3103" style="padding:8px 16px;background:var(--br);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">전화 051-711-3103</a>'+
-  '<a href="mailto:help@filo.ai.kr" style="padding:8px 16px;border:1px solid var(--bd2);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">이메일 문의</a>'+
+  '<a href="mailto:filo-dine@donway.ai.kr" style="padding:8px 16px;border:1px solid var(--bd2);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">이메일 문의</a>'+
   '</div></div>'+
   '</div>';
 }

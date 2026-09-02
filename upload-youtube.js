@@ -21,7 +21,7 @@ const VIDEO_DESC = `FILO·DINE은 외식업을 위한 통합 운영 플랫폼입
 ✅ POS 결제 — 현금·카드·간편결제 6종 지원
 
 🔗 무료 체험: https://filo.ai.kr
-📞 문의: kimdh4790@gmail.com
+📞 문의: filo-dine@donway.ai.kr
 
 #외식업 #식당관리 #POS #QR주문 #키오스크 #매장관리 #FILODINE`;
 
