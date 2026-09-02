@@ -9446,6 +9446,20 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
         const s = coords.reduce((a, c) => ({ lat: a.lat + c.lat, lng: a.lng + c.lng }), { lat: 0, lng: 0 });
         return { lat: s.lat / coords.length, lng: s.lng / coords.length };
       }
+      function _tmToWgs84(x, y) {
+        const a=6378137, f=1/298.257222101, b=a*(1-f), e2=1-b*b/(a*a), ep2=e2/(1-e2);
+        const lat0=38*Math.PI/180, lng0=127.5*Math.PI/180, E0=1e6, N0=2e6, e4=e2*e2, e6=e4*e2;
+        const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));
+        function mArc(p){return a*((1-e2/4-3*e4/64-5*e6/256)*p-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));}
+        const M=mArc(lat0)+(y-N0), mu=M/(a*(1-e2/4-3*e4/64-5*e6/256));
+        const phi1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+        const sp1=Math.sin(phi1), cp1=Math.cos(phi1), tp1=Math.tan(phi1);
+        const N1=a/Math.sqrt(1-e2*sp1*sp1), T1=tp1*tp1, C1=ep2*cp1*cp1;
+        const R1=a*(1-e2)/Math.pow(1-e2*sp1*sp1,1.5), D=(x-E0)/N1;
+        const lat=phi1-(N1*tp1/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+        const lng2=lng0+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/cp1;
+        return {lat:lat*180/Math.PI, lng:lng2*180/Math.PI};
+      }
       // ① business.juso.go.kr WFS
       try {
         const jusoBase='https://business.juso.go.kr/api/proxy/juso/wfs?SERVICE=WFS&apikey=3B63BE88F1A06653075E0C88883B157E&version=1.1.1&REQUEST=GetFeature&outputFormat=application/json&TYPENAME=daip:TBL_KARB_SBD';
@@ -9457,6 +9471,27 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
             if (jr.ok){const jfc=await jr.json();if((jfc.features||[]).length){jFeats=jfc.features;break;}}
           } catch(_){}
         }
+        if (!jFeats && env.DONWAY_ASSETS) {
+          const kvRaw=await env.DONWAY_ASSETS.get('basidco:'+zip);
+          if (kvRaw) {
+            const kv=JSON.parse(kvRaw);
+            if (Array.isArray(kv)&&kv.length) {
+              const s=kv.reduce((a,c)=>({lat:a.lat+c.lat,lng:a.lng+c.lng}),{lat:0,lng:0});
+              const cLat=s.lat/kv.length, cLng=s.lng/kv.length;
+              const d=0.04;
+              const bbox=`${cLng-d},${cLat-d},${cLng+d},${cLat+d},EPSG:4326`;
+              try {
+                const jr2=await fetch(`${jusoBase}&BBOX=${bbox}&SRSNAME=EPSG:4326`,{headers:jusoHdrs,signal:AbortSignal.timeout(15000)});
+                if (jr2.ok){
+                  const jfc2=await jr2.json();
+                  const feats2=jfc2.features||[];
+                  const f2=feats2.find(f=>{const p=f.properties||{};return ['BAS_ID','KARB_CD','BASEID','ZONE_NO','BAS_CD','ZIP','ZIPNO'].some(k=>String(p[k]||'')===zip);})||feats2.find(f=>Object.values(f.properties||{}).some(v=>String(v)===zip));
+                  if(f2)jFeats=[f2];
+                }
+              } catch(_){}
+            }
+          }
+        }
         if (jFeats&&jFeats.length) {
           const feat=jFeats[0];
           if (feat?.geometry) {
@@ -9464,8 +9499,12 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
             const coords=ring.map(c=>({lat:c[1],lng:c[0]}));
             if (coords.length>=4&&coords[0].lat>33&&coords[0].lat<39&&coords[0].lng>124) {
               const cen=_centroid(coords);
-              const zipName = zip;
-              return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,zipName,source:'juso'}),{headers:corsH});
+              return new Response(JSON.stringify({ok:true,coords,lat:cen.lat,lng:cen.lng,zipName:zip,source:'juso'}),{headers:corsH});
+            }
+            const coords5179=ring.map(c=>_tmToWgs84(c[0],c[1]));
+            if (coords5179.length>=4&&coords5179[0].lat>33&&coords5179[0].lat<39&&coords5179[0].lng>124) {
+              const cen=_centroid(coords5179);
+              return new Response(JSON.stringify({ok:true,coords:coords5179,lat:cen.lat,lng:cen.lng,zipName:zip,source:'juso'}),{headers:corsH});
             }
           }
         }
@@ -9507,6 +9546,19 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
                 const cen = _centroid(coords);
                 return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, zipName: zip, source: 'vworld-data' }), { headers: corsH });
               }
+            }
+          }
+        } catch (_) {}
+      }
+      // ④ KV 캐시 직접 조회 (shapefile 변환 데이터)
+      if (env.DONWAY_ASSETS) {
+        try {
+          const kvVal = await env.DONWAY_ASSETS.get('basidco:' + zip);
+          if (kvVal) {
+            const coords = JSON.parse(kvVal);
+            if (Array.isArray(coords) && coords.length >= 4) {
+              const cen = _centroid(coords);
+              return new Response(JSON.stringify({ ok: true, coords, lat: cen.lat, lng: cen.lng, zipName: zip, source: 'kv' }), { headers: corsH });
             }
           }
         } catch (_) {}

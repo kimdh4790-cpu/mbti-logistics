@@ -7,3 +7,7 @@ workers_dev = false
 [[routes]]
 pattern = "yongcha.app/*"
 zone_name = "yongcha.app"
+
+[[kv_namespaces]]
+binding = "DONWAY_ASSETS"
+id = "7f0e90efaea64f3ab08ff00f8970b28b"
