@@ -925,6 +925,11 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option>충남</option><option>충북</option><option>강원</option><option>제주</option>
       </select>
     </div>
+    <!-- 소장 — 담당 택배업체 (복수 선택) -->
+    <div class="inp-wrap" id="r-courier-wrap">
+      <label class="inp-lbl">담당 택배업체 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 가능)</span></label>
+      <div id="r-courier-chips" style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0"></div>
+    </div>
     <!-- 기사 차종 — 이 필드가 없어서 지금까지 carType 이 항상 빈 값이었고
          맞춤추천/AI 배차의 차종 매칭이 전혀 동작하지 않았다 -->
     <div class="inp-wrap" id="r-cartype-wrap" style="display:none">
@@ -1181,6 +1186,8 @@ function _yTab(t){
   document.getElementById('tab-reg').classList.toggle('on',t==='reg');
   document.getElementById('form-login').style.display=t==='login'?'block':'none';
   document.getElementById('form-reg').style.display=t==='reg'?'block':'none';
+  // 회원가입 탭으로 전환 시 기본 타입(소장) 칩 초기화
+  if(t==='reg') _setType(_regType||'agency');
 }
 function _setType(t){
   _regType=t;
@@ -1192,6 +1199,29 @@ function _setType(t){
   if(cw)cw.style.display=(t==='driver')?'block':'none';
   var fw=document.getElementById('r-carfuel-wrap');
   if(fw)fw.style.display=(t==='driver')?'block':'none';
+  var courWrap=document.getElementById('r-courier-wrap');
+  if(courWrap){
+    courWrap.style.display=(t==='agency')?'block':'none';
+    // 칩 최초 생성 (중복 방지)
+    var chips=document.getElementById('r-courier-chips');
+    if(chips&&!chips.dataset.built){
+      chips.dataset.built='1';
+      COURIERS.slice(1).forEach(function(c){
+        var lbl=document.createElement('label');
+        lbl.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;border:1.5px solid var(--bd2,#e2e8f0);background:var(--b2,#f8fafc);font-size:12px;font-weight:700;color:var(--tx,#334155);cursor:pointer;user-select:none;transition:all .15s';
+        var cb=document.createElement('input');
+        cb.type='checkbox';cb.name='r-courier';cb.value=c;cb.style.cssText='display:none';
+        cb.addEventListener('change',function(){
+          lbl.style.background=cb.checked?'#1e6efb':'var(--b2,#f8fafc)';
+          lbl.style.color=cb.checked?'#ffffff':'var(--tx,#334155)';
+          lbl.style.borderColor=cb.checked?'#1e6efb':'var(--bd2,#e2e8f0)';
+        });
+        lbl.appendChild(cb);
+        lbl.appendChild(document.createTextNode(c));
+        chips.appendChild(lbl);
+      });
+    }
+  }
 }
 
 /* ══ 차종 — 하이탑 / 로우탑 두 가지로 통일 ══════════════════════
@@ -1243,12 +1273,17 @@ function _yRegister(){
   var btn=document.getElementById('r-btn');
   if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  // 소장은 택배업체 1개 이상 선택 필수
+  var selCouriers=[];
+  document.querySelectorAll('#r-courier-chips input[type=checkbox]:checked').forEach(function(cb){selCouriers.push(cb.value);});
+  if(_regType==='agency'&&selCouriers.length===0){err.textContent='담당 택배업체를 1개 이상 선택하세요';err.style.display='block';return;}
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
     var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
     var _doc={
       uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
+      couriers:selCouriers,
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
