@@ -125,30 +125,35 @@ function _filoPosTopBar(did){
   var view=_filoPosView();
   var dual=_filoPosDual();
   var viewLbl=view==='floor'?'클래식 뷰':'플로어 뷰';
-  var dualActv=dual?'rgba(8,145,178,.12)':'var(--surface,#fff)';
-  var dualCol=dual?'#0891b2':'var(--t2)';
-  var dualBd=dual?'1px solid rgba(8,145,178,.4)':'1px solid var(--bd)';
-  return '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
-    '<button onclick="_filoPosSetView(\''+(view==='floor'?'classic':'floor')+'\')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--bd);font-size:11px;font-weight:700;cursor:pointer;background:var(--surface,#fff);color:var(--t2)">'+viewLbl+'</button>'+
+  var dualActv=dual?'rgba(56,189,248,.15)':'#0d1528';
+  var dualCol=dual?'#38bdf8':'#64748b';
+  var dualBd=dual?'1px solid rgba(56,189,248,.4)':'1px solid #1a2d4a';
+  return '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0">'+
+    '<button onclick="_filoPosSetView(\''+(view==='floor'?'classic':'floor')+'\')" style="padding:6px 14px;border-radius:20px;border:1px solid #1a2d4a;font-size:11px;font-weight:700;cursor:pointer;background:#0d1528;color:#94a3b8">'+viewLbl+'</button>'+
     '<button onclick="_filoPosSetView(undefined,\''+(dual?'0':'1')+'\')" style="padding:6px 14px;border-radius:20px;border:'+dualBd+';font-size:11px;font-weight:700;cursor:pointer;background:'+dualActv+';color:'+dualCol+';display:inline-flex;align-items:center;gap:4px">'+
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'+
     (dual?'단일 화면':'양면 화면')+'</button>'+
-    '<button onclick="_filoGoPage(\'menu_mgmt\')" class="btn" style="background:var(--br);color:#fff;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700">'+
+    '<button onclick="_filoGoPage(\'menu_mgmt\')" class="btn" style="background:#c9a84c;color:#0a0a0a;border:none;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:800">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 메뉴 등록</button>'+
-    '<button onclick="typeof _filoRefundLookup===\'function\'?_filoRefundLookup():_filoGoPage(\'orders\')" class="btn" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700">'+
+    '<button onclick="typeof _filoRefundLookup===\'function\'?_filoRefundLookup():_filoGoPage(\'orders\')" class="btn" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.49"/></svg> 환불 조회</button>'+
-    '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:var(--b3);font-size:12px;display:inline-flex;align-items:center;gap:5px">'+
+    '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:#0d1528;border:1px solid #1a2d4a;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:5px">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 메뉴 엑셀</button>'+
     '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
     '</div>';
 }
 
-// ── 인라인 고객 디스플레이 패널 (양면 화면) ──────────────────────────────────
+// ── 인라인 고객 디스플레이 패널 (양면 화면 — 테이블오더 스타일) ─────────────
 var _posCustInlineTimer=null;
+var _posCustSelCat=null;
+function _posCustSetCat(cat){
+  window._posCustSelCat=cat;
+  _renderPosInlineCust();
+}
 function _startPosInlineCust(){
   _stopPosInlineCust();
   _renderPosInlineCust();
-  _posCustInlineTimer=setInterval(_renderPosInlineCust,500);
+  _posCustInlineTimer=setInterval(_renderPosInlineCust,800);
 }
 function _stopPosInlineCust(){
   if(_posCustInlineTimer){clearInterval(_posCustInlineTimer);_posCustInlineTimer=null;}
@@ -156,36 +161,54 @@ function _stopPosInlineCust(){
 function _renderPosInlineCust(){
   var panel=document.getElementById('pos-cust-panel');
   if(!panel){_stopPosInlineCust();return;}
+  var menus=window._kioskMenus||[];
+  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
+  if(!window._posCustSelCat&&cats.length)window._posCustSelCat=cats[0];
+  var selCat=window._posCustSelCat||null;
+  var filtered=selCat?menus.filter(function(m){return (m.category||'기타')===selCat;}):menus;
   var items=window._cartItems||[];
   var total=items.reduce(function(s,c){return s+c.price*c.qty;},0);
   var disc=window._posDiscount||0;
   var finalTotal=Math.max(0,total-disc);
-  var tbl=window._selectedTableName||'';
-  var itemsHtml=items.length?items.map(function(c){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
-      '<div><div style="font-size:15px;font-weight:800;color:#e2e8f0">'+esc(c.name)+'</div>'+
-      '<div style="font-size:12px;color:#475569;margin-top:2px">₩'+c.price.toLocaleString()+' × '+c.qty+'</div></div>'+
-      '<div style="font-size:17px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums">₩'+(c.price*c.qty).toLocaleString()+'</div>'+
-      '</div>';
-  }).join(''):'<div style="text-align:center;padding:40px 16px;color:#1e293b">'+
-    '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 12px"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'+
-    '<div style="font-size:14px;font-weight:700">주문 대기 중</div></div>';
+
+  var catHtml=!cats.length?'<div style="padding:20px 6px;font-size:11px;color:#1e3555;text-align:center">로딩중</div>':
+    cats.map(function(cat){
+      var active=cat===selCat;
+      return '<button onclick="_posCustSetCat(\''+cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="display:block;width:100%;padding:18px 4px;text-align:center;border:none;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;font-size:11px;font-weight:800;line-height:1.4;word-break:keep-all;transition:all .15s;background:'+(active?'#c9a84c':'transparent')+';color:'+(active?'#0a0a0a':'#334155')+'">'+esc(cat)+'</button>';
+    }).join('');
+
+  var menuHtml=!filtered.length?'<div style="padding:40px 8px;text-align:center;color:#1e3555;font-size:12px;font-weight:700">메뉴 없음</div>':
+    filtered.map(function(m){
+      var colors=['#6366f1','#10b981','#f59e0b','#ef4444','#0891b2','#8b5cf6','#ec4899'];
+      var c=colors[(m.name||'').charCodeAt(0)%colors.length]||'#6366f1';
+      var imgHtml=m.imageUrl
+        ?'<div style="height:88px;background:url(\''+esc(m.imageUrl)+'\') center/cover no-repeat;border-radius:12px 12px 0 0"></div>'
+        :'<div style="height:88px;background:'+c+'18;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:'+c+'">'+esc((m.name||'?').slice(0,1))+'</div>';
+      return '<div style="border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:#0c1a2e">'+imgHtml+
+        '<div style="padding:8px 10px 10px">'+
+          '<div style="font-size:12px;font-weight:800;color:#cbd5e1;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
+          '<div style="font-size:14px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums">₩'+Number(m.price||0).toLocaleString()+'</div>'+
+        '</div></div>';
+    }).join('');
+
   panel.innerHTML=
-    '<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">'+
-      '<div>'+
-        '<div style="font-size:9px;font-weight:900;letter-spacing:2px;color:#334155;text-transform:uppercase">CUSTOMER DISPLAY</div>'+
-        '<div style="font-size:14px;font-weight:900;color:#e2e8f0;margin-top:2px">'+(tbl?esc(tbl)+' 주문':'주문 내역')+'</div>'+
-      '</div>'+
-      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#334155" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'+
+    // 헤더
+    '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:#04091a">'+
+      '<span style="font-size:17px;font-weight:900;color:#c9a84c;letter-spacing:-.3px">FILO</span>'+
+      '<span style="font-size:9px;font-weight:900;color:#1e3555;letter-spacing:2px;text-transform:uppercase">MENU BOARD</span>'+
     '</div>'+
-    '<div style="flex:1;overflow-y:auto;padding:0 16px">'+itemsHtml+'</div>'+
-    '<div style="flex-shrink:0;padding:16px;border-top:1px solid rgba(255,255,255,.08)">'+
-      (disc>0?'<div style="font-size:12px;color:#f87171;text-align:right;margin-bottom:4px">할인 -₩'+disc.toLocaleString()+'</div>':'')+
-      '<div style="text-align:center;margin-bottom:12px">'+
-        '<div style="font-size:11px;color:#334155;font-weight:700;letter-spacing:.5px;margin-bottom:4px">합계</div>'+
-        '<div style="font-size:42px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-2px;line-height:1">₩'+finalTotal.toLocaleString()+'</div>'+
+    // 바디: 카테고리 좌측 + 메뉴 중앙
+    '<div style="flex:1;display:flex;overflow:hidden;min-height:0">'+
+      '<div style="width:66px;flex-shrink:0;overflow-y:auto;background:#04091a;border-right:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column">'+catHtml+'</div>'+
+      '<div style="flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;align-content:start;background:#06101e">'+menuHtml+'</div>'+
+    '</div>'+
+    // 푸터: 합계 + 주문 내역
+    '<div style="flex-shrink:0;padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);background:#04091a">'+
+      '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">'+
+        '<span style="font-size:10px;font-weight:700;color:#1e3555;letter-spacing:.5px">합계</span>'+
+        '<span style="font-size:32px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px">₩'+finalTotal.toLocaleString()+'</span>'+
       '</div>'+
-      '<button onclick="_filoPay()" style="width:100%;padding:14px;background:#c9a84c;border:none;border-radius:14px;color:#0a0a0a;font-size:16px;font-weight:900;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif;letter-spacing:-.3px"'+(items.length?'':' disabled style="opacity:.3;width:100%;padding:14px;background:#c9a84c;border:none;border-radius:14px;color:#0a0a0a;font-size:16px;font-weight:900;cursor:not-allowed;font-family:Pretendard,-apple-system,sans-serif"')+'>결제하기</button>'+
+      (items.length?'<div style="font-size:10px;color:#1e3a5f;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+items.map(function(i){return esc(i.name)+' ×'+i.qty;}).join(' · ')+'</div>':'<div style="font-size:10px;color:#1e3555;margin-top:3px">주문 대기 중</div>')+
     '</div>';
 }
 
@@ -308,8 +331,8 @@ function _loadKioskTableGrid(did){
        if(isPaid)amtHtml='<div style="font-size:10px;color:#818cf8;font-weight:800;margin-top:3px">전액결제</div>';
       }
       card.innerHTML=
-        '<div style="font-size:13px;font-weight:900;color:var(--tx);line-height:1.2">'+esc(t.name)+'</div>'+
-        '<div style="font-size:9px;font-weight:700;color:'+(hasOrder?(isPaid?'#6366f1':'#f59e0b'):'var(--t3)')+';margin-top:4px;letter-spacing:.3px">'+(hasOrder?(isPaid?'결제완료':'주문중'):'비어있음')+'</div>'+
+        '<div style="font-size:13px;font-weight:900;color:#e2e8f0;line-height:1.2">'+esc(t.name)+'</div>'+
+        '<div style="font-size:9px;font-weight:700;color:'+(hasOrder?(isPaid?'#818cf8':'#fbbf24'):'#334155')+';margin-top:4px;letter-spacing:.3px">'+(hasOrder?(isPaid?'결제완료':'주문중'):'비어있음')+'</div>'+
         amtHtml;
       card.addEventListener('click',function(){
        // 선택 표시
@@ -325,7 +348,7 @@ function _loadKioskTableGrid(did){
         var stateColor=hasOrder?(isPaid?'#818cf8':'#fbbf24'):'#4ade80';
         hdr.innerHTML=
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="'+stateColor+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg>'+
-          '<span style="font-size:15px;font-weight:900;color:var(--tx)">'+esc(t.name)+'</span>'+
+          '<span style="font-size:15px;font-weight:900;color:#e2e8f0">'+esc(t.name)+'</span>'+
           '<span style="font-size:11px;font-weight:700;color:'+stateColor+';background:'+stateColor+'1a;padding:3px 8px;border-radius:20px">'+stateLabel+'</span>'+
           (hasOrder&&dispPending>0?'<span style="font-size:13px;font-weight:900;color:#fbbf24;margin-left:auto;font-variant-numeric:tabular-nums">미결 ₩'+dispPending.toLocaleString()+'</span>':'');
        }
