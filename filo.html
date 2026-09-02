@@ -343,6 +343,22 @@ input:focus,select:focus,textarea:focus{border-color:var(--br);box-shadow:0 0 0 
 .menu-item:active{transform:translateY(0) scale(.97);transition-duration:.1s}
 .cart-panel{background:var(--surface);border:1px solid var(--bd2);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow)}
 
+/* ── POS 플로어 레이아웃 ── */
+.pos-floor-wrap{display:flex;height:calc(100dvh - var(--topbar-h) - 40px);overflow:hidden;gap:0;border-radius:var(--r-lg);border:1px solid var(--bd2);box-shadow:var(--shadow)}
+.pos-tables-panel{width:244px;flex-shrink:0;border-right:1px solid var(--bd);overflow-y:auto;background:var(--surface);display:flex;flex-direction:column}
+.pos-order-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;background:var(--surface)}
+.pos-order-hdr{padding:10px 14px;border-bottom:1px solid var(--bd);font-size:14px;font-weight:900;display:flex;align-items:center;gap:8px;flex-shrink:0;min-height:48px;background:var(--surface2)}
+.pos-order-body{flex:1;display:flex;overflow:hidden;min-height:0}
+.pos-cust-panel{width:296px;flex-shrink:0;border-left:2px solid rgba(201,168,76,.3);background:#06101e;display:flex;flex-direction:column;overflow:hidden;font-family:Pretendard,-apple-system,sans-serif;color:#e2e8f0}
+.pos-table-card{background:var(--surface2);border:1.5px solid var(--bd);border-radius:12px;padding:10px 6px;cursor:pointer;transition:all .18s cubic-bezier(.34,1.3,.64,1);text-align:center;user-select:none;position:relative}
+.pos-table-card:hover{border-color:var(--br);transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.14)}
+.pos-table-card:active{transform:translateY(0) scale(.96);transition-duration:.08s}
+.pos-table-card.t-selected{border-color:#0891b2!important;box-shadow:0 0 0 2px rgba(8,145,178,.25),0 4px 14px rgba(8,145,178,.15)!important;background:rgba(8,145,178,.06)!important}
+.pos-table-card.t-occupied{border-color:#f59e0b;background:rgba(251,191,36,.07)}
+.pos-table-card.t-paid{border-color:#6366f1;background:rgba(99,102,241,.07)}
+.pos-table-card.t-empty{border-color:var(--bd);background:var(--surface2)}
+@media(max-width:900px){.pos-floor-wrap{flex-direction:column;height:auto}.pos-tables-panel{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--bd);overflow-x:auto;overflow-y:hidden}.pos-tables-panel #kiosk-table-grid{grid-template-columns:repeat(auto-fill,minmax(68px,1fr))!important;padding:8px 8px 10px!important}.pos-cust-panel{display:none!important}.pos-order-panel{min-height:60dvh}}
+
 /* ── 직원/회원 카드 ── */
 .member-card{background:var(--surface);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px;transition:.2s;position:relative;z-index:1}
 .member-card:hover{border-color:var(--bd2);background:var(--surface2)}
@@ -1403,7 +1419,8 @@ input:focus,select:focus,textarea:focus{
 <script src="/filo-table.js?v=3"></script>
   <script src="/filo-qr.js?v=1"></script>
 <script src="/filo-pos-core.js?v=3"></script>
-<script src="/filo-pos-ui.js?v=13"></script>
+<script src="/filo-pos-pay.js?v=2"></script>
+<script src="/filo-pos-ui.js?v=14"></script>
 <script src="/filo-pos.js?v=8"></script>
 <!-- filo-ai.js 통합됨: filo-margin.js (2026-08-04) -->
 <script src="/filo-memo.js?v=1"></script>
