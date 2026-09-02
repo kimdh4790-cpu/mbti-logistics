@@ -4427,6 +4427,10 @@ function _pgPostWrite(el){
   '<div style="font-size:13px;font-weight:900;color:var(--gn);margin-bottom:8px">AI 빠른 입력</div>'+
   '<div style="display:flex;gap:8px;align-items:center">'+
   '<input class="inp" id="pw-nl-input" placeholder="예: 쿠팡 금정 120건 오늘저녁 18만" style="flex:1;margin-bottom:0;border-color:rgba(16,185,129,.35)">'+
+  '<button type="button" id="pw-mic-btn" onclick="_pwVoiceToggle()" title="음성 입력" style="flex-shrink:0;width:44px;height:44px;background:var(--bg2);border:1.5px solid rgba(16,185,129,.35);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative">'+
+    '<svg id="pw-mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gn)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>'+
+    '<span id="pw-mic-dot" style="display:none;position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#ef4444"></span>'+
+  '</button>'+
   '<button type="button" onclick="_pwNlParse()" style="flex-shrink:0;padding:0 14px;height:44px;background:var(--gn);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:900;cursor:pointer">AI 파싱</button>'+
   '</div>'+
   '<div id="pw-nl-status" style="font-size:11.5px;color:var(--t3);margin-top:6px">자연어로 입력하면 AI가 자동으로 아래 필드를 채워줘요</div>'+
@@ -8228,6 +8232,69 @@ function _yAiCoach(){
     var b=document.getElementById('modal-body');
     if(b)b.innerHTML='<div style="font-size:18px;font-weight:900;margin-bottom:12px">AI 수익 코치</div>'+_errHtml(e);
   });
+}
+
+// ── 음성 입력 (소장 공고 등록) ────────────────────────────────────
+var _pwSR = null;
+var _pwMicOn = false;
+var _pwMicDotTimer = null;
+function _pwVoiceToggle(){
+  if(_pwMicOn){ _pwVoiceStop(); return; }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ _yToast('이 브라우저는 음성 입력을 지원하지 않아요'); return; }
+  _pwSR = new SR();
+  _pwSR.lang = 'ko-KR';
+  _pwSR.interimResults = true;
+  _pwSR.continuous = true;
+  var finalText = '';
+  _pwSR.onstart = function(){
+    _pwMicOn = true;
+    var btn=document.getElementById('pw-mic-btn');
+    var dot=document.getElementById('pw-mic-dot');
+    var icon=document.getElementById('pw-mic-icon');
+    if(btn){ btn.style.background='rgba(239,68,68,.12)'; btn.style.borderColor='#ef4444'; }
+    if(icon){ icon.setAttribute('stroke','#ef4444'); }
+    if(dot){ dot.style.display='block'; }
+    _pwMicDotTimer = setInterval(function(){
+      if(dot) dot.style.opacity = dot.style.opacity==='0'?'1':'0';
+    }, 500);
+    var st=document.getElementById('pw-nl-status');
+    if(st) st.textContent='듣는 중... (탭하면 중지)';
+  };
+  _pwSR.onresult = function(e){
+    var interim=''; finalText='';
+    for(var i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal) finalText+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    var inp=document.getElementById('pw-nl-input');
+    if(inp) inp.value = finalText + interim;
+  };
+  _pwSR.onerror = function(e){
+    _yToast('음성 인식 오류: '+e.error);
+    _pwVoiceStop();
+  };
+  _pwSR.onend = function(){
+    _pwMicOn = false;
+    clearInterval(_pwMicDotTimer);
+    var btn=document.getElementById('pw-mic-btn');
+    var dot=document.getElementById('pw-mic-dot');
+    var icon=document.getElementById('pw-mic-icon');
+    if(btn){ btn.style.background=''; btn.style.borderColor='rgba(16,185,129,.35)'; }
+    if(icon){ icon.setAttribute('stroke','var(--gn)'); }
+    if(dot){ dot.style.display='none'; dot.style.opacity='1'; }
+    var inp=document.getElementById('pw-nl-input');
+    var text=(inp&&inp.value||'').trim();
+    if(text){ _pwNlParse(); }
+    else {
+      var st=document.getElementById('pw-nl-status');
+      if(st) st.textContent='자연어로 입력하면 AI가 자동으로 아래 필드를 채워줘요';
+    }
+  };
+  _pwSR.start();
+}
+function _pwVoiceStop(){
+  if(_pwSR){ try{ _pwSR.stop(); }catch(e){} }
 }
 
 // ── NL 공고 파싱 (소장용) ─────────────────────────────────────────
