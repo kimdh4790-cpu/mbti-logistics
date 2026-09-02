@@ -949,6 +949,11 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option value="전기">전기</option>
       </select>
     </div>
+    <!-- 기사 — 선호 근무타입 (AI 추천에 반영) -->
+    <div class="inp-wrap" id="r-worktype-wrap" style="display:none">
+      <label class="inp-lbl">선호 근무타입 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 · AI 추천에 반영)</span></label>
+      <div id="r-worktype-chips" style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0"></div>
+    </div>
     <div class="inp-wrap">
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
@@ -1199,6 +1204,27 @@ function _setType(t){
   if(cw)cw.style.display=(t==='driver')?'block':'none';
   var fw=document.getElementById('r-carfuel-wrap');
   if(fw)fw.style.display=(t==='driver')?'block':'none';
+  var wtWrap=document.getElementById('r-worktype-wrap');
+  if(wtWrap){
+    wtWrap.style.display=(t==='driver')?'block':'none';
+    var wtChips=document.getElementById('r-worktype-chips');
+    if(wtChips&&!wtChips.dataset.built){
+      wtChips.dataset.built='1';
+      ['주간','야간','새벽','주5일','주6일','단거리','장거리','탄력'].forEach(function(wt){
+        var lbl=document.createElement('label');
+        lbl.style.cssText='display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;border:1.5px solid var(--bd2,#e2e8f0);background:var(--b2,#f8fafc);font-size:12px;font-weight:700;color:var(--tx,#334155);cursor:pointer;user-select:none;transition:all .15s';
+        var cb=document.createElement('input');
+        cb.type='checkbox';cb.name='r-worktype';cb.value=wt;cb.style.cssText='display:none';
+        cb.addEventListener('change',function(){
+          lbl.style.background=cb.checked?'#1e6efb':'var(--b2,#f8fafc)';
+          lbl.style.color=cb.checked?'#ffffff':'var(--tx,#334155)';
+          lbl.style.borderColor=cb.checked?'#1e6efb':'var(--bd2,#e2e8f0)';
+        });
+        lbl.appendChild(cb);lbl.appendChild(document.createTextNode(wt));
+        wtChips.appendChild(lbl);
+      });
+    }
+  }
   var courWrap=document.getElementById('r-courier-wrap');
   if(courWrap){
     courWrap.style.display=(t==='agency')?'block':'none';
@@ -1277,6 +1303,8 @@ function _yRegister(){
   var selCouriers=[];
   document.querySelectorAll('#r-courier-chips input[type=checkbox]:checked').forEach(function(cb){selCouriers.push(cb.value);});
   if(_regType==='agency'&&selCouriers.length===0){err.textContent='담당 택배업체를 1개 이상 선택하세요';err.style.display='block';return;}
+  var selWorkTypes=[];
+  document.querySelectorAll('#r-worktype-chips input[type=checkbox]:checked').forEach(function(cb){selWorkTypes.push(cb.value);});
   err.style.display='none';btn.textContent='가입 중...';btn.disabled=true;
   _auth.createUserWithEmailAndPassword(e,p).then(function(c){
     var userType=ADMINS.indexOf(e)>=0?'admin':_regType;
@@ -1284,6 +1312,7 @@ function _yRegister(){
       uid:c.user.uid,type:userType,name:n,email:e,phone:ph,region:rg,carType:(document.getElementById('r-cartype')||{}).value||'',
       carFuelType:(document.getElementById('r-carfuel')||{}).value||'휘발유',
       couriers:selCouriers,
+      workTypes:selWorkTypes,
       rating:0,reviewCount:0,status:'active',
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -2943,6 +2972,13 @@ function _yMatchScore(p){
   if(_prefs.carType&&p.vehicleType&&_yCarNorm(p.vehicleType)===_yCarNorm(_prefs.carType))score++;
   if(_prefs.courier&&p.courier&&p.courier===_prefs.courier)score++;
   if(_prefs.minPrice&&(p.unitPrice||0)<_prefs.minPrice)return -1;
+  // 선호 근무타입 매칭 — workTypes 배열(기사)과 공고 workHours/workType 필드 비교
+  var driverWt=(_prefs.workTypes&&_prefs.workTypes.length)?_prefs.workTypes:(_CU&&_CU.workTypes)||[];
+  if(driverWt.length){
+    var postWt=(p.workType||'')+(p.workHours||'');
+    var matched=driverWt.some(function(wt){return postWt.indexOf(wt)!==-1;});
+    if(matched)score++;
+  }
   return score;
 }
 
@@ -5402,6 +5438,17 @@ function _pgProfile(el){
         '<select id="pref-time" class="inp">'+
           ['','오전','오후','야간'].map(function(v){return '<option value="'+v+'"'+(p.timeSlot===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
         '</select></div>'+
+      (function(){
+        var saved=p.workTypes||_CU.workTypes||[];
+        var chips=['주간','야간','새벽','주5일','주6일','단거리','장거리','탄력'].map(function(wt){
+          var on=saved.indexOf(wt)!==-1;
+          return '<label id="pref-wt-'+wt+'" style="display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:20px;border:1.5px solid '+(on?'#1e6efb':'var(--bd2)') +';background:'+(on?'#1e6efb':'var(--b2)')+';font-size:12px;font-weight:700;color:'+(on?'#fff':'var(--tx)')+';cursor:pointer;user-select:none;transition:all .15s">'+
+            '<input type="checkbox" name="pref-worktype" value="'+wt+'"'+(on?' checked':'')+' style="display:none" onchange="var l=this.parentElement;l.style.background=this.checked?\'#1e6efb\':\'var(--b2)\';l.style.color=this.checked?\'#fff\':\'var(--tx)\';l.style.borderColor=this.checked?\'#1e6efb\':\'var(--bd2)\'">'+
+            wt+'</label>';
+        }).join('');
+        return '<div class="inp-wrap"><label class="inp-lbl">선호 근무타입 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 · AI 추천 반영)</span></label>'+
+          '<div id="pref-worktype-chips" style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0">'+chips+'</div></div>';
+      })()+
       '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
         '<input id="pref-carNum" class="inp" placeholder="예: 12가3456" value="'+(_CU.carNumber||'')+'"></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">정기검사 만료일</label>'+
@@ -7129,12 +7176,15 @@ function _doLogout(){
 }
 
 function _ySavePrefs(){
+  var prefWorkTypes=[];
+  document.querySelectorAll('#pref-worktype-chips input[type=checkbox]:checked').forEach(function(cb){prefWorkTypes.push(cb.value);});
   var prefs={
     region:(document.getElementById('pref-region')||{}).value||'',
     carType:(document.getElementById('pref-carType')||{}).value||'',
     courier:(document.getElementById('pref-courier')||{}).value||'',
     minPrice:parseInt((document.getElementById('pref-price')||{}).value)||0,
-    timeSlot:(document.getElementById('pref-time')||{}).value||''
+    timeSlot:(document.getElementById('pref-time')||{}).value||'',
+    workTypes:prefWorkTypes
   };
   // carType/region 은 문서 루트에도 미러링한다 — AI 기사 추천이 preferences 를
   // 보지 않고 루트 필드를 읽기 때문에, 여기서 안 넣으면 추천에서 차종이 늘 비어 있다.
