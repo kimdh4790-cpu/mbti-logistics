@@ -319,8 +319,8 @@ function _loadKioskTableGrid(did){
        if(isPaid)amtHtml='<div style="font-size:10px;color:#818cf8;font-weight:800;margin-top:3px">전액결제</div>';
       }
       card.innerHTML=
-        '<div style="font-size:13px;font-weight:900;color:#e2e8f0;line-height:1.2">'+esc(t.name)+'</div>'+
-        '<div style="font-size:9px;font-weight:700;color:'+(hasOrder?(isPaid?'#818cf8':'#fbbf24'):'#334155')+';margin-top:4px;letter-spacing:.3px">'+(hasOrder?(isPaid?'결제완료':'주문중'):'비어있음')+'</div>'+
+        '<div style="font-size:13px;font-weight:900;color:#1e293b;line-height:1.2">'+esc(t.name)+'</div>'+
+        '<div style="font-size:9px;font-weight:700;color:'+(hasOrder?(isPaid?'#6366f1':'#d97706'):'#64748b')+';margin-top:4px;letter-spacing:.3px">'+(hasOrder?(isPaid?'결제완료':'주문중'):'비어있음')+'</div>'+
         amtHtml;
       card.addEventListener('click',function(){
        // 선택 표시
