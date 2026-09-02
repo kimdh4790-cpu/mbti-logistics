@@ -163,6 +163,22 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-02 (31차)
+**문의 이메일 통합 + FILO 랜딩 전면 재설계**
+- 전체 앱 문의 이메일 → `filo-dine@donway.ai.kr` 통합
+  - `filo-settings.js`: `help@filo.ai.kr` → `filo-dine@donway.ai.kr`
+  - `_worker.js`: 환불 고객센터 이메일 변경
+  - `donway_landing.html`: 문의 이메일 변경
+  - `mbtico-pages/_worker.js`: DONWAY 문의 수신 이메일 변경
+  - `upload-youtube.js`: 소셜미디어 설명 이메일 변경
+- `filo-landing.html` 전면 재설계 (DINE 랜딩 동일 스타일)
+  - 흰 배경(#fff) + 핑크(#f43f5e / #ec4899) 테마
+  - 5개 슬라이드: 히어로 / POS·QR주문 / 직원·급여 / AI분석 / 요금제
+  - 피처 카드 클릭 → 모달 상세 내용 (자세히 보기, 17개 모달)
+  - 슬라이드 2-3: 좌측 텍스트 + 우측 폰 목업 레이아웃 (짤림 없음)
+  - 터치 스와이프 + 키보드 화살표 + 도트/화살표 슬라이드 전환
+  - KPI 카운트업 애니메이션 (매출/절감시간)
+
 ### 2026-09-02 (30차)
 **POS 포스기 스타일 리디자인 — 플로어 뷰 + 양면 화면**
 - `filo-pos-ui.js`:
