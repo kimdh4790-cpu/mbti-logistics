@@ -8724,9 +8724,9 @@ function _addZipCodeZone(){
       _renderZoneTags();
       _updateMapZones();
       var areaInp=document.getElementById('pw-area');
-      if(areaInp) areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+      if(areaInp) areaInp.value=window._zones.map(function(z){return z.zipcode+(z.name&&z.name!==z.zipcode?' '+z.name:'');}).join(', ');
       var msgEl=document.getElementById('zip-add-msg');
-      if(msgEl) msgEl.textContent=zip+' '+zipName+' 구역이 추가됐어요';
+      if(msgEl) msgEl.textContent=zip+(zipName&&zipName!==zip?' '+zipName:'')+ ' 구역이 추가됐어요';
       input.value='';
     })
     .catch(function(){_yToast('우편번호 조회 중 오류가 발생했어요');});
@@ -8764,9 +8764,9 @@ function _renderZoneTags(){
   if(!el) return;
   if(!window._zones||!window._zones.length){el.innerHTML='';return;}
   el.innerHTML = window._zones.map(function(z,i){
+    var label = z.name&&z.name!==z.zipcode ? z.zipcode+' '+z.name : z.zipcode;
     return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--ac);color:#000;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700">'
-      +' '+z.zipcode
-      +' <span style="font-weight:500">'+z.name+'</span>'
+      +' '+label
       +'<button onclick="event.stopPropagation();_removeZone('+i+')" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0 0 0 4px;color:#000;line-height:1">×</button>'
       +'</span>';
   }).join('');
@@ -8806,11 +8806,17 @@ function _doUpdateMapZones(){
   window._polygons = [];
   if(!window._zones||!window._zones.length) return;
   window._zones.forEach(function(z){
+    var lbl = z.name&&z.name!==z.zipcode ? z.zipcode+' '+z.name : z.zipcode;
     var pos = new kakao.maps.LatLng(z.lat, z.lng);
-    var content = '<div style="background:rgba(0,212,170,.92);color:#000;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)">'+z.zipcode+' '+z.name+'</div>';
+    var content = '<div style="background:rgba(0,212,170,.92);color:#000;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)">'+lbl+'</div>';
     var overlay = new kakao.maps.CustomOverlay({content:content, position:pos, yAnchor:2.5});
     overlay.setMap(_map);
     _markers.push(overlay);
+    if(z.coords&&z.coords.length>=3){
+      var path=z.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);});
+      var polygon=new kakao.maps.Polygon({path:path,strokeWeight:2,strokeColor:'#00d4aa',strokeOpacity:0.9,fillColor:'#00d4aa',fillOpacity:0.15,map:_map});
+      window._polygons.push(polygon);
+    }
   });
   var last = window._zones[window._zones.length-1];
   _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
