@@ -161,54 +161,42 @@ function _stopPosInlineCust(){
 function _renderPosInlineCust(){
   var panel=document.getElementById('pos-cust-panel');
   if(!panel){_stopPosInlineCust();return;}
-  var menus=window._kioskMenus||[];
-  var cats=[...new Set(menus.map(function(m){return m.category||'기타';}))];
-  if(!window._posCustSelCat&&cats.length)window._posCustSelCat=cats[0];
-  var selCat=window._posCustSelCat||null;
-  var filtered=selCat?menus.filter(function(m){return (m.category||'기타')===selCat;}):menus;
   var items=window._cartItems||[];
   var total=items.reduce(function(s,c){return s+c.price*c.qty;},0);
   var disc=window._posDiscount||0;
   var finalTotal=Math.max(0,total-disc);
+  var tblName=window._selectedTableName||'고객 화면';
 
-  var catHtml=!cats.length?'<div style="padding:20px 6px;font-size:11px;color:#1e3555;text-align:center">로딩중</div>':
-    cats.map(function(cat){
-      var active=cat===selCat;
-      return '<button onclick="_posCustSetCat(\''+cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="display:block;width:100%;padding:18px 4px;text-align:center;border:none;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;font-size:11px;font-weight:800;line-height:1.4;word-break:keep-all;transition:all .15s;background:'+(active?'#c9a84c':'transparent')+';color:'+(active?'#0a0a0a':'#334155')+'">'+esc(cat)+'</button>';
-    }).join('');
-
-  var menuHtml=!filtered.length?'<div style="padding:40px 8px;text-align:center;color:#1e3555;font-size:12px;font-weight:700">메뉴 없음</div>':
-    filtered.map(function(m){
-      var colors=['#6366f1','#10b981','#f59e0b','#ef4444','#0891b2','#8b5cf6','#ec4899'];
-      var c=colors[(m.name||'').charCodeAt(0)%colors.length]||'#6366f1';
-      var imgHtml=m.imageUrl
-        ?'<div style="height:88px;background:url(\''+esc(m.imageUrl)+'\') center/cover no-repeat;border-radius:12px 12px 0 0"></div>'
-        :'<div style="height:88px;background:'+c+'18;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:'+c+'">'+esc((m.name||'?').slice(0,1))+'</div>';
-      return '<div style="border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:#0c1a2e">'+imgHtml+
-        '<div style="padding:8px 10px 10px">'+
-          '<div style="font-size:12px;font-weight:800;color:#cbd5e1;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
-          '<div style="font-size:14px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums">₩'+Number(m.price||0).toLocaleString()+'</div>'+
-        '</div></div>';
-    }).join('');
+  var itemsHtml=!items.length
+    ?'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#1e3555">'+
+        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1e3555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>'+
+        '<span style="font-size:12px;font-weight:700">주문 대기 중</span>'+
+      '</div>'
+    :'<div style="flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px">'+
+        items.map(function(i){
+          var sub=i.price*i.qty;
+          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#0c1a2e;border:1px solid rgba(255,255,255,.05)">'+
+            '<div style="flex:1;min-width:0">'+
+              '<div style="font-size:13px;font-weight:800;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(i.name)+'</div>'+
+              '<div style="font-size:11px;color:#475569;margin-top:2px">₩'+Number(i.price||0).toLocaleString()+' × '+i.qty+'</div>'+
+            '</div>'+
+            '<div style="font-size:14px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;white-space:nowrap">₩'+sub.toLocaleString()+'</div>'+
+          '</div>';
+        }).join('')+
+      '</div>';
 
   panel.innerHTML=
-    // 헤더
     '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:#04091a">'+
-      '<span style="font-size:17px;font-weight:900;color:#c9a84c;letter-spacing:-.3px">FILO</span>'+
-      '<span style="font-size:9px;font-weight:900;color:#1e3555;letter-spacing:2px;text-transform:uppercase">MENU BOARD</span>'+
+      '<span style="font-size:15px;font-weight:900;color:#e2e8f0">'+esc(tblName)+'</span>'+
+      '<span style="font-size:9px;font-weight:900;color:#1e3555;letter-spacing:2px;text-transform:uppercase">CUSTOMER DISPLAY</span>'+
     '</div>'+
-    // 바디: 카테고리 좌측 + 메뉴 중앙
-    '<div style="flex:1;display:flex;overflow:hidden;min-height:0">'+
-      '<div style="width:66px;flex-shrink:0;overflow-y:auto;background:#04091a;border-right:1px solid rgba(255,255,255,.04);display:flex;flex-direction:column">'+catHtml+'</div>'+
-      '<div style="flex:1;overflow-y:auto;padding:8px;display:grid;grid-template-columns:repeat(2,1fr);gap:6px;align-content:start;background:#06101e">'+menuHtml+'</div>'+
-    '</div>'+
-    // 푸터: 합계 + 주문 내역
-    '<div style="flex-shrink:0;padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);background:#04091a">'+
-      '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">'+
-        '<span style="font-size:10px;font-weight:700;color:#1e3555;letter-spacing:.5px">합계</span>'+
-        '<span style="font-size:32px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px">₩'+finalTotal.toLocaleString()+'</span>'+
-      '</div>'+
-      (items.length?'<div style="font-size:10px;color:#1e3a5f;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+items.map(function(i){return esc(i.name)+' ×'+i.qty;}).join(' · ')+'</div>':'<div style="font-size:10px;color:#1e3555;margin-top:3px">주문 대기 중</div>')+
+    '<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0">'+itemsHtml+'</div>'+
+    '<div style="flex-shrink:0;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);background:#04091a">'+
+      (disc>0?'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
+        '<span style="font-size:10px;color:#475569;font-weight:700">할인</span>'+
+        '<span style="font-size:13px;font-weight:800;color:#f87171;font-variant-numeric:tabular-nums">-₩'+disc.toLocaleString()+'</span>'+
+      '</div>':'<div style="font-size:10px;color:#1e3555;font-weight:700;margin-bottom:6px">합계</div>')+
+      '<div style="font-size:36px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px;text-align:right">₩'+finalTotal.toLocaleString()+'</div>'+
     '</div>';
 }
 
