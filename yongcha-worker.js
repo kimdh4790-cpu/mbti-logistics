@@ -9420,9 +9420,18 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
     }
 
     if (path === '/api/kakao-config') {
-      return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY || '' }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      // env.KAKAO_JS_KEY는 _worker.js 환경에만 등록됨 → filo.ai.kr로 프록시해서 실제 키 획득
+      if (env.KAKAO_JS_KEY) {
+        return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY }), { headers: corsH });
+      }
+      try {
+        const pr = await fetch('https://filo.ai.kr/api/kakao-config', { signal: AbortSignal.timeout(5000) });
+        const data = await pr.text();
+        return new Response(data, { headers: corsH });
+      } catch(e) {
+        return new Response(JSON.stringify({ key: '' }), { headers: corsH });
+      }
     }
 
     // 기초구역 경계 — filo.ai.kr 워커로 프록시 (KV 바인딩 공유)
