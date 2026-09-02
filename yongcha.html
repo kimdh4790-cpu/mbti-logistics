@@ -998,19 +998,18 @@ select.inp option{background:#24243d;color:#f0f1f8}
 <!-- 카카오맵 미리 로드 -->
 <script>
 (function(){
-  fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
-    if(!d.key) return;
-    var s=document.createElement('script');
-    s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+d.key+'&libraries=services&autoload=false';
-    s.onload=function(){
-      kakao.maps.load(function(){
-        window._kakaoReady=true;
-        window._kakaoKey=d.key;
-        console.log('[용차] 카카오맵 로드 완료');
-      });
-    };
-    document.head.appendChild(s);
-  }).catch(function(e){ console.warn('[용차] 카카오 로드 실패:', e); });
+  var key='3d5a58a3e1099aa2b6b221c3db2b0d13';
+  window._kakaoKey=key;
+  var s=document.createElement('script');
+  s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+key+'&libraries=services&autoload=false';
+  s.onload=function(){
+    kakao.maps.load(function(){
+      window._kakaoReady=true;
+      console.log('[용차] 카카오맵 로드 완료');
+    });
+  };
+  s.onerror=function(){ console.warn('[용차] 카카오맵 스크립트 로드 실패'); };
+  document.head.appendChild(s);
 })();
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -8703,33 +8702,21 @@ function _addZipCodeZone(){
   if(!input) return;
   var zip = (input.value||'').replace(/\D/g,'');
   if(zip.length !== 5){_yToast('5자리 우편번호를 입력하세요');return;}
-  new daum.Postcode({
-    oncomplete: function(data){
-      var addr = data.roadAddress || data.jibunAddress;
-      var zipcode = data.zonecode || zip;
-      var name = ((data.sido||'')+' '+(data.sigungu||'')+' '+(data.bname||data.bname1||'')).trim();
-      _loadKakaoMap(function(){
-        var gc = new kakao.maps.services.Geocoder();
-        gc.addressSearch(addr, function(res, status){
-          if(status === kakao.maps.services.Status.OK){
-            var lat = parseFloat(res[0].y), lng = parseFloat(res[0].x);
-            var dup = window._zones.some(function(z){return z.zipcode===zipcode;});
-            if(dup){_yToast('이미 추가된 우편번호예요');return;}
-            window._zones.push({zipcode:zipcode, name:name, lat:lat, lng:lng});
-            _renderZoneTags();
-            _updateMapZones();
-            var areaInp = document.getElementById('pw-area');
-            if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-            var msgEl = document.getElementById('zip-add-msg');
-            if(msgEl) msgEl.textContent = zipcode+' '+name+' 구역이 추가됐어요';
-            input.value = '';
-          } else {
-            _yToast('주소 좌표를 찾을 수 없어요');
-          }
-        });
-      });
-    }
-  }).open({q: zip});
+  var dup = window._zones.some(function(z){return z.zipcode===zip;});
+  if(dup){_yToast('이미 추가된 우편번호예요');return;}
+  fetch('/api/yongcha/basidco?zip='+zip)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok || !d.centLat){_yToast('좌표를 찾을 수 없어요: '+zip);return;}
+      window._zones.push({zipcode:zip, name:d.zipName||zip, lat:d.centLat, lng:d.centLng});
+      _renderZoneTags();
+      _updateMapZones();
+      var areaInp = document.getElementById('pw-area');
+      if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+      var msgEl = document.getElementById('zip-add-msg');
+      if(msgEl) msgEl.textContent = zip+' '+(d.zipName||'')+' 구역이 추가됐어요';
+      input.value = '';
+    }).catch(function(e){_yToast('우편번호 조회 실패: '+e.message);});
 }
 function _openDaumPost(){
   new daum.Postcode({
