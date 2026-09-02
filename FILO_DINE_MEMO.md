@@ -163,6 +163,21 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-02 (32차)
+**filo-landing.html 흰 바탕+핑크 테마 2열 히어로 재설계**
+- `filo-landing.html` 전면 재설계 (DINE 랜딩 참고, 별도 구조)
+  - 테마: 흰 배경(#fff/#f9fafb) + 핑크(#f43f5e / #ec4899) 주조색
+  - 헤더: FILO 로고 + 네비 + 핑크 CTA 버튼, 스크롤 시 frosted-glass
+  - 히어로: 2열 그리드 — 좌측 텍스트·CTA, 우측 CSS 폰 목업(5슬라이드 자동 전환 4.2초)
+    - 폰 슬라이드: POS 테이블현황, QR 주문, 급여·근태, 재고·원가, AIVO AI
+  - 신뢰 chips 바(150+ 매장 / 4.9★ 평점 등)
+  - 기능 카드 8개 아코디언 (자세히 보기 → 인라인 펼침)
+    - QR 테이블주문 / POS·키오스크 / 급여·근태 / 재고·원가 / AIVO AI / 예약·웨이팅 / 회원·포인트 / 스케줄
+  - 비교 섹션 (문제상황 vs FILO 해결), AI 칩 섹션, DINE 번들 박스
+  - 요금 CTA, 업종 태그, 최종 CTA, 푸터 유지
+  - JS 전부 인라인 (filo-landing.js 의존 없음)
+  - 폰 목업 aspect-ratio:9/19.5, object-fit:contain, 짤림 없음
+
 ### 2026-09-02 (31차)
 **문의 이메일 통합 + FILO 랜딩 전면 재설계**
 - 전체 앱 문의 이메일 → `filo-dine@donway.ai.kr` 통합
