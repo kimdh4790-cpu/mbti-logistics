@@ -373,16 +373,21 @@ function SceneCTA() {
       })}
 
       <div style={{ transform: 'scale(' + sc + ')', textAlign: 'center', padding: '0 40px' }}>
+        {/* 준비중 배지 */}
+        <div style={{ display: 'inline-block', background: 'rgba(229,25,107,.18)', border: '1.5px solid rgba(229,25,107,.5)', borderRadius: 30, padding: '7px 22px', fontSize: 14, fontWeight: 900, color: '#ff6fa3', letterSpacing: 2, marginBottom: 18, opacity: fadeIn(frame, 8, 18) }}>
+          🚧 &nbsp;서비스 오픈 준비중
+        </div>
         <div style={{ fontSize: 86, fontWeight: 900, color: LTGLD, letterSpacing: -2, textShadow: '0 0 40px ' + GOLD + '88, 0 0 100px ' + GOLD + '22' }}>용차앱</div>
-        <div style={{ fontSize: 24, color: WHITE, fontWeight: 700, marginTop: -4, marginBottom: 16, opacity: fadeIn(frame, 20, 18) }}>수수료 0원 · 화물 직접 매칭</div>
-        <div style={{ fontSize: 17, color: WHITE + '44', marginBottom: 48, opacity: fadeIn(frame, 28, 18), lineHeight: 1.6 }}>기사 ₩150,000/월 · 소장 ₩50,000/월<br/>DONWAY 구독 소장 무료</div>
-        <div style={{ background: 'linear-gradient(135deg, ' + GOLD + ', #deb95a)', borderRadius: 24, padding: '22px 64px', fontSize: 28, fontWeight: 900, color: '#08101f', opacity: fadeIn(frame, 34, 18), boxShadow: '0 8px 36px ' + GOLD + '55, 0 0 80px ' + GOLD + glowHex, display: 'inline-block', letterSpacing: 0.5, minWidth: 240, textAlign: 'center', marginBottom: 28 }}>
+        <div style={{ fontSize: 24, color: WHITE, fontWeight: 700, marginTop: -4, marginBottom: 16, opacity: fadeIn(frame, 20, 18) }}>소장·기사 직접 거래 정보 서비스</div>
+        <div style={{ fontSize: 17, color: WHITE + '55', marginBottom: 32, opacity: fadeIn(frame, 28, 18), lineHeight: 1.6 }}>기사 ₩150,000/월 · 소장 ₩50,000/월<br/>DONWAY 구독 소장 무료</div>
+        <div style={{ background: 'linear-gradient(135deg, ' + GOLD + ', #deb95a)', borderRadius: 24, padding: '22px 64px', fontSize: 28, fontWeight: 900, color: '#08101f', opacity: fadeIn(frame, 34, 18), boxShadow: '0 8px 36px ' + GOLD + '55, 0 0 80px ' + GOLD + glowHex, display: 'inline-block', letterSpacing: 0.5, minWidth: 240, textAlign: 'center', marginBottom: 10 }}>
           {url.slice(0, charsVisible)}{charsVisible < url.length ? <span style={{ opacity: 0.35 }}>|</span> : null}
         </div>
+        <div style={{ fontSize: 13, color: WHITE + '44', marginBottom: 24, opacity: fadeIn(frame, 50, 18) }}>사전 신청 · 베타 참여 가능</div>
 
         {/* 기능 태그 */}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', opacity: fadeIn(frame, 55, 18), flexWrap: 'wrap' }}>
-          {['🤖 AI 루트코치', '⛽ 주유 최저가', '📄 세금계산서'].map(function(t, i) {
+          {['🤖 AI 기사 추천', '📋 직접 거래 정보', '📄 세금계산서'].map(function(t, i) {
             return <div key={i} style={{ background: GOLD + '14', border: '1px solid ' + GOLD + '33', borderRadius: 20, padding: '8px 16px', color: GOLD + 'cc', fontSize: 13 }}>{t}</div>;
           })}
         </div>
@@ -404,7 +409,7 @@ var SUBTITLES_DATA = [
   { from: 480, to: 570, text: "주유소 최저가까지 같이 안내해요" },
   { from: 570, to: 690, text: "기사님은 월 15만 원" },
   { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
-  { from: 780, to: 900, text: "지금 바로 · yongcha.app" },
+  { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
 ];
 
 function SubtitleBar() {
