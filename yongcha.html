@@ -2972,6 +2972,8 @@ function _yMatchScore(p){
   if(_prefs.carType&&p.vehicleType&&_yCarNorm(p.vehicleType)===_yCarNorm(_prefs.carType))score++;
   if(_prefs.courier&&p.courier&&p.courier===_prefs.courier)score++;
   if(_prefs.minPrice&&(p.unitPrice||0)<_prefs.minPrice)return -1;
+  // 희망 시간대 매칭 — pref-time 선택값과 공고 workShift 직접 비교
+  if(_prefs.workShift&&p.workShift&&_prefs.workShift===p.workShift)score++;
   // 선호 근무타입 매칭 — workTypes 배열(기사)과 공고 workHours/workType 필드 비교
   var driverWt=(_prefs.workTypes&&_prefs.workTypes.length)?_prefs.workTypes:(_CU&&_CU.workTypes)||[];
   if(driverWt.length){
@@ -5428,15 +5430,15 @@ function _pgProfile(el){
         '<select id="pref-fuelType" class="inp">'+
           ['휘발유','경유','LPG','전기'].map(function(v){return '<option value="'+v+'"'+(_CU.carFuelType===v?' selected':'')+'>'+v+(v==='경유'?' (디젤)':v==='LPG'?' (가스)':'')+'</option>';}).join('')+
         '</select></div>'+
-      '<div class="inp-wrap"><label class="inp-lbl">담당 택배사</label>'+
+      '<div class="inp-wrap"><label class="inp-lbl">희망 택배사 <span style="font-size:10px;font-weight:500;color:var(--t3)">(AI 추천 반영)</span></label>'+
         '<select id="pref-courier" class="inp">'+
           ['','CJ대한통운','한진택배','롯데택배','쿠팡로지스틱스','우체국','로젠택배'].map(function(v){return '<option value="'+v+'"'+(p.courier===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
         '</select></div>'+
       '<div class="inp-wrap"><label class="inp-lbl">희망 최저 단가 (원/건)</label>'+
         '<input id="pref-price" type="number" class="inp" placeholder="예: 700" value="'+(p.minPrice||'')+'"></div>'+
-      '<div class="inp-wrap"><label class="inp-lbl">희망 시간대</label>'+
+      '<div class="inp-wrap"><label class="inp-lbl">희망 시간대 <span style="font-size:10px;font-weight:500;color:var(--t3)">(AI 추천 반영)</span></label>'+
         '<select id="pref-time" class="inp">'+
-          ['','오전','오후','야간'].map(function(v){return '<option value="'+v+'"'+(p.timeSlot===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
+          ['','주간','야간','새벽','협의'].map(function(v){return '<option value="'+v+'"'+((p.workShift||p.timeSlot)===v?' selected':'')+'>'+( v||'선택 안함')+'</option>';}).join('')+
         '</select></div>'+
       (function(){
         var saved=p.workTypes||_CU.workTypes||[];
@@ -7184,6 +7186,7 @@ function _ySavePrefs(){
     courier:(document.getElementById('pref-courier')||{}).value||'',
     minPrice:parseInt((document.getElementById('pref-price')||{}).value)||0,
     timeSlot:(document.getElementById('pref-time')||{}).value||'',
+    workShift:(document.getElementById('pref-time')||{}).value||'',
     workTypes:prefWorkTypes
   };
   // carType/region 은 문서 루트에도 미러링한다 — AI 기사 추천이 preferences 를
