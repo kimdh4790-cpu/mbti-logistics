@@ -128,17 +128,17 @@ function _filoPosTopBar(did){
   var dualActv=dual?'rgba(56,189,248,.15)':'#0d1528';
   var dualCol=dual?'#38bdf8':'#64748b';
   var dualBd=dual?'1px solid rgba(56,189,248,.4)':'1px solid #1a2d4a';
-  return '<div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0">'+
-    '<button onclick="_filoPosSetView(\''+(view==='floor'?'classic':'floor')+'\')" style="padding:6px 14px;border-radius:20px;border:1px solid #1a2d4a;font-size:11px;font-weight:700;cursor:pointer;background:#0d1528;color:#94a3b8">'+viewLbl+'</button>'+
-    '<button onclick="_filoPosSetView(undefined,\''+(dual?'0':'1')+'\')" style="padding:6px 14px;border-radius:20px;border:'+dualBd+';font-size:11px;font-weight:700;cursor:pointer;background:'+dualActv+';color:'+dualCol+';display:inline-flex;align-items:center;gap:4px">'+
+  return '<div class="pos-topbar" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;padding:10px 12px;background:#04091a;border-radius:10px 10px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">'+
+    '<button onclick="_filoPosSetView(\''+(view==='floor'?'classic':'floor')+'\')" style="padding:7px 14px;border-radius:20px;border:1px solid #1a2d4a;font-size:11px;font-weight:700;cursor:pointer;background:#0d1528;color:#94a3b8;white-space:nowrap;flex-shrink:0">'+viewLbl+'</button>'+
+    '<button onclick="_filoPosSetView(undefined,\''+(dual?'0':'1')+'\')" style="padding:7px 14px;border-radius:20px;border:'+dualBd+';font-size:11px;font-weight:700;cursor:pointer;background:'+dualActv+';color:'+dualCol+';display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0">'+
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'+
-    (dual?'단일 화면':'양면 화면')+'</button>'+
-    '<button onclick="_filoGoPage(\'menu_mgmt\')" class="btn" style="background:#c9a84c;color:#0a0a0a;border:none;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:800">'+
+    (dual?'단일':'양면')+'</button>'+
+    '<button onclick="_filoGoPage(\'menu_mgmt\')" class="btn" style="background:#c9a84c;color:#0a0a0a;border:none;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:800;white-space:nowrap;flex-shrink:0">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 메뉴 등록</button>'+
-    '<button onclick="typeof _filoRefundLookup===\'function\'?_filoRefundLookup():_filoGoPage(\'orders\')" class="btn" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700">'+
-    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.49"/></svg> 환불 조회</button>'+
-    '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn" style="background:#0d1528;border:1px solid #1a2d4a;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:5px">'+
-    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 메뉴 엑셀</button>'+
+    '<button onclick="typeof _filoRefundLookup===\'function\'?_filoRefundLookup():_filoGoPage(\'orders\')" class="btn pos-topbar-sec" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700;white-space:nowrap;flex-shrink:0">'+
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.49"/></svg> 환불</button>'+
+    '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn pos-topbar-sec" style="background:#0d1528;border:1px solid #1a2d4a;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">'+
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 엑셀</button>'+
     '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
     '</div>';
 }
