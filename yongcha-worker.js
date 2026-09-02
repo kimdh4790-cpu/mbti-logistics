@@ -8712,8 +8712,8 @@ function _addZipCodeZone(){
   fetch('/api/yongcha/basidco?zip='+zip)
     .then(function(r){return r.json();})
     .then(function(d){
-      if(!d.ok || !d.centLat){_yToast('좌표를 찾을 수 없어요: '+zip);return;}
-      window._zones.push({zipcode:zip, name:d.zipName||zip, lat:d.centLat, lng:d.centLng});
+      if(!d.ok || !d.lat){_yToast('좌표를 찾을 수 없어요: '+zip);return;}
+      window._zones.push({zipcode:zip, name:d.zipName||zip, lat:d.lat, lng:d.lng});
       _renderZoneTags();
       _updateMapZones();
       var areaInp = document.getElementById('pw-area');
