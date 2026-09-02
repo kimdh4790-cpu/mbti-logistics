@@ -4544,10 +4544,10 @@ function _pgPostWrite(el){
   '<div style="font-size:11px;color:var(--t2);margin-bottom:4px">예상 일 수익</div>'+
   '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
   '</div>'+
-  '<div style="padding:12px;background:var(--acl);border-radius:10px;margin-bottom:8px">'+
-  '<div style="font-size:11px;color:var(--ac);font-weight:700;margin-bottom:4px">최소보장 안내 (소장 설정)</div>'+
-  '<div style="font-size:13px;font-weight:800" id="pw-guarantee-display">주간: 일 30만원 / 야간: 일 35만원</div>'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:4px">실건수×단가 미달 시 소장이 보장액 지급 (소장·기사 간 계약 조건에 따름)</div>'+
+  '<div class="inp-wrap">'+
+  '<label class="inp-lbl">최소보장금액 (원/일) <span style="font-size:10px;font-weight:500;color:var(--t3)">(선택 · 물량 미달 시 기사에게 지급)</span></label>'+
+  '<input class="inp" id="pw-guarantee" type="number" placeholder="예: 300000 (비워두면 보장 없음)" min="0">'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:4px;padding:0 2px">실건수×단가 미달 시 소장이 보장액 지급 — 소장·기사 간 직접 거래 조건</div>'+
   '</div>'+
   '</div>'+
 
@@ -4835,7 +4835,7 @@ function _submitPost(){
     _yToast('주의: 허위공고 신고 3건 이상으로 "주의" 대리점으로 표시됩니다');
   }
 
-  var minGuarantee = workShift==='야간' ? 350000 : 300000;
+  var minGuarantee = parseInt((document.getElementById('pw-guarantee')||{}).value||'')||0;
 
   // ★ 재진입 잠금 — 버튼 disabled 만으로는 엔터 연타·중복 호출을 못 막는다
   if(window._ySubmitLock){_yToast('처리 중이에요…');return;}
