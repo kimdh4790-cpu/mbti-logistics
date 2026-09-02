@@ -64,7 +64,7 @@ function _cartRender(){
   '<span class="pos-cart-name">'+esc(c.name)+'</span>'+
   '<span class="pos-cart-qty">'+
     '<button onclick="_cartQty('+i+',-1)">−</button>'+
-    '<span style="font-size:13px;font-weight:900;min-width:18px;text-align:center;color:#e2e8f0">'+c.qty+'</span>'+
+    '<span style="font-size:13px;font-weight:900;min-width:18px;text-align:center;color:#1e293b">'+c.qty+'</span>'+
     '<button onclick="_cartQty('+i+',1)">+</button>'+
   '</span>'+
   '<span class="pos-cart-price">₩'+( c.price*c.qty).toLocaleString()+'</span>'+
@@ -85,7 +85,7 @@ function _cartRender(){
   if(ppbCount){
    var _names=_cartItems.map(function(c){return c.name+(c.qty>1?' ×'+c.qty:'');});
    var _nameStr=_names.length===1?_names[0]:_names.length===2?_names.join(', '):(_names[0]+', '+_names[1]+' 외 '+(_names.length-2)+'개');
-   ppbCount.innerHTML='<span style="font-size:12px;color:#e2e8f0;font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_nameStr+'</span>'+
+   ppbCount.innerHTML='<span style="font-size:12px;color:#1e293b;font-weight:800;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_nameStr+'</span>'+
     '<span style="font-size:10px;color:#64748b">총 '+totalQty+'개 선택 · 결제 대기</span>';
   }
   if(ppbTotal)ppbTotal.textContent='₩'+total.toLocaleString();

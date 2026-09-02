@@ -127,9 +127,9 @@ function _filoPosTopBar(did){
   var viewLbl=view==='floor'?'클래식 뷰':'플로어 뷰';
   var dualActv=dual?'rgba(56,189,248,.15)':'#0d1528';
   var dualCol=dual?'#38bdf8':'#64748b';
-  var dualBd=dual?'1px solid rgba(56,189,248,.4)':'1px solid #1a2d4a';
-  return '<div class="pos-topbar" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;padding:10px 12px;background:#04091a;border-radius:10px 10px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">'+
-    '<button onclick="_filoPosSetView(\''+(view==='floor'?'classic':'floor')+'\')" style="padding:7px 14px;border-radius:20px;border:1px solid #1a2d4a;font-size:11px;font-weight:700;cursor:pointer;background:#0d1528;color:#94a3b8;white-space:nowrap;flex-shrink:0">'+viewLbl+'</button>'+
+  var dualBd=dual?'1px solid rgba(56,189,248,.4)':'1px solid #e2e8f0';
+  return '<div class="pos-topbar" style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;padding:10px 12px;background:#ffffff;border-radius:10px 10px 0 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">'+
+    '<button onclick="_filoPosSetView(\''+(view==='floor'?'classic':'floor')+'\')" style="padding:7px 14px;border-radius:20px;border:1px solid #e2e8f0;font-size:11px;font-weight:700;cursor:pointer;background:#f8fafc;color:#475569;white-space:nowrap;flex-shrink:0">'+viewLbl+'</button>'+
     '<button onclick="_filoPosSetView(undefined,\''+(dual?'0':'1')+'\')" style="padding:7px 14px;border-radius:20px;border:'+dualBd+';font-size:11px;font-weight:700;cursor:pointer;background:'+dualActv+';color:'+dualCol+';display:inline-flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0">'+
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'+
     (dual?'단일':'양면')+'</button>'+
@@ -137,7 +137,7 @@ function _filoPosTopBar(did){
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> 메뉴 등록</button>'+
     '<button onclick="typeof _filoRefundLookup===\'function\'?_filoRefundLookup():_filoGoPage(\'orders\')" class="btn pos-topbar-sec" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#ef4444;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-weight:700;white-space:nowrap;flex-shrink:0">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.49"/></svg> 환불</button>'+
-    '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn pos-topbar-sec" style="background:#0d1528;border:1px solid #1a2d4a;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">'+
+    '<button onclick="document.getElementById(\'menu-excel-input\').click()" class="btn pos-topbar-sec" style="background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:12px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0">'+
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> 엑셀</button>'+
     '<input id="menu-excel-input" type="file" accept=".xlsx,.xls" style="display:none" onchange="_filoImportMenuExcel(this)">'+
     '</div>';
@@ -168,35 +168,35 @@ function _renderPosInlineCust(){
   var tblName=window._selectedTableName||'고객 화면';
 
   var itemsHtml=!items.length
-    ?'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#1e3555">'+
-        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#1e3555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>'+
+    ?'<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#94a3b8">'+
+        '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>'+
         '<span style="font-size:12px;font-weight:700">주문 대기 중</span>'+
       '</div>'
     :'<div style="flex:1;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px">'+
         items.map(function(i){
           var sub=i.price*i.qty;
-          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#0c1a2e;border:1px solid rgba(255,255,255,.05)">'+
+          return '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0">'+
             '<div style="flex:1;min-width:0">'+
-              '<div style="font-size:13px;font-weight:800;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(i.name)+'</div>'+
+              '<div style="font-size:13px;font-weight:800;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(i.name)+'</div>'+
               '<div style="font-size:11px;color:#475569;margin-top:2px">₩'+Number(i.price||0).toLocaleString()+' × '+i.qty+'</div>'+
             '</div>'+
-            '<div style="font-size:14px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;white-space:nowrap">₩'+sub.toLocaleString()+'</div>'+
+            '<div style="font-size:14px;font-weight:900;color:#e5196b;font-variant-numeric:tabular-nums;white-space:nowrap">₩'+sub.toLocaleString()+'</div>'+
           '</div>';
         }).join('')+
       '</div>';
 
   panel.innerHTML=
-    '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:#04091a">'+
-      '<span style="font-size:15px;font-weight:900;color:#e2e8f0">'+esc(tblName)+'</span>'+
-      '<span style="font-size:9px;font-weight:900;color:#1e3555;letter-spacing:2px;text-transform:uppercase">CUSTOMER DISPLAY</span>'+
+    '<div style="padding:12px 16px;border-bottom:1px solid #e2e8f0;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc">'+
+      '<span style="font-size:15px;font-weight:900;color:#1e293b">'+esc(tblName)+'</span>'+
+      '<span style="font-size:9px;font-weight:900;color:#94a3b8;letter-spacing:2px;text-transform:uppercase">CUSTOMER DISPLAY</span>'+
     '</div>'+
     '<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0">'+itemsHtml+'</div>'+
-    '<div style="flex-shrink:0;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);background:#04091a">'+
+    '<div style="flex-shrink:0;padding:14px 16px;border-top:1px solid #e2e8f0;background:#ffffff">'+
       (disc>0?'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'+
         '<span style="font-size:10px;color:#475569;font-weight:700">할인</span>'+
         '<span style="font-size:13px;font-weight:800;color:#f87171;font-variant-numeric:tabular-nums">-₩'+disc.toLocaleString()+'</span>'+
-      '</div>':'<div style="font-size:10px;color:#1e3555;font-weight:700;margin-bottom:6px">합계</div>')+
-      '<div style="font-size:36px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;letter-spacing:-1px;text-align:right">₩'+finalTotal.toLocaleString()+'</div>'+
+      '</div>':'<div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:6px">합계</div>')+
+      '<div style="font-size:36px;font-weight:900;color:#e5196b;font-variant-numeric:tabular-nums;letter-spacing:-1px;text-align:right">₩'+finalTotal.toLocaleString()+'</div>'+
     '</div>';
 }
 
@@ -336,7 +336,7 @@ function _loadKioskTableGrid(did){
         var stateColor=hasOrder?(isPaid?'#818cf8':'#fbbf24'):'#4ade80';
         hdr.innerHTML=
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="'+stateColor+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg>'+
-          '<span style="font-size:15px;font-weight:900;color:#e2e8f0">'+esc(t.name)+'</span>'+
+          '<span style="font-size:15px;font-weight:900;color:#1e293b">'+esc(t.name)+'</span>'+
           '<span style="font-size:11px;font-weight:700;color:'+stateColor+';background:'+stateColor+'1a;padding:3px 8px;border-radius:20px">'+stateLabel+'</span>'+
           (hasOrder&&dispPending>0?'<span style="font-size:13px;font-weight:900;color:#fbbf24;margin-left:auto;font-variant-numeric:tabular-nums">미결 ₩'+dispPending.toLocaleString()+'</span>':'');
        }
@@ -361,7 +361,7 @@ function _filoPageKioskClassic(el,did,dual){
   // 모바일 하단 결제 바 (max-width:900px 에서만 표시)
   var payBar=document.createElement('div');
   payBar.id='pos-pay-bar';
-  payBar.style.cssText='display:none;position:fixed;bottom:0;left:0;right:0;z-index:700;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:#040c18;border-top:1px solid rgba(201,168,76,.35);box-shadow:0 -6px 24px rgba(0,0,0,.7);flex-direction:row;align-items:center;gap:10px';
+  payBar.style.cssText='display:none;position:fixed;bottom:0;left:0;right:0;z-index:700;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:#ffffff;border-top:1px solid #e2e8f0;box-shadow:0 -4px 16px rgba(0,0,0,.12);flex-direction:row;align-items:center;gap:10px';
   payBar.innerHTML=
     '<div style="flex:1;min-width:0">'+
       '<div id="ppb-count" style="font-size:10px;color:#475569;font-weight:700;letter-spacing:.5px;text-transform:uppercase">장바구니 비어 있음</div>'+
@@ -617,16 +617,16 @@ function _posCustomerDisplay(){
  overlay.style.cssText='position:fixed;inset:0;z-index:850;background:#050e1a;display:flex;flex-direction:column;font-family:Pretendard,-apple-system,sans-serif;color:#e2e8f0;overflow:hidden';
 
  var hdr=document.createElement('div');hdr.id='cust-hdr';
- hdr.style.cssText='flex-shrink:0;padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06);background:#060f1f';
+ hdr.style.cssText='flex-shrink:0;padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #e2e8f0;background:#f8fafc';
 
  var tabBar=document.createElement('div');tabBar.id='cust-tabbar';
- tabBar.style.cssText='flex-shrink:0;display:none;border-bottom:1px solid rgba(255,255,255,.06);background:#060f1f';
+ tabBar.style.cssText='flex-shrink:0;display:none;border-bottom:1px solid #e2e8f0;background:#f8fafc';
 
  var content=document.createElement('div');content.id='cust-content';
  content.style.cssText='flex:1;overflow-y:auto;padding:20px';
 
  var foot=document.createElement('div');foot.id='cust-foot';
- foot.style.cssText='flex-shrink:0;border-top:1px solid rgba(255,255,255,.08);background:#0a1628';
+ foot.style.cssText='flex-shrink:0;border-top:1px solid #e2e8f0;background:#ffffff';
 
  overlay.appendChild(hdr);overlay.appendChild(tabBar);overlay.appendChild(content);overlay.appendChild(foot);
  document.body.appendChild(overlay);
@@ -645,11 +645,11 @@ function _posCustBuildHeader(){
  hdr.innerHTML=
   '<div style="flex:1;min-width:0">'+
   '<div style="font-size:10px;font-weight:900;letter-spacing:2px;color:#334155;text-transform:uppercase;margin-bottom:2px">CUSTOMER DISPLAY</div>'+
-  '<div style="font-size:15px;font-weight:900;color:#e2e8f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(tblLabel)+'</div>'+
+  '<div style="font-size:15px;font-weight:900;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(tblLabel)+'</div>'+
   '</div>'+
   payBtn+
-  '<button id="cust-touch-toggle" style="background:'+(_posCustTouchMode?'rgba(201,168,76,.2)':'rgba(255,255,255,.07)')+';border:1px solid '+(_posCustTouchMode?'rgba(201,168,76,.5)':'rgba(255,255,255,.1)')+';border-radius:10px;color:'+(_posCustTouchMode?'#c9a84c':'#64748b')+';font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">'+(_posCustTouchMode?'터치 ON':'터치 OFF')+'</button>'+
-  '<button id="cust-close" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#64748b;font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">닫기</button>';
+  '<button id="cust-touch-toggle" style="background:'+(_posCustTouchMode?'rgba(201,168,76,.2)':''#f8fafc')+';border:1px solid '+(_posCustTouchMode?'rgba(229,25,107,.5)':'#e2e8f0')+';border-radius:10px;color:'+(_posCustTouchMode?'#c9a84c':'#64748b')+';font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">'+(_posCustTouchMode?'터치 ON':'터치 OFF')+'</button>'+
+  '<button id="cust-close" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;color:#475569;font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">닫기</button>';
  var overlay=document.getElementById('pos-cust-disp');
  var tog=document.getElementById('cust-touch-toggle');
  if(tog)tog.onclick=function(){
@@ -667,7 +667,7 @@ function _posCustBuildHeader(){
 
 function _posCustBuildTabBar(){
  var tb=document.getElementById('cust-tabbar');if(!tb)return;
- tb.style.cssText='flex-shrink:0;display:flex;border-bottom:1px solid rgba(255,255,255,.06);background:#060f1f';
+ tb.style.cssText='flex-shrink:0;display:flex;border-bottom:1px solid #e2e8f0;background:#f8fafc';
  var oAct=_posCustTab==='order';
  tb.innerHTML=
   '<button id="ctab-order" style="flex:1;padding:14px;background:none;border:none;border-bottom:2px solid '+(oAct?'#c9a84c':'transparent')+';color:'+(oAct?'#c9a84c':'#64748b')+';font-size:14px;font-weight:800;cursor:pointer;font-family:Pretendard,-apple-system,sans-serif">주문내역</button>'+
@@ -780,16 +780,16 @@ function _posCustRenderOrder(content){
    '</div>';return;
  }
  content.innerHTML=items.map(function(c){
-  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.05)">'+
+  return '<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #f1f5f9">'+
    '<div style="flex:1;min-width:0">'+
    '<div style="font-size:16px;font-weight:800;color:#e2e8f0;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.name)+'</div>'+
    '<div style="font-size:13px;color:#64748b">₩'+c.price.toLocaleString()+' × '+c.qty+'</div></div>'+
    '<div style="display:flex;align-items:center;gap:10px">'+
    (_posCustTouchMode?
     '<div style="display:flex;align-items:center;gap:8px">'+
-    '<button onclick="_posCustChangeQty(\''+esc(c.id)+'\',-1)" style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
+    '<button onclick="_posCustChangeQty(\''+esc(c.id)+'\',-1)" style="width:30px;height:30px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;color:#1e293b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>'+
     '<span style="font-size:16px;font-weight:800;min-width:18px;text-align:center">'+c.qty+'</span>'+
-    '<button onclick="_posCustChangeQty(\''+esc(c.id)+'\',1)" style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'+
+    '<button onclick="_posCustChangeQty(\''+esc(c.id)+'\',1)" style="width:30px;height:30px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;color:#1e293b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>'+
     '</div>':'')+
    '<div style="font-size:18px;font-weight:900;color:#c9a84c;font-variant-numeric:tabular-nums;white-space:nowrap">₩'+(c.price*c.qty).toLocaleString()+'</div></div>'+
    '</div>';
@@ -809,7 +809,7 @@ function _posCustRenderMenu(content){
    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">';
   groups[cat].forEach(function(m){
    var imgBg=m.imageUrl?'background-image:url('+esc(m.imageUrl)+');background-size:cover;background-position:center':'background:#1e293b';
-   html+='<div onclick="_posCustAddItem(\''+esc(m.id)+'\')" style="border-radius:12px;overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,.08)">'+
+   html+='<div onclick="_posCustAddItem(\''+esc(m.id)+'\')" style="border-radius:12px;overflow:hidden;cursor:pointer;border:1px solid #e2e8f0">'+
     '<div style="height:80px;'+imgBg+'"></div>'+
     '<div style="padding:8px 10px 10px">'+
     '<div style="font-size:12px;font-weight:800;color:#e2e8f0;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(m.name)+'</div>'+
