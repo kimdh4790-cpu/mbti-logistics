@@ -434,6 +434,17 @@ cd mbtico-pages && npx wrangler deploy
 8. mbtico-pages/_worker.js 경량화 (515KB)
 9. emergency.html 재작성 (461KB)
 
+### 네이버 플레이스 플러스 POS 파트너십 (고가치 비즈니스 작업)
+13. **네이버 POS 파트너 신청** — 스마트플레이스 플레이스 플러스 지원 POS 목록에 FILO 등록
+    - 신청처: 네이버 B2B 파트너센터 (developers.naver.com 또는 smartplace.naver.com 파트너 문의)
+    - 연동 시 FILO 고객사 네이버 순위 점수 직접 반영 → FILO 마케팅 효과 큼
+    - 효과: 실매출 데이터 → 네이버 순위 점수 반영 / 연동 가게 전용 혜택 / 비연동 가게와 격차 확대
+14. **플레이스 플러스 API 연동 코드 구현** (파트너 승인 후)
+    - _worker.js에 /api/naver-place-sync 엔드포인트 추가
+    - filo_sales/filo_orders → 일자별 매출합계·결제건수·결제방식 집계 후 네이버 API 전송
+    - filo-settings.js에 네이버 플레이스 연동 설정 UI 추가 (매장별 네이버 place ID 입력)
+15. **FILO 설정 화면 플레이스 플러스 안내 카드** — "FILO 연동 준비 중, 승인 시 즉시 알림" UI 선제 추가
+
 ### 법무·인증 (외부 절차)
 11. 용차앱 저작권 등록 (cros.or.kr)
 12. 벤처기업 인증 (기보 부산지점)

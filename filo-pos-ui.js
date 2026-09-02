@@ -648,7 +648,7 @@ function _posCustBuildHeader(){
   '<div style="font-size:15px;font-weight:900;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(tblLabel)+'</div>'+
   '</div>'+
   payBtn+
-  '<button id="cust-touch-toggle" style="background:'+(_posCustTouchMode?'rgba(201,168,76,.2)':''#f8fafc')+';border:1px solid '+(_posCustTouchMode?'rgba(229,25,107,.5)':'#e2e8f0')+';border-radius:10px;color:'+(_posCustTouchMode?'#c9a84c':'#64748b')+';font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">'+(_posCustTouchMode?'터치 ON':'터치 OFF')+'</button>'+
+  '<button id="cust-touch-toggle" style="background:'+(_posCustTouchMode?'rgba(201,168,76,.2)':'#f8fafc')+';border:1px solid '+(_posCustTouchMode?'rgba(229,25,107,.5)':'#e2e8f0')+';border-radius:10px;color:'+(_posCustTouchMode?'#c9a84c':'#64748b')+';font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">'+(_posCustTouchMode?'터치 ON':'터치 OFF')+'</button>'+
   '<button id="cust-close" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;color:#475569;font-size:12px;font-weight:700;cursor:pointer;padding:8px 12px;white-space:nowrap">닫기</button>';
  var overlay=document.getElementById('pos-cust-disp');
  var tog=document.getElementById('cust-touch-toggle');
