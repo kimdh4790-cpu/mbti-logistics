@@ -163,6 +163,21 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-02 (30차)
+**POS 포스기 스타일 리디자인 — 플로어 뷰 + 양면 화면**
+- `filo-pos-ui.js`:
+  - `_filoPageKiosk(el)` 메인 디스패처 함수 추가 (뷰 분기 + 리스너 정리)
+  - `_filoPageKioskFloor(el,did,dual)`: 테이블 그리드(3열) + 우측 주문 패널 + 선택적 고객 디스플레이
+  - `_filoPageKioskClassic(el,did,dual)`: 기존 수평 탭바 레이아웃 유지
+  - `_loadKioskTableGrid(did)`: filo_orders onSnapshot 실시간 테이블 상태 반영
+  - `_filoPosTopBar(did)`: 뷰 전환 + 양면화면 토글 공통 버튼바
+  - `_startPosInlineCust()/_renderPosInlineCust()`: 500ms 인라인 고객 디스플레이 패널
+  - `localStorage` `filo_pos_view`('floor'|'classic') / `filo_pos_dual`('0'|'1') 뷰 상태 저장
+- `filo.html`:
+  - `.pos-floor-wrap`, `.pos-tables-panel`, `.pos-order-panel`, `.pos-cust-panel`, `.pos-table-card` CSS 추가
+  - `filo-pos-pay.js` 스크립트 태그 추가 (분리된 결제 모듈 누락 수정)
+  - `filo-pos-ui.js` 버전 v13 → v14 캐시버스터
+
 ### 2026-09-01 (29차)
 **전기능 코드 감사 — 보안·런타임 크래시·중복·로직 버그 일괄 수정**
 - `filo-settings.js`: `_filoGenReviewReply()` 브라우저 직접 Anthropic API 키 노출 제거 → 항상 `/api/review-reply` 프록시 경유
