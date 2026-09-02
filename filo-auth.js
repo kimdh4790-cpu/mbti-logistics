@@ -255,6 +255,14 @@ function _showApp(){
   '</div>';
  }
  _buildFiloNav();
+ // PWA 뒤로가기 앱 종료 방지
+ history.replaceState({page:'home'}, '');
+ history.pushState({page:'home'}, '');
+ window.addEventListener('popstate', function(e){
+  var p=(e.state&&e.state.page)||'home';
+  _filoGoPage(p, true);
+  if(p==='home') history.pushState({page:'home'}, '');
+ });
  _filoGoPage('home');
  // 업종 데모 로그인 시 해당 딜러로 자동 전환
  var _demoPending=localStorage.getItem('_demoType');
@@ -737,7 +745,11 @@ function _toggleOrientation(){
  }
 }
 
-function _filoGoPage(p){
+function _filoGoPage(p, _fromPopstate){
+ if(!_fromPopstate){
+  if(p==='home') history.replaceState({page:'home'}, '');
+  else history.pushState({page:p}, '');
+ }
  /* 페이지 전환 시 이전 화면의 실시간 리스너를 모두 해제한다 (리스너 누수 방지) */
  _filoReleaseWatchers(p);
  /* POS 결제 하단 바 + 고객 화면 — kiosk 이외 페이지로 이동 시 제거 */

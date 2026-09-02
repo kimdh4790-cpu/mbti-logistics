@@ -471,6 +471,14 @@ _auth.onAuthStateChanged(function(u){
     document.getElementById('login-wrap').style.display='none';
     var aw=document.getElementById('app-wrap');aw.style.display='flex';
     document.getElementById('tb-user-name').textContent=_CU.name;
+    // PWA 뒤로가기 앱 종료 방지
+    history.replaceState({page:'dashboard'}, '');
+    history.pushState({page:'dashboard'}, '');
+    window.addEventListener('popstate', function(e){
+     var p=(e.state&&e.state.page)||'dashboard';
+     _dinePage(p, null, true);
+     if(p==='dashboard') history.pushState({page:'dashboard'}, '');
+    });
     _dinePage('dashboard',document.querySelector('.nav-item'));
     _dineUpdateSidebar();
     _dineWatchAttend();
@@ -489,7 +497,11 @@ function _dineToggleGroup(titleEl){
     items.classList.toggle('collapsed');
   }
 }
-function _dinePage(p,el){
+function _dinePage(p,el,_fromPopstate){
+ if(!_fromPopstate){
+  if(p==='dashboard') history.replaceState({page:'dashboard'}, '');
+  else history.pushState({page:p}, '');
+ }
  // 직원 접근 제한 — 허용되지 않은 페이지 차단
  var staffAllowed=['dashboard','schedule','attend','mypay','payslip'];
  if(_CU&&_CU.role==='staff'&&staffAllowed.indexOf(p)<0) return;
