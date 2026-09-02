@@ -1282,7 +1282,12 @@ function _yLogin(){
   if(!e||!p){err.textContent='이메일과 비밀번호를 입력하세요';err.style.display='block';return;}
   err.style.display='none';
   btn.textContent='로그인 중...';btn.disabled=true;
-  _auth.signInWithEmailAndPassword(e,p).catch(function(ex){
+  var _loginTimer=setTimeout(function(){
+    btn.textContent='로그인';btn.disabled=false;
+    err.textContent='로그인 시간이 초과됐어요. 네트워크를 확인 후 다시 시도해주세요.';err.style.display='block';
+  },20000);
+  _auth.signInWithEmailAndPassword(e,p).then(function(){clearTimeout(_loginTimer);}).catch(function(ex){
+    clearTimeout(_loginTimer);
     btn.textContent='로그인';btn.disabled=false;
     var c=ex.code||'';
     err.textContent=c==='auth/wrong-password'||c==='auth/invalid-credential'?'비밀번호가 틀렸어요':
@@ -9416,6 +9421,12 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
       for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
       return new Response(buf, {
         headers: { 'Content-Type': 'image/x-icon', 'Cache-Control': 'no-cache' }
+      });
+    }
+
+    if (path === '/filo-memo.js') {
+      return new Response('/* filo-memo stub */', {
+        headers: { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-cache' }
       });
     }
 
