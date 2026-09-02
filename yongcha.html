@@ -8705,19 +8705,32 @@ function _addZipCodeZone(){
   if(zip.length !== 5){_yToast('5자리 우편번호를 입력하세요');return;}
   var dup = window._zones.some(function(z){return z.zipcode===zip;});
   if(dup){_yToast('이미 추가된 우편번호예요');return;}
-  fetch('/api/yongcha/basidco?zip='+zip)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d.ok || !d.lat){_yToast('좌표를 찾을 수 없어요: '+zip);return;}
-      window._zones.push({zipcode:zip, name:d.zipName||zip, lat:d.lat, lng:d.lng});
+  _loadKakaoMap(function(){
+    var gc = new kakao.maps.services.Geocoder();
+    gc.addressSearch(zip, function(res, status){
+      var matched = [];
+      if(status === kakao.maps.services.Status.OK){
+        matched = res.filter(function(r){
+          return (r.address&&r.address.zip_code===zip)||(r.road_address&&r.road_address.zone_no===zip);
+        });
+        if(!matched.length) matched = res;
+      }
+      if(!matched.length){_yToast('좌표를 찾을 수 없어요: '+zip);return;}
+      var centLat=0, centLng=0;
+      matched.forEach(function(r){centLat+=parseFloat(r.y);centLng+=parseFloat(r.x);});
+      centLat/=matched.length; centLng/=matched.length;
+      var ra=matched[0].road_address||{};
+      var zipName=[ra.region_1depth_name,ra.region_2depth_name,ra.region_3depth_name].filter(Boolean).join(' ')||zip;
+      window._zones.push({zipcode:zip, name:zipName, lat:centLat, lng:centLng});
       _renderZoneTags();
       _updateMapZones();
-      var areaInp = document.getElementById('pw-area');
-      if(areaInp) areaInp.value = window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
-      var msgEl = document.getElementById('zip-add-msg');
-      if(msgEl) msgEl.textContent = zip+' '+(d.zipName||'')+' 구역이 추가됐어요';
-      input.value = '';
-    }).catch(function(e){_yToast('우편번호 조회 실패: '+e.message);});
+      var areaInp=document.getElementById('pw-area');
+      if(areaInp) areaInp.value=window._zones.map(function(z){return z.zipcode+' '+z.name;}).join(', ');
+      var msgEl=document.getElementById('zip-add-msg');
+      if(msgEl) msgEl.textContent=zip+' '+zipName+' 구역이 추가됐어요';
+      input.value='';
+    });
+  });
 }
 function _openDaumPost(){
   new daum.Postcode({
@@ -8799,19 +8812,6 @@ function _doUpdateMapZones(){
     var overlay = new kakao.maps.CustomOverlay({content:content, position:pos, yAnchor:2.5});
     overlay.setMap(_map);
     _markers.push(overlay);
-    fetch('/api/yongcha/basidco?zip='+z.zipcode)
-      .then(function(r){return r.json();})
-      .then(function(data){
-        if(!data.ok||!data.coords||!data.coords.length) return;
-        var path = data.coords.map(function(c){return new kakao.maps.LatLng(c.lat,c.lng);});
-        var polygon = new kakao.maps.Polygon({
-          path:path,
-          strokeWeight:2,strokeColor:'#00d4aa',strokeOpacity:.9,
-          fillColor:'#00d4aa',fillOpacity:.2
-        });
-        polygon.setMap(_map);
-        window._polygons.push(polygon);
-      }).catch(function(){});
   });
   var last = window._zones[window._zones.length-1];
   _map.setCenter(new kakao.maps.LatLng(last.lat, last.lng));
