@@ -1,90 +1,90 @@
 {
   "A": {
-    "youtube_title": "수수료 20% 아직도 내고 계세요? | 용차앱",
-    "youtube_description": "주선사 수수료 없이 직접 계약하세요...",
+    "youtube_title": "소장↔기사 직접 연결 정보 서비스 | 용차앱 사전가입 오픈",
+    "youtube_description": "소장과 기사가 직접 거래하는 화물 정보 서비스. 일부 기능 준비 중, 지금 사전가입하면 공고 열람 즉시 가능. yongcha.app",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "주선사에 수수료 20% 내고 계시나요? 안 내도 됩니다."},
-      {"startSec": 6.0, "text": "공고 올리면 기사가 직접 지원해요. 수수료 없이요."},
-      {"startSec": 14.0, "text": "AI가 최적 노선 알려주고요. 기사님 월 십오만원 고정이에요."},
-      {"startSec": 22.0, "text": "DONWAY 쓰고 계신 소장님은요, 용차앱이 무료예요."},
-      {"startSec": 29.0, "text": "공차 없이 이동하세요. 용차 닷 앱."}
+      {"startSec": 0.0, "text": "솔직하게 여쭤볼게요. 지금 화물 매칭을 어떻게 하고 계세요?"},
+      {"startSec": 7.0, "text": "용차앱은 소장님이랑 기사님이 중간 없이 직접 연결되는 정보 서비스예요."},
+      {"startSec": 15.0, "text": "일부 기능은 아직 준비 중이긴 한데, 지금 가입하시면 공고 열람은 바로 가능해요."},
+      {"startSec": 23.0, "text": "AI 루트코치 같은 기능도 순차적으로 열릴 거예요."},
+      {"startSec": 30.0, "text": "먼저 가입해두세요. 용차 닷 앱."}
     ],
     "slides": [
-      {"type": "hero", "tag": "수수료 제로", "title": "수수료 20%\n아직도 내고 있어요?", "sub": "용차앱으로 직접 계약하세요"},
-      {"type": "compare", "bad": "주선사 수수료 20%+\n단가 불투명 · 브로커 의존", "good": "기사 ↔ 대리점 직접 연결\n수수료 없음 · 단가 100% 공개"},
-      {"type": "feature", "icon": "📋", "title": "공고 무제한 등록", "desc": "소장님이 공고 올리면\n기사가 직접 지원해요"},
-      {"type": "feature", "icon": "🤖", "title": "AI 루트코치", "desc": "최적 노선·단가 자동 추천\n공차 없이 운행하세요"},
+      {"type": "hero", "tag": "사전가입 오픈", "title": "소장↔기사\n직접 거래 정보 서비스", "sub": "지금 가입 가능"},
+      {"type": "notice", "icon": "⏳", "title": "일부 기능 준비 중", "desc": "가입은 지금 바로 가능\n공고 열람·기사 정보 즉시 이용"},
+      {"type": "feature", "icon": "✅", "title": "지금 가입 가능", "desc": "사전가입으로 정식 오픈 즉시 이용\n수수료 없이 직접 거래"},
+      {"type": "feature", "icon": "🤖", "title": "AI 루트코치", "desc": "최적 노선·단가 자동 추천\n(순차 제공 예정)"},
       {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 구독 소장 무료"},
-      {"type": "cta", "title": "용차앱", "sub": "수수료 없는 직접 매칭", "domain": "yongcha.app"}
+      {"type": "cta", "title": "용차앱", "sub": "지금 사전가입 — yongcha.app", "domain": "yongcha.app"}
     ],
-    "hashtags": ["용차앱", "수수료없는용차", "화물운송", "기사모집", "대리점"]
+    "hashtags": ["용차앱", "사전가입", "화물정보서비스", "소장기사직거래", "화물운송"]
   },
   "B": {
-    "youtube_title": "기사님, 월 15만원으로 전국 공고 무제한 | 용차앱",
-    "youtube_description": "전국 공고 한눈에 보고 AI 루트코치까지...",
+    "youtube_title": "기사님, 전국 공고 한눈에 | 용차앱 가입 오픈",
+    "youtube_description": "전국 공고 한눈에 보고 AI 루트코치까지. 일부 기능 준비 중, 지금 가입 가능. yongcha.app",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "공고 찾느라 하루를 날리고 있나요?"},
-      {"startSec": 6.0, "text": "용차앱에 가입하면 전국 공고가 한눈에."},
-      {"startSec": 13.0, "text": "AI 루트코치가 최적 경로와 단가를 추천해요."},
-      {"startSec": 20.0, "text": "실시간 알림으로 빈 차 없이 운행하세요."},
-      {"startSec": 27.0, "text": "기사님 월 십오만원 고정. 용차 닷 앱."}
+      {"startSec": 0.0, "text": "공고 찾느라 하루를 다 날리고 계시는 거 아닌가요?"},
+      {"startSec": 6.0, "text": "용차앱에 가입하면 전국 공고가 한눈에 다 보여요. 실시간 알림도 오고요."},
+      {"startSec": 14.0, "text": "일부 기능은 아직 준비 중이에요. 그래도 지금 가입하면 공고 열람은 바로 돼요."},
+      {"startSec": 22.0, "text": "AI 루트코치 기능도 곧 열릴 거예요. 미리 자리 잡아두세요."},
+      {"startSec": 29.0, "text": "지금 바로 가입하세요. 용차 닷 앱."}
     ],
     "slides": [
-      {"type": "hero", "tag": "기사님 전용", "title": "공고 찾느라\n하루를 날리나요?", "sub": "전국 공고가 한눈에"},
-      {"type": "feature", "icon": "📦", "title": "전국 공고 실시간", "desc": "내 위치 반경 공고\n실시간 알림 수신"},
-      {"type": "feature", "icon": "🤖", "title": "AI 루트코치", "desc": "단가 추천 · 최적 경로\n귀로 화물 연결"},
-      {"type": "feature", "icon": "⛽", "title": "주유소 최저가", "desc": "경로 위 최저가 주유소\n자동 안내"},
+      {"type": "hero", "tag": "기사님 전용", "title": "전국 공고\n한눈에 보세요", "sub": "용차앱 가입 오픈"},
+      {"type": "notice", "icon": "⏳", "title": "일부 기능 준비 중", "desc": "가입은 지금 바로 가능\n공고 열람 즉시 이용"},
+      {"type": "feature", "icon": "📦", "title": "공고 열람", "desc": "가입 후 즉시 공고 열람\n실시간 알림 수신"},
+      {"type": "feature", "icon": "🤖", "title": "AI 루트코치", "desc": "최적 노선·단가 추천\n(순차 제공 예정)"},
       {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "공고 무제한 · 수수료 없음"},
-      {"type": "cta", "title": "용차앱", "sub": "기사님을 위한 직접 매칭", "domain": "yongcha.app"}
+      {"type": "cta", "title": "용차앱", "sub": "지금 가입 — yongcha.app", "domain": "yongcha.app"}
     ],
-    "hashtags": ["용차앱", "화물기사", "공고", "AI루트코치", "화물운송"]
+    "hashtags": ["용차앱", "화물기사", "공고", "사전가입", "화물운송"]
   },
   "C": {
-    "youtube_title": "소장님, 공차 줄이는 법 알려드릴게요 | 용차앱",
-    "youtube_description": "귀로 화물 연결, AI 루트코치로 공차 없이 운행...",
+    "youtube_title": "소장님, 기사 직접 찾으세요 | 용차앱 가입 오픈",
+    "youtube_description": "소장님이 기사 프로필 보고 직접 선택. 일부 기능 준비 중, 지금 가입 가능. DONWAY 구독 소장 무료. yongcha.app",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "공차 비율이 몇 퍼센트나 되세요?"},
-      {"startSec": 6.0, "text": "용차앱은 귀로 화물도 연결해 드려요."},
-      {"startSec": 13.0, "text": "단가 백 퍼센트 공개, 흥정 없이 계약하세요."},
-      {"startSec": 20.0, "text": "DONWAY 구독하시면 용차앱 소장 요금 무료예요."},
-      {"startSec": 27.0, "text": "빈 차 없이 달리세요. 용차 닷 앱."}
+      {"startSec": 0.0, "text": "기사 찾는 게 매번 힘드시죠? 믿을 수 있는 사람을 구하기도 어렵고."},
+      {"startSec": 7.0, "text": "용차앱에서는 소장님이 기사 프로필 직접 보고 선택할 수 있어요."},
+      {"startSec": 14.0, "text": "일부 기능은 준비 중이에요. 지금 가입하시면 기사 프로필 열람은 바로 가능해요."},
+      {"startSec": 22.0, "text": "DONWAY 구독하시는 소장님은 용차앱 요금이 무료예요."},
+      {"startSec": 29.0, "text": "먼저 가입하세요. 용차 닷 앱."}
     ],
     "slides": [
-      {"type": "hero", "tag": "소장님 전용", "title": "공차 비율\n줄이고 싶으세요?", "sub": "귀로 화물까지 연결해드려요"},
-      {"type": "feature", "icon": "🔄", "title": "귀로 화물 연결", "desc": "빈 차로 돌아오는 길\n수익 화물로 채우세요"},
-      {"type": "feature", "icon": "💰", "title": "단가 100% 공개", "desc": "흥정 없이 투명한 계약\n중간 수수료 없음"},
-      {"type": "feature", "icon": "⭐", "title": "기사 신뢰도 평점", "desc": "검증된 기사와 매칭\n안심 계약"},
+      {"type": "hero", "tag": "소장님 전용", "title": "기사 직접 찾고\n직접 계약하세요", "sub": "용차앱 가입 오픈"},
+      {"type": "notice", "icon": "⏳", "title": "일부 기능 준비 중", "desc": "가입은 지금 바로 가능\n기사 프로필 즉시 열람"},
+      {"type": "feature", "icon": "👤", "title": "기사 프로필 열람", "desc": "경력·평점 확인 후 직접 선택\n가입 후 바로 이용 가능"},
+      {"type": "feature", "icon": "💰", "title": "단가 100% 공개", "desc": "투명한 단가 정보\n흥정 없이 직접 계약"},
       {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 구독 소장 무료"},
-      {"type": "cta", "title": "용차앱", "sub": "소장님의 공차를 줄여드려요", "domain": "yongcha.app"}
+      {"type": "cta", "title": "용차앱", "sub": "지금 가입 — yongcha.app", "domain": "yongcha.app"}
     ],
-    "hashtags": ["용차앱", "공차없는운행", "화물소장", "귀로화물", "물류"]
+    "hashtags": ["용차앱", "화물소장", "가입오픈", "기사모집", "물류"]
   },
   "D": {
-    "youtube_title": "주선사 수수료 vs 용차앱 월정액 수익 비교 | 용차앱",
-    "youtube_description": "월 1000만원 매출, 수수료 200만원 vs 월정액 15만원...",
+    "youtube_title": "화물 직거래 정보 서비스 | 용차앱 가입 오픈",
+    "youtube_description": "소장·기사 직접 거래 화물 정보 플랫폼. 일부 기능 준비 중, 지금 가입 후 공고 열람 즉시 가능. yongcha.app",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "월 매출 천만원, 수수료 20%면 이백만원이 날아가요."},
-      {"startSec": 7.0, "text": "용차앱은 월정액 십오만원. 수수료 없어요."},
-      {"startSec": 14.0, "text": "단가도 직접 보고, 계약도 직접 해요."},
-      {"startSec": 20.0, "text": "AI가 가장 수익 좋은 루트를 추천해요."},
-      {"startSec": 27.0, "text": "한 달 무료로 비교해보세요. 용차 닷 앱."}
+      {"startSec": 0.0, "text": "화물 업계에 투명한 정보 서비스가 시작됩니다."},
+      {"startSec": 6.0, "text": "소장님이랑 기사님이 직접 공고랑 단가 정보를 주고받는 방식이에요."},
+      {"startSec": 13.0, "text": "아직 일부 기능은 준비 중이에요. 그래도 지금 가입하면 공고 열람은 바로 돼요."},
+      {"startSec": 21.0, "text": "가입하시면 정식 오픈 즉시 알림 드릴게요. 혜택도 먼저 받으실 수 있어요."},
+      {"startSec": 29.0, "text": "지금 가입하세요. 용차 닷 앱."}
     ],
     "slides": [
-      {"type": "hero", "tag": "수익 비교", "title": "주선사 vs 용차앱\n수익 비교", "sub": "숫자로 직접 보세요"},
-      {"type": "compare", "bad": "주선사\n월 매출 1000만원 → 수수료 200만원 손실", "good": "용차앱\n월 매출 1000만원 → 비용 15만원만"},
-      {"type": "feature", "icon": "📊", "title": "수익 185만원 차이", "desc": "연간 2,220만원 차이\n5년이면 1억이 넘어요"},
-      {"type": "feature", "icon": "🤖", "title": "AI 수익 최적화", "desc": "가장 수익 좋은 루트\nAI가 실시간 추천"},
+      {"type": "hero", "tag": "가입 오픈", "title": "화물 직거래\n정보 서비스", "sub": "지금 가입 가능"},
+      {"type": "notice", "icon": "⏳", "title": "일부 기능 준비 중", "desc": "가입은 지금 바로 가능\n공고 열람 즉시 이용"},
+      {"type": "feature", "icon": "✅", "title": "지금 가입 가능", "desc": "가입 후 공고 열람 즉시\n정식 오픈 시 모든 기능"},
+      {"type": "feature", "icon": "🔔", "title": "오픈 즉시 알림", "desc": "가입 시 정식 오픈 즉시 알림\n혜택 먼저 받으세요"},
       {"type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 구독 소장 무료"},
-      {"type": "cta", "title": "용차앱", "sub": "한 달 무료로 비교해보세요", "domain": "yongcha.app"}
+      {"type": "cta", "title": "용차앱", "sub": "지금 가입 — yongcha.app", "domain": "yongcha.app"}
     ],
-    "hashtags": ["용차앱", "수수료비교", "화물수익", "주선사대안", "화물운송"]
+    "hashtags": ["용차앱", "가입오픈", "화물정보", "화물운송", "물류서비스"]
   }
 }

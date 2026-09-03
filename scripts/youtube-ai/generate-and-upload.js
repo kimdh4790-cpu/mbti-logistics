@@ -13,13 +13,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
 const args = process.argv.slice(2);
-const topicId = args.find((a, i) => args[i - 1] === '--topic-id') || args[1];
-const dryRun  = args.includes('--dry-run');
+const topicId    = args.find((a, i) => args[i - 1] === '--topic-id') || args[1];
+const dryRun     = args.includes('--dry-run');
+const skipScript = args.includes('--skip-script');
+const template   = args.find((a, i) => args[i - 1] === '--template') || 'tutorial';
 
 if (!topicId) {
-  console.error('사용법: node generate-and-upload.js --topic-id <id>');
+  console.error('사용법: node generate-and-upload.js --topic-id <id> [--skip-script] [--template tutorial|news|tips] [--dry-run]');
   process.exit(1);
 }
+
+const TEMPLATE_MAP = {
+  tutorial: { jsx: 'AITutorialTemplate.jsx', comp: 'AITutorialVideo' },
+  news:     { jsx: 'AINewsTemplate.jsx',     comp: 'AINewsVideo'     },
+  tips:     { jsx: 'AITipsTemplate.jsx',      comp: 'AITipsVideo'     },
+};
 
 function run(cmd, label) {
   console.log(`\n▶ ${label}`);
@@ -84,17 +92,21 @@ async function main() {
   const videoPath  = path.join(ROOT, 'output', `${topicId}-final.mp4`);
 
   // 1. 스크립트 생성
-  if (!fs.existsSync(scriptPath)) {
+  if (skipScript) {
+    console.log(`✓ 스크립트 생성 건너뜀 (--skip-script)`);
+  } else if (!fs.existsSync(scriptPath)) {
     run(`node scripts/youtube-ai/generate-script.js --topic-id ${topicId}`, '스크립트 생성 (Claude API)');
   } else {
     console.log(`✓ 스크립트 이미 존재: ${scriptPath}`);
   }
 
-  // 2. Remotion 렌더
+  // 2. Remotion 렌더 (--template 에 따라 다른 템플릿 사용)
+  const tmpl = TEMPLATE_MAP[template] || TEMPLATE_MAP.tutorial;
+  const scriptJson = fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, 'utf8') : '{}';
   if (!fs.existsSync(videoPath)) {
     run(
-      `npx remotion render scripts/youtube-ai/AITutorialTemplate.jsx AITutorialVideo ${videoPath} --props='{"script": ${JSON.stringify(JSON.parse(fs.existsSync(scriptPath) ? fs.readFileSync(scriptPath, 'utf8') : '{}'))}}' --codec=h264`,
-      'Remotion 영상 렌더'
+      `npx remotion render scripts/youtube-ai/${tmpl.jsx} ${tmpl.comp} ${videoPath} --props='{"script": ${JSON.stringify(JSON.parse(scriptJson))}}' --codec=h264`,
+      `Remotion 영상 렌더 [템플릿: ${template}]`
     );
   } else {
     console.log(`✓ 영상 이미 존재: ${videoPath}`);

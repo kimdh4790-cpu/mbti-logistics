@@ -97,6 +97,25 @@ async function main() {
     console.log('[Remotion] BGM 파일 없음 — BGM 없이 렌더링');
   }
 
+  // 이번 주차 variant(A/B/C/D) 로드 → slides/lines를 Remotion에 전달
+  let slides = null;
+  let lines = null;
+  const variantsPath = path.join(ROOT, 'scripts/content/variants/filo-variants.json');
+  if (fs.existsSync(variantsPath)) {
+    const variants = JSON.parse(fs.readFileSync(variantsPath, 'utf8'));
+    const variantKeys = ['A', 'B', 'C', 'D'];
+    const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000));
+    const variantKey = variantKeys[weekNum % 4];
+    const variant = variants[variantKey];
+    if (variant) {
+      slides = variant.slides;
+      lines = variant.lines;
+      console.log(`[Remotion] Variant ${variantKey} 사용: ${variant.youtube_title}`);
+    }
+  } else {
+    console.log('[Remotion] filo-variants.json 없음 — 기본 슬라이드 사용');
+  }
+
   console.log('[Remotion] 번들링 중...');
   const bundled = await bundle({
     entryPoint: ENTRY,
@@ -104,11 +123,13 @@ async function main() {
     publicDir: pubDir,
   });
 
+  const inputProps = { hasNarration, hasBgm, slides, lines };
+
   console.log('[Remotion] 컴포지션 로딩...');
   const composition = await selectComposition({
     serveUrl: bundled,
     id: compositionId,
-    inputProps: { hasNarration, hasBgm },
+    inputProps,
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
   });
 
@@ -118,7 +139,7 @@ async function main() {
     serveUrl: bundled,
     codec: 'h264',
     outputLocation: outFile,
-    inputProps: { hasNarration, hasBgm },
+    inputProps,
     videoBitrate: '8M',
     backgroundColor: '#08101f',
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),

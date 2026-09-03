@@ -1,90 +1,90 @@
 {
   "A": {
-    "youtube_title": "태블릿 하나로 주문·결제 끝 | FILO POS",
-    "youtube_description": "별도 POS 단말기 없이 태블릿 하나로 주문·결제·주방 디스플레이까지 한번에. FILO로 매장 운영을 단순하게.",
+    "youtube_title": "필로포스 개발 중 | 태블릿 하나로 주문·결제·직원관리",
+    "youtube_description": "FILO POS(필로포스) 개발 중. 지금은 소프트웨어(filo.ai.kr)로 주문·결제·주방·근태·급여까지. 직원 앱 DINE 포함. filo.ai.kr",
     "voice": "ko-KR-Neural2-B",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "POS 단말기, 주문 태블릿, 주방 모니터... 따로 살 필요 없어요."},
-      {"startSec": 7.0, "text": "FILO 하나면 주문, 결제, 주방 디스플레이까지 다 됩니다."},
-      {"startSec": 14.0, "text": "QR 코드로 고객이 직접 주문하면 주방에 바로 전달돼요."},
-      {"startSec": 21.0, "text": "테이블별 현황, 매출, 재고까지 실시간으로 보여요."},
-      {"startSec": 28.0, "text": "매장 운영, 이제 FILO 하나로. 파일로 닷 에이아이."}
+      {"startSec": 0.0, "text": "매장 운영하다 보면 기기가 너무 많죠? 주문 태블릿, POS 단말기, 주방 모니터..."},
+      {"startSec": 8.0, "text": "이거 다 따로 살 필요 없어요. FILO 하나면 전부 다 됩니다."},
+      {"startSec": 15.0, "text": "고객이 QR 찍어서 주문하면 주방으로 바로 넘어가고요."},
+      {"startSec": 22.0, "text": "매출이랑 재고까지 실시간으로 다 보여요. 직원 앱 DINE도 같이 포함이고요."},
+      {"startSec": 30.0, "text": "매장 운영 진짜 간단해져요. 파일로 닷 에이아이."}
     ],
     "slides": [
-      {"type": "hero", "tag": "통합 POS", "title": "태블릿 하나로\n주문·결제 끝", "sub": "FILO로 매장을 단순하게"},
-      {"type": "compare", "bad": "POS 단말기 + 주문 태블릿\n+ 주방 모니터 + 재고 프로그램 따로따로", "good": "FILO 하나로\n주문 · 결제 · 주방 · 재고 통합"},
-      {"type": "feature", "icon": "📱", "title": "QR 테이블 주문", "desc": "고객이 QR 스캔 후 직접 주문\n주방에 즉시 전달"},
-      {"type": "feature", "icon": "🖥", "title": "주방 디스플레이", "desc": "주문 들어오면 주방 화면에 바로\n완료 터치로 서빙 안내"},
-      {"type": "feature", "icon": "📊", "title": "실시간 매출 현황", "desc": "테이블별 주문 현황\n일·주·월 매출 한눈에"},
-      {"type": "cta", "title": "FILO", "sub": "매장 통합 관리 SaaS", "domain": "filo.ai.kr"}
+      {"type": "hero", "tag": "필로포스 개발 중", "title": "소프트웨어 설치만으로\n매장 통합 관리", "sub": "FILO POS + DINE 앱 포함"},
+      {"type": "feature", "icon": "📲", "title": "소프트웨어 설치 가능", "desc": "별도 단말기 없이\n있는 태블릿에 바로 설치"},
+      {"type": "compare", "bad": "POS 단말기 + 주문 태블릿\n+ 주방 모니터 + 직원 앱 따로따로", "good": "FILO + DINE\n주문 · 결제 · 주방 · 근태 · 급여 통합"},
+      {"type": "feature", "icon": "👥", "title": "직원 앱 DINE 포함", "desc": "직원이 DINE 앱으로\n출퇴근·급여명세 확인"},
+      {"type": "feature", "icon": "📊", "title": "실시간 연동", "desc": "FILO 매출 ↔ DINE 직원\n실시간 데이터 공유"},
+      {"type": "cta", "title": "FILO + DINE", "sub": "지금 설치 — filo.ai.kr", "domain": "filo.ai.kr"}
     ],
-    "hashtags": ["FILO", "매장POS", "태블릿POS", "QR주문", "매장관리"]
+    "hashtags": ["필로포스", "FILO", "DINE", "POS소프트웨어", "매장관리"]
   },
   "B": {
-    "youtube_title": "QR 찍으면 출퇴근 자동, 급여도 자동 | FILO 직원관리",
-    "youtube_description": "직원 QR 출퇴근 체크, 근태 자동 집계, 급여명세서 자동 발송. FILO와 DINE 앱으로 HR을 자동화하세요.",
+    "youtube_title": "QR 찍으면 출퇴근·급여 자동 | FILO+DINE 연동 앱",
+    "youtube_description": "FILO POS와 직원 전용 DINE 앱이 실시간 연동. QR 출퇴근 자동 기록, 급여 자동 계산, 직원 앱으로 명세서 수신. filo.ai.kr",
     "voice": "ko-KR-Neural2-B",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "직원 출퇴근을 매일 수동으로 기록하고 계신가요?"},
-      {"startSec": 7.0, "text": "FILO QR 코드 찍으면 출퇴근이 자동으로 기록돼요."},
-      {"startSec": 14.0, "text": "근태 데이터 그대로 급여 계산까지 자동이에요."},
-      {"startSec": 21.0, "text": "직원은 DINE 앱에서 본인 급여명세서를 바로 확인해요."},
-      {"startSec": 28.0, "text": "HR 자동화, FILO로 시작하세요. 파일로 닷 에이아이."}
+      {"startSec": 0.0, "text": "직원 출퇴근, 아직도 손으로 쓰고 계세요? 그럴 필요 없어요."},
+      {"startSec": 7.0, "text": "QR 한 번 찍으면 자동으로 기록되고요. 근태 데이터에서 급여 계산까지 자동이에요."},
+      {"startSec": 16.0, "text": "직원은 DINE 앱에서 본인 스케줄이랑 급여명세서 바로 확인할 수 있어요."},
+      {"startSec": 24.0, "text": "FILO랑 DINE이 실시간으로 연동되거든요. 따로 관리 안 해도 돼요."},
+      {"startSec": 31.0, "text": "HR 자동화, 지금 시작하세요. 파일로 닷 에이아이."}
     ],
     "slides": [
-      {"type": "hero", "tag": "HR 자동화", "title": "QR 찍으면\n출퇴근·급여 자동", "sub": "직원 관리를 자동화하세요"},
+      {"type": "hero", "tag": "HR 자동화", "title": "QR 찍으면\n출퇴근·급여 자동", "sub": "FILO + DINE 연동 앱"},
       {"type": "feature", "icon": "📲", "title": "QR 출퇴근", "desc": "직원이 QR 스캔 한 번으로\n출퇴근 자동 기록"},
-      {"type": "feature", "icon": "💵", "title": "급여 자동 계산", "desc": "근태 데이터 → 시급 자동 계산\n공제·추가수당 설정 가능"},
-      {"type": "feature", "icon": "📄", "title": "급여명세서 발송", "desc": "직원 앱(DINE)으로\n급여명세서 자동 발송"},
-      {"type": "feature", "icon": "📅", "title": "스케줄 관리", "desc": "직원별 근무 스케줄\n캘린더로 한눈에"},
-      {"type": "cta", "title": "FILO", "sub": "직원 관리까지 통합", "domain": "filo.ai.kr"}
+      {"type": "feature", "icon": "💵", "title": "급여 자동 계산", "desc": "근태 → 시급 자동 계산\n공제·수당 설정 가능"},
+      {"type": "feature", "icon": "📱", "title": "DINE 앱 연동", "desc": "직원 전용 앱 DINE\n급여명세·스케줄 실시간 확인"},
+      {"type": "feature", "icon": "📲", "title": "소프트웨어 설치 가능", "desc": "별도 단말기 없이\n있는 기기에 바로 설치"},
+      {"type": "cta", "title": "FILO + DINE", "sub": "필로포스 개발 중 — filo.ai.kr", "domain": "filo.ai.kr"}
     ],
-    "hashtags": ["FILO", "직원관리", "QR출퇴근", "급여자동화", "근태관리"]
+    "hashtags": ["FILO", "DINE", "직원관리", "QR출퇴근", "필로포스"]
   },
   "C": {
     "youtube_title": "오늘 뭐 많이 팔릴지 AI가 알려줘요 | FILO AI 매출예측",
-    "youtube_description": "날씨·시간대·재고를 분석해 오늘의 추천 메뉴와 7일 매출을 예측하는 AI. FILO로 데이터 기반 운영을 시작하세요.",
+    "youtube_description": "날씨·시간대·재고 분석으로 추천 메뉴와 7일 매출 예측. FILO POS + DINE 직원 앱 연동으로 매장 전체 통합 관리. filo.ai.kr",
     "voice": "ko-KR-Neural2-B",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "오늘 장사 잘 될지, 어떤 메뉴 준비해야 할지 모르겠죠?"},
-      {"startSec": 7.0, "text": "FILO AI가 날씨, 시간대, 재고를 분석해서 알려줘요."},
-      {"startSec": 14.0, "text": "7일 매출 예측과 추천 메뉴를 매일 아침 확인하세요."},
-      {"startSec": 21.0, "text": "마진 분석으로 진짜 남는 메뉴가 뭔지도 보여요."},
-      {"startSec": 28.0, "text": "데이터로 운영하세요. FILO. 파일로 닷 에이아이."}
+      {"startSec": 0.0, "text": "오늘 장사가 잘 될지, 어떤 메뉴를 준비해야 할지 감이 안 잡히죠?"},
+      {"startSec": 8.0, "text": "FILO AI가 날씨랑 시간대, 재고 상황을 분석해서 딱 알려줘요."},
+      {"startSec": 15.0, "text": "7일 매출 예측이랑 오늘 추천 메뉴까지, 매일 아침 바로 확인 가능해요."},
+      {"startSec": 23.0, "text": "DINE 직원 앱이랑 연동해서 직원 관리까지 한 번에 해결돼요."},
+      {"startSec": 30.0, "text": "데이터로 운영하세요. 파일로 닷 에이아이."}
     ],
     "slides": [
-      {"type": "hero", "tag": "AI 예측", "title": "오늘 뭐 많이 팔릴지\nAI가 알려줘요", "sub": "데이터 기반 매장 운영"},
-      {"type": "feature", "icon": "🤖", "title": "7일 매출 예측", "desc": "날씨·요일·계절 패턴 분석\n오늘 예상 매출 미리 확인"},
-      {"type": "feature", "icon": "🍽", "title": "AI 메뉴 추천", "desc": "시간대·재고·날씨 기반\n오늘의 추천 메뉴 자동 선정"},
-      {"type": "feature", "icon": "📈", "title": "마진 분석", "desc": "원가 입력 시 메뉴별 수익률\n실제 남는 메뉴 파악"},
-      {"type": "feature", "icon": "🌍", "title": "다국어 메뉴 번역", "desc": "외국인 고객용 메뉴판\nAI 자동 번역"},
-      {"type": "cta", "title": "FILO", "sub": "AI가 함께하는 매장 운영", "domain": "filo.ai.kr"}
+      {"type": "hero", "tag": "AI 예측 + 직원관리", "title": "FILO AI 예측\n+ DINE 직원 앱", "sub": "매장 전체를 하나로"},
+      {"type": "feature", "icon": "🤖", "title": "AI 매출 예측", "desc": "날씨·요일·재고 분석\n오늘 예상 매출 미리 확인"},
+      {"type": "feature", "icon": "🍽", "title": "AI 메뉴 추천", "desc": "시간대·재고·날씨 기반\n오늘의 추천 메뉴"},
+      {"type": "feature", "icon": "📱", "title": "DINE 직원 앱 연동", "desc": "매출·재고 데이터 ↔ 직원 관리\n실시간 동기화"},
+      {"type": "feature", "icon": "📲", "title": "소프트웨어 설치 가능", "desc": "있는 태블릿에 바로 설치\n필로포스 개발 중"},
+      {"type": "cta", "title": "FILO + DINE", "sub": "필로포스 개발 중 — filo.ai.kr", "domain": "filo.ai.kr"}
     ],
-    "hashtags": ["FILO", "AI매출예측", "메뉴추천", "매장AI", "스마트매장"]
+    "hashtags": ["FILO", "DINE", "AI매출예측", "매장AI", "필로포스"]
   },
   "D": {
-    "youtube_title": "기존 POS 대비 비용 90% 절감 | FILO 비용 비교",
-    "youtube_description": "POS 단말기·유지보수비·추가 모듈 비용 없이 월정액 하나로. FILO로 매장 운영 비용을 절감하세요.",
+    "youtube_title": "기존 POS 대비 비용 절감 + 직원 앱까지 | FILO+DINE",
+    "youtube_description": "POS 단말기·유지보수비 없이 소프트웨어 설치만으로. FILO POS + 직원 앱 DINE 포함 월정액 하나. 필로포스 개발 중. filo.ai.kr",
     "voice": "ko-KR-Neural2-B",
     "speedRate": 1.0,
     "lines": [
-      {"startSec": 0.0, "text": "기존 POS, 설치비에 월 유지보수비에 모듈 추가 비용까지..."},
-      {"startSec": 7.0, "text": "FILO는 월정액 하나로 전부 다 포함이에요."},
-      {"startSec": 14.0, "text": "주문, 결제, 근태, 급여, 재고, AI까지 하나의 요금이에요."},
-      {"startSec": 21.0, "text": "기존 POS 대비 연간 수백만원을 아낄 수 있어요."},
-      {"startSec": 28.0, "text": "비용 먼저 비교해보세요. FILO. 파일로 닷 에이아이."}
+      {"startSec": 0.0, "text": "기존 POS, 설치비에 월 유지보수비에 모듈 추가 비용까지... 진짜 많이 나가죠?"},
+      {"startSec": 8.0, "text": "FILO는 소프트웨어 설치만 해도 그게 전부 다 포함이에요."},
+      {"startSec": 15.0, "text": "주문, 결제, 근태, 급여, 재고에다 직원 앱 DINE까지 따로 살 필요 없어요."},
+      {"startSec": 23.0, "text": "기존 POS랑 비교해보시면 연간 수백만원 차이 나는 거 금방 보여요."},
+      {"startSec": 30.0, "text": "비용 먼저 비교해보세요. 파일로 닷 에이아이."}
     ],
     "slides": [
-      {"type": "hero", "tag": "비용 비교", "title": "기존 POS 대비\n비용 90% 절감", "sub": "숫자로 직접 비교하세요"},
-      {"type": "compare", "bad": "기존 POS\n설치비 100~300만원\n+ 월 유지보수 5~10만원\n+ 모듈 추가 비용 별도", "good": "FILO\n월정액 하나로 전부 포함\n추가 비용 없음"},
-      {"type": "feature", "icon": "💳", "title": "월정액 하나", "desc": "POS · 주문 · 근태 · 급여\n재고 · AI · DINE 앱 포함"},
+      {"type": "hero", "tag": "필로포스 개발 중", "title": "소프트웨어 설치\n+ DINE 앱 포함", "sub": "기존 POS 대비 비용 절감"},
+      {"type": "compare", "bad": "기존 POS\n설치비 100~300만원\n+ 월 유지보수비 5~10만원\n+ 직원 앱 별도 구매", "good": "FILO + DINE\n소프트웨어 설치만\n직원 앱 포함 · 추가 비용 없음"},
+      {"type": "feature", "icon": "📲", "title": "소프트웨어 설치", "desc": "기존 태블릿 그대로\n단말기 구매 불필요"},
+      {"type": "feature", "icon": "👥", "title": "DINE 직원 앱 포함", "desc": "직원 전용 앱까지 번들\n추가 비용 없음"},
       {"type": "feature", "icon": "🔧", "title": "유지보수비 0원", "desc": "업데이트 자동\n별도 계약 없음"},
-      {"type": "feature", "icon": "📱", "title": "기존 태블릿 활용", "desc": "새 단말기 구매 불필요\n있는 태블릿 그대로 사용"},
-      {"type": "cta", "title": "FILO", "sub": "비용 비교 후 결정하세요", "domain": "filo.ai.kr"}
+      {"type": "cta", "title": "FILO + DINE", "sub": "지금 설치 — filo.ai.kr", "domain": "filo.ai.kr"}
     ],
-    "hashtags": ["FILO", "POS비용절감", "매장비용", "스마트POS", "매장관리"]
+    "hashtags": ["필로포스", "FILO", "DINE", "POS소프트웨어", "매장비용"]
   }
 }
