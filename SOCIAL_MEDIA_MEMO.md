@@ -149,6 +149,34 @@ INSTAGRAM_ACCESS_TOKEN=등록완료 (만료: 2026-10-28)
 
 ---
 
+## SPCL 영향력 프레임워크 (알렉스 홀모지, 2026-09-03 적용)
+
+> 조회수보다 영향력 — 시청자를 잠재고객으로 전환하는 콘텐츠 전략
+
+### 핵심 원칙: "콘텐츠 자체가 타겟팅이다"
+- 소상공인·물류업자가 아니면 조회수 낮아도 OK → 정확한 타겟만 유입되면 됨
+- CTA 목표: "좋아요" 아닌 **상담 문의 / 무료 체험** 신청 (행동 전환)
+
+### SPCL 4요소
+| 요소 | 목적 | 구현 방식 |
+|---|---|---|
+| **Status** (자격증명) | "이 채널 믿어도 돼?" | 실제 성과 수치 ("사용자들이 월 30만원 절감") |
+| **Power** (즉시실행법) | "나도 할 수 있겠다" | 영상 하나만 보고 바로 따라할 단계별 방법 |
+| **Credibility** (객관적증거) | "진짜인가?" | 실제 사례·스크린샷·데이터를 화면에 직접 표시 |
+| **Likeness** (공감/나를보여주기) | "나랑 비슷하다" | 오프닝에 "저도 이 문제로 고생했어요" 1개 필수 |
+
+### 섹션 구성 필수 순서
+```
+intro(likeness 공감) → status(자격증명 수치) → power(단계별방법) → credibility(실제사례) → cta
+```
+
+### generate-script.js 적용 현황
+- `SPCL_GUIDE` 상수가 Claude API 프롬프트에 내장됨 (2026-09-03)
+- 생성되는 모든 스크립트에 `spcl_type` 필드 자동 포함
+- 섹션 순서 강제: intro → status → power → credibility → cta (5~8개, 6~10분)
+
+---
+
 ## AI 영상 제작 워크플로우 (2026-09-03 추가)
 
 ### 방법 A: 존코바 방식 (수동, 고퀄리티)
@@ -460,6 +488,8 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-03 | **SPCL 프레임워크 적용** — generate-script.js에 알렉스 홀모지 Status/Power/Credibility/Likeness 전략 내장. spcl_type 필드 추가, 섹션 순서 강제(intro→status→power→credibility→cta). SOCIAL_MEDIA_MEMO.md SPCL 섹션 신규 추가 |
+| 2026-09-03 | **AI 영상 제작 워크플로우 추가** — higgsfield-render.js 신규(9층 프롬프트), oracle-init.sh Agent Reach 자동설치 스텝 추가, INFRA_MEMO.md Agent Reach + OpenChatCut 섹션 등록 |
 | 2026-08-31 | **네이버 블로그 자동화 완료** — naver_schedule.js 생성 (요일별 제품 순환), 초안 3개 신규 생성(DONWAY 알림톡/FILO 근태관리/용차앱 직접거래), naver_login.js fs require 버그 수정, Windows 작업 스케줄러 NaverBlogPost 등록(월수금 09:00), Oracle VM cron 등록 완료 |
 | 2026-08-29 | **DONWAY·용차앱 Remotion 코드 영상 추가** — DonwayPromo.jsx(5씬 파티클·카운터·자막), YongchaPromo.jsx(5씬 AI타이핑·루트비교). render-donway.js·render-yongcha.js 신규 생성. social-media.yml Remotion 렌더 범위 확장(FILO→FILO·DONWAY·용차앱), Playwright 녹화·FFmpeg 편집은 dine·mbtico만으로 변경. 비용 없이 코드 기반 고품질 영상 자동 생성 |
 | 2026-08-29 | **DONWAY Instagram Reels 업로드 완료** — Oracle Cloud Playwright, `[role="button"]:has-text("공유")` 셀렉터 수정으로 해결 |
