@@ -426,17 +426,15 @@ function _filoPageSubscription(el){
   var featureList=p.features.map(function(f){
    return '<li style="font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px">'+checkSvg+f+'</li>';
   }).join('');
-  var prices={basic:29000,pro:59000,premium:99000,franchise_hq:300000};
-  var priceLabel=(prices[p.id]||0).toLocaleString()+'원/월';
   var actionBtn=isCurrent?
    '<div style="padding:10px;text-align:center;border-radius:8px;background:#22c55e20;color:#22c55e;font-size:13px;font-weight:700">현재 플랜</div>':
-   '<button onclick="_filoSubscribePlan(\''+p.id+'\')" style="display:block;width:100%;box-sizing:border-box;padding:11px;text-align:center;background:'+(isRec?'var(--br)':'transparent')+';color:'+(isRec?'#fff':'var(--br)')+';border:2px solid var(--br);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">💳 카드로 구독 ('+priceLabel+')</button>';
+   '<a href="tel:051-711-3103" style="display:block;width:100%;box-sizing:border-box;padding:11px;text-align:center;background:'+(isRec?'var(--br)':'transparent')+';color:'+(isRec?'#fff':'var(--br)')+';border:2px solid var(--br);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none">도입 문의</a>';
   return '<div style="border:'+(isRec?'2px solid var(--br)':'1px solid var(--bd)')+';border-radius:12px;padding:16px;background:'+(isRec?'rgba(244,63,94,.03)':'var(--b3)')+';position:relative">'+
    (isRec?'<span style="position:absolute;top:-10px;right:16px;background:var(--br);color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px">추천</span>':'')+
    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
    '<div>'+
    '<div style="font-size:16px;font-weight:700;color:var(--tx)">'+p.name+'</div>'+
-   '<div style="font-size:13px;color:var(--t3);margin-top:3px">'+priceLabel+' · VAT 별도</div>'+
+   '<div style="font-size:13px;color:var(--t3);margin-top:3px">요금 문의 · 업종별 맞춤 제안</div>'+
    '</div>'+
    '</div>'+
    '<ul style="list-style:none;padding:0;margin:0 0 14px;display:flex;flex-direction:column;gap:4px">'+featureList+'</ul>'+
