@@ -4605,10 +4605,18 @@ function _pgPostWrite(el){
   // 구역
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
+  ((_CU.savedLocations&&_CU.savedLocations.length)?
+  '<div class="inp-wrap"><label class="inp-lbl">저장된 캠프 선택</label>'+
+  '<div style="display:flex;flex-wrap:wrap;gap:7px">'+
+  (_CU.savedLocations||[]).map(function(c,i){
+    return '<button type="button" onclick="_pwPickCamp('+i+')" style="padding:7px 14px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+
+      _esc(c.name)+(c.courier?'<span style="font-size:11px;color:var(--t3);margin-left:4px">'+_esc(c.courier.replace('로지스틱스','').replace('택배','').replace('대한통운','CJ'))+'</span>':'')+'</button>';
+  }).join('')+
+  '</div></div>':'') +
   '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:flex;gap:8px">'+
   '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
-  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 검색</button>'+
+  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
   '</div>'+
   '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
@@ -4678,7 +4686,10 @@ function _pgPostWrite(el){
   setTimeout(function(){
     var v1=document.querySelector('#pw-vehicle-group button');
     if(v1) _selType(v1,'하이탑','pw-vehicle');
-    if(_CU.defaultLoadingAddr){
+    // savedLocations 첫 번째 캠프를 기본 상차지로 자동 세팅
+    if(_CU.savedLocations&&_CU.savedLocations.length){
+      _pwPickCamp(0);
+    } else if(_CU.defaultLoadingAddr){
       var lA=document.getElementById('pw-loadingAddr');
       var lLat=document.getElementById('pw-loadingLat');
       var lLng=document.getElementById('pw-loadingLng');
@@ -5510,20 +5521,29 @@ function _pgProfile(el){
   (type==='agency'?
   '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
 
-  // 대리점 기본 상차지 설정
+  // 대리점 캠프/상차지 관리
   (type==='agency'?
-  '<div class="card" style="margin-bottom:8px">'+
-  '<div style="font-size:15px;font-weight:800;margin-bottom:6px">기본 상차지 설정</div>'+
-  '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">저장하면 공고 등록 시 상차지가 자동으로 채워져요 (음성 등록 가능)</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">기본 상차지 주소</label>'+
+  '<div class="card" style="margin-bottom:8px" id="camp-mgmt-card">'+
+  '<div style="font-size:15px;font-weight:800;margin-bottom:6px">캠프·상차지 관리</div>'+
+  '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">저장하면 공고 등록 시 원탭으로 택배사+상차지가 자동 완성돼요</div>'+
+  '<div id="camp-list" style="margin-bottom:12px">'+_yCampListHtml(_CU.savedLocations||[])+'</div>'+
+  '<div style="border-top:1px solid var(--bd);padding-top:12px;margin-top:4px">'+
+  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">+ 새 캠프 추가</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">캠프명</label>'+
+  '<input class="inp" id="camp-name" placeholder="예: 부산1캠프, 진주M캠프"></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">택배사</label>'+
+  '<select class="inp" id="camp-courier">'+
+  ['','쿠팡로지스틱스','CJ대한통운','한진택배','롯데택배','우체국','로젠택배'].map(function(v){return '<option value="'+v+'">'+(v||'선택 안함')+'</option>';}).join('')+
+  '</select></div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소</label>'+
   '<div style="display:flex;gap:8px">'+
-  '<input class="inp" id="agency-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1" value="'+_esc(_CU.defaultLoadingAddr||'')+'">'+
+  '<input class="inp" id="camp-addr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
   '<button type="button" onclick="_geocodeAgencyLoading()" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
   '</div>'+
-  '<input type="hidden" id="agency-loadingLat" value="'+(_CU.defaultLoadingLat||'')+'">'+
-  '<input type="hidden" id="agency-loadingLng" value="'+(_CU.defaultLoadingLng||'')+'">'+
+  '<input type="hidden" id="camp-lat"><input type="hidden" id="camp-lng">'+
   '</div>'+
-  '<button onclick="_ySaveAgencyDefaults()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">기본 상차지 저장</button>'+
+  '<button onclick="_yAddCamp()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">캠프 추가 저장</button>'+
+  '</div>'+
   '</div>':'')+
 
   '<div style="margin:16px 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
@@ -8810,22 +8830,36 @@ function _geocodeLoadingAddr(){
   }).open();
 }
 
-// 업체 기본 상차지 주소검색
+// 캠프 목록 HTML 렌더
+function _yCampListHtml(locs){
+  if(!locs||!locs.length)return '<div style="font-size:12px;color:var(--t3);text-align:center;padding:8px 0">저장된 캠프가 없어요</div>';
+  return locs.map(function(c,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13.5px;font-weight:800">'+_esc(c.name)+'</div>'+
+        '<div style="font-size:11.5px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.courier?_esc(c.courier)+' · ':'')+_esc(c.addr)+'</div>'+
+      '</div>'+
+      '<button type="button" onclick="_yDelCamp('+i+')" style="flex-shrink:0;padding:4px 10px;border-radius:8px;border:1px solid var(--rdln);background:var(--rdl);color:var(--rd);font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">삭제</button>'+
+    '</div>';
+  }).join('');
+}
+
+// 캠프 상차지 주소검색 (추가 폼용)
 function _geocodeAgencyLoading(){
   new daum.Postcode({
     oncomplete:function(data){
       var addr=data.roadAddress||data.jibunAddress;
-      var inp=document.getElementById('agency-loadingAddr');
+      var inp=document.getElementById('camp-addr');
       if(inp)inp.value=addr;
       _loadKakaoMap(function(){
         var gc=new kakao.maps.services.Geocoder();
         gc.addressSearch(addr,function(res,status){
           if(status===kakao.maps.services.Status.OK){
-            var latEl=document.getElementById('agency-loadingLat');
-            var lngEl=document.getElementById('agency-loadingLng');
+            var latEl=document.getElementById('camp-lat');
+            var lngEl=document.getElementById('camp-lng');
             if(latEl)latEl.value=parseFloat(res[0].y);
             if(lngEl)lngEl.value=parseFloat(res[0].x);
-            _yToast('주소 검색 완료. 저장 버튼을 눌러주세요');
+            _yToast('주소 검색 완료');
           } else {_yToast('주소 좌표를 찾을 수 없어요');}
         });
       });
@@ -8833,18 +8867,61 @@ function _geocodeAgencyLoading(){
   }).open();
 }
 
-// 업체 기본 상차지 저장
-function _ySaveAgencyDefaults(){
-  var addr=((document.getElementById('agency-loadingAddr')||{}).value||'').trim();
+// 캠프 추가 저장
+function _yAddCamp(){
+  var name=((document.getElementById('camp-name')||{}).value||'').trim();
+  var addr=((document.getElementById('camp-addr')||{}).value||'').trim();
+  var courier=(document.getElementById('camp-courier')||{}).value||'';
+  var lat=parseFloat((document.getElementById('camp-lat')||{}).value)||null;
+  var lng=parseFloat((document.getElementById('camp-lng')||{}).value)||null;
+  if(!name){_yToast('캠프명을 입력하세요');return;}
   if(!addr){_yToast('상차지 주소를 입력하세요');return;}
-  var lat=parseFloat((document.getElementById('agency-loadingLat')||{}).value)||null;
-  var lng=parseFloat((document.getElementById('agency-loadingLng')||{}).value)||null;
   if(!lat||!lng){_yToast('주소 검색 버튼을 눌러 좌표를 확인해 주세요');return;}
-  var patch={defaultLoadingAddr:addr,defaultLoadingLat:lat,defaultLoadingLng:lng};
-  _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
-    _CU.defaultLoadingAddr=addr;_CU.defaultLoadingLat=lat;_CU.defaultLoadingLng=lng;
-    _yToast('기본 상차지가 저장됐어요! 다음 공고 등록부터 자동으로 채워집니다');
+  var locs=(_CU.savedLocations||[]).slice();
+  if(locs.some(function(c){return c.name===name;})){_yToast('같은 이름의 캠프가 이미 있어요');return;}
+  locs.push({name:name,addr:addr,courier:courier,lat:lat,lng:lng});
+  _db.collection('yongcha_users').doc(_CU.uid).update({savedLocations:locs}).then(function(){
+    _CU.savedLocations=locs;
+    var listEl=document.getElementById('camp-list');
+    if(listEl)listEl.innerHTML=_yCampListHtml(locs);
+    ['camp-name','camp-addr','camp-lat','camp-lng'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    var sel=document.getElementById('camp-courier');if(sel)sel.value='';
+    _yToast(name+' 캠프가 추가됐어요!');
   }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
+// 캠프 삭제
+function _yDelCamp(idx){
+  var locs=(_CU.savedLocations||[]).slice();
+  var removed=locs.splice(idx,1)[0];
+  _db.collection('yongcha_users').doc(_CU.uid).update({savedLocations:locs}).then(function(){
+    _CU.savedLocations=locs;
+    var listEl=document.getElementById('camp-list');
+    if(listEl)listEl.innerHTML=_yCampListHtml(locs);
+    _yToast((removed?removed.name:'캠프')+'이 삭제됐어요');
+  }).catch(function(e){_yToast('삭제 실패: '+e.message);});
+}
+
+// 공고 등록 폼에서 저장된 캠프 원탭 선택
+function _pwPickCamp(idx){
+  var c=(_CU.savedLocations||[])[idx];if(!c)return;
+  var lA=document.getElementById('pw-loadingAddr');
+  var lLat=document.getElementById('pw-loadingLat');
+  var lLng=document.getElementById('pw-loadingLng');
+  if(lA)lA.value=c.addr;
+  if(lLat)lLat.value=c.lat;
+  if(lLng)lLng.value=c.lng;
+  if(c.courier){
+    var cSel=document.getElementById('pw-courier');
+    if(cSel)cSel.value=c.courier;
+  }
+  // 버튼 활성 표시
+  document.querySelectorAll('[onclick^="_pwPickCamp"]').forEach(function(b){
+    b.style.background='var(--bg2)';b.style.borderColor='var(--bd)';b.style.color='var(--tx)';
+  });
+  var picked=document.querySelector('[onclick="_pwPickCamp('+idx+')"]');
+  if(picked){picked.style.background='var(--acl)';picked.style.borderColor='var(--acln)';picked.style.color='var(--ac)';}
+  _yToast(c.name+' 선택됨');
 }
 
 // 우편번호 직접 입력으로 구역 추가
