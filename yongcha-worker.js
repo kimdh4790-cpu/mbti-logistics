@@ -4674,10 +4674,18 @@ function _pgPostWrite(el){
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
     '초고속 용차 공고 발송</button>';
 
-  // 하이탑 기본 선택 처리
+  // 하이탑 기본 선택 처리 + 기본 상차지 자동 세팅
   setTimeout(function(){
     var v1=document.querySelector('#pw-vehicle-group button');
     if(v1) _selType(v1,'하이탑','pw-vehicle');
+    if(_CU.defaultLoadingAddr){
+      var lA=document.getElementById('pw-loadingAddr');
+      var lLat=document.getElementById('pw-loadingLat');
+      var lLng=document.getElementById('pw-loadingLng');
+      if(lA&&!lA.value){lA.value=_CU.defaultLoadingAddr;}
+      if(lLat&&!lLat.value&&_CU.defaultLoadingLat)lLat.value=_CU.defaultLoadingLat;
+      if(lLng&&!lLng.value&&_CU.defaultLoadingLng)lLng.value=_CU.defaultLoadingLng;
+    }
   },100);
 }
 
@@ -5501,6 +5509,22 @@ function _pgProfile(el){
   // 공고 등록 (대리점)
   (type==='agency'?
   '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
+
+  // 대리점 기본 상차지 설정
+  (type==='agency'?
+  '<div class="card" style="margin-bottom:8px">'+
+  '<div style="font-size:15px;font-weight:800;margin-bottom:6px">기본 상차지 설정</div>'+
+  '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">저장하면 공고 등록 시 상차지가 자동으로 채워져요 (음성 등록 가능)</div>'+
+  '<div class="inp-wrap"><label class="inp-lbl">기본 상차지 주소</label>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input class="inp" id="agency-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1" value="'+_esc(_CU.defaultLoadingAddr||'')+'">'+
+  '<button type="button" onclick="_geocodeAgencyLoading()" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
+  '</div>'+
+  '<input type="hidden" id="agency-loadingLat" value="'+(_CU.defaultLoadingLat||'')+'">'+
+  '<input type="hidden" id="agency-loadingLng" value="'+(_CU.defaultLoadingLng||'')+'">'+
+  '</div>'+
+  '<button onclick="_ySaveAgencyDefaults()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">기본 상차지 저장</button>'+
+  '</div>':'')+
 
   '<div style="margin:16px 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
   '용차앱은 소장과 기사 간 직접 거래를 위한 정보 서비스를 제공합니다. 플랫폼은 계약의 당사자가 아니며, 소장과 기사 간에 직접 체결된 계약에 대해 책임을 지지 않습니다.'+
@@ -8784,6 +8808,43 @@ function _geocodeLoadingAddr(){
       });
     }
   }).open();
+}
+
+// 업체 기본 상차지 주소검색
+function _geocodeAgencyLoading(){
+  new daum.Postcode({
+    oncomplete:function(data){
+      var addr=data.roadAddress||data.jibunAddress;
+      var inp=document.getElementById('agency-loadingAddr');
+      if(inp)inp.value=addr;
+      _loadKakaoMap(function(){
+        var gc=new kakao.maps.services.Geocoder();
+        gc.addressSearch(addr,function(res,status){
+          if(status===kakao.maps.services.Status.OK){
+            var latEl=document.getElementById('agency-loadingLat');
+            var lngEl=document.getElementById('agency-loadingLng');
+            if(latEl)latEl.value=parseFloat(res[0].y);
+            if(lngEl)lngEl.value=parseFloat(res[0].x);
+            _yToast('주소 검색 완료. 저장 버튼을 눌러주세요');
+          } else {_yToast('주소 좌표를 찾을 수 없어요');}
+        });
+      });
+    }
+  }).open();
+}
+
+// 업체 기본 상차지 저장
+function _ySaveAgencyDefaults(){
+  var addr=((document.getElementById('agency-loadingAddr')||{}).value||'').trim();
+  if(!addr){_yToast('상차지 주소를 입력하세요');return;}
+  var lat=parseFloat((document.getElementById('agency-loadingLat')||{}).value)||null;
+  var lng=parseFloat((document.getElementById('agency-loadingLng')||{}).value)||null;
+  if(!lat||!lng){_yToast('주소 검색 버튼을 눌러 좌표를 확인해 주세요');return;}
+  var patch={defaultLoadingAddr:addr,defaultLoadingLat:lat,defaultLoadingLng:lng};
+  _db.collection('yongcha_users').doc(_CU.uid).update(patch).then(function(){
+    _CU.defaultLoadingAddr=addr;_CU.defaultLoadingLat=lat;_CU.defaultLoadingLng=lng;
+    _yToast('기본 상차지가 저장됐어요! 다음 공고 등록부터 자동으로 채워집니다');
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
 }
 
 // 우편번호 직접 입력으로 구역 추가
