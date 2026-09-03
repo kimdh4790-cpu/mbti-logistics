@@ -29089,7 +29089,7 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
       var active=i===0;
       var lbl=n===9999?'1000명+':'~'+n+'명';var style='padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid '+(active?'var(--brand)':'var(--border)')+';background:'+(active?'var(--brand)':'var(--bg)')+';color:'+(active?'#fff':'var(--text)');if(n===9999)style+=';font-size:11px';return '<button id="sub-tier-'+n+'" onclick="_selectTier('+n+')" style="'+style+'">'+lbl+'</button>';
     }).join('')
-    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 · 계좌이체 월 갱신</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">💡 7일 무료 체험 · 카드 · 계좌이체 결제 가능</div>'
     +'</div>'
     
     +'</div>'
@@ -29110,7 +29110,7 @@ function _showSubModal(){window._subPlanType=window._subGrp?'grp':'ind';
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:8px">'
       +p.ft.map(function(f){return '<div style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:3px"><span style="color:'+p.color+'">✓</span>'+f+'</div>';}).join('')
       +'</div>'
-      +'<button data-pkey="'+p.key+'" data-uprice="'+p.up+'" onclick="_subPayClick(this)" style="width:100%;padding:10px;background:'+p.color+';color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💬 계좌이체 신청 → <span class="sub-btn-amt-'+p.key+'">'+amt.toLocaleString()+'원</span>/월</button>'
+      +'<button data-pkey="'+p.key+'" data-uprice="'+p.up+'" onclick="_subPayClick(this)" style="width:100%;padding:10px;background:'+p.color+';color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💳 결제하기 (카드·계좌이체) → <span class="sub-btn-amt-'+p.key+'">'+amt.toLocaleString()+'원</span>/월</button>'
       +'</div>';
   });
   html+='</div><div style="text-align:center;font-size:11px;color:var(--text3);padding:0 0 12px">📱 앱 푸시 무제한 · 문의: <a href="tel:051-711-3103" style="color:var(--brand)">051-711-3103</a></div></div>';

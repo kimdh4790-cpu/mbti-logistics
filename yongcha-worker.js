@@ -10871,6 +10871,72 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       }
     }
 
+    // Toss client key
+    if (path === '/api/toss-client-key' && method === 'GET') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      return new Response(JSON.stringify({ clientKey: env.TOSS_CLIENT_KEY || '' }), { headers: corsH });
+    }
+
+    // Yongcha subscribe confirm (Toss callback → save ycPlanExpiry)
+    if (path === '/api/yongcha/subscribe-confirm' && method === 'POST') {
+      const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      try {
+        const body = await request.json();
+        const { paymentKey, orderId, amount, uid, role } = body;
+        if (!paymentKey || !orderId || !amount || !uid) {
+          return new Response(JSON.stringify({ ok: false, error: 'missing params' }), { status: 400, headers: corsH });
+        }
+        // Confirm with Toss
+        const secretKey = env.TOSS_SECRET_KEY || '';
+        const tossResp = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + btoa(secretKey + ':'),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ paymentKey, orderId, amount })
+        });
+        const tossData = await tossResp.json();
+        if (!tossResp.ok) {
+          return new Response(JSON.stringify({ ok: false, error: tossData.message || 'toss error' }), { status: 400, headers: corsH });
+        }
+        // Save ycPlanExpiry to yongcha_users/{uid}
+        const fsToken = await ycGetFsToken(env);
+        const now = new Date();
+        const expiry = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+        const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID || 'mbti-logistics'}/databases/(default)/documents`;
+        const fields = {
+          ycPlanActive: { booleanValue: true },
+          ycPlanRole: { stringValue: role || 'driver' },
+          ycPlanExpiry: { stringValue: expiry.toISOString() },
+          ycPlanOrderId: { stringValue: orderId },
+          ycPlanUpdatedAt: { stringValue: now.toISOString() }
+        };
+        await fetch(`${FS}/yongcha_users/${uid}?${Object.keys(fields).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields })
+        });
+        return new Response(JSON.stringify({ ok: true }), { headers: corsH });
+      } catch (e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: corsH });
+      }
+    }
+
+    // Yongcha subscribe success page
+    if (path === '/yongcha-subscribe-success' && method === 'GET') {
+      const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>결제 완료</title><style>body{margin:0;font-family:Pretendard,sans-serif;background:#08101f;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box}.card{background:#0d1f35;border:1px solid rgba(0,212,170,.2);border-radius:16px;padding:32px;text-align:center;max-width:400px;width:100%}.ic{font-size:48px;margin-bottom:16px}.tt{font-size:20px;font-weight:800;margin-bottom:8px}.sub{font-size:13px;color:#8fa3b1;margin-bottom:24px}.btn{display:inline-block;padding:14px 28px;background:#00d47c;color:#000;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;border:none;width:100%;box-sizing:border-box}</style></head><body><div class="card"><div class="ic">🎉</div><div class="tt">구독 완료!</div><div class="sub">결제가 성공적으로 처리되었습니다.</div><button class="btn" onclick="confirm_and_go()">확인</button></div><script>async function confirm_and_go(){var p=new URLSearchParams(location.search);var uid=localStorage.getItem('yc_pay_uid');var role=localStorage.getItem('yc_pay_role');if(uid){try{await fetch('/api/yongcha/subscribe-confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:p.get('paymentKey'),orderId:p.get('orderId'),amount:Number(p.get('amount')),uid,role})});}catch(e){}}location.href='/';}confirm_and_go();<\/script></body></html>`;
+      return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    }
+
+    // Yongcha subscribe fail page
+    if (path === '/yongcha-subscribe-fail' && method === 'GET') {
+      const p = new URL(request.url).searchParams;
+      const msg = p.get('message') || '결제가 취소되었습니다.';
+      const html = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>결제 실패</title><style>body{margin:0;font-family:Pretendard,sans-serif;background:#08101f;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;box-sizing:border-box}.card{background:#0d1f35;border:1px solid rgba(244,63,94,.2);border-radius:16px;padding:32px;text-align:center;max-width:400px;width:100%}.ic{font-size:48px;margin-bottom:16px}.tt{font-size:20px;font-weight:800;margin-bottom:8px;color:#f43f5e}.sub{font-size:13px;color:#8fa3b1;margin-bottom:24px}.btn{display:inline-block;padding:14px 28px;background:#f43f5e;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;cursor:pointer;border:none;width:100%;box-sizing:border-box}</style></head><body><div class="card"><div class="ic">😞</div><div class="tt">결제 실패</div><div class="sub">${msg.replace(/</g,'&lt;')}</div><a class="btn" href="/">돌아가기</a></div></body></html>`;
+      return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+    }
+
     // Serve app
     return new Response(YONGCHA_HTML, {
       headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-cache' }

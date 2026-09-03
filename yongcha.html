@@ -1013,6 +1013,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
   });
 })();
 </script>
+<script src="https://js.tosspayments.com/v1/payment"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -5497,6 +5498,17 @@ function _pgProfile(el){
   (type==='agency'?
   '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
 
+  // 구독 카드
+  '<div style="margin-top:16px;border:1px solid rgba(0,212,170,.25);border-radius:var(--r);padding:14px;background:var(--bg2)">' +
+  '<div style="font-size:14px;font-weight:800;margin-bottom:4px">💳 구독 관리</div>' +
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:10px">' +
+  (type==='driver'?'기사 월정액 ₩150,000 · AI 추천 · 우선 노출':type==='agency'?'소장 월정액 ₩50,000 · AI 기사 추천 · 무제한 공고':'관리자 계정') +
+  '</div>' +
+  (type==='driver'||type==='agency' ?
+   '<button onclick="_ySubPay(\''+type+'\')" style="width:100%;padding:12px;background:var(--ac);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">💳 카드로 구독하기</button>' :
+   '') +
+  '</div>'+
+
   '<div style="margin:16px 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
   '용차앱은 소장과 기사 간 직접 거래를 위한 정보 서비스를 제공합니다. 플랫폼은 계약의 당사자가 아니며, 소장과 기사 간에 직접 체결된 계약에 대해 책임을 지지 않습니다.'+
   '</div>'+
@@ -7189,6 +7201,31 @@ function _yToast(msg){
   _toastTimer=setTimeout(function(){t.classList.remove('show');},2800);
 }
 
+async function _ySubPay(role){
+  if(!_CU||!_CU.uid){alert('로그인이 필요합니다.');return;}
+  try{
+    var r=await fetch('/api/toss-client-key');
+    var d=await r.json();
+    var clientKey=d.clientKey;
+    if(!clientKey){alert('결제 설정 오류. 잠시 후 다시 시도해주세요.');return;}
+    var price=role==='driver'?150000:50000;
+    var label=role==='driver'?'용차앱 기사 구독 (월정액)':'용차앱 소장 구독 (월정액)';
+    var orderId='YC-'+_CU.uid.slice(0,8)+'-'+Date.now()+'-'+role;
+    localStorage.setItem('yc_pay_uid',_CU.uid);
+    localStorage.setItem('yc_pay_role',role);
+    var toss=TossPayments(clientKey);
+    await toss.requestPayment('카드',{
+      amount:price,
+      orderId:orderId,
+      orderName:label,
+      successUrl:location.origin+'/yongcha-subscribe-success',
+      failUrl:location.origin+'/yongcha-subscribe-fail',
+      customerName:_CU.displayName||_CU.email||'사용자'
+    });
+  }catch(e){
+    if(e.code&&e.code!=='USER_CANCEL')alert('결제 오류: '+e.message);
+  }
+}
 function _yLogout(){
   var body=document.getElementById('modal-body');
   body.innerHTML=
