@@ -8330,14 +8330,14 @@ function _pwNlParse(){
     if(f.volume){var v=document.getElementById('pw-volume');if(v)v.value=f.volume;}
     if(f.unitPrice){var p=document.getElementById('pw-price');if(p){p.value=f.unitPrice;_calcEst();_loadRegionStats();}}
     if(f.urgent&&!_isUrgent){var ub=document.getElementById('toggle-urgent');if(ub)ub.click();}
-    if(f.region){
-      var ri=document.getElementById('pw-region');if(ri)ri.value=f.region;
-      var ai=document.getElementById('pw-area');if(ai&&f.area)ai.value=f.area;
-    }
+    if(f.region){var ri=document.getElementById('pw-region');if(ri)ri.value=f.region;}
+    if(f.area){var ai=document.getElementById('pw-area');if(ai)ai.value=f.area;}
     if(f.workShift){
+      var _shiftBtn={'새벽':'야간','당일':'주간'}[f.workShift]||f.workShift;
       document.querySelectorAll('#pw-shift-group button').forEach(function(b){
-        if(b.textContent===f.workShift)b.click();
+        if(b.textContent===_shiftBtn)b.click();
       });
+      var _shEl=document.getElementById('pw-shift');if(_shEl&&!_shEl.value)_shEl.value=f.workShift;
     }
     if(st)st.innerHTML='<span style="color:var(--gn);font-weight:800">자동 완성됨</span> — 내용을 확인하고 수정하세요';
   }).catch(function(e){if(st)st.textContent='오류: '+e.message;});
