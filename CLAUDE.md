@@ -429,6 +429,11 @@ cd mbtico-pages && npx wrangler deploy
 - DINE PWA 홈화면 설치 아이콘: _PWA_ICONS + _DINE_ICON_192/_DINE_APPLE_ICON 신규 로고 base64로 교체
 - 용차앱 음성 공고 등록 버그 수정: area·workShift 자동완성 (f.region 의존 제거)
 - 용차앱 캠프·상차지 다중 등록: 업체별 여러 캠프(이름·택배사·주소·좌표) 저장 + 공고 폼 원탭 선택
+- YouTube 패시브인컴 채널 전략 수립: scripts/youtube-ai/ 신규 (topics.json, generate-script.js, AITutorialTemplate.jsx, generate-and-upload.js, weekly-cron.sh)
+  - 채널: "AI 자동화 연구소" — n8n·Claude API·소상공인 자동화 한국어 튜토리얼
+  - CPM 목표: 8,000~20,000원 (AI/기술 카테고리)
+  - 첫 10편 주제 확정, Remotion 영상 템플릿 완성
+  - Oracle Cloud cron 설정: 매주 수요일 09:00 KST 자동 생성+업로드 (weekly-cron.sh)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요

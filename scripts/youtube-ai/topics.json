@@ -1,0 +1,72 @@
+[
+  {
+    "id": "n8n-kakao-auto",
+    "title": "n8n으로 카카오톡 자동 발송 만들기 (소상공인 실전)",
+    "keywords": ["n8n", "카카오톡 자동화", "소상공인 자동화", "알림톡"],
+    "category": "ai-automation",
+    "priority": 1
+  },
+  {
+    "id": "claude-api-free",
+    "title": "Claude API 한 달 무료로 써보는 법 (실제 업무 자동화)",
+    "keywords": ["Claude API", "AI 자동화", "무료 AI", "업무 자동화"],
+    "category": "ai-automation",
+    "priority": 2
+  },
+  {
+    "id": "delivery-payroll-auto",
+    "title": "배달대행 정산 엑셀 자동화 완전 정복 (수백 명도 5분)",
+    "keywords": ["배달대행 정산", "엑셀 자동화", "기사 정산", "물류 자동화"],
+    "category": "logistics",
+    "priority": 3
+  },
+  {
+    "id": "soginco-voucher-2026",
+    "title": "소진공 바우처 2026 신청하는 법 (200만원 지원)",
+    "keywords": ["소진공", "바우처", "정부지원금", "소상공인 지원"],
+    "category": "grants",
+    "priority": 4
+  },
+  {
+    "id": "notion-ai-inventory",
+    "title": "Notion + AI로 매장 재고 자동 관리하는 법",
+    "keywords": ["Notion", "재고관리", "AI 재고", "카페 재고"],
+    "category": "ai-automation",
+    "priority": 5
+  },
+  {
+    "id": "qr-order-diy",
+    "title": "음식점 QR주문 직접 만들기 — 수수료 월 40만원 절약",
+    "keywords": ["QR주문", "음식점 자동화", "배달앱 수수료", "POS"],
+    "category": "restaurant",
+    "priority": 6
+  },
+  {
+    "id": "ai-sales-forecast",
+    "title": "AI 매출 예측으로 발주 실수 없애기 (식당·카페 실전)",
+    "keywords": ["AI 매출 예측", "발주 자동화", "재고 최적화", "식당 AI"],
+    "category": "ai-automation",
+    "priority": 7
+  },
+  {
+    "id": "payroll-4insurance",
+    "title": "직원 급여 자동계산 — 4대보험 포함 완전 세팅법",
+    "keywords": ["급여 자동계산", "4대보험", "급여 관리", "소상공인 급여"],
+    "category": "hr",
+    "priority": 8
+  },
+  {
+    "id": "venture-cert-tax",
+    "title": "벤처기업 인증으로 법인세 50% 절감하기 (신청 완전 정리)",
+    "keywords": ["벤처기업 인증", "법인세 절감", "기보", "세금 절약"],
+    "category": "grants",
+    "priority": 9
+  },
+  {
+    "id": "kakao-naver-fee-zero",
+    "title": "카카오·네이버 주문 수수료 없애는 POS 세팅 (연 480만원 절약)",
+    "keywords": ["주문 수수료", "POS", "카카오 주문", "네이버 주문"],
+    "category": "restaurant",
+    "priority": 10
+  }
+]
