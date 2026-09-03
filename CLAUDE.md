@@ -1,4 +1,4 @@
-﻿# MBTICO - CLAUDE.md
+# MBTICO - CLAUDE.md
 > 유한회사 엠비티아이 SaaS 모노레포. 세션 시작 시 반드시 이 파일 전체를 읽고 시작할 것.
 
 ## 🎯 정확성·검증 우선 응답 원칙 (모든 세션 필수 적용)
@@ -434,6 +434,7 @@ cd mbtico-pages && npx wrangler deploy
   - CPM 목표: 8,000~20,000원 (AI/기술 카테고리)
   - 첫 10편 주제 확정, Remotion 영상 템플릿 완성
   - Oracle Cloud cron 설정: 매주 수요일 09:00 KST 자동 생성+업로드 (weekly-cron.sh)
+- 구독 결제 방식 메모 등록: 전 제품 계좌이체, 하나은행 270-910019-24204 (유)엠비티아이
 - **계좌이체 안내 UI 전 제품 추가**: FILO 구독 페이지(filo-settings.js) · 용차앱 프로필(yongcha.html) 하나은행 계좌 안내 카드 추가
 - YouTube AI 강의 주제 10편 → 20편으로 확장 (scripts/youtube-ai/topics.json)
 
