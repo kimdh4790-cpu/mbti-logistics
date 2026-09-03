@@ -424,6 +424,12 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: `_filoPageHqNotice()` 전가맹점 공지 일괄 발송 신규 구현 (hq_notices 컬렉션)
 - filo-auth.js: `_filoPageQSC()` QSC 체크리스트 신규 구현 (hq_qsc 컬렉션, 9항목 5점 채점)
 
+### ✅ 완료 (2026-09-03)
+- DONWAY PWA 홈화면 설치 아이콘: manifest 경로 /icon-192.png → /donway-icon-192.png (신규 PNG)로 변경
+- DINE PWA 홈화면 설치 아이콘: _PWA_ICONS + _DINE_ICON_192/_DINE_APPLE_ICON 신규 로고 base64로 교체
+- 용차앱 음성 공고 등록 버그 수정: area·workShift 자동완성 (f.region 의존 제거)
+- 용차앱 캠프·상차지 다중 등록: 업체별 여러 캠프(이름·택배사·주소·좌표) 저장 + 공고 폼 원탭 선택
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
