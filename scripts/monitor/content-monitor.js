@@ -63,16 +63,16 @@ async function classify(videoTitle, channelName) {
     messages: [{
       role: 'user',
       content: `MBTICO 관점에서 이 YouTube 영상을 분류해줘.
-MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouTube "AI 자동화 연구소" 채널 운영 중.
+MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouTube "AI 자동화 연구소" 채널 운영 중. 대표가 직접 시청해서 아이디어 얻는 용도.
 
 채널: ${channelName}
 제목: ${videoTitle}
 
-분류 기준:
-- 강의소재: AI 자동화 연구소 채널 강의 주제로 쓸 수 있음
-- 앱기능: FILO/DONWAY/용차앱에 구현할 기능 아이디어
-- 수익모델: 새로운 수익원 아이디어
-- 패스: 관련없음
+분류 기준 (폭넓게 판단, 조금이라도 해당하면 패스 금지):
+- 강의소재: AI·자동화·노코드·개발·SaaS·마케팅·수익화·창업 등 "AI 자동화 연구소" 강의 주제로 쓸 수 있는 것
+- 앱기능: FILO(매장POS)/DONWAY(정산)/용차앱에 추가하면 좋을 기능·UX·워크플로우 아이디어
+- 수익성: 새로운 사업 아이템, 수익 모델, 트렌드 아이디어, 부업·투자·비즈니스 기회 — 분야 무관하게 돈이 될 가능성 있는 것
+- 패스: 개인 일상·먹방·여행·순수 오락 등 위 세 가지와 전혀 무관한 것만
 
 JSON만: {"category":"강의소재","reason":"한줄이유"}`
     }]
