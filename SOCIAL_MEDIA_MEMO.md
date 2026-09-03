@@ -542,6 +542,11 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-03 | **FiloPromo.jsx variant 동적 슬라이드 렌더링** — hero/feature/compare/notice/price/cta 6가지 타입 씬 컴포넌트. render-filo.js가 filo-variants.json에서 이번 주 variant(weekNum%4→A/B/C/D) 읽어 slides+lines를 inputProps로 전달. 매주 완전히 다른 장면 자동 생성. index.jsx defaultProps 추가 |
+| 2026-09-03 | **generate-and-upload.js --skip-script / --template 파라미터 추가** — TEMPLATE_MAP으로 tutorial/news/tips 분기. weekly-cron.sh에서 --template $TEMPLATE 전달 가능 |
+| 2026-09-03 | **AINewsTemplate.jsx, AITipsTemplate.jsx 신규** — 뉴스 속보 스타일(빨간 Ticker+BreakingBanner, Composition: AINewsVideo), 팁 카드 스타일(상단 진행 점+TIP 배지, Composition: AITipsVideo). weekly-cron.sh 주차별 tutorial/news/tips 로테이션 |
+| 2026-09-03 | **filo-variants.json 전면 개편** — FILO+DINE 연동 공동 홍보 4종: A(태블릿통합), B(QR출퇴근+DINE HR), C(AI매출예측+DINE), D(비용비교+DINE). "필로포스 개발중" 표기, 자연스러운 구어체 나레이션 |
+| 2026-09-03 | **yongcha-variants.json 최종 업데이트** — 일부 기능 준비중 + 지금 가입 가능 메시지 4종(A:직접거래/B:기사공고/C:소장선택/D:서비스소개). 구어체 나레이션, 국민신문고 언급 제거 |
 | 2026-09-03 | **YouTube 채널 자동 모니터링 파이프라인 구축** — channels.json(10개 채널), content-monitor.js(RSS→Haiku분류→SMS), Oracle Cloud 매일 09:00 KST cron 등록. 월 $0.30 비용. Fish Audio(AI 나레이션 무료 티어), Mirr($19/월 한국 AI SNS 자동화), 신영선 Headroom+TaskObserver(Claude 토큰 40-50% 절감) 참고 등록 |
 | 2026-09-03 | **Topview Canvas × Seedance 2.5 워크플로우 추가** — 앱 스크린샷 1장으로 브이로그/UGC후기/시네마틱 3종 동시 생성. 제품별 프롬프트 템플릿 + 파이프라인 통합 계획 정리 |
 | 2026-09-03 | **SPCL 프레임워크 적용** — generate-script.js에 알렉스 홀모지 Status/Power/Credibility/Likeness 전략 내장. spcl_type 필드 추가, 섹션 순서 강제(intro→status→power→credibility→cta). SOCIAL_MEDIA_MEMO.md SPCL 섹션 신규 추가 |
