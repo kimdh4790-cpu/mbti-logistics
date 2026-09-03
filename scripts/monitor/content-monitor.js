@@ -93,6 +93,10 @@ JSON만: {"category":"강의소재","reason":"한줄이유"}`;
     messages: [{ role: 'user', content: prompt }]
   }), 'utf8');
 
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return { category: '패스', reason: 'API키 미설정' };
+  }
+
   return new Promise((resolve) => {
     const req = https.request({
       hostname: 'api.anthropic.com',
