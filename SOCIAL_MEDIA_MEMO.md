@@ -149,6 +149,60 @@ INSTAGRAM_ACCESS_TOKEN=등록완료 (만료: 2026-10-28)
 
 ---
 
+## Topview Canvas × Seedance 2.5 — 사진 1장 멀티 릴스 (2026-09-03 추가)
+
+> 앱 스크린샷 1장 → 콘셉트별 릴스 3종 동시 생성 → Meta A/B 테스트 직행
+
+### 도구
+- **Topview Canvas**: AI 기획+영상 생성 통합 워크플로우 (회원가입 필요)
+- **Seedance 2.5**: 인물·제품 일관성 유지 멀티버전 생성 모델 (Canvas 내 선택)
+
+### 핵심 차이점 — 기존 방식 vs Topview Canvas
+| 기존 (Remotion/FFmpeg) | Topview Canvas |
+|---|---|
+| 코드로 씬 직접 설계 | 프롬프트 → AI가 기획안 먼저 제시 |
+| 버전 교체 시 코드 수정 | 콘셉트 3종 동시 선택 → 나란히 생성 |
+| 스크린샷 기반 | 실사 인물/제품 사진 레퍼런스 |
+| A/B는 variants.json 로테이션 | A/B/C 즉시 비교 가능 |
+
+### MBTICO 제품별 활용 계획
+| 제품 | 업로드할 사진 | 콘셉트 3종 |
+|---|---|---|
+| FILO | 앱 대시보드 스크린샷 + 매장 사진 | 브이로그(매장 하루) / UGC후기(실사용) / 시네마틱(브랜드필름) |
+| DONWAY | 정산 화면 스크린샷 + 기사/배달 사진 | 실사후기 / 비포애프터 / 시네마틱 |
+| 용차앱 | AI추천 화면 + 트럭/소장 사진 | 브이로그 / UGC후기 / 시네마틱 |
+
+### 프롬프트 템플릿 (MBTICO용)
+```
+[제품명] 앱 사용 후기 릴스 영상 제작해줘.
+첫 3초 안에 "소상공인이 공감할" 후킹 멘트로 시작하고,
+업로드한 앱 화면을 메인 소재로 사용해줘.
+30~40초 분량, 세로형(9:16)으로 만들어줘.
+타겟: 한국 소상공인 / 물류업체 / 배달대행사
+```
+
+### 워크플로우 순서 (수동)
+```
+앱 스크린샷 + 레퍼런스 이미지 업로드
+  ↓
+프롬프트 입력 (주제 + 후킹 + 타겟 + 포맷)
+  ↓
+AI 기획안 확인 → 장면별 수정 (생성 전)
+  ↓
+콘셉트 3종 동시 생성 (브이로그 / UGC후기 / 시네마틱)
+  ↓
+장면 단위 수정 (전체 재생성 없이)
+  ↓
+Export 1080p → Instagram Reels 업로드
+```
+
+### 현재 파이프라인과의 관계
+- **단기**: Topview Canvas 수동 생성 → Oracle Cloud로 옮겨 자동 업로드
+- **중기**: Topview Canvas API 생기면 social-media.yml에 통합
+- **Remotion 영상**: 코드 기반 브랜딩 영상은 유지 (Topview는 실사 소재용)
+
+---
+
 ## SPCL 영향력 프레임워크 (알렉스 홀모지, 2026-09-03 적용)
 
 > 조회수보다 영향력 — 시청자를 잠재고객으로 전환하는 콘텐츠 전략
@@ -488,6 +542,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-03 | **Topview Canvas × Seedance 2.5 워크플로우 추가** — 앱 스크린샷 1장으로 브이로그/UGC후기/시네마틱 3종 동시 생성. 제품별 프롬프트 템플릿 + 파이프라인 통합 계획 정리 |
 | 2026-09-03 | **SPCL 프레임워크 적용** — generate-script.js에 알렉스 홀모지 Status/Power/Credibility/Likeness 전략 내장. spcl_type 필드 추가, 섹션 순서 강제(intro→status→power→credibility→cta). SOCIAL_MEDIA_MEMO.md SPCL 섹션 신규 추가 |
 | 2026-09-03 | **AI 영상 제작 워크플로우 추가** — higgsfield-render.js 신규(9층 프롬프트), oracle-init.sh Agent Reach 자동설치 스텝 추가, INFRA_MEMO.md Agent Reach + OpenChatCut 섹션 등록 |
 | 2026-08-31 | **네이버 블로그 자동화 완료** — naver_schedule.js 생성 (요일별 제품 순환), 초안 3개 신규 생성(DONWAY 알림톡/FILO 근태관리/용차앱 직접거래), naver_login.js fs require 버그 수정, Windows 작업 스케줄러 NaverBlogPost 등록(월수금 09:00), Oracle VM cron 등록 완료 |
