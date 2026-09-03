@@ -434,6 +434,8 @@ cd mbtico-pages && npx wrangler deploy
   - CPM 목표: 8,000~20,000원 (AI/기술 카테고리)
   - 첫 10편 주제 확정, Remotion 영상 템플릿 완성
   - Oracle Cloud cron 설정: 매주 수요일 09:00 KST 자동 생성+업로드 (weekly-cron.sh)
+- **계좌이체 안내 UI 전 제품 추가**: FILO 구독 페이지(filo-settings.js) · 용차앱 프로필(yongcha.html) 하나은행 계좌 안내 카드 추가
+- YouTube AI 강의 주제 10편 → 20편으로 확장 (scripts/youtube-ai/topics.json)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
@@ -461,6 +463,16 @@ cd mbtico-pages && npx wrangler deploy
 12. 벤처기업 인증 (기보 부산지점)
 
 ---
+
+## 💳 결제 방식 (필독 — 절대 착각 금지)
+- **FILO·DONWAY·용차앱 구독료는 전부 계좌이체**
+- 카드 결제(토스 등) 연동 없음. 구현하지 말 것
+- "결제 등록해줘" = 메모/안내 텍스트 등록이지 PG 연동이 아님
+
+### 입금 계좌
+- 은행: 하나은행
+- 계좌번호: 270-910019-24204
+- 예금주: (유)엠비티아이
 
 ## 💳 알림톡 템플릿 ID
 정산명세서: KA01TP260618101225825DuJHXpoC4kY

@@ -68,5 +68,75 @@
     "keywords": ["주문 수수료", "POS", "카카오 주문", "네이버 주문"],
     "category": "restaurant",
     "priority": 10
+  },
+  {
+    "id": "cloudflare-worker-saas",
+    "title": "Cloudflare Workers로 SaaS 백엔드 무료 구축 (월 서버비 0원)",
+    "keywords": ["Cloudflare Workers", "SaaS 백엔드", "서버리스", "무료 서버"],
+    "category": "tech",
+    "priority": 11
+  },
+  {
+    "id": "firebase-firestore-save",
+    "title": "Firebase 읽기 2만건/일 줄이는 캐시 전략 — 요금 폭탄 예방",
+    "keywords": ["Firebase Firestore", "읽기 최적화", "캐시 전략", "요금 절감"],
+    "category": "tech",
+    "priority": 12
+  },
+  {
+    "id": "naver-place-rank",
+    "title": "네이버 플레이스 순위 올리는 POS 연동 방법 (FILO 실전)",
+    "keywords": ["네이버 플레이스", "순위 올리기", "플레이스 플러스", "POS 연동"],
+    "category": "restaurant",
+    "priority": 13
+  },
+  {
+    "id": "cargo-app-legal",
+    "title": "화물 매칭앱 창업 — 주선사 등록 없이 합법으로 운영하는 법",
+    "keywords": ["화물 매칭앱", "부가통신사업자", "규제 샌드박스", "창업 합법"],
+    "category": "startup",
+    "priority": 14
+  },
+  {
+    "id": "ai-review-reply",
+    "title": "AI로 네이버·구글 리뷰 자동 답글 달기 (식당 대표 필수)",
+    "keywords": ["리뷰 답글 자동화", "AI 리뷰", "네이버 리뷰", "구글 리뷰"],
+    "category": "restaurant",
+    "priority": 15
+  },
+  {
+    "id": "excel-to-kakao-auto",
+    "title": "엑셀 데이터 → 카카오 알림톡 자동 발송 (정산서·급여명세서)",
+    "keywords": ["알림톡 자동화", "엑셀 연동", "카카오 알림톡", "정산 자동화"],
+    "category": "ai-automation",
+    "priority": 16
+  },
+  {
+    "id": "oracle-free-server",
+    "title": "Oracle Cloud 무료 서버로 AI 서비스 24시간 돌리기",
+    "keywords": ["Oracle Cloud", "무료 서버", "AI 서비스", "Always Free"],
+    "category": "tech",
+    "priority": 17
+  },
+  {
+    "id": "remotion-video-auto",
+    "title": "Remotion으로 코드로 홍보 영상 만들기 — 영상 제작비 0원",
+    "keywords": ["Remotion", "영상 자동화", "홍보 영상", "코드 영상"],
+    "category": "ai-automation",
+    "priority": 18
+  },
+  {
+    "id": "n8n-instagram-auto",
+    "title": "n8n + Instagram API로 릴스 자동 업로드 세팅 (소상공인 SNS 자동화)",
+    "keywords": ["Instagram 자동화", "릴스 자동 업로드", "n8n", "SNS 마케팅"],
+    "category": "ai-automation",
+    "priority": 19
+  },
+  {
+    "id": "kiosk-pos-cost",
+    "title": "키오스크·POS 구매 vs 렌탈 — 3년 비용 비교 완전 분석",
+    "keywords": ["키오스크 비용", "POS 렌탈", "구매 vs 렌탈", "소상공인 비용"],
+    "category": "restaurant",
+    "priority": 20
   }
 ]

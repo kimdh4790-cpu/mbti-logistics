@@ -445,7 +445,16 @@ function _filoPageSubscription(el){
   '<h2 style="font-size:20px;font-weight:700;color:var(--tx);margin-bottom:8px">요금제 선택</h2>'+
   '<p style="font-size:14px;color:var(--t3);margin-bottom:24px">DINE 직원앱 포함 · 업종·규모별 맞춤 제안</p>'+
   '<div style="display:grid;gap:12px">'+cards+'</div>'+
-  '<div style="margin-top:20px;padding:14px;background:rgba(244,63,94,.04);border:1px solid rgba(244,63,94,.15);border-radius:12px;text-align:center">'+
+  '<div style="margin-top:16px;padding:14px 16px;background:rgba(0,102,255,.04);border:1px solid rgba(0,102,255,.15);border-radius:12px">'+
+  '<div style="font-size:12px;font-weight:700;color:#0066ff;margin-bottom:10px">구독료 납부 계좌 (계좌이체 전용)</div>'+
+  '<div style="display:flex;flex-direction:column;gap:6px">'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t3)">은행</span><span style="font-weight:700;color:var(--tx)">하나은행</span></div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t3)">계좌번호</span><span style="font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums">270-910019-24204</span></div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--t3)">예금주</span><span style="font-weight:700;color:var(--tx)">(유)엠비티아이</span></div>'+
+  '</div>'+
+  '<div style="margin-top:10px;font-size:11px;color:var(--t3)">입금 후 051-711-3103 또는 카카오채널로 알려주시면 즉시 활성화됩니다.</div>'+
+  '</div>'+
+  '<div style="margin-top:12px;padding:14px;background:rgba(244,63,94,.04);border:1px solid rgba(244,63,94,.15);border-radius:12px;text-align:center">'+
   '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">요금 문의</div>'+
   '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">'+
   '<a href="tel:051-711-3103" style="padding:8px 16px;background:var(--br);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">전화 051-711-3103</a>'+
