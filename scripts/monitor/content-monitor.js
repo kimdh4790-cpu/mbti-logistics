@@ -3,7 +3,7 @@
 // 사용법: node scripts/monitor/content-monitor.js
 // Oracle Cloud cron: 매일 09:00 KST (00:00 UTC)
 
-import Anthropic from '@anthropic-ai/sdk';
+import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -14,8 +14,6 @@ const STATE_PATH = path.join(ROOT, 'output', 'monitor-state.json');
 const DIGEST_PATH = path.join(ROOT, 'output', 'monitor-digest.json');
 const CHANNELS_PATH = path.join(__dirname, 'channels.json');
 const LOG_DIR = process.env.LOG_DIR || '/home/opc/mbtico-logs';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // 상태 로드 (마지막으로 본 영상 ID + 캐시된 channelId)
 function loadState() {
@@ -30,13 +28,31 @@ function saveState(state) {
 
 // YouTube @handle → channelId 변환 (1회만, 이후 캐시)
 async function resolveChannelId(handle) {
-  const url = `https://www.youtube.com/${handle.startsWith('@') ? handle : handle}`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' }
-  });
-  const html = await res.text();
-  const m = html.match(/"channelId":"(UC[^"]{22})"/);
-  return m ? m[1] : null;
+  const h = handle.startsWith('@') ? handle : `@${handle}`;
+  const url = `https://www.youtube.com/${h}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    });
+    const html = await res.text();
+    const patterns = [
+      /"channelId":"(UC[^"]{22})"/,
+      /"externalId":"(UC[^"]{22})"/,
+      /"browseId":"(UC[^"]{22})"/,
+      /\/channel\/(UC[^"/?]{22})/,
+    ];
+    for (const p of patterns) {
+      const m = html.match(p);
+      if (m) return m[1];
+    }
+  } catch (e) {
+    console.log(`  resolveChannelId 오류: ${e.message}`);
+  }
+  return null;
 }
 
 // YouTube RSS 파싱 (Atom 포맷)
@@ -55,14 +71,9 @@ function parseRSS(xml) {
   return items;
 }
 
-// Claude Haiku로 분류
+// Claude Haiku로 분류 (https 직접 호출 — Node.js fetch ByteString 오류 우회)
 async function classify(videoTitle, channelName) {
-  const msg = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 150,
-    messages: [{
-      role: 'user',
-      content: `MBTICO 관점에서 이 YouTube 영상을 분류해줘.
+  const prompt = `MBTICO 관점에서 이 YouTube 영상을 분류해줘.
 MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouTube "AI 자동화 연구소" 채널 운영 중. 대표가 직접 시청해서 아이디어 얻는 용도.
 
 채널: ${channelName}
@@ -74,16 +85,43 @@ MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouT
 - 수익성: 새로운 사업 아이템, 수익 모델, 트렌드 아이디어, 부업·투자·비즈니스 기회 — 분야 무관하게 돈이 될 가능성 있는 것
 - 패스: 개인 일상·먹방·여행·순수 오락 등 위 세 가지와 전혀 무관한 것만
 
-JSON만: {"category":"강의소재","reason":"한줄이유"}`
-    }]
+JSON만: {"category":"강의소재","reason":"한줄이유"}`;
+
+  const body = Buffer.from(JSON.stringify({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 150,
+    messages: [{ role: 'user', content: prompt }]
+  }), 'utf8');
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': body.length,
+        'anthropic-version': '2023-06-01',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+      }
+    }, (res) => {
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+          const raw = data.content[0].text;
+          const j = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+          resolve(JSON.parse(j));
+        } catch {
+          resolve({ category: '패스', reason: '분류 실패' });
+        }
+      });
+    });
+    req.on('error', () => resolve({ category: '패스', reason: '네트워크 오류' }));
+    req.write(body);
+    req.end();
   });
-  try {
-    const raw = msg.content[0].text;
-    const j = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
-    return JSON.parse(j);
-  } catch {
-    return { category: '패스', reason: '분류 실패' };
-  }
 }
 
 // Aligo SMS 발송 (환경변수 설정 시)
@@ -111,7 +149,10 @@ async function main() {
       if (!channelId && ch.handle) {
         console.log(`  채널ID 조회: ${ch.name}`);
         channelId = await resolveChannelId(ch.handle);
-        if (channelId) state.channelIds[ch.instagram] = channelId;
+        if (channelId) {
+          state.channelIds[ch.instagram] = channelId;
+          console.log(`    → ${channelId}`);
+        }
       }
       if (!channelId) { console.log(`  ⚠️ ${ch.name}: channelId 없음 스킵`); continue; }
 
@@ -164,7 +205,7 @@ async function main() {
   let allDigest = [];
   try { allDigest = JSON.parse(fs.readFileSync(DIGEST_PATH, 'utf8')); } catch {}
   allDigest.unshift(digestEntry);
-  allDigest = allDigest.slice(0, 30); // 30일치만 유지
+  allDigest = allDigest.slice(0, 30);
   fs.writeFileSync(DIGEST_PATH, JSON.stringify(allDigest, null, 2));
 
   // 결과 출력
