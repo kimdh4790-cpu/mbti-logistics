@@ -542,6 +542,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-03 | **YouTube 채널 자동 모니터링 파이프라인 구축** — channels.json(10개 채널), content-monitor.js(RSS→Haiku분류→SMS), Oracle Cloud 매일 09:00 KST cron 등록. 월 $0.30 비용. Fish Audio(AI 나레이션 무료 티어), Mirr($19/월 한국 AI SNS 자동화), 신영선 Headroom+TaskObserver(Claude 토큰 40-50% 절감) 참고 등록 |
 | 2026-09-03 | **Topview Canvas × Seedance 2.5 워크플로우 추가** — 앱 스크린샷 1장으로 브이로그/UGC후기/시네마틱 3종 동시 생성. 제품별 프롬프트 템플릿 + 파이프라인 통합 계획 정리 |
 | 2026-09-03 | **SPCL 프레임워크 적용** — generate-script.js에 알렉스 홀모지 Status/Power/Credibility/Likeness 전략 내장. spcl_type 필드 추가, 섹션 순서 강제(intro→status→power→credibility→cta). SOCIAL_MEDIA_MEMO.md SPCL 섹션 신규 추가 |
 | 2026-09-03 | **AI 영상 제작 워크플로우 추가** — higgsfield-render.js 신규(9층 프롬프트), oracle-init.sh Agent Reach 자동설치 스텝 추가, INFRA_MEMO.md Agent Reach + OpenChatCut 섹션 등록 |

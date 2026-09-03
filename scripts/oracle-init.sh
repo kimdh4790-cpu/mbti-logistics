@@ -85,6 +85,7 @@ echo "[5/6] Cron 설정..."
 
 CRON_CONTENT="CHROMIUM_PATH=${CHROMIUM_BIN}
 PROFILES_DIR=${PROFILES_DIR}
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 
 # ════════════════════════════════════════════
 #  MBTICO 전체 자동화 스케줄 (oracle-init.sh)
@@ -142,6 +143,10 @@ PROFILES_DIR=${PROFILES_DIR}
 0 2 * * 6 cd ${REPO_DIR} && node scripts/upload/post-naver-blog.js --product donway >> ${LOG_DIR}/blog-donway.log 2>&1
 
 # ── 앱 자동화 ───────────────────────────────
+
+# 매일 09:00 KST(00:00 UTC) — YouTube 채널 신규 영상 모니터링 + Claude Haiku 분류 (월~\$0.30)
+# (ANTHROPIC_API_KEY 위 환경변수 섹션에 등록 필요)
+0 0 * * * cd ${REPO_DIR} && git pull origin main -q && node scripts/monitor/content-monitor.js >> ${LOG_DIR}/content-monitor.log 2>&1
 
 # 매일 22:00 KST(13:00 UTC) — 5개 앱 헬스체크
 0 13 * * * cd ${REPO_DIR} && node scripts/health-check.js >> ${LOG_DIR}/health.log 2>&1

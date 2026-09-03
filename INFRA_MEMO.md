@@ -221,6 +221,66 @@ OpenChatCut 편집 세션 열어줘.
 
 ---
 
+## YouTube 채널 모니터링 파이프라인 — 2026-09-03 구축
+
+> 인스타 팔로잉 AI 크리에이터 10개 채널의 신규 영상을 매일 자동 수집 + Claude Haiku 분류 + SMS 알림
+
+### 파일 위치
+| 파일 | 역할 |
+|---|---|
+| `scripts/monitor/channels.json` | 모니터링 채널 목록 (10개) |
+| `scripts/monitor/content-monitor.js` | 메인 파이프라인 스크립트 |
+| `output/monitor-state.json` | 마지막으로 본 영상 ID + 캐시된 channelId |
+| `output/monitor-digest.json` | 분류 결과 30일치 |
+
+### 모니터링 채널 (10개)
+| Instagram | 이름 | YouTube |
+|---|---|---|
+| yeonsidesign | 연시 | @yeonsidesign (handle) |
+| lazy_owen | 게으른빌더 | @lazyowenAI |
+| moodmode.ai | 무드모드 | @moodmode |
+| mia.aimaker | 미아바이브코딩 | madeinmia |
+| moongi_adve | 뭉이 | channelId 직접 등록 |
+| qjc.ai | 퀀텀점프클럽 | @qjc_qjc |
+| jayroad | 제이로드 | URL 인코딩 handle |
+| woojoboss_ | 우주보스 | @woojooboss |
+| ai.yeongson | 신영선 | @ai.yeongseon |
+| hyenim_ai | 안혜인 | channelId 직접 등록 |
+
+### 동작 원리
+1. YouTube RSS `https://www.youtube.com/feeds/videos.xml?channel_id=...` 폴링 (무료, API 키 불필요)
+2. `@handle` → `channelId` 변환: YouTube 페이지 HTML에서 `"channelId":"UC..."` 패턴 추출 후 state 캐시
+3. Claude Haiku 분류: 영상 제목 → 강의소재 / 앱기능 / 수익모델 / 패스 4분류
+4. 패스 제외한 항목 SMS 발송 (Aligo, 환경변수 있을 때만)
+
+### 비용
+- Claude Haiku API: 10채널 × 3영상/일 × 250토큰 × 30일 = 225,000토큰 → **월 약 $0.30 (430원)**
+- YouTube RSS: 완전 무료
+- Aligo SMS: 환경변수 미설정 시 발송 안 함
+
+### Oracle Cloud Cron (매일 09:00 KST = 00:00 UTC)
+```bash
+0 0 * * * cd /home/opc/mbti-logistics && git pull origin main -q && node scripts/monitor/content-monitor.js >> /home/opc/mbtico-logs/content-monitor.log 2>&1
+```
+→ oracle-init.sh 재실행 시 자동 등록됨. `ANTHROPIC_API_KEY`는 crontab 상단 또는 ~/.bashrc에 설정 필요.
+
+### 수동 실행 (테스트)
+```bash
+cd ~/mbti-logistics
+ANTHROPIC_API_KEY=sk-ant-... node scripts/monitor/content-monitor.js
+```
+
+### 출력 예시
+```
+[2026-09-03T00:00:00.000Z] 콘텐츠 모니터링 시작
+  📺 게으른빌더: 새 영상 2개
+    [강의소재] n8n으로 유튜브 자동화하는 방법 완전정복
+    [패스] 오늘 점심 뭐먹지
+📋 오늘 발견: 1건
+```
+
+---
+
 ## GitHub Actions
 
 ### 워크플로우
