@@ -111,6 +111,116 @@ scp -r ./naver-profile opc@161.33.136.154:~/mbti-logistics/naver-blog/naver-prof
 
 ---
 
+---
+
+## Agent Reach (AI 인터넷 읽기 도구) — 2026-09-03 설치
+
+> 클로드가 YouTube 자막·GitHub·RSS·Reddit 등을 API 비용 없이 읽게 해주는 MIT 오픈소스 도구
+
+### 설치 정보
+- **PyPI 패키지**: `agent-reach 0.1.0`
+- **venv 경로**: `~/.agent-reach-venv` (Python 3.11)
+- **GitHub**: https://github.com/Panniantong/agent-reach (★77,166)
+- **라이선스**: MIT
+
+### 설치 명령 (최초 1회)
+```bash
+python3 -m venv ~/.agent-reach-venv
+source ~/.agent-reach-venv/bin/activate
+pip install agent-reach
+agent-reach install youtube    # yt-dlp 자동 설치
+agent-reach install rss        # feedparser 자동 설치
+```
+
+### 사용 방법
+```bash
+source ~/.agent-reach-venv/bin/activate
+
+# YouTube 자막 가져오기
+agent-reach get youtube "https://youtu.be/VIDEO_ID"
+
+# RSS 피드 읽기
+agent-reach get rss "https://example.com/feed.xml"
+
+# 채널 목록 확인
+agent-reach list
+agent-reach list --all
+
+# 상태 점검
+agent-reach doctor --json
+```
+
+### 설치된 채널 (제로 컨피그)
+| 채널 | 상태 | 비고 |
+|---|---|---|
+| youtube | ready | yt-dlp 2026.08.19 — 자막 추출 + 영상 검색 |
+| rss | ready | feedparser — 아무 RSS/Atom 피드 |
+
+### 환경 제한 사항
+- **Claude Code 원격 컨테이너**: 프록시 제한으로 YouTube 접근 불가 (403)
+- **Oracle Cloud (161.33.136.154)**: 프록시 없음 → 완전 동작. 여기서 실행 권장
+- 로그인 필요 채널 (Reddit/Twitter/LinkedIn): `agent-reach install <채널명>` 후 설정 필요
+
+### YouTube 파이프라인 활용
+```bash
+# Oracle Cloud에서: 경쟁사 영상 자막 분석 → 주제 리서치
+source ~/.agent-reach-venv/bin/activate
+agent-reach get youtube "경쟁 채널 영상 URL" | claude "핵심 주제 3개 추출해줘"
+```
+
+---
+
+---
+
+## OpenChatCut (AI 영상 편집기 + Claude Code MCP) — 2026-09-03 등록
+
+> 트랙·클립이 보존되는 AI 영상 편집기. Claude Code를 MCP로 연결해 말로 편집 지시.
+> 출처: https://github.com/0xsline/OpenChatCut (MIT)
+
+### 주요 특징
+- AI 편집 결과가 "초안"으로 쌓임 → 사람이 승인 버튼 눌러야 타임라인 적용
+- 트랙·클립 보존 → 손으로 다시 수정 가능
+- 말소리 받아쓰기 → 문장 삭제로 컷 편집
+- 내보내기: MP4, MP3, SRT, FCPXML(파이널컷), 캡컷 초안, ProRes
+
+### 설치 (로컬 PC / Oracle Cloud)
+```bash
+# Node.js 24 필요
+git clone https://github.com/0xsline/OpenChatCut.git
+cd OpenChatCut
+npm install
+cp .env.example .env.local
+npm run dev
+# 브라우저: http://localhost:5199
+```
+
+### Claude Code MCP 연결
+```bash
+# 1. 편집 스킬 설치
+npx skills add 0xsline/OpenChatCut
+
+# 2. 앱 안 플러그 아이콘 → External agents (MCP) → Claude Code: Connect 클릭
+
+# 3. 또는 수동 등록 (토큰 필요)
+claude mcp add --transport http openchatcut http://localhost:5199/api/external-mcp/mcp \
+  --header "Authorization: Bearer $(cat ~/.openchatcut/mcp-token)"
+```
+
+### 편집 지시 예시 (Claude Code에서)
+```
+OpenChatCut 편집 세션 열어줘.
+지금 프로젝트에서 "어" "음" 습관어랑 0.6초 넘는 빈 구간 정리해줘.
+다 되면 검토 요청 보내고 내가 승인할 때까지 기다려.
+```
+
+### 주의사항
+- 로컬 PC 전용 (서버 배포 비권장 — 토큰 없이 열면 외부 접근 가능)
+- 아직 초기 버전 (v0.2.13). 중요 납품 영상 첫 프로젝트로 쓰지 말 것
+- Windows 0.2.12 버그 있음 → 0.2.13 사용
+- 맥 첫 실행: 우클릭 → 열기 (서명 없는 빌드)
+
+---
+
 ## GitHub Actions
 
 ### 워크플로우

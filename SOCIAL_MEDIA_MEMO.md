@@ -149,6 +149,64 @@ INSTAGRAM_ACCESS_TOKEN=등록완료 (만료: 2026-10-28)
 
 ---
 
+## AI 영상 제작 워크플로우 (2026-09-03 추가)
+
+### 방법 A: 존코바 방식 (수동, 고퀄리티)
+> 출처: @존코바디자인 (저작권 있음 — 직접 재배포 금지, 참고용)
+
+```
+Midjourney → Newtake.ai(스토리보드) → Seedance 2.5(영상) → Premiere Pro(편집)
+```
+
+- Midjourney: Kpop 스타일 이미지 생성
+- Newtake: 9분할 그리드 → 멀티카메라 스토리보드 → 9:16 720p 10초 영상
+- Premiere: BGM 추가 후 완성
+- **단점**: 자동화 불가 (모든 단계 수동 클릭 필요)
+
+### 방법 B: 뉴테이크 캐릭터 일관성 워크플로우
+> 출처: @yeonsidesign (저작권 있음 — 재배포 금지, 참고용)
+
+**핵심 원칙:**
+1. 이미지 단계에서 캐릭터 확정 후 영상 생성 (영상이 크레딧 더 소모)
+2. 레퍼런스 역할 분리: 정체성 이미지(@image1) vs 헤어스타일만(@image2)
+3. 프레임 연결: 끝 프레임 캡처 → 다음 장면 시작점으로 재사용
+
+**9층 프롬프트 구조:**
+```
+1. HEADER    — 길이, 화면비, 촬영 톤
+2. REFERENCE — 이미지별 가져올 것/말 것 분리
+3. CONTINUITY — 소품 수량·상태 진행 방향 고정
+4. CAMERA    — 높이, 각도, 거리, 금지 구도
+5. AUDIO     — 대사 타임코드, BGM 유무
+6. ACTION    — 허용 동작 횟수·시간 구간
+7. PACING    — 구간별 속도·멈춤 길이
+8. BEATS     — 각 구간 시작/끝 상태
+9. NEGATIVES — 금지 요소·보존할 질감
+```
+
+**레퍼런스 제어 핵심 프롬프트:**
+```
+preserve the CURRENT length and shape as in @image1, do not restyle
+use @image2 ONLY for the hairstyle, do not take face/outfit/background
+```
+
+### 방법 C: Higgsfield API 자동화 (권장 — API 기반)
+> 세션에 Higgsfield AI 연결됨. 코드로 완전 자동화 가능.
+
+```
+scripts/youtube-ai/generate-script.js (Claude API)
+  → scripts/youtube-ai/higgsfield-render.js (Higgsfield 이미지→영상)
+  → scripts/compose/compose-video.sh (FFmpeg 자막 합성)
+  → scripts/upload/upload-youtube-api.js (YouTube 업로드)
+```
+
+**Newtake 방법 B의 원칙을 Higgsfield로 구현:**
+- `generate_image`: 캐릭터 기준 이미지 생성
+- `generate_video`: 이미지→영상 변환 (Seedance 동등)
+- `motion_control`: 카메라/동작 세밀 제어
+
+---
+
 ## 콘텐츠 캘린더 (자동화 기반, 2026-08 ~ 09)
 
 > `scripts/content/calendar.json` 에 전체 항목 관리. 아래는 요약.

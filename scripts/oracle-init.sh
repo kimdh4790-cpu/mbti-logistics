@@ -164,9 +164,27 @@ PROFILES_DIR=${PROFILES_DIR}
 echo "$CRON_CONTENT" | crontab -
 echo "  Cron 등록 완료"
 
-# ── 6. 완료 안내 ────────────────────────────────────────
+# ── 6. Agent Reach 설치 (YouTube 자막 리서치용) ────────
+echo "[6/7] Agent Reach 설치..."
+if ! python3 -c "import agent_reach" 2>/dev/null; then
+  python3 -m venv ~/.agent-reach-venv
+  source ~/.agent-reach-venv/bin/activate
+  pip install agent-reach -q
+  agent-reach install youtube   # yt-dlp 설치
+  agent-reach install rss       # feedparser 설치
+  deactivate
+  # .bashrc에 alias 추가
+  if ! grep -q "agent-reach" ~/.bashrc 2>/dev/null; then
+    echo "alias agent-reach='~/.agent-reach-venv/bin/agent-reach'" >> ~/.bashrc
+  fi
+  echo "  Agent Reach 설치 완료 (YouTube + RSS 채널)"
+else
+  echo "  Agent Reach 이미 설치됨"
+fi
+
+# ── 7. 완료 안내 ────────────────────────────────────────
 echo ""
-echo "[6/6] 완료!"
+echo "[7/7] 완료!"
 echo ""
 echo "================================================="
 echo "  다음 단계: 플랫폼 최초 로그인 (1회만 필요)"
