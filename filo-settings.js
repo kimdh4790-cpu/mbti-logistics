@@ -460,6 +460,19 @@ function _filoPageSubscription(el){
   '<a href="tel:051-711-3103" style="padding:8px 16px;background:var(--br);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">전화 051-711-3103</a>'+
   '<a href="mailto:filo-dine@donway.ai.kr" style="padding:8px 16px;border:1px solid var(--bd2);color:var(--t2);border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">이메일 문의</a>'+
   '</div></div>'+
+  '<div style="margin-top:12px;padding:14px 16px;background:rgba(3,199,90,.04);border:1px solid rgba(3,199,90,.2);border-radius:12px">'+
+  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03c75a" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>'+
+  '<div style="font-size:13px;font-weight:700;color:#03c75a">네이버 플레이스 플러스 연동 (준비 중)</div>'+
+  '</div>'+
+  '<div style="font-size:12px;color:var(--t2);margin-bottom:10px">FILO 실매출 데이터 → 네이버 순위 점수 자동 반영. 연동 매장은 비연동 매장 대비 검색 노출에서 유리합니다.</div>'+
+  '<ul style="list-style:none;padding:0;margin:0 0 10px;display:flex;flex-direction:column;gap:4px">'+
+  '<li style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#03c75a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>결제건수·매출·방문객 수 자동 전송</li>'+
+  '<li style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap=6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#03c75a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>스마트플레이스 순위 점수 실시간 반영</li>'+
+  '<li style="font-size:12px;color:var(--t3);display:flex;align-items:center;gap=6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#03c75a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>FILO 구독 플랜 내 추가 비용 없음</li>'+
+  '</ul>'+
+  '<div style="font-size:11px;padding:8px 10px;background:rgba(3,199,90,.07);border-radius:8px;color:var(--t2);text-align:center">파트너 승인 완료 시 즉시 활성화 · 사전 신청 매장 우선 연동</div>'+
+  '</div>'+
   '</div>';
 }
 function _filoPageTaxShare(el){

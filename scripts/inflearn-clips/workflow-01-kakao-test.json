@@ -1,0 +1,129 @@
+{
+  "name": "01. 카카오 알림톡 첫 발송 테스트",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "수동 실행",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "ALIGO_API_KEY", "value": "여기에_알리고_API_KEY_입력" },
+            { "name": "ALIGO_USER_ID", "value": "여기에_알리고_아이디_입력" },
+            { "name": "ALIGO_SENDER_KEY", "value": "여기에_카카오_채널_발신키_입력" },
+            { "name": "ALIGO_TEMPLATE_CODE", "value": "여기에_템플릿_코드_입력" },
+            { "name": "SENDER_PHONE", "value": "051-711-3103" },
+            { "name": "TEST_RECEIVER", "value": "수신자_휴대폰번호_01012345678" },
+            { "name": "TEST_NAME", "value": "홍길동" }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000002",
+      "name": "설정값 입력",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $json.ALIGO_API_KEY }}" },
+            { "name": "userid", "value": "={{ $json.ALIGO_USER_ID }}" },
+            { "name": "senderkey", "value": "={{ $json.ALIGO_SENDER_KEY }}" },
+            { "name": "tpl_code", "value": "={{ $json.ALIGO_TEMPLATE_CODE }}" },
+            { "name": "sender", "value": "={{ $json.SENDER_PHONE }}" },
+            { "name": "receiver_1", "value": "={{ $json.TEST_RECEIVER }}" },
+            { "name": "recvname_1", "value": "={{ $json.TEST_NAME }}" },
+            { "name": "message_1", "value": "안녕하세요 {{ $json.TEST_NAME }}님, 알림톡 테스트 메시지입니다." },
+            { "name": "subject_1", "value": "테스트 발송" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000003",
+      "name": "알림톡 발송",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "check-result",
+              "leftValue": "={{ $json.result_code }}",
+              "rightValue": 1,
+              "operator": { "type": "number", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000004",
+      "name": "발송 성공?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "status", "value": "성공" },
+            { "name": "message", "value": "={{ $('알림톡 발송').item.json.message }}" },
+            { "name": "sent_at", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000005",
+      "name": "성공 결과",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1120, 220]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            { "name": "status", "value": "실패" },
+            { "name": "error_code", "value": "={{ $('알림톡 발송').item.json.result_code }}" },
+            { "name": "error_message", "value": "={{ $('알림톡 발송').item.json.message }}" }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000006",
+      "name": "실패 결과",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1120, 400]
+    }
+  ],
+  "connections": {
+    "수동 실행": { "main": [[{ "node": "설정값 입력", "type": "main", "index": 0 }]] },
+    "설정값 입력": { "main": [[{ "node": "알림톡 발송", "type": "main", "index": 0 }]] },
+    "알림톡 발송": { "main": [[{ "node": "발송 성공?", "type": "main", "index": 0 }]] },
+    "발송 성공?": {
+      "main": [
+        [{ "node": "성공 결과", "type": "main", "index": 0 }],
+        [{ "node": "실패 결과", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": [{ "name": "카카오 알림톡" }, { "name": "소상공인 자동화" }]
+}

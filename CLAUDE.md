@@ -438,6 +438,15 @@ cd mbtico-pages && npx wrangler deploy
 - **계좌이체 안내 UI 전 제품 추가**: FILO 구독 페이지(filo-settings.js) · 용차앱 프로필(yongcha.html) 하나은행 계좌 안내 카드 추가
 - YouTube AI 강의 주제 10편 → 20편으로 확장 (scripts/youtube-ai/topics.json)
 
+### ✅ 완료 (2026-09-04)
+- **인프런 클립 패키지 신규** (scripts/inflearn-clips/): n8n 카카오 알림톡 자동화 워크플로우 3종 + 설치 가이드 + 상품 설명
+  - workflow-01-kakao-test.json: 첫 발송 테스트 (수동 트리거 → 성공/실패 분기)
+  - workflow-02-sheet-to-kakao.json: 구글 시트 → 일괄 알림톡 발송 (1초 간격 Rate Limit 안전)
+  - workflow-03-weekly-auto.json: 매주 월요일 09:00 완전 자동 정산 알림톡 + 관리자 완료 알림
+  - README-setup.md: Oracle Cloud Docker 설치~첫 발송 단계별 가이드 + FAQ
+  - product-description.md: 인프런 등록용 상품 소개 · 가격 책정 · 등록 체크리스트
+- **FILO 설정 화면 네이버 플레이스 플러스 안내 카드 추가** (filo-settings.js `_filoPageSubscription()`): "FILO 연동 준비 중, 승인 시 즉시 알림" — 파트너 승인 완료 후 바로 활성화 가능한 선제 UI
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
