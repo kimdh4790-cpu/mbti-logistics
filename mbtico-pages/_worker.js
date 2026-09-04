@@ -1207,6 +1207,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       <div class="acc-body" id="acc-billing"></div>
     </div>
 
+    <!-- 📱 앱별 현황 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('apps')">
+        <span class="acc-icon" id="ico-apps">▶</span>
+        <span class="acc-title">📱 앱별 현황</span>
+      </div>
+      <div class="acc-body" id="acc-apps"></div>
+    </div>
+
   </div><!-- /main-scroll -->
 </div><!-- /main-screen -->
 
@@ -1326,7 +1335,8 @@ function _ctrlLoad(id) {
     companies: _ctrlLoadCompanies,
     chat:      _ctrlLoadChat,
     notice:    _ctrlLoadNotice,
-    billing:   _ctrlLoadBilling
+    billing:   _ctrlLoadBilling,
+    apps:      _ctrlLoadApps
   }[id];
   if (fn) fn();
 }
@@ -2044,6 +2054,240 @@ function _ctrlLoadBilling() {
       html = '<div class="billing-total">이번 조회 합계: <b>₩' + totalAmt.toLocaleString() + '</b></div>' + html;
       c.innerHTML = html;
     });
+}
+
+// ── 공통 이스케이프 헬퍼 ──────────────────────────────────────────
+function _esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── 📱 앱별 현황 ──────────────────────────────────────────────────
+var _appsTab = 'filo';
+
+function _ctrlLoadApps() {
+  var c = document.getElementById('acc-apps');
+  c.innerHTML =
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">' +
+    '<button class="ctrl-btn" id="atab-filo" onclick="_ctrlAppsTab(\'filo\')">🟣 FILO·DINE</button>' +
+    '<button class="ctrl-btn" id="atab-donway" onclick="_ctrlAppsTab(\'donway\')">🔵 DONWAY</button>' +
+    '<button class="ctrl-btn" id="atab-yongcha" onclick="_ctrlAppsTab(\'yongcha\')">🟠 용차앱</button>' +
+    '</div>' +
+    '<div id="apps-content"><div class="ctrl-loading">로딩 중...</div></div>';
+  _ctrlAppsTab('filo');
+}
+
+function _ctrlAppsTab(tab) {
+  _appsTab = tab;
+  ['filo','donway','yongcha'].forEach(function(t) {
+    var btn = document.getElementById('atab-' + t);
+    if (btn) btn.style.background = t === tab ? 'rgba(99,102,241,.3)' : '';
+  });
+  var fns = { filo: _ctrlAppsFiloDine, donway: _ctrlAppsDonway, yongcha: _ctrlAppsYongcha };
+  if (fns[tab]) fns[tab]();
+}
+
+function _appsStatusColor(s) {
+  return {approved:'#22c55e',active:'#22c55e',trial:'#f59e0b',pending:'#7c3aed',suspended:'#ef4444'}[s] || '#888';
+}
+
+function _appsExpiryColor(expiry) {
+  if (!expiry || expiry === '-') return '#888';
+  var today = new Date().toISOString().slice(0,10);
+  var in7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+  return expiry < today ? '#ef4444' : expiry <= in7 ? '#f59e0b' : '#22c55e';
+}
+
+// FILO·DINE 탭
+function _ctrlAppsFiloDine() {
+  var c = document.getElementById('apps-content');
+  c.innerHTML = '<div class="ctrl-loading">FILO·DINE 로딩 중...</div>';
+  _db.collection('companies').limit(200).get().then(function(snap) {
+    var docs = [];
+    snap.forEach(function(d) {
+      var data = d.data(), svcs = data.services || [];
+      var FILO_SVCS = ['kiosk','table_order','inventory','qr_attend','reservation','member_crm','sales_analytics','bakery_qr'];
+      var DINE_SVCS = ['dine_delivery','staff_mgmt','tax_invoice'];
+      if (svcs.some(function(s){return FILO_SVCS.includes(s)||DINE_SVCS.includes(s);}) ||
+          data.serviceType === 'filo' || data.serviceType === 'dine') {
+        docs.push(Object.assign({_id:d.id}, data));
+      }
+    });
+    if (!docs.length) { c.innerHTML = '<div class="ctrl-empty">FILO·DINE 고객사 없음</div>'; return; }
+
+    var today = new Date().toISOString().slice(0,10);
+    var in7 = new Date(Date.now()+7*86400000).toISOString().slice(0,10);
+    var expSoon = docs.filter(function(d){ var e=d.filoPlanExpiry||d.trialEnd||''; return e>=today&&e<=in7; }).length;
+
+    var html = '<div style="margin-bottom:8px;font-size:12px;color:var(--tx2)">총 <b>' + docs.length + '</b>개 고객사' +
+      (expSoon ? ' · <span style="color:#f59e0b">만료임박 ' + expSoon + '곳</span>' : '') + '</div>';
+    html += '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+      '<th>업체명</th><th>상태</th><th>FILO플랜</th><th>플랜만료</th><th>서비스</th><th>액션</th>' +
+      '</tr></thead><tbody>';
+
+    var PLAN_LBL = {trial:'체험',basic:'베이직',pro:'프로',premium:'프리미엄',franchise_hq:'프랜차이즈'};
+    docs.forEach(function(d) {
+      var id = d._id;
+      var planLbl = PLAN_LBL[d.filoPlan] || (d.filoPlan || '-');
+      var expiry = d.filoPlanExpiry || d.trialEnd || '-';
+      var svcs = (d.services||[]).slice(0,4).map(function(s){
+        return '<span style="display:inline-block;padding:1px 5px;background:rgba(99,102,241,.14);border-radius:4px;font-size:9px;margin:1px">' + _esc(s) + '</span>';
+      }).join('');
+      html += '<tr>' +
+        '<td><b>' + _esc(d.companyName||d.name||'-') + '</b><br><span style="font-size:10px;color:var(--tx2)">' + _esc(d.email||'-') + '</span></td>' +
+        '<td><span style="color:' + _appsStatusColor(d.status) + ';font-weight:700">' + _esc(d.status||'-') + '</span></td>' +
+        '<td style="font-weight:700;color:#c9a84c">' + _esc(planLbl) + '</td>' +
+        '<td style="color:' + _appsExpiryColor(expiry) + '">' + _esc(expiry) + '</td>' +
+        '<td>' + svcs + '</td>' +
+        '<td>' +
+          '<button class="ctrl-btn" style="font-size:10px;padding:3px 7px" data-id="' + _esc(id) + '" onclick="_ctrlExtendTrial(this.dataset.id)">+연장</button> ' +
+          (d.status!=='suspended'
+            ? '<button class="ctrl-btn ctrl-btn-err" style="font-size:10px;padding:3px 7px" data-id="' + _esc(id) + '" onclick="_ctrlSuspend(this.dataset.id)">정지</button>'
+            : '<button class="ctrl-btn ctrl-btn-ok" style="font-size:10px;padding:3px 7px" data-id="' + _esc(id) + '" onclick="_ctrlUnsuspend(this.dataset.id)">복구</button>') +
+        '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    c.innerHTML = html;
+  }).catch(function(e){ c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>'; });
+}
+
+// DONWAY 탭
+function _ctrlAppsDonway() {
+  var c = document.getElementById('apps-content');
+  c.innerHTML = '<div class="ctrl-loading">DONWAY 로딩 중...</div>';
+  _db.collection('companies').limit(200).get().then(function(snap) {
+    var docs = [];
+    snap.forEach(function(d) {
+      var data = d.data(), svcs = data.services || [];
+      if (svcs.includes('settle')||svcs.includes('delivery')||svcs.includes('qr_payroll')||data.serviceType==='settle') {
+        docs.push(Object.assign({_id:d.id}, data));
+      }
+    });
+    if (!docs.length) { c.innerHTML = '<div class="ctrl-empty">DONWAY 고객사 없음</div>'; return; }
+
+    var html = '<div style="margin-bottom:8px;font-size:12px;color:var(--tx2)">총 <b>' + docs.length + '</b>개 업체</div>';
+    html += '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+      '<th>업체명</th><th>이메일</th><th>상태</th><th>플랜</th><th>만료일</th><th>드라이버</th><th>액션</th>' +
+      '</tr></thead><tbody>';
+
+    docs.forEach(function(d) {
+      var id = d._id;
+      var subs = d.subscriptions || {};
+      var dwSub = subs.donway || {};
+      var expiry = dwSub.expiry || d.trialEnd || '-';
+      var plan = dwSub.plan || d.plan || '-';
+      var drivers = d.driverCount || d.memberCount || '-';
+
+      html += '<tr>' +
+        '<td><b>' + _esc(d.companyName||d.name||'-') + '</b></td>' +
+        '<td style="font-size:11px">' + _esc(d.email||'-') + '</td>' +
+        '<td><span style="color:' + _appsStatusColor(d.status) + ';font-weight:700">' + _esc(d.status||'-') + '</span></td>' +
+        '<td>' + _esc(plan) + '</td>' +
+        '<td style="color:' + _appsExpiryColor(expiry) + '">' + _esc(expiry) + '</td>' +
+        '<td style="text-align:center">' + _esc(String(drivers)) + '</td>' +
+        '<td>' +
+          '<button class="ctrl-btn" style="font-size:10px;padding:3px 7px" data-id="' + _esc(id) + '" onclick="_ctrlExtendTrial(this.dataset.id)">+연장</button> ' +
+          (d.status!=='suspended'
+            ? '<button class="ctrl-btn ctrl-btn-err" style="font-size:10px;padding:3px 7px" data-id="' + _esc(id) + '" onclick="_ctrlSuspend(this.dataset.id)">정지</button>'
+            : '<button class="ctrl-btn ctrl-btn-ok" style="font-size:10px;padding:3px 7px" data-id="' + _esc(id) + '" onclick="_ctrlUnsuspend(this.dataset.id)">복구</button>') +
+        '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    c.innerHTML = html;
+  }).catch(function(e){ c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>'; });
+}
+
+// 용차앱 탭
+function _ctrlAppsYongcha() {
+  var c = document.getElementById('apps-content');
+  c.innerHTML = '<div class="ctrl-loading">용차앱 로딩 중...</div>';
+  _db.collection('yongcha_users').orderBy('createdAt','desc').limit(200).get().then(function(snap) {
+    if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">용차앱 사용자 없음</div>'; return; }
+
+    var agencies = [], drivers = [];
+    snap.forEach(function(d) {
+      var data = Object.assign({_id:d.id}, d.data());
+      if (data.type === 'agency') agencies.push(data); else drivers.push(data);
+    });
+
+    var today = new Date().toISOString().slice(0,10);
+    function subLabel(d) {
+      if (!d.subExpiry) return '<span style="color:#f59e0b">미확인</span>';
+      return d.subExpiry < today
+        ? '<span style="color:#ef4444">만료(' + d.subExpiry + ')</span>'
+        : '<span style="color:#22c55e">구독중(' + d.subExpiry + ')</span>';
+    }
+    function joinDate(d) {
+      if (!d.createdAt) return '-';
+      return d.createdAt.toDate ? d.createdAt.toDate().toISOString().slice(0,10) : String(d.createdAt).slice(0,10);
+    }
+    function bannedBadge(d) {
+      return d.status === 'banned' ? '<span style="color:#ef4444;font-size:10px;margin-left:4px">[제재]</span>' : '';
+    }
+
+    var html = '<div style="display:flex;gap:20px;margin-bottom:14px;font-size:13px">' +
+      '<span>소장·대리점: <b style="color:#3b82f6">' + agencies.length + '명</b></span>' +
+      '<span>기사: <b style="color:#22c55e">' + drivers.length + '명</b></span>' +
+      '<span>합계: <b>' + snap.size + '명</b></span>' +
+      '</div>';
+
+    if (agencies.length) {
+      html += '<div style="font-weight:700;font-size:12px;color:#3b82f6;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">소장 · 대리점 (' + agencies.length + ')</div>';
+      html += '<div class="ctrl-table-wrap" style="margin-bottom:18px"><table class="ctrl-table"><thead><tr>' +
+        '<th>상호명</th><th>이메일</th><th>전화</th><th>구독</th><th>가입일</th><th>액션</th>' +
+        '</tr></thead><tbody>';
+      agencies.forEach(function(d) {
+        html += '<tr>' +
+          '<td><b>' + _esc(d.name||'-') + '</b>' + bannedBadge(d) + '</td>' +
+          '<td style="font-size:11px">' + _esc(d.email||'-') + '</td>' +
+          '<td style="font-size:11px">' + _esc(d.phone||'-') + '</td>' +
+          '<td>' + subLabel(d) + '</td>' +
+          '<td style="font-size:11px">' + joinDate(d) + '</td>' +
+          '<td>' +
+            (d.status!=='banned'
+              ? '<button class="ctrl-btn ctrl-btn-err" style="font-size:10px;padding:3px 7px" data-id="' + _esc(d._id) + '" onclick="_ctrlYongchaBan(this.dataset.id)">제재</button>'
+              : '<button class="ctrl-btn ctrl-btn-ok" style="font-size:10px;padding:3px 7px" data-id="' + _esc(d._id) + '" onclick="_ctrlYongchaUnban(this.dataset.id)">해제</button>') +
+          '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    if (drivers.length) {
+      html += '<div style="font-weight:700;font-size:12px;color:#22c55e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">기사 (' + drivers.length + ')</div>';
+      html += '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+        '<th>이름</th><th>이메일</th><th>전화</th><th>구독</th><th>가입일</th><th>액션</th>' +
+        '</tr></thead><tbody>';
+      drivers.forEach(function(d) {
+        html += '<tr>' +
+          '<td><b>' + _esc(d.name||'-') + '</b>' + bannedBadge(d) + '</td>' +
+          '<td style="font-size:11px">' + _esc(d.email||'-') + '</td>' +
+          '<td style="font-size:11px">' + _esc(d.phone||'-') + '</td>' +
+          '<td>' + subLabel(d) + '</td>' +
+          '<td style="font-size:11px">' + joinDate(d) + '</td>' +
+          '<td>' +
+            (d.status!=='banned'
+              ? '<button class="ctrl-btn ctrl-btn-err" style="font-size:10px;padding:3px 7px" data-id="' + _esc(d._id) + '" onclick="_ctrlYongchaBan(this.dataset.id)">제재</button>'
+              : '<button class="ctrl-btn ctrl-btn-ok" style="font-size:10px;padding:3px 7px" data-id="' + _esc(d._id) + '" onclick="_ctrlYongchaUnban(this.dataset.id)">해제</button>') +
+          '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    c.innerHTML = html;
+  }).catch(function(e){ c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>'; });
+}
+
+function _ctrlYongchaBan(uid) {
+  if (!confirm('이 사용자를 제재(비활성화)하시겠습니까?')) return;
+  _db.collection('yongcha_users').doc(uid).update({status:'banned',bannedAt:new Date().toISOString(),bannedBy:_CU.email})
+    .then(function(){ _ctrlToast('제재 처리 완료'); _ctrlAppsYongcha(); })
+    .catch(function(e){ _ctrlToast('오류: ' + e.message); });
+}
+
+function _ctrlYongchaUnban(uid) {
+  if (!confirm('제재를 해제하시겠습니까?')) return;
+  _db.collection('yongcha_users').doc(uid).update({status:'active',unbannedAt:new Date().toISOString(),unbannedBy:_CU.email})
+    .then(function(){ _ctrlToast('제재 해제 완료'); _ctrlAppsYongcha(); })
+    .catch(function(e){ _ctrlToast('오류: ' + e.message); });
 }
 
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',_ctrlInit);}else{_ctrlInit();}
