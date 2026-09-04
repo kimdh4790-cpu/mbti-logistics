@@ -1977,6 +1977,13 @@ async function acceptExchange(){
       const shortLabel = compDoc.shortLabel?.stringValue || '';
       const label = shortLabel || shortName.slice(0,2);
 
+      const dwLogoB64 = compDoc.slugLogoB64?.stringValue || '';
+      // 커스텀 로고 PNG
+      if (subPath === '/logo.png' && dwLogoB64) {
+        const dwLogoStr = dwLogoB64.replace(/^data:image\/\w+;base64,/, '');
+        const dwLogoBin = Uint8Array.from(atob(dwLogoStr), c => c.charCodeAt(0));
+        return new Response(dwLogoBin, { headers: { 'Content-Type':'image/png', 'Cache-Control':'public,max-age=3600' } });
+      }
       // SVG 아이콘
       if (subPath === '/icon.svg') {
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#00c8f8"/><text x="96" y="130" font-size="88" font-family="'Noto Sans KR',sans-serif" font-weight="700" fill="white" text-anchor="middle">${label}</text></svg>`;
@@ -1985,6 +1992,8 @@ async function acceptExchange(){
 
       // manifest.json
       if (subPath === '/manifest.json') {
+        const dwIconSrc = dwLogoB64 ? '/c/'+slug+'/logo.png' : '/c/'+slug+'/icon.svg';
+        const dwIconType = dwLogoB64 ? 'image/png' : 'image/svg+xml';
         const manifest = {
           name: compName + ' DONWAY',
           short_name: shortLabel || shortName,
@@ -1993,7 +2002,7 @@ async function acceptExchange(){
           background_color: '#0f1623',
           theme_color: '#00c8f8',
           icons: [
-            { src: '/c/' + slug + '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
+            { src: dwIconSrc, sizes: dwLogoB64 ? '512x512' : 'any', type: dwIconType, purpose: 'any maskable' }
           ]
         };
         return new Response(JSON.stringify(manifest), { headers: { 'Content-Type':'application/manifest+json', 'Cache-Control':'no-cache' } });
@@ -2224,16 +2233,24 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const _dCompName = _dCompDoc.companyName?.stringValue || 'DINE';
         const _dDealerId = _dQData[0]?.document?.name?.split('/').pop() || '';
         const _dLabel = _dCompDoc.shortLabel?.stringValue || _dCompName.slice(0,2);
+        const _dLogoB64 = _dCompDoc.slugLogoB64?.stringValue || '';
+        if (_dSubPath === '/logo.png' && _dLogoB64) {
+          const _dLogoStr = _dLogoB64.replace(/^data:image\/\w+;base64,/, '');
+          const _dLogoBin = Uint8Array.from(atob(_dLogoStr), c => c.charCodeAt(0));
+          return new Response(_dLogoBin,{headers:{'Content-Type':'image/png','Cache-Control':'public,max-age=3600'}});
+        }
         if (_dSubPath === '/icon.svg') {
           const _dSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#8fb32a"/><text x="96" y="130" font-size="88" font-family="'Noto Sans KR',sans-serif" font-weight="700" fill="white" text-anchor="middle">${_dLabel}</text></svg>`;
           return new Response(_dSvg,{headers:{'Content-Type':'image/svg+xml','Cache-Control':'public,max-age=3600'}});
         }
         if (_dSubPath === '/manifest.json') {
+          const _dIconSrc = _dLogoB64 ? '/s/'+_dSlug+'/logo.png' : '/s/'+_dSlug+'/icon.svg';
+          const _dIconType = _dLogoB64 ? 'image/png' : 'image/svg+xml';
           return new Response(JSON.stringify({
             name:_dCompName+' DINE',short_name:_dLabel,
             start_url:'/s/'+_dSlug,scope:'/s/'+_dSlug+'/',
             display:'standalone',background_color:'#1a1f1a',theme_color:'#8fb32a',lang:'ko',
-            icons:[{src:'/s/'+_dSlug+'/icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]
+            icons:[{src:_dIconSrc,sizes:_dLogoB64?'512x512':'any',type:_dIconType,purpose:'any maskable'}]
           }),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
         }
         const _dHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${_dCompName} DINE</title><link rel="manifest" href="/s/${_dSlug}/manifest.json"><meta name="theme-color" content="#8fb32a"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${_dLabel} DINE"><link rel="apple-touch-icon" href="/s/${_dSlug}/icon.svg"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1f1a;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Pretendard',sans-serif}.wrap{text-align:center}.ic{width:96px;height:96px;margin:0 auto 24px;border-radius:22px;background:#8fb32a;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:700;color:#fff;line-height:1}.nm{color:#fff;font-size:22px;font-weight:700;margin-bottom:8px}.sb{color:#8fb32a;font-size:14px}</style></head><body><div class="wrap"><div class="ic">${_dLabel}</div><div class="nm">${_dCompName}</div><div class="sb">DINE 로딩 중...</div></div><script>if(${JSON.stringify(!!_dDealerId)})localStorage.setItem('_dine_slug_dealer',${JSON.stringify(_dDealerId)});setTimeout(()=>location.replace('/'),800);</script></body></html>`;
@@ -2487,6 +2504,18 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const _filoArr = Uint8Array.from(atob(_filoIconData), c => c.charCodeAt(0));
         return new Response(_filoArr, {headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=86400'}});
       }
+      // ── 슬러그 로고 업로드 API ────────────────────────────────────────────────
+      if (path === '/api/slug-logo' && method === 'POST') {
+        const _slUser = await verifyFirebaseToken(request, env);
+        if (!_slUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        let _slBody; try{_slBody=await request.json();}catch(e){_slBody={};}
+        const _slLogoB64 = _slBody.logoB64 || '';
+        if (!_slLogoB64 || !_slLogoB64.startsWith('data:image/')) return new Response(JSON.stringify({ok:false,error:'올바른 이미지 형식이 아닙니다'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        if (_slLogoB64.length > 1400000) return new Response(JSON.stringify({ok:false,error:'이미지가 너무 큽니다 (1MB 이하)'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const _slFsToken = await getAccessToken(env);
+        await fetch(`${FS_BASE}/companies/${_slUser.uid}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_slFsToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{slugLogoB64:{stringValue:_slLogoB64}}})});
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
       // ── FILO 고객사 전용 경로 /s/{slug} ──────────────────────────────────────
       const _filoSlugMatch = path.match(/^\/s\/([A-Za-z0-9가-힣\-_]+)(\/.*)?$/);
       if (_filoSlugMatch) {
@@ -2502,16 +2531,24 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const _fCompName = _fCompDoc.companyName?.stringValue || 'FILO';
         const _fDealerId = _fQData[0]?.document?.name?.split('/').pop() || '';
         const _fLabel = _fCompDoc.shortLabel?.stringValue || _fCompName.slice(0,2);
+        const _fLogoB64 = _fCompDoc.slugLogoB64?.stringValue || '';
+        if (_fSubPath === '/logo.png' && _fLogoB64) {
+          const _fLogoStr = _fLogoB64.replace(/^data:image\/\w+;base64,/, '');
+          const _fLogoBin = Uint8Array.from(atob(_fLogoStr), c => c.charCodeAt(0));
+          return new Response(_fLogoBin,{headers:{'Content-Type':'image/png','Cache-Control':'public,max-age=3600'}});
+        }
         if (_fSubPath === '/icon.svg') {
           const _fSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#c2185b"/><text x="96" y="130" font-size="88" font-family="'Noto Sans KR',sans-serif" font-weight="700" fill="white" text-anchor="middle">${_fLabel}</text></svg>`;
           return new Response(_fSvg,{headers:{'Content-Type':'image/svg+xml','Cache-Control':'public,max-age=3600'}});
         }
         if (_fSubPath === '/manifest.json') {
+          const _fIconSrc = _fLogoB64 ? '/s/'+_fSlug+'/logo.png' : '/s/'+_fSlug+'/icon.svg';
+          const _fIconType = _fLogoB64 ? 'image/png' : 'image/svg+xml';
           return new Response(JSON.stringify({
             name:_fCompName+' FILO',short_name:_fLabel,
             start_url:'/s/'+_fSlug,scope:'/s/'+_fSlug+'/',
             display:'standalone',background_color:'#1a0a12',theme_color:'#c2185b',lang:'ko',
-            icons:[{src:'/s/'+_fSlug+'/icon.svg',sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]
+            icons:[{src:_fIconSrc,sizes:_fLogoB64?'512x512':'any',type:_fIconType,purpose:'any maskable'}]
           }),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
         }
         const _fHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${_fCompName} FILO</title><link rel="manifest" href="/s/${_fSlug}/manifest.json"><meta name="theme-color" content="#c2185b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="${_fLabel} FILO"><link rel="apple-touch-icon" href="/s/${_fSlug}/icon.svg"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a0a12;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Pretendard',sans-serif}.wrap{text-align:center}.ic{width:96px;height:96px;margin:0 auto 24px;border-radius:22px;background:#c2185b;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:700;color:#fff;line-height:1}.nm{color:#fff;font-size:22px;font-weight:700;margin-bottom:8px}.sb{color:#c2185b;font-size:14px}</style></head><body><div class="wrap"><div class="ic">${_fLabel}</div><div class="nm">${_fCompName}</div><div class="sb">FILO 로딩 중...</div></div><script>if(${JSON.stringify(!!_fDealerId)})localStorage.setItem('_filo_slug_dealer',${JSON.stringify(_fDealerId)});setTimeout(()=>location.replace('/'),800);</script></body></html>`;

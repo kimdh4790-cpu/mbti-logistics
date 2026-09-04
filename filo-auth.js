@@ -615,6 +615,7 @@ function _buildFiloNav(){
  /* ── 설정 ── */
  var _settings=[
   {ic:'sliders',l:'설정',p:'settings'},
+  {ic:'link',l:'전용 링크 관리',p:'slug_link'},
   {ic:'credit-card',l:'구독 관리',p:'subscription'},
  ];
  if(isAdmin)_settings.push({ic:'megaphone',l:'공지사항',p:'notices'});
@@ -835,6 +836,7 @@ function _filoGoPage(p, _fromPopstate){
  else if(p==='notices') _filoPageNotices(el);
  else if(p==='settings') _filoPageSettings(el);
  else if(p==='subscription') _filoPageSubscription(el);
+ else if(p==='slug_link') _filoPageSlugLink(el);
  else if(p==='cost_mgmt') _filoPageCostMgmt(el);
  else if(p==='sales') _filoPageSales(el);
  else if(p==='margin') _filoPageMargin(el);

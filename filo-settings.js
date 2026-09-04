@@ -659,3 +659,124 @@ async function _filoSeedSalesData(){
   if(btn)btn.disabled=false;
  }
 }
+
+// ── 전용 링크 관리 (고객사 홈화면 설치 PWA) ──────────────────────────────
+function _filoPageSlugLink(el){
+ if(!el)el=document.getElementById('mg-content')||document.getElementById('page-content');
+ if(!el)return;
+ var d=_cachedCompanyDoc||{};
+ var slug=d.slug||'';
+ var companyName=d.companyName||(_CU&&_CU.displayName)||'매장';
+ var label=(d.shortLabel||companyName).slice(0,2);
+ var baseUrl='https://filo.ai.kr/s/';
+ var fullUrl=slug?(baseUrl+slug):'';
+ var iconSvg='<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 96 96\' width=\'96\' height=\'96\'><rect width=\'96\' height=\'96\' rx=\'20\' fill=\'#c2185b\'/><text x=\'48\' y=\'67\' font-size=\'44\' font-family=\'Pretendard,sans-serif\' font-weight=\'700\' fill=\'white\' text-anchor=\'middle\'>'+label+'</text></svg>';
+
+ el.innerHTML='<div style="padding:20px 0;max-width:600px">'+
+  '<h2 style="font-size:20px;font-weight:700;color:var(--tx);margin-bottom:6px">전용 링크 관리</h2>'+
+  '<p style="font-size:14px;color:var(--t3);margin-bottom:24px">고객사 맞춤 홈화면 설치 링크 · 로고 등록</p>'+
+
+  // 슬러그 입력
+  '<div style="background:var(--b3);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:10px">전용 링크 슬러그</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:10px">영문·숫자·하이픈 조합으로 고유 슬러그를 설정하면 <b>filo.ai.kr/s/{슬러그}</b> 링크가 생성됩니다.<br>고객사에 이 링크를 공유하면 매장 로고로 홈화면 설치 가능합니다.</div>'+
+  '<div style="display:flex;gap:8px;align-items:center">'+
+  '<div style="font-size:13px;color:var(--t2);white-space:nowrap">filo.ai.kr/s/</div>'+
+  '<input id="slug-input" value="'+slug+'" placeholder="예: mystore" style="flex:1;padding:9px 12px;border:1px solid var(--bd2);border-radius:8px;background:var(--b2);color:var(--tx);font-size:14px;outline:none">'+
+  '<button onclick="_filoSaveSlug()" style="padding:9px 14px;background:var(--br);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">저장</button>'+
+  '</div>'+
+  (fullUrl?
+   '<div style="margin-top:10px;display:flex;align-items:center;gap:8px;padding:10px;background:rgba(194,24,91,.05);border:1px solid rgba(194,24,91,.2);border-radius:8px">'+
+   '<div style="font-size:12px;color:var(--t2);flex:1;word-break:break-all">'+fullUrl+'</div>'+
+   '<button onclick="navigator.clipboard&&navigator.clipboard.writeText(\''+fullUrl+'\').then(function(){_filoToast(\'링크 복사됨\')})" style="padding:6px 10px;border:1px solid var(--bd2);background:var(--b2);color:var(--t2);border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap">복사</button>'+
+   '</div>':'<div style="margin-top:8px;font-size:12px;color:var(--t3)">슬러그 저장 후 링크가 생성됩니다</div>')+
+  '</div>'+
+
+  // 로고 등록
+  '<div style="background:var(--b3);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px">'+
+  '<div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">홈화면 설치 로고</div>'+
+  '<div style="font-size:12px;color:var(--t3);margin-bottom:14px">고객사가 홈화면 설치 시 표시될 매장 로고입니다.<br>• 권장: 1:1 비율 PNG/JPG, 512×512px 이상<br>• 미등록 시: 회사명 이니셜('+label+') 자동 아이콘 사용</div>'+
+  '<div style="display:flex;align-items:flex-start;gap:16px">'+
+  '<div id="slug-icon-preview" style="flex-shrink:0">'+
+  (d.slugLogoB64?
+   '<img src="'+d.slugLogoB64+'" style="width:80px;height:80px;border-radius:18px;object-fit:cover;border:1px solid var(--bd2)">':
+   iconSvg)+
+  '<div style="font-size:10px;color:var(--t3);text-align:center;margin-top:4px">'+(d.slugLogoB64?'등록된 로고':'이니셜 아이콘')+'</div>'+
+  '</div>'+
+  '<div style="flex:1">'+
+  '<label style="display:block;font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">이미지 첨부</label>'+
+  '<div style="font-size:11px;color:var(--t3);margin-bottom:8px">PNG/JPG/WEBP · 최대 1MB · 1:1 정방형 권장<br>첨부 이유: 홈화면 앱 아이콘으로 사용됩니다. 브랜드 로고나 매장 대표 이미지를 업로드하세요.</div>'+
+  '<input id="slug-logo-file" type="file" accept="image/png,image/jpeg,image/webp" style="font-size:12px;color:var(--t2);width:100%">'+
+  '<div style="display:flex;gap:8px;margin-top:10px">'+
+  '<button onclick="_filoUploadSlugLogo()" style="padding:9px 16px;background:var(--br);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">로고 등록</button>'+
+  (d.slugLogoB64?'<button onclick="_filoDeleteSlugLogo()" style="padding:9px 14px;border:1px solid rgba(239,68,68,.4);background:transparent;color:#ef4444;border-radius:8px;font-size:13px;cursor:pointer">삭제</button>':'')+
+  '</div>'+
+  '<div id="slug-logo-status" style="margin-top:8px;font-size:12px"></div>'+
+  '</div>'+
+  '</div>'+
+  '</div>'+
+
+  // 안내
+  '<div style="padding:12px 14px;background:rgba(194,24,91,.03);border:1px solid rgba(194,24,91,.15);border-radius:10px;font-size:12px;color:var(--t3)">'+
+  '<b style="color:var(--tx)">고객사 홈화면 설치 방법</b><br>'+
+  '1. 위 링크를 고객사에 카카오/문자로 전달<br>'+
+  '2. 고객사가 링크 접속 → 브라우저 "홈 화면에 추가" 선택<br>'+
+  '3. 매장 로고 + 매장명으로 앱 아이콘 설치 완료<br>'+
+  '4. 이후 아이콘 터치 시 바로 FILO 앱으로 진입'+
+  '</div>'+
+  '</div>';
+}
+
+async function _filoSaveSlug(){
+ var slug=(document.getElementById('slug-input')||{}).value||'';
+ slug=slug.trim().toLowerCase().replace(/[^a-z0-9\-_]/g,'');
+ if(!slug){_filoToast('슬러그를 입력하세요');return;}
+ try{
+  var uid=firebase.auth().currentUser&&firebase.auth().currentUser.uid;
+  if(!uid)return;
+  await firebase.firestore().collection('companies').doc(uid).update({slug:slug});
+  _cachedCompanyDoc=Object.assign({},_cachedCompanyDoc,{slug:slug});
+  _filoToast('슬러그 저장 완료');
+  _filoGoPage('slug_link');
+ }catch(e){_filoToast('오류: '+e.message);}
+}
+
+async function _filoUploadSlugLogo(){
+ var file=(document.getElementById('slug-logo-file')||{}).files&&document.getElementById('slug-logo-file').files[0];
+ if(!file){_filoToast('이미지를 선택하세요');return;}
+ if(file.size>1024*1024){_filoToast('1MB 이하 이미지만 등록 가능합니다');return;}
+ var statusEl=document.getElementById('slug-logo-status');
+ if(statusEl)statusEl.innerHTML='<span style="color:var(--t2)">업로드 중...</span>';
+ try{
+  var reader=new FileReader();
+  reader.onload=async function(e){
+   var b64=e.target.result;
+   var uid=firebase.auth().currentUser&&firebase.auth().currentUser.uid;
+   if(!uid)return;
+   var token=await firebase.auth().currentUser.getIdToken();
+   var res=await fetch('/api/slug-logo',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({logoB64:b64})});
+   var data=await res.json();
+   if(data.ok){
+    _cachedCompanyDoc=Object.assign({},_cachedCompanyDoc,{slugLogoB64:b64});
+    _filoToast('로고 등록 완료');
+    _filoGoPage('slug_link');
+   } else {
+    if(statusEl)statusEl.innerHTML='<span style="color:#ef4444">오류: '+(data.error||'실패')+'</span>';
+   }
+  };
+  reader.readAsDataURL(file);
+ }catch(e){
+  if(statusEl)statusEl.innerHTML='<span style="color:#ef4444">오류: '+e.message+'</span>';
+ }
+}
+
+async function _filoDeleteSlugLogo(){
+ try{
+  var uid=firebase.auth().currentUser&&firebase.auth().currentUser.uid;
+  if(!uid)return;
+  await firebase.firestore().collection('companies').doc(uid).update({slugLogoB64:firebase.firestore.FieldValue.delete()});
+  _cachedCompanyDoc=Object.assign({},_cachedCompanyDoc,{slugLogoB64:null});
+  _filoToast('로고 삭제 완료');
+  _filoGoPage('slug_link');
+ }catch(e){_filoToast('오류: '+e.message);}
+}

@@ -49,7 +49,7 @@
 
 | 컬렉션 | 용도 | 공유 앱 | 주의 |
 |---|---|---|---|
-| companies | 매장 정보·설정·테마 | FILO·DINE | uid == dealerId |
+| companies | 매장 정보·설정·테마 | FILO·DINE | uid == dealerId. slug·slugLogoB64·shortLabel 필드 포함 |
 | members | 직원 정보·시급·FCM토큰 | FILO·DINE | **별도 컬렉션 생성 금지** |
 | attendance | 출퇴근 기록 | FILO·DINE | type: 'in'/'out'/'break_start'/'break_end' |
 | filo_menus | 메뉴 목록·번역·이미지 | FILO·QR주문 | nameTranslations 필드에 번역 저장 |
@@ -162,6 +162,35 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 ---
 
 ## 📋 수정 이력
+
+### 2026-09-04 (35차)
+**고객사 전용 PWA 홈화면 설치 경로 구현 + 로고 업로드 API**
+- `_worker.js`: FILO `filo.ai.kr/s/{slug}` 라우트 신규 (스플래시 HTML → localStorage dealerId 저장 → `/` 리다이렉트)
+  - `/s/{slug}/manifest.json`: 동적 Web App Manifest (name=회사명, icons=커스텀로고 or SVG이니셜)
+  - `/s/{slug}/icon.svg`: 회사명 앞 2글자 SVG 이니셜 아이콘 (핑크 #c2185b 배경)
+  - `/s/{slug}/logo.png`: companies.slugLogoB64 (base64) → PNG 바이트 스트림 서빙
+- `_worker.js`: DINE `dine.ne.kr/s/{slug}` 동일 패턴 (연두 #8fb32a 배경)
+- `_worker.js`: DONWAY `/c/{slug}/logo.png` + manifest 아이콘 커스텀 로고 지원 추가
+- `_worker.js`: `/api/slug-logo` POST 엔드포인트 신규
+  - Firebase 토큰 인증 필수 → `companies/{uid}` Firestore PATCH (slugLogoB64 저장)
+  - 파일 크기 1MB 제한, `data:image/` 접두사 검증
+- `filo-settings.js`: `_filoPageSlugLink()` 함수 신규
+  - 슬러그 URL 표시 + 클립보드 복사
+  - 현재 로고 미리보기 (커스텀 로고 or SVG 이니셜)
+  - 이미지 업로드 폼 (png/jpg/webp, max 1MB) — 첨부 이유 상세 안내 포함
+  - 로고 등록/삭제 버튼, 고객사 설치 안내 4단계
+- `filo-settings.js`: `_filoSaveSlug()`, `_filoUploadSlugLogo()`, `_filoDeleteSlugLogo()` 신규
+- `filo-auth.js`: 사이드바 설정 그룹에 "전용 링크 관리" 메뉴 추가 (link 아이콘, slug_link 라우트)
+
+**Firestore 신규 필드 (companies 컬렉션)**
+- `slug` (string): 매장 고유 슬러그. 경로 `filo.ai.kr/s/{slug}` 에 사용
+- `slugLogoB64` (string): base64 인코딩 로고 이미지. `/s/{slug}/logo.png` 서빙용
+- `shortLabel` (string): SVG 이니셜 아이콘용 2글자 레이블 (미설정 시 companyName 앞 2글자 자동)
+
+**홍보 콘텐츠 메타 (고객사PWA홈화면설치 variant)**
+- `scripts/content/filo-meta.json`: "고객사PWA홈화면설치" variant 추가 (YouTube/Instagram/blog)
+- `scripts/content/dine-meta.json`: variants 배열 신규 생성 — "고객사PWA홈화면설치" + "QR출퇴근·급여자동화"
+- `scripts/content/donway-meta.json`: "고객사PWA홈화면설치" variant 추가
 
 ### 2026-09-04 (34차)
 **filo-landing.html GEO/AEO 최적화 + filo-settings.js 네이버 플레이스 안내 카드**
