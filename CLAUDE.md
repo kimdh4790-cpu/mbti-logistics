@@ -477,6 +477,16 @@ cd mbtico-pages && npx wrangler deploy
   - 썸네일: ai-prompts-thumbnail.png (600×337px, 영문)
 - **SOCIAL_MEDIA_MEMO.md**: @LJH_93 영상 관련 계정 등록 (2026-09-04)
 
+### ✅ 완료 (2026-09-04 인프런 홍보 영상 자동화 파이프라인)
+- **InflearnPromo.jsx 신규** — Remotion 4씬 홍보 영상 (SceneHook/SceneClips/SceneBest/SceneCTA, 30초, 1080×1920)
+- **render-inflearn.js 신규** — Remotion 렌더 스크립트 (inflearn-promo.mp4 / inflearn-reels.mp4)
+- **scripts/remotion/index.jsx** — InflearnPromo + InflearnReels 컴포지션 등록
+- **scripts/content/inflearn-meta.json 신규** — YouTube/Instagram 메타데이터 (제목·설명·태그·캡션·해시태그)
+- **social-media.yml** — inflearn product 옵션 추가, Remotion 렌더·YouTube/Instagram 업로드 지원
+- **social-media-schedule.yml** — 수 09:00 KST 인프런 YouTube / 수 10:30 KST 인프런 Instagram 크론 추가
+- **social-media-schedule.yml** — 토 09:00 KST mbtico → 인프런 YouTube로 변경 (mbtico 홍보 준비 안 됨)
+- 인프런 자동 업로드 주 2회: 수요일(YouTube+Instagram) + 토요일(YouTube)
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
@@ -622,12 +632,19 @@ cd mbtico-pages && npx wrangler deploy
 - **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
 - **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
 
-### 소셜미디어 업로드 스케줄 (Oracle Cloud cron)
-- 화요일 09:00 — FILO YouTube
-- 화요일 10:00 — FILO Instagram Reels
-- 목요일 09:00 — DONWAY YouTube
-- 목요일 10:00 — DONWAY Instagram Reels
-- 월요일 09:00 — 용차앱 YouTube
+### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-04 기준)
+| 요일 | KST | 제품 | 플랫폼 |
+|---|---|---|---|
+| 월 | 09:00 | 용차앱 | YouTube |
+| 화 | 09:00 | FILO | YouTube |
+| 화 | 10:30 | FILO | Instagram |
+| 수 | 09:00 | 인프런 | YouTube |
+| 수 | 10:30 | 인프런 | Instagram |
+| 목 | 09:00 | DONWAY | YouTube |
+| 목 | 10:30 | DONWAY | Instagram |
+| 토 | 09:00 | 인프런 | YouTube |
+
+> mbtico는 홍보 준비 완료 전까지 스케줄 제외
 
 ### 프로필 이미지 (회사 로고)
 - 파일: `assets/logo.png`

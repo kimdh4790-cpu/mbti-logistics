@@ -348,7 +348,8 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 | FILO | ✅ 완료 | ✅ Remotion (FiloPromo.jsx) | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
 | DONWAY | ✅ 완료 | ✅ Remotion (DonwayPromo.jsx, 2026-08-29) | output/donway-promo.mp4 | ✅ 숏츠 완료 (3HRSPE2bNDM) |
 | YONGCHA | ✅ 완료 | ✅ Remotion (YongchaPromo.jsx, 2026-08-29) | output/yongcha-promo.mp4 | ⚠️ eDpowbKedgs 깨짐(무음+자막가림) — 삭제 후 재업로드 필요 |
-| MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 |
+| 인프런 | ⏳ (TTS API 없으면 무음) | ✅ Remotion (InflearnPromo.jsx, 2026-09-04) | output/inflearn-promo.mp4 | 미업로드 |
+| MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 (스케줄 제외) |
 
 ---
 
@@ -548,6 +549,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-04 | **인프런 홍보 영상 자동화 파이프라인 구축** — InflearnPromo.jsx(4씬: Hook/Clips/Best/CTA, 30초), render-inflearn.js, inflearn-meta.json(YouTube/Instagram 메타). social-media.yml inflearn 지원 추가. social-media-schedule.yml 수 09:00 YouTube + 수 10:30 Instagram + 토 09:00 YouTube 크론 추가(주 2회). 토요일 mbtico → 인프런으로 교체(mbtico 준비 안 됨) |
 | 2026-09-03 | **FiloPromo.jsx variant 동적 슬라이드 렌더링** — hero/feature/compare/notice/price/cta 6가지 타입 씬 컴포넌트. render-filo.js가 filo-variants.json에서 이번 주 variant(weekNum%4→A/B/C/D) 읽어 slides+lines를 inputProps로 전달. 매주 완전히 다른 장면 자동 생성. index.jsx defaultProps 추가 |
 | 2026-09-03 | **generate-and-upload.js --skip-script / --template 파라미터 추가** — TEMPLATE_MAP으로 tutorial/news/tips 분기. weekly-cron.sh에서 --template $TEMPLATE 전달 가능 |
 | 2026-09-03 | **AINewsTemplate.jsx, AITipsTemplate.jsx 신규** — 뉴스 속보 스타일(빨간 Ticker+BreakingBanner, Composition: AINewsVideo), 팁 카드 스타일(상단 진행 점+TIP 배지, Composition: AITipsVideo). weekly-cron.sh 주차별 tutorial/news/tips 로테이션 |
