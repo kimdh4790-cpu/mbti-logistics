@@ -1,0 +1,56 @@
+name: 주간 정보수집 다이제스트
+
+# 매주 월요일 08:00 KST (일요일 23:00 UTC) 자동 실행
+# 인프런 트렌드 + Product Hunt 신제품 + YouTube 모니터링 결과 수집
+# Claude Haiku로 강의소재·앱기능·수익성 분류 → SMS 발송
+
+on:
+  schedule:
+    - cron: '0 23 * * 0'   # 일 23:00 UTC = 월 08:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'SMS 발송 없이 수집만'
+        type: boolean
+        default: false
+
+jobs:
+  research-digest:
+    name: 주간 정보수집
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ALIGO_API_KEY: ${{ secrets.ALIGO_API_KEY }}
+      ALIGO_USER_ID: ${{ secrets.ALIGO_USER_ID }}
+      ALIGO_SENDER: ${{ secrets.ALIGO_SENDER }}
+      ADMIN_PHONE: ${{ secrets.ADMIN_PHONE }}
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci --ignore-scripts
+
+      - name: 정보수집 실행
+        run: node scripts/monitor/research-digest.js
+
+      - name: 결과 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-digest-${{ github.run_number }}
+          path: |
+            output/research-digest-*.json
+            output/inflearn-digest.json
+            output/producthunt-digest.json
+          if-no-files-found: warn
+          retention-days: 30

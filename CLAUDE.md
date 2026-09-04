@@ -27,6 +27,7 @@
 | `YONGCHA_MEMO.md` | 용차앱 작업 시 |
 | `배송앱_변경내역.md` | 배송앱·emergency.html 수정 시 |
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
+| `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
@@ -487,6 +488,15 @@ cd mbtico-pages && npx wrangler deploy
 - **social-media-schedule.yml** — 토 09:00 KST mbtico → 인프런 YouTube로 변경 (mbtico 홍보 준비 안 됨)
 - 인프런 자동 업로드 주 2회: 수요일(YouTube+Instagram) + 토요일(YouTube)
 - **inflearn-narration.json 신규** — 5구간 나레이션 스크립트 (나레이션 없이 배포된 영상 재업로드 필요)
+
+### ✅ 완료 (2026-09-04 정보수집 자동화 시스템 구축)
+- **scripts/monitor/inflearn-monitor.js 신규** — 인프런 인기 클립 트렌드 HTTP 수집 (10개 키워드, 주 1회)
+- **scripts/monitor/producthunt-monitor.js 신규** — Product Hunt SaaS/AI 신제품 수집 (5개 토픽, 주 1회)
+- **scripts/monitor/research-digest.js 신규** — 인프런+ProductHunt+YouTube 결과 종합 → Claude Haiku 분류 → SMS 발송
+- **.github/workflows/research-digest.yml 신규** — 매주 월 08:00 KST 자동 실행 GitHub Actions
+- **RESEARCH_MEMO.md 신규** — 정보수집 시스템 전용 메모 (소스·분류기준·실행방법·출력파일)
+- 분류: 강의소재 / 앱기능 / 수익성 → 패스 제외 후 SMS + Artifacts 저장
+- CLAUDE.md 메모 체계 테이블에 RESEARCH_MEMO.md 항목 추가 필요
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
