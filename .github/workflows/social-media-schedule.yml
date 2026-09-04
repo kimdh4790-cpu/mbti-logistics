@@ -7,6 +7,8 @@ name: 소셜미디어 자동 스케줄 업로드
 #   월 09:00 KST → 용차앱 YouTube Shorts
 #   화 09:00 KST → FILO YouTube Shorts
 #   화 10:30 KST → FILO Instagram Reels
+#   수 09:00 KST → 인프런 YouTube Shorts
+#   수 10:30 KST → 인프런 Instagram Reels
 #   목 09:00 KST → DONWAY YouTube Shorts
 #   목 10:30 KST → DONWAY Instagram Reels
 #   토 09:00 KST → mbtico YouTube Shorts
@@ -16,6 +18,8 @@ on:
     - cron: '0 0 * * 1'   # 월 09:00 KST → 용차앱 YouTube
     - cron: '0 0 * * 2'   # 화 09:00 KST → FILO YouTube
     - cron: '30 1 * * 2'  # 화 10:30 KST → FILO Instagram
+    - cron: '0 0 * * 3'   # 수 09:00 KST → 인프런 YouTube
+    - cron: '30 1 * * 3'  # 수 10:30 KST → 인프런 Instagram
     - cron: '0 0 * * 4'   # 목 09:00 KST → DONWAY YouTube
     - cron: '30 1 * * 4'  # 목 10:30 KST → DONWAY Instagram
     - cron: '0 0 * * 6'   # 토 09:00 KST → mbtico YouTube
@@ -28,6 +32,7 @@ on:
         default: ''
         options:
           - ''
+          - inflearn
           - yongcha
           - filo
           - donway
@@ -105,6 +110,10 @@ jobs:
               PRODUCT="filo"; PLATFORMS="youtube"; REASON="화 09:00 KST 자동"
             elif [ "$DAY" = "2" ] && [ "$HOUR" = "01" ]; then
               PRODUCT="filo"; PLATFORMS="instagram"; REASON="화 10:30 KST 자동"
+            elif [ "$DAY" = "3" ] && [ "$HOUR" = "00" ]; then
+              PRODUCT="inflearn"; PLATFORMS="youtube"; REASON="수 09:00 KST 자동"
+            elif [ "$DAY" = "3" ] && [ "$HOUR" = "01" ]; then
+              PRODUCT="inflearn"; PLATFORMS="instagram"; REASON="수 10:30 KST 자동"
             elif [ "$DAY" = "4" ] && [ "$HOUR" = "00" ]; then
               PRODUCT="donway"; PLATFORMS="youtube"; REASON="목 09:00 KST 자동"
             elif [ "$DAY" = "4" ] && [ "$HOUR" = "01" ]; then
@@ -136,15 +145,27 @@ jobs:
           node scripts/audio/generate-narration.js --product "$PRODUCT" \
             || echo "[$PRODUCT] 나레이션 생성 건너뜀 (API 키 없거나 파일 없음)"
 
+      - name: Remotion 영상 렌더링 (인프런)
+        if: steps.target.outputs.PRODUCT == 'inflearn'
+        run: |
+          PRODUCT="${{ steps.target.outputs.PRODUCT }}"
+          mkdir -p output
+          CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
+          [ -n "$CHROMIUM" ] && export CHROMIUM_PATH="$CHROMIUM"
+          echo "[$PRODUCT] Remotion 본영상 렌더링..."
+          node scripts/remotion/render-${PRODUCT}.js || echo "[$PRODUCT] 본영상 렌더링 실패"
+          echo "[$PRODUCT] Remotion Reels 렌더링..."
+          node scripts/remotion/render-${PRODUCT}.js --reels || echo "[$PRODUCT] Reels 렌더링 실패"
+
       - name: 화면 녹화 (Playwright)
-        if: steps.target.outputs.PRODUCT != 'skip'
+        if: steps.target.outputs.PRODUCT != 'skip' && steps.target.outputs.PRODUCT != 'inflearn'
         run: |
           PRODUCT="${{ steps.target.outputs.PRODUCT }}"
           mkdir -p output
           node scripts/capture/record-$PRODUCT.js
 
       - name: FFmpeg 영상 편집
-        if: steps.target.outputs.PRODUCT != 'skip'
+        if: steps.target.outputs.PRODUCT != 'skip' && steps.target.outputs.PRODUCT != 'inflearn'
         run: |
           PRODUCT="${{ steps.target.outputs.PRODUCT }}"
           bash scripts/compose/compose-video.sh "$PRODUCT"
