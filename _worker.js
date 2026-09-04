@@ -151,7 +151,7 @@ function _jwtDecode(token) {
     return {localId:pl.sub, email:pl.email||''};
   } catch(e) { return null; }
 }
-async function verifyFirebaseToken(request, _env) {
+async function verifyFirebaseToken(request, _env, _origin) {
   try {
     const auth = request.headers.get('Authorization') || '';
     const token = auth.replace('Bearer ', '').trim();
@@ -159,10 +159,11 @@ async function verifyFirebaseToken(request, _env) {
     const _e = _env || _env_ref;
     const apiKey = (_e && _e.FIREBASE_API_KEY) ? _e.FIREBASE_API_KEY : '';
     if (!apiKey) return null;
+    const _ref = _origin || 'https://filo.ai.kr';
     try {
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Referer': 'https://filo.ai.kr', 'Origin': 'https://filo.ai.kr'},
+        headers: {'Content-Type': 'application/json', 'Referer': _ref, 'Origin': _ref},
         body: JSON.stringify({idToken: token})
       });
       if (res.ok) {
@@ -439,6 +440,31 @@ async function handleDriversBatch(request, env) {
   } catch(e) {
     return new Response(JSON.stringify({error:e.message}), {status:500, headers:{'Content-Type':'application/json'}});
   }
+}
+
+// ── FCM v1 API 직접 발송 — sendAdminFCM·sendFCM 클로저 공유 헬퍼 ──
+async function _sendFCMv1(env, fcmToken, t, b, d) {
+  const accessToken = await getAccessToken(env);
+  return fetch(
+    `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          token: fcmToken,
+          notification: { title: t, body: b },
+          data: { ...(d || {}), click_action: (d && d.url) || 'https://donway.ai.kr' },
+          android: { priority: 'high', notification: { click_action: (d && d.url) || '' } },
+          apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+          webpush: {
+            notification: { title: t, body: b, icon: '/mbtico-192.png' },
+            fcm_options: { link: (d && d.url) || 'https://donway.ai.kr' }
+          }
+        }
+      })
+    }
+  );
 }
 
 // ── FCM 푸시 발송 (Cloud Function sendPush 경유) ──
@@ -10963,30 +10989,8 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
           return tokens.map(t => t.stringValue).filter(Boolean);
         }
 
-        // 단일 FCM 토큰에 발송
-        async function sendFCM(fcmToken, t, b, d) {
-          const accessToken = await getAccessToken(env);
-          return fetch(
-            `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`,
-            {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                message: {
-                  token: fcmToken,
-                  notification: { title: t, body: b },
-                  data: { ...( d || {}), click_action: d?.url || 'https://donway.ai.kr' },
-                  android: { priority: 'high', notification: { click_action: d?.url || '' } },
-                  apns: { payload: { aps: { sound: 'default', badge: 1 } } },
-                  webpush: {
-                    notification: { title: t, body: b, icon: '/mbtico-192.png' },
-                    fcm_options: { link: d?.url || 'https://donway.ai.kr' }
-                  }
-                }
-              })
-            }
-          );
-        }
+        // 단일 FCM 토큰에 발송 — _sendFCMv1 재사용
+        const sendFCM = (fcmToken, t, b, d) => _sendFCMv1(env, fcmToken, t, b, d);
 
         let sent = 0;
 
@@ -21921,27 +21925,6 @@ const YONGCHA_MKT_AVG = {
   '우체국':900, '쿠팡로지스틱스':960, '로젠택배':840
 };
 
-// Firebase ID 토큰 서버 측 검증
-// Firebase web API key는 클라이언트에 이미 공개된 값이므로 fallback으로 사용 가능
-const _FIREBASE_WEB_KEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
-async function verifyYongchaToken(request, env) {
-  const auth = (request.headers.get('Authorization') || '').trim();
-  if (!auth.startsWith('Bearer ')) return null;
-  const token = auth.slice(7);
-  if (token.length < 100) return null;
-  const apiKey = env.FIREBASE_API_KEY || _FIREBASE_WEB_KEY;
-  try {
-    const res = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: token }) }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return (data.users && data.users[0]) || null;
-  } catch(e) { return null; }
-}
-
 function authRequired(corsH) {
   return new Response(JSON.stringify({ ok: false, error: '인증이 필요해요' }), {
     status: 401, headers: corsH
@@ -22064,7 +22047,7 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
   // ── 팝빌 전자세금계산서 역발행 요청 ──────────────────────────────────
   if (path === '/api/yongcha/popbill-issue' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
@@ -22237,7 +22220,7 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
   // ── 정산명세서 알림톡 발송 + 팝빌 역발행 요청 ──────────────────────────────
   if (path === '/api/yongcha/settle-notify' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
@@ -22305,7 +22288,7 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
   // ── 팝빌 역발행 승인 (기사 호출) ──────────────────────────────────────────
   if (path === '/api/yongcha/popbill-approve' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
@@ -22359,7 +22342,7 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
   // ── 팝빌 역발행 거부 (기사 호출) ──────────────────────────────────────────
   if (path === '/api/yongcha/popbill-reject' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const body = await request.json();
@@ -22412,7 +22395,7 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
   // ── AI 코치 (Claude) ───────────────────────────────────────────────────────
   if (path === '/api/ai-coach' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const { driver, posts } = await request.json();
@@ -22517,7 +22500,7 @@ ${postSummary || '공고 없음'}
   // ── SmartMatch AI: 공고 스코어링 ─────────────────────────────
   if (path === '/api/yongcha/smart-match' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const { driver, posts } = await request.json();
@@ -22565,7 +22548,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
   // ── Quick Post NL Parser: 자연어 → 공고 필드 ────────────────
   if (path === '/api/yongcha/quick-post' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     const rlParse = (t) => {
       const f={};
@@ -22630,7 +22613,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
   // ── Price Suggest AI: 단가 최적화 추천 ───────────────────────
   if (path === '/api/yongcha/price-suggest' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const { courier, region, workShift, volume } = await request.json();
@@ -23155,7 +23138,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
   // AI 기사 배차 추천
   if (path === '/api/yongcha/recommend' && method === 'POST') {
     const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' };
-    const user = await verifyYongchaToken(request, env);
+    const user = await verifyFirebaseToken(request, env, 'https://yongcha.app');
     if (!user) return authRequired(corsH);
     try {
       const { topN = 5, post = {}, drivers = [] } = await request.json();

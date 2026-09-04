@@ -48,7 +48,7 @@
 | `_worker.js:445` vs `_worker.js:10880` | `sendFCMPush` vs `sendFCM` — FCM POST 요청 동일 로직 중복 |
 
 - **수정 방향**: 공통 헬퍼 함수 1개로 통합 (파라미터로 서비스 계정 구분)
-- 상태: 미수정
+- 상태: ✅ 2026-09-04 `verifyYongchaToken` 삭제 → `verifyFirebaseToken(request, env, origin)` 3번째 파라미터 추가로 통합 (9개 callsite 교체). `sendFCM` 클로저 → `_sendFCMv1(env, token, t, b, d)` top-level 헬퍼로 추출 후 재사용. `sendFCMPush`는 Cloud Function 경유라 전송 방식 달라 별도 유지.
 
 ### [중] N+1 쿼리
 - **`filo-auth.js:~1506`** (`_filoInitDemo`): `next(i+1)` 직렬 재귀로 데모 메뉴 배열 하나씩 Firestore 쓰기. → `Promise.all` 병렬화 필요
@@ -155,3 +155,4 @@
 | 2026-09-04 | CI 토큰 로그 마스킹: get-youtube-token.js CLIENT_SECRET/REFRESH_TOKEN, get-instagram-token.js ACCESS_TOKEN 출력 시 앞 6자리만 노출 ✅ |
 | 2026-09-04 | CORS 제한: functions/claude-ocr.js, functions/label-ocr.js `*`→`donway.ai.kr`, donway-pages/_worker.js `*`→`yongcha.app` ✅ |
 | 2026-09-04 | `_filoInitDemo` 직렬 next(i+1) 재귀 → Promise.all 병렬화 ✅ |
+| 2026-09-04 | 중복 함수 통합: `verifyYongchaToken` 삭제 + `verifyFirebaseToken` origin 파라미터 추가, `sendFCM` 클로저 → `_sendFCMv1` top-level 헬퍼 추출 ✅ |
