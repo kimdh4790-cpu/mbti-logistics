@@ -17,7 +17,7 @@
 |---|---|---|---|
 | 인프런 | `scripts/monitor/inflearn-monitor.js` | 주 1회 | n8n, AI자동화, 노코드, 소상공인, 수익화, Claude API 등 10개 |
 | Product Hunt | `scripts/monitor/producthunt-monitor.js` | 주 1회 | AI, no-code, SaaS, productivity, developer-tools |
-| YouTube RSS | `scripts/monitor/content-monitor.js` | 일 1회 | 17개 AI 크리에이터 채널 |
+| YouTube RSS | `scripts/monitor/content-monitor.js` | 일 1회 | 28개 AI 크리에이터 채널 |
 
 ---
 
@@ -174,3 +174,4 @@ node scripts/monitor/content-monitor.js  # YouTube (일별)
 |---|---|
 | 2026-09-04 | 최초 생성: inflearn-monitor.js, producthunt-monitor.js, research-digest.js, research-digest.yml 구축 |
 | 2026-09-04 | 큐레이션 현황 섹션 추가 — 강의소재 5개·앱기능 10개·수익성 외부플랜 6개 정리 |
+| 2026-09-04 | channels.json 채널 11개 추가 (AI부업플랜/방구석컴퍼니/코딩못하는중개사/마일드코드/maker39/MONEY_TOUCH/Channel_AION/배움에끝은없다/hs_academy/stevesurfing/with2511) — 17→28개 |
