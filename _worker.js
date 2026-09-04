@@ -9573,7 +9573,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     
     // ── Firestore Rules 자동 배포 (/api/deploy-rules) ──
     if (path === '/api/deploy-rules' && method === 'POST') {
-      const authUser2 = await verifyFirebaseToken(request);
+      const authUser2 = await verifyFirebaseToken(request, env);
       if (!authUser2) return new Response(JSON.stringify({ok:false,error:'인증 필요'}), {status:401,headers:{'Content-Type':'application/json'}});
       try {
         const body = await request.json();
