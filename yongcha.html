@@ -1446,14 +1446,13 @@ function _buildNav(){
       '</button>';
   }).join('');
   _yStartChatBadge();
-  // PWA 뒤로가기 앱 종료 방지: 홈 진입 시 스택 보호
-  history.replaceState({page:'home'}, '');
-  history.pushState({page:'home'}, '');  // 뒤로가기 1회 여유
+  // PWA 뒤로가기 앱 종료 방지 — _base 센티넬을 바닥에 두고 home부터 시작
+  history.replaceState({page:'_base'}, '');
+  history.pushState({page:'home'}, '');
   window.addEventListener('popstate', function(e){
     var p = (e.state&&e.state.page) || 'home';
+    if(p==='_base'){history.pushState({page:'home'},'');return;}
     _goPage(p, true);
-    // 항상 현재 페이지 state를 스택에 유지 (앱이 닫히지 않도록)
-    if(p==='home') history.pushState({page:'home'}, '');
   }, {once: false});
 }
 
@@ -1464,8 +1463,7 @@ function _goPage(p, _fromPopstate){
   _yStopHomeWatch();               // 관리자 홈 실시간 리스너 해제 (누수 방지)
   _curPage=p;
   if(!_fromPopstate){
-    if(p==='home') history.replaceState({page:'home'}, '');
-    else history.pushState({page:p}, '');
+    history.pushState({page:p}, '');
   }
   var el=document.getElementById('content');
   el.removeAttribute('style');     // 채팅방 인라인 스타일 초기화

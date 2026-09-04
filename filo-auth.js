@@ -255,13 +255,13 @@ function _showApp(){
   '</div>';
  }
  _buildFiloNav();
- // PWA 뒤로가기 앱 종료 방지
- history.replaceState({page:'home'}, '');
+ // PWA 뒤로가기 앱 종료 방지 — _base 센티넬을 바닥에 두고 home부터 시작
+ history.replaceState({page:'_base'}, '');
  history.pushState({page:'home'}, '');
  window.addEventListener('popstate', function(e){
   var p=(e.state&&e.state.page)||'home';
+  if(p==='_base'){history.pushState({page:'home'},'');return;}
   _filoGoPage(p, true);
-  if(p==='home') history.pushState({page:'home'}, '');
  });
  _filoGoPage('home');
  // 업종 데모 로그인 시 해당 딜러로 자동 전환
@@ -747,8 +747,7 @@ function _toggleOrientation(){
 
 function _filoGoPage(p, _fromPopstate){
  if(!_fromPopstate){
-  if(p==='home') history.replaceState({page:'home'}, '');
-  else history.pushState({page:p}, '');
+  history.pushState({page:p}, '');
  }
  /* 페이지 전환 시 이전 화면의 실시간 리스너를 모두 해제한다 (리스너 누수 방지) */
  _filoReleaseWatchers(p);
