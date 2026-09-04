@@ -12,6 +12,58 @@ const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <meta name="theme-color" content="#1a1a2e">
 <title>용차 — 택배 노선 정보 서비스</title>
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@graph":[
+    {
+      "@type":"SoftwareApplication",
+      "name":"용차앱",
+      "applicationCategory":"BusinessApplication",
+      "operatingSystem":"Web, Android, iOS",
+      "description":"택배 노선 소장과 기사를 연결하는 직접 거래 정보 서비스. AI 기사 추천, 실시간 노선 공고, 단가 정보 제공. 부가통신사업자로 운영되며 플랫폼은 계약 당사자가 아닙니다.",
+      "url":"https://yongcha.app",
+      "inLanguage":"ko",
+      "featureList":["노선 공고 등록·조회","AI 기사 추천","실시간 공고 알림","기사 프로필 관리","노선 단가 정보 제공","소장·기사 직접 거래 지원","음성 공고 등록"],
+      "potentialAction":{"@type":"ViewAction","target":"https://yongcha.app"}
+    },
+    {
+      "@type":"Service",
+      "name":"용차앱 택배 노선 정보 서비스",
+      "serviceType":"부가통신사업자 — 정보 연결 서비스",
+      "provider":{"@type":"Organization","name":"유한회사 엠비티아이","url":"https://yongcha.app"},
+      "description":"소장과 기사가 직접 거래할 수 있도록 노선 정보를 실시간으로 제공하는 부가통신사업자 서비스입니다.",
+      "areaServed":"KR",
+      "inLanguage":"ko"
+    },
+    {
+      "@type":"FAQPage",
+      "mainEntity":[
+        {
+          "@type":"Question",
+          "name":"용차앱은 무엇인가요?",
+          "acceptedAnswer":{"@type":"Answer","text":"용차앱은 택배 노선 소장과 기사를 연결하는 직접 거래 정보 서비스입니다. 플랫폼은 계약 당사자가 아니며, 소장과 기사가 직접 거래합니다. 부가통신사업자로 운영됩니다."}
+        },
+        {
+          "@type":"Question",
+          "name":"기사 요금제는 얼마인가요?",
+          "acceptedAnswer":{"@type":"Answer","text":"기사는 월 150,000원, 소장은 월 50,000원입니다. DONWAY 구독 소장은 용차앱을 무료로 이용할 수 있습니다."}
+        },
+        {
+          "@type":"Question",
+          "name":"AI 기사 추천은 어떻게 작동하나요?",
+          "acceptedAnswer":{"@type":"Answer","text":"소장이 노선 공고를 등록하면 AI가 경력, 담당 구역, 평점 등을 분석해 적합한 기사를 추천합니다. 기사에게도 맞춤 공고를 추천해 빠른 매칭을 돕습니다."}
+        },
+        {
+          "@type":"Question",
+          "name":"노선 공고는 어떻게 등록하나요?",
+          "acceptedAnswer":{"@type":"Answer","text":"소장은 앱에서 담당 구역, 단가, 근무 조건을 입력해 공고를 등록할 수 있습니다. 음성으로도 공고 등록이 가능하며, 등록 즉시 조건에 맞는 기사에게 알림이 발송됩니다."}
+        }
+      ]
+    }
+  ]
+}
+</script>
 <style>
 /* ═══════════════════════════════════════════════════════════
    용차 디자인 시스템 v3 — 모바일 퍼스트 / 최소 터치 48px
@@ -4605,18 +4657,10 @@ function _pgPostWrite(el){
   // 구역
   '<div class="form-section">'+
   '<div class="form-section-title">구역 정보</div>'+
-  ((_CU.savedLocations&&_CU.savedLocations.length)?
-  '<div class="inp-wrap"><label class="inp-lbl">저장된 캠프 선택</label>'+
-  '<div style="display:flex;flex-wrap:wrap;gap:7px">'+
-  (_CU.savedLocations||[]).map(function(c,i){
-    return '<button type="button" onclick="_pwPickCamp('+i+')" style="padding:7px 14px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg2);color:var(--tx);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">'+
-      _esc(c.name)+(c.courier?'<span style="font-size:11px;color:var(--t3);margin-left:4px">'+_esc(c.courier.replace('로지스틱스','').replace('택배','').replace('대한통운','CJ'))+'</span>':'')+'</button>';
-  }).join('')+
-  '</div></div>':'') +
   '<div class="inp-wrap"><label class="inp-lbl">상차지 주소 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:flex;gap:8px">'+
   '<input class="inp" id="pw-loadingAddr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
-  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
+  '<button onclick="_geocodeLoadingAddr()" type="button" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">🔍 검색</button>'+
   '</div>'+
   '<input type="hidden" id="pw-loadingLat"><input type="hidden" id="pw-loadingLng">'+
   '<div id="loading-dist-preview" style="margin-top:6px;font-size:11px;color:var(--t3)"></div>'+
@@ -4682,21 +4726,10 @@ function _pgPostWrite(el){
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'+
     '초고속 용차 공고 발송</button>';
 
-  // 하이탑 기본 선택 처리 + 기본 상차지 자동 세팅
+  // 하이탑 기본 선택 처리
   setTimeout(function(){
     var v1=document.querySelector('#pw-vehicle-group button');
     if(v1) _selType(v1,'하이탑','pw-vehicle');
-    // savedLocations 첫 번째 캠프를 기본 상차지로 자동 세팅
-    if(_CU.savedLocations&&_CU.savedLocations.length){
-      _pwPickCamp(0);
-    } else if(_CU.defaultLoadingAddr){
-      var lA=document.getElementById('pw-loadingAddr');
-      var lLat=document.getElementById('pw-loadingLat');
-      var lLng=document.getElementById('pw-loadingLng');
-      if(lA&&!lA.value){lA.value=_CU.defaultLoadingAddr;}
-      if(lLat&&!lLat.value&&_CU.defaultLoadingLat)lLat.value=_CU.defaultLoadingLat;
-      if(lLng&&!lLng.value&&_CU.defaultLoadingLng)lLng.value=_CU.defaultLoadingLng;
-    }
   },100);
 }
 
@@ -5521,32 +5554,16 @@ function _pgProfile(el){
   (type==='agency'?
   '<button onclick="_goPage(\'post_write\')" style="width:100%;padding:13px;background:var(--bg3);color:var(--tx);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">공고 등록</button>':'')+
 
-  // 대리점 캠프/상차지 관리
-  (type==='agency'?
-  '<div class="card" style="margin-bottom:8px" id="camp-mgmt-card">'+
-  '<div style="font-size:15px;font-weight:800;margin-bottom:6px">캠프·상차지 관리</div>'+
-  '<div style="font-size:12px;color:var(--t2);margin-bottom:12px">저장하면 공고 등록 시 원탭으로 택배사+상차지가 자동 완성돼요</div>'+
-  '<div id="camp-list" style="margin-bottom:12px">'+_yCampListHtml(_CU.savedLocations||[])+'</div>'+
-  '<div style="border-top:1px solid var(--bd);padding-top:12px;margin-top:4px">'+
-  '<div style="font-size:13px;font-weight:800;margin-bottom:10px;color:var(--t2)">+ 새 캠프 추가</div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">캠프명</label>'+
-  '<input class="inp" id="camp-name" placeholder="예: 부산1캠프, 진주M캠프"></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">택배사</label>'+
-  '<select class="inp" id="camp-courier">'+
-  ['','쿠팡로지스틱스','CJ대한통운','한진택배','롯데택배','우체국','로젠택배'].map(function(v){return '<option value="'+v+'">'+(v||'선택 안함')+'</option>';}).join('')+
-  '</select></div>'+
-  '<div class="inp-wrap"><label class="inp-lbl">상차지 주소</label>'+
-  '<div style="display:flex;gap:8px">'+
-  '<input class="inp" id="camp-addr" placeholder="예: 부산시 강서구 녹산동 OO터미널" style="flex:1">'+
-  '<button type="button" onclick="_geocodeAgencyLoading()" style="white-space:nowrap;padding:0 12px;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;color:var(--t2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">검색</button>'+
+  '<div style="margin:16px 0 8px;padding:14px 16px;background:rgba(0,102,255,.06);border:1px solid rgba(0,102,255,.18);border-radius:var(--r)">'+
+  '<div style="font-size:12px;font-weight:800;color:#3b82f6;margin-bottom:10px">구독료 납부 계좌 (계좌이체 전용)</div>'+
+  '<div style="display:flex;flex-direction:column;gap:7px">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--t2)">은행</span><span style="font-weight:700;color:var(--tx)">하나은행</span></div>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--t2)">계좌번호</span><span style="font-weight:800;color:var(--tx);font-variant-numeric:tabular-nums;letter-spacing:.5px">270-910019-24204</span></div>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--t2)">예금주</span><span style="font-weight:700;color:var(--tx)">(유)엠비티아이</span></div>'+
   '</div>'+
-  '<input type="hidden" id="camp-lat"><input type="hidden" id="camp-lng">'+
+  '<div style="margin-top:10px;font-size:11px;color:var(--t3)">기사 ₩150,000/월 · 소장 ₩50,000/월 · 입금 후 문의: 051-711-3103</div>'+
   '</div>'+
-  '<button onclick="_yAddCamp()" style="width:100%;padding:12px;background:var(--gnl);color:var(--gn);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">캠프 추가 저장</button>'+
-  '</div>'+
-  '</div>':'')+
-
-  '<div style="margin:16px 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
+  '<div style="margin:0 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
   '용차앱은 소장과 기사 간 직접 거래를 위한 정보 서비스를 제공합니다. 플랫폼은 계약의 당사자가 아니며, 소장과 기사 간에 직접 체결된 계약에 대해 책임을 지지 않습니다.'+
   '</div>'+
   '<button onclick="_yLogout()" style="width:100%;padding:14px;background:var(--rdl);color:var(--rd);border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;font-family:inherit">로그아웃</button>'+
@@ -8374,14 +8391,14 @@ function _pwNlParse(){
     if(f.volume){var v=document.getElementById('pw-volume');if(v)v.value=f.volume;}
     if(f.unitPrice){var p=document.getElementById('pw-price');if(p){p.value=f.unitPrice;_calcEst();_loadRegionStats();}}
     if(f.urgent&&!_isUrgent){var ub=document.getElementById('toggle-urgent');if(ub)ub.click();}
-    if(f.region){var ri=document.getElementById('pw-region');if(ri)ri.value=f.region;}
-    if(f.area){var ai=document.getElementById('pw-area');if(ai)ai.value=f.area;}
+    if(f.region){
+      var ri=document.getElementById('pw-region');if(ri)ri.value=f.region;
+      var ai=document.getElementById('pw-area');if(ai&&f.area)ai.value=f.area;
+    }
     if(f.workShift){
-      var _shiftBtn={'새벽':'야간','당일':'주간'}[f.workShift]||f.workShift;
       document.querySelectorAll('#pw-shift-group button').forEach(function(b){
-        if(b.textContent===_shiftBtn)b.click();
+        if(b.textContent===f.workShift)b.click();
       });
-      var _shEl=document.getElementById('pw-shift');if(_shEl&&!_shEl.value)_shEl.value=f.workShift;
     }
     if(st)st.innerHTML='<span style="color:var(--gn);font-weight:800">자동 완성됨</span> — 내용을 확인하고 수정하세요';
   }).catch(function(e){if(st)st.textContent='오류: '+e.message;});
@@ -8828,100 +8845,6 @@ function _geocodeLoadingAddr(){
       });
     }
   }).open();
-}
-
-// 캠프 목록 HTML 렌더
-function _yCampListHtml(locs){
-  if(!locs||!locs.length)return '<div style="font-size:12px;color:var(--t3);text-align:center;padding:8px 0">저장된 캠프가 없어요</div>';
-  return locs.map(function(c,i){
-    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)">'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13.5px;font-weight:800">'+_esc(c.name)+'</div>'+
-        '<div style="font-size:11.5px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.courier?_esc(c.courier)+' · ':'')+_esc(c.addr)+'</div>'+
-      '</div>'+
-      '<button type="button" onclick="_yDelCamp('+i+')" style="flex-shrink:0;padding:4px 10px;border-radius:8px;border:1px solid var(--rdln);background:var(--rdl);color:var(--rd);font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">삭제</button>'+
-    '</div>';
-  }).join('');
-}
-
-// 캠프 상차지 주소검색 (추가 폼용)
-function _geocodeAgencyLoading(){
-  new daum.Postcode({
-    oncomplete:function(data){
-      var addr=data.roadAddress||data.jibunAddress;
-      var inp=document.getElementById('camp-addr');
-      if(inp)inp.value=addr;
-      _loadKakaoMap(function(){
-        var gc=new kakao.maps.services.Geocoder();
-        gc.addressSearch(addr,function(res,status){
-          if(status===kakao.maps.services.Status.OK){
-            var latEl=document.getElementById('camp-lat');
-            var lngEl=document.getElementById('camp-lng');
-            if(latEl)latEl.value=parseFloat(res[0].y);
-            if(lngEl)lngEl.value=parseFloat(res[0].x);
-            _yToast('주소 검색 완료');
-          } else {_yToast('주소 좌표를 찾을 수 없어요');}
-        });
-      });
-    }
-  }).open();
-}
-
-// 캠프 추가 저장
-function _yAddCamp(){
-  var name=((document.getElementById('camp-name')||{}).value||'').trim();
-  var addr=((document.getElementById('camp-addr')||{}).value||'').trim();
-  var courier=(document.getElementById('camp-courier')||{}).value||'';
-  var lat=parseFloat((document.getElementById('camp-lat')||{}).value)||null;
-  var lng=parseFloat((document.getElementById('camp-lng')||{}).value)||null;
-  if(!name){_yToast('캠프명을 입력하세요');return;}
-  if(!addr){_yToast('상차지 주소를 입력하세요');return;}
-  if(!lat||!lng){_yToast('주소 검색 버튼을 눌러 좌표를 확인해 주세요');return;}
-  var locs=(_CU.savedLocations||[]).slice();
-  if(locs.some(function(c){return c.name===name;})){_yToast('같은 이름의 캠프가 이미 있어요');return;}
-  locs.push({name:name,addr:addr,courier:courier,lat:lat,lng:lng});
-  _db.collection('yongcha_users').doc(_CU.uid).update({savedLocations:locs}).then(function(){
-    _CU.savedLocations=locs;
-    var listEl=document.getElementById('camp-list');
-    if(listEl)listEl.innerHTML=_yCampListHtml(locs);
-    ['camp-name','camp-addr','camp-lat','camp-lng'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
-    var sel=document.getElementById('camp-courier');if(sel)sel.value='';
-    _yToast(name+' 캠프가 추가됐어요!');
-  }).catch(function(e){_yToast('저장 실패: '+e.message);});
-}
-
-// 캠프 삭제
-function _yDelCamp(idx){
-  var locs=(_CU.savedLocations||[]).slice();
-  var removed=locs.splice(idx,1)[0];
-  _db.collection('yongcha_users').doc(_CU.uid).update({savedLocations:locs}).then(function(){
-    _CU.savedLocations=locs;
-    var listEl=document.getElementById('camp-list');
-    if(listEl)listEl.innerHTML=_yCampListHtml(locs);
-    _yToast((removed?removed.name:'캠프')+'이 삭제됐어요');
-  }).catch(function(e){_yToast('삭제 실패: '+e.message);});
-}
-
-// 공고 등록 폼에서 저장된 캠프 원탭 선택
-function _pwPickCamp(idx){
-  var c=(_CU.savedLocations||[])[idx];if(!c)return;
-  var lA=document.getElementById('pw-loadingAddr');
-  var lLat=document.getElementById('pw-loadingLat');
-  var lLng=document.getElementById('pw-loadingLng');
-  if(lA)lA.value=c.addr;
-  if(lLat)lLat.value=c.lat;
-  if(lLng)lLng.value=c.lng;
-  if(c.courier){
-    var cSel=document.getElementById('pw-courier');
-    if(cSel)cSel.value=c.courier;
-  }
-  // 버튼 활성 표시
-  document.querySelectorAll('[onclick^="_pwPickCamp"]').forEach(function(b){
-    b.style.background='var(--bg2)';b.style.borderColor='var(--bd)';b.style.color='var(--tx)';
-  });
-  var picked=document.querySelector('[onclick="_pwPickCamp('+idx+')"]');
-  if(picked){picked.style.background='var(--acl)';picked.style.borderColor='var(--acln)';picked.style.color='var(--ac)';}
-  _yToast(c.name+' 선택됨');
 }
 
 // 우편번호 직접 입력으로 구역 추가
@@ -9479,7 +9402,6 @@ function _showZoneOnMap(i){
 <script src="/filo-memo.js?v=1"></script>
 </body>
 </html>
-
 
 `;
 // Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
