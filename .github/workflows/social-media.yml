@@ -16,6 +16,7 @@ on:
           - yongcha
           - dine
           - mbtico
+          - inflearn
       steps:
         description: '실행 단계 (콤마 구분)'
         required: true
@@ -137,8 +138,8 @@ jobs:
             node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 건너뜀"
           fi
 
-      - name: Remotion 코드 영상 렌더링 (FILO·DONWAY·용차앱)
-        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'all') }}
+      - name: Remotion 코드 영상 렌더링 (FILO·DONWAY·용차앱·인프런)
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'inflearn' || env.PRODUCT == 'all') }}
         run: |
           mkdir -p output
           CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
@@ -153,8 +154,8 @@ jobs:
           }
 
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha; do render_remotion $p; done
-          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ]; then
+            for p in filo donway yongcha inflearn; do render_remotion $p; done
+          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
             render_remotion $PRODUCT
           fi
 
@@ -174,17 +175,17 @@ jobs:
       - name: FFmpeg 영상 편집
         if: ${{ contains(env.STEPS, 'compose') }}
         run: |
-          # Remotion 렌더 완료 제품(filo/donway/yongcha)은 FFmpeg 편집 불필요
+          # Remotion 렌더 완료 제품(filo/donway/yongcha/inflearn)은 FFmpeg 편집 불필요
           # Playwright 녹화 제품(dine/mbtico)만 FFmpeg 합성
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha; do
+            for p in filo donway yongcha inflearn; do
               [ -f "output/${p}-promo.mp4" ] && echo "[$p] Remotion 영상 준비됨" || echo "[$p] Remotion 영상 없음"
             done
             for p in dine mbtico; do
               RAW="output/${p}-raw.webm"
               [ -f "$RAW" ] && bash scripts/compose/compose-video.sh $p || echo "[$p] 녹화 파일 없음: 건너뜀"
             done
-          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ]; then
+          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
             [ -f "output/${PRODUCT}-promo.mp4" ] && echo "[$PRODUCT] Remotion 영상 준비됨 (FFmpeg 건너뜀)" || echo "[$PRODUCT] Remotion 영상 없음 — compose 건너뜀"
           else
             bash scripts/compose/compose-video.sh $PRODUCT
@@ -219,7 +220,7 @@ jobs:
 
           FAILED=0
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha; do upload_yt $p || FAILED=1; done
+            for p in filo donway yongcha inflearn; do upload_yt $p || FAILED=1; done
           else
             upload_yt $PRODUCT || FAILED=1
           fi
