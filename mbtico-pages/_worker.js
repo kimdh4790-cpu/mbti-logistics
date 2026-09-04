@@ -1664,52 +1664,78 @@ function _ctrlLoadJoin() {
     });
 }
 function _ctrlApprove(reqId) {
+  // join_requests(DONWAY) 먼저 시도, 없으면 companies(FILO/mbtico) 직접 처리
   _db.collection('join_requests').doc(reqId).get().then(function(doc) {
-    if (!doc.exists) return;
-    var d = doc.data();
-    // 1. join_requests 상태 업데이트
-    _db.collection('join_requests').doc(reqId).update({
-      status: 'approved',
-      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      approvedBy: _CU.email
-    });
-    // 2. companies 상태 업데이트
-    if (d.uid) {
-      var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
-      _db.collection('companies').doc(d.uid).set({
-        status: 'trial',
-        plan: 'trial',
-        trialEnd: trialEnd,
-        approvedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, {merge: true});
+    if (doc.exists) {
+      var d = doc.data();
+      _db.collection('join_requests').doc(reqId).update({
+        status: 'approved',
+        approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        approvedBy: _CU.email
+      });
+      if (d.uid) {
+        var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+        _db.collection('companies').doc(d.uid).set({
+          status: 'trial', plan: 'trial', trialEnd: trialEnd,
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, {merge: true});
+      }
+      _ctrlNotifyApproval({uid: d.uid, email: d.email, companyName: d.companyName, phone: d.phone, slug: d.slug});
+      _ctrlToast('✅ ' + (d.companyName||'업체') + ' 승인 완료! 알림 발송됨');
+    } else {
+      // companies 컬렉션에서 직접 조회 (FILO/mbtico 가입 흐름)
+      _db.collection('companies').doc(reqId).get().then(function(compDoc) {
+        if (!compDoc.exists) { _ctrlToast('❌ 신청 정보를 찾을 수 없습니다'); return; }
+        var d = compDoc.data();
+        var trialEnd = new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+        _db.collection('companies').doc(reqId).update({
+          status: 'trial', plan: 'trial', trialEnd: trialEnd,
+          approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          approvedBy: _CU.email
+        });
+        _ctrlNotifyApproval({uid: reqId, email: d.email, companyName: d.companyName, phone: d.phone, slug: d.slug});
+        _ctrlToast('✅ ' + (d.companyName||'업체') + ' 승인 완료! 알림 발송됨');
+      });
     }
-    // 3. FCM + 카카오 알림
-    _ctrlNotifyApproval({
-      uid: d.uid, email: d.email,
-      companyName: d.companyName, phone: d.phone,
-      slug: d.slug
-    });
-    _ctrlToast('✅ ' + (d.companyName||'업체') + ' 승인 완료! 알림 발송됨');
   });
 }
 
 function _ctrlReject(reqId) {
   var reason = prompt('거절 사유 (고객에게 전달됩니다):');
   if (reason === null) return;
-  _db.collection('join_requests').doc(reqId).update({
-    status: 'rejected',
-    rejectReason: reason,
-    rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() { _ctrlToast('❌ 거절 처리 완료'); });
+  // join_requests 먼저 시도, 없으면 companies 직접 처리
+  _db.collection('join_requests').doc(reqId).get().then(function(doc) {
+    if (doc.exists) {
+      _db.collection('join_requests').doc(reqId).update({
+        status: 'rejected', rejectReason: reason,
+        rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() { _ctrlToast('❌ 거절 처리 완료'); });
+    } else {
+      _db.collection('companies').doc(reqId).update({
+        status: 'rejected', rejectReason: reason,
+        rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() { _ctrlToast('❌ 거절 처리 완료'); });
+    }
+  });
 }
 
 function _ctrlHold(reqId) {
   var memo = prompt('보류 메모:');
   if (memo === null) return;
-  _db.collection('join_requests').doc(reqId).update({
-    status: 'hold', holdMemo: memo,
-    heldAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
+  // join_requests 먼저 시도, 없으면 companies 직접 처리
+  _db.collection('join_requests').doc(reqId).get().then(function(doc) {
+    if (doc.exists) {
+      _db.collection('join_requests').doc(reqId).update({
+        status: 'hold', holdMemo: memo,
+        heldAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
+    } else {
+      _db.collection('companies').doc(reqId).update({
+        status: 'hold', holdMemo: memo,
+        heldAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(function() { _ctrlToast('⏸ 보류 처리 완료'); });
+    }
+  });
 }
 
 // ── 👥 고객사 관리 ────────────────────────────────────────────────
@@ -2007,7 +2033,7 @@ function _ctrlLoadChatList() {
         var d = doc.data();
         var unread = d.unreadSA || 0;
         var active = _chatDealerId === doc.id ? ' chat-item-active' : '';
-    var html = '<div class="chat-item' + active + '" data-id="' + doc.id + '" data-nm="' + (d.companyName||doc.id).replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">' +
+        html += '<div class="chat-item' + active + '" data-id="' + doc.id + '" data-nm="' + (d.companyName||doc.id).replace(/"/g,'') + '" onclick="_ctrlOpenChat(this.dataset.id,this.dataset.nm)">' +
           '<div class="chat-item-name">' + (d.companyName||doc.id) +
             (unread ? '<span class="chat-badge">' + unread + '</span>' : '') +
           '</div>' +
