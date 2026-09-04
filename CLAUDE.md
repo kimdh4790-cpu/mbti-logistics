@@ -439,6 +439,11 @@ cd mbtico-pages && npx wrangler deploy
 - YouTube AI 강의 주제 10편 → 20편으로 확장 (scripts/youtube-ai/topics.json)
 
 ### ✅ 완료 (2026-09-04)
+- **인프런 클립 게시 완료**: n8n 카카오 알림톡 자동화 — ₩22,000, 9월 4일 게시
+  - 포함 파일: 워크플로우 3종 + 설치가이드.pdf + 정산데이터_샘플.xlsx (v2 ZIP)
+  - 태그: n8n, 카카오알림톡, 업무자동화, 구글시트, 소상공인
+  - 정산: 사업자 등록, 하나은행 270-910019-24204, 팝빌 세금계산서 역발행
+  - 정산일: 익월 10 영업일, B2C 90% 수익
 - **인프런 클립 패키지 신규** (scripts/inflearn-clips/): n8n 카카오 알림톡 자동화 워크플로우 3종 + 설치 가이드 + 상품 설명
   - workflow-01-kakao-test.json: 첫 발송 테스트 (수동 트리거 → 성공/실패 분기)
   - workflow-02-sheet-to-kakao.json: 구글 시트 → 일괄 알림톡 발송 (1초 간격 Rate Limit 안전)
