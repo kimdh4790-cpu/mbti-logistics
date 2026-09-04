@@ -486,6 +486,7 @@ cd mbtico-pages && npx wrangler deploy
 - **social-media-schedule.yml** — 수 09:00 KST 인프런 YouTube / 수 10:30 KST 인프런 Instagram 크론 추가
 - **social-media-schedule.yml** — 토 09:00 KST mbtico → 인프런 YouTube로 변경 (mbtico 홍보 준비 안 됨)
 - 인프런 자동 업로드 주 2회: 수요일(YouTube+Instagram) + 토요일(YouTube)
+- **inflearn-narration.json 신규** — 5구간 나레이션 스크립트 (나레이션 없이 배포된 영상 재업로드 필요)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
