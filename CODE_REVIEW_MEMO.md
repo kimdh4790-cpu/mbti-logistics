@@ -22,7 +22,7 @@
 - **파일**: 20개+ 파일 (`filo-auth.js:125`, `dine.js:46,167`, `_worker.js` 8곳, `mbtico-pages/_worker.js` 4곳, `yongcha-worker.js:9465` 등)
 - **내용**: `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0`가 다수 파일에 직접 박혀있음. Firebase Web API Key는 클라이언트 공개 설계라 즉각 위협은 아님. 단, **Firestore Security Rules가 실제 방어선**이므로 Rules가 느슨하면 이 키로 직접 데이터 접근 가능.
 - **필수 확인**: Firebase 콘솔 → Firestore → Rules 검토 (authenticated user만 읽기/쓰기 허용인지 확인)
-- 상태: Rules 검토 필요
+- 상태: ✅ 2026-09-04 Rules 검토 및 강화 완료
 
 ### [낮음] CORS `*` 광역 허용
 - **파일**: `donway-pages/_worker.js:12,27,36`, `functions/claude-ocr.js:16,21,28`, `functions/label-ocr.js:15,20,28`
@@ -150,3 +150,5 @@
 | 날짜 | 내용 |
 |---|---|
 | 2026-09-04 | 최초 생성 — 3개 에이전트 병렬 스캔 결과 종합 (보안/품질/아키텍처) |
+| 2026-09-04 | `_worker.js:9576` verifyFirebaseToken env 인수 추가 ✅ |
+| 2026-09-04 | Firestore Rules 검토 및 강화: isAuth() 과허용 8곳 → canOwn() 수정, alimtalk_queue/join_requests create `true`→`isAuth()`, admin_tokens uid 제한, yongcha_fcm_tokens uid 제한, wildcard `isAuth()`→`isSuperAdmin()`, members/isDealer/ownsDoc/ownsNewDoc에 members 컬렉션 체크 추가. firestore.rules + _worker.js embedded rulesContent 동기화 완료 ✅ |
