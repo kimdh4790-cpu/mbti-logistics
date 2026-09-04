@@ -1302,6 +1302,8 @@ function _filoRegister(){
  var phone=(document.getElementById('fr-phone').value||'').trim();
  var svc=document.getElementById('fr-service').value||'inventory';
  var errEl=document.getElementById('fr-err');
+ var termsEl=document.getElementById('fr-terms');
+ if(!termsEl||!termsEl.checked){errEl.textContent='이용약관 및 개인정보처리방침에 동의해 주세요';errEl.style.display='block';return;}
  if(!company||!biznum||!name||!email||!pw||!industry){errEl.textContent='필수 항목을 모두 입력해 주세요 (업종 포함)';errEl.style.display='block';return;}
  if(pw.length<6){errEl.textContent='비밀번호는 6자 이상';errEl.style.display='block';return;}
  errEl.style.display='none';

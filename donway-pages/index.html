@@ -407,6 +407,12 @@ window.onBizDocSelected=onBizDocSelected;</script>
         <div style="background:rgba(0,200,248,.06);border:1px solid rgba(0,200,248,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
           ✅ 가입 완료 후 <strong>담당자 승인</strong>이 완료되면 로그인 가능합니다 (보통 1 영업일 이내)
         </div>
+        <div style="background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+          <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
+            <input type="checkbox" id="r-terms" style="margin-top:2px;accent-color:var(--brand)">
+            <span>[필수] DONWAY <strong style="color:var(--text1)">서비스 이용약관</strong> 및 <strong style="color:var(--text1)">개인정보처리방침</strong>에 동의합니다. 수집된 정보(회사명·사업자번호·연락처)는 서비스 제공 목적으로만 사용됩니다.</span>
+          </label>
+        </div>
         <div id="r-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
         <div style="display:flex;gap:8px">
           <button class="btn" style="flex:1;padding:11px;font-size:13px" onclick="_regNext(2)">← 이전</button>
@@ -475,6 +481,12 @@ window.onBizDocSelected=onBizDocSelected;</script>
         <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
         <div class="fg"><label>비밀번호</label><input id="j-pw-full" type="password" placeholder="8자 이상"></div>
         <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase"></div>
+      </div>
+      <div style="background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
+          <input type="checkbox" id="j-terms" style="margin-top:2px;accent-color:var(--brand)">
+          <span>[필수] DONWAY <strong style="color:var(--text1)">서비스 이용약관</strong> 및 <strong style="color:var(--text1)">개인정보처리방침</strong>에 동의합니다. 수집된 개인정보(이름·연락처)는 정산 서비스 제공 목적으로만 사용됩니다.</span>
+        </label>
       </div>
       <div id="j-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
       <button id="join-submit-btn" class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700"
@@ -6873,6 +6885,8 @@ function doRegister(){
   err.style.display='none';
 
   var bizDocUrl=document.getElementById('r-bizdoc-input').dataset.url||'';
+  var termsEl=document.getElementById('r-terms');
+  if(!termsEl||!termsEl.checked){err.textContent='이용약관 및 개인정보처리방침에 동의해 주세요';err.style.display='block';return;}
   if(!company||!biz||!email||!pw){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   // bizDocUrl은 가입 완료 후 업로드되므로 파일 선택 여부만 체크
   if(!contactName){err.textContent='정산 문의 담당자명을 입력해주세요';err.style.display='block';return;}
@@ -7149,6 +7163,8 @@ function doQuickJoin(){
   var el=document.getElementById('j-code')||{dataset:{},value:''};
   var companyId=el.dataset.companyId||'',companyName=el.dataset.companyName||'';
   var err=document.getElementById('j-err');if(err)err.style.display='none';
+  var termsElQ=document.getElementById('j-terms');
+  if(!termsElQ||!termsElQ.checked){if(err){err.textContent='이용약관 및 개인정보처리방침에 동의해 주세요';err.style.display='';}return;}
   if(!name){if(err){err.textContent='이름을 입력하세요';err.style.display='';}return;}
   if(phone.length<10){if(err){err.textContent='연락처를 입력하세요';err.style.display='';}return;}
   if(pw.length<6){if(err){err.textContent='비밀번호 6자 이상';err.style.display='';}return;}
@@ -7790,6 +7806,8 @@ function doJoin(){
   var joinRole=(document.getElementById('j-role-full')||document.getElementById('j-role')||{value:'driver'}).value||'driver';
   var joinStore=(document.getElementById('j-store-full')||document.getElementById('j-store')||{value:''}).value||'';
   var err=document.getElementById('j-err');err.style.display='none';
+  var termsElJ=document.getElementById('j-terms');
+  if(!termsElJ||!termsElJ.checked){err.textContent='이용약관 및 개인정보처리방침에 동의해 주세요';err.style.display='block';return;}
 
   if(!name||!driverId||!email||!pw||!code){err.textContent='이름, 정산 아이디, 이메일, 비밀번호, 회사코드를 입력하세요';err.style.display='block';return;}
   if(!companyId){err.textContent='회사코드 확인을 먼저 해주세요';err.style.display='block';return;}
