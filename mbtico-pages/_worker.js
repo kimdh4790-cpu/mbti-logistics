@@ -972,6 +972,29 @@ export default {
     // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
+
+      // FCM Service Worker — 브라우저 백그라운드 푸시 알림용
+      if (path === '/firebase-messaging-sw.js') {
+        const swJs = `importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+firebase.initializeApp({apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',authDomain:'mbti-logistics.firebaseapp.com',projectId:'mbti-logistics',storageBucket:'mbti-logistics.firebasestorage.app',messagingSenderId:'40761160761',appId:'1:40761160761:web:20545b610f03f534e949e8'});
+const messaging=firebase.messaging();
+messaging.onBackgroundMessage(function(payload){
+  var title=payload.notification&&payload.notification.title||'관제센터 알림';
+  var body=payload.notification&&payload.notification.body||'';
+  var icon='/favicon.ico';
+  self.registration.showNotification(title,{body:body,icon:icon,badge:icon,tag:'mbtico-ctrl',renotify:true,data:payload.data||{}});
+});
+self.addEventListener('notificationclick',function(e){
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(function(cl){
+    for(var c of cl){if(c.url.includes('mbtico.kr/control')&&'focus' in c){return c.focus();}}
+    if(clients.openWindow) return clients.openWindow('https://mbtico.kr/control');
+  }));
+});`;
+        return new Response(swJs, {headers:{'Content-Type':'application/javascript;charset=utf-8','Cache-Control':'no-cache, no-store'}});
+      }
+
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       if (path === '/app') return serveKVFile(env, '엠비티아이_물류관리_v9.html', 'text/html');
       if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
@@ -1229,6 +1252,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script>
 /**
  * mbtico-ctrl.js — 관제센터 공통 모듈
@@ -1298,8 +1322,35 @@ function _ctrlLogout() {
 function _ctrlRequestNotifPerm() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
-    Notification.requestPermission();
+    Notification.requestPermission().then(function(perm) {
+      if (perm === 'granted') _ctrlInitFCM();
+    });
+  } else if (Notification.permission === 'granted') {
+    _ctrlInitFCM();
   }
+}
+
+// ── FCM 토큰 등록 (백그라운드 푸시) ─────────────────────────────
+var _CTRL_VAPID = 'BEl62iUYgUivxIkv69yViEuiBIa40Lf1WvVB_QPL-nBelGT5LbwzMvCwMmS_-ZxCjPIe4i7E6y2bQf5zZ7X0';
+
+function _ctrlInitFCM() {
+  if (!_CU || !firebase.messaging) return;
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg) {
+    var msg = firebase.messaging();
+    return msg.getToken({ vapidKey: _CTRL_VAPID, serviceWorkerRegistration: reg });
+  }).then(function(token) {
+    if (!token) return;
+    // admin_tokens/{uid} 에 저장 — notifyAdmins()가 이 컬렉션을 읽어 FCM 발송
+    _db.collection('admin_tokens').doc(_CU.uid).set({
+      token: token,
+      email: _CU.email,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      platform: 'web-ctrl'
+    }, { merge: true }).catch(function() {});
+  }).catch(function(e) {
+    console.warn('[FCM] 토큰 등록 실패:', e.message);
+  });
 }
 
 function _ctrlShowBrowserNotif(title, body, onClick) {
