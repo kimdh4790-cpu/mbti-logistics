@@ -272,3 +272,4 @@
 | 2026-08-31 | Sunany Technology OEM POS 파트너십 협의 현황 기록 추가 (A100-156 스펙·샘플견적·OEM조건·KC인증·파트너십 진행 상황) |
 | 2026-09-03 | 구독료 수납 계좌 등록: 하나은행 270-910019-24204 (유)엠비티아이 (전 제품 계좌이체 전용) |
 | 2026-09-03 | FILO 구독 페이지(filo-settings.js)·용차앱 프로필(yongcha.html) 계좌이체 안내 UI 추가 |
+| 2026-09-04 | GEO/AEO 최적화: filo-landing.html·donway_landing.html·yongcha.html에 Schema.org JSON-LD(SoftwareApplication+FAQPage) 삽입. filo-landing.html에 시각적 FAQ 섹션(접기/펼치기) 추가. yongcha-worker.js YONGCHA_HTML 동기화. AI 검색엔진(ChatGPT·Perplexity·Claude)이 세 제품을 정확히 인식할 수 있도록 구조화 데이터 반영 |
