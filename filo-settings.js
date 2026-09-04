@@ -375,39 +375,8 @@ function _filoAiReplyCopy(){
  if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){_filoToast('답글이 복사됐습니다');});}
  else{_filoToast('복사 실패 — 직접 선택하여 복사하세요');}
 }
-var _FILO_PLAN_PRICES={basic:29000,pro:59000,premium:99000,franchise_hq:300000};
-async function _filoSubscribePlan(planId){
- var price=_FILO_PLAN_PRICES[planId]||29000;
- var uid=(_CU&&(_CU.dealerId||_CU.uid))||'';
- if(!uid){_filoToast('로그인 후 이용해주세요.');return;}
- // Toss SDK 동적 로드
- if(typeof TossPayments==='undefined'){
-  await new Promise(function(res,rej){
-   var s=document.createElement('script');
-   s.src='https://js.tosspayments.com/v1/payment';
-   s.onload=res;s.onerror=rej;document.head.appendChild(s);
-  });
- }
- // 클라이언트 키 조회
- var ckRes=await fetch('/api/toss-client-key').then(function(r){return r.json();}).catch(function(){return{};});
- var ck=ckRes.clientKey||'';
- if(!ck){_filoToast('결제 설정을 불러올 수 없습니다. 고객센터로 문의해주세요.');return;}
- var orderId='FILO-'+uid.slice(0,8)+'-'+Date.now()+'-'+planId;
- var planNames={basic:'베이직',pro:'프로',premium:'프리미엄',franchise_hq:'프랜차이즈'};
- var companyName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'FILO 매장';
- try{
-  var tp=TossPayments(ck);
-  await tp.requestPayment('카드',{
-   amount:price,
-   orderId:orderId,
-   orderName:'FILO '+planNames[planId]+' 구독',
-   successUrl:location.origin+'/filo-subscribe-success',
-   failUrl:location.origin+'/filo-subscribe-fail',
-   customerName:companyName
-  });
- }catch(e){
-  if(e.code&&e.code!=='USER_CANCEL')_filoToast('결제 오류: '+e.message);
- }
+function _filoSubscribePlan(planId){
+ location.href='tel:051-711-3103';
 }
 function _filoPageSubscription(el){
  if(!el)el=document.getElementById('mg-content')||document.getElementById('page-content');
