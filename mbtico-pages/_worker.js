@@ -1012,6 +1012,7 @@ self.addEventListener('notificationclick',function(e){
           short_name: '관제센터',
           description: '엠비티아이 슈퍼어드민 관제센터',
           start_url: '/control',
+          scope: '/control',
           display: 'standalone',
           background_color: '#07080F',
           theme_color: '#07080F',
