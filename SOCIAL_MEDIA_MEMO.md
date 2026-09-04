@@ -430,16 +430,23 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ---
 
-## 다음 작업 우선순위
+## 다음 작업 우선순위 (2026-09-04 기준)
 
-1. ~~**DONWAY YouTube 숏츠 업로드**~~ ✅ 완료 (https://youtu.be/3HRSPE2bNDM, 2026-08-27)
-2. ~~**YONGCHA 영상 제작**~~ ✅ Oracle Cloud 편집 완료 (2026-08-28)
-3. **YONGCHA YouTube 재업로드** → YouTube Studio에서 eDpowbKedgs 삭제 후, GitHub Actions product=yongcha steps=record,compose,youtube 재실행
-4. **FILO 재렌더링** → GitHub Actions product=filo steps=record,compose,youtube
-5. ~~**DONWAY Instagram Reels 업로드**~~ ✅ 완료 (2026-08-29)
-6. **YONGCHA Instagram Reels 업로드** → Oracle Cloud: `node scripts/run-pipeline.js --product yongcha --steps instagram`
-7. **FILO Instagram Reels 업로드** → Oracle Cloud: `node scripts/run-pipeline.js --product filo --steps instagram`
-6. **MBTICO 영상 제작** → GitHub Actions product=mbtico steps=record,compose,youtube
+### 영상 미완료 (긴급)
+1. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 GitHub Actions `product=yongcha steps=record,compose,youtube` 재실행
+2. **인프런 YouTube 재업로드** → 무음 업로드됨. `product=inflearn steps=record,compose,youtube` 실행 (나레이션 포함)
+3. **FILO 재렌더링** → GitHub Actions `product=filo steps=record,compose,youtube`
+
+### 업로드 완료 목록
+- ✅ FILO YouTube 숏츠 (BdG2vAkzZuo, 2026-08-28)
+- ✅ DONWAY YouTube 숏츠 (3HRSPE2bNDM, 2026-08-27)
+- ✅ DONWAY Instagram Reels (2026-08-29)
+
+### SNS 미업로드 잔여
+4. **YONGCHA Instagram Reels** → Oracle Cloud: `node scripts/run-pipeline.js --product yongcha --steps instagram`
+5. **FILO Instagram Reels** → Oracle Cloud: `node scripts/run-pipeline.js --product filo --steps instagram`
+6. **인프런 Instagram** → 재업로드 후 진행
+7. **MBTICO 영상 제작** → 스케줄 제외 상태. 준비 완료 시 진행
 
 ### 업로드 방향 (확정)
 - YouTube: **숏츠(--reels) 우선** — 구독자 적을 때 알고리즘 노출 유리
