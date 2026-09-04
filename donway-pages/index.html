@@ -23330,7 +23330,20 @@ function _initFCMReceiver(){
   } catch(e){}
 }
 
-function goPage(page){
+function goPage(page, _fromPopstate){
+  // 첫 호출 시 히스토리 초기화 — 뒤로가기 앱 종료 방지
+  if(!window._dwPopstateInited){
+    window._dwPopstateInited=true;
+    history.replaceState({page:'_base'},'');
+    history.pushState({page:page},'');
+    window.addEventListener('popstate',function(e){
+      var p=(e.state&&e.state.page)||'home';
+      if(p==='_base'){history.pushState({page:window._currentPage||'home'},'');return;}
+      goPage(p, true);
+    });
+  } else if(!_fromPopstate){
+    history.pushState({page:page},'');
+  }
   window._currentPage=page;  // 현재 페이지 추적
   // ★ 배달대행 탭 떠날 때 dw-engine-wrap 보존 (body로 이동)
   if(page!=='delivery_input'){
