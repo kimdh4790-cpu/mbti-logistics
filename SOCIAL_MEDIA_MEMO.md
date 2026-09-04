@@ -113,6 +113,12 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 - [ ] **YONGCHA 영상 제작** — Oracle VM에서 실행 필요
 - [ ] **FILO 영상 제작** — Oracle VM에서 실행 필요
 
+### 소셜미디어 계정 목록 (2026-09-04 업데이트)
+| 계정 | 플랫폼 | 용도 | 비고 |
+|---|---|---|---|
+| @hyung.83 | Instagram | MBTICO 제품 홍보 릴스 | Graph API 연동, 토큰 2026-10-28 만료 |
+| @LJH_93 | Instagram / 영상 | 영상 관련 계정 | 2026-09-04 등록 |
+
 ### Instagram Graph API 계정 정보 (2026-08-29)
 | 항목 | 값 |
 |---|---|
