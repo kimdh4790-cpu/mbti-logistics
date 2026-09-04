@@ -1491,11 +1491,9 @@ function _filoDemoInit(){
    services:['kiosk','bakery_qr','inventory']}
  ];
  _filoToast('데모 딜러 초기화 시작...');
- var total=0;
- function next(i){
-  if(i>=DEMOS.length){_filoToast('데모 초기화 완료 — 총 '+total+'개 메뉴');return;}
-  var d=DEMOS[i];
-  _db.collection('companies').doc(d.id).set({
+ var now=(typeof _nowISO==='function')?_nowISO():new Date().toISOString();
+ Promise.all(DEMOS.map(function(d){
+  return _db.collection('companies').doc(d.id).set({
    companyName:'데모 '+d.label,theme:d.theme,
    primaryColor:d.primary,bgColor:d.bg,
    services:d.services,
@@ -1512,8 +1510,7 @@ function _filoDemoInit(){
   }).then(function(){
    var items=(typeof _FILO_MENU_TEMPLATES!=='undefined')
     ?(_FILO_MENU_TEMPLATES[d.tpl]||[]):[];
-   if(!items.length){next(i+1);return;}
-   var now=(typeof _nowISO==='function')?_nowISO():new Date().toISOString();
+   if(!items.length) return 0;
    var b2=_db.batch();
    var refs=[];
    items.forEach(function(it){
@@ -1527,14 +1524,15 @@ function _filoDemoInit(){
      createdAt:now,updatedAt:now
     });
    });
-   total+=items.length;
    return b2.commit().then(function(){
     if(typeof _filoFillTemplateImages==='function') _filoFillTemplateImages(refs);
+    return items.length;
    });
-  }).then(function(){next(i+1);})
-  .catch(function(e){console.error(d.id,e);next(i+1);});
- }
- next(0);
+  }).catch(function(e){console.error(d.id,e);return 0;});
+ })).then(function(counts){
+  var total=counts.reduce(function(s,n){return s+(n||0);},0);
+  _filoToast('데모 초기화 완료 — 총 '+total+'개 메뉴');
+ });
 }
 
 /* ──────────────────────────────────────────────────────────

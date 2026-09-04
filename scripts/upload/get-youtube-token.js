@@ -42,14 +42,16 @@ const server = http.createServer(async (req, res) => {
 
   try {
     const { tokens } = await auth.getToken(code);
+    const maskedSecret = CLIENT_SECRET.slice(0, 4) + '***';
+    const maskedToken = (tokens.refresh_token || '').slice(0, 6) + '***';
     console.log('\n=== 아래 값을 Oracle Cloud 서버 환경변수에 등록하세요 ===');
     console.log(`YOUTUBE_CLIENT_ID=${CLIENT_ID}`);
-    console.log(`YOUTUBE_CLIENT_SECRET=${CLIENT_SECRET}`);
-    console.log(`YOUTUBE_REFRESH_TOKEN=${tokens.refresh_token}`);
+    console.log(`YOUTUBE_CLIENT_SECRET=${maskedSecret}`);
+    console.log(`YOUTUBE_REFRESH_TOKEN=${maskedToken}`);
     console.log('\n~/.bashrc 또는 ~/mbti-logistics/.env 에 추가:');
     console.log(`export YOUTUBE_CLIENT_ID="${CLIENT_ID}"`);
-    console.log(`export YOUTUBE_CLIENT_SECRET="${CLIENT_SECRET}"`);
-    console.log(`export YOUTUBE_REFRESH_TOKEN="${tokens.refresh_token}"`);
+    console.log('export YOUTUBE_CLIENT_SECRET="(GitHub Secret에서 확인)"');
+    console.log('export YOUTUBE_REFRESH_TOKEN="(GitHub Secret에서 확인)"');
   } catch(e) {
     console.error('토큰 발급 실패:', e.message);
   }

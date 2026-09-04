@@ -9,7 +9,7 @@ export default {
 
       if (path === '/api/kakao-config') {
         return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY || '' }), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' }
         });
       }
       if (path === '/api/ctrl-notify' && request.method === 'POST') {
@@ -24,7 +24,7 @@ export default {
         if (!lat1 || !lng1 || !lat2 || !lng2) {
           return new Response(JSON.stringify({ error: 'missing coordinates' }), {
             status: 400,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' }
           });
         }
         const R = 6371;
@@ -33,7 +33,7 @@ export default {
         const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
         const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         return new Response(JSON.stringify({ distanceKm: Math.round(dist * 10) / 10 }), {
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': 'https://yongcha.app' }
         });
       }
 

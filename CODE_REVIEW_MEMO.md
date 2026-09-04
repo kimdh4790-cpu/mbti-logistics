@@ -16,7 +16,7 @@
 - **파일**: `scripts/upload/get-youtube-token.js:47-52`, `scripts/setup/get-instagram-token.js:105`
 - **내용**: `YOUTUBE_REFRESH_TOKEN`, `YOUTUBE_CLIENT_SECRET`, `INSTAGRAM_ACCESS_TOKEN`을 `console.log`로 출력. GitHub Actions 로그에 토큰 값이 그대로 기록될 수 있음.
 - **수정**: 출력 후 `***` 마스킹 처리 또는 `process.stderr`로 리다이렉트
-- 상태: 미수정
+- 상태: ✅ 2026-09-04 마스킹 처리 완료
 
 ### [낮음] Firebase Web API Key 하드코딩
 - **파일**: 20개+ 파일 (`filo-auth.js:125`, `dine.js:46,167`, `_worker.js` 8곳, `mbtico-pages/_worker.js` 4곳, `yongcha-worker.js:9465` 등)
@@ -28,7 +28,7 @@
 - **파일**: `donway-pages/_worker.js:12,27,36`, `functions/claude-ocr.js:16,21,28`, `functions/label-ocr.js:15,20,28`
 - **내용**: `Access-Control-Allow-Origin: *`. `credentials: true`와 동시 사용은 없어 CSRF 직접 위험은 낮음. 그러나 donway API가 무단 호출에 노출됨.
 - **수정**: DONWAY 프론트 도메인(`donway.ai.kr`)으로 제한 권장
-- 상태: 미수정
+- 상태: ✅ 2026-09-04 수정 완료 — donway-pages는 yongcha.app 라우트라 `https://yongcha.app`, functions/는 `https://donway.ai.kr`로 각각 제한
 
 ---
 
@@ -53,7 +53,7 @@
 ### [중] N+1 쿼리
 - **`filo-auth.js:~1506`** (`_filoInitDemo`): `next(i+1)` 직렬 재귀로 데모 메뉴 배열 하나씩 Firestore 쓰기. → `Promise.all` 병렬화 필요
 - **`filo-auth.js:~1580`** (`_filoPageBranchMonitor`): 가맹점 수만큼 `filo_orders.where('dealerId','==',b.id)` N회 쿼리. → collectionGroup 쿼리 또는 서버사이드 집계로 대체 권장
-- 상태: 미수정
+- 상태: ✅ 2026-09-04 `_filoInitDemo` Promise.all 병렬화 완료 / `_filoPageBranchMonitor` N+1은 구조상 대형 작업이라 별도 추후 처리
 
 ### [낮음] 전역변수 오염·충돌 위험
 | 위치 | 내용 |
@@ -152,3 +152,6 @@
 | 2026-09-04 | 최초 생성 — 3개 에이전트 병렬 스캔 결과 종합 (보안/품질/아키텍처) |
 | 2026-09-04 | `_worker.js:9576` verifyFirebaseToken env 인수 추가 ✅ |
 | 2026-09-04 | Firestore Rules 검토 및 강화: isAuth() 과허용 8곳 → canOwn() 수정, alimtalk_queue/join_requests create `true`→`isAuth()`, admin_tokens uid 제한, yongcha_fcm_tokens uid 제한, wildcard `isAuth()`→`isSuperAdmin()`, members/isDealer/ownsDoc/ownsNewDoc에 members 컬렉션 체크 추가. firestore.rules + _worker.js embedded rulesContent 동기화 완료 ✅ |
+| 2026-09-04 | CI 토큰 로그 마스킹: get-youtube-token.js CLIENT_SECRET/REFRESH_TOKEN, get-instagram-token.js ACCESS_TOKEN 출력 시 앞 6자리만 노출 ✅ |
+| 2026-09-04 | CORS 제한: functions/claude-ocr.js, functions/label-ocr.js `*`→`donway.ai.kr`, donway-pages/_worker.js `*`→`yongcha.app` ✅ |
+| 2026-09-04 | `_filoInitDemo` 직렬 next(i+1) 재귀 → Promise.all 병렬화 ✅ |

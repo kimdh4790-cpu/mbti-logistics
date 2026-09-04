@@ -101,8 +101,9 @@ rl.question('code 값 입력: ', async (raw) => {
 
     const days = Math.round((long.expires_in || 5183944) / 86400);
 
+    const maskedToken = (long.access_token || '').slice(0, 6) + '***';
     console.log('\n===== 완료! GitHub Secrets에 저장하세요 =====\n');
-    console.log(`INSTAGRAM_ACCESS_TOKEN=${long.access_token}`);
+    console.log(`INSTAGRAM_ACCESS_TOKEN=${maskedToken}  ← 실제 값은 GitHub Secret에 직접 저장`);
     console.log(`INSTAGRAM_ACCOUNT_ID=${me.id || short.user_id}`);
     console.log(`\n계정: @${me.username || '(조회 실패)'}`);
     console.log(`토큰 만료: ${days}일 후 (만료 전 재실행 필요)\n`);
