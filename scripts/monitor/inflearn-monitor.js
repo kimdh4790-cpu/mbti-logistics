@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 인프런 인기 클립·강의 트렌드 수집
-// 키워드: AI, 자동화, n8n, 소상공인, 노코드, SaaS, 수익화
+// Next.js __NEXT_DATA__ JSON에서 강의 목록 파싱
 // 출력: output/inflearn-digest.json
 
 import https from 'https';
@@ -23,51 +23,100 @@ function fetchPage(keyword) {
   return new Promise((resolve) => {
     const req = https.request(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'ko-KR,ko;q=0.9',
+        'Accept-Encoding': 'identity',
       },
     }, (res) => {
+      // 리다이렉트 처리
+      if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
+        resolve('');
+        return;
+      }
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     });
     req.on('error', () => resolve(''));
+    req.setTimeout(8000, () => { req.destroy(); resolve(''); });
     req.end();
   });
 }
 
 function parseItems(html, keyword) {
   const items = [];
-  // 강의 카드 타이틀 파싱 (og 태그 없이 HTML에서 직접)
-  const titleRe = /<div[^>]+class="[^"]*course-title[^"]*"[^>]*>([^<]+)<\/div>/g;
-  const priceRe = /(\d{1,3}(?:,\d{3})*)\s*원/g;
-  const ratingRe = /(\d+\.\d+)\s*점/g;
 
-  let m;
-  while ((m = titleRe.exec(html)) !== null) {
-    const title = m[1].trim();
-    if (title && title.length > 3) {
-      items.push({ title, keyword, url: `https://www.inflearn.com/courses?s=${encodeURIComponent(keyword)}&order=popular` });
-    }
-    if (items.filter(i => i.keyword === keyword).length >= 5) break;
+  // 방법1: __NEXT_DATA__ JSON 파싱 (Next.js SSR)
+  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([^<]+)<\/script>/);
+  if (nextDataMatch) {
+    try {
+      const data = JSON.parse(nextDataMatch[1]);
+      // 강의 목록은 props.pageProps.courses 또는 dehydratedState 안에 있음
+      const courses = findCourses(data);
+      for (const c of courses.slice(0, 5)) {
+        const title = c.title || c.name;
+        if (title && title.length > 3) {
+          items.push({
+            title,
+            keyword,
+            price: c.price != null ? `${c.price.toLocaleString()}원` : null,
+            rating: c.rating || c.score || null,
+            url: c.slug ? `https://www.inflearn.com/course/${c.slug}` : `https://www.inflearn.com/courses?s=${encodeURIComponent(keyword)}`,
+          });
+        }
+      }
+    } catch {}
   }
 
-  // 가격 정보
-  const prices = [];
-  let pm;
-  while ((pm = priceRe.exec(html)) !== null) prices.push(pm[1]);
+  // 방법2: JSON-LD 파싱 폴백
+  if (items.length === 0) {
+    const ldRe = /<script type="application\/ld\+json">([^<]+)<\/script>/g;
+    let m;
+    while ((m = ldRe.exec(html)) !== null && items.length < 5) {
+      try {
+        const obj = JSON.parse(m[1]);
+        const list = Array.isArray(obj) ? obj : [obj];
+        for (const entry of list) {
+          if (entry.name && (entry['@type'] === 'Course' || entry['@type'] === 'Product')) {
+            items.push({ title: entry.name, keyword, price: null, rating: null, url: entry.url || '' });
+          }
+        }
+      } catch {}
+    }
+  }
 
-  // 평점
-  const ratings = [];
-  let rm;
-  while ((rm = ratingRe.exec(html)) !== null) ratings.push(parseFloat(rm[1]));
+  // 방법3: og:title 메타 폴백 (단일 결과만)
+  if (items.length === 0) {
+    const ogRe = /<meta[^>]+property="og:title"[^>]+content="([^"]+)"/;
+    const ogM = html.match(ogRe);
+    if (ogM && !ogM[1].includes('인프런')) {
+      items.push({ title: ogM[1].trim(), keyword, price: null, rating: null, url: '' });
+    }
+  }
 
-  return items.map((item, i) => ({
-    ...item,
-    price: prices[i] ? `${prices[i]}원` : null,
-    rating: ratings[i] || null,
-  }));
+  return items;
+}
+
+function findCourses(obj, depth = 0) {
+  if (depth > 8 || !obj || typeof obj !== 'object') return [];
+  if (Array.isArray(obj)) {
+    // 강의 배열인지 확인
+    if (obj.length > 0 && obj[0] && typeof obj[0].title === 'string') return obj;
+    for (const item of obj) {
+      const found = findCourses(item, depth + 1);
+      if (found.length > 0) return found;
+    }
+    return [];
+  }
+  // courses, items, list, data 키 우선 탐색
+  for (const key of ['courses', 'items', 'list', 'data', 'results', 'pageProps']) {
+    if (obj[key]) {
+      const found = findCourses(obj[key], depth + 1);
+      if (found.length > 0) return found;
+    }
+  }
+  return [];
 }
 
 async function main() {
@@ -87,7 +136,6 @@ async function main() {
     }
   }
 
-  // 중복 제거 (타이틀 기준)
   const seen = new Set();
   const unique = results.filter(i => {
     if (seen.has(i.title)) return false;
@@ -101,7 +149,7 @@ async function main() {
   let all = [];
   try { all = JSON.parse(fs.readFileSync(OUT, 'utf8')); } catch {}
   all.unshift(entry);
-  all = all.slice(0, 14); // 2주치
+  all = all.slice(0, 14);
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(all, null, 2));
 
