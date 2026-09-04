@@ -11,7 +11,7 @@ name: 소셜미디어 자동 스케줄 업로드
 #   수 10:30 KST → 인프런 Instagram Reels
 #   목 09:00 KST → DONWAY YouTube Shorts
 #   목 10:30 KST → DONWAY Instagram Reels
-#   토 09:00 KST → mbtico YouTube Shorts
+#   토 09:00 KST → 인프런 YouTube Shorts
 
 on:
   schedule:
@@ -22,7 +22,7 @@ on:
     - cron: '30 1 * * 3'  # 수 10:30 KST → 인프런 Instagram
     - cron: '0 0 * * 4'   # 목 09:00 KST → DONWAY YouTube
     - cron: '30 1 * * 4'  # 목 10:30 KST → DONWAY Instagram
-    - cron: '0 0 * * 6'   # 토 09:00 KST → mbtico YouTube
+    - cron: '0 0 * * 6'   # 토 09:00 KST → 인프런 YouTube
   workflow_dispatch:
     inputs:
       product:
@@ -36,7 +36,6 @@ on:
           - yongcha
           - filo
           - donway
-          - mbtico
       platforms:
         description: '업로드 플랫폼'
         required: false
@@ -119,7 +118,7 @@ jobs:
             elif [ "$DAY" = "4" ] && [ "$HOUR" = "01" ]; then
               PRODUCT="donway"; PLATFORMS="instagram"; REASON="목 10:30 KST 자동"
             elif [ "$DAY" = "6" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="mbtico"; PLATFORMS="youtube"; REASON="토 09:00 KST 자동"
+              PRODUCT="inflearn"; PLATFORMS="youtube"; REASON="토 09:00 KST 자동"
             else
               echo "스케줄 매칭 없음: DAY=$DAY HOUR=$HOUR — 건너뜀"
               echo "PRODUCT=skip" >> $GITHUB_OUTPUT
