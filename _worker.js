@@ -6388,14 +6388,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Noto Sans
   <!-- STEP 4: 완료 -->
   <div id="step4" class="card" style="display:none">
     <div class="complete">
-      <div class="complete-icon">🎉</div>
-      <div class="complete-title">가입 신청 완료!</div>
-      <div class="complete-sub">
+      <div class="complete-icon" id="step4-icon">🎉</div>
+      <div class="complete-title" id="step4-title">가입 신청 완료!</div>
+      <div class="complete-sub" id="step4-sub">
         관리자 검토 후 1~2 영업일 내에<br>
         이메일과 카카오 알림톡으로 승인 안내를 드립니다.<br><br>
-        승인 후 배송앱을 바로 사용하실 수 있습니다.
+        <span id="step4-status" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#f59e0b">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;animation:pulse 1.5s infinite"></span>
+          승인 대기 중 — 승인 시 이 화면에서 바로 알려드립니다
+        </span>
       </div>
-      <a href="/hub" class="btn btn-primary" style="display:block;text-decoration:none">앱 로그인하기</a>
+      <a href="/hub" class="btn btn-primary" id="step4-login-btn" style="display:block;text-decoration:none">앱 로그인하기</a>
       <div style="margin-top:12px;font-size:12px;color:var(--text3)">
         문의: 051-711-3103 · <a href="https://pf.kakao.com/_xkuxabX/chat" style="color:var(--acc)" target="_blank">카카오 채널</a>
       </div>
@@ -6558,6 +6561,7 @@ async function _step3Submit(){
     }).catch(function(){});
 
     _goStep(4);
+    _watchApprovalStatus(uid);
   }catch(e){
     btn.disabled=false; btn.textContent='✅ 가입 신청 완료';
     if(e.code==='auth/email-already-in-use'){
@@ -6566,6 +6570,54 @@ async function _step3Submit(){
       _showErr('err3','오류: '+e.message);
     }
   }
+}
+
+var _approvalUnsub = null;
+function _watchApprovalStatus(uid) {
+  if (_approvalUnsub) { _approvalUnsub(); _approvalUnsub = null; }
+  // pulse 애니메이션 CSS
+  if (!document.getElementById('pulse-style')) {
+    var s = document.createElement('style');
+    s.id = 'pulse-style';
+    s.textContent = '@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}';
+    document.head.appendChild(s);
+  }
+  _approvalUnsub = _db.collection('companies').doc(uid).onSnapshot(function(doc) {
+    if (!doc.exists) return;
+    var status = doc.data().status;
+    if (status === 'approved' || status === 'active' || status === 'trial') {
+      if (_approvalUnsub) { _approvalUnsub(); _approvalUnsub = null; }
+      // 승인 화면으로 업데이트
+      var icon = document.getElementById('step4-icon');
+      var title = document.getElementById('step4-title');
+      var sub = document.getElementById('step4-sub');
+      var btn = document.getElementById('step4-login-btn');
+      if (icon) icon.textContent = '✅';
+      if (title) { title.textContent = '가입이 승인되었습니다!'; title.style.color = '#16a34a'; }
+      if (sub) sub.innerHTML = '서비스 이용이 활성화되었습니다.<br>지금 바로 로그인하여 사용할 수 있습니다!';
+      if (btn) { btn.textContent = '지금 바로 시작하기 →'; btn.style.background = '#16a34a'; }
+      // 승인 알림 팝업
+      _showApprovalPopup();
+    } else if (status === 'rejected') {
+      if (_approvalUnsub) { _approvalUnsub(); _approvalUnsub = null; }
+      var sub2 = document.getElementById('step4-sub');
+      if (sub2) sub2.innerHTML = '<span style="color:#dc2626;font-weight:700">죄송합니다. 가입이 거절되었습니다.</span><br>카카오 채널로 문의해 주세요.';
+    }
+  });
+}
+
+function _showApprovalPopup() {
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:20px;padding:32px 28px;text-align:center;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.3)">' +
+    '<div style="font-size:52px;margin-bottom:12px">🎊</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#16a34a;margin-bottom:10px">가입 승인!</div>' +
+    '<div style="font-size:14px;color:#374151;line-height:1.6;margin-bottom:20px">관리자가 가입을 승인했습니다.<br>지금 바로 서비스를 이용하실 수 있습니다.</div>' +
+    '<a href="/hub" style="display:block;background:#16a34a;color:#fff;padding:14px;border-radius:12px;font-size:15px;font-weight:800;text-decoration:none">앱 시작하기 →</a>' +
+    '</div>';
+  overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
 }
 </script>
 </body>

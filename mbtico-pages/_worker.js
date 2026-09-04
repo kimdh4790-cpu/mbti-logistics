@@ -1121,6 +1121,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 /* ── Toast ── */
 .ctrl-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;animation:fadeIn .2s ease;pointer-events:none}
 @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 </style>
 </head>
 <body>
@@ -1275,6 +1276,7 @@ function _ctrlInit() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-screen').style.display  = 'flex';
     document.getElementById('ctrl-user').textContent = user.email;
+    _ctrlRequestNotifPerm();
     _ctrlStartListeners();
   });
 }
@@ -1292,15 +1294,68 @@ function _ctrlLogout() {
   _auth.signOut();
 }
 
+// ── 브라우저 알림 권한 요청 ──────────────────────────────────────
+function _ctrlRequestNotifPerm() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function _ctrlShowBrowserNotif(title, body, onClick) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  var n = new Notification(title, {
+    body: body,
+    icon: 'https://mbtico.kr/favicon.ico',
+    tag: 'mbtico-admin-' + Date.now()
+  });
+  if (onClick) n.onclick = function() { window.focus(); onClick(); n.close(); };
+  setTimeout(function() { n.close(); }, 8000);
+}
+
 // ── 슈퍼어드민 리스너 시작 ─────────────────────────────────────
+var _joinNotifInit = false; // 초기 로드 시 기존 pending은 알림 생략
+var _companyNotifInit = false;
+
 function _ctrlStartListeners() {
-  // 가입 대기 뱃지
+  // 가입 대기 뱃지 + 신규 pending 실시간 브라우저 알림
   var u1 = _db.collection('join_requests')
     .where('status','==','pending')
     .onSnapshot(function(snap) {
       _ctrlBadge('badge-join', snap.size);
+      if (!_joinNotifInit) { _joinNotifInit = true; return; }
+      snap.docChanges().forEach(function(change) {
+        if (change.type !== 'added') return;
+        var d = change.doc.data();
+        var name = d.companyName || d.company || d.email || '신규 신청';
+        var platform = d.platform ? '[' + d.platform.toUpperCase() + '] ' : '';
+        var msg = platform + name + '님 가입 신청이 도착했습니다!';
+        _ctrlShowBrowserNotif('🔔 신규 가입 신청', msg, function() {
+          _ctrlToggle('join');
+        });
+        _ctrlAlertToast('🔔 신규 가입 신청: ' + name, 'join');
+      });
     });
   _unsubs.push(u1);
+
+  // companies 컬렉션 신규 pending 감시 (mbtico 직접 가입)
+  var u3 = _db.collection('companies')
+    .where('status','==','pending')
+    .onSnapshot(function(snap) {
+      if (!_companyNotifInit) { _companyNotifInit = true; return; }
+      snap.docChanges().forEach(function(change) {
+        if (change.type !== 'added') return;
+        var d = change.doc.data();
+        if (d.platform !== 'mbtico') return; // DONWAY join_requests로 이미 처리
+        var name = d.companyName || d.name || d.email || '신규 신청';
+        var msg = '[MBTICO] ' + name + '님 가입 신청이 도착했습니다!';
+        _ctrlShowBrowserNotif('🔔 신규 가입 신청', msg, function() {
+          _ctrlToggle('companies');
+        });
+        _ctrlAlertToast('🔔 신규 가입(mbtico): ' + name, 'companies');
+      });
+    });
+  _unsubs.push(u3);
 
   // 채팅 미읽음 뱃지 (슈퍼어드민 기준 unreadSA)
   var u2 = _db.collection('chats')
@@ -1348,6 +1403,22 @@ function _ctrlToast(msg) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(function() { t.remove(); }, 3000);
+}
+
+// 신규 가입 알림용 — 더 눈에 띄는 배너 토스트 (클릭 시 해당 섹션 열기)
+function _ctrlAlertToast(msg, sectionId) {
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;background:#dc2626;color:#fff;padding:14px 20px;border-radius:12px;font-size:14px;font-weight:700;box-shadow:0 4px 24px rgba(220,38,38,.5);cursor:pointer;max-width:320px;line-height:1.4;animation:slideInRight .3s ease';
+  t.textContent = msg;
+  if (sectionId) {
+    t.onclick = function() {
+      var body = document.getElementById('acc-' + sectionId);
+      if (body && body.style.display === 'none') _ctrlToggle(sectionId);
+      t.remove();
+    };
+  }
+  document.body.appendChild(t);
+  setTimeout(function() { t.remove(); }, 10000);
 }
 
 function _ctrlBadge(id, n) {
