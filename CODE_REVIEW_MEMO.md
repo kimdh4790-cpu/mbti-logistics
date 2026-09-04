@@ -156,3 +156,5 @@
 | 2026-09-04 | CORS 제한: functions/claude-ocr.js, functions/label-ocr.js `*`→`donway.ai.kr`, donway-pages/_worker.js `*`→`yongcha.app` ✅ |
 | 2026-09-04 | `_filoInitDemo` 직렬 next(i+1) 재귀 → Promise.all 병렬화 ✅ |
 | 2026-09-04 | 중복 함수 통합: `verifyYongchaToken` 삭제 + `verifyFirebaseToken` origin 파라미터 추가, `sendFCM` 클로저 → `_sendFCMv1` top-level 헬퍼 추출 ✅ |
+| 2026-09-04 | 관제센터 신규 가입 실시간 알림 추가 (`mbtico-pages/_worker.js`): Web Notification API 브라우저 팝업 + 빨간 배너 토스트, FCM 백그라운드 푸시 (Service Worker + VAPID + admin_tokens 저장), join_requests/companies onSnapshot 실시간 감지, _watchApprovalStatus 신청자 측 승인 감지 팝업 (`_worker.js`) ✅ |
+| 2026-09-04 | 관제센터 전체 코드 리뷰 후 버그 2건 수정 (`mbtico-pages/_worker.js`): (1) `_ctrlLoadChatList()` forEach 내부 `var html` 재선언으로 채팅 목록 항상 빈화면 → `html +=` 패턴으로 수정 (2) `_ctrlApprove()`/`_ctrlReject()`/`_ctrlHold()` join_requests만 조회하던 로직 → join_requests 없으면 companies 컬렉션 직접 처리 (FILO/mbtico 가입 승인 무작동 버그 해결) ✅ |

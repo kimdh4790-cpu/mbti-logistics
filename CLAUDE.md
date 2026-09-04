@@ -498,6 +498,16 @@ cd mbtico-pages && npx wrangler deploy
 - 분류: 강의소재 / 앱기능 / 수익성 → 패스 제외 후 SMS + Artifacts 저장
 - CLAUDE.md 메모 체계 테이블에 RESEARCH_MEMO.md 항목 추가 필요
 
+### ✅ 완료 (2026-09-04 관제센터 알림 + 버그 수정)
+- **신규 가입 실시간 알림 (mbtico-pages/_worker.js + _worker.js)**:
+  - Web Notification API 브라우저 팝업 (`_ctrlShowBrowserNotif`) + 빨간 배너 토스트 (`_ctrlAlertToast`)
+  - join_requests / companies onSnapshot 실시간 감지 (초기 로드 중복 방지 플래그: `_joinNotifInit`, `_companyNotifInit`)
+  - FCM 백그라운드 푸시: `/firebase-messaging-sw.js` 라우트 추가, Service Worker + VAPID 토큰 발급 → `admin_tokens/{uid}` 저장
+  - 신청자 측 (`_worker.js`): Step 4 승인 대기 표시기 + `_watchApprovalStatus(uid)` onSnapshot + `_showApprovalPopup()` 🎊 팝업
+- **관제센터 전체 코드 리뷰 후 버그 2건 수정 (mbtico-pages/_worker.js)**:
+  - `_ctrlLoadChatList()`: forEach 내부 `var html` 재선언 → 채팅 목록 항상 빈화면 → `html +=` 수정 ✅
+  - `_ctrlApprove()`/`_ctrlReject()`/`_ctrlHold()`: join_requests만 조회 → FILO/mbtico 가입 승인 무작동 → join_requests 없으면 companies 직접 처리 ✅
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
