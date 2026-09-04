@@ -995,6 +995,24 @@ self.addEventListener('notificationclick',function(e){
         return new Response(swJs, {headers:{'Content-Type':'application/javascript;charset=utf-8','Cache-Control':'no-cache, no-store'}});
       }
 
+      if (path === '/ctrl-manifest.json') {
+        const manifest = {
+          name: '엠비티아이 관제센터',
+          short_name: '관제센터',
+          description: '엠비티아이 슈퍼어드민 관제센터',
+          start_url: '/control',
+          display: 'standalone',
+          background_color: '#07080F',
+          theme_color: '#07080F',
+          orientation: 'portrait',
+          icons: [
+            { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          ]
+        };
+        return new Response(JSON.stringify(manifest), { headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'no-cache' } });
+      }
+
       if (path === '/' || path === '') return serveKVFile(env, 'mbti_landing.html', 'text/html');
       if (path === '/app') return serveKVFile(env, '엠비티아이_물류관리_v9.html', 'text/html');
       if (path === '/hub') return serveKVFile(env, 'mbtico_hub.html', 'text/html');
@@ -1005,6 +1023,13 @@ self.addEventListener('notificationclick',function(e){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>엠비티아이 관제센터</title>
+<link rel="manifest" href="/ctrl-manifest.json">
+<meta name="theme-color" content="#07080F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="관제센터">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
 :root{
   --bg:#07080F;--bg2:#0D1117;--bg3:#161B22;--bd:rgba(255,255,255,.08);
