@@ -163,6 +163,27 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 
 ## 📋 수정 이력
 
+### 2026-09-04 (34차)
+**filo-landing.html GEO/AEO 최적화 + filo-settings.js 네이버 플레이스 안내 카드**
+- `filo-landing.html`: Schema.org JSON-LD 삽입 (SoftwareApplication + FAQPage) — AI 검색 노출 최적화
+  - 시각적 FAQ 섹션 추가 (자주 묻는 질문 6개)
+  - pricing 섹션 추가 ("요금 문의" CTA 카드 + 하나은행 계좌이체 안내)
+- `filo-settings.js`: 네이버 플레이스 플러스 안내 카드 추가 (`_filoPageSubscription()`)
+  - "FILO 연동 준비 중, 파트너 승인 시 즉시 알림" 선제 UI
+  - 파트너 승인 완료 후 바로 활성화 가능한 구조로 설계
+
+### 2026-09-04 (33차)
+**filo-settings.js 요금제 전화 문의 전환**
+- `filo-settings.js`: `_FILO_PLAN_PRICES` 상수 제거 (토스 결제 가격 하드코딩 삭제)
+- `_filoSubscribePlan()`: 토스 결제 연동 제거 → tel:051-711-3103 전화 문의로 교체
+  - 전 요금제(Standard/Pro/Enterprise) 모두 "문의하기" 버튼으로 통일
+  - 계좌이체 안내: 하나은행 270-910019-24204 (유)엠비티아이 표시
+
+### 2026-09-03 (32.5차)
+**DINE PWA 홈화면 설치 아이콘 교체**
+- `_worker.js`: `_PWA_ICONS` + `_DINE_ICON_192` / `_DINE_APPLE_ICON` 신규 로고 base64로 교체
+  - DINE 앱 홈화면 설치 시 새 로고 아이콘 표시
+
 ### 2026-09-02 (32차)
 **filo-landing.html 흰 바탕+핑크 테마 2열 히어로 재설계**
 - `filo-landing.html` 전면 재설계 (DINE 랜딩 참고, 별도 구조)
