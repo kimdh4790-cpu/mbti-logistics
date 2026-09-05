@@ -375,25 +375,27 @@ function _applyTranslationsToGrid(menus){
  });
  if(!needApi.length) return;
 
- // 개별 병렬 호출 (5초 타임아웃) — KV캐시 덕분에 2번째 방문부터 즉시 반환
- needApi.forEach(function(item){
-  var ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-  var tid=ctrl?setTimeout(function(){ctrl.abort();},5000):null;
-  var fetchOpts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:item.m.name,lang:lang})};
-  if(ctrl) fetchOpts.signal=ctrl.signal;
-  fetch('/api/translate',fetchOpts)
-  .then(function(r){return r.json();})
-  .then(function(d){
-   if(ctrl&&tid) clearTimeout(tid);
-   if(_lang!==lang) return;
-   var tr=(d.translated||'').trim();
+ // 배치 일괄 번역 (1번 API 호출로 전체 처리 — 동시 호출 과부하 방지)
+ var batchNames=needApi.map(function(i){return i.m.name;});
+ var ctrl2=typeof AbortController!=='undefined'?new AbortController():null;
+ var tid2=ctrl2?setTimeout(function(){ctrl2.abort();},15000):null;
+ var opts2={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:batchNames,lang:lang})};
+ if(ctrl2) opts2.signal=ctrl2.signal;
+ fetch('/api/translate-batch',opts2)
+ .then(function(r){return r.json();})
+ .then(function(d){
+  if(ctrl2&&tid2) clearTimeout(tid2);
+  if(_lang!==lang) return;
+  var map=d.translations||{};
+  needApi.forEach(function(item){
+   var tr=(map[item.m.name]||'').trim();
    if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)) _tlCache[item.ck]=tr;
    _applyOneTr(item.trId, item.m.name, _tlCache[item.ck]||'');
-  })
-  .catch(function(){
-   if(_lang!==lang) return;
-   _applyOneTr(item.trId, item.m.name, ''); // 실패 시 원문 복원
   });
+ })
+ .catch(function(){
+  if(_lang!==lang) return;
+  needApi.forEach(function(item){ _applyOneTr(item.trId, item.m.name, ''); });
  });
 }
 
