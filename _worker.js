@@ -2574,13 +2574,8 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         let translated = '';
         const isKo = function(s){return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(s);};
         const isValid = function(s){return s&&s!==name&&!isKo(s)&&(lang==='zh'||!/[一-鿿]/.test(s));};
-        // 1) Google 무료 API — 빠르고 무료
-        try{
-          const gRes=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name),{headers:{'User-Agent':'Mozilla/5.0'}});
-          if(gRes.ok){const gd=await gRes.json();const t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';if(isValid(t))translated=t;}
-        }catch(e){}
-        // 2) Anthropic 폴백 (Google 실패 시, 타임아웃 8초)
-        if(!translated){
+        // 1) Anthropic (1차, 가장 안정적)
+        {
           const k=(env.ANTHROPIC_API_KEY||'').trim();
           if(k){
             try{
@@ -2588,13 +2583,18 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               const res=await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',signal:ctrl.signal,
                 headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:50,messages:[{role:'user',content:'Translate to '+{en:'English',zh:'Chinese (Simplified)',ja:'Japanese'}[lang]+', return ONLY the translation: '+name}]})
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Translate to '+{en:'English',zh:'Chinese (Simplified)',ja:'Japanese'}[lang]+', return ONLY the translation: '+name}]})
               });
               clearTimeout(tid);
               if(res.ok){const d=await res.json();const t=(d.content&&d.content[0]&&d.content[0].text||'').trim();if(isValid(t))translated=t;}
             }catch(e){}
           }
         }
+        // 2) Google 무료 API 폴백 (Anthropic 실패 시)
+        if(!translated){try{
+          const gRes=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(name),{headers:{'User-Agent':'Mozilla/5.0'}});
+          if(gRes.ok){const gd=await gRes.json();const t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';if(isValid(t))translated=t;}
+        }catch(e){}}
         // 3) Google 공식 API 폴백
         if(!translated){
           const gKey=(env.GOOGLE_TRANSLATE_KEY||'').trim();
