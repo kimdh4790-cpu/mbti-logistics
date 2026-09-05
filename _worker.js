@@ -2665,10 +2665,11 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
           needTr.push(nm);
         }
         dbg.needTr = needTr.length;
+        const fast2 = body2.fast === true; // true: Google 직행(~200ms), false: Anthropic 우선(품질)
         if(needTr.length){
           const k2 = (env.ANTHROPIC_API_KEY||'').trim();
-          // 2) Anthropic 배치 번역 (1회 호출, 20s timeout)
-          if(k2){
+          // 2) Anthropic 배치 번역 (fast 모드 시 건너뜀)
+          if(!fast2 && k2){
             try{
               const _ac=new AbortController();const _at=setTimeout(()=>_ac.abort(),20000);
               const prompt2 = 'Translate these Korean restaurant menu names to '+langNames2[lang2]+'. Return ONLY a JSON object {"Korean name":"Translation",...}. No markdown, no code blocks, ONLY raw JSON:\n'+JSON.stringify(needTr);
@@ -2697,8 +2698,8 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
                 } else {dbg.antErr='no-json:'+txt.slice(0,80);}
               } else {dbg.antErr='http:'+bRes.status;}
             }catch(e){dbg.antErr='fetch:'+String(e).slice(0,80);}
-          } else {dbg.antErr='no-key';}
-          // 3) Google 공식 API 폴백 (Anthropic 실패 또는 미번역 항목)
+          } else if(!fast2){dbg.antErr='no-key';}
+          // 3) Google 공식 API (fast 모드: 전체, 일반 모드: 미번역 폴백)
           const remaining2 = needTr.filter(nm=>!result2[nm]);
           if(remaining2.length){
             const gKey=(env.GOOGLE_TRANSLATE_KEY||'').trim();

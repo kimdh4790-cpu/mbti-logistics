@@ -878,27 +878,26 @@ function _prefetchTranslations(menus){
   });
   allNeed[lang]=need;
  });
- langs.forEach(function(lang,idx){
+ langs.forEach(function(lang){
   var need=allNeed[lang];
   if(!need||!need.length) return;
-  // 서버 부하 분산: en 즉시, zh +400ms, ja +800ms
-  setTimeout(function(){
-   var names=need.map(function(m){return m.name;});
-   var tl=tlMap[lang];
-   function _browserFallback(items){
-    items.forEach(function(m){
-     fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(m.name))
-     .then(function(r){return r.json();})
-     .then(function(gd){
-      var t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';
-      if(t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
-       _tlCache[m.name+'_'+lang]=t;
-       if(_lang===lang) _applyOneTr('tr-'+_menuSlug(m.name),m.name,t);
-      }
-     }).catch(function(){});
-    });
-   }
-   fetch('/api/translate-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:names,lang:lang})})
+  // fast:true → Anthropic 생략, Google 공식 API 직행 (~200ms)
+  var names=need.map(function(m){return m.name;});
+  var tl=tlMap[lang];
+  function _browserFallback(items){
+   items.forEach(function(m){
+    fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(m.name))
+    .then(function(r){return r.json();})
+    .then(function(gd){
+     var t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';
+     if(t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
+      _tlCache[m.name+'_'+lang]=t;
+      if(_lang===lang) _applyOneTr('tr-'+_menuSlug(m.name),m.name,t);
+     }
+    }).catch(function(){});
+   });
+  }
+  fetch('/api/translate-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:names,lang:lang,fast:true})})
    .then(function(r){return r.json();})
    .then(function(d){
     var map=d.translations||{};
