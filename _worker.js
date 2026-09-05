@@ -535,6 +535,40 @@ async function notifyAdmins(env, token, { title, body, type }) {
   }
 }
 
+// ── 오류 모니터링 잡 (Cron 1시간마다 실행) ──────────────────────────────────
+async function runErrorMonitorJob(env) {
+  try {
+    const token = await getAccessToken(env);
+    const since = new Date(Date.now() - 3600_000).toISOString(); // 최근 1시간
+    const res = await fetch(`${FS_BASE}:runQuery`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ structuredQuery: {
+        from: [{ collectionId: 'filo_errors' }],
+        where: { fieldFilter: { field: { fieldPath: 'ts' }, op: 'GREATER_THAN_OR_EQUAL', value: { stringValue: since } } },
+        orderBy: [{ field: { fieldPath: 'ts' }, direction: 'DESCENDING' }],
+        limit: 30
+      }})
+    });
+    const rows = await res.json();
+    const errors = (Array.isArray(rows) ? rows : []).filter(r => r.document).map(r => {
+      const f = r.document.fields || {};
+      return { ts: f.ts?.stringValue, source: f.source?.stringValue, message: (f.message?.stringValue || f.msg?.stringValue || '').slice(0, 120), path: f.path?.stringValue };
+    });
+    if (errors.length === 0) return;
+    // 소스별 카운트
+    const bySource = {};
+    errors.forEach(e => { bySource[e.source || 'unknown'] = (bySource[e.source || 'unknown'] || 0) + 1; });
+    const summary = Object.entries(bySource).map(([s, c]) => `${s}:${c}건`).join(', ');
+    const lastErr = errors[0];
+    const msg = `[MBTICO 오류경보]\n최근1시간 ${errors.length}건\n${summary}\n최신: ${lastErr.message || lastErr.path}`;
+    await notifyAdmins(env, token, { title: `오류 ${errors.length}건 감지`, body: summary, type: 'error_monitor' });
+    console.log('[ErrorMonitor]', msg);
+  } catch(e) {
+    console.error('[ErrorMonitor]', e.message);
+  }
+}
+
 // ── 환영 이메일 발송 (Gmail SMTP via Cloudflare Email) ──
 async function sendWelcomeEmail(env, { email, companyName, tempPassword, planType, loginUrl, planLabel }) {
   const emailKey = env.EMAIL_API_KEY || env.RESEND_API_KEY;
@@ -5103,6 +5137,16 @@ ${JSON.stringify(postSummary)}
             }).catch(() => {});
           }
 
+          // 첫 발생 시 즉시 FCM 알림
+          if (newCnt === 1) {
+            const _nt = await getAccessToken(env).catch(()=>null);
+            if(_nt) await notifyAdmins(env,_nt,{
+              title:`[${source}] 새 오류`,
+              body: msg.slice(0,100),
+              type:'frontend_error'
+            }).catch(()=>{});
+          }
+
           // 임계치 도달 시 filo_alerts에 기록 (루틴이 이를 감지해 즉시 수정)
           if (newCnt === 10 || newCnt === 50 || newCnt === 200) {
             const token = await getAccessToken(env);
@@ -5114,6 +5158,13 @@ ${JSON.stringify(postSummary)}
               count:   { integerValue: newCnt },
               status:  { stringValue: 'pending' }
             }).catch(() => {});
+            // 임계치 도달 시도 FCM 알림
+            const _nt2 = await getAccessToken(env).catch(()=>null);
+            if(_nt2) await notifyAdmins(env,_nt2,{
+              title:`[경보] ${source} 오류 ${newCnt}회 반복`,
+              body: msg.slice(0,100),
+              type:'error_threshold'
+            }).catch(()=>{});
           }
 
           return new Response('ok', {
@@ -5167,6 +5218,66 @@ ${JSON.stringify(postSummary)}
               msg:f.msg?.stringValue,count:f.count?.integerValue};
           });
           return Response.json({ok:true,errors,alerts,total:errors.length});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
+      // /api/error-digest — Claude Routine이 오류 분석+자동 수정에 사용 (슈퍼어드민 전용)
+      if (path === '/api/error-digest' && method === 'GET') {
+        const _edAdmin = await requireAdmin(request, env);
+        if (!_edAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
+        try {
+          const token = await getAccessToken(env);
+          const since = new URL(request.url).searchParams.get('since') ||
+            new Date(Date.now() - 7200_000).toISOString(); // 기본 2시간
+          // 최근 오류 + severity=CRITICAL 우선
+          const res = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{
+              from:[{collectionId:'filo_errors'}],
+              where:{fieldFilter:{field:{fieldPath:'ts'},op:'GREATER_THAN_OR_EQUAL',value:{stringValue:since}}},
+              orderBy:[{field:{fieldPath:'ts'},direction:'DESCENDING'}],
+              limit:20
+            }})
+          });
+          const rows = await res.json();
+          const errors = (Array.isArray(rows)?rows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            const docName=r.document.name||'';
+            return {
+              id:docName.split('/').pop(),
+              ts:f.ts?.stringValue, source:f.source?.stringValue,
+              hostname:f.hostname?.stringValue, path:f.path?.stringValue,
+              message:f.message?.stringValue||f.msg?.stringValue||'',
+              stack:f.stack?.stringValue||'',
+              severity:f.severity?.stringValue||'INFO',
+              count:f.count?.integerValue||1
+            };
+          });
+          // 파일명 추출 힌트 (stack에서 .js 파일명 파싱)
+          const fileHints = [...new Set(
+            errors.flatMap(e=>(e.stack||'').match(/[\w-]+\.js/g)||[])
+          )].slice(0,10);
+          return Response.json({ok:true,errors,fileHints,since,count:errors.length});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
+      // /api/error-resolve — 오류 해결됨 표시 (Routine이 수정 후 호출)
+      if (path === '/api/error-resolve' && method === 'POST') {
+        const _erAdmin = await requireAdmin(request, env);
+        if (!_erAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
+        try {
+          const body = await request.json();
+          const ids = Array.isArray(body.ids) ? body.ids : [];
+          const token = await getAccessToken(env);
+          await Promise.allSettled(ids.map(id =>
+            fsPatch(token, `${FS_BASE}/filo_errors/${id}`, {
+              resolved: { booleanValue: true },
+              resolvedAt: { stringValue: new Date().toISOString() },
+              resolvedBy: { stringValue: body.resolvedBy || 'claude-routine' }
+            })
+          ));
+          return Response.json({ok:true,resolved:ids.length});
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
@@ -12860,13 +12971,26 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         const _et = await getAccessToken(env).catch(()=>null);
         if(_et){
           const _eu=new URL(request.url);
+          const _errMsg=(e.message||String(e)).slice(0,500);
+          // 중복 방지: 같은 오류 5분 내 재알림 없음
+          const _errFp='werr:'+(_eu.pathname+_errMsg).replace(/[^a-zA-Z가-힣]/g,'').slice(0,50);
+          const _prevW=await env.DONWAY_ASSETS.get(_errFp).catch(()=>null);
+          if(!_prevW){
+            await env.DONWAY_ASSETS.put(_errFp,'1',{expirationTtl:300}).catch(()=>{});
+            await notifyAdmins(env,_et,{
+              title:'Worker 오류 발생',
+              body:`[${_eu.hostname}] ${_eu.pathname}\n${_errMsg}`,
+              type:'worker_error'
+            }).catch(()=>{});
+          }
           await fsAdd(_et,'filo_errors',{
             ts:{stringValue:new Date().toISOString()},
             path:{stringValue:_eu.pathname.slice(0,200)},
             method:{stringValue:request.method},
             hostname:{stringValue:_eu.hostname},
-            message:{stringValue:(e.message||String(e)).slice(0,500)},
-            stack:{stringValue:(e.stack||'').slice(0,800)}
+            message:{stringValue:_errMsg},
+            stack:{stringValue:(e.stack||'').slice(0,800)},
+            severity:{stringValue:'CRITICAL'}
           }).catch(()=>{});
         }
       } catch(_){}
@@ -12882,7 +13006,8 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
       runExpireJob(env).catch(e => console.error('[cron-expire]', e.message)),
       runNoShowPenaltyJob(env).catch(e => console.error('[cron-noshow]', e.message)),
       runSettlementAlertJob(env).catch(e => console.error('[cron-settle]', e.message)),
-      processAlimtalkQueue(env).catch(e => console.error('[cron-alimtalk]', e.message))
+      processAlimtalkQueue(env).catch(e => console.error('[cron-alimtalk]', e.message)),
+      runErrorMonitorJob(env).catch(e => console.error('[cron-error-monitor]', e.message))
     ]));
   }
 };
