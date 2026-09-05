@@ -859,6 +859,63 @@ function _renderRecommendBanner(menus){
  if(grid&&grid.parentNode)grid.parentNode.insertBefore(banner,grid);
 }
 
+// ── 번역 미리 캐시 (페이지 로드 후 백그라운드 — 언어 전환 즉시 표시용) ────────
+function _prefetchTranslations(menus){
+ var langs=['en','zh','ja'];
+ var tlMap={en:'en',zh:'zh-CN',ja:'ja'};
+ // Firestore nameTranslations 있는 것은 즉시 _tlCache 선점
+ var allNeed={};
+ langs.forEach(function(lang){
+  var need=[];
+  menus.forEach(function(m){
+   var ck=m.name+'_'+lang;
+   if(_tlCache[ck]) return;
+   if(m.nameTranslations&&m.nameTranslations[lang]){
+    var s=m.nameTranslations[lang];
+    if(s&&s!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(s)){_tlCache[ck]=s;return;}
+   }
+   need.push(m);
+  });
+  allNeed[lang]=need;
+ });
+ langs.forEach(function(lang,idx){
+  var need=allNeed[lang];
+  if(!need||!need.length) return;
+  // 서버 부하 분산: en 즉시, zh +400ms, ja +800ms
+  setTimeout(function(){
+   var names=need.map(function(m){return m.name;});
+   var tl=tlMap[lang];
+   function _browserFallback(items){
+    items.forEach(function(m){
+     fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(m.name))
+     .then(function(r){return r.json();})
+     .then(function(gd){
+      var t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';
+      if(t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
+       _tlCache[m.name+'_'+lang]=t;
+       if(_lang===lang) _applyOneTr('tr-'+_menuSlug(m.name),m.name,t);
+      }
+     }).catch(function(){});
+    });
+   }
+   fetch('/api/translate-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:names,lang:lang})})
+   .then(function(r){return r.json();})
+   .then(function(d){
+    var map=d.translations||{};
+    var missed=[];
+    need.forEach(function(m){
+     var tr=(map[m.name]||'').trim();
+     if(tr&&tr!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+      _tlCache[m.name+'_'+lang]=tr;
+      if(_lang===lang) _applyOneTr('tr-'+_menuSlug(m.name),m.name,tr);
+     } else { missed.push(m); }
+    });
+    if(missed.length) _browserFallback(missed);
+   }).catch(function(){ _browserFallback(need); });
+  }, idx*400);
+ });
+}
+
 // ── 메뉴 로드 (order.js / store.js 공통) ────────────────────────────────────
 function _loadMenus(onDone){
  fetch('/api/menus?did='+encodeURIComponent(_did))
@@ -868,6 +925,7 @@ function _loadMenus(onDone){
   _renderCatBar(_menus,'cat-bar');
   _renderMenuGrid(_menus,'menu-grid');
   _renderRecommendBanner(_menus);
+  _prefetchTranslations(_menus); // 백그라운드에서 3개 언어 미리 캐시
   if(onDone) onDone(_menus);
  }).catch(function(){
   var g=document.getElementById('menu-grid');
