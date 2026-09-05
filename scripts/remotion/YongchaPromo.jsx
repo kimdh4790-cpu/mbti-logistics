@@ -1,10 +1,26 @@
 const React = require('react');
 const { useCurrentFrame, useVideoConfig, interpolate, Sequence, AbsoluteFill, Easing, Audio, staticFile } = require('remotion');
 
-const DARK  = '#08101f';
-const GOLD  = '#c9a84c';
-const LTGLD = '#f0d070';
 const WHITE = '#ffffff';
+
+var YONGCHA_THEMES = [
+  { bg: '#000d1a', mid: '#003366', accent: '#2563eb', accent2: '#60a5fa' }, // A: 파랑 (신뢰)
+  { bg: '#001208', mid: '#004d20', accent: '#16a34a', accent2: '#4ade80' }, // B: 초록 (절약)
+  { bg: '#150800', mid: '#7a3500', accent: '#ea580c', accent2: '#fb923c' }, // C: 주황 (에너지)
+  { bg: '#140000', mid: '#7f1d1d', accent: '#dc2626', accent2: '#f87171' }, // D: 빨강 (충격)
+];
+var YONGCHA_VARIANTS = [
+  { hook: ['화물기사들이', '이걸 몰랐다고?'],         punchline: '주선사 없이도 화물 받는 방법이 있어요' },
+  { hook: ['주선 수수료', '왜 아직 내고 있어요?'],     punchline: '직접 연결하면 수수료가 0원이에요' },
+  { hook: ['기사 구하는데', '하루가 다 가죠?'],        punchline: 'AI가 3초 만에 딱 맞는 기사 추천해요' },
+  { hook: ['연간 3천만원이', '어디서 새는지 알아요?'], punchline: '주선사 수수료에서 다 새고 있어요' },
+];
+var WEEK_VARIANT = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 4;
+var T = YONGCHA_THEMES[WEEK_VARIANT];
+var V = YONGCHA_VARIANTS[WEEK_VARIANT];
+var DARK  = T.bg;
+var GOLD  = T.accent;
+var LTGLD = T.accent2;
 
 function fadeIn(frame, start, dur) {
   return interpolate(frame, [start, start + dur], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
@@ -49,64 +65,38 @@ function AnimatedCounter(props) {
   return React.createElement(React.Fragment, null, val.toLocaleString() + (props.suffix || ''));
 }
 
-// ── Scene 1: 브랜드 인트로 ────────────────────────────────────
-function SceneIntro() {
+// ── Scene 1: 궁금증 유발 훅 ───────────────────────────────────
+function SceneHook() {
   var frame = useCurrentFrame();
-  var scanY  = interpolate(frame, [0, 80], [-2, 102], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  var scanOp = interpolate(frame, [0, 4, 75, 80], [0, 0.8, 0.8, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  var logoSc = interpolate(frame, [14, 54], [0.42, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.9)) });
-  var logoOp = fadeIn(frame, 14, 18);
-  var glow   = interpolate(frame, [44, 90], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  var textY  = slideUp(frame, 58, 22);
-  var textOp = fadeIn(frame, 58, 22);
-  var subY   = slideUp(frame, 76, 20);
-  var subOp  = fadeIn(frame, 76, 20);
-  var tag1Y  = slideUp(frame, 96, 20);
-  var tag1Op = fadeIn(frame, 96, 20);
-  var tag2Y  = slideUp(frame, 110, 20);
-  var tag2Op = fadeIn(frame, 110, 20);
-  var ringSc = interpolate(frame, [24, 100], [0.15, 3], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.quad) });
-  var ringOp = interpolate(frame, [24, 100], [0.55, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  var lineW  = interpolate(frame, [86, 138], [0, 234], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  var line1Op = fadeIn(frame, 8, 20);
+  var line1Y  = slideUp(frame, 8, 22);
+  var line2Op = fadeIn(frame, 34, 20);
+  var line2Y  = slideUp(frame, 34, 22);
+  var punchSc = interpolate(frame, [72, 90], [0.85, 1], {
+    extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    easing: Easing.out(Easing.back(1.3)),
+  });
+  var punchOp = fadeIn(frame, 72, 18);
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: fadeIn(frame, 0, 14) }}>
-      <Particles count={13} />
-      <div style={{ position: 'absolute', left: 0, right: 0, top: scanY + '%', height: 2, background: 'linear-gradient(90deg, transparent, ' + GOLD + '77, ' + GOLD + ', ' + GOLD + '77, transparent)', opacity: scanOp, boxShadow: '0 0 18px ' + GOLD + '55' }} />
-      <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 390, height: 390, borderRadius: '50%', background: 'radial-gradient(circle, ' + GOLD + '18 0%, transparent 70%)' }} />
-      <div style={{ position: 'absolute', top: '48%', left: '50%', transform: 'translate(-50%, -62%) scale(' + ringSc + ')', width: 175, height: 175, borderRadius: '50%', border: '1px solid ' + GOLD, opacity: ringOp }} />
+    <AbsoluteFill style={{ ...BASE, background: DARK, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <Particles count={12} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, ' + GOLD + '22 0%, transparent 65%)' }} />
 
-      {/* 로고 */}
-      <div style={{ transform: 'scale(' + logoSc + ')', opacity: logoOp, textAlign: 'center', marginBottom: 40 }}>
-        <div style={{ fontSize: 80, fontWeight: 900, color: GOLD, letterSpacing: -1, textShadow: '0 0 ' + Math.round(60 * glow) + 'px ' + GOLD + '88, 0 0 ' + Math.round(140 * glow) + 'px ' + GOLD + '22' }}>용차앱</div>
-        <div style={{ fontSize: 18, color: GOLD + '99', letterSpacing: 6, marginTop: -4, fontWeight: 300 }}>화물 직접 매칭</div>
+      {/* 훅 1단 — 질문 */}
+      <div style={{ textAlign: 'center', padding: '0 40px', marginBottom: 36 }}>
+        <div style={{ transform: 'translateY(' + line1Y + 'px)', opacity: line1Op, marginBottom: 8 }}>
+          <div style={{ fontSize: 56, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>{V.hook[0]}</div>
+        </div>
+        <div style={{ transform: 'translateY(' + line2Y + 'px)', opacity: line2Op }}>
+          <div style={{ fontSize: 56, fontWeight: 900, color: GOLD, lineHeight: 1.15, textShadow: '0 0 32px ' + GOLD + '55' }}>{V.hook[1]}</div>
+        </div>
       </div>
 
-      {/* 메인 카피 */}
-      <div style={{ transform: 'translateY(' + textY + 'px)', opacity: textOp, textAlign: 'center', marginBottom: 20 }}>
-        <div style={{ fontSize: 48, fontWeight: 900, color: WHITE, lineHeight: 1.2 }}>주선사 없이</div>
-        <div style={{ fontSize: 48, fontWeight: 900, color: LTGLD, lineHeight: 1.2, textShadow: '0 0 26px ' + GOLD + '44' }}>수수료 0원</div>
+      {/* 반전 충격 박스 */}
+      <div style={{ transform: 'scale(' + punchSc + ')', opacity: punchOp, background: GOLD, borderRadius: 20, padding: '24px 44px', textAlign: 'center', maxWidth: '85%', boxShadow: '0 8px 40px ' + GOLD + '44' }}>
+        <div style={{ fontSize: 22, fontWeight: 900, color: DARK, lineHeight: 1.4 }}>{V.punchline}</div>
       </div>
-
-      {/* 서브 */}
-      <div style={{ transform: 'translateY(' + subY + 'px)', opacity: subOp, textAlign: 'center', marginBottom: 48 }}>
-        <div style={{ fontSize: 19, color: WHITE + '77', letterSpacing: 2 }}>AI 매칭 · 루트코치 · 주유소 최저가</div>
-      </div>
-
-      {/* 특징 태그 */}
-      <div style={{ transform: 'translateY(' + tag1Y + 'px)', opacity: tag1Op, display: 'flex', gap: 16, justifyContent: 'center', marginBottom: 16 }}>
-        {['🚚 직접 매칭', '🤖 AI 루트', '⛽ 주유 최저가'].map(function(t, i) {
-          return <div key={i} style={{ background: GOLD + '18', border: '1px solid ' + GOLD + '44', borderRadius: 24, padding: '10px 20px', color: GOLD, fontSize: 15, fontWeight: 600, letterSpacing: 0.5 }}>{t}</div>;
-        })}
-      </div>
-
-      {/* 수치 뱃지 */}
-      <div style={{ transform: 'translateY(' + tag2Y + 'px)', opacity: tag2Op, textAlign: 'center' }}>
-        <div style={{ fontSize: 15, color: WHITE + '44', letterSpacing: 2 }}>전국 화물기사 월 평균 수익 향상</div>
-        <div style={{ fontSize: 36, fontWeight: 900, color: LTGLD, marginTop: 8 }}>+420만원</div>
-      </div>
-
-      <div style={{ position: 'absolute', bottom: 90, left: '50%', transform: 'translateX(-50%)', width: lineW, height: 1, background: 'linear-gradient(90deg, transparent, ' + GOLD + '99, transparent)' }} />
     </AbsoluteFill>
   );
 }
@@ -400,17 +390,57 @@ function SceneCTA() {
   );
 }
 
-var SUBTITLES_DATA = [
-  { from: 0,   to: 90,  text: "주선사 없이 화물 직접 받아요" },
-  { from: 90,  to: 150, text: "수수료는 0원이에요" },
-  { from: 150, to: 270, text: "앱에서 화물 공고 바로 확인하고" },
-  { from: 270, to: 360, text: "직접 수락하면 바로 연결됩니다" },
-  { from: 360, to: 480, text: "AI 루트코치가 최적 경로 알려줘요" },
-  { from: 480, to: 570, text: "주유소 최저가까지 같이 안내해요" },
-  { from: 570, to: 690, text: "기사님은 월 15만 원" },
-  { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
-  { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+var SUBTITLES_ALL = [
+  // A: 파랑 — 기사 타겟 (화물기사들이 이걸 몰랐다고?)
+  [
+    { from: 0,   to: 90,  text: "화물기사들이 이걸 몰랐다고?" },
+    { from: 90,  to: 150, text: "주선사 없이도 화물 받을 수 있어요" },
+    { from: 150, to: 270, text: "앱에서 화물 공고 바로 확인하고" },
+    { from: 270, to: 360, text: "직접 수락하면 바로 연결됩니다" },
+    { from: 360, to: 480, text: "AI 루트코치가 최적 경로 알려줘요" },
+    { from: 480, to: 570, text: "주유소 최저가까지 같이 안내해요" },
+    { from: 570, to: 690, text: "기사님은 월 15만 원" },
+    { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
+    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+  ],
+  // B: 초록 — 수수료 타겟 (주선 수수료 왜 아직 내고 있어요?)
+  [
+    { from: 0,   to: 90,  text: "주선 수수료 왜 아직 내고 있어요?" },
+    { from: 90,  to: 150, text: "직접 연결하면 수수료가 0원이에요" },
+    { from: 150, to: 270, text: "소장과 기사가 앱에서 직접 연결" },
+    { from: 270, to: 360, text: "중간 수수료 없이 100% 내 수익" },
+    { from: 360, to: 480, text: "AI가 루트까지 최적화해줘요" },
+    { from: 480, to: 570, text: "주유비도 아끼는 스마트한 운행" },
+    { from: 570, to: 690, text: "기사님은 월 15만 원" },
+    { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
+    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+  ],
+  // C: 주황 — 소장 타겟 (기사 구하는데 하루가 다 가죠?)
+  [
+    { from: 0,   to: 90,  text: "기사 구하는데 하루가 다 가죠?" },
+    { from: 90,  to: 150, text: "AI가 3초 만에 딱 맞는 기사 추천해요" },
+    { from: 150, to: 270, text: "거리·경력·평점 분석해서 자동 추천" },
+    { from: 270, to: 360, text: "채용 시간이 하루 → 3분으로 줄어요" },
+    { from: 360, to: 480, text: "AI 루트코치로 운행 효율도 올리고" },
+    { from: 480, to: 570, text: "세금계산서도 자동으로 발행돼요" },
+    { from: 570, to: 690, text: "기사님은 월 15만 원" },
+    { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
+    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+  ],
+  // D: 빨강 — 충격 타겟 (연간 3천만원이 어디서 새는지 알아요?)
+  [
+    { from: 0,   to: 90,  text: "연간 3천만원이 어디서 새는지 알아요?" },
+    { from: 90,  to: 150, text: "주선사 수수료에서 다 새고 있어요" },
+    { from: 150, to: 270, text: "주선사 없이 직접 연결하면" },
+    { from: 270, to: 360, text: "그 돈이 전부 내 통장으로 들어와요" },
+    { from: 360, to: 480, text: "AI 루트코치로 주유비까지 아끼고" },
+    { from: 480, to: 570, text: "팝빌 연동 세금계산서 자동 발행" },
+    { from: 570, to: 690, text: "기사님은 월 15만 원" },
+    { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
+    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+  ],
 ];
+var SUBTITLES_DATA = SUBTITLES_ALL[WEEK_VARIANT];
 
 function SubtitleBar() {
   var frame = useCurrentFrame();
@@ -443,7 +473,7 @@ function YongchaPromo(props) {
   var hasNarration = props.hasNarration;
   var hasBgm = props.hasBgm;
   var SCENES = [
-    { component: SceneIntro,    start: 0,   duration: 150 },
+    { component: SceneHook,     start: 0,   duration: 150 },
     { component: SceneMatching, start: 150, duration: 210 },
     { component: SceneAI,       start: 360, duration: 210 },
     { component: ScenePricing,  start: 570, duration: 210 },
