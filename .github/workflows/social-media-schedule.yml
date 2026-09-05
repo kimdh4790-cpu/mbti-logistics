@@ -108,31 +108,28 @@ jobs:
             HOUR=$(date -u +%H)  # UTC 기준
             MINUTE=$(date -u +%M)
 
-            if [ "$DAY" = "1" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="yongcha"; PLATFORMS="youtube"; REASON="월 09:00 KST 자동"
-            elif [ "$DAY" = "2" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="filo"; PLATFORMS="youtube"; REASON="화 09:00 KST 자동"
-            elif [ "$DAY" = "2" ] && [ "$HOUR" = "01" ]; then
-              PRODUCT="filo"; PLATFORMS="instagram"; REASON="화 10:30 KST 자동"
-            elif [ "$DAY" = "3" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="inflearn"; PLATFORMS="youtube"; REASON="수 09:00 KST 자동"
-            elif [ "$DAY" = "3" ] && [ "$HOUR" = "01" ]; then
-              PRODUCT="inflearn"; PLATFORMS="instagram"; REASON="수 10:30 KST 자동"
-            elif [ "$DAY" = "4" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="donway"; PLATFORMS="youtube"; REASON="목 09:00 KST 자동"
-            elif [ "$DAY" = "4" ] && [ "$HOUR" = "01" ]; then
-              PRODUCT="donway"; PLATFORMS="instagram"; REASON="목 10:30 KST 자동"
-            elif [ "$DAY" = "5" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="dine"; PLATFORMS="youtube"; REASON="금 09:00 KST 자동"
-            elif [ "$DAY" = "5" ] && [ "$HOUR" = "01" ]; then
-              PRODUCT="dine"; PLATFORMS="instagram"; REASON="금 10:30 KST 자동"
-            elif [ "$DAY" = "6" ] && [ "$HOUR" = "00" ]; then
-              PRODUCT="inflearn"; PLATFORMS="youtube"; REASON="토 09:00 KST 자동"
-            else
-              echo "스케줄 매칭 없음: DAY=$DAY HOUR=$HOUR — 건너뜀"
-              echo "PRODUCT=skip" >> $GITHUB_OUTPUT
-              exit 0
-            fi
+            DAY=$(date -u +%u)   # 로그용 (매칭에 사용 안 함)
+            HOUR=$(date -u +%H)
+            echo "실행 시각: DAY=$DAY HOUR=$HOUR UTC"
+            # github.event.schedule 값으로 정확히 매칭 (시간 지연에 무관)
+            SCHEDULE="${{ github.event.schedule }}"
+            case "$SCHEDULE" in
+              "0 0 * * 1")  PRODUCT="yongcha";  PLATFORMS="youtube";   REASON="월 09:00 KST 자동" ;;
+              "0 0 * * 2")  PRODUCT="filo";      PLATFORMS="youtube";   REASON="화 09:00 KST 자동" ;;
+              "30 1 * * 2") PRODUCT="filo";      PLATFORMS="instagram"; REASON="화 10:30 KST 자동" ;;
+              "0 0 * * 3")  PRODUCT="inflearn";  PLATFORMS="youtube";   REASON="수 09:00 KST 자동" ;;
+              "30 1 * * 3") PRODUCT="inflearn";  PLATFORMS="instagram"; REASON="수 10:30 KST 자동" ;;
+              "0 0 * * 4")  PRODUCT="donway";    PLATFORMS="youtube";   REASON="목 09:00 KST 자동" ;;
+              "30 1 * * 4") PRODUCT="donway";    PLATFORMS="instagram"; REASON="목 10:30 KST 자동" ;;
+              "0 0 * * 5")  PRODUCT="dine";      PLATFORMS="youtube";   REASON="금 09:00 KST 자동" ;;
+              "30 1 * * 5") PRODUCT="dine";      PLATFORMS="instagram"; REASON="금 10:30 KST 자동" ;;
+              "0 0 * * 6")  PRODUCT="inflearn";  PLATFORMS="youtube";   REASON="토 09:00 KST 자동" ;;
+              *)
+                echo "스케줄 매칭 없음: SCHEDULE=$SCHEDULE — 건너뜀"
+                echo "PRODUCT=skip" >> $GITHUB_OUTPUT
+                exit 0
+                ;;
+            esac
 
             echo "PRODUCT=$PRODUCT" >> $GITHUB_OUTPUT
             echo "PLATFORMS=$PLATFORMS" >> $GITHUB_OUTPUT
