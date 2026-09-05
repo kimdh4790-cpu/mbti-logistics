@@ -381,6 +381,22 @@ function _applyTranslationsToGrid(menus){
  var tid2=ctrl2?setTimeout(function(){ctrl2.abort();},15000):null;
  var opts2={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:batchNames,lang:lang})};
  if(ctrl2) opts2.signal=ctrl2.signal;
+ // 브라우저 직접 번역 폴백 (Google free API — 브라우저에서 CORS 허용)
+ function _browserTr(items,l){
+  var tlMap={en:'en',zh:'zh-CN',ja:'ja'};
+  var tl=tlMap[l]||'en';
+  items.forEach(function(item){
+   fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(item.m.name))
+   .then(function(r){return r.json();})
+   .then(function(gd){
+    var t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';
+    if(t&&t!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
+     _tlCache[item.ck]=t;
+     if(_lang===l) _applyOneTr(item.trId,item.m.name,t);
+    }
+   }).catch(function(){});
+  });
+ }
  fetch('/api/translate-batch',opts2)
  .then(function(r){return r.json();})
  .then(function(d){
@@ -388,15 +404,23 @@ function _applyTranslationsToGrid(menus){
   if(d&&d._debug) console.log('[TR]',lang,JSON.stringify(d._debug));
   if(_lang!==lang) return;
   var map=d.translations||{};
+  var missed=[];
   needApi.forEach(function(item){
    var tr=(map[item.m.name]||'').trim();
-   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)) _tlCache[item.ck]=tr;
-   _applyOneTr(item.trId, item.m.name, _tlCache[item.ck]||'');
+   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+    _tlCache[item.ck]=tr;
+    _applyOneTr(item.trId,item.m.name,tr);
+   } else {
+    missed.push(item);
+    _applyOneTr(item.trId,item.m.name,'');
+   }
   });
+  if(missed.length) _browserTr(missed,lang);
  })
  .catch(function(){
   if(_lang!==lang) return;
-  needApi.forEach(function(item){ _applyOneTr(item.trId, item.m.name, ''); });
+  needApi.forEach(function(item){ _applyOneTr(item.trId,item.m.name,''); });
+  _browserTr(needApi,lang);
  });
 }
 
