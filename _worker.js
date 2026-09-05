@@ -2694,13 +2694,25 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               }
             }catch(e){}
           }
-          // 배치 실패한 항목 → Google 폴백 (개별)
-          if(!batchDone){
-            for(const nm of needTr){
-              if(result2[nm]) continue;
+          // 배치 실패한 항목 → Anthropic 개별 폴백 (Google 사용 불가, Cloudflare IP 차단)
+          if(!batchDone && k2){
+            const remaining = needTr.filter(nm=>!result2[nm]);
+            for(const nm of remaining){
               try{
-                const gRes=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl2b+'&dt=t&q='+encodeURIComponent(nm),{headers:{'User-Agent':'Mozilla/5.0'}});
-                if(gRes.ok){const gd=await gRes.json();const tr=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';if(tr&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){result2[nm]=tr;try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+slugFn(nm),tr,{expirationTtl:86400});}catch(e){}}}
+                const p2='Translate this Korean restaurant menu name to '+langNames2[lang2]+'. Return ONLY the translated text, no explanation:\n'+nm;
+                const r2=await fetch('https://api.anthropic.com/v1/messages',{
+                  method:'POST',
+                  headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
+                  body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:64,messages:[{role:'user',content:p2}]})
+                });
+                if(r2.ok){
+                  const rd=await r2.json();
+                  const tr=((rd.content&&rd.content[0]&&rd.content[0].text)||'').trim();
+                  if(tr&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+                    result2[nm]=tr;
+                    try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+slugFn(nm),tr,{expirationTtl:86400});}catch(e){}
+                  }
+                }
               }catch(e){}
             }
           }
