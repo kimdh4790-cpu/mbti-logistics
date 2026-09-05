@@ -2654,70 +2654,87 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const tl2b = langMap2[lang2]||'en';
         const CORS2 = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
         if(!names2.length) return new Response(JSON.stringify({translations:{}}),{headers:CORS2});
-        // KV 캐시 조회 (각 항목별)
         const slugFn = function(s){var h=0x811c9dc5;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(36)+':'+s.length;};
         const result2 = {};
         const needTr = [];
+        const dbg = {cached:0,needTr:0,antStatus:0,antErr:'',gStatus:0,gErr:'',translated:0};
+        // 1) KV 캐시 조회
         for(const nm of names2){
           const ck = 'tr:'+lang2+':'+slugFn(nm);
-          try{const cv=await env.DONWAY_ASSETS.get(ck);if(cv&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cv)){result2[nm]=cv;continue;}}catch(e){}
+          try{const cv=await env.DONWAY_ASSETS.get(ck);if(cv&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cv)){result2[nm]=cv;dbg.cached++;continue;}}catch(e){}
           needTr.push(nm);
         }
+        dbg.needTr = needTr.length;
         if(needTr.length){
-          // Anthropic 배치 번역 (한 번 호출)
           const k2 = (env.ANTHROPIC_API_KEY||'').trim();
-          let batchDone = false;
+          // 2) Anthropic 배치 번역 (1회 호출, 20s timeout)
           if(k2){
             try{
-              const prompt = 'Translate these Korean restaurant menu names to '+langNames2[lang2]+'. Return ONLY a JSON object like {"Korean name":"Translation",...}. No markdown, no explanation, ONLY valid JSON:\n'+JSON.stringify(needTr);
+              const _ac=new AbortController();const _at=setTimeout(()=>_ac.abort(),20000);
+              const prompt2 = 'Translate these Korean restaurant menu names to '+langNames2[lang2]+'. Return ONLY a JSON object {"Korean name":"Translation",...}. No markdown, no code blocks, ONLY raw JSON:\n'+JSON.stringify(needTr);
               const bRes = await fetch('https://api.anthropic.com/v1/messages',{
-                method:'POST',
+                method:'POST', signal:_ac.signal,
                 headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,messages:[{role:'user',content:prompt}]})
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,messages:[{role:'user',content:prompt2}]})
               });
+              clearTimeout(_at);
+              dbg.antStatus = bRes.status;
               if(bRes.ok){
                 const bd = await bRes.json();
                 const txt = (bd.content&&bd.content[0]&&bd.content[0].text)||'';
-                const m = txt.match(/\{[\s\S]*\}/);
-                if(m){
-                  const parsed = JSON.parse(m[0]);
-                  for(const nm of needTr){
-                    const tr = (parsed[nm]||'').trim();
-                    if(tr && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
-                      result2[nm]=tr;
-                      const ck=slugFn(nm);
-                      try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+ck,tr,{expirationTtl:86400});}catch(e){}
+                const mj = txt.match(/\{[\s\S]*\}/);
+                if(mj){
+                  try{
+                    const parsed = JSON.parse(mj[0]);
+                    for(const nm of needTr){
+                      const tr = (parsed[nm]||'').trim();
+                      if(tr && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+                        result2[nm]=tr; dbg.translated++;
+                        try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+slugFn(nm),tr,{expirationTtl:86400});}catch(e){}
+                      }
                     }
-                  }
-                  batchDone=true;
-                }
-              }
-            }catch(e){}
-          }
-          // 배치 실패한 항목 → Anthropic 개별 폴백 (Google 사용 불가, Cloudflare IP 차단)
-          if(!batchDone && k2){
-            const remaining = needTr.filter(nm=>!result2[nm]);
-            for(const nm of remaining){
+                  }catch(pe){dbg.antErr='parse:'+pe.message.slice(0,80);}
+                } else {dbg.antErr='no-json:'+txt.slice(0,80);}
+              } else {dbg.antErr='http:'+bRes.status;}
+            }catch(e){dbg.antErr='fetch:'+String(e).slice(0,80);}
+          } else {dbg.antErr='no-key';}
+          // 3) Google 공식 API 폴백 (Anthropic 실패 또는 미번역 항목)
+          const remaining2 = needTr.filter(nm=>!result2[nm]);
+          if(remaining2.length){
+            const gKey=(env.GOOGLE_TRANSLATE_KEY||'').trim();
+            if(gKey){
               try{
-                const p2='Translate this Korean restaurant menu name to '+langNames2[lang2]+'. Return ONLY the translated text, no explanation:\n'+nm;
-                const r2=await fetch('https://api.anthropic.com/v1/messages',{
+                const gRes = await fetch('https://translation.googleapis.com/language/translate/v2?key='+gKey,{
                   method:'POST',
-                  headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
-                  body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:64,messages:[{role:'user',content:p2}]})
+                  headers:{'Content-Type':'application/json'},
+                  body:JSON.stringify({q:remaining2,source:'ko',target:tl2b,format:'text'})
                 });
-                if(r2.ok){
-                  const rd=await r2.json();
-                  const tr=((rd.content&&rd.content[0]&&rd.content[0].text)||'').trim();
-                  if(tr&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
-                    result2[nm]=tr;
-                    try{await env.DONWAY_ASSETS.put('tr:'+lang2+':'+slugFn(nm),tr,{expirationTtl:86400});}catch(e){}
-                  }
-                }
-              }catch(e){}
-            }
+                dbg.gStatus = gRes.status;
+                if(gRes.ok){
+                  const gd = await gRes.json();
+                  const trList = (gd&&gd.data&&gd.data.translations)||[];
+                  remaining2.forEach(function(nm,i){
+                    const t = (trList[i]&&trList[i].translatedText)||'';
+                    if(t && t!==nm && !/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
+                      result2[nm]=t; dbg.translated++;
+                      try{env.DONWAY_ASSETS.put('tr:'+lang2+':'+slugFn(nm),t,{expirationTtl:86400}).catch(function(){});}catch(e){}
+                    }
+                  });
+                } else {dbg.gErr='http:'+gRes.status;}
+              }catch(e){dbg.gErr='fetch:'+String(e).slice(0,80);}
+            } else {dbg.gErr='no-key';}
           }
         }
-        return new Response(JSON.stringify({translations:result2}),{headers:CORS2});
+        return new Response(JSON.stringify({translations:result2,_debug:dbg}),{headers:CORS2});
+      }
+      /* /api/translate-test — 번역 API 진단 (디버깅용) */
+      if (path === '/api/translate-test') {
+        const _tk = (env.ANTHROPIC_API_KEY||'').trim();
+        const _gk = (env.GOOGLE_TRANSLATE_KEY||'').trim();
+        const _tres = {antKeyLen:_tk.length, gKeyLen:_gk.length, antStatus:0, antOk:false, antText:'', gStatus:0, gOk:false, gText:''};
+        if(_tk){try{const _tr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':_tk,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:20,messages:[{role:'user',content:'Translate to Japanese: 김치찌개'}]})});_tres.antStatus=_tr.status;_tres.antOk=_tr.ok;if(_tr.ok){const _td=await _tr.json();_tres.antText=(_td.content&&_td.content[0]&&_td.content[0].text)||'';}else{_tres.antText=(await _tr.text()).slice(0,200);}}catch(e){_tres.antText=String(e).slice(0,100);}}
+        if(_gk){try{const _gr=await fetch('https://translation.googleapis.com/language/translate/v2?key='+_gk,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:'김치찌개',source:'ko',target:'ja',format:'text'})});_tres.gStatus=_gr.status;_tres.gOk=_gr.ok;if(_gr.ok){const _gd=await _gr.json();_tres.gText=(_gd&&_gd.data&&_gd.data.translations&&_gd.data.translations[0]&&_gd.data.translations[0].translatedText)||'';}else{_tres.gText=(await _gr.text()).slice(0,200);}}catch(e){_tres.gText=String(e).slice(0,100);}}
+        return new Response(JSON.stringify(_tres),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
 
       /* /api/claude — AI 인사이트·리뷰답글 프록시 (filo-margin.js, filo-settings.js) */

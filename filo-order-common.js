@@ -385,6 +385,7 @@ function _applyTranslationsToGrid(menus){
  .then(function(r){return r.json();})
  .then(function(d){
   if(ctrl2&&tid2) clearTimeout(tid2);
+  if(d&&d._debug) console.log('[TR]',lang,JSON.stringify(d._debug));
   if(_lang!==lang) return;
   var map=d.translations||{};
   needApi.forEach(function(item){
