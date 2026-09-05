@@ -911,7 +911,6 @@ function _prefetchTranslations(menus){
     });
     if(missed.length) _browserFallback(missed);
    }).catch(function(){ _browserFallback(need); });
-  }, idx*400);
  });
 }
 
