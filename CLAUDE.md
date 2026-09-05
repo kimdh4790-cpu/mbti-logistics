@@ -489,6 +489,14 @@ cd mbtico-pages && npx wrangler deploy
 - 인프런 자동 업로드 주 2회: 수요일(YouTube+Instagram) + 토요일(YouTube)
 - **inflearn-narration.json 신규** — 5구간 나레이션 스크립트 (나레이션 없이 배포된 영상 재업로드 필요)
 
+### ✅ 완료 (2026-09-05 인프런 6개 클립 변형 시스템)
+- **inflearn-variants.json 신규** — A~F 6개 클립별 변형 (카카오알림톡/급여/부가세/경비/Oracle/AI프롬프트)
+  - 각 변형: 클립 URL·나레이션 lines·slides·YouTube 제목·Instagram 캡션·해시태그
+- **render-inflearn.js 업데이트** — 주차 기반 A-F 자동 선택 (weekIdx % 6), narration JSON 덮어쓰기, clipVariant → Remotion inputProps 전달, --variant 수동 지정 옵션
+- **InflearnPromo.jsx 업데이트** — SceneClipSpotlight 신규 (클립별 집중 홍보 씬, CLIP_META 6종 색상/특징/검색어), clipVariant prop 있으면 SceneBest → SceneClipSpotlight 자동 교체
+- **social-media-schedule.yml 업데이트** — 일 09:00/10:30 KST 인프런 슬롯 추가 (주 3회 → 4회: 수·토·일), 블로그 게시 스텝 추가
+- **post-naver-blog.js 업데이트** — inflearn·dine productMap 추가
+
 ### ✅ 완료 (2026-09-04 정보수집 자동화 시스템 구축)
 - **scripts/monitor/inflearn-monitor.js 신규** — 인프런 인기 클립 트렌드 HTTP 수집 (10개 키워드, 주 1회)
 - **scripts/monitor/producthunt-monitor.js 신규** — Product Hunt SaaS/AI 신제품 수집 (5개 토픽, 주 1회)
@@ -653,9 +661,11 @@ cd mbtico-pages && npx wrangler deploy
 - **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
 - **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
 
-### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-04 기준)
+### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-05 기준)
 | 요일 | KST | 제품 | 플랫폼 |
 |---|---|---|---|
+| 일 | 09:00 | 인프런 | YouTube |
+| 일 | 10:30 | 인프런 | Instagram |
 | 월 | 09:00 | 용차앱 | YouTube |
 | 화 | 09:00 | FILO | YouTube |
 | 화 | 10:30 | FILO | Instagram |
@@ -663,9 +673,12 @@ cd mbtico-pages && npx wrangler deploy
 | 수 | 10:30 | 인프런 | Instagram |
 | 목 | 09:00 | DONWAY | YouTube |
 | 목 | 10:30 | DONWAY | Instagram |
+| 금 | 09:00 | DINE | YouTube |
+| 금 | 10:30 | DINE | Instagram |
 | 토 | 09:00 | 인프런 | YouTube |
 
 > mbtico는 홍보 준비 완료 전까지 스케줄 제외
+> 인프런: 주 4회 (수·토·일 YouTube, 수·일 Instagram) — 6주 순환으로 클립별 집중 홍보
 
 ### 프로필 이미지 (회사 로고)
 - 파일: `assets/logo.png`
