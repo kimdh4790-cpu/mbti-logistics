@@ -147,7 +147,62 @@ function SceneClips() {
   );
 }
 
-// ── Scene 3: 베스트 픽 ───────────────────────────────────────
+// ── Scene 3-A: 클립 스포트라이트 (변형별 단일 클립 집중 홍보) ──
+var CLIP_META = {
+  A: { icon: '📊', color: '#f59e0b', tag: 'n8n 알림톡 자동화', points: ['구글시트 → 카카오 알림톡', '워크플로우 3종 포함', 'Oracle 무료 서버 연동', '월 0원 서버 운영'], price: '22,000', keyword: 'n8n 카카오알림톡 자동화' },
+  B: { icon: '💰', color: '#10b981', tag: '급여명세서 자동계산', points: ['2026년 4대보험 요율 반영', '국민연금·건강·고용 자동공제', '지방소득세 자동 계산', '간이세액표 VLOOKUP 내장'], price: '19,000', keyword: '급여명세서 자동계산 소상공인' },
+  C: { icon: '🧾', color: '#3b82f6', tag: '부가세 신고 자동화', points: ['연 4회 신고 자동 산출', '매출·매입 입력만으로 완성', '공제가능 세액 자동 계산', '납부세액 SUMIF 자동화'], price: '25,000', keyword: '부가세신고 자동계산 소상공인' },
+  D: { icon: '📒', color: '#8b5cf6', tag: '소상공인 경비 장부', points: ['영수증 입력 → 월별 집계', '세금공제 기준 카테고리', '부가세 포함/별도 자동 분리', '연간 집계 자동화'], price: '15,000', keyword: '소상공인 경비장부 자동계산' },
+  E: { icon: '☁️', color: '#06b6d4', tag: 'Oracle 무료 서버', points: ['4코어 24GB 영구 무료', 'ARM A1.Flex 완전 가이드', 'n8n Docker 설치 포함', 'VCN 방화벽·SSH 접속까지'], price: '22,000', keyword: 'Oracle Cloud 무료서버 완전정복' },
+  F: { icon: '🤖', color: '#c9a84c', tag: 'AI 프롬프트 100선', points: ['마케팅·SNS 15개', '계약·법무 12개', '고객응대·공지 13개', '[대괄호] 변수 즉시 치환'], price: '29,000', keyword: 'AI프롬프트 소상공인 100선' },
+};
+
+function SceneClipSpotlight(props) {
+  var frame = useCurrentFrame();
+  var variantKey = (props.clipVariant && props.clipVariant.key) || 'A';
+  var cm = CLIP_META[variantKey] || CLIP_META['A'];
+  var glowHex = Math.round(interpolate(frame % 60, [0, 30, 60], [18, 55, 18], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })).toString(16).padStart(2, '0');
+
+  return (
+    <AbsoluteFill style={{ ...BASE, background: '#060d18' }}>
+      <Particles count={10} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 45%, ' + cm.color + '18 0%, transparent 65%)' }} />
+
+      {/* 상단 배지 */}
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: cm.color + '18', border: '1px solid ' + cm.color + '44', borderRadius: 20, padding: '8px 28px', opacity: fadeIn(frame, 5, 14), whiteSpace: 'nowrap' }}>
+        <span style={{ color: cm.color, fontSize: 15, fontWeight: 700, letterSpacing: 2 }}>이번 주 추천</span>
+      </div>
+
+      <div style={{ position: 'absolute', top: 152, left: 36, right: 36, bottom: 180, display: 'flex', flexDirection: 'column', justifyContent: 'space-evenly', alignItems: 'center' }}>
+        {/* 아이콘 + 제목 */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 8, 20), transform: 'translateY(' + slideUp(frame, 8, 20) + 'px)' }}>
+          <div style={{ fontSize: 80, marginBottom: 16 }}>{cm.icon}</div>
+          <div style={{ fontSize: 38, fontWeight: 900, color: WHITE, lineHeight: 1.2 }}>{cm.tag}</div>
+        </div>
+
+        {/* 특징 카드 */}
+        <div style={{ width: '100%', background: '#0d1a28', borderRadius: 24, padding: '28px 24px', border: '1.5px solid ' + cm.color + '44', opacity: fadeIn(frame, 26, 22), boxShadow: '0 0 40px ' + cm.color + glowHex }}>
+          {cm.points.map(function(p, i) {
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: i < cm.points.length - 1 ? 18 : 0, opacity: fadeIn(frame, 30 + i * 10, 16), transform: 'translateX(' + interpolate(frame, [30 + i * 10, 44 + i * 10], [-18, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) + 'px)' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: cm.color, flexShrink: 0 }} />
+                <div style={{ color: WHITE + 'cc', fontSize: 17, fontWeight: 600 }}>{p}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 가격 + CTA */}
+        <div style={{ textAlign: 'center', opacity: fadeIn(frame, 80, 22) }}>
+          <div style={{ fontSize: 52, fontWeight: 900, color: cm.color, marginBottom: 8 }}>₩{cm.price}</div>
+          <div style={{ fontSize: 18, color: WHITE + '66' }}>인프런에서 '{cm.keyword}' 검색</div>
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+}
+
+// ── Scene 3-B: 베스트 픽 ───────────────────────────────────────
 function SceneBest() {
   var frame = useCurrentFrame();
   var highlights = [
@@ -324,11 +379,17 @@ function TransitionOverlay(props) {
 function InflearnPromo(props) {
   var hasNarration = props.hasNarration;
   var hasBgm = props.hasBgm;
+  var clipVariant = props.clipVariant || null;
+
+  // 변형이 있으면 SceneBest → SceneClipSpotlight로 교체
+  var Scene3 = clipVariant ? SceneClipSpotlight : SceneBest;
+  var scene3Props = clipVariant ? { clipVariant: clipVariant } : {};
+
   var SCENES = [
-    { component: SceneHook,  start: 0,   duration: 150 },
-    { component: SceneClips, start: 150, duration: 210 },
-    { component: SceneBest,  start: 360, duration: 300 },
-    { component: SceneCTA,   start: 660, duration: 240 },
+    { component: SceneHook,  start: 0,   duration: 150, extraProps: {} },
+    { component: SceneClips, start: 150, duration: 210, extraProps: {} },
+    { component: Scene3,     start: 360, duration: 300, extraProps: scene3Props },
+    { component: SceneCTA,   start: 660, duration: 240, extraProps: {} },
   ];
   return (
     <AbsoluteFill style={{ background: DARK }}>
@@ -336,9 +397,10 @@ function InflearnPromo(props) {
       {hasBgm && <Audio src={staticFile('bgm.mp3')} volume={0.12} />}
       {SCENES.map(function(scene, idx) {
         var Comp = scene.component;
+        var extra = scene.extraProps || {};
         return (
           <Sequence key={scene.start} from={scene.start} durationInFrames={scene.duration}>
-            <Comp />
+            <Comp {...extra} />
             <TransitionOverlay direction="in" totalFrames={scene.duration} />
             {idx < SCENES.length - 1 && <TransitionOverlay direction="out" totalFrames={scene.duration} />}
           </Sequence>
