@@ -556,6 +556,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-05 | **social-media-schedule.yml 스케줄 매칭 방식 개선** — GitHub Actions cron 지연(오늘 Run#7: UTC 00:00 예약→01:40 실행)으로 HOUR 조건 불일치 → 전 단계 skip 됐던 버그 수정. `date +%H` 직접 비교 → `github.event.schedule` 크론 문자열 case 매칭으로 교체. 수동 테스트(Run#8) success 확인 (2m 43s) |
 | 2026-09-04 | **inflearn-narration.json 신규** — 5구간 나레이션(0s 후킹/6s 6종 소개/12s 상품명/21s 인기자료CTA/25s 검색유도). 나레이션 없이 업로드된 영상 재업로드 필요 (GitHub Actions product=inflearn 수동 실행) |
 | 2026-09-04 | **인프런 홍보 영상 자동화 파이프라인 구축** — InflearnPromo.jsx(4씬: Hook/Clips/Best/CTA, 30초), render-inflearn.js, inflearn-meta.json(YouTube/Instagram 메타). social-media.yml inflearn 지원 추가. social-media-schedule.yml 수 09:00 YouTube + 수 10:30 Instagram + 토 09:00 YouTube 크론 추가(주 2회). 토요일 mbtico → 인프런으로 교체(mbtico 준비 안 됨) |
 | 2026-09-03 | **FiloPromo.jsx variant 동적 슬라이드 렌더링** — hero/feature/compare/notice/price/cta 6가지 타입 씬 컴포넌트. render-filo.js가 filo-variants.json에서 이번 주 variant(weekNum%4→A/B/C/D) 읽어 slides+lines를 inputProps로 전달. 매주 완전히 다른 장면 자동 생성. index.jsx defaultProps 추가 |

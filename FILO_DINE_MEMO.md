@@ -119,24 +119,33 @@ _kioskMenus       — filo_menus 캐시 (POS 탭 진입 시 1회 로드)
 
 ---
 
-## 🌐 번역 시스템 구조
+## 🌐 번역 시스템 구조 (2026-09-05 배치 방식 전환)
 
 ```
 고객 언어 선택 (EN/中/日)
   ↓
-filo-order-common.js _applyTranslationsToGrid()
-  ↓ 병렬 요청 (AbortController 5s timeout)
-_worker.js /api/translate
-  ↓ 1) KV 캐시 확인 (7일 TTL) — 한국어 오염 캐시 건너뜀
-  ↓ 2) Google 무료 API
-  ↓ 3) Anthropic API (8s timeout)
-  ↓ 4) Google 공식 API
-  ↓ 결과 KV 저장 (tr:{lang}:{hash} 키)
+filo-order-common.js _applyTranslationsToGrid(menus)
+  ↓ 1) _tlCache (세션 인메모리) 확인
+  ↓ 2) menus[].nameTranslations (Firestore 저장된 번역) 확인
+  ↓ 미번역 항목만 일괄 배치 요청
+_worker.js /api/translate-batch  (POST, body: {names:[], lang:'en'|'zh'|'ja'})
+  ↓ 1) KV 캐시 확인 (tr:{lang}:{FNV1a-hash} — 한국어 오염 캐시 건너뜀)
+  ↓ 2) Anthropic claude-haiku-4-5-20251001 (AbortController 20s timeout)
+  ↓ 3) Google 공식 Translation API v2 (translation.googleapis.com) — 미번역 항목 fallback
+  ↓ 성공 항목 KV 저장 (tr:{lang}:{hash} 키)
+  ↓ 응답: {translations:{name→번역}, _debug:{cached,needTr,antStatus,antErr,gStatus,gErr,translated}}
   ↓
-Firestore filo_menus.nameTranslations 저장 (성공 번역만)
+filo-order-common.js DOM 적용 ([data-orig] 셀렉터)
+  + _tlCache 인메모리 저장
 ```
 
+**진단 엔드포인트**: `GET filo.ai.kr/api/translate-test` → Anthropic·Google 양쪽 키 상태·번역 결과 확인
+
 **번역 실패 시**: 한국어 원본 표시 (번역 저장 안 함)
+
+**주의 — Google 무료 API (translate.googleapis.com)**: Cloudflare 엣지 IP에서 차단됨 → 사용 금지. 반드시 공식 API (translation.googleapis.com/language/translate/v2?key=) 사용.
+
+**console.log 디버그**: 언어 버튼 클릭 후 DevTools Console에서 `[TR]` 로그로 _debug 객체 확인 가능.
 
 ---
 
@@ -162,6 +171,16 @@ Firestore filo_menus.nameTranslations 저장 (성공 번역만)
 ---
 
 ## 📋 수정 이력
+
+### 2026-09-05 (36차)
+**QR주문 메뉴 번역 배치 방식 전환 + Google 공식 API fallback 추가**
+- `_worker.js`: `/api/translate-batch` 전면 재작성
+  - Anthropic 호출에 AbortController 20s timeout 추가
+  - 번역 실패 시 Google 공식 Translation API v2 배치 fallback 추가 (GOOGLE_TRANSLATE_KEY 사용)
+  - 응답에 `_debug` 필드 추가 (cached·needTr·antStatus·antErr·gStatus·gErr·translated)
+  - Google 무료 API (translate.googleapis.com) → 공식 API (translation.googleapis.com)로 교체 (CF IP 차단 대응)
+- `_worker.js`: `/api/translate-test` GET 엔드포인트 신규 (Anthropic·Google 키 상태·번역 결과 진단용)
+- `filo-order-common.js`: `_applyTranslationsToGrid()` 응답 후 `console.log('[TR]', ...)` 추가 (DevTools 디버그용)
 
 ### 2026-09-04 (35차)
 **고객사 전용 PWA 홈화면 설치 경로 구현 + 로고 업로드 API**

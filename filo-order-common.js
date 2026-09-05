@@ -375,25 +375,52 @@ function _applyTranslationsToGrid(menus){
  });
  if(!needApi.length) return;
 
- // 개별 병렬 호출 (5초 타임아웃) — KV캐시 덕분에 2번째 방문부터 즉시 반환
- needApi.forEach(function(item){
-  var ctrl=typeof AbortController!=='undefined'?new AbortController():null;
-  var tid=ctrl?setTimeout(function(){ctrl.abort();},5000):null;
-  var fetchOpts={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:item.m.name,lang:lang})};
-  if(ctrl) fetchOpts.signal=ctrl.signal;
-  fetch('/api/translate',fetchOpts)
-  .then(function(r){return r.json();})
-  .then(function(d){
-   if(ctrl&&tid) clearTimeout(tid);
-   if(_lang!==lang) return;
-   var tr=(d.translated||'').trim();
-   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)) _tlCache[item.ck]=tr;
-   _applyOneTr(item.trId, item.m.name, _tlCache[item.ck]||'');
-  })
-  .catch(function(){
-   if(_lang!==lang) return;
-   _applyOneTr(item.trId, item.m.name, ''); // 실패 시 원문 복원
+ // 배치 일괄 번역 (1번 API 호출로 전체 처리 — 동시 호출 과부하 방지)
+ var batchNames=needApi.map(function(i){return i.m.name;});
+ var ctrl2=typeof AbortController!=='undefined'?new AbortController():null;
+ var tid2=ctrl2?setTimeout(function(){ctrl2.abort();},15000):null;
+ var opts2={method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:batchNames,lang:lang})};
+ if(ctrl2) opts2.signal=ctrl2.signal;
+ // 브라우저 직접 번역 폴백 (Google free API — 브라우저에서 CORS 허용)
+ function _browserTr(items,l){
+  var tlMap={en:'en',zh:'zh-CN',ja:'ja'};
+  var tl=tlMap[l]||'en';
+  items.forEach(function(item){
+   fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(item.m.name))
+   .then(function(r){return r.json();})
+   .then(function(gd){
+    var t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';
+    if(t&&t!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
+     _tlCache[item.ck]=t;
+     if(_lang===l) _applyOneTr(item.trId,item.m.name,t);
+    }
+   }).catch(function(){});
   });
+ }
+ fetch('/api/translate-batch',opts2)
+ .then(function(r){return r.json();})
+ .then(function(d){
+  if(ctrl2&&tid2) clearTimeout(tid2);
+  if(d&&d._debug) console.log('[TR]',lang,JSON.stringify(d._debug));
+  if(_lang!==lang) return;
+  var map=d.translations||{};
+  var missed=[];
+  needApi.forEach(function(item){
+   var tr=(map[item.m.name]||'').trim();
+   if(tr&&tr!==item.m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+    _tlCache[item.ck]=tr;
+    _applyOneTr(item.trId,item.m.name,tr);
+   } else {
+    missed.push(item);
+    _applyOneTr(item.trId,item.m.name,'');
+   }
+  });
+  if(missed.length) _browserTr(missed,lang);
+ })
+ .catch(function(){
+  if(_lang!==lang) return;
+  needApi.forEach(function(item){ _applyOneTr(item.trId,item.m.name,''); });
+  _browserTr(needApi,lang);
  });
 }
 
@@ -832,6 +859,61 @@ function _renderRecommendBanner(menus){
  if(grid&&grid.parentNode)grid.parentNode.insertBefore(banner,grid);
 }
 
+// ── 번역 미리 캐시 (페이지 로드 후 백그라운드 — 언어 전환 즉시 표시용) ────────
+function _prefetchTranslations(menus){
+ var langs=['en','zh','ja'];
+ var tlMap={en:'en',zh:'zh-CN',ja:'ja'};
+ // Firestore nameTranslations 있는 것은 즉시 _tlCache 선점
+ var allNeed={};
+ langs.forEach(function(lang){
+  var need=[];
+  menus.forEach(function(m){
+   var ck=m.name+'_'+lang;
+   if(_tlCache[ck]) return;
+   if(m.nameTranslations&&m.nameTranslations[lang]){
+    var s=m.nameTranslations[lang];
+    if(s&&s!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(s)){_tlCache[ck]=s;return;}
+   }
+   need.push(m);
+  });
+  allNeed[lang]=need;
+ });
+ langs.forEach(function(lang){
+  var need=allNeed[lang];
+  if(!need||!need.length) return;
+  // fast:true → Anthropic 생략, Google 공식 API 직행 (~200ms)
+  var names=need.map(function(m){return m.name;});
+  var tl=tlMap[lang];
+  function _browserFallback(items){
+   items.forEach(function(m){
+    fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ko&tl='+tl+'&dt=t&q='+encodeURIComponent(m.name))
+    .then(function(r){return r.json();})
+    .then(function(gd){
+     var t=(gd&&gd[0]&&gd[0][0]&&gd[0][0][0])||'';
+     if(t&&t!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(t)){
+      _tlCache[m.name+'_'+lang]=t;
+      if(_lang===lang) _applyOneTr('tr-'+_menuSlug(m.name),m.name,t);
+     }
+    }).catch(function(){});
+   });
+  }
+  fetch('/api/translate-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({names:names,lang:lang,fast:true})})
+   .then(function(r){return r.json();})
+   .then(function(d){
+    var map=d.translations||{};
+    var missed=[];
+    need.forEach(function(m){
+     var tr=(map[m.name]||'').trim();
+     if(tr&&tr!==m.name&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(tr)){
+      _tlCache[m.name+'_'+lang]=tr;
+      if(_lang===lang) _applyOneTr('tr-'+_menuSlug(m.name),m.name,tr);
+     } else { missed.push(m); }
+    });
+    if(missed.length) _browserFallback(missed);
+   }).catch(function(){ _browserFallback(need); });
+ });
+}
+
 // ── 메뉴 로드 (order.js / store.js 공통) ────────────────────────────────────
 function _loadMenus(onDone){
  fetch('/api/menus?did='+encodeURIComponent(_did))
@@ -841,6 +923,7 @@ function _loadMenus(onDone){
   _renderCatBar(_menus,'cat-bar');
   _renderMenuGrid(_menus,'menu-grid');
   _renderRecommendBanner(_menus);
+  _prefetchTranslations(_menus); // 백그라운드에서 3개 언어 미리 캐시
   if(onDone) onDone(_menus);
  }).catch(function(){
   var g=document.getElementById('menu-grid');

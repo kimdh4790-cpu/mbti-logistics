@@ -516,6 +516,19 @@ cd mbtico-pages && npx wrangler deploy
   - `_ctrlLoadChatList()`: forEach 내부 `var html` 재선언 → 채팅 목록 항상 빈화면 → `html +=` 수정 ✅
   - `_ctrlApprove()`/`_ctrlReject()`/`_ctrlHold()`: join_requests만 조회 → FILO/mbtico 가입 승인 무작동 → join_requests 없으면 companies 직접 처리 ✅
 
+### ✅ 완료 (2026-09-05 오류 즉각 발견·수정 시스템)
+- **Worker 런타임 오류 즉시 FCM 알림**: 오류 발생 시 5분 중복방지 후 관리자 전 기기에 FCM 푸시
+- **프론트엔드 오류 첫 발생 / 임계치(10·50·200회) FCM 알림** (`/api/client-error` 핸들러)
+- `/api/error-digest` 신규: Claude Routine이 오류 구조화 데이터 조회 (fileHints 포함)
+- `/api/error-resolve` 신규: Routine이 수정 완료 후 해결됨 표시
+- `runErrorMonitorJob`: Cloudflare Cron 시간별 오류 요약 FCM (최근 1시간 신규 오류 건수·소스별 집계)
+- `filo_errors` `severity` 필드 추가 (CRITICAL/INFO)
+- **번역 API 순서 변경**: Anthropic 1차, Google 무료 2차 (Cloudflare IP 차단 대응, 모델 claude-haiku-4-5-20251001)
+- **Claude Code Routine 생성** (4시간마다, 새 세션 per 실행):
+  - Routine ID: trig_0195xXdFo2j8BrfmDbqFjg5m
+  - 다음 실행: 2026-09-05T12:07 UTC (KST 21:07)
+  - 동작: /api/error-digest 조회 → 오류 분석 → 코드 수정 → push → 푸시 알림
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
