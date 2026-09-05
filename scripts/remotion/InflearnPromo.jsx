@@ -22,6 +22,19 @@ var BASE = {
   width: '100%', height: '100%', overflow: 'hidden',
 };
 
+// 변형별 훅 + 색상 테마 (A~F, 6주 순환)
+var INFLEARN_THEMES = {
+  A: { bg: '#0a0800', accent: '#f59e0b', tag: 'n8n 카카오 알림톡', hook: ['카카오 알림톡', '자동으로 보내는 법'], punchline: '구글시트 연결만 하면 혼자 발송됩니다' },
+  B: { bg: '#001208', accent: '#10b981', tag: '급여명세서 자동계산', hook: ['직원 급여 계산', '실수한 적 있나요?'], punchline: '이젠 엑셀이 알아서 4대보험까지 계산해요' },
+  C: { bg: '#000a18', accent: '#3b82f6', tag: '부가세 신고 자동화', hook: ['부가세 신고', '또 헷갈리세요?'], punchline: '납부세액이 자동으로 산출됩니다' },
+  D: { bg: '#08000f', accent: '#8b5cf6', tag: '소상공인 경비 장부', hook: ['영수증 쌓아두고', '연말에 고생하세요?'], punchline: '월별 경비가 자동으로 정리돼요' },
+  E: { bg: '#000c0f', accent: '#06b6d4', tag: 'Oracle 무료 서버', hook: ['서버 비용', '0원으로 만드는 법'], punchline: '오라클 클라우드 4코어 24GB 영구무료' },
+  F: { bg: '#0a0700', accent: '#c9a84c', tag: 'AI 프롬프트 100선', hook: ['AI한테 물어봐도', '원하는 답 안 나오죠?'], punchline: '소상공인 프롬프트 100개 그냥 드릴게요' },
+};
+var INFLEARN_KEYS = ['A','B','C','D','E','F'];
+var WEEK_VARIANT_IDX = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 6;
+var DEFAULT_THEME_KEY = INFLEARN_KEYS[WEEK_VARIANT_IDX];
+
 function Particles(props) {
   var count = props.count || 14;
   var frame = useCurrentFrame();
@@ -41,49 +54,53 @@ function Particles(props) {
   return React.createElement(AbsoluteFill, { style: { pointerEvents: 'none' } }, items);
 }
 
-// ── Scene 1: 훅 ──────────────────────────────────────────────
-function SceneHook() {
+// ── Scene 1: 훅 (per-variant 궁금증 유발형) ──────────────────
+function SceneHook(props) {
   var frame = useCurrentFrame();
-  var lines = [
-    '부가세 신고할 때마다',
-    '엑셀 수식 틀릴까봐',
-    '직원 급여 계산 또 실수?',
-  ];
+  var variantKey = (props.clipVariant && props.clipVariant.key) || DEFAULT_THEME_KEY;
+  var TH = INFLEARN_THEMES[variantKey] || INFLEARN_THEMES[DEFAULT_THEME_KEY];
+  var punchScale = interpolate(frame, [72, 90], [0.85, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.5)) });
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: '#060d18', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: TH.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <Particles count={10} />
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, ' + TEAL + '12 0%, transparent 65%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, ' + TH.accent + '18 0%, transparent 65%)' }} />
 
       {/* 상단 배지 */}
-      <div style={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', background: TEAL + '1a', border: '1px solid ' + TEAL + '44', borderRadius: 20, padding: '8px 28px', opacity: fadeIn(frame, 5, 14) }}>
-        <span style={{ color: TEAL, fontSize: 15, fontWeight: 700, letterSpacing: 2 }}>소상공인 자동화 도구</span>
+      <div style={{ position: 'absolute', top: 80, left: '50%', transform: 'translateX(-50%)', background: TH.accent + '1a', border: '1px solid ' + TH.accent + '44', borderRadius: 20, padding: '8px 28px', opacity: fadeIn(frame, 5, 14), whiteSpace: 'nowrap' }}>
+        <span style={{ color: TH.accent, fontSize: 15, fontWeight: 700, letterSpacing: 2 }}>{TH.tag}</span>
       </div>
 
       <div style={{ textAlign: 'center', padding: '0 52px' }}>
-        {/* 공감 문구 */}
-        <div style={{ marginBottom: 48 }}>
-          {lines.map(function(line, i) {
+        {/* 질문 훅 — 궁금증 유발 */}
+        <div style={{ marginBottom: 52 }}>
+          {TH.hook.map(function(line, i) {
             return (
               <div key={i} style={{
-                fontSize: 38, fontWeight: 800, color: WHITE + 'cc', lineHeight: 1.45,
-                opacity: fadeIn(frame, 12 + i * 20, 18),
-                transform: 'translateY(' + slideUp(frame, 12 + i * 20, 18) + 'px)',
+                fontSize: i === 0 ? 44 : 48,
+                fontWeight: 900,
+                color: i === 0 ? WHITE + 'cc' : TH.accent,
+                lineHeight: 1.3,
+                opacity: fadeIn(frame, 10 + i * 24, 20),
+                transform: 'translateY(' + slideUp(frame, 10 + i * 24, 20) + 'px)',
+                textShadow: i === 1 ? '0 0 24px ' + TH.accent + '55' : 'none',
               }}>{line}</div>
             );
           })}
         </div>
 
-        {/* 강조 */}
-        <div style={{ opacity: fadeIn(frame, 72, 22), transform: 'translateY(' + slideUp(frame, 72, 22) + 'px)' }}>
-          <div style={{ fontSize: 58, fontWeight: 900, color: LTGLD, lineHeight: 1.15, textShadow: '0 0 30px ' + GOLD + '55' }}>
-            이제 엑셀이<br/>알아서 합니다
+        {/* 반전 답변 — 충격 포인트 */}
+        <div style={{ opacity: fadeIn(frame, 68, 22), transform: 'scale(' + punchScale + ')' }}>
+          <div style={{ background: TH.accent + '18', border: '1.5px solid ' + TH.accent + '55', borderRadius: 24, padding: '24px 32px' }}>
+            <div style={{ fontSize: 34, fontWeight: 900, color: WHITE, lineHeight: 1.3, textShadow: '0 2px 12px #00000088' }}>
+              {TH.punchline}
+            </div>
           </div>
         </div>
 
         {/* 서브 */}
-        <div style={{ marginTop: 32, opacity: fadeIn(frame, 98, 20) }}>
-          <div style={{ fontSize: 18, color: TEAL + 'bb', letterSpacing: 1 }}>6가지 자동화 툴 · 인프런 단독 판매</div>
+        <div style={{ marginTop: 36, opacity: fadeIn(frame, 96, 20) }}>
+          <div style={{ fontSize: 17, color: TH.accent + 'bb', letterSpacing: 1 }}>인프런 단독 판매 · 즉시 다운로드</div>
         </div>
       </div>
     </AbsoluteFill>
@@ -337,17 +354,69 @@ function SceneCTA() {
   );
 }
 
-var SUBTITLES_DATA = [
-  { from: 0,   to: 90,  text: "부가세 계산 또 헷갈리세요?" },
-  { from: 90,  to: 150, text: "직원 급여 계산 실수 걱정되세요?" },
-  { from: 150, to: 210, text: "엑셀이 알아서 다 해줍니다" },
-  { from: 210, to: 360, text: "소상공인 자동화 툴 6가지" },
-  { from: 360, to: 480, text: "n8n 카카오 알림톡부터" },
-  { from: 480, to: 570, text: "AI 프롬프트 100선까지" },
-  { from: 570, to: 660, text: "인기 자료 베스트 픽" },
-  { from: 660, to: 780, text: "각 자료 개별 구매 가능해요" },
-  { from: 780, to: 900, text: "인프런에서 '소상공인 자동화' 검색" },
-];
+var SUBTITLES_ALL_INFLEARN = {
+  A: [
+    { from: 0,   to: 80,  text: "카카오 알림톡 자동 발송하는 법" },
+    { from: 80,  to: 160, text: "구글시트 연결하면 혼자 보냅니다" },
+    { from: 160, to: 270, text: "n8n으로 무료 자동화" },
+    { from: 270, to: 390, text: "오라클 무료 서버에서 돌리면 비용 0원" },
+    { from: 390, to: 510, text: "워크플로우 3개 그대로 드려요" },
+    { from: 510, to: 630, text: "인프런 'n8n 카카오알림톡' 검색" },
+    { from: 630, to: 780, text: "22,000원 · 평생 소장" },
+    { from: 780, to: 900, text: "지금 바로 무료 미리보기" },
+  ],
+  B: [
+    { from: 0,   to: 80,  text: "직원 급여 계산 실수 있었나요?" },
+    { from: 80,  to: 160, text: "4대보험 공제 틀리면 다시 해야죠" },
+    { from: 160, to: 270, text: "이 엑셀은 자동으로 계산해요" },
+    { from: 270, to: 390, text: "국민연금 건강 고용 지방소득세까지" },
+    { from: 390, to: 510, text: "명세서 출력도 자동이에요" },
+    { from: 510, to: 630, text: "인프런 '급여명세서 자동계산' 검색" },
+    { from: 630, to: 780, text: "19,000원 · 2026년 요율 반영" },
+    { from: 780, to: 900, text: "지금 바로 무료 미리보기" },
+  ],
+  C: [
+    { from: 0,   to: 80,  text: "부가세 신고 때마다 헷갈리죠?" },
+    { from: 80,  to: 160, text: "납부세액이 자동으로 나와요" },
+    { from: 160, to: 270, text: "매출 매입 입력만 하면" },
+    { from: 270, to: 390, text: "SUMIF 수식이 알아서 계산" },
+    { from: 390, to: 510, text: "연 4회 신고 자동 산출" },
+    { from: 510, to: 630, text: "인프런 '부가세신고 자동계산' 검색" },
+    { from: 630, to: 780, text: "25,000원 · 평생 소장" },
+    { from: 780, to: 900, text: "지금 바로 무료 미리보기" },
+  ],
+  D: [
+    { from: 0,   to: 80,  text: "영수증 연말에 몰아서 처리하세요?" },
+    { from: 80,  to: 160, text: "그게 제일 힘든 일이잖아요" },
+    { from: 160, to: 270, text: "매달 입력하면 자동 집계돼요" },
+    { from: 270, to: 390, text: "세금공제 기준도 카테고리에 포함" },
+    { from: 390, to: 510, text: "연간 경비 한눈에 정리" },
+    { from: 510, to: 630, text: "인프런 '소상공인 경비장부' 검색" },
+    { from: 630, to: 780, text: "15,000원 · 가장 실용적인 자료" },
+    { from: 780, to: 900, text: "지금 바로 무료 미리보기" },
+  ],
+  E: [
+    { from: 0,   to: 80,  text: "서버 비용 매달 나가세요?" },
+    { from: 80,  to: 160, text: "오라클에서 무료로 만드는 법 있어요" },
+    { from: 160, to: 270, text: "4코어 24GB 영구 무료입니다" },
+    { from: 270, to: 390, text: "n8n Docker 설치 가이드 포함" },
+    { from: 390, to: 510, text: "SSH 접속부터 방화벽 설정까지" },
+    { from: 510, to: 630, text: "인프런 'Oracle Cloud 무료서버' 검색" },
+    { from: 630, to: 780, text: "22,000원 · 9단계 완전 가이드" },
+    { from: 780, to: 900, text: "지금 바로 무료 미리보기" },
+  ],
+  F: [
+    { from: 0,   to: 80,  text: "AI한테 물어봐도 답이 안 나오죠?" },
+    { from: 80,  to: 160, text: "프롬프트를 잘못 쓰고 있는 거예요" },
+    { from: 160, to: 270, text: "소상공인용 프롬프트 100개 드려요" },
+    { from: 270, to: 390, text: "마케팅 계약 고객응대 공지까지" },
+    { from: 390, to: 510, text: "[대괄호] 변수만 바꾸면 즉시 완성" },
+    { from: 510, to: 630, text: "인프런 'AI프롬프트 소상공인' 검색" },
+    { from: 630, to: 780, text: "29,000원 · 100개 전부 포함" },
+    { from: 780, to: 900, text: "지금 바로 무료 미리보기" },
+  ],
+};
+var SUBTITLES_DATA = SUBTITLES_ALL_INFLEARN[INFLEARN_KEYS[WEEK_VARIANT_IDX]] || SUBTITLES_ALL_INFLEARN['A'];
 
 function SubtitleBar() {
   var frame = useCurrentFrame();
@@ -385,8 +454,9 @@ function InflearnPromo(props) {
   var Scene3 = clipVariant ? SceneClipSpotlight : SceneBest;
   var scene3Props = clipVariant ? { clipVariant: clipVariant } : {};
 
+  var hookProps = { clipVariant: clipVariant };
   var SCENES = [
-    { component: SceneHook,  start: 0,   duration: 150, extraProps: {} },
+    { component: SceneHook,  start: 0,   duration: 150, extraProps: hookProps },
     { component: SceneClips, start: 150, duration: 210, extraProps: {} },
     { component: Scene3,     start: 360, duration: 300, extraProps: scene3Props },
     { component: SceneCTA,   start: 660, duration: 240, extraProps: {} },
