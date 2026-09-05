@@ -2660,7 +2660,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const needTr = [];
         for(const nm of names2){
           const ck = 'tr:'+lang2+':'+slugFn(nm);
-          try{const cv=await env.DONWAY_ASSETS.get(ck);if(cv){result2[nm]=cv;continue;}}catch(e){}
+          try{const cv=await env.DONWAY_ASSETS.get(ck);if(cv&&!/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(cv)){result2[nm]=cv;continue;}}catch(e){}
           needTr.push(nm);
         }
         if(needTr.length){
@@ -2673,7 +2673,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               const bRes = await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',
                 headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:500,messages:[{role:'user',content:prompt}]})
+                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,messages:[{role:'user',content:prompt}]})
               });
               if(bRes.ok){
                 const bd = await bRes.json();
