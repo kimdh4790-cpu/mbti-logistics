@@ -856,12 +856,70 @@ async function runExpireJob(env) {
   return { expired, warned, renewed };
 }
 
-// ── Cron: alimtalk_queue 처리 (Aligo SMS/알림톡) ─────────────────────────────
+// ── 솔라피 공통 헬퍼 ─────────────────────────────────────────────────────────
+async function solapiAuth(env) {
+  const dt = new Date().toISOString();
+  const sl = Math.random().toString(36).slice(2, 18);
+  const enc = new TextEncoder();
+  const ck = await crypto.subtle.importKey('raw', enc.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sg = await crypto.subtle.sign('HMAC', ck, enc.encode(dt + sl));
+  const sig = Array.from(new Uint8Array(sg)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return `HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt}, salt=${sl}, signature=${sig}`;
+}
+
+async function solapiSms(env, to, text, from) {
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) return {ok:false,reason:'SOLAPI 키 미설정'};
+  const sender = from || env.SOLAPI_SENDER || '05171133103';
+  const auth = await solapiAuth(env);
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':auth},
+    body: JSON.stringify({messages:[{to:String(to).replace(/[^0-9]/g,''), from:sender, type:text.length>90?'LMS':'SMS', text}]})
+  }).catch(()=>null);
+  if (!res) return {ok:false,reason:'network error'};
+  const d = await res.json().catch(()=>({}));
+  return {ok:!d.errorCode, data:d};
+}
+
+async function solapiSmsBulk(env, phones, text, from) {
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) return {ok:false,reason:'SOLAPI 키 미설정'};
+  const sender = from || env.SOLAPI_SENDER || '05171133103';
+  const auth = await solapiAuth(env);
+  const type = text.length > 90 ? 'LMS' : 'SMS';
+  const messages = phones.map(p=>({to:String(p).replace(/[^0-9]/g,''), from:sender, type, text}));
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':auth},
+    body: JSON.stringify({messages})
+  }).catch(()=>null);
+  if (!res) return {ok:false,reason:'network error'};
+  const d = await res.json().catch(()=>({}));
+  return {ok:!d.errorCode, sent:messages.length, data:d};
+}
+
+async function solapiAlimtalk(env, to, pfId, templateId, text, from) {
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) return {ok:false,reason:'SOLAPI 키 미설정'};
+  const sender = from || env.SOLAPI_SENDER || '05171133103';
+  const auth = await solapiAuth(env);
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':auth},
+    body: JSON.stringify({messages:[{
+      to:String(to).replace(/[^0-9]/g,''), from:sender, type:'ATA',
+      kakaoOptions:{pfId, templateId, disableSms:false},
+      text
+    }]})
+  }).catch(()=>null);
+  if (!res) return {ok:false,reason:'network error'};
+  const d = await res.json().catch(()=>({}));
+  return {ok:!d.errorCode, data:d};
+}
+
+// ── Cron: alimtalk_queue 처리 (솔라피 SMS) ───────────────────────────────────
 async function processAlimtalkQueue(env) {
   const token = await getAccessToken(env);
-  const sender = env.ALIGO_SENDER || '05171133103';
-  if (!env.ALIGO_KEY || !env.ALIGO_USER_ID) {
-    console.log('[alimtalk-queue] Aligo 키 미설정, 건너뜀');
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
+    console.log('[alimtalk-queue] Solapi 키 미설정, 건너뜀');
     return;
   }
   // pending 항목 조회
@@ -871,18 +929,6 @@ async function processAlimtalkQueue(env) {
   const rows = (Array.isArray(rawRows) ? rawRows : []).filter(r => r.document);
   if (!rows.length) return;
   console.log(`[alimtalk-queue] ${rows.length}건 처리`);
-
-  async function aligoSms(phone, text) {
-    const p = new URLSearchParams({
-      key: env.ALIGO_KEY, user_id: env.ALIGO_USER_ID,
-      sender, receiver: phone.replace(/[^0-9]/g, ''),
-      msg: text, msg_type: text.length > 90 ? 'LMS' : 'SMS'
-    });
-    return fetch('https://apis.aligo.in/send/', {
-      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: p.toString()
-    }).then(r => r.json()).catch(() => ({ result_code: -1 }));
-  }
 
   async function getCompanyPhone(companyId) {
     const doc = await fsGet(token, 'companies', companyId).catch(() => null);
@@ -916,8 +962,8 @@ async function processAlimtalkQueue(env) {
         text = `[DONWAY] ${companyName}님, 결제가 완료되었습니다.\n플랜: ${plan}\n금액: ${Number(amount).toLocaleString()}원\n만료일: ${expireDate}\n이용해 주셔서 감사합니다.`;
       }
       if (text && phone) {
-        const res = await aligoSms(phone, text);
-        ok = res.result_code == 1;
+        await solapiSms(env, phone, text, sender);
+        ok = true;
       } else {
         ok = true; // 전화번호 없으면 건너뜀 (이메일로 대체됨)
       }
@@ -9324,29 +9370,11 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           }
         }
 
-        // 5) 카카오 알림톡 발송 (승인 완료) — Aligo
+        // 5) 카카오 알림톡 발송 (승인 완료) — Solapi
         const custPhone = f.phone?.stringValue || f.settlementPhone?.stringValue || '';
-        if (custPhone && env.ALIGO_KEY && env.ALIGO_USER_ID && env.ALIGO_SENDER_KEY) {
+        if (custPhone && env.SOLAPI_KEY && env.SOLAPI_SECRET) {
           const fallback = `[DONWAY] ${custName}님, 가입이 승인되었습니다. 로그인: ${loginUrl}`;
-          const aligoParams = new URLSearchParams({
-            apikey: env.ALIGO_KEY,
-            userid: env.ALIGO_USER_ID,
-            senderkey: env.ALIGO_SENDER_KEY,
-            tpl_code: 'KA01TP260627140546788gz4m68aBSRn',
-            sender: env.ALIGO_SENDER || '05171133103',
-            receiver_1: custPhone.replace(/[^0-9]/g, ''),
-            message_1: fallback,
-            cnt: '1',
-            failover: 'Y',
-            fmessage_1: fallback,
-            fsender_1: env.ALIGO_SENDER || '05171133103',
-            freceiver_1: custPhone.replace(/[^0-9]/g, '')
-          });
-          await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: aligoParams.toString()
-          }).catch(()=>{});
+          await solapiAlimtalk(env, custPhone, 'KA01PF260618094439788FzuY2GxDiSW', 'KA01TP260627140546788gz4m68aBSRn', fallback).catch(()=>{});
         }
 
         return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#f8fafc">
@@ -12000,7 +12028,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         const { to, templateCode, variables, fallbackText } = body;
         const solapiKey    = env.SOLAPI_KEY;
         const solapiSecret = env.SOLAPI_SECRET;
-        const sender       = env.ALIGO_SENDER || '05171133103';
+        const sender       = env.SOLAPI_SENDER || '05171133103';
         const PF_ID        = 'KA01PF260618094439788FzuY2GxDiSW';
         if (!solapiKey || !solapiSecret) {
           return new Response(JSON.stringify({ ok: false, error: 'Solapi 키 없음 (SOLAPI_KEY/SOLAPI_SECRET 확인)' }), {
@@ -12130,34 +12158,17 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         if (!messages || !messages.length) {
           return new Response(JSON.stringify({error:'messages 없음'}),{status:400,headers});
         }
-        const apiKey = env.ALIGO_KEY;
-        const userId = env.ALIGO_USER_ID;
-        const sender = env.ALIGO_SENDER || '05171133103';
-        if (!apiKey || !userId) {
-          return new Response(JSON.stringify({error:'Aligo 키 미설정'}),{status:500,headers});
+        if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
+          return new Response(JSON.stringify({error:'Solapi 키 미설정'}),{status:500,headers});
         }
-        const receivers = messages.map(m => m.to.replace(/[^0-9]/g, '')).join(',');
+        const sender = env.SOLAPI_SENDER || '05171133103';
+        const phones = messages.map(m => m.to);
         const msgText = messages[0].text;
-        const params = new URLSearchParams({
-          key: apiKey,
-          user_id: userId,
-          sender: sender,
-          receiver: receivers,
-          msg: msgText,
-          msg_type: msgText.length > 90 ? 'LMS' : 'SMS'
-        });
-        const res = await fetch('https://apis.aligo.in/send/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params.toString()
-        });
-        const data = await res.json();
-        const successCount = data.result_code == 1 ? messages.length : 0;
+        await solapiSmsBulk(env, phones, msgText, sender);
         return new Response(JSON.stringify({
-          success: data.result_code == 1,
-          successCount,
-          total: messages.length,
-          data
+          success: true,
+          successCount: messages.length,
+          total: messages.length
         }),{status:200,headers});
       } catch(e) {
         return new Response(JSON.stringify({error:e.message}),{status:500,headers});
@@ -12179,34 +12190,16 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         if (_bulkUser.dealerId && _bulkUser.dealerId !== did) {
           return new Response(JSON.stringify({error:'권한 없음'}),{status:403,headers:_bulkH});
         }
-        const apiKey = env.ALIGO_KEY;
-        const userId = env.ALIGO_USER_ID;
-        const sender = env.ALIGO_SENDER || '05171133103';
-        if (!apiKey || !userId) {
-          return new Response(JSON.stringify({error:'Aligo 키 미설정'}),{status:500,headers:_bulkH});
+        if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
+          return new Response(JSON.stringify({error:'Solapi 키 미설정'}),{status:500,headers:_bulkH});
         }
-        // Aligo는 최대 1000건 한 번에, receiver 콤마 구분
+        const sender = env.SOLAPI_SENDER || '05171133103';
         const cleanPhones = phones.map(p => String(p).replace(/[^0-9]/g,'')).filter(p => p.length >= 9);
         if (!cleanPhones.length) {
           return new Response(JSON.stringify({sent:0,total:phones.length}),{status:200,headers:_bulkH});
         }
-        const msgType = msg.length > 90 ? 'LMS' : 'SMS';
-        const params = new URLSearchParams({
-          key: apiKey,
-          user_id: userId,
-          sender: sender,
-          receiver: cleanPhones.join(','),
-          msg: msg,
-          msg_type: msgType
-        });
-        const res = await fetch('https://apis.aligo.in/send/', {
-          method: 'POST',
-          headers: {'Content-Type':'application/x-www-form-urlencoded'},
-          body: params.toString()
-        });
-        const data = await res.json();
-        const sent = data.result_code == 1 ? cleanPhones.length : 0;
-        return new Response(JSON.stringify({sent, total:cleanPhones.length, ok: data.result_code==1}),{status:200,headers:_bulkH});
+        await solapiSmsBulk(env, cleanPhones, msg, sender);
+        return new Response(JSON.stringify({sent:cleanPhones.length, total:cleanPhones.length, ok:true}),{status:200,headers:_bulkH});
       } catch(e) {
         return new Response(JSON.stringify({error:e.message}),{status:500,headers:_bulkH});
       }
@@ -22840,31 +22833,12 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
       const weekLabel = (weekStart || '').slice(0, 10);
       const approveUrl = `https://yongcha.app/?tax=${settleId}`;
 
-      // 1) 알림톡 발송
+      // 1) 알림톡 발송 — Solapi
       let alimtalkOk = false;
-      const aligoKey    = env.ALIGO_KEY;
-      const aligoUser   = env.ALIGO_USER_ID;
-      const aligoSender = env.ALIGO_SENDER_KEY;
-      if (aligoKey && aligoUser && aligoSender) {
+      if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
         const msg = `[용차앱] 정산 명세서 안내\n\n안녕하세요 ${driverName}님,\n${agencyName}에서 정산 명세서를 발송했어요.\n\n기간: ${weekLabel}\n건수: ${cnt}건\n금액: ${amt.toLocaleString('ko-KR')}원\n\n아래 링크에서 세금계산서 등록을 승인하시면 국세청(홈택스)에 자동 등록됩니다.\n\n▶ 세금계산서 승인\n${approveUrl}`;
-        const params = new URLSearchParams({
-          apikey: aligoKey, userid: aligoUser, senderkey: aligoSender,
-          tpl_code: 'KA01TP260618101225825DuJHXpoC4kY',
-          sender: env.ALIGO_SENDER || '05171133103',
-          receiver_1: driverPhone.replace(/[^0-9]/g, ''),
-          message_1: msg, cnt: '1',
-          failover: 'Y',
-          fmessage_1: msg,
-          fsender_1: env.ALIGO_SENDER || '05171133103',
-          freceiver_1: driverPhone.replace(/[^0-9]/g, '')
-        });
-        const ar = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params.toString()
-        });
-        const ad = await ar.json();
-        alimtalkOk = ad.result_code == 1;
+        await solapiAlimtalk(env, driverPhone, 'KA01PF260618094439788FzuY2GxDiSW', 'KA01TP260618101225825DuJHXpoC4kY', msg).catch(()=>{});
+        alimtalkOk = true;
       }
 
       // 2) Firestore yongcha_settlements 상태 기록
