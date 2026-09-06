@@ -549,8 +549,7 @@ cd mbtico-pages && npx wrangler deploy
 - _worker.js: filo.ai.kr 블록에서 /seolyuhana 라우트 + API 핸들러 전체 삭제
 - _worker.js: mbtico.kr 블록으로 모든 /api/seolyuhana/* API 이전
 - **SCAN PWA 홈화면 설치**: /scan-manifest.json 엔드포인트, scan-icon-192/512.png KV 업로드, PWA 메타태그 추가
-- **SCAN 로고**: 헤더 + 히어로 섹션에 SCAN 로고 이미지(scan-icon-192.png) 표시: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
-  - processAlimtalkQueue, DONWAY 승인 알림톡, /api/send-sms, /api/send-sms-bulk, 용차앱 정산 알림톡 모두 solapiSms()/solapiAlimtalk() 교체
+- **SCAN 로고**: 헤더 + 히어로 섹션에 SCAN 로고 이미지 base64 직접 내장 (KV 의존 제거, 48px PNG ~6KB)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
