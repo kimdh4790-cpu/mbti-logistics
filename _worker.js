@@ -5583,6 +5583,79 @@ ${JSON.stringify(postSummary)}
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
+      // POST /api/seolyuhana/biz-status — 국세청 사업자 상태조회
+      if (path === '/api/seolyuhana/biz-status' && method === 'POST') {
+        const _bizUser = await requireAuth(request, env);
+        if (!_bizUser) return Response.json({error:'인증 필요'},{status:401,headers});
+        try {
+          const { bizNum } = await request.json();
+          if (!bizNum) return Response.json({error:'사업자번호 필요'},{status:400,headers});
+          const cleanBiz = bizNum.replace(/[-\s]/g, '');
+          if (!/^\d{10}$/.test(cleanBiz)) return Response.json({error:'유효하지 않은 사업자번호 형식'},{status:400,headers});
+          const apiKey = env.BIZ_API_KEY;
+          if (!apiKey) return Response.json({error:'BIZ_API_KEY 미설정'},{status:500,headers});
+          const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({ b_no: [cleanBiz] })
+          });
+          const data = await r.json().catch(() => ({}));
+          const item = data?.data?.[0];
+          if (!item) return Response.json({error:'조회 결과 없음'},{status:404,headers});
+          // Claude로 결과 요약
+          const statusLabel = item.b_stt === '01' ? '계속사업자' : item.b_stt === '02' ? '휴업자' : item.b_stt === '03' ? '폐업자' : '알 수 없음';
+          const taxLabel = item.tax_type === '01' ? '일반과세자' : item.tax_type === '02' ? '간이과세자' : item.tax_type === '03' ? '면세사업자' : item.tax_type;
+          return Response.json({
+            ok: true,
+            bizNum: cleanBiz,
+            status: statusLabel,
+            taxType: taxLabel,
+            tradeNm: item.trade_nm || '',
+            endDt: item.end_dt || '',
+            raw: item
+          }, {status:200,headers});
+        } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+      }
+
+      // POST /api/seolyuhana/registry-link — V-World 주소→인터넷등기소 URL 생성
+      if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
+        const _regUser = await requireAuth(request, env);
+        if (!_regUser) return Response.json({error:'인증 필요'},{status:401,headers});
+        try {
+          const { address, regType = 'all' } = await request.json();
+          if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
+          const vkey = env.VWORLD_API_KEY;
+          let pnu = null;
+          let stdAddr = address;
+          if (vkey) {
+            const vUrl = `https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`;
+            const vr = await fetch(vUrl).catch(() => null);
+            if (vr?.ok) {
+              const vd = await vr.json().catch(() => ({}));
+              const result = vd?.response?.result;
+              if (result) {
+                stdAddr = result.refined?.text || address;
+                pnu = result.structure?.pnu;
+              }
+            }
+          }
+          // 인터넷등기소 검색 URL (비회원 열람)
+          const irosBase = 'https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp';
+          const irosUrl = `${irosBase}?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          const typeLabels = { all:'전체현황', ownership:'소유현황', mortgage:'근저당·담보', lease:'전세권·임차권' };
+          return Response.json({
+            ok: true,
+            stdAddr,
+            pnu,
+            irosUrl,
+            irosOpenUrl: `https://www.iros.go.kr/ifrontservlet?cmd=IFSRegSrchGubunListCmd&gubun=1`,
+            regType,
+            typeLabel: typeLabels[regType] || '전체현황',
+            guide: '인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'
+          }, {status:200,headers});
+        } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+      }
+
       // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
       async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token}) {
         const setProgress = async (p, status='processing') => {
@@ -5604,7 +5677,7 @@ ${JSON.stringify(postSummary)}
           }
 
           // 3. Claude 분석
-          const { analyzeResume, analyzeCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf } = await import('./seolyuhana/services/analyze.js');
+          const { analyzeResume, analyzeCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
           let analysisData;
@@ -5621,6 +5694,10 @@ ${JSON.stringify(postSummary)}
               const r = await translateCoverLetter({text, resumeText, env}); analysisData = r.data;
             } else if (serviceId === 'interview_questions') {
               const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'registry_analysis') {
+              const r = await analyzeRegistry({text, env}); analysisData = r.data;
+            } else if (serviceId === 'public_doc_analysis') {
+              const r = await analyzePublicDoc({text, env}); analysisData = r.data;
             } else {
               const r = await analyzeContract({text, contractType:serviceId, env}); analysisData = r.data;
             }

@@ -891,15 +891,26 @@ let _slySelectedCharge = 0;
 
 const SVC = [
   { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
-    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)' },
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis' },
   { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
-    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)' },
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
   { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 20, accept: '.hwp,.docx,.pdf,.txt',
-    hasJd: false },
+    hasJd: false, serviceId: 'cover_letter_translation' },
   { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
-    hasJd: true, jdLabel: '지원 공고 (선택)' },
+    hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
   { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
-    hasJd: false },
+    hasJd: false, serviceId: 'employment_contract' },
+  // ── 공문서 발급 & 분석 ──
+  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 20, accept: '.pdf',
+    hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry' },
+  { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 10, accept: '.pdf',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'biz' },
+  { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 10, accept: '.pdf',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'health' },
+  { id: 'income',        label: '소득',   sublabel: '확인',   cost: 10, accept: '.pdf',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'income' },
+  { id: 'gov_doc',       label: '공문서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: false },
 ];
 
 const ICONS = {
@@ -908,6 +919,11 @@ const ICONS = {
   cv_translate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
   interview: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
   contract: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  registry: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>`,
+  biz_cert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
+  health_ins: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+  income: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  gov_doc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
 };
 
 function _slyToast(msg, dur = 3000) {
@@ -932,23 +948,64 @@ function renderTabs() {
   `).join('');
 }
 
+const ISSUE_LINKS = {
+  health: [
+    { label: '국민건강보험 납부확인서', url: 'https://www.nhis.or.kr/nhis/minwon/retrieveElctrncCrtfcIssuMenu.do', color: '#1E7F4F' },
+    { label: '국민연금 납부확인서', url: 'https://www.nps.or.kr/jsppage/main.jsp', color: '#0066CC' },
+  ],
+  income: [
+    { label: '홈택스 소득금액증명원', url: 'https://www.hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&topMenuId=UTCBBA00&tab=TAB03', color: '#0050A0' },
+    { label: '근로소득 원천징수확인서', url: 'https://www.hometax.go.kr', color: '#0050A0' },
+    { label: '사업소득 원천징수확인서', url: 'https://www.hometax.go.kr', color: '#0050A0' },
+    { label: '정부24 통합 발급', url: 'https://www.gov.kr/portal/ezdoc/main', color: '#0053A6' },
+  ],
+};
+
 function _slySelectService(id) {
   _slyService = id;
   renderTabs();
   const svc = SVC.find(s => s.id === id);
-  // update file input accept
-  const fi = document.getElementById('slyFileInput');
-  if (fi) fi.accept = svc.accept;
-  // show/hide JD
-  const jdWrap = document.getElementById('slyJdWrap');
-  if (jdWrap) {
-    jdWrap.style.display = svc.hasJd ? 'block' : 'none';
-    if (svc.hasJd) document.getElementById('slyJdLabel').textContent = svc.jdLabel;
+  if (!svc) return;
+
+  const issueCard = document.getElementById('slyIssueCard');
+  const uploadCard = document.getElementById('slyUploadCard');
+
+  if (svc.isIssue) {
+    issueCard.style.display = 'block';
+    uploadCard.style.display = 'block';
+    // show correct sub-section
+    document.getElementById('slyIssueRegistry').style.display = svc.issueType === 'registry' ? 'block' : 'none';
+    document.getElementById('slyIssueBiz').style.display = svc.issueType === 'biz' ? 'block' : 'none';
+    document.getElementById('slyIssueLinks').style.display = ['health','income'].includes(svc.issueType) ? 'block' : 'none';
+    // render quick links
+    const grid = document.getElementById('slyIssueLinkGrid');
+    if (grid && ISSUE_LINKS[svc.issueType]) {
+      grid.innerHTML = ISSUE_LINKS[svc.issueType].map(l =>
+        `<a href="${l.url}" target="_blank" rel="noopener" style="padding:14px 12px;background:${l.color};color:#fff;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;display:block">${l.label}</a>`
+      ).join('');
+    }
+    // update accept on file input
+    const fi2 = document.getElementById('slyFileInput2');
+    if (fi2) fi2.accept = svc.accept || '.pdf';
+    const cn2 = document.getElementById('slyCostNote2');
+    if (cn2) cn2.textContent = `파일 분석 시 ${svc.cost}P 차감됩니다`;
+    // title
+    const titleLabels = { registry:'등기부등본 발급 & 분석', biz:'사업자 조회 & 증명서 분석', health:'건강보험·국민연금 발급 & 분석', income:'소득·세금 서류 발급 & 분석' };
+    const tt = document.getElementById('slyIssueTitleText');
+    if (tt) tt.textContent = titleLabels[svc.issueType] || '공문서 발급 & 분석';
+  } else {
+    issueCard.style.display = 'none';
+    uploadCard.style.display = 'block';
+    const fi2 = document.getElementById('slyFileInput2');
+    if (fi2) fi2.accept = svc.accept || '.hwp,.docx,.pdf,.txt';
+    const jdWrap = document.getElementById('slyJdWrap2');
+    if (jdWrap) {
+      jdWrap.style.display = svc.hasJd ? 'block' : 'none';
+      if (svc.hasJd) document.getElementById('slyJdLabel2').textContent = svc.jdLabel;
+    }
+    const cn2 = document.getElementById('slyCostNote2');
+    if (cn2) cn2.textContent = `분석 시 ${svc.cost}P 차감됩니다`;
   }
-  // update cost note
-  const cn = document.getElementById('slyCostNote');
-  if (cn) cn.textContent = `분석 시 ${svc.cost}P 차감됩니다`;
-  // reset results
   clearResult();
 }
 window._slySelectService = _slySelectService;
@@ -963,9 +1020,9 @@ function handleFile(file) {
   const maxMB = 32;
   if (file.size > maxMB * 1024 * 1024) { _slyToast(`파일이 ${maxMB}MB를 초과합니다`); return; }
   _slyFile = file;
-  const prev = document.getElementById('slyFilePrev');
-  document.getElementById('slyFileName').textContent = file.name;
-  document.getElementById('slyFileSize').textContent = (file.size / 1024 < 1000
+  const prev = document.getElementById('slyFilePrev2');
+  document.getElementById('slyFileName2').textContent = file.name;
+  document.getElementById('slyFileSize2').textContent = (file.size / 1024 < 1000
     ? (file.size / 1024).toFixed(0) + ' KB'
     : (file.size / 1024 / 1024).toFixed(1) + ' MB');
   prev?.classList.add('visible');
@@ -974,11 +1031,13 @@ function handleFile(file) {
 
 function _slyRemoveFile() {
   _slyFile = null;
-  document.getElementById('slyFileInput').value = '';
-  document.getElementById('slyFilePrev')?.classList.remove('visible');
+  const fi2 = document.getElementById('slyFileInput2');
+  if (fi2) fi2.value = '';
+  document.getElementById('slyFilePrev2')?.classList.remove('visible');
   clearResult();
 }
 window._slyRemoveFile = _slyRemoveFile;
+window._slyRemoveFile2 = _slyRemoveFile;
 
 async function _slyAnalyze() {
   if (!window._slyUser) { _slyToast('먼저 로그인해주세요'); return; }
@@ -988,8 +1047,8 @@ async function _slyAnalyze() {
   const pts = window._slyPoints || 0;
   if (pts < svc.cost) { _slyToast(`포인트가 부족합니다 (필요: ${svc.cost}P, 보유: ${pts}P)`); _slyOpenPoints(); return; }
 
-  const btn = document.getElementById('slyAnalyzeBtn');
-  btn.disabled = true;
+  const btn = document.getElementById('slyAnalyzeBtn2');
+  if (btn) btn.disabled = true;
 
   const prog = document.getElementById('slyProgress');
   prog?.classList.add('visible');
@@ -1000,8 +1059,8 @@ async function _slyAnalyze() {
     const token = await window._slyGetToken();
     const fd = new FormData();
     fd.append('file', _slyFile);
-    fd.append('serviceId', _slyService);
-    const jdText = document.getElementById('slyJdText')?.value || '';
+    fd.append('serviceId', svc.serviceId || _slyService);
+    const jdText = document.getElementById('slyJdText2')?.value || '';
     if (jdText) fd.append('jdText', jdText);
 
     const r = await fetch('/api/seolyuhana/analyze', {
@@ -1020,7 +1079,7 @@ async function _slyAnalyze() {
   } catch(e) {
     _slyToast('오류: ' + e.message);
     prog?.classList.remove('visible');
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
   }
 }
 window._slyAnalyze = _slyAnalyze;
@@ -1052,7 +1111,8 @@ function pollResult(jobId) {
         setTimeout(() => {
           document.getElementById('slyProgress')?.classList.remove('visible');
           renderResult(d.result);
-          document.getElementById('slyAnalyzeBtn').disabled = false;
+          const b2 = document.getElementById('slyAnalyzeBtn2');
+          if (b2) b2.disabled = false;
           window._slyLoadPoints?.();
         }, 500);
       } else if (d.status === 'failed') {
@@ -1063,7 +1123,8 @@ function pollResult(jobId) {
     } catch(e) {
       _slyToast('결과 조회 실패: ' + e.message);
       document.getElementById('slyProgress')?.classList.remove('visible');
-      document.getElementById('slyAnalyzeBtn').disabled = false;
+      const b2 = document.getElementById('slyAnalyzeBtn2');
+      if (b2) b2.disabled = false;
     }
   }, 2000);
 }
@@ -1191,6 +1252,73 @@ function renderResult(data) {
     </div>`;
   }
 
+  // Registry analysis (등기부등본)
+  if (data.property) {
+    const p = data.property;
+    html += `<div class="sly-card"><div class="sly-card-title">부동산 정보</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px">
+        ${p.address ? `<div><span style="color:var(--text-muted);font-size:12px">주소</span><div style="font-weight:600">${p.address}</div></div>` : ''}
+        ${p.type ? `<div><span style="color:var(--text-muted);font-size:12px">유형</span><div style="font-weight:600">${p.type}</div></div>` : ''}
+        ${p.area ? `<div><span style="color:var(--text-muted);font-size:12px">면적</span><div style="font-weight:600">${p.area}</div></div>` : ''}
+        ${p.registeredDate ? `<div><span style="color:var(--text-muted);font-size:12px">등기일</span><div style="font-weight:600">${p.registeredDate}</div></div>` : ''}
+      </div>
+    </div>`;
+  }
+  if (data.ownership?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">소유 현황</div><div class="sly-tags">
+      ${data.ownership.map(o => `<span class="sly-tag tag-strength">${typeof o === 'string' ? o : (o.name || '') + (o.share ? ' ' + o.share : '')}</span>`).join('')}
+    </div></div>`;
+  }
+  if (data.encumbrances?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title" style="color:var(--danger)">담보·제한 현황 (${data.encumbrances.length}건)</div>
+      <div class="sly-improve-list">
+        ${data.encumbrances.map((e, i) => `
+          <div class="sly-improve-item" id="slyEnc${i}">
+            <div class="sly-improve-head" onclick="_slyToggleEnc(${i})">
+              <span class="sly-risk-dot ${(e.riskLevel || 'medium') === 'high' ? 'risk-high' : 'risk-medium'}"></span>
+              <span class="sly-improve-section">${e.type || '제한사항'} ${e.amount ? '(' + e.amount + ')' : ''}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              ${e.creditor ? `<div class="sly-reason">채권자: ${e.creditor}</div>` : ''}
+              ${e.date ? `<div class="sly-reason">설정일: ${e.date}</div>` : ''}
+              ${e.description ? `<div class="sly-reason">${e.description}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  if (data.riskSummary) {
+    html += `<div class="sly-card" style="border-left:3px solid var(--danger)">
+      <div class="sly-card-title">위험 요약</div>
+      <div style="font-size:14px;line-height:1.7;white-space:pre-line">${data.riskSummary}</div>
+    </div>`;
+  }
+  if (data.recommendations?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">추천 조치</div><div class="sly-tags">
+      ${data.recommendations.map(r => `<span class="sly-tag tag-keyword">${r}</span>`).join('')}
+    </div></div>`;
+  }
+
+  // Public doc (건강보험/소득/공문서)
+  if (data.docType) {
+    html += `<div class="sly-card">
+      <div class="sly-card-title">${data.docType}</div>
+      ${data.issuedBy ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">발급: ${data.issuedBy}${data.issuedDate ? ' (' + data.issuedDate + ')' : ''}</div>` : ''}
+      ${data.subject ? `<div style="font-size:14px;font-weight:600;margin-bottom:12px">${data.subject}</div>` : ''}
+      ${data.keyFacts?.length ? `<div class="sly-tags" style="margin-bottom:10px">${data.keyFacts.map(f => `<span class="sly-tag tag-strength">${f}</span>`).join('')}</div>` : ''}
+      ${data.summary ? `<div style="font-size:14px;line-height:1.7">${data.summary}</div>` : ''}
+      ${data.validity ? `<div style="margin-top:10px;font-size:13px;color:var(--success);font-weight:600">유효기간: ${data.validity}</div>` : ''}
+      ${data.useCase ? `<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">활용처: ${data.useCase}</div>` : ''}
+    </div>`;
+    if (data.warnings?.length) {
+      html += `<div class="sly-card" style="border-left:3px solid var(--warn)">
+        <div class="sly-card-title">주의사항</div>
+        ${data.warnings.map(w => `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">⚠️ ${w}</div>`).join('')}
+      </div>`;
+    }
+  }
+
   // Download
   html += `<div class="sly-download-row">
     <button class="sly-dl-btn btn-docx" onclick="_slyDownload('docx')">
@@ -1211,6 +1339,7 @@ function renderResult(data) {
 window._slyToggleImp = i => document.getElementById(`slyImp${i}`)?.classList.toggle('open');
 window._slyToggleCat = i => document.getElementById(`slyCat${i}`)?.classList.toggle('open');
 window._slyToggleSec = i => document.getElementById(`slySec${i}`)?.classList.toggle('open');
+window._slyToggleEnc = i => document.getElementById(`slyEnc${i}`)?.classList.toggle('open');
 
 async function _slyDownload(ext) {
   if (!_slyJobId) { _slyToast('먼저 분석을 완료해주세요'); return; }
@@ -1275,24 +1404,95 @@ async function _slyRequestCharge() {
 }
 window._slyRequestCharge = _slyRequestCharge;
 
+// ── 등기부 주소 검색 ──
+async function _slyRegSearch() {
+  const addr = document.getElementById('slyRegAddr')?.value?.trim();
+  if (!addr) { _slyToast('주소를 입력해주세요'); return; }
+  const regType = document.getElementById('slyRegType')?.value || 'all';
+  const btn = document.querySelector('#slyIssueRegistry button');
+  if (btn) { btn.disabled = true; btn.textContent = '검색 중...'; }
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch('/api/seolyuhana/registry-link', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: addr, regType })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '조회 실패');
+    const d = await r.json();
+    const result = document.getElementById('slyRegResult');
+    if (result) {
+      result.style.display = 'block';
+      const addr2 = document.getElementById('slyRegAddr2');
+      if (addr2) addr2.textContent = d.stdAddr || addr;
+      const link = document.getElementById('slyRegLink');
+      if (link && d.irosUrl) { link.href = d.irosUrl; link.style.display = 'block'; }
+    }
+  } catch(e) {
+    _slyToast('주소 조회 실패: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '주소 검색 →'; }
+  }
+}
+window._slyRegSearch = _slyRegSearch;
+
+// ── 사업자 조회 ──
+async function _slyBizSearch() {
+  const biz = document.getElementById('slyBizNum')?.value?.trim();
+  if (!biz) { _slyToast('사업자번호를 입력해주세요'); return; }
+  const btn = document.querySelector('#slyIssueBiz button');
+  if (btn) { btn.disabled = true; btn.textContent = '조회 중...'; }
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch('/api/seolyuhana/biz-status', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bizNum: biz })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '조회 실패');
+    const d = await r.json();
+    const result = document.getElementById('slyBizResult');
+    if (result) {
+      result.style.display = 'block';
+      const statusColor = d.status === '계속사업자' ? 'var(--success)' : 'var(--danger)';
+      result.innerHTML = `
+        <div style="background:var(--bg);border-radius:10px;padding:14px 16px;border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-weight:700;font-size:15px">${d.tradeNm || '(상호 없음)'}</span>
+            <span style="color:${statusColor};font-weight:700;font-size:14px">${d.status || '조회 불가'}</span>
+          </div>
+          ${d.taxType ? `<div style="font-size:13px;color:var(--text-secondary)">세금 유형: <strong>${d.taxType}</strong></div>` : ''}
+          ${d.bizNum ? `<div style="font-size:13px;color:var(--text-muted)">사업자번호: ${d.bizNum}</div>` : ''}
+          ${d.endDt ? `<div style="font-size:13px;color:var(--danger);margin-top:4px">폐업일: ${d.endDt}</div>` : ''}
+        </div>`;
+    }
+  } catch(e) {
+    _slyToast('사업자 조회 실패: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '조회'; }
+  }
+}
+window._slyBizSearch = _slyBizSearch;
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   renderTabs();
   _slySelectService('resume');
 
-  const dz = document.getElementById('slyDropzone');
-  const fi = document.getElementById('slyFileInput');
-  if (dz) {
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-    dz.addEventListener('drop', e => {
+  const dz2 = document.getElementById('slyDropzone2');
+  const fi2 = document.getElementById('slyFileInput2');
+  if (dz2) {
+    dz2.addEventListener('click', () => fi2?.click());
+    dz2.addEventListener('dragover', e => { e.preventDefault(); dz2.classList.add('drag-over'); });
+    dz2.addEventListener('dragleave', () => dz2.classList.remove('drag-over'));
+    dz2.addEventListener('drop', e => {
       e.preventDefault();
-      dz.classList.remove('drag-over');
+      dz2.classList.remove('drag-over');
       const f = e.dataTransfer.files[0];
       if (f) handleFile(f);
     });
   }
-  if (fi) fi.addEventListener('change', () => handleFile(fi.files[0]));
+  if (fi2) fi2.addEventListener('change', () => handleFile(fi2.files[0]));
 
   // close overlay on backdrop click
   document.getElementById('slyPointsOverlay')?.addEventListener('click', e => {
@@ -1339,12 +1539,73 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Tabs -->
     <div class="sly-tabs" id="slyTabs"></div>
 
-    <!-- Upload card -->
-    <div class="sly-card">
-      <div class="sly-card-title">파일 업로드</div>
+    <!-- Issue card (공문서 발급 모드) -->
+    <div class="sly-card" id="slyIssueCard" style="display:none">
+      <div class="sly-card-title" id="slyIssueTitleText">공문서 발급 & 분석</div>
 
-      <div class="sly-dropzone" id="slyDropzone">
-        <input type="file" id="slyFileInput" accept=".hwp,.docx,.pdf,.txt">
+      <!-- 등기부등본 -->
+      <div id="slyIssueRegistry" style="display:none">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <input id="slyRegAddr" type="text" placeholder="도로명 또는 지번 주소 입력 (예: 서울시 강남구 테헤란로 123)"
+            style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
+            onkeydown="if(event.key==='Enter') _slyRegSearch()">
+          <select id="slyRegType" style="padding:12px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:13px;min-width:110px">
+            <option value="all">전체현황</option>
+            <option value="ownership">소유현황</option>
+            <option value="mortgage">근저당·담보</option>
+            <option value="lease">전세권·임차</option>
+          </select>
+        </div>
+        <button onclick="_slyRegSearch()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
+          주소 검색 →
+        </button>
+        <div id="slyRegResult" style="display:none;background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
+          <div id="slyRegAddr2" style="font-size:13px;color:var(--text-secondary);margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a id="slyRegLink" href="#" target="_blank" rel="noopener"
+              style="flex:1;min-width:180px;padding:12px 16px;background:var(--gold);color:var(--navy);border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;text-align:center;display:block">
+              인터넷등기소에서 열람 (700원)
+            </a>
+            <a href="https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp" target="_blank" rel="noopener"
+              style="flex:1;min-width:120px;padding:12px 16px;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;text-decoration:none;text-align:center;display:block">
+              인터넷등기소 홈
+            </a>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.5">
+            열람 후 PDF 저장 → 아래 업로드 → AI 자동 분석
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 PDF 업로드</div>
+      </div>
+
+      <!-- 사업자등록 조회 -->
+      <div id="slyIssueBiz" style="display:none">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <input id="slyBizNum" type="text" maxlength="12" placeholder="사업자등록번호 10자리 (예: 123-45-67890)"
+            style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
+            oninput="this.value=this.value.replace(/[^\d-]/g,'')"
+            onkeydown="if(event.key==='Enter') _slyBizSearch()">
+          <button onclick="_slyBizSearch()" style="padding:12px 20px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">
+            조회
+          </button>
+        </div>
+        <div id="slyBizResult" style="display:none"></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:14px;margin-bottom:8px;font-weight:600">사업자등록증 PDF 업로드 (선택 — AI 상세 분석)</div>
+      </div>
+
+      <!-- 건강보험 / 소득 / 기타 -->
+      <div id="slyIssueLinks" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px" id="slyIssueLinkGrid"></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 파일 업로드</div>
+      </div>
+
+    </div><!-- close slyIssueCard -->
+
+    <!-- Regular upload card (non-issue services) -->
+    <div class="sly-card" id="slyUploadCard">
+      <div class="sly-card-title">파일 업로드</div>
+      <div class="sly-dropzone" id="slyDropzone2">
+        <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
         <div class="sly-dz-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1354,15 +1615,14 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="sly-dz-title">파일을 끌어다 놓거나 클릭하세요</div>
         <div class="sly-dz-sub">최대 32MB</div>
-        <div class="sly-dz-types">
+        <div class="sly-dz-types" id="slyDzTypes2">
           <span class="sly-type-chip">HWP</span>
           <span class="sly-type-chip">DOCX</span>
           <span class="sly-type-chip">PDF</span>
           <span class="sly-type-chip">TXT</span>
         </div>
       </div>
-
-      <div class="sly-file-preview" id="slyFilePrev">
+      <div class="sly-file-preview" id="slyFilePrev2">
         <div class="sly-file-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -1370,26 +1630,24 @@ document.addEventListener('DOMContentLoaded', () => {
           </svg>
         </div>
         <div class="sly-file-info">
-          <div class="sly-file-name" id="slyFileName"></div>
-          <div class="sly-file-size" id="slyFileSize"></div>
+          <div class="sly-file-name" id="slyFileName2"></div>
+          <div class="sly-file-size" id="slyFileSize2"></div>
         </div>
-        <button class="sly-file-remove" onclick="_slyRemoveFile()">
+        <button class="sly-file-remove" onclick="_slyRemoveFile2()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-
-      <div class="sly-optional" id="slyJdWrap">
-        <label id="slyJdLabel">지원 공고 붙여넣기 (선택)</label>
-        <textarea id="slyJdText" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
+      <div class="sly-optional" id="slyJdWrap2">
+        <label id="slyJdLabel2">지원 공고 붙여넣기 (선택)</label>
+        <textarea id="slyJdText2" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
       </div>
-
-      <button class="sly-analyze-btn" id="slyAnalyzeBtn" onclick="_slyAnalyze()">
+      <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         AI 분석 시작
       </button>
-      <div class="sly-cost-note" id="slyCostNote">분석 시 10P 차감됩니다</div>
+      <div class="sly-cost-note" id="slyCostNote2">분석 시 10P 차감됩니다</div>
     </div>
 
     <!-- Progress -->

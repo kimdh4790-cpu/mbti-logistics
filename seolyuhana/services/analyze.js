@@ -360,6 +360,97 @@ function getScannedPrompt(serviceId, ctx) {
   return prompts[serviceId] || '이 문서를 읽고 내용을 JSON으로 정리하세요.';
 }
 
+// ────────────────────────────────────────────────────────────
+// 6. 등기부등본 분석
+// ────────────────────────────────────────────────────────────
+const REGISTRY_SYSTEM = `당신은 부동산 등기 전문가입니다. 등기부등본(부동산 등기사항전부증명서)을 분석하여
+핵심 권리관계와 위험요소를 명확하게 정리합니다.
+반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+출력 스키마:
+{
+  "property": {
+    "address": "소재지 주소",
+    "type": "부동산 종류 (토지/건물/집합건물 등)",
+    "area": "면적 (㎡)",
+    "purpose": "지목/용도",
+    "buildingInfo": "건물 구조 및 면적 (해당 시)"
+  },
+  "ownership": {
+    "owners": [{"name": "소유자명", "share": "지분비율", "acquiredDate": "취득일", "acquireType": "매매/증여/상속 등"}],
+    "isMultiOwner": true,
+    "multiOwnerRisk": "공동소유 위험 설명 (해당 시)"
+  },
+  "encumbrances": [
+    {
+      "type": "권리종류 (근저당/전세권/지상권/가압류/가처분/예고등기 등)",
+      "creditor": "권리자명",
+      "amount": "채권최고액 또는 전세금",
+      "priority": "순위번호",
+      "registeredDate": "등기일",
+      "status": "현재 상태 (말소됨/유효 등)",
+      "risk": "위험도 (높음/중간/낮음)"
+    }
+  ],
+  "riskSummary": {
+    "score": 85,
+    "level": "안전|주의|위험|고위험",
+    "totalDebt": "총 채권최고액 합계",
+    "hasCompulsoryExecution": false,
+    "hasPreliminaryInjunction": false,
+    "hasPreemptiveRight": false,
+    "keyRisks": ["주요 위험 항목1", "항목2"]
+  },
+  "recommendations": ["권고사항1", "권고사항2", "권고사항3"],
+  "summary": "전체 권리관계 요약 (200자 이내)"
+}`;
+
+export async function analyzeRegistry({ text, env }) {
+  return callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    system: REGISTRY_SYSTEM,
+    userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요:\n\n${text}` }],
+    env,
+    maxTokens: 4096
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+// 7. 건강보험/국민연금/소득 납부확인서 분석
+// ────────────────────────────────────────────────────────────
+const PUBLIC_DOC_SYSTEM = `당신은 한국 공공문서 분석 전문가입니다. 건강보험료 납부확인서, 국민연금 납부확인서,
+소득금액증명원, 근로소득원천징수 확인서, 주민등록등본/초본 등 공공문서를 분석합니다.
+반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+출력 스키마:
+{
+  "docType": "문서 종류 (건강보험납부확인서/국민연금납부확인서/소득금액증명원/근로소득원천징수/주민등록등본/기타)",
+  "issuedDate": "발급일자",
+  "issuedBy": "발급기관",
+  "subject": {
+    "name": "성명",
+    "idNumber": "주민등록번호 (뒷자리 마스킹)",
+    "address": "주소 (해당 시)"
+  },
+  "keyFacts": [
+    {"label": "항목명", "value": "값", "period": "기간 (해당 시)"}
+  ],
+  "summary": "문서 주요 내용 요약 (150자 이내)",
+  "useCase": "이 문서가 주로 활용되는 용도 (대출/임대차/비자/취업 등)",
+  "validity": "유효기간 또는 주의사항",
+  "warnings": ["주의사항1", "주의사항2"]
+}`;
+
+export async function analyzePublicDoc({ text, env }) {
+  return callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    system: PUBLIC_DOC_SYSTEM,
+    userBlocks: [{ type: 'text', text: `다음 공공문서를 분석해주세요:\n\n${text}` }],
+    env,
+    maxTokens: 3000
+  });
+}
+
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let bin = '';
