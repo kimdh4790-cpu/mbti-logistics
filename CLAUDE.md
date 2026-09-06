@@ -551,6 +551,15 @@ cd mbtico-pages && npx wrangler deploy
 - **SCAN PWA 홈화면 설치**: /scan-manifest.json 엔드포인트, scan-icon-192/512.png KV 업로드, PWA 메타태그 추가
 - **SCAN 로고**: 헤더 + 히어로 섹션에 SCAN 로고 이미지 base64 직접 내장 (KV 의존 제거, 48px PNG ~6KB)
 
+### ✅ 완료 (2026-09-06 SCAN 랜딩 리디자인)
+- **scan.html 랜딩 전면 리디자인**: 핑크(#F472B6)·민트(#34D399)·골드(#F59E0B) 3색 + 흰 배경
+- CSS 애니메이션 폰 목업 데모 (slyFloat·slyScanLine·slyFadeSlide·slyPulseRing)
+- 기능 카드 6종 가로 스크롤 스냅 → 탭 시 상세 패널 펼침 (_slyFeatDetail)
+- 포인트 체계 1P=1원: 서비스 500P~2000P, 충전 5000P~55000P (보너스 포함)
+- _slyRequestCharge 하드코딩 요금 동기화 (구 50·120·270·600P → 신 5000·10000·22000·55000P)
+- Firebase Auth popup→redirect 폴백 + getRedirectResult 초기화 추가
+- 슈퍼어드민(kimdh4790@gmail.com·soungkyekim@naver.com) 무제한 포인트(∞P) 바이패스
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
