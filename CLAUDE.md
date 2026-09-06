@@ -529,6 +529,15 @@ cd mbtico-pages && npx wrangler deploy
   - 다음 실행: 2026-09-05T12:07 UTC (KST 21:07)
   - 동작: /api/error-digest 조회 → 오류 분석 → 코드 수정 → push → 푸시 알림
 
+### ✅ 완료 (2026-09-06)
+- **서류하나 백엔드 코어 구현**: seolyuhana/utils/parser.js, seolyuhana/services/analyze.js, seolyuhana/output/builder.js
+- **서류하나 API 6개 추가** (_worker.js): /api/seolyuhana/analyze·result·download·points·point-request·point-approve
+- **서류하나 프론트엔드** (seolyuhana.html): Firebase Auth + 파일 업로드 + 분석 UI + 포인트 충전 모달
+- **서류하나 Oracle 변환서버** (seolyuhana/oracle-server.js): LibreOffice HWP→DOCX + Puppeteer HTML→PDF (포트 3100)
+- **_worker.js /seolyuhana 라우트 추가** (filo.ai.kr 블록)
+- **Aligo SMS/알림톡 → Solapi 전환 완료**: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
+  - processAlimtalkQueue, DONWAY 승인 알림톡, /api/send-sms, /api/send-sms-bulk, 용차앱 정산 알림톡 모두 solapiSms()/solapiAlimtalk() 교체
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
