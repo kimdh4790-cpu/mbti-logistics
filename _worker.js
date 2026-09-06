@@ -5311,7 +5311,310 @@ ${JSON.stringify(postSummary)}
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
-      // /api/trigger-social — GitHub Actions 소셜미디어 워크플로우 실행 (슈퍼어드민 전용)
+      // ══════════════════════════════════════════════════════════════
+      // 서류하나 (seolyuhana) API
+      // ══════════════════════════════════════════════════════════════
+
+      // POST /api/seolyuhana/analyze — 파일 업로드 + 분석 시작 (비동기, jobId 반환)
+      if (path === '/api/seolyuhana/analyze' && method === 'POST') {
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401});
+
+          const form = await request.formData();
+          const file = form.get('file');
+          const serviceId = form.get('serviceId') || '';
+          const jdText = form.get('jdText') || '';
+          const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
+
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract'];
+          if (!VALID_SERVICES.includes(serviceId)) {
+            return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
+          }
+          if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400});
+
+          // 서비스 설정 조회 (포인트·페이지 제한)
+          const token = await getAccessToken(env);
+          const svcDoc = await fsGet(token, `${FS_BASE}/sly_service_config/${serviceId}`);
+          if (!svcDoc?.fields) return Response.json({ok:false,error:'서비스 설정을 찾을 수 없습니다.'},{status:404});
+          const pointCost = svcDoc.fields.pointCost?.integerValue|0 || 0;
+          const enabled   = svcDoc.fields.enabled?.booleanValue ?? false;
+          if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503});
+
+          // 포인트 잔액 확인
+          const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+          const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
+          if (balance < pointCost) {
+            return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402});
+          }
+
+          // Job 레코드 생성 (processing 상태)
+          const jobId = crypto.randomUUID();
+          const filename = file.name || 'document';
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+            uid:           { stringValue: uid },
+            serviceId:     { stringValue: serviceId },
+            filename:      { stringValue: filename },
+            status:        { stringValue: 'processing' },
+            progress:      { integerValue: 0 },
+            pointCost:     { integerValue: pointCost },
+            createdAt:     { stringValue: new Date().toISOString() },
+            jdText:        { stringValue: jdText },
+            resumeJobId:   { stringValue: resumeJobId }
+          });
+
+          // 포인트 차감 (runTransaction)
+          const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
+          if (!txRes.ok) {
+            await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
+            return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+          }
+
+          // 포인트 차감 이력
+          const histId = crypto.randomUUID();
+          await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
+            uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
+            serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
+            balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
+          });
+
+          // 비동기 처리 (waitUntil 사용)
+          const fileBuffer = await file.arrayBuffer();
+          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token};
+          ctx.waitUntil(_slyProcessJob(processingCtx));
+
+          return Response.json({
+            ok: true, jobId,
+            estimatedSec: 30,
+            pointsCharged: pointCost,
+            balance: balance - pointCost
+          });
+        } catch(e) {
+          return Response.json({ok:false,error:e.message},{status:500});
+        }
+      }
+
+      // GET /api/seolyuhana/result/:jobId — 처리 상태 조회
+      if (path.startsWith('/api/seolyuhana/result/') && method === 'GET') {
+        const jobId = path.replace('/api/seolyuhana/result/', '');
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const token = await getAccessToken(env);
+          const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
+          if (!doc?.fields) return Response.json({ok:false,error:'잡을 찾을 수 없습니다.'},{status:404});
+          const f = doc.fields;
+          if (f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          return Response.json({
+            ok:true,
+            status:    f.status?.stringValue || 'unknown',
+            progress:  f.progress?.integerValue|0 || 0,
+            summary:   f.summary?.stringValue || null,
+            downloadUrls: f.downloadUrls?.mapValue?.fields ? {
+              docx: f.downloadUrls.mapValue.fields.docx?.stringValue,
+              pdf:  f.downloadUrls.mapValue.fields.pdf?.stringValue
+            } : null,
+            error: f.error?.stringValue || null,
+            completedAt: f.completedAt?.stringValue || null
+          });
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // GET /api/seolyuhana/download/:jobId — 파일 다운로드 스트림
+      if (path.startsWith('/api/seolyuhana/download/') && method === 'GET') {
+        const jobId = path.replace('/api/seolyuhana/download/', '');
+        const fileType = new URL(request.url).searchParams.get('type') || 'docx';
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return new Response('Unauthorized', {status:401});
+          const token = await getAccessToken(env);
+          const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
+          if (!doc?.fields) return new Response('Not found', {status:404});
+          const f = doc.fields;
+          if (f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
+          if (f.status?.stringValue !== 'completed') return new Response('Not ready', {status:202});
+
+          // KV에서 파일 가져오기
+          const kvKey = `sly_job_${jobId}_${fileType}`;
+          const fileData = await env.DONWAY_ASSETS.get(kvKey, {type:'arrayBuffer'});
+          if (!fileData) return new Response('File not found', {status:404});
+
+          const mime = fileType === 'pdf' ? 'application/pdf'
+                     : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          const filename = f.outputFilename?.stringValue || `analysis.${fileType}`;
+          return new Response(fileData, {
+            headers: {
+              'Content-Type': mime,
+              'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+            }
+          });
+        } catch(e) { return new Response(e.message, {status:500}); }
+      }
+
+      // GET /api/seolyuhana/points — 포인트 잔액 조회
+      if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const token = await getAccessToken(env);
+          const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+          const balance = doc?.fields?.balance?.integerValue|0 || 0;
+
+          // 최근 이력 5건
+          const histRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{
+              from:[{collectionId:'sly_point_history'}],
+              where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},
+              orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],
+              limit:5
+            }})
+          });
+          const histRows = await histRes.json();
+          const history = (Array.isArray(histRows)?histRows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            return {type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};
+          });
+          return Response.json({ok:true, balance, history});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // POST /api/seolyuhana/point-request — 포인트 충전 신청 (계좌이체)
+      if (path === '/api/seolyuhana/point-request' && method === 'POST') {
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const body = await request.json();
+          const depositorName = (body.depositorName||'').trim();
+          const amount = parseInt(body.amount) || 0;
+          if (!depositorName) return Response.json({ok:false,error:'입금자명을 입력하세요.'},{status:400});
+          if (amount < 10000) return Response.json({ok:false,error:'최소 충전 금액은 10,000원입니다.'},{status:400});
+          const token = await getAccessToken(env);
+          const reqId = crypto.randomUUID();
+          await fsPatch(token, `${FS_BASE}/sly_point_requests/${reqId}`, {
+            uid:           { stringValue: uid },
+            depositorName: { stringValue: depositorName },
+            amount:        { integerValue: amount },
+            points:        { integerValue: amount }, // 1원 = 1P
+            status:        { stringValue: 'pending' },
+            createdAt:     { stringValue: new Date().toISOString() }
+          });
+          return Response.json({ok:true, reqId, points: amount, message:`${depositorName}님 이름으로 ${amount.toLocaleString()}원 입금 후 24시간 내 포인트가 충전됩니다.`});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // POST /api/seolyuhana/point-approve — 관리자 포인트 승인 (수동)
+      if (path === '/api/seolyuhana/point-approve' && method === 'POST') {
+        const _paAdmin = await requireAdmin(request, env);
+        if (!_paAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
+        try {
+          const body = await request.json();
+          const reqId = body.reqId;
+          if (!reqId) return Response.json({ok:false,error:'reqId 필요'},{status:400});
+          const token = await getAccessToken(env);
+          const reqDoc = await fsGet(token, `${FS_BASE}/sly_point_requests/${reqId}`);
+          if (!reqDoc?.fields) return Response.json({ok:false,error:'신청을 찾을 수 없습니다.'},{status:404});
+          const f = reqDoc.fields;
+          if (f.status?.stringValue !== 'pending') return Response.json({ok:false,error:'이미 처리된 신청입니다.'},{status:409});
+          const uid = f.uid?.stringValue;
+          const points = parseInt(f.points?.integerValue) || 0;
+
+          // 포인트 적립 + 상태 변경
+          const [_, __, ___] = await Promise.all([
+            fetch(`${FS_BASE}:runQuery`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+              body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,
+              fieldTransforms:[{fieldPath:'balance',increment:{integerValue:points}}]}}]})}),
+            fsPatch(token, `${FS_BASE}/sly_point_requests/${reqId}`, {status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}),
+            fsPatch(token, `${FS_BASE}/sly_point_history/${crypto.randomUUID()}`, {uid:{stringValue:uid},type:{stringValue:'charge'},amount:{integerValue:points},reqId:{stringValue:reqId},createdAt:{stringValue:new Date().toISOString()}})
+          ]);
+          return Response.json({ok:true, uid, points, message:`${points.toLocaleString()}P 충전 완료`});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
+      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token}) {
+        const setProgress = async (p, status='processing') => {
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
+        };
+        try {
+          // 1. 파일 파싱 (동적 import — Workers 모듈 시스템)
+          const { parseFile, makeOutputFilename } = await import('./seolyuhana/utils/parser.js');
+          await setProgress(10);
+          const parsed = await parseFile(fileBuffer, filename, '', env);
+          if (parsed.pageCount > 20) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 20)`);
+          await setProgress(25);
+
+          // 2. 이력서 컨텍스트 로드 (재사용)
+          let resumeText = '';
+          if (resumeJobId) {
+            const rDoc = await fsGet(token, `${FS_BASE}/sly_jobs/${resumeJobId}`);
+            resumeText = rDoc?.fields?.originalText?.stringValue || '';
+          }
+
+          // 3. Claude 분석
+          const { analyzeResume, analyzeCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf } = await import('./seolyuhana/services/analyze.js');
+          await setProgress(40);
+
+          let analysisData;
+          if (parsed.scanned) {
+            const result = await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer, serviceId, extraContext:{resumeText, jdText}, env});
+            analysisData = result.data;
+          } else {
+            const text = parsed.text;
+            if (serviceId === 'resume_analysis') {
+              const r = await analyzeResume({text, jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'cover_letter_analysis') {
+              const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'cover_letter_translation') {
+              const r = await translateCoverLetter({text, resumeText, env}); analysisData = r.data;
+            } else if (serviceId === 'interview_questions') {
+              const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); analysisData = r.data;
+            } else {
+              const r = await analyzeContract({text, contractType:serviceId, env}); analysisData = r.data;
+            }
+          }
+          await setProgress(70);
+
+          // 4. 출력 파일 생성
+          const { buildDocx, buildPdf } = await import('./seolyuhana/output/builder.js');
+          const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '');
+          await setProgress(85);
+          let pdfBuffer = null;
+          try { pdfBuffer = await buildPdf(analysisData, serviceId, filename, env); } catch {}
+          await setProgress(95);
+
+          // 5. KV 저장 (24시간 TTL)
+          const docxKey = `sly_job_${jobId}_docx`;
+          const pdfKey  = `sly_job_${jobId}_pdf`;
+          await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400});
+          if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400});
+
+          // 6. 완료 처리
+          const outputDocx = makeOutputFilename(filename, 'docx');
+          const outputPdf  = makeOutputFilename(filename, 'pdf');
+          const summary = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+            status:      { stringValue: 'completed' },
+            progress:    { integerValue: 100 },
+            summary:     { stringValue: summary.slice(0,300) },
+            originalText:{ stringValue: (parsed.text||'').slice(0,5000) },
+            outputFilename:{ stringValue: outputDocx },
+            downloadUrls:{ mapValue:{ fields:{
+              docx:{ stringValue: `/api/seolyuhana/download/${jobId}?type=docx` },
+              ...(pdfBuffer ? {pdf:{ stringValue: `/api/seolyuhana/download/${jobId}?type=pdf` }} : {})
+            }}},
+            completedAt: { stringValue: new Date().toISOString() }
+          });
+        } catch(err) {
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+            status:  { stringValue: 'failed' },
+            error:   { stringValue: err.message || '알 수 없는 오류' }
+          }).catch(()=>{});
+        }
+      }
+
+      // ── /api/trigger-social — GitHub Actions 소셜미디어 워크플로우 실행 (슈퍼어드민 전용)
       if (path === '/api/trigger-social' && method === 'POST') {
         const _tsAdmin = await requireAdmin(request, env);
         if (!_tsAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
