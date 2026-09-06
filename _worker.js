@@ -5618,6 +5618,7 @@ ${JSON.stringify(postSummary)}
       }
 
       // ─── Tilko API 등기부 직접 조회 헬퍼 ────────────────────────────────────
+      // Tilko API v2.0 스펙: 필드별 AES-128-CBC 암호화, ENC-KEY에 RSA-OAEP로 암호화된 AES키
       function _b64Buf(b64) {
         const bin = atob(b64.replace(/\s+/g,''));
         const buf = new Uint8Array(bin.length);
@@ -5626,68 +5627,144 @@ ${JSON.stringify(postSummary)}
       }
       function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 
-      async function _tilkoFetchRegistry(address, pnu, regType, apiKey, rsaPubKeyB64) {
+      async function _tilkoFetchRegistry(address, tilkoPinHint, regType, env) {
+        const apiKey = env.TILKO_API_KEY;
+        const rsaPubKeyB64 = env.TILKO_RSA_PUBKEY;
+        const irosId = env.IROS_USER_ID;
+        const irosPw = env.IROS_USER_PW;
+        const emoneyNo1 = env.IROS_EMONEY_NO1;
+        const emoneyNo2 = env.IROS_EMONEY_NO2;
+        const emoneyPwd = env.IROS_EMONEY_PWD;
+        if (!irosId || !irosPw || !emoneyNo1 || !emoneyNo2 || !emoneyPwd) {
+          throw new Error('인터넷등기소 계정/전자지불카드 env 미설정 (IROS_USER_ID, IROS_USER_PW, IROS_EMONEY_NO1/NO2/PWD)');
+        }
+
+        // 1) AES-128 세션키 + IV 생성
         const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
         const iv = crypto.getRandomValues(new Uint8Array(16));
         const rawAes = await crypto.subtle.exportKey('raw', aesKey);
+
+        // 2) RSA-OAEP로 AES키 암호화 → ENC-KEY 헤더
         const spki = _b64Buf(rsaPubKeyB64);
         const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
         const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAes);
         const encKey = _bufB64(encAes);
-        const reqBytes = new TextEncoder().encode(JSON.stringify({
-          부동산고유번호: pnu || '',
-          발급구분: regType === 'mortgage' ? '말소사항포함' : '전부',
-          검색주소: address
-        }));
-        const encBody = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, reqBytes);
-        const payload = new Uint8Array(16 + encBody.byteLength);
-        payload.set(iv, 0);
-        payload.set(new Uint8Array(encBody), 16);
 
-        const res = await fetch('https://api.tilko.net/api/v1.0/Iros/RISURetrieve', {
+        // 3) 필드별 AES-CBC 암호화 헬퍼
+        const enc = async (val) => {
+          const ct = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, new TextEncoder().encode(String(val)));
+          return _bufB64(ct);
+        };
+        // 일부 필드(EmoneyNo*)는 값을 Base64 인코딩 후 AES 암호화
+        const encB64 = async (val) => enc(btoa(String(val)));
+
+        // 4) Tilko 주소→고유번호 검색 (선행 API, 인증 불필요)
+        let pin = (tilkoPinHint || '').replace(/-/g,'');
+        if (!pin || pin.length !== 14) {
+          try {
+            const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
+              method: 'POST',
+              headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
+              body: JSON.stringify({ SearchAddr: await enc(address) }),
+              signal: AbortSignal.timeout(15000)
+            });
+            if (addrRes.ok) {
+              const ad = await addrRes.json().catch(()=>({}));
+              const first = (ad.realty_list || ad.RealtyList || [])[0];
+              pin = (first?.pin || first?.Pin || first?.고유번호 || '').replace(/-/g,'');
+            }
+          } catch(_) {}
+        }
+        if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (주소: ${address}). 14자리 고유번호를 직접 입력해주세요.`);
+
+        // 5) 등기부 조회 요청
+        const absCls = (regType === 'current') ? '11' : '12'; // 11=현재유효, 12=말소사항포함
+        const body = {
+          Auth: { UserId: await enc(irosId), UserPassword: await enc(irosPw) },
+          Pin: await enc(pin),
+          EmoneyNo1: await encB64(emoneyNo1),
+          EmoneyNo2: await encB64(emoneyNo2),
+          EmoneyPwd: await encB64(emoneyPwd),
+          CmortFlag: await enc('N'),
+          TradeSeqFlag: await enc('N'),
+          AbsCls: await enc(absCls),
+          RgsMttrSmry: ''
+        };
+
+        const res = await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry', {
           method: 'POST',
-          headers: {'api-key': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/octet-stream'},
-          body: payload, signal: AbortSignal.timeout(30000)
+          headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
+          body: JSON.stringify(body), signal: AbortSignal.timeout(30000)
         });
-        if (!res.ok) throw new Error(`Tilko ${res.status}: ${await res.text().catch(()=>'')}`);
+        const resText = await res.text();
+        if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,200)}`);
 
-        const resBytes = new Uint8Array(await res.arrayBuffer());
-        const resIv = resBytes.slice(0, 16);
-        const resEnc = resBytes.slice(16);
-        const resPlain = new TextDecoder().decode(
-          await crypto.subtle.decrypt({name:'AES-CBC',iv:resIv}, aesKey, resEnc)
-        );
-        return _parseTilkoXml(resPlain);
+        // 6) 응답 파싱 (JSON 우선, XML 폴백)
+        try {
+          const json = JSON.parse(resText);
+          const code = json.ResultCode || json.result_code || '';
+          if (code && code !== '0000' && code !== '00000' && code !== '200') {
+            throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage || json.result_message || ''}`);
+          }
+          return _parseTilkoJson(json);
+        } catch(pe) {
+          if (pe.message.startsWith('Tilko')) throw pe;
+          return _parseTilkoXml(resText);
+        }
+      }
+
+      function _parseTilkoJson(d) {
+        const r = d.realty_registry || d.RealtyInfo || d.data || d;
+        const property = {
+          address: r.Address || r.소재지번 || r.지번 || '',
+          type: r.RealtyType || r.부동산구분 || '',
+          area: r.Area || r.면적 || '',
+          buildYear: r.BuildYear || r.건축년도 || ''
+        };
+        const ownership = (r.GabSection || r.갑구 || r.gab_section || []).map(o=>({
+          purpose: o.Purpose || o.목적 || o.등기목적 || '',
+          date: o.Date || o.접수일자 || '',
+          owner: o.Owner || o.소유자 || o.owner || ''
+        }));
+        const encumbrances = (r.EulSection || r.을구 || r.eul_section || []).map(e=>({
+          type: e.Purpose || e.목적 || e.등기목적 || '',
+          amount: e.Amount || e.채권최고액 || e.전세금 || '',
+          creditor: e.Creditor || e.근저당권자 || e.채권자 || '',
+          date: e.Date || e.접수일자 || ''
+        })).filter(e=>e.type);
+        return _buildRegistryResult(property, ownership, encumbrances);
       }
 
       function _parseTilkoXml(xml) {
-        const tag = (t, src) => { const m = (src||xml).match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`, 'i')); return m?.[1]?.trim() || ''; };
-        const tags = (t, src) => [...(src||xml).matchAll(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`, 'gi'))].map(m=>m[1].trim());
+        const tag = (t,src) => { const m=(src||xml).match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`,'i')); return m?.[1]?.trim()||''; };
+        const tags = (t,src) => [...(src||xml).matchAll(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`,'gi'))].map(m=>m[1].trim());
         const property = {
-          address: tag('부동산소재지번') || tag('도로명주소') || tag('주소'),
-          type: tag('부동산구분') || tag('지목'),
-          area: tag('면적'),
-          buildYear: tag('건축년도')
+          address: tag('부동산소재지번')||tag('도로명주소')||tag('주소'),
+          type: tag('부동산구분')||tag('지목'),
+          area: tag('면적'), buildYear: tag('건축년도')
         };
         const ownership = tags('갑구사항').map(s=>({
-          purpose: s.match(/소유권이전|소유권보존|소유권|가압류|가처분/)?.[0] || '',
-          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0] || '',
-          owner: s.match(/소유자[:\s＊*]+([^\n<,]+)/)?.[1]?.trim() || ''
+          purpose: s.match(/소유권이전|소유권보존|가압류|가처분/)?.[0]||'',
+          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0]||'',
+          owner: s.match(/소유자[:\s＊*]+([^\n<,]+)/)?.[1]?.trim()||''
         })).filter(o=>o.owner||o.purpose);
         const encumbrances = tags('을구사항').map(s=>({
-          type: s.match(/근저당권설정|전세권설정|지상권설정|임차권등기/)?.[0] || '',
-          amount: s.match(/채권최고액[:\s]+([^\n<]+)/)?.[1]?.trim() || s.match(/전세금[:\s]+([^\n<]+)/)?.[1]?.trim() || '',
-          creditor: s.match(/(?:근저당권자|채권자|전세권자)[:\s]+([^\n<,]+)/)?.[1]?.trim() || '',
-          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0] || ''
+          type: s.match(/근저당권설정|전세권설정|지상권설정|임차권등기/)?.[0]||'',
+          amount: s.match(/채권최고액[:\s]+([^\n<]+)/)?.[1]?.trim()||s.match(/전세금[:\s]+([^\n<]+)/)?.[1]?.trim()||'',
+          creditor: s.match(/(?:근저당권자|채권자|전세권자)[:\s]+([^\n<,]+)/)?.[1]?.trim()||'',
+          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0]||''
         })).filter(e=>e.type);
-        const totalDebt = encumbrances.reduce((sum,e)=>{
-          const n = parseInt((e.amount||'').replace(/[^0-9]/g,''), 10);
-          return sum + (isNaN(n)?0:n);
-        }, 0);
-        const riskSummary = encumbrances.length > 0
-          ? `근저당·담보 ${encumbrances.length}건, 채권최고액 합계 ${totalDebt.toLocaleString()}원`
-          : '담보·제한 없음';
-        return { property, ownership, encumbrances, riskSummary, totalDebt };
+        return _buildRegistryResult(property, ownership, encumbrances);
+      }
+
+      function _buildRegistryResult(property, ownership, encumbrances) {
+        const totalDebt = encumbrances.reduce((s,e)=>s+(parseInt((e.amount||'').replace(/[^0-9]/g,''),10)||0),0);
+        return {
+          property, ownership, encumbrances, totalDebt,
+          riskSummary: encumbrances.length
+            ? `근저당·담보 ${encumbrances.length}건, 채권최고액 합계 ${totalDebt.toLocaleString()}원`
+            : '담보·제한 없음'
+        };
       }
       // ─────────────────────────────────────────────────────────────────────────
 
@@ -5696,10 +5773,10 @@ ${JSON.stringify(postSummary)}
         const _ru = await requireAuth(request, env);
         if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
         try {
-          const { address, regType = 'all' } = await request.json();
+          const { address, regType = 'all', pin } = await request.json();
           if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
 
-          let stdAddr = address, pnu = null;
+          let stdAddr = address, pnuHint = pin || null;
           const vkey = env.VWORLD_API_KEY;
           if (vkey) {
             try {
@@ -5707,7 +5784,7 @@ ${JSON.stringify(postSummary)}
               if (vr.ok) {
                 const vd = await vr.json();
                 const rs = vd?.response?.result;
-                if (rs) { stdAddr = rs.refined?.text || address; pnu = rs.structure?.pnu; }
+                if (rs) { stdAddr = rs.refined?.text || address; }
               }
             } catch(_) {}
           }
@@ -5716,19 +5793,29 @@ ${JSON.stringify(postSummary)}
           const tilkoRsa = env.TILKO_RSA_PUBKEY;
           if (tilkoKey && tilkoRsa) {
             try {
-              const data = await _tilkoFetchRegistry(stdAddr, pnu, regType, tilkoKey, tilkoRsa);
-              return Response.json({ok:true, mode:'direct', stdAddr, pnu, ...data}, {status:200,headers});
+              const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
+              return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
             } catch(te) {
               console.error('[tilko-registry]', te.message);
+              // 설정 오류는 바로 반환
+              if (te.message.includes('env 미설정') || te.message.includes('고유번호')) {
+                return Response.json({ok:false, mode:'link', error: te.message,
+                  stdAddr, irosUrl:`https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`
+                },{status:200,headers});
+              }
             }
           }
 
           // Fallback: 인터넷등기소 링크
           const irosUrl = `https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          const missing = [];
+          if (!tilkoKey) missing.push('TILKO_API_KEY');
+          if (!tilkoRsa) missing.push('TILKO_RSA_PUBKEY');
+          if (!env.IROS_USER_ID) missing.push('IROS_USER_ID');
+          if (!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
           return Response.json({
-            ok: true, mode: 'link', stdAddr, pnu, irosUrl,
-            guide: (tilkoKey && tilkoRsa) ? 'Tilko API 오류로 링크 모드 전환. 잠시 후 재시도해주세요.'
-              : 'TILKO_API_KEY + TILKO_RSA_PUBKEY 설정 시 직접 조회 가능합니다.'
+            ok: true, mode: 'link', stdAddr, irosUrl,
+            guide: missing.length ? `직접 조회 미설정 항목: ${missing.join(', ')}` : 'Tilko API 오류로 링크 모드 전환'
           }, {status:200,headers});
         } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
       }
