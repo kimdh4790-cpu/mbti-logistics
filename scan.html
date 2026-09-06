@@ -766,120 +766,382 @@ body {
 
 /* Login wall */
 /* ── 랜딩 페이지 ── */
+/* ── Landing color tokens ── */
+:root {
+  --pink: #F472B6;
+  --pink-dark: #DB2777;
+  --pink-tint: #FDF2F8;
+  --mint: #34D399;
+  --mint-dark: #059669;
+  --mint-tint: #ECFDF5;
+  --sly-gold: #F59E0B;
+  --sly-gold-dark: #D97706;
+  --sly-gold-tint: #FFFBEB;
+  --landing-bg: #ffffff;
+  --landing-text: #0f172a;
+  --landing-muted: #64748b;
+  --landing-border: #e2e8f0;
+}
+
+/* ── Phone mockup animation ── */
+@keyframes slyFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes slyFadeSlide {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes slyPulseRing {
+  0% { box-shadow: 0 0 0 0 rgba(244,114,182,.4); }
+  70% { box-shadow: 0 0 0 14px rgba(244,114,182,0); }
+  100% { box-shadow: 0 0 0 0 rgba(244,114,182,0); }
+}
+@keyframes slyTyping {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes slyScanLine {
+  0% { top: 10%; }
+  100% { top: 85%; }
+}
+@keyframes slyCheck {
+  0% { stroke-dashoffset: 40; }
+  100% { stroke-dashoffset: 0; }
+}
+
 .sly-landing {
   display: none;
-  background: #fff;
+  background: var(--landing-bg);
   min-height: 100vh;
-  color: #0f172a;
+  color: var(--landing-text);
   font-family: 'Pretendard', sans-serif;
 }
 .sly-landing.visible { display: block; }
 
+/* ── Hero ── */
 .sly-landing-hero {
-  background: var(--navy);
-  padding: 60px 24px 48px;
+  background: linear-gradient(160deg, #fff5fb 0%, #f0fdf4 50%, #fffbeb 100%);
+  padding: 48px 24px 0;
   text-align: center;
-  color: #fff;
+  overflow: hidden;
 }
-.sly-landing-hero img {
-  width: 72px; height: 72px;
-  border-radius: 18px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 24px rgba(201,168,76,.4);
+.sly-hero-eyebrow-landing {
+  display: inline-block;
+  background: var(--pink-tint);
+  color: var(--pink-dark);
+  font-size: 12px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 14px; border-radius: 20px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(244,114,182,.2);
 }
 .sly-landing-hero h1 {
-  font-size: 28px; font-weight: 800;
-  line-height: 1.35; margin: 0 0 12px;
-  text-wrap: balance;
+  font-size: clamp(26px, 7vw, 36px);
+  font-weight: 900; line-height: 1.25;
+  margin: 0 0 14px; text-wrap: balance;
+  color: var(--landing-text);
 }
-.sly-landing-hero h1 em { color: var(--gold); font-style: normal; }
-.sly-landing-hero p {
-  font-size: 15px; color: rgba(255,255,255,.7);
-  margin: 0 0 28px; line-height: 1.6;
+.sly-landing-hero h1 .sly-h1-pink { color: var(--pink-dark); }
+.sly-landing-hero h1 .sly-h1-mint { color: var(--mint-dark); }
+.sly-landing-hero h1 .sly-h1-gold { color: var(--sly-gold-dark); }
+.sly-landing-hero > p {
+  font-size: 15px; color: var(--landing-muted);
+  margin: 0 0 28px; line-height: 1.7; max-width: 320px;
+  margin-left: auto; margin-right: auto;
 }
 .sly-landing-hero-btn {
   display: inline-flex; align-items: center; gap: 10px;
-  padding: 14px 32px;
-  background: var(--gold); color: var(--navy);
+  padding: 15px 34px;
+  background: var(--pink-dark); color: #fff;
   font-weight: 700; font-size: 16px;
-  border-radius: 12px; border: none; cursor: pointer;
-  transition: background .2s;
+  border-radius: 50px; border: none; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(219,39,119,.3);
+  animation: slyPulseRing 2s infinite;
+  transition: transform .15s, box-shadow .15s;
 }
-.sly-landing-hero-btn:hover { background: var(--gold-light); }
+.sly-landing-hero-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(219,39,119,.4); }
 .sly-landing-hero-btn svg { width:20px;height:20px;flex-shrink:0; }
-
-.sly-landing-section { padding: 40px 20px 8px; }
-.sly-landing-section-title {
-  font-size: 13px; font-weight: 700; letter-spacing: .08em;
-  color: var(--gold); text-transform: uppercase; margin: 0 0 16px;
-}
-.sly-landing-section h2 {
-  font-size: 22px; font-weight: 800; margin: 0 0 4px; line-height: 1.3;
-}
-.sly-landing-section > p {
-  font-size: 14px; color: #64748b; margin: 0 0 24px; line-height: 1.6;
+.sly-cta-sub {
+  font-size: 12px; color: var(--landing-muted);
+  margin-top: 12px; margin-bottom: 0;
 }
 
-/* 기능 슬라이드 */
+/* ── Phone mockup demo ── */
+.sly-phone-wrap {
+  display: flex; justify-content: center;
+  margin-top: 40px; padding-bottom: 0;
+}
+.sly-phone {
+  width: 220px; height: 420px;
+  background: #0f172a;
+  border-radius: 36px;
+  border: 6px solid #1e293b;
+  box-shadow: 0 24px 60px rgba(15,23,42,.25), 0 0 0 1px #334155;
+  position: relative; overflow: hidden;
+  animation: slyFloat 4s ease-in-out infinite;
+}
+.sly-phone-notch {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 70px; height: 10px;
+  background: #1e293b; border-radius: 10px; z-index: 10;
+}
+.sly-phone-screen {
+  position: absolute; inset: 0;
+  background: #fff; border-radius: 30px;
+  padding: 28px 12px 12px;
+  overflow: hidden; display: flex; flex-direction: column; gap: 8px;
+}
+/* scan line animation */
+.sly-phone-scanline {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--pink), transparent);
+  animation: slyScanLine 2s ease-in-out infinite alternate;
+  z-index: 5;
+  box-shadow: 0 0 8px var(--pink);
+}
+.sly-phone-doc {
+  background: #f8fafc; border-radius: 8px;
+  padding: 10px; border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+.sly-phone-doc-line {
+  height: 7px; border-radius: 4px;
+  background: linear-gradient(90deg, #e2e8f0, #f1f5f9);
+  margin-bottom: 6px;
+}
+.sly-phone-doc-line:last-child { width: 60%; margin-bottom: 0; }
+.sly-phone-result {
+  background: var(--mint-tint); border-radius: 8px;
+  padding: 8px 10px; border: 1px solid rgba(52,211,153,.3);
+  animation: slyFadeSlide .6s ease .5s both;
+}
+.sly-phone-result-score {
+  font-size: 22px; font-weight: 900; color: var(--mint-dark);
+  text-align: center; line-height: 1.1;
+}
+.sly-phone-result-label {
+  font-size: 9px; color: var(--landing-muted); text-align: center; margin-top: 2px;
+}
+.sly-phone-tags {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  animation: slyFadeSlide .6s ease .9s both;
+}
+.sly-phone-tag {
+  font-size: 8px; font-weight: 700; padding: 3px 7px;
+  border-radius: 20px;
+}
+.sly-phone-tag.pink { background: var(--pink-tint); color: var(--pink-dark); }
+.sly-phone-tag.mint { background: var(--mint-tint); color: var(--mint-dark); }
+.sly-phone-tag.gold { background: var(--sly-gold-tint); color: var(--sly-gold-dark); }
+.sly-phone-advice {
+  background: var(--sly-gold-tint); border-radius: 8px;
+  padding: 8px 10px; border: 1px solid rgba(245,158,11,.25);
+  font-size: 9px; color: var(--sly-gold-dark); line-height: 1.5;
+  animation: slyFadeSlide .6s ease 1.2s both;
+}
+
+/* ── Stats bar ── */
+.sly-stats-bar {
+  display: flex; justify-content: center; gap: 0;
+  background: #fff;
+  border-top: 1px solid var(--landing-border);
+  border-bottom: 1px solid var(--landing-border);
+  margin: 0;
+}
+.sly-stat {
+  flex: 1; text-align: center;
+  padding: 20px 8px;
+  border-right: 1px solid var(--landing-border);
+}
+.sly-stat:last-child { border-right: none; }
+.sly-stat-num { font-size: 22px; font-weight: 900; }
+.sly-stat-num.pink { color: var(--pink-dark); }
+.sly-stat-num.mint { color: var(--mint-dark); }
+.sly-stat-num.gold { color: var(--sly-gold-dark); }
+.sly-stat-label { font-size: 11px; color: var(--landing-muted); margin-top: 2px; }
+
+/* ── Pain points ── */
+.sly-pain-section {
+  padding: 44px 24px 36px;
+  background: #fafafa;
+}
+.sly-pain-section h2 {
+  font-size: 20px; font-weight: 800; margin: 0 0 6px; text-wrap: balance;
+}
+.sly-pain-section > p { font-size: 14px; color: var(--landing-muted); margin: 0 0 24px; }
+.sly-pain-list { display: flex; flex-direction: column; gap: 12px; }
+.sly-pain-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: #fff; border-radius: 14px;
+  padding: 16px; border: 1px solid var(--landing-border);
+  box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.sly-pain-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sly-pain-icon.pink { background: var(--pink-tint); }
+.sly-pain-icon.mint { background: var(--mint-tint); }
+.sly-pain-icon.gold { background: var(--sly-gold-tint); }
+.sly-pain-icon svg { width:18px;height:18px; }
+.sly-pain-icon.pink svg { color: var(--pink-dark); }
+.sly-pain-icon.mint svg { color: var(--mint-dark); }
+.sly-pain-icon.gold svg { color: var(--sly-gold-dark); }
+.sly-pain-text strong { font-size: 14px; font-weight: 700; display: block; margin-bottom: 2px; }
+.sly-pain-text span { font-size: 13px; color: var(--landing-muted); }
+
+/* ── 기능 슬라이드 ── */
+.sly-feat-section { padding: 44px 0 0; }
+.sly-feat-section-head { padding: 0 24px 20px; }
+.sly-feat-section-head .sly-label {
+  font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--pink-dark);
+  margin-bottom: 8px;
+}
+.sly-feat-section-head h2 { font-size: 21px; font-weight: 800; margin: 0 0 4px; }
+.sly-feat-section-head p { font-size: 13px; color: var(--landing-muted); margin: 0; }
+
 .sly-feat-track {
   display: flex; gap: 14px;
   overflow-x: auto; scroll-snap-type: x mandatory;
-  padding: 4px 20px 24px; margin: 0 -20px;
+  padding: 4px 24px 24px; margin: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
 .sly-feat-track::-webkit-scrollbar { display: none; }
 .sly-feat-card {
   flex: 0 0 260px; scroll-snap-align: start;
-  background: #f8fafc; border-radius: 16px;
-  border: 1.5px solid #e2e8f0;
+  background: #fff; border-radius: 18px;
+  border: 1.5px solid var(--landing-border);
   padding: 22px 20px; cursor: pointer;
-  transition: border-color .2s, box-shadow .2s;
+  transition: border-color .2s, box-shadow .2s, transform .15s;
 }
-.sly-feat-card:hover { border-color: var(--gold); box-shadow: 0 4px 16px rgba(201,168,76,.15); }
-.sly-feat-card.active { border-color: var(--gold); background: #fffbf0; }
+.sly-feat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.sly-feat-card.active.pink-card { border-color: var(--pink); background: var(--pink-tint); }
+.sly-feat-card.active.mint-card { border-color: var(--mint); background: var(--mint-tint); }
+.sly-feat-card.active.gold-card { border-color: var(--sly-gold); background: var(--sly-gold-tint); }
 .sly-feat-icon {
   width: 44px; height: 44px; border-radius: 12px;
-  background: var(--navy); display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   margin-bottom: 14px;
 }
-.sly-feat-icon svg { width: 22px; height: 22px; color: var(--gold); }
+.sly-feat-icon.pink { background: var(--pink-tint); }
+.sly-feat-icon.mint { background: var(--mint-tint); }
+.sly-feat-icon.gold { background: var(--sly-gold-tint); }
+.sly-feat-icon.pink svg { color: var(--pink-dark); }
+.sly-feat-icon.mint svg { color: var(--mint-dark); }
+.sly-feat-icon.gold svg { color: var(--sly-gold-dark); }
+.sly-feat-icon svg { width: 22px; height: 22px; }
 .sly-feat-card h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
-.sly-feat-card p { font-size: 13px; color: #64748b; margin: 0; line-height: 1.5; }
-.sly-feat-card .sly-feat-cost {
+.sly-feat-card p { font-size: 13px; color: var(--landing-muted); margin: 0; line-height: 1.5; }
+.sly-feat-cost {
   display: inline-block; margin-top: 12px;
   padding: 4px 10px; border-radius: 20px;
-  background: var(--navy); color: var(--gold);
   font-size: 12px; font-weight: 700;
 }
+.pink-card .sly-feat-cost { background: var(--pink-tint); color: var(--pink-dark); border: 1px solid rgba(244,114,182,.3); }
+.mint-card .sly-feat-cost { background: var(--mint-tint); color: var(--mint-dark); border: 1px solid rgba(52,211,153,.3); }
+.gold-card .sly-feat-cost { background: var(--sly-gold-tint); color: var(--sly-gold-dark); border: 1px solid rgba(245,158,11,.3); }
 
-/* 상세 패널 */
+/* ── 상세 패널 ── */
 .sly-feat-detail {
-  background: #f0f4ff; border-radius: 16px;
-  margin: 0 0 32px; padding: 24px 20px;
-  border-left: 4px solid var(--gold);
+  border-radius: 16px;
+  margin: 0 24px 32px; padding: 22px 20px;
+  border-left: 4px solid;
   display: none;
 }
 .sly-feat-detail.visible { display: block; }
-.sly-feat-detail h4 { font-size: 17px; font-weight: 800; margin: 0 0 12px; }
-.sly-feat-detail ul { margin: 0; padding: 0 0 0 18px; }
-.sly-feat-detail ul li { font-size: 14px; color: #334155; line-height: 1.8; }
-
-/* 요금 테이블 */
-.sly-price-table { width:100%; border-collapse:collapse; margin: 16px 0; font-size:14px; }
-.sly-price-table th { background: var(--navy); color: #fff; padding: 10px 14px; text-align:left; font-size:13px; }
-.sly-price-table td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }
-.sly-price-table tr:last-child td { border-bottom: none; }
-.sly-price-table td:last-child { font-weight: 700; color: var(--navy); text-align:right; }
-
-/* 문의 푸터 */
-.sly-landing-footer {
-  background: var(--navy); color: rgba(255,255,255,.7);
-  padding: 32px 24px; text-align: center; font-size: 13px;
-  line-height: 1.8;
+.sly-feat-detail.pink-detail { background: var(--pink-tint); border-color: var(--pink-dark); }
+.sly-feat-detail.mint-detail { background: var(--mint-tint); border-color: var(--mint-dark); }
+.sly-feat-detail.gold-detail { background: var(--sly-gold-tint); border-color: var(--sly-gold-dark); }
+.sly-feat-detail h4 { font-size: 16px; font-weight: 800; margin: 0 0 10px; }
+.sly-feat-detail ul { margin: 0; padding: 0; list-style: none; }
+.sly-feat-detail ul li {
+  font-size: 13px; color: var(--landing-text); line-height: 1.8;
+  padding: 3px 0; display: flex; align-items: flex-start; gap: 8px;
 }
-.sly-landing-footer a { color: var(--gold); text-decoration: none; }
+.sly-feat-detail ul li::before {
+  content: "✓"; font-weight: 900; flex-shrink: 0; margin-top: 1px;
+}
+.pink-detail ul li::before { color: var(--pink-dark); }
+.mint-detail ul li::before { color: var(--mint-dark); }
+.gold-detail ul li::before { color: var(--sly-gold-dark); }
+.sly-feat-detail .sly-try-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 16px; padding: 10px 20px;
+  border-radius: 50px; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 700; transition: transform .15s;
+}
+.sly-feat-detail .sly-try-btn:hover { transform: scale(1.03); }
+.pink-detail .sly-try-btn { background: var(--pink-dark); color: #fff; }
+.mint-detail .sly-try-btn { background: var(--mint-dark); color: #fff; }
+.gold-detail .sly-try-btn { background: var(--sly-gold-dark); color: #fff; }
+
+/* ── 요금 섹션 ── */
+.sly-price-section {
+  padding: 44px 24px 36px;
+  background: #fafafa;
+}
+.sly-price-section h2 { font-size: 21px; font-weight: 800; margin: 0 0 6px; }
+.sly-price-section > p { font-size: 14px; color: var(--landing-muted); margin: 0 0 24px; }
+.sly-charge-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+}
+.sly-charge-card {
+  background: #fff; border: 1.5px solid var(--landing-border);
+  border-radius: 16px; padding: 16px; text-align: center;
+  position: relative; overflow: hidden;
+}
+.sly-charge-card.featured {
+  border-color: var(--pink); box-shadow: 0 4px 16px rgba(244,114,182,.15);
+}
+.sly-charge-card .bonus-badge {
+  position: absolute; top: 8px; right: -12px;
+  background: var(--pink-dark); color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 3px 18px 3px 8px; transform: rotate(0deg);
+  border-radius: 4px 0 0 4px;
+}
+.sly-charge-price { font-size: 22px; font-weight: 900; color: var(--landing-text); }
+.sly-charge-pts { font-size: 13px; font-weight: 700; color: var(--mint-dark); margin-top: 2px; }
+.sly-charge-sub { font-size: 11px; color: var(--landing-muted); margin-top: 4px; }
+.sly-svc-price-list { display: flex; flex-direction: column; gap: 8px; }
+.sly-svc-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff; border-radius: 12px; padding: 12px 14px;
+  border: 1px solid var(--landing-border);
+}
+.sly-svc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sly-svc-dot.pink { background: var(--pink); }
+.sly-svc-dot.mint { background: var(--mint); }
+.sly-svc-dot.gold { background: var(--sly-gold); }
+.sly-svc-name { font-size: 14px; font-weight: 600; flex: 1; }
+.sly-svc-cost { font-size: 13px; font-weight: 700; color: var(--landing-muted); }
+
+/* ── CTA ── */
+.sly-cta-section {
+  padding: 48px 24px 40px; text-align: center;
+  background: linear-gradient(160deg, #fff5fb 0%, #f0fdf4 100%);
+}
+.sly-cta-section h2 { font-size: 22px; font-weight: 900; margin: 0 0 8px; text-wrap: balance; }
+.sly-cta-section p { font-size: 14px; color: var(--landing-muted); margin: 0 0 24px; }
+
+/* ── 푸터 ── */
+.sly-landing-footer {
+  background: #0f172a; color: rgba(255,255,255,.6);
+  padding: 32px 24px; text-align: center; font-size: 13px; line-height: 1.9;
+}
+.sly-landing-footer a { color: var(--mint); text-decoration: none; }
 .sly-landing-footer strong { color: #fff; }
+
+/* ── price table fallback ── */
+.sly-price-table { width:100%; border-collapse:collapse; margin: 16px 0; font-size:14px; }
+.sly-price-table th { background: #0f172a; color: #fff; padding: 10px 14px; text-align:left; font-size:13px; }
+.sly-price-table td { padding: 10px 14px; border-bottom: 1px solid var(--landing-border); }
+.sly-price-table tr:last-child td { border-bottom: none; }
+.sly-price-table td:last-child { font-weight: 700; color: #0f172a; text-align:right; }
 
 @media (max-width: 520px) {
   .sly-score-bar { flex-direction: column; text-align: center; }
@@ -891,7 +1153,7 @@ body {
 <!-- Firebase (재사용) -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
@@ -905,18 +1167,18 @@ window._slyGetToken = () => auth.currentUser?.getIdToken();
 window._slyUser = null;
 
 const SLY_SERVICES = [
-  { id: 'resume',        label: '이력서 분석',    cost: 10, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cover_letter',  label: '자소서 분석',    cost: 10, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cv_translate',  label: '영문 번역',      cost: 20, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'interview',     label: '면접 질문',      cost: 15, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'contract',      label: '계약서 검토',    cost: 15, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'resume',        label: '이력서 분석',    cost: 1000, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_letter',  label: '자소서 분석',    cost: 1000, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',  label: '영문 번역',      cost: 2000, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'interview',     label: '면접 질문',      cost: 1500, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'contract',      label: '계약서 검토',    cost: 1500, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
 ];
 
 const CHARGE_PLANS = [
-  { pts: 50,  price: 5000,  label: '기본' },
-  { pts: 120, price: 10000, bonus: '+20P', label: '스탠다드' },
-  { pts: 270, price: 20000, bonus: '+70P', label: '프리미엄' },
-  { pts: 600, price: 40000, bonus: '+200P', label: '비즈니스' },
+  { pts: 5000,  price: 5000,  label: '5,000P' },
+  { pts: 10000, price: 10000, bonus: '+1,000P', label: '10,000P' },
+  { pts: 22000, price: 20000, bonus: '+2,000P', label: '20,000P' },
+  { pts: 55000, price: 50000, bonus: '+5,000P', label: '50,000P' },
 ];
 
 // ── Render header auth state
@@ -985,11 +1247,22 @@ window.addEventListener('popstate', e => {
   }
 });
 
+// 페이지 로드 시 redirect 결과 처리
+getRedirectResult(auth).then(result => {
+  if (result?.user) updateAuthUI(result.user);
+}).catch(() => {});
+
 window._slySignIn = async () => {
+  const provider = new GoogleAuthProvider();
   try {
-    const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-  } catch(e) { _slyToast('로그인 실패: ' + e.message); }
+  } catch(e) {
+    if (['auth/popup-blocked','auth/cancelled-popup-request','auth/popup-closed-by-user'].includes(e.code) || e.message?.includes('Pending promise')) {
+      try { await signInWithRedirect(auth, provider); } catch(e2) { _slyToast('로그인 실패. 다시 시도해주세요'); }
+    } else {
+      _slyToast('로그인 실패: ' + (e.code || e.message));
+    }
+  }
 };
 window._slySignOut = async () => {
   await signOut(auth);
@@ -1006,26 +1279,26 @@ let _slyPollTimer = null;
 let _slySelectedCharge = 0;
 
 const SVC = [
-  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 1000, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis' },
-  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 1000, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
-  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 20, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 2000, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'cover_letter_translation' },
-  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 1500, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
-  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 1500, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'employment_contract' },
   // ── 공문서 발급 & 분석 ──
-  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 20, accept: '.pdf',
+  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 2000, accept: '.pdf',
     hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry' },
-  { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 10, accept: '.pdf',
+  { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 1000, accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'biz' },
-  { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 10, accept: '.pdf',
+  { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 1000, accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'health' },
-  { id: 'income',        label: '소득',   sublabel: '확인',   cost: 10, accept: '.pdf',
+  { id: 'income',        label: '소득',   sublabel: '확인',   cost: 1000, accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'income' },
-  { id: 'gov_doc',       label: '공문서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'gov_doc',       label: '공문서', sublabel: '분석',   cost: 500, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: false },
 ];
 
@@ -1519,10 +1792,10 @@ window._slySelectCharge = _slySelectCharge;
 async function _slyRequestCharge() {
   if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
   const plans = [
-    { pts: 50, price: 5000 },
-    { pts: 120, price: 10000 },
-    { pts: 270, price: 20000 },
-    { pts: 600, price: 40000 },
+    { pts: 5000,  price: 5000 },
+    { pts: 10000, price: 10000 },
+    { pts: 22000, price: 20000 },
+    { pts: 55000, price: 50000 },
   ];
   const plan = plans[_slySelectedCharge];
   try {
@@ -1705,143 +1978,271 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- 히어로 -->
     <div class="sly-landing-hero">
-      <img src="data:image/png;base64,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" alt="SCAN">
-      <h1>문서 하나로<br><em>AI 분석 완성</em></h1>
-      <p>이력서 · 자소서 · 계약서 · 공문서<br>AI가 즉시 분석하고 개선안을 제시합니다</p>
+      <div class="sly-hero-eyebrow-landing">AI 문서 분석 서비스</div>
+      <h1>서류 한 장이<br><span class="sly-h1-pink">무섭지 않은</span><br><span class="sly-h1-mint">세상</span></h1>
+      <p>이력서·자소서·계약서·공문서<br>올리면 AI가 즉시 읽고 개선안을 드립니다<br>1P = 1원, 써야 할 만큼만 충전</p>
       <button class="sly-landing-hero-btn" onclick="_slySignIn()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M14 12H3"/></svg>
-        구글로 시작하기
+        구글로 무료 시작
       </button>
-    </div>
+      <p class="sly-cta-sub">설치 없음 · 가입 무료 · 홈화면 설치 지원</p>
 
-    <!-- 핵심 기능 슬라이드 -->
-    <div class="sly-landing-section">
-      <div class="sly-landing-section-title">Core Features</div>
-      <h2>모든 문서, 하나의 앱으로</h2>
-      <p>업로드 한 번으로 AI가 즉시 분석 · 채점 · 개선안 제시</p>
-    </div>
-    <div class="sly-feat-track" id="slyFeatTrack">
-      <div class="sly-feat-card" onclick="_slyFeatDetail(0)">
-        <div class="sly-feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <!-- 폰 목업 데모 -->
+      <div class="sly-phone-wrap">
+        <div class="sly-phone">
+          <div class="sly-phone-notch"></div>
+          <div class="sly-phone-screen">
+            <div class="sly-phone-scanline"></div>
+            <div class="sly-phone-doc">
+              <div class="sly-phone-doc-line"></div>
+              <div class="sly-phone-doc-line" style="width:80%"></div>
+              <div class="sly-phone-doc-line" style="width:90%"></div>
+              <div class="sly-phone-doc-line"></div>
+              <div class="sly-phone-doc-line"></div>
+            </div>
+            <div class="sly-phone-result">
+              <div class="sly-phone-result-score">87점</div>
+              <div class="sly-phone-result-label">직무 적합도</div>
+            </div>
+            <div class="sly-phone-tags">
+              <span class="sly-phone-tag pink">경력 강점</span>
+              <span class="sly-phone-tag mint">키워드 매칭</span>
+              <span class="sly-phone-tag gold">보완 필요 2건</span>
+            </div>
+            <div class="sly-phone-advice">
+              💡 "직무 연관 성과 수치를 추가하면<br>합격률이 23% 높아집니다"
+            </div>
+          </div>
         </div>
-        <h3>이력서 분석</h3>
-        <p>AI가 직무 적합도를 채점하고 개선 포인트를 항목별로 제시합니다</p>
-        <span class="sly-feat-cost">10P / 건</span>
-      </div>
-      <div class="sly-feat-card" onclick="_slyFeatDetail(1)">
-        <div class="sly-feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        </div>
-        <h3>자기소개서 첨삭</h3>
-        <p>문항별 논리 구조·어휘·분량을 분석하고 합격 가능성을 높이는 개선안을 제안합니다</p>
-        <span class="sly-feat-cost">15P / 건</span>
-      </div>
-      <div class="sly-feat-card" onclick="_slyFeatDetail(2)">
-        <div class="sly-feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        </div>
-        <h3>계약서 검토</h3>
-        <p>불리한 조항·법적 리스크·누락 항목을 자동으로 찾아 요약합니다</p>
-        <span class="sly-feat-cost">20P / 건</span>
-      </div>
-      <div class="sly-feat-card" onclick="_slyFeatDetail(3)">
-        <div class="sly-feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        </div>
-        <h3>공문서 발급·분석</h3>
-        <p>등기부등본·사업자등록·건강보험 등 공문서를 AI가 즉시 분석합니다</p>
-        <span class="sly-feat-cost">30P / 건</span>
-      </div>
-      <div class="sly-feat-card" onclick="_slyFeatDetail(4)">
-        <div class="sly-feat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/><path d="M16 2l4 4-4 4"/></svg>
-        </div>
-        <h3>범용 문서 분석</h3>
-        <p>HWP · DOCX · PDF 어떤 형식이든 업로드하면 AI가 요약·분석·개선안을 제시합니다</p>
-        <span class="sly-feat-cost">5P / 건</span>
       </div>
     </div>
 
-    <!-- 상세 패널 -->
-    <div class="sly-feat-detail" id="slyFeatDetail0" style="margin:0 20px 24px">
-      <h4>이력서 분석 — 상세</h4>
-      <ul>
-        <li>직무 키워드 매칭률 자동 채점</li>
-        <li>경력·학력·스킬셋 항목별 피드백</li>
-        <li>채용공고 JD 기반 맞춤 분석 (선택)</li>
-        <li>개선 문구 샘플 자동 생성</li>
-        <li>HWP · DOCX · PDF 모든 형식 지원</li>
-      </ul>
+    <!-- 지표 바 -->
+    <div class="sly-stats-bar">
+      <div class="sly-stat">
+        <div class="sly-stat-num pink">30초</div>
+        <div class="sly-stat-label">평균 분석 시간</div>
+      </div>
+      <div class="sly-stat">
+        <div class="sly-stat-num mint">10종</div>
+        <div class="sly-stat-label">지원 서비스</div>
+      </div>
+      <div class="sly-stat">
+        <div class="sly-stat-num gold">500P~</div>
+        <div class="sly-stat-label">건당 이용 요금</div>
+      </div>
     </div>
-    <div class="sly-feat-detail" id="slyFeatDetail1" style="margin:0 20px 24px">
-      <h4>자기소개서 첨삭 — 상세</h4>
-      <ul>
-        <li>문항별 STAR 구조 분석</li>
-        <li>어휘 다양성·문장 가독성 점수</li>
-        <li>중복 표현·진부한 표현 감지</li>
-        <li>분량 최적화 제안</li>
-        <li>합격률 높은 표현으로 재작성 제안</li>
-      </ul>
+
+    <!-- 왜 써야 하나 (Pain points) -->
+    <div class="sly-pain-section">
+      <h2>이런 상황,<br>혼자 해결하셨나요?</h2>
+      <p>SCAN이 AI로 즉시 해결해 드립니다</p>
+      <div class="sly-pain-list">
+        <div class="sly-pain-item">
+          <div class="sly-pain-icon pink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <div class="sly-pain-text">
+            <strong>이력서 수십 번 고쳐도 서류 탈락</strong>
+            <span>AI가 JD 기반 키워드 매칭률·경력 표현·보완 포인트를 항목별로 채점합니다</span>
+          </div>
+        </div>
+        <div class="sly-pain-item">
+          <div class="sly-pain-icon mint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="sly-pain-text">
+            <strong>계약서 내용이 불리한지 모르겠어요</strong>
+            <span>변호사 비용 없이 AI가 불리한 조항·위약금·해지 조건을 30초 안에 요약합니다</span>
+          </div>
+        </div>
+        <div class="sly-pain-item">
+          <div class="sly-pain-icon gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <div class="sly-pain-text">
+            <strong>공문서 발급·해석이 복잡하고 번거롭다</strong>
+            <span>등기부·사업자·건강보험 서류를 AI가 즉시 발급 안내 + 핵심 내용 해설까지</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="sly-feat-detail" id="slyFeatDetail2" style="margin:0 20px 24px">
-      <h4>계약서 검토 — 상세</h4>
-      <ul>
-        <li>불리한 조항 자동 하이라이트</li>
-        <li>표준 계약서 대비 누락 항목 감지</li>
-        <li>위약금·해지 조건·갱신 조건 요약</li>
-        <li>법적 리스크 등급 표시 (낮음/중간/높음)</li>
-        <li>수정 권장 문구 제안</li>
-      </ul>
-    </div>
-    <div class="sly-feat-detail" id="slyFeatDetail3" style="margin:0 20px 24px">
-      <h4>공문서 발급·분석 — 상세</h4>
-      <ul>
-        <li>등기부등본: 주소 입력 → 인터넷등기소 직접 연결</li>
-        <li>사업자등록: 국세청 API 즉시 조회</li>
-        <li>건강보험·소득증명: 기관 딥링크 제공</li>
-        <li>발급된 문서 AI 분석 (소유권·근저당·갑구·을구)</li>
-        <li>Tilko API 연동 등기부 직접 조회 지원</li>
-      </ul>
-    </div>
-    <div class="sly-feat-detail" id="slyFeatDetail4" style="margin:0 20px 24px">
-      <h4>범용 문서 분석 — 상세</h4>
-      <ul>
-        <li>HWP · DOCX · PDF · TXT 전 형식 지원</li>
-        <li>핵심 내용 3줄 요약</li>
-        <li>문서 유형 자동 감지</li>
-        <li>개선 포인트·오류 자동 탐지</li>
-        <li>Oracle 서버 LibreOffice 변환 지원</li>
-      </ul>
+
+    <!-- 기능 슬라이드 -->
+    <div class="sly-feat-section">
+      <div class="sly-feat-section-head">
+        <div class="sly-label">Core Features</div>
+        <h2>탭해서 상세 기능 확인</h2>
+        <p>오른쪽으로 밀어서 전체 기능을 살펴보세요</p>
+      </div>
+      <div class="sly-feat-track" id="slyFeatTrack">
+        <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(0)">
+          <div class="sly-feat-icon pink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <h3>이력서 분석</h3>
+          <p>직무 적합도 채점 + 항목별 개선 포인트 + 합격 문구 샘플 자동 생성</p>
+          <span class="sly-feat-cost">1,000P / 건</span>
+        </div>
+        <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(1)">
+          <div class="sly-feat-icon pink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <h3>자기소개서 첨삭</h3>
+          <p>STAR 구조 분석 + 어휘 다양성 점수 + 합격률 높은 표현으로 재작성 제안</p>
+          <span class="sly-feat-cost">1,000P / 건</span>
+        </div>
+        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(2)">
+          <div class="sly-feat-icon mint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h3>계약서 검토</h3>
+          <p>불리한 조항 자동 하이라이트 + 법적 리스크 등급 + 수정 권장 문구 제안</p>
+          <span class="sly-feat-cost">1,500P / 건</span>
+        </div>
+        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(3)">
+          <div class="sly-feat-icon mint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          </div>
+          <h3>면접 질문 생성</h3>
+          <p>이력서 기반 예상 면접 질문 + 모범 답변 구조 + 취약 포인트 대비 전략</p>
+          <span class="sly-feat-cost">1,500P / 건</span>
+        </div>
+        <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(4)">
+          <div class="sly-feat-icon gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <h3>공문서 발급·분석</h3>
+          <p>등기부·사업자·건강보험 발급 안내 + AI 해설 + 핵심 항목 요약</p>
+          <span class="sly-feat-cost">1,000~2,000P</span>
+        </div>
+        <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(5)">
+          <div class="sly-feat-icon gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M16 2l4 4-4 4"/></svg>
+          </div>
+          <h3>범용 문서 분석</h3>
+          <p>HWP · DOCX · PDF 어떤 형식이든 — 요약·분석·개선안 자동 제시</p>
+          <span class="sly-feat-cost">500P / 건</span>
+        </div>
+      </div>
+
+      <!-- 상세 패널 -->
+      <div class="sly-feat-detail pink-detail" id="slyFeatDetail0">
+        <h4>이력서 분석</h4>
+        <ul>
+          <li>직무 키워드 매칭률 자동 채점 (0~100점)</li>
+          <li>경력·학력·스킬셋 항목별 피드백</li>
+          <li>채용공고 JD 기반 맞춤 분석 (선택)</li>
+          <li>개선 문구 샘플 자동 생성</li>
+          <li>HWP · DOCX · PDF 모든 형식 지원</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail pink-detail" id="slyFeatDetail1">
+        <h4>자기소개서 첨삭</h4>
+        <ul>
+          <li>문항별 STAR 구조 분석</li>
+          <li>어휘 다양성·문장 가독성 점수</li>
+          <li>중복 표현·진부한 표현 감지</li>
+          <li>분량 최적화 제안</li>
+          <li>합격률 높은 표현으로 재작성 제안</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail mint-detail" id="slyFeatDetail2">
+        <h4>계약서 검토</h4>
+        <ul>
+          <li>불리한 조항 자동 하이라이트</li>
+          <li>표준 계약서 대비 누락 항목 감지</li>
+          <li>위약금·해지 조건·갱신 조건 요약</li>
+          <li>법적 리스크 등급 (낮음/중간/높음)</li>
+          <li>수정 권장 문구 제안</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail mint-detail" id="slyFeatDetail3">
+        <h4>면접 질문 생성</h4>
+        <ul>
+          <li>이력서 기반 맞춤 예상 질문 10~20개</li>
+          <li>질문 유형 분류 (직무/경험/성격/압박)</li>
+          <li>취약 포인트 파악 및 대비 전략</li>
+          <li>모범 답변 구조 (STAR 방식) 제안</li>
+          <li>공고 JD 연계 심층 면접 예측 지원</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail gold-detail" id="slyFeatDetail4">
+        <h4>공문서 발급·분석</h4>
+        <ul>
+          <li>등기부등본: 주소 입력 → 인터넷등기소 연결</li>
+          <li>사업자등록: 국세청 API 즉시 조회</li>
+          <li>건강보험·소득증명: 기관 딥링크 제공</li>
+          <li>발급 문서 AI 해설 (갑구·을구·근저당 등)</li>
+          <li>Tilko API 연동 등기부 직접 조회 지원</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail gold-detail" id="slyFeatDetail5">
+        <h4>범용 문서 분석</h4>
+        <ul>
+          <li>HWP · DOCX · PDF · TXT 전 형식 지원</li>
+          <li>핵심 내용 3줄 요약 자동 생성</li>
+          <li>문서 유형 자동 감지</li>
+          <li>개선 포인트·오류 자동 탐지</li>
+          <li>Oracle 서버 LibreOffice 변환 지원</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
     </div>
 
     <!-- 요금 안내 -->
-    <div class="sly-landing-section">
-      <div class="sly-landing-section-title">Pricing</div>
+    <div class="sly-price-section">
       <h2>포인트 충전제</h2>
-      <p>가입 후 포인트 충전 → 원하는 서비스만 사용 (계좌이체)</p>
-      <div style="overflow-x:auto">
-        <table class="sly-price-table">
-          <thead><tr><th>서비스</th><th>차감 포인트</th></tr></thead>
-          <tbody>
-            <tr><td>범용 문서 분석</td><td>5P</td></tr>
-            <tr><td>이력서 분석</td><td>10P</td></tr>
-            <tr><td>자기소개서 첨삭</td><td>15P</td></tr>
-            <tr><td>계약서 검토</td><td>20P</td></tr>
-            <tr><td>공문서 발급·분석</td><td>30P</td></tr>
-          </tbody>
-        </table>
+      <p>1P = 1원 · 써야 할 만큼만 충전 · 만원이면 만포인트</p>
+      <div class="sly-charge-cards">
+        <div class="sly-charge-card">
+          <div class="sly-charge-price">₩5,000</div>
+          <div class="sly-charge-pts">5,000P</div>
+          <div class="sly-charge-sub">이력서 5건 분석</div>
+        </div>
+        <div class="sly-charge-card featured">
+          <div class="bonus-badge">+1,000P</div>
+          <div class="sly-charge-price">₩10,000</div>
+          <div class="sly-charge-pts">11,000P</div>
+          <div class="sly-charge-sub">가장 인기</div>
+        </div>
+        <div class="sly-charge-card">
+          <div class="bonus-badge">+2,000P</div>
+          <div class="sly-charge-price">₩20,000</div>
+          <div class="sly-charge-pts">22,000P</div>
+          <div class="sly-charge-sub">계약서 14건</div>
+        </div>
+        <div class="sly-charge-card">
+          <div class="bonus-badge">+5,000P</div>
+          <div class="sly-charge-price">₩50,000</div>
+          <div class="sly-charge-pts">55,000P</div>
+          <div class="sly-charge-sub">대량 이용</div>
+        </div>
       </div>
-      <p style="font-size:13px;color:#64748b;margin-top:8px">포인트 충전: 하나은행 270-910019-24204 (유)엠비티아이<br>입금 후 관리자 확인 → 즉시 적립</p>
+      <div class="sly-svc-price-list">
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">범용 문서 분석</div><div class="sly-svc-cost">500P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 · 자소서 분석</div><div class="sly-svc-cost">1,000P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">계약서 검토 · 면접 질문</div><div class="sly-svc-cost">1,500P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">영문 번역 · 등기부 조회</div><div class="sly-svc-cost">2,000P</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--landing-muted);margin-top:16px;line-height:1.7">
+        충전: 하나은행 270-910019-24204 (유)엠비티아이<br>입금 확인 후 관리자 즉시 적립
+      </p>
     </div>
 
     <!-- CTA -->
-    <div style="padding:40px 24px;text-align:center">
+    <div class="sly-cta-section">
+      <h2>지금 바로 써보세요<br><span style="color:var(--pink-dark)">첫 분석은 무료로 체험</span></h2>
+      <p>구글 계정 하나면 충분합니다<br>설치 없이 홈화면에 추가해서 앱처럼 사용</p>
       <button class="sly-landing-hero-btn" onclick="_slySignIn()" style="font-size:17px;padding:16px 40px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:22px;height:22px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M14 12H3"/></svg>
         구글로 무료 시작하기
       </button>
-      <p style="font-size:13px;color:#94a3b8;margin-top:14px">가입 무료 · 별도 설치 없음 · 홈화면 설치 지원</p>
     </div>
 
     <!-- 푸터 -->
