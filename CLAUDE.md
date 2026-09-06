@@ -533,6 +533,11 @@ cd mbtico-pages && npx wrangler deploy
 - **서류하나 백엔드 코어 구현**: seolyuhana/utils/parser.js, seolyuhana/services/analyze.js, seolyuhana/output/builder.js
 - **서류하나 API 6개 추가** (_worker.js): /api/seolyuhana/analyze·result·download·points·point-request·point-approve
 - **서류하나 프론트엔드** (seolyuhana.html): Firebase Auth + 파일 업로드 + 분석 UI + 포인트 충전 모달
+- **서류하나 공문서 발급·분석 원스톱** (seolyuhana.html + _worker.js + analyze.js):
+  - 등기부(주소→인터넷등기소 딥링크), 사업자(국세청 API 즉시 조회), 건강보험/소득(기관 딥링크), 공문서 범용 분석
+  - /api/seolyuhana/biz-status, /api/seolyuhana/registry-link 엔드포인트
+  - analyzeRegistry(), analyzePublicDoc() AI 분석 함수
+  - 직접 발급: 사업자 조회만 가능 (공인인증서 필요 서류는 딥링크 제공)
 - **서류하나 Oracle 변환서버** (seolyuhana/oracle-server.js): LibreOffice HWP→DOCX + Puppeteer HTML→PDF (포트 3100)
 - **_worker.js /seolyuhana 라우트 추가** (filo.ai.kr 블록)
 - **Aligo SMS/알림톡 → Solapi 전환 완료**: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
