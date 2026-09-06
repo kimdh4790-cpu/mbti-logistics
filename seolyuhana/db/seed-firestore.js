@@ -91,15 +91,15 @@ async function seedLegalRefs() {
 async function seedServiceConfig() {
   console.log('⚙️ sly_service_config 시딩 시작...');
   const services = [
-    // 취업 서류 — 경쟁사 조사 기반 스위트스팟: 5,000~15,000원
-    { id: 'cover_letter_analysis', label: '자기소개서 분석·피드백', pointCost: 9900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 5, category: 'employment' },
-    { id: 'cover_letter_translation', label: '자기소개서 영문 번역', pointCost: 19900, enabled: true, modelDefault: 'claude-sonnet-5', maxPages: 5, category: 'employment' },
-    { id: 'resume_analysis', label: '이력서 분석·피드백', pointCost: 5900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 3, category: 'employment' },
-    { id: 'interview_questions', label: '면접 예상 질문 생성', pointCost: 4900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 3, category: 'employment' },
-    // 계약서 검토 — 경쟁사 조사 기반 스위트스팟: 10,000~30,000원 (변호사 20만원 대비 압도적 가성비)
-    { id: 'employment_contract', label: '근로계약서 검토', pointCost: 14900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 10, category: 'contract' },
-    { id: 'rental_contract', label: '전월세 계약서 검토', pointCost: 29900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 20, category: 'contract' },
-    { id: 'freelance_contract', label: '프리랜서 계약서 검토', pointCost: 14900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 15, category: 'contract' }
+    // 취업 서류 — 2계층 비교 기반 단가: AI 서비스 상단 / 사람 서비스(크몽·숨고) 대비 60~90% 절감
+    { id: 'interview_questions', label: '면접 예상 질문 생성', pointCost: 19900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 3, category: 'employment' },
+    { id: 'resume_analysis', label: '이력서 분석·피드백', pointCost: 29900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 3, category: 'employment' },
+    { id: 'cover_letter_analysis', label: '자기소개서 분석·피드백', pointCost: 39900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 5, category: 'employment' },
+    { id: 'cover_letter_translation', label: '자기소개서 영문 번역', pointCost: 39900, enabled: true, modelDefault: 'claude-sonnet-5', maxPages: 5, category: 'employment' },
+    // 계약서 검토 — 크몽 법무사 ₩100,000~₩300,000 대비 60~87% 절감
+    { id: 'employment_contract', label: '근로계약서 검토', pointCost: 29900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 10, category: 'contract' },
+    { id: 'freelance_contract', label: '프리랜서 계약서 검토', pointCost: 29900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 15, category: 'contract' },
+    { id: 'rental_contract', label: '전월세 계약서 검토', pointCost: 39900, enabled: true, modelDefault: 'claude-haiku-4-5-20251001', maxPages: 20, category: 'contract' }
   ];
 
   const batch = db.batch();
