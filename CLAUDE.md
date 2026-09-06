@@ -541,7 +541,15 @@ cd mbtico-pages && npx wrangler deploy
 - **서류하나 Oracle 변환서버** (seolyuhana/oracle-server.js): LibreOffice HWP→DOCX + Puppeteer HTML→PDF (포트 3100)
 - **서류하나 등기부 직접 조회** (_worker.js `/api/seolyuhana/registry-direct`): Tilko API(AES-CBC-128+RSA-OAEP) 연동, TILKO_API_KEY+TILKO_RSA_PUBKEY 설정 시 직접 조회. 미설정 시 인터넷등기소 링크 폴백. seolyuhana.html `_slyShowRegResult()` 결과 동적 렌더링.
 - **_worker.js /seolyuhana 라우트 추가** (filo.ai.kr 블록)
-- **Aligo SMS/알림톡 → Solapi 전환 완료**: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
+- **Aligo SMS/알림톡 → Solapi 전환 완료**
+
+### ✅ 완료 (2026-09-06 SCAN 앱 이전)
+- **서류하나 → mbtico.kr/scan 이전**: filo.ai.kr/seolyuhana 삭제, mbtico.kr/scan으로 서비스 이전
+- seolyuhana.html → scan.html 리네임 (KV key: scan.html, deploy.yml 자동 배포)
+- _worker.js: filo.ai.kr 블록에서 /seolyuhana 라우트 + API 핸들러 전체 삭제
+- _worker.js: mbtico.kr 블록으로 모든 /api/seolyuhana/* API 이전
+- **SCAN PWA 홈화면 설치**: /scan-manifest.json 엔드포인트, scan-icon-192/512.png KV 업로드, PWA 메타태그 추가
+- **SCAN 로고**: 헤더 + 히어로 섹션에 SCAN 로고 이미지(scan-icon-192.png) 표시: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
   - processAlimtalkQueue, DONWAY 승인 알림톡, /api/send-sms, /api/send-sms-bulk, 용차앱 정산 알림톡 모두 solapiSms()/solapiAlimtalk() 교체
 
 ### 최우선
