@@ -2565,6 +2565,11 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
     }
 
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      // ── 서류하나 (/seolyuhana) ───────────────────────────────────────────────
+      if (path === '/seolyuhana' || path === '/seolyuhana.html' || path === '/seolyuhana/') {
+        return serveKVFile(env, 'seolyuhana.html', 'text/html');
+      }
+      if (pathNoQ === '/seolyuhana.js') return serveKVFile(env, 'seolyuhana.js', 'application/javascript');
       // ── FILO PWA 아이콘 + 매니페스트 ────────────────────────────────────────
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') {
         return new Response(JSON.stringify({

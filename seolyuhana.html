@@ -1,0 +1,1467 @@
+<title>서류하나</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap">
+
+<style>
+:root {
+  --navy: #08101f;
+  --navy-mid: #0f1e38;
+  --navy-card: #1a2844;
+  --gold: #C9A84C;
+  --gold-light: #e0c06e;
+  --white: #FFFFFF;
+  --bg: #F0F4FA;
+  --surface: #FFFFFF;
+  --border: #D1DCF0;
+  --text-primary: #0f1e38;
+  --text-secondary: #5A6E90;
+  --text-muted: #8FA0BD;
+  --success: #16A34A;
+  --warn: #D97706;
+  --danger: #DC2626;
+  --radius: 14px;
+  --shadow: 0 4px 24px rgba(8,16,31,.10);
+  --shadow-card: 0 2px 12px rgba(8,16,31,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #060e1c;
+    --surface: #0f1e38;
+    --border: #1e3254;
+    --text-primary: #E8EFF8;
+    --text-secondary: #8FA0BD;
+    --text-muted: #4A6080;
+    --shadow: 0 4px 24px rgba(0,0,0,.35);
+    --shadow-card: 0 2px 12px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #060e1c;
+  --surface: #0f1e38;
+  --border: #1e3254;
+  --text-primary: #E8EFF8;
+  --text-secondary: #8FA0BD;
+  --text-muted: #4A6080;
+  --shadow: 0 4px 24px rgba(0,0,0,.35);
+  --shadow-card: 0 2px 12px rgba(0,0,0,.25);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.sly-header {
+  background: var(--navy);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.sly-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.sly-logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--gold);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sly-logo-mark svg { width: 18px; height: 18px; }
+.sly-logo-text {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.3px;
+}
+.sly-logo-text span { color: var(--gold); }
+.sly-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sly-points-badge {
+  background: rgba(201,168,76,.15);
+  border: 1px solid rgba(201,168,76,.35);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-points-badge:hover { background: rgba(201,168,76,.25); }
+.sly-auth-btn {
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-auth-btn:hover { background: var(--gold-light); }
+
+/* ── Main ── */
+.sly-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+/* ── Hero ── */
+.sly-hero {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.sly-hero-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.sly-hero h1 {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: clamp(26px, 5vw, 36px);
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.sly-hero h1 em {
+  font-style: normal;
+  color: var(--gold);
+}
+.sly-hero p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Service Tabs ── */
+.sly-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sly-tabs::-webkit-scrollbar { display: none; }
+.sly-tab {
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.sly-tab svg { width: 20px; height: 20px; opacity: .6; transition: opacity .2s; }
+.sly-tab:hover { background: rgba(201,168,76,.08); color: var(--gold); }
+.sly-tab:hover svg { opacity: 1; }
+.sly-tab.active {
+  background: var(--navy);
+  color: var(--gold);
+  font-weight: 700;
+}
+.sly-tab.active svg { opacity: 1; }
+.sly-tab .tab-cost {
+  font-size: 11px;
+  opacity: .7;
+  font-weight: 400;
+}
+
+/* ── Upload Card ── */
+.sly-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 28px;
+  margin-bottom: 16px;
+}
+.sly-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin: 0 0 16px;
+}
+
+.sly-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.sly-dropzone:hover, .sly-dropzone.drag-over {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.05);
+}
+.sly-dropzone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.sly-dz-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(201,168,76,.12);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.sly-dz-icon svg { width: 24px; height: 24px; color: var(--gold); }
+.sly-dz-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+.sly-dz-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.sly-dz-types {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.sly-type-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(201,168,76,.12);
+  color: var(--gold);
+  letter-spacing: .3px;
+}
+
+/* ── File Preview ── */
+.sly-file-preview {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 10px;
+  margin-top: 12px;
+}
+.sly-file-preview.visible { display: flex; }
+.sly-file-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--navy);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sly-file-icon svg { width: 20px; height: 20px; color: var(--gold); }
+.sly-file-info { flex: 1; min-width: 0; }
+.sly-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sly-file-size { font-size: 12px; color: var(--text-muted); }
+.sly-file-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color .2s;
+}
+.sly-file-remove:hover { color: var(--danger); }
+.sly-file-remove svg { width: 18px; height: 18px; display: block; }
+
+/* ── Optional JD input ── */
+.sly-optional {
+  margin-top: 16px;
+}
+.sly-optional label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+.sly-optional textarea {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg);
+  resize: vertical;
+  transition: border-color .2s;
+  outline: none;
+}
+.sly-optional textarea:focus { border-color: var(--gold); }
+.sly-optional textarea::placeholder { color: var(--text-muted); }
+
+/* ── Analyze Button ── */
+.sly-analyze-btn {
+  width: 100%;
+  padding: 15px;
+  background: var(--navy);
+  color: var(--gold);
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .2s;
+  margin-top: 20px;
+}
+.sly-analyze-btn:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--navy);
+}
+.sly-analyze-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.sly-analyze-btn svg { width: 20px; height: 20px; }
+.sly-cost-note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── Progress ── */
+.sly-progress {
+  display: none;
+  padding: 28px;
+  text-align: center;
+}
+.sly-progress.visible { display: block; }
+.sly-progress-ring {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+}
+.sly-progress-ring circle {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.sly-progress-ring .track { stroke: var(--border); }
+.sly-progress-ring .fill {
+  stroke: var(--gold);
+  stroke-dasharray: 163;
+  stroke-dashoffset: 163;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset .4s ease;
+}
+.sly-progress-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.sly-progress-sub { font-size: 13px; color: var(--text-muted); }
+
+/* ── Results ── */
+.sly-result { display: none; }
+.sly-result.visible { display: block; }
+
+.sly-score-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--navy);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.sly-score-circle {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  position: relative;
+}
+.sly-score-circle svg { width: 72px; height: 72px; }
+.sly-score-circle .score-track { fill: none; stroke: rgba(255,255,255,.12); stroke-width: 6; }
+.sly-score-circle .score-fill {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);
+}
+.sly-score-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.sly-score-info { flex: 1; }
+.sly-score-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(201,168,76,.7);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.sly-score-grade {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.sly-score-comment { font-size: 13px; color: rgba(255,255,255,.6); }
+
+.sly-breakdown {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.sly-breakdown-item {
+  flex: 1;
+  min-width: 100px;
+  background: rgba(255,255,255,.07);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.sly-bk-label { font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+.sly-bk-val { font-size: 16px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* Improvements */
+.sly-improve-list { display: flex; flex-direction: column; gap: 12px; }
+.sly-improve-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sly-improve-head {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.sly-improve-head:hover { background: rgba(201,168,76,.05); }
+.sly-risk-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.risk-high { background: var(--danger); }
+.risk-medium { background: var(--warn); }
+.risk-low { background: var(--success); }
+.sly-improve-section {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+.sly-improve-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform .2s;
+}
+.sly-improve-item.open .sly-improve-chevron { transform: rotate(180deg); }
+.sly-improve-body {
+  display: none;
+  padding: 0 16px 16px;
+}
+.sly-improve-item.open .sly-improve-body { display: block; }
+.sly-orig-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--border);
+}
+.sly-suggestion-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.sly-suggestion-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.7;
+  background: rgba(201,168,76,.07);
+  border-radius: 6px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--gold);
+  white-space: pre-wrap;
+}
+.sly-reason {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* Missing items, strengths */
+.sly-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sly-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.tag-miss { background: rgba(220,38,38,.1); color: #DC2626; }
+.tag-strength { background: rgba(22,163,74,.1); color: #16A34A; }
+.tag-keyword { background: rgba(201,168,76,.12); color: var(--gold); }
+
+/* Download */
+.sly-download-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.sly-dl-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .2s;
+}
+.sly-dl-btn svg { width: 18px; height: 18px; }
+.btn-docx { background: #2563EB; color: #fff; }
+.btn-docx:hover { background: #1d4ed8; }
+.btn-pdf { background: var(--danger); color: #fff; }
+.btn-pdf:hover { background: #b91c1c; }
+
+/* ── Points modal ── */
+.sly-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.sly-overlay.open { opacity: 1; pointer-events: auto; }
+.sly-modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+  transform: translateY(16px);
+  transition: transform .25s;
+}
+.sly-overlay.open .sly-modal { transform: translateY(0); }
+.sly-modal-title {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+}
+.sly-balance-display {
+  background: var(--navy);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sly-balance-label { font-size: 13px; color: rgba(255,255,255,.6); }
+.sly-balance-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.sly-charge-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
+.sly-charge-options { display: flex; flex-direction: column; gap: 8px; }
+.sly-charge-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.sly-charge-opt:hover { border-color: var(--gold); background: rgba(201,168,76,.05); }
+.sly-charge-opt.selected { border-color: var(--gold); background: rgba(201,168,76,.1); }
+.sly-charge-pts { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.sly-charge-price { font-size: 13px; color: var(--text-secondary); }
+.sly-charge-bonus { font-size: 11px; color: var(--gold); font-weight: 600; }
+.sly-account-info {
+  margin-top: 16px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+.sly-account-info strong { color: var(--text-primary); }
+.sly-request-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  background: var(--gold);
+  color: var(--navy);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-request-btn:hover { background: var(--gold-light); }
+.sly-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.sly-modal-close svg { width: 16px; height: 16px; }
+
+/* toast */
+.sly-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border-left: 3px solid var(--gold);
+  box-shadow: var(--shadow);
+  z-index: 300;
+  opacity: 0;
+  transition: all .3s;
+  white-space: nowrap;
+  max-width: 90vw;
+}
+.sly-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Login wall */
+.sly-login-wall {
+  background: var(--navy);
+  border-radius: var(--radius);
+  padding: 40px 28px;
+  text-align: center;
+  display: none;
+}
+.sly-login-wall.visible { display: block; }
+.sly-login-wall h2 {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--white);
+  margin: 0 0 10px;
+}
+.sly-login-wall p { font-size: 14px; color: rgba(255,255,255,.6); margin: 0 0 20px; }
+.sly-login-wall-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-login-wall-btn:hover { background: var(--gold-light); }
+
+@media (max-width: 520px) {
+  .sly-score-bar { flex-direction: column; text-align: center; }
+  .sly-breakdown { flex-direction: row; }
+  .sly-download-row { flex-direction: column; }
+}
+</style>
+
+<!-- Firebase (재사용) -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDSNsVJcSZy9X4N3MGCZ4JjYtfxBs4V2pc",
+  authDomain: "mbti-logistics.firebaseapp.com",
+  projectId: "mbti-logistics"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+window._slyAuth = auth;
+window._slyGetToken = () => auth.currentUser?.getIdToken();
+window._slyUser = null;
+
+const SLY_SERVICES = [
+  { id: 'resume',        label: '이력서 분석',    cost: 10, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_letter',  label: '자소서 분석',    cost: 10, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',  label: '영문 번역',      cost: 20, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'interview',     label: '면접 질문',      cost: 15, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'contract',      label: '계약서 검토',    cost: 15, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+];
+
+const CHARGE_PLANS = [
+  { pts: 50,  price: 5000,  label: '기본' },
+  { pts: 120, price: 10000, bonus: '+20P', label: '스탠다드' },
+  { pts: 270, price: 20000, bonus: '+70P', label: '프리미엄' },
+  { pts: 600, price: 40000, bonus: '+200P', label: '비즈니스' },
+];
+
+// ── Render header auth state
+function updateAuthUI(user) {
+  const hRight = document.getElementById('slyHeaderRight');
+  if (!hRight) return;
+  if (user) {
+    hRight.innerHTML = `
+      <button class="sly-points-badge" onclick="_slyOpenPoints()">
+        <span id="slyPtsBadge">... P</span>
+      </button>
+      <button class="sly-auth-btn" onclick="_slySignOut()">${user.displayName?.split(' ')[0] || '로그아웃'}</button>
+    `;
+    loadPoints();
+  } else {
+    hRight.innerHTML = `<button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>`;
+  }
+  const lw = document.getElementById('slyLoginWall');
+  const mc = document.getElementById('slyMainContent');
+  if (lw && mc) {
+    lw.classList.toggle('visible', !user);
+    mc.style.display = user ? 'block' : 'none';
+  }
+}
+
+async function loadPoints() {
+  if (!auth.currentUser) return;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch('/api/seolyuhana/points', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) return;
+    const d = await r.json();
+    const el = document.getElementById('slyPtsBadge');
+    if (el) el.textContent = `${(d.balance || 0).toLocaleString()} P`;
+    window._slyPoints = d.balance || 0;
+    const bv = document.getElementById('slyBalanceVal');
+    if (bv) bv.textContent = (d.balance || 0).toLocaleString() + ' P';
+  } catch(e) {}
+}
+window._slyLoadPoints = loadPoints;
+
+onAuthStateChanged(auth, user => {
+  window._slyUser = user;
+  updateAuthUI(user);
+});
+
+window._slySignIn = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) { _slyToast('로그인 실패: ' + e.message); }
+};
+window._slySignOut = async () => {
+  await signOut(auth);
+  _slyToast('로그아웃 되었습니다');
+};
+</script>
+
+<!-- Page JS -->
+<script>
+let _slyService = 'resume';
+let _slyFile = null;
+let _slyJobId = null;
+let _slyPollTimer = null;
+let _slySelectedCharge = 0;
+
+const SVC = [
+  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)' },
+  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)' },
+  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 20, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false },
+  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 (선택)' },
+  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false },
+];
+
+const ICONS = {
+  resume: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+  cover_letter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  cv_translate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  interview: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
+  contract: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+};
+
+function _slyToast(msg, dur = 3000) {
+  let t = document.getElementById('slyToast');
+  if (!t) { t = document.createElement('div'); t.id = 'slyToast'; t.className = 'sly-toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), dur);
+}
+window._slyToast = _slyToast;
+
+function renderTabs() {
+  const cont = document.getElementById('slyTabs');
+  if (!cont) return;
+  cont.innerHTML = SVC.map(s => `
+    <button class="sly-tab ${s.id === _slyService ? 'active' : ''}" onclick="_slySelectService('${s.id}')">
+      ${ICONS[s.id]}
+      <span>${s.label}<br>${s.sublabel}</span>
+      <span class="tab-cost">${s.cost}P</span>
+    </button>
+  `).join('');
+}
+
+function _slySelectService(id) {
+  _slyService = id;
+  renderTabs();
+  const svc = SVC.find(s => s.id === id);
+  // update file input accept
+  const fi = document.getElementById('slyFileInput');
+  if (fi) fi.accept = svc.accept;
+  // show/hide JD
+  const jdWrap = document.getElementById('slyJdWrap');
+  if (jdWrap) {
+    jdWrap.style.display = svc.hasJd ? 'block' : 'none';
+    if (svc.hasJd) document.getElementById('slyJdLabel').textContent = svc.jdLabel;
+  }
+  // update cost note
+  const cn = document.getElementById('slyCostNote');
+  if (cn) cn.textContent = `분석 시 ${svc.cost}P 차감됩니다`;
+  // reset results
+  clearResult();
+}
+window._slySelectService = _slySelectService;
+
+function clearResult() {
+  document.getElementById('slyResult')?.classList.remove('visible');
+  document.getElementById('slyProgress')?.classList.remove('visible');
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const maxMB = 32;
+  if (file.size > maxMB * 1024 * 1024) { _slyToast(`파일이 ${maxMB}MB를 초과합니다`); return; }
+  _slyFile = file;
+  const prev = document.getElementById('slyFilePrev');
+  document.getElementById('slyFileName').textContent = file.name;
+  document.getElementById('slyFileSize').textContent = (file.size / 1024 < 1000
+    ? (file.size / 1024).toFixed(0) + ' KB'
+    : (file.size / 1024 / 1024).toFixed(1) + ' MB');
+  prev?.classList.add('visible');
+  clearResult();
+}
+
+function _slyRemoveFile() {
+  _slyFile = null;
+  document.getElementById('slyFileInput').value = '';
+  document.getElementById('slyFilePrev')?.classList.remove('visible');
+  clearResult();
+}
+window._slyRemoveFile = _slyRemoveFile;
+
+async function _slyAnalyze() {
+  if (!window._slyUser) { _slyToast('먼저 로그인해주세요'); return; }
+  if (!_slyFile) { _slyToast('파일을 선택해주세요'); return; }
+
+  const svc = SVC.find(s => s.id === _slyService);
+  const pts = window._slyPoints || 0;
+  if (pts < svc.cost) { _slyToast(`포인트가 부족합니다 (필요: ${svc.cost}P, 보유: ${pts}P)`); _slyOpenPoints(); return; }
+
+  const btn = document.getElementById('slyAnalyzeBtn');
+  btn.disabled = true;
+
+  const prog = document.getElementById('slyProgress');
+  prog?.classList.add('visible');
+  clearResult();
+  setProgress(10, 'AI 분석 요청 중...');
+
+  try {
+    const token = await window._slyGetToken();
+    const fd = new FormData();
+    fd.append('file', _slyFile);
+    fd.append('serviceId', _slyService);
+    const jdText = document.getElementById('slyJdText')?.value || '';
+    if (jdText) fd.append('jdText', jdText);
+
+    const r = await fetch('/api/seolyuhana/analyze', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: fd
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || `서버 오류 (${r.status})`);
+    }
+    const { jobId } = await r.json();
+    _slyJobId = jobId;
+    setProgress(25, '파일 파싱 중...');
+    pollResult(jobId);
+  } catch(e) {
+    _slyToast('오류: ' + e.message);
+    prog?.classList.remove('visible');
+    btn.disabled = false;
+  }
+}
+window._slyAnalyze = _slyAnalyze;
+
+function setProgress(pct, label) {
+  const circle = document.querySelector('.sly-progress-ring .fill');
+  if (circle) {
+    const circ = 163;
+    circle.style.strokeDashoffset = circ - (circ * pct / 100);
+  }
+  const lbl = document.getElementById('slyProgLabel');
+  if (lbl) lbl.textContent = label;
+}
+
+function pollResult(jobId) {
+  clearTimeout(_slyPollTimer);
+  _slyPollTimer = setTimeout(async () => {
+    try {
+      const token = await window._slyGetToken();
+      const r = await fetch(`/api/seolyuhana/result/${jobId}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const d = await r.json();
+      if (d.status === 'processing') {
+        setProgress(55, 'Claude AI 분석 중...');
+        pollResult(jobId);
+      } else if (d.status === 'done') {
+        setProgress(100, '완료!');
+        setTimeout(() => {
+          document.getElementById('slyProgress')?.classList.remove('visible');
+          renderResult(d.result);
+          document.getElementById('slyAnalyzeBtn').disabled = false;
+          window._slyLoadPoints?.();
+        }, 500);
+      } else if (d.status === 'failed') {
+        throw new Error(d.error || '분석 실패');
+      } else {
+        pollResult(jobId);
+      }
+    } catch(e) {
+      _slyToast('결과 조회 실패: ' + e.message);
+      document.getElementById('slyProgress')?.classList.remove('visible');
+      document.getElementById('slyAnalyzeBtn').disabled = false;
+    }
+  }, 2000);
+}
+
+function renderResult(data) {
+  const cont = document.getElementById('slyResult');
+  if (!cont) return;
+  const svc = SVC.find(s => s.id === _slyService);
+  let html = '';
+
+  if (data.score) {
+    const sc = data.score;
+    const total = sc.total || sc.score || 0;
+    const grade = total >= 85 ? '우수' : total >= 70 ? '양호' : total >= 55 ? '보통' : '개선 필요';
+    const circ = 163;
+    const offset = circ - (circ * total / 100);
+    html += `<div class="sly-score-bar">
+      <div class="sly-score-circle">
+        <svg viewBox="0 0 72 72">
+          <circle class="score-track" cx="36" cy="36" r="26"/>
+          <circle class="score-fill" cx="36" cy="36" r="26"
+            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="sly-score-num">${total}</div>
+      </div>
+      <div class="sly-score-info">
+        <div class="sly-score-label">종합 점수</div>
+        <div class="sly-score-grade">${grade}</div>
+        <div class="sly-score-comment">${data.overallComment || ''}</div>
+        ${sc.breakdown ? `<div class="sly-breakdown">${
+          Object.entries(sc.breakdown).map(([k,v]) => `
+            <div class="sly-breakdown-item">
+              <div class="sly-bk-label">${k}</div>
+              <div class="sly-bk-val">${v}</div>
+            </div>`).join('')
+        }</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Strengths
+  if (data.strengths?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">강점</div>
+      <div class="sly-tags">${data.strengths.map(s => `<span class="sly-tag tag-strength">${s}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  // Improvements
+  if (data.improvements?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">개선 포인트 (${data.improvements.length}개)</div>
+      <div class="sly-improve-list" id="slyImproveList">
+        ${data.improvements.map((item, i) => {
+          const risk = (item.riskLevel || '').toLowerCase();
+          const dot = risk === 'high' ? 'risk-high' : risk === 'medium' ? 'risk-medium' : 'risk-low';
+          return `<div class="sly-improve-item" id="slyImp${i}">
+            <div class="sly-improve-head" onclick="_slyToggleImp(${i})">
+              <span class="sly-risk-dot ${dot}"></span>
+              <span class="sly-improve-section">${item.section || item.clauseTitle || item.category || '항목 ' + (i+1)}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              ${item.original || item.originalText ? `<div class="sly-orig-text">${item.original || item.originalText}</div>` : ''}
+              ${item.suggestion || item.suggestedRevision ? `
+                <div class="sly-suggestion-label">수정 제안</div>
+                <div class="sly-suggestion-text">${item.suggestion || item.suggestedRevision}</div>` : ''}
+              ${item.reason || item.issue ? `<div class="sly-reason">${item.reason || item.issue}</div>` : ''}
+              ${item.legalBasis ? `<div class="sly-reason">⚖️ ${item.legalBasis}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Missing items / keywords
+  if (data.missingItems?.length || data.jdMissingKeywords?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">누락 항목</div><div class="sly-tags">
+      ${(data.missingItems || []).map(s => `<span class="sly-tag tag-miss">${s}</span>`).join('')}
+      ${(data.jdMissingKeywords || []).map(s => `<span class="sly-tag tag-keyword">${s}</span>`).join('')}
+    </div></div>`;
+  }
+
+  // Interview questions
+  if (data.categoryQuestions?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">면접 예상 질문</div>
+      <div class="sly-improve-list">
+        ${data.categoryQuestions.map((cat, ci) => `
+          <div class="sly-improve-item" id="slyCat${ci}">
+            <div class="sly-improve-head" onclick="_slyToggleCat(${ci})">
+              <span class="sly-improve-section">${cat.category}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              ${(cat.questions || []).map((q, qi) => `
+                <div style="margin-bottom:14px">
+                  <div style="font-weight:600;font-size:14px;color:var(--text-primary);margin-bottom:6px">Q${qi+1}. ${q.question}</div>
+                  ${q.answerGuide?.keyPoints?.length ? `
+                    <div class="sly-suggestion-label">핵심 포인트</div>
+                    <div class="sly-suggestion-text">${q.answerGuide.keyPoints.join('\n')}</div>` : ''}
+                </div>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Translation sections
+  if (data.sections?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">번역 결과</div>
+      <div class="sly-improve-list">
+        ${data.sections.map((sec, si) => `
+          <div class="sly-improve-item" id="slySec${si}">
+            <div class="sly-improve-head" onclick="_slyToggleSec(${si})">
+              <span class="sly-improve-section">${sec.title}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              <div class="sly-orig-text">${sec.koreanOriginal}</div>
+              <div class="sly-suggestion-label">영문 번역</div>
+              <div class="sly-suggestion-text">${sec.englishTranslation}</div>
+              ${sec.translatorNotes ? `<div class="sly-reason">${sec.translatorNotes}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Download
+  html += `<div class="sly-download-row">
+    <button class="sly-dl-btn btn-docx" onclick="_slyDownload('docx')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      DOCX 다운로드
+    </button>
+    <button class="sly-dl-btn btn-pdf" onclick="_slyDownload('pdf')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      PDF 다운로드
+    </button>
+  </div>`;
+
+  cont.innerHTML = html;
+  cont.classList.add('visible');
+  cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+window._slyToggleImp = i => document.getElementById(`slyImp${i}`)?.classList.toggle('open');
+window._slyToggleCat = i => document.getElementById(`slyCat${i}`)?.classList.toggle('open');
+window._slyToggleSec = i => document.getElementById(`slySec${i}`)?.classList.toggle('open');
+
+async function _slyDownload(ext) {
+  if (!_slyJobId) { _slyToast('먼저 분석을 완료해주세요'); return; }
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch(`/api/seolyuhana/download/${_slyJobId}?ext=${ext}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error('다운로드 실패');
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fname = cd.match(/filename\*?=(?:UTF-8'')?(.+)/)?.[1]?.replace(/"/g, '') || `분석결과.${ext}`;
+    a.download = decodeURIComponent(fname);
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { _slyToast(e.message); }
+}
+window._slyDownload = _slyDownload;
+
+// ── Points modal ──
+function _slyOpenPoints() {
+  document.getElementById('slyPointsOverlay')?.classList.add('open');
+  window._slyLoadPoints?.();
+}
+function _slyClosePoints() {
+  document.getElementById('slyPointsOverlay')?.classList.remove('open');
+}
+window._slyOpenPoints = _slyOpenPoints;
+window._slyClosePoints = _slyClosePoints;
+
+function _slySelectCharge(idx) {
+  _slySelectedCharge = idx;
+  document.querySelectorAll('.sly-charge-opt').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+}
+window._slySelectCharge = _slySelectCharge;
+
+async function _slyRequestCharge() {
+  if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
+  const plans = [
+    { pts: 50, price: 5000 },
+    { pts: 120, price: 10000 },
+    { pts: 270, price: 20000 },
+    { pts: 600, price: 40000 },
+  ];
+  const plan = plans[_slySelectedCharge];
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch('/api/seolyuhana/point-request', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ points: plan.pts, amount: plan.price })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '신청 실패');
+    _slyToast(`${plan.pts}P 충전 신청 완료! 입금 후 관리자 승인 시 즉시 충전됩니다.`, 5000);
+    _slyClosePoints();
+  } catch(e) { _slyToast(e.message); }
+}
+window._slyRequestCharge = _slyRequestCharge;
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderTabs();
+  _slySelectService('resume');
+
+  const dz = document.getElementById('slyDropzone');
+  const fi = document.getElementById('slyFileInput');
+  if (dz) {
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault();
+      dz.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    });
+  }
+  if (fi) fi.addEventListener('change', () => handleFile(fi.files[0]));
+
+  // close overlay on backdrop click
+  document.getElementById('slyPointsOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) _slyClosePoints();
+  });
+});
+</script>
+
+<!-- ── HTML ── -->
+<header class="sly-header">
+  <a class="sly-logo" href="/seolyuhana">
+    <div class="sly-logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#08101f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14,2 14,8 20,8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/>
+        <line x1="16" y1="17" x2="8" y2="17"/>
+      </svg>
+    </div>
+    <span class="sly-logo-text">서류<span>하나</span></span>
+  </a>
+  <div class="sly-header-right" id="slyHeaderRight">
+    <button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>
+  </div>
+</header>
+
+<main class="sly-main">
+  <!-- Login wall -->
+  <div class="sly-login-wall" id="slyLoginWall">
+    <h2>AI 서류 분석 서비스</h2>
+    <p>이력서·자소서·계약서를 AI가 즉시 분석합니다.<br>구글 계정으로 무료 가입하세요.</p>
+    <button class="sly-login-wall-btn" onclick="_slySignIn()">구글로 시작하기</button>
+  </div>
+
+  <!-- Main content -->
+  <div id="slyMainContent" style="display:none">
+    <!-- Hero -->
+    <div class="sly-hero">
+      <div class="sly-hero-eyebrow">AI 서류 분석</div>
+      <h1>파일 하나로<br><em>완성하는 서류</em></h1>
+      <p>HWP · DOCX · PDF 그대로 올리면 AI가 즉시 분석하고 개선안을 제시합니다</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="sly-tabs" id="slyTabs"></div>
+
+    <!-- Upload card -->
+    <div class="sly-card">
+      <div class="sly-card-title">파일 업로드</div>
+
+      <div class="sly-dropzone" id="slyDropzone">
+        <input type="file" id="slyFileInput" accept=".hwp,.docx,.pdf,.txt">
+        <div class="sly-dz-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17,8 12,3 7,8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="sly-dz-title">파일을 끌어다 놓거나 클릭하세요</div>
+        <div class="sly-dz-sub">최대 32MB</div>
+        <div class="sly-dz-types">
+          <span class="sly-type-chip">HWP</span>
+          <span class="sly-type-chip">DOCX</span>
+          <span class="sly-type-chip">PDF</span>
+          <span class="sly-type-chip">TXT</span>
+        </div>
+      </div>
+
+      <div class="sly-file-preview" id="slyFilePrev">
+        <div class="sly-file-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+          </svg>
+        </div>
+        <div class="sly-file-info">
+          <div class="sly-file-name" id="slyFileName"></div>
+          <div class="sly-file-size" id="slyFileSize"></div>
+        </div>
+        <button class="sly-file-remove" onclick="_slyRemoveFile()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="sly-optional" id="slyJdWrap">
+        <label id="slyJdLabel">지원 공고 붙여넣기 (선택)</label>
+        <textarea id="slyJdText" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
+      </div>
+
+      <button class="sly-analyze-btn" id="slyAnalyzeBtn" onclick="_slyAnalyze()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        AI 분석 시작
+      </button>
+      <div class="sly-cost-note" id="slyCostNote">분석 시 10P 차감됩니다</div>
+    </div>
+
+    <!-- Progress -->
+    <div class="sly-card sly-progress" id="slyProgress">
+      <svg class="sly-progress-ring" viewBox="0 0 64 64">
+        <circle class="track" cx="32" cy="32" r="26"/>
+        <circle class="fill" cx="32" cy="32" r="26" stroke-dasharray="163" stroke-dashoffset="163"/>
+      </svg>
+      <div class="sly-progress-label" id="slyProgLabel">AI 분석 요청 중...</div>
+      <div class="sly-progress-sub">약 10~30초 소요됩니다</div>
+    </div>
+
+    <!-- Results -->
+    <div id="slyResult" class="sly-result"></div>
+  </div>
+</main>
+
+<!-- Points modal -->
+<div class="sly-overlay" id="slyPointsOverlay">
+  <div class="sly-modal" style="position:relative">
+    <button class="sly-modal-close" onclick="_slyClosePoints()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="sly-modal-title">포인트 충전</div>
+    <div class="sly-balance-display">
+      <div>
+        <div class="sly-balance-label">현재 보유 포인트</div>
+        <div class="sly-balance-val" id="slyBalanceVal">0 P</div>
+      </div>
+      <div style="font-size:13px;color:rgba(201,168,76,.6);text-align:right">1P = ₩1</div>
+    </div>
+
+    <div class="sly-charge-title">충전 옵션 선택</div>
+    <div class="sly-charge-options">
+      <div class="sly-charge-opt selected" onclick="_slySelectCharge(0)">
+        <div>
+          <div class="sly-charge-pts">50 P</div>
+          <div style="font-size:11px;color:var(--text-muted)">기본 체험</div>
+        </div>
+        <div class="sly-charge-price">₩5,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(1)">
+        <div>
+          <div class="sly-charge-pts">120 P <span class="sly-charge-bonus">+20P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">스탠다드</div>
+        </div>
+        <div class="sly-charge-price">₩10,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(2)">
+        <div>
+          <div class="sly-charge-pts">270 P <span class="sly-charge-bonus">+70P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">프리미엄</div>
+        </div>
+        <div class="sly-charge-price">₩20,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(3)">
+        <div>
+          <div class="sly-charge-pts">600 P <span class="sly-charge-bonus">+200P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">비즈니스</div>
+        </div>
+        <div class="sly-charge-price">₩40,000</div>
+      </div>
+    </div>
+
+    <div class="sly-account-info">
+      <strong>입금 계좌</strong><br>
+      하나은행 270-910019-24204<br>
+      예금주: (유)엠비티아이<br>
+      <br>
+      입금 후 관리자 확인 시 <strong>즉시 포인트 충전</strong>됩니다.<br>
+      <span style="color:var(--text-muted)">신청 후 영업일 기준 1일 이내 처리</span>
+    </div>
+    <button class="sly-request-btn" onclick="_slyRequestCharge()">충전 신청하기</button>
+  </div>
+</div>
