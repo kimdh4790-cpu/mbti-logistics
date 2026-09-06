@@ -539,6 +539,7 @@ cd mbtico-pages && npx wrangler deploy
   - analyzeRegistry(), analyzePublicDoc() AI 분석 함수
   - 직접 발급: 사업자 조회만 가능 (공인인증서 필요 서류는 딥링크 제공)
 - **서류하나 Oracle 변환서버** (seolyuhana/oracle-server.js): LibreOffice HWP→DOCX + Puppeteer HTML→PDF (포트 3100)
+- **서류하나 등기부 직접 조회** (_worker.js `/api/seolyuhana/registry-direct`): Tilko API(AES-CBC-128+RSA-OAEP) 연동, TILKO_API_KEY+TILKO_RSA_PUBKEY 설정 시 직접 조회. 미설정 시 인터넷등기소 링크 폴백. seolyuhana.html `_slyShowRegResult()` 결과 동적 렌더링.
 - **_worker.js /seolyuhana 라우트 추가** (filo.ai.kr 블록)
 - **Aligo SMS/알림톡 → Solapi 전환 완료**: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
   - processAlimtalkQueue, DONWAY 승인 알림톡, /api/send-sms, /api/send-sms-bulk, 용차앱 정산 알림톡 모두 solapiSms()/solapiAlimtalk() 교체

@@ -1339,7 +1339,12 @@ function renderResult(data) {
 window._slyToggleImp = i => document.getElementById(`slyImp${i}`)?.classList.toggle('open');
 window._slyToggleCat = i => document.getElementById(`slyCat${i}`)?.classList.toggle('open');
 window._slyToggleSec = i => document.getElementById(`slySec${i}`)?.classList.toggle('open');
-window._slyToggleEnc = i => document.getElementById(`slyEnc${i}`)?.classList.toggle('open');
+window._slyToggleEnc = i => {
+  const el = document.getElementById(`slyEnc${i}`);
+  if (!el) return;
+  const open = el.style.maxHeight && el.style.maxHeight !== '0px';
+  el.style.maxHeight = open ? '0px' : el.scrollHeight + 'px';
+};
 
 async function _slyDownload(ext) {
   if (!_slyJobId) { _slyToast('먼저 분석을 완료해주세요'); return; }
@@ -1404,30 +1409,23 @@ async function _slyRequestCharge() {
 }
 window._slyRequestCharge = _slyRequestCharge;
 
-// ── 등기부 주소 검색 ──
+// ── 등기부 주소 검색 (Tilko 직접 조회 or 링크 폴백) ──
 async function _slyRegSearch() {
   const addr = document.getElementById('slyRegAddr')?.value?.trim();
   if (!addr) { _slyToast('주소를 입력해주세요'); return; }
   const regType = document.getElementById('slyRegType')?.value || 'all';
   const btn = document.querySelector('#slyIssueRegistry button');
-  if (btn) { btn.disabled = true; btn.textContent = '검색 중...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '조회 중...'; }
   try {
     const token = await window._slyGetToken();
-    const r = await fetch('/api/seolyuhana/registry-link', {
+    const r = await fetch('/api/seolyuhana/registry-direct', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ address: addr, regType })
     });
     if (!r.ok) throw new Error((await r.json()).error || '조회 실패');
     const d = await r.json();
-    const result = document.getElementById('slyRegResult');
-    if (result) {
-      result.style.display = 'block';
-      const addr2 = document.getElementById('slyRegAddr2');
-      if (addr2) addr2.textContent = d.stdAddr || addr;
-      const link = document.getElementById('slyRegLink');
-      if (link && d.irosUrl) { link.href = d.irosUrl; link.style.display = 'block'; }
-    }
+    _slyShowRegResult(d, addr);
   } catch(e) {
     _slyToast('주소 조회 실패: ' + e.message);
   } finally {
@@ -1435,6 +1433,65 @@ async function _slyRegSearch() {
   }
 }
 window._slyRegSearch = _slyRegSearch;
+
+function _slyShowRegResult(d, queryAddr) {
+  const result = document.getElementById('slyRegResult');
+  if (!result) return;
+  result.style.display = 'block';
+
+  if (d.mode === 'direct') {
+    // Tilko 직접 조회 결과
+    const p = d.property || {};
+    const propInfo = [p.type && `유형: ${p.type}`, p.area && `면적: ${p.area}`, p.buildYear && `건축: ${p.buildYear}년`].filter(Boolean).join(' &nbsp;|&nbsp; ');
+    const ownerHtml = (d.ownership||[]).map(o =>
+      `<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:var(--navy-mid);color:var(--text-primary);font-size:12px;margin:2px">${o.owner || '?'} <span style="color:var(--text-muted)">${o.purpose}</span></span>`
+    ).join('');
+    const encHtml = (d.encumbrances||[]).length === 0
+      ? `<div style="color:var(--success,#4caf50);font-size:13px;padding:10px 0">담보·제한 없음</div>`
+      : (d.encumbrances||[]).map((e,i) => `
+        <div onclick="_slyToggleEnc(${i})" style="padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);margin-bottom:6px;cursor:pointer">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#ef4444;font-size:16px">●</span>
+            <span style="font-size:13px;font-weight:600;flex:1">${e.type}</span>
+            <span style="font-size:13px;color:var(--danger,#ef4444);font-weight:700">${e.amount}</span>
+          </div>
+          <div id="slyEnc${i}" class="sly-accordion" style="max-height:0;overflow:hidden;transition:max-height .25s">
+            <div style="padding-top:8px;font-size:12px;color:var(--text-secondary)">채권자: ${e.creditor || '미상'} &nbsp;/&nbsp; 일자: ${e.date || '미상'}</div>
+          </div>
+        </div>`).join('');
+    const riskColor = (d.totalDebt||0) > 0 ? '#ef4444' : 'var(--success,#4caf50)';
+    result.innerHTML = `
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;word-break:break-all">${d.stdAddr || queryAddr}</div>
+      ${propInfo ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${propInfo}</div>` : ''}
+      ${ownerHtml ? `<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">소유권</div>${ownerHtml}</div>` : ''}
+      <div style="margin-bottom:6px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">담보·제한</div>${encHtml}</div>
+      <div style="padding:10px 12px;border-radius:8px;background:var(--bg);border:2px solid ${riskColor};margin-top:4px;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:700;color:${riskColor}">${d.riskSummary || '분석 완료'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">출처: Tilko / 대법원 인터넷등기소 &nbsp;•&nbsp; 열람 기준</div>
+    `;
+  } else {
+    // 링크 모드 (Tilko 미설정 또는 실패)
+    result.innerHTML = `
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;word-break:break-all">${d.stdAddr || queryAddr}</div>
+      ${d.guide ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${d.guide}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="${d.irosUrl||'https://www.iros.go.kr'}" target="_blank" rel="noopener"
+          style="flex:1;min-width:180px;padding:12px 16px;background:var(--gold);color:var(--navy);border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;text-align:center;display:block">
+          인터넷등기소에서 열람 (700원)
+        </a>
+        <a href="https://www.iros.go.kr" target="_blank" rel="noopener"
+          style="flex:1;min-width:120px;padding:12px 16px;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;text-decoration:none;text-align:center;display:block">
+          인터넷등기소 홈
+        </a>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.5">
+        열람 후 PDF 저장 → 아래 업로드 → AI 자동 분석
+      </div>
+    `;
+  }
+}
+window._slyShowRegResult = _slyShowRegResult;
 
 // ── 사업자 조회 ──
 async function _slyBizSearch() {
@@ -1559,21 +1616,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <button onclick="_slyRegSearch()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
           주소 검색 →
         </button>
-        <div id="slyRegResult" style="display:none;background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
-          <div id="slyRegAddr2" style="font-size:13px;color:var(--text-secondary);margin-bottom:10px"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <a id="slyRegLink" href="#" target="_blank" rel="noopener"
-              style="flex:1;min-width:180px;padding:12px 16px;background:var(--gold);color:var(--navy);border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;text-align:center;display:block">
-              인터넷등기소에서 열람 (700원)
-            </a>
-            <a href="https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp" target="_blank" rel="noopener"
-              style="flex:1;min-width:120px;padding:12px 16px;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;text-decoration:none;text-align:center;display:block">
-              인터넷등기소 홈
-            </a>
-          </div>
-          <div style="margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.5">
-            열람 후 PDF 저장 → 아래 업로드 → AI 자동 분석
-          </div>
+        <div id="slyRegResult" style="display:none;background:var(--surface);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
+          <!-- _slyShowRegResult()로 동적 렌더링 -->
         </div>
         <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 PDF 업로드</div>
       </div>

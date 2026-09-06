@@ -5617,6 +5617,122 @@ ${JSON.stringify(postSummary)}
         } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
       }
 
+      // ─── Tilko API 등기부 직접 조회 헬퍼 ────────────────────────────────────
+      function _b64Buf(b64) {
+        const bin = atob(b64.replace(/\s+/g,''));
+        const buf = new Uint8Array(bin.length);
+        for (let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+        return buf.buffer;
+      }
+      function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+
+      async function _tilkoFetchRegistry(address, pnu, regType, apiKey, rsaPubKeyB64) {
+        const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        const rawAes = await crypto.subtle.exportKey('raw', aesKey);
+        const spki = _b64Buf(rsaPubKeyB64);
+        const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
+        const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAes);
+        const encKey = _bufB64(encAes);
+        const reqBytes = new TextEncoder().encode(JSON.stringify({
+          부동산고유번호: pnu || '',
+          발급구분: regType === 'mortgage' ? '말소사항포함' : '전부',
+          검색주소: address
+        }));
+        const encBody = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, reqBytes);
+        const payload = new Uint8Array(16 + encBody.byteLength);
+        payload.set(iv, 0);
+        payload.set(new Uint8Array(encBody), 16);
+
+        const res = await fetch('https://api.tilko.net/api/v1.0/Iros/RISURetrieve', {
+          method: 'POST',
+          headers: {'api-key': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/octet-stream'},
+          body: payload, signal: AbortSignal.timeout(30000)
+        });
+        if (!res.ok) throw new Error(`Tilko ${res.status}: ${await res.text().catch(()=>'')}`);
+
+        const resBytes = new Uint8Array(await res.arrayBuffer());
+        const resIv = resBytes.slice(0, 16);
+        const resEnc = resBytes.slice(16);
+        const resPlain = new TextDecoder().decode(
+          await crypto.subtle.decrypt({name:'AES-CBC',iv:resIv}, aesKey, resEnc)
+        );
+        return _parseTilkoXml(resPlain);
+      }
+
+      function _parseTilkoXml(xml) {
+        const tag = (t, src) => { const m = (src||xml).match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`, 'i')); return m?.[1]?.trim() || ''; };
+        const tags = (t, src) => [...(src||xml).matchAll(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`, 'gi'))].map(m=>m[1].trim());
+        const property = {
+          address: tag('부동산소재지번') || tag('도로명주소') || tag('주소'),
+          type: tag('부동산구분') || tag('지목'),
+          area: tag('면적'),
+          buildYear: tag('건축년도')
+        };
+        const ownership = tags('갑구사항').map(s=>({
+          purpose: s.match(/소유권이전|소유권보존|소유권|가압류|가처분/)?.[0] || '',
+          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0] || '',
+          owner: s.match(/소유자[:\s＊*]+([^\n<,]+)/)?.[1]?.trim() || ''
+        })).filter(o=>o.owner||o.purpose);
+        const encumbrances = tags('을구사항').map(s=>({
+          type: s.match(/근저당권설정|전세권설정|지상권설정|임차권등기/)?.[0] || '',
+          amount: s.match(/채권최고액[:\s]+([^\n<]+)/)?.[1]?.trim() || s.match(/전세금[:\s]+([^\n<]+)/)?.[1]?.trim() || '',
+          creditor: s.match(/(?:근저당권자|채권자|전세권자)[:\s]+([^\n<,]+)/)?.[1]?.trim() || '',
+          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0] || ''
+        })).filter(e=>e.type);
+        const totalDebt = encumbrances.reduce((sum,e)=>{
+          const n = parseInt((e.amount||'').replace(/[^0-9]/g,''), 10);
+          return sum + (isNaN(n)?0:n);
+        }, 0);
+        const riskSummary = encumbrances.length > 0
+          ? `근저당·담보 ${encumbrances.length}건, 채권최고액 합계 ${totalDebt.toLocaleString()}원`
+          : '담보·제한 없음';
+        return { property, ownership, encumbrances, riskSummary, totalDebt };
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
+      // POST /api/seolyuhana/registry-direct — Tilko API 등기부 직접 조회
+      if (path === '/api/seolyuhana/registry-direct' && method === 'POST') {
+        const _ru = await requireAuth(request, env);
+        if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
+        try {
+          const { address, regType = 'all' } = await request.json();
+          if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
+
+          let stdAddr = address, pnu = null;
+          const vkey = env.VWORLD_API_KEY;
+          if (vkey) {
+            try {
+              const vr = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`);
+              if (vr.ok) {
+                const vd = await vr.json();
+                const rs = vd?.response?.result;
+                if (rs) { stdAddr = rs.refined?.text || address; pnu = rs.structure?.pnu; }
+              }
+            } catch(_) {}
+          }
+
+          const tilkoKey = env.TILKO_API_KEY;
+          const tilkoRsa = env.TILKO_RSA_PUBKEY;
+          if (tilkoKey && tilkoRsa) {
+            try {
+              const data = await _tilkoFetchRegistry(stdAddr, pnu, regType, tilkoKey, tilkoRsa);
+              return Response.json({ok:true, mode:'direct', stdAddr, pnu, ...data}, {status:200,headers});
+            } catch(te) {
+              console.error('[tilko-registry]', te.message);
+            }
+          }
+
+          // Fallback: 인터넷등기소 링크
+          const irosUrl = `https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          return Response.json({
+            ok: true, mode: 'link', stdAddr, pnu, irosUrl,
+            guide: (tilkoKey && tilkoRsa) ? 'Tilko API 오류로 링크 모드 전환. 잠시 후 재시도해주세요.'
+              : 'TILKO_API_KEY + TILKO_RSA_PUBKEY 설정 시 직접 조회 가능합니다.'
+          }, {status:200,headers});
+        } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+      }
+
       // POST /api/seolyuhana/registry-link — V-World 주소→인터넷등기소 URL 생성
       if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
         const _regUser = await requireAuth(request, env);
