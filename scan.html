@@ -2059,6 +2059,25 @@ function _slyShowRegResult(d, queryAddr) {
   if (!result) return;
   result.style.display = 'block';
 
+  if (d.mode === 'auto' && d.pdfBase64) {
+    // Oracle 서버 자동 발급 성공 → PDF를 분석 파이프라인으로 바로 전달
+    result.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="font-size:18px">✅</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary)">등기부등본 자동 발급 완료</div>
+          <div style="font-size:12px;color:var(--text-secondary)">${d.stdAddr || queryAddr}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">AI 분석을 시작하려면 아래 버튼을 눌러주세요.</div>
+      <button onclick="_slyAutoAnalyzeRegistry('${encodeURIComponent(d.pdfBase64||'')}','${encodeURIComponent(d.stdAddr||queryAddr)}')"
+        style="width:100%;padding:14px;background:var(--gold);color:var(--navy);border:none;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer">
+        등기부 AI 분석 시작 (${(29900).toLocaleString()}P)
+      </button>
+    `;
+    return;
+  }
+
   if (d.mode === 'direct') {
     // Tilko 직접 조회 결과
     const p = d.property || {};
@@ -2114,6 +2133,43 @@ function _slyShowRegResult(d, queryAddr) {
   }
 }
 window._slyShowRegResult = _slyShowRegResult;
+
+// Oracle 자동 발급 PDF → AI 분석 제출
+async function _slyAutoAnalyzeRegistry(encodedPdf, encodedAddr) {
+  const pdfBase64 = decodeURIComponent(encodedPdf);
+  const addr = decodeURIComponent(encodedAddr);
+  const COST = 29900;
+  const pts = window._slyPoints || 0;
+  if (pts < COST) { _slyToast(`포인트 부족 (보유: ${pts.toLocaleString()}P, 필요: ${COST.toLocaleString()}P)`); return; }
+
+  // base64 → Blob → File
+  const byteCharacters = atob(pdfBase64);
+  const byteArray = new Uint8Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) byteArray[i] = byteCharacters.charCodeAt(i);
+  const blob = new Blob([byteArray], { type: 'application/pdf' });
+  const file = new File([blob], `registry_${addr.replace(/\s+/g,'_')}.pdf`, { type: 'application/pdf' });
+
+  // 분석 파이프라인 실행 (기존 _slySubmit 로직 재사용)
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('service', 'registry_analysis');
+  fd.append('jeonseDeposit', '');
+
+  const token = await window._slyGetToken();
+  _slyToast('AI 분석 중...');
+  try {
+    const r = await fetch('/api/seolyuhana/analyze', {
+      method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || '분석 실패');
+    _slyToast('분석 시작! 잠시 후 결과가 표시됩니다.');
+    window._slyCurrentJobId = d.jobId;
+    document.getElementById('slyProgressSection').style.display = 'block';
+    _slyPollResult(d.jobId);
+  } catch(e) { _slyToast('분석 실패: ' + e.message); }
+}
+window._slyAutoAnalyzeRegistry = _slyAutoAnalyzeRegistry;
 
 // ── 사업자 조회 ──
 async function _slyBizSearch() {

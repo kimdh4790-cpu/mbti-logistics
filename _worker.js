@@ -8500,25 +8500,63 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
             } catch(te) {
               console.error('[tilko-registry]', te.message);
-              // 설정 오류는 바로 반환
-              if (te.message.includes('env 미설정') || te.message.includes('고유번호')) {
-                return Response.json({ok:false, mode:'link', error: te.message,
-                  stdAddr, irosUrl:`https://www.iros.go.kr`
-                },{status:200,headers});
-              }
             }
           }
 
-          // Fallback: 인터넷등기소 링크 (JSF 딥링크 미지원 → 메인 페이지)
+          // Fallback 1: Oracle 서버 Puppeteer로 IROS 자동 로그인 + 발급
+          const oracleUrl = env.ORACLE_SERVER_URL;
+          const irosId  = env.IROS_USER_ID;
+          const irosPw  = env.IROS_USER_PW;
+          const emNo1   = env.IROS_EMONEY_NO1;
+          const emNo2   = env.IROS_EMONEY_NO2;
+          const emPwd   = env.IROS_EMONEY_PWD;
+          if (oracleUrl && irosId && irosPw) {
+            try {
+              const oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  address: stdAddr,
+                  regType: regType === 'land' ? 'land' : 'building',
+                  irosId, irosPw,
+                  emoneyNo1: emNo1 || '', emoneyNo2: emNo2 || '', emoneyPwd: emPwd || ''
+                }),
+                signal: AbortSignal.timeout(120000)
+              });
+              if (oRes.ok) {
+                const od = await oRes.json();
+                if (od.ok && od.pdfBase64) {
+                  // PDF를 KV에 저장하고 base64 직접 반환
+                  const pdfKey = `iros_pdf_${Date.now()}`;
+                  await env.DONWAY_ASSETS.put(pdfKey, od.pdfBase64, { expirationTtl: 3600 });
+                  return Response.json({ok:true, mode:'auto', stdAddr,
+                    pdfBase64: od.pdfBase64, pdfKey,
+                    guide:'인터넷등기소에서 자동 발급 완료'
+                  }, {status:200,headers});
+                }
+                if (!od.ok) {
+                  console.error('[oracle-iros]', od.error);
+                  // Oracle도 실패 → 링크 모드로
+                  return Response.json({ok:false, mode:'link', stdAddr,
+                    error: od.error || 'Oracle 서버 IROS 조회 실패',
+                    irosUrl:'https://www.iros.go.kr'
+                  },{status:200,headers});
+                }
+              }
+            } catch(oe) {
+              console.error('[oracle-iros]', oe.message);
+            }
+          }
+
+          // Fallback 2: 인터넷등기소 링크
           const irosUrl = `https://www.iros.go.kr`;
           const missing = [];
-          if (!tilkoKey) missing.push('TILKO_API_KEY');
-          if (!tilkoRsa) missing.push('TILKO_RSA_PUBKEY');
-          if (!env.IROS_USER_ID) missing.push('IROS_USER_ID');
-          if (!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
+          if (!oracleUrl) missing.push('ORACLE_SERVER_URL');
+          if (!irosId) missing.push('IROS_USER_ID');
+          if (!irosPw) missing.push('IROS_USER_PW');
           return Response.json({
             ok: true, mode: 'link', stdAddr, irosUrl,
-            guide: missing.length ? `직접 조회 미설정 항목: ${missing.join(', ')}` : 'Tilko API 오류로 링크 모드 전환'
+            guide: missing.length ? `직접 조회 미설정 항목: ${missing.join(', ')}` : 'Oracle 서버 오류로 링크 모드 전환'
           }, {status:200,headers});
         } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
       }
