@@ -120,27 +120,40 @@ app.post('/api/iros-fetch', async (req, res) => {
 
     // 1단계: 인터넷등기소 메인 접속
     await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml', { waitUntil: 'networkidle', timeout: 60000 });
+    console.log('[iros] 메인 URL:', page.url());
 
     // 2단계: 로그인
     try {
-      await page.waitForSelector('#userId, input[name="userId"]', { timeout: 10000 });
-      await page.fill('#userId', irosId);
-      await page.fill('#userPwd', irosPw);
-      await page.click('#loginBtn, button[onclick*="login"], input[type="submit"]');
+      await page.waitForSelector('#userId, input[name="userId"], input[id*="userId"], input[id*="Id"]', { timeout: 10000 });
+      const userIdFld = page.locator('#userId, input[name="userId"], input[id*="userId"]').first();
+      const userPwFld = page.locator('#userPwd, input[name="userPwd"], input[id*="Pwd"], input[type="password"]').first();
+      await userIdFld.fill(irosId);
+      await userPwFld.fill(irosPw);
+      const loginBtn = page.locator('#loginBtn, button[onclick*="login"], input[type="submit"], button[type="submit"]').first();
+      if (await loginBtn.count() > 0) await loginBtn.click();
+      else await page.keyboard.press('Enter');
       await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
-    } catch {
-      // 이미 로그인됐거나 팝업 방식
+      console.log('[iros] 로그인 후 URL:', page.url());
+    } catch (le) {
+      console.log('[iros] 로그인 셀렉터 없음(이미 로그인 또는 팝업):', le.message);
     }
 
-    // 3단계: 건물·토지 검색 페이지
+    // 3단계: 건물·토지 검색 페이지 (selectRenf0100List = 신 JSF URL)
     const searchUrl = regType === 'land'
-      ? 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0101List.xhtml?type=L'
-      : 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0101List.xhtml?type=B';
+      ? 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=L'
+      : 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=B';
     await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 60000 });
+    console.log('[iros] 검색페이지 URL:', page.url(), '| 제목:', await page.title());
 
-    // 4단계: 주소 입력
-    await page.waitForSelector('input[id*="addr"], input[id*="Addr"], #searchAddr', { timeout: 15000 });
-    const addrInput = page.locator('input[id*="addr"], input[id*="Addr"], #searchAddr').first();
+    // 4단계: 주소 입력 (다양한 셀렉터 폴백)
+    const ADDR_SEL = [
+      'input[id*="addr"]', 'input[id*="Addr"]', '#searchAddr',
+      'input[placeholder*="주소"]', 'input[placeholder*="지번"]',
+      'input[name*="addr"]', 'input[name*="Addr"]',
+      'input[type="text"]'
+    ].join(', ');
+    await page.waitForSelector(ADDR_SEL, { timeout: 20000 });
+    const addrInput = page.locator(ADDR_SEL).first();
     await addrInput.click({ clickCount: 3 });
     await addrInput.fill(address);
 
