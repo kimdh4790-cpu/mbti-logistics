@@ -186,6 +186,7 @@
 | 2026-09-07 | **면접 시스템 2026 데이터 주입**: 삼성합격자 평균TOEIC·인턴경험비율·카카오합격률·압박질문10유형·싫어하는답변20가지 추가 |
 | 2026-09-07 | **등기부 모델 업그레이드**: haiku → sonnet-4-6 (34,900P 가격 정당화) |
 | 2026-09-07 | **IROS 딥링크 404 수정**: selectRenf0100List.xhtml → iros.go.kr 메인으로 변경 |
+| 2026-09-07 | **IROS 자동 발급 구현**: oracle-server.js `/api/iros-fetch` Puppeteer 엔드포인트 추가. registry-direct Tilko 실패 후 Oracle 서버 폴백 추가 (mode:'auto'). scan.html mode:'auto' UI 처리 및 _slyAutoAnalyzeRegistry() 구현 |
 | 2026-09-07 | **[긴급] uid 객체 버그 수정**: verifyFirebaseToken이 객체 반환 → localId 추출, Firestore sly_points 경로 오류 해소 |
 | 2026-09-07 | **슈퍼어드민 포인트 바이패스**: _SUPERADMIN_EMAILS 검사 후 포인트 차감 스킵 (filo.ai.kr·mbtico.kr 블록 양쪽) |
 | 2026-09-07 | **biz-status debug 필드 추가**: 조회 실패 시 NTS API 응답 상태·matchCount 반환 |
