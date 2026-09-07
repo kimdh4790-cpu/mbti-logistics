@@ -2850,11 +2850,11 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               } catch(te) {
                 console.error('[tilko-registry]', te.message);
                 if (te.message.includes('env 미설정')||te.message.includes('고유번호')) {
-                  return Response.json({ok:false,mode:'link',error:te.message,stdAddr,irosUrl:`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?addr=${encodeURIComponent(stdAddr)}`},{status:200,headers});
+                  return Response.json({ok:false,mode:'link',error:te.message,stdAddr,irosUrl:'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml'},{status:200,headers});
                 }
               }
             }
-            const irosUrl=`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?addr=${encodeURIComponent(stdAddr)}`;
+            const irosUrl='https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml';
             const missing=[];
             if(!tilkoKey) missing.push('TILKO_API_KEY'); if(!tilkoRsa) missing.push('TILKO_RSA_PUBKEY'); if(!env.IROS_USER_ID) missing.push('IROS_USER_ID'); if(!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
             return Response.json({ok:true,mode:'link',stdAddr,irosUrl,guide:missing.length?`직접 조회 미설정 항목: ${missing.join(', ')}`:'Tilko API 오류로 링크 모드 전환'},{status:200,headers});
