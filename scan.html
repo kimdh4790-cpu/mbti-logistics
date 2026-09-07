@@ -1173,18 +1173,18 @@ window._slyGetToken = () => auth.currentUser?.getIdToken();
 window._slyUser = null;
 
 const SLY_SERVICES = [
-  { id: 'resume',        label: '이력서 분석',    cost: 1000, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cover_letter',  label: '자소서 분석',    cost: 1000, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cv_translate',  label: '영문 번역',      cost: 2000, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'interview',     label: '면접 질문',      cost: 1500, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'contract',      label: '계약서 검토',    cost: 1500, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'resume',        label: '이력서 분석',    cost: 9900,  icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_letter',  label: '자소서 분석',    cost: 9900,  icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',  label: '영문 번역',      cost: 14900, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'interview',     label: '면접 질문',      cost: 9900,  icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'contract',      label: '계약서 검토',    cost: 14900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
 ];
 
 const CHARGE_PLANS = [
-  { pts: 5000,  price: 5000,  label: '5,000P' },
-  { pts: 10000, price: 10000, bonus: '+1,000P', label: '10,000P' },
-  { pts: 22000, price: 20000, bonus: '+2,000P', label: '20,000P' },
-  { pts: 55000, price: 50000, bonus: '+5,000P', label: '50,000P' },
+  { pts: 10000,  price: 10000,  label: '10,000P' },
+  { pts: 22000,  price: 20000,  bonus: '+2,000P', label: '20,000P' },
+  { pts: 57000,  price: 50000,  bonus: '+7,000P', label: '50,000P' },
+  { pts: 120000, price: 100000, bonus: '+20,000P', label: '100,000P' },
 ];
 
 // ── Render header auth state
@@ -1286,26 +1286,26 @@ let _slyPollTimer = null;
 let _slySelectedCharge = 0;
 
 const SVC = [
-  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 1000, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 9900,  accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis' },
-  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 1000, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 9900,  accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
-  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 2000, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 14900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'cover_letter_translation' },
-  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 1500, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 9900,  accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
-  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 1500, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 14900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'employment_contract' },
   // ── 공문서 발급 & 분석 ──
-  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 2000, accept: '.pdf',
+  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 4900,  accept: '.pdf',
     hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry' },
-  { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 1000, accept: '.pdf',
+  { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 2900,  accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'biz' },
-  { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 1000, accept: '.pdf',
+  { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 2900,  accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'health' },
-  { id: 'income',        label: '소득',   sublabel: '확인',   cost: 1000, accept: '.pdf',
+  { id: 'income',        label: '소득',   sublabel: '확인',   cost: 2900,  accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'income' },
-  { id: 'gov_doc',       label: '공문서', sublabel: '분석',   cost: 500, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'gov_doc',       label: '공문서', sublabel: '분석',   cost: 2900,  accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: false },
 ];
 
@@ -1801,10 +1801,10 @@ window._slySelectCharge = _slySelectCharge;
 async function _slyRequestCharge() {
   if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
   const plans = [
-    { pts: 5000,  price: 5000 },
-    { pts: 10000, price: 10000 },
-    { pts: 22000, price: 20000 },
-    { pts: 55000, price: 50000 },
+    { pts: 10000,  price: 10000 },
+    { pts: 22000,  price: 20000 },
+    { pts: 57000,  price: 50000 },
+    { pts: 120000, price: 100000 },
   ];
   const plan = plans[_slySelectedCharge];
   try {
@@ -2215,37 +2215,37 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- 요금 안내 -->
     <div class="sly-price-section">
       <h2>포인트 충전제</h2>
-      <p>1P = 1원 · 써야 할 만큼만 충전 · 만원이면 만포인트</p>
+      <p>1P = 1원 · 써야 할 만큼만 충전 · 크몽 대비 66% 저렴</p>
       <div class="sly-charge-cards">
         <div class="sly-charge-card">
-          <div class="sly-charge-price">₩5,000</div>
-          <div class="sly-charge-pts">5,000P</div>
-          <div class="sly-charge-sub">이력서 5건 분석</div>
+          <div class="sly-charge-price">₩10,000</div>
+          <div class="sly-charge-pts">10,000P</div>
+          <div class="sly-charge-sub">이력서 1건 분석</div>
         </div>
         <div class="sly-charge-card featured">
-          <div class="bonus-badge">+1,000P</div>
-          <div class="sly-charge-price">₩10,000</div>
-          <div class="sly-charge-pts">11,000P</div>
-          <div class="sly-charge-sub">가장 인기</div>
-        </div>
-        <div class="sly-charge-card">
           <div class="bonus-badge">+2,000P</div>
           <div class="sly-charge-price">₩20,000</div>
           <div class="sly-charge-pts">22,000P</div>
-          <div class="sly-charge-sub">계약서 14건</div>
+          <div class="sly-charge-sub">가장 인기 · 이력서 2건</div>
         </div>
         <div class="sly-charge-card">
-          <div class="bonus-badge">+5,000P</div>
+          <div class="bonus-badge">+7,000P</div>
           <div class="sly-charge-price">₩50,000</div>
-          <div class="sly-charge-pts">55,000P</div>
+          <div class="sly-charge-pts">57,000P</div>
+          <div class="sly-charge-sub">이력서 5건+</div>
+        </div>
+        <div class="sly-charge-card">
+          <div class="bonus-badge">+20,000P</div>
+          <div class="sly-charge-price">₩100,000</div>
+          <div class="sly-charge-pts">120,000P</div>
           <div class="sly-charge-sub">대량 이용</div>
         </div>
       </div>
       <div class="sly-svc-price-list">
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">범용 문서 분석</div><div class="sly-svc-cost">500P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 · 자소서 분석</div><div class="sly-svc-cost">1,000P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">계약서 검토 · 면접 질문</div><div class="sly-svc-cost">1,500P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">영문 번역 · 등기부 조회</div><div class="sly-svc-cost">2,000P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">공문서 · 사업자 · 건강보험 · 소득</div><div class="sly-svc-cost">2,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">등기부등본 분석</div><div class="sly-svc-cost">4,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 · 자소서 · 면접 질문</div><div class="sly-svc-cost">9,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">영문 번역 · 계약서 검토</div><div class="sly-svc-cost">14,900P</div></div>
       </div>
       <p style="font-size:12px;color:var(--landing-muted);margin-top:16px;line-height:1.7">
         충전: 하나은행 270-910019-24204 (유)엠비티아이<br>입금 확인 후 관리자 즉시 적립
