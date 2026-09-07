@@ -2850,11 +2850,11 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               } catch(te) {
                 console.error('[tilko-registry]', te.message);
                 if (te.message.includes('env 미설정')||te.message.includes('고유번호')) {
-                  return Response.json({ok:false,mode:'link',error:te.message,stdAddr,irosUrl:'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml'},{status:200,headers});
+                  return Response.json({ok:false,mode:'link',error:te.message,stdAddr,irosUrl:'https://www.iros.go.kr'},{status:200,headers});
                 }
               }
             }
-            const irosUrl='https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml';
+            const irosUrl='https://www.iros.go.kr';
             const missing=[];
             if(!tilkoKey) missing.push('TILKO_API_KEY'); if(!tilkoRsa) missing.push('TILKO_RSA_PUBKEY'); if(!env.IROS_USER_ID) missing.push('IROS_USER_ID'); if(!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
             return Response.json({ok:true,mode:'link',stdAddr,irosUrl,guide:missing.length?`직접 조회 미설정 항목: ${missing.join(', ')}`:'Tilko API 오류로 링크 모드 전환'},{status:200,headers});
@@ -8469,14 +8469,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               // 설정 오류는 바로 반환
               if (te.message.includes('env 미설정') || te.message.includes('고유번호')) {
                 return Response.json({ok:false, mode:'link', error: te.message,
-                  stdAddr, irosUrl:`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?addr=${encodeURIComponent(stdAddr)}`
+                  stdAddr, irosUrl:`https://www.iros.go.kr`
                 },{status:200,headers});
               }
             }
           }
 
-          // Fallback: 인터넷등기소 링크
-          const irosUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?addr=${encodeURIComponent(stdAddr)}`;
+          // Fallback: 인터넷등기소 링크 (JSF 딥링크 미지원 → 메인 페이지)
+          const irosUrl = `https://www.iros.go.kr`;
           const missing = [];
           if (!tilkoKey) missing.push('TILKO_API_KEY');
           if (!tilkoRsa) missing.push('TILKO_RSA_PUBKEY');
