@@ -316,17 +316,72 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | Account ID | 02709cbec18d848913b4246015b9148f |
 | KV NS_ID | 7f0e90efaea64f3ab08ff00f8970b28b |
 
-### Worker Secrets 등록 현황
-| Secret | 값 | 상태 |
+### Worker Secrets 등록 현황 (2026-09-07 대시보드 전수 확인)
+
+#### AI / 분석
+| Secret | 상태 | 용도 |
 |---|---|---|
-| `FIREBASE_API_KEY` | `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0` | **등록완료** (Cloudflare 대시보드 확인 2026-08-30) |
-| `ANTHROPIC_API_KEY` | (별도 관리) | 등록완료 |
-| `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 등록완료 |
-| `SOLAPI_KEY` | (별도 관리) | 등록완료 (2026-09-06 Aligo→Solapi 전환 시 등록) |
-| `SOLAPI_SECRET` | (별도 관리) | 등록완료 |
-| `SOLAPI_SENDER` | `05171133103` | 등록완료 |
-| `TILKO_API_KEY` | (별도 관리) | 등록완료 (사용자 확인 2026-09-07) |
-| `TILKO_RSA_PUBKEY` | (별도 관리) | 등록완료 (사용자 확인 2026-09-07) |
+| `ANTHROPIC_API_KEY` | ✅ 등록완료 | Claude AI 분석 (SCAN·FILO AIVO·번역) |
+| `CLAUDE_API_KEY` | ✅ 등록완료 | 동일 목적 별도 키 (혼용 주의) |
+| `GOOGLE_TRANSLATE_KEY` | ✅ 등록완료 | 번역 폴백 |
+
+#### Firebase
+| Secret | 상태 | 용도 |
+|---|---|---|
+| `FIREBASE_API_KEY` | ✅ 등록완료 | Firebase 인증 |
+| `FIREBASE_WEB_API_KEY` | ✅ 등록완료 | Firebase 웹 클라이언트 |
+| `FIREBASE_SA_KEY` | ✅ 등록완료 | Firestore 서버사이드 직접 접근 (SA 키) |
+
+#### SMS / 알림
+| Secret | 상태 | 용도 |
+|---|---|---|
+| `SOLAPI_KEY` | ✅ 등록완료 | Solapi SMS·알림톡 |
+| `SOLAPI_SECRET` | ✅ 등록완료 | |
+| `SOLAPI_SENDER` | ✅ 등록완료 | 발신번호 05171133103 |
+| `KAKAO_JS_KEY` | ✅ 등록완료 | 카카오 SDK |
+| `KAKAO_REST_KEY` | ✅ 등록완료 | 카카오 REST API |
+| `RESEND_API_KEY` | ✅ 등록완료 | 이메일 발송 |
+
+#### 등기부·부동산 (SCAN)
+| Secret | 상태 | 용도 |
+|---|---|---|
+| `TILKO_API_KEY` | ✅ 등록완료 | Tilko 등기부 직접조회 (AES+RSA) |
+| `TILKO_RSA_PUBKEY` | ✅ 등록완료 | |
+| `IROS_USER_ID` | ✅ 등록완료 | **인터넷등기소 로그인 ID** |
+| `IROS_USER_PW` | ✅ 등록완료 | **인터넷등기소 비밀번호** |
+| `IROS_EMONEY_NO1` | ✅ 등록완료 | **전자화폐 번호 1** (등기부 유료 발급용) |
+| `IROS_EMONEY_NO2` | ✅ 등록완료 | **전자화폐 번호 2** |
+| `IROS_EMONEY_PWD` | ✅ 등록완료 | **전자화폐 비밀번호** |
+| `VWORLD_API_KEY` | ✅ 등록완료 | 국토부 VWorld 지도·주소 API |
+
+#### 외부 서비스
+| Secret | 상태 | 용도 |
+|---|---|---|
+| `BIZ_API_KEY` | ✅ 등록완료 | 국세청 사업자 조회 API |
+| `KOTSA_API_KEY` | ✅ 등록완료 | 한국교통안전공단 (용차앱) |
+| `MODUSIGN_API_KEY` | ✅ 등록완료 | 모두싸인 전자서명 (용차앱 계약서) |
+| `OPINET_API_KE` | ✅ 등록완료 | 오피넷 주유소 최저가 (키 이름 오타 — Y 빠짐) |
+| `PEXELS_API_KEY` | ✅ 등록완료 | Pexels 이미지 |
+| `WEATHER_API_KEY` | ✅ 등록완료 | 날씨 API |
+| `TOSS_SECRET_KEY` | ✅ 등록완료 | 토스페이먼츠 (현재 미사용 — 계좌이체 전용) |
+| `ORACLE_SERVER_URL` | ✅ 등록완료 | Oracle 변환서버 (HWP→DOCX, 포트 3100) |
+
+#### 인프라
+| Secret | 상태 | 용도 |
+|---|---|---|
+| `CF_GLOBAL_KEY` | ✅ 등록완료 | Cloudflare Global API Key |
+| `Global API Key` | ✅ 등록완료 | 중복 (CF_GLOBAL_KEY와 동일 — 정리 필요) |
+| `GITHUB_TOKEN` | ✅ 등록완료 | GitHub API |
+| `CRON_SECRET` | ✅ 등록완료 | Cron 엔드포인트 인증 |
+| `RULES_DEPLOY_KEY` | ✅ 등록완료 | 배포 규칙 |
+| `SYNC_KV_SECRET` | ✅ 등록완료 | KV 동기화 |
+
+> ⚠️ `OPINET_API_KE` — 키 이름 오타 (API_KEY → API_KE). _worker.js에서 `env.OPINET_API_KE`로 참조하고 있으면 작동하나, 추후 정정 권장.
+
+#### 미확인 / 미사용
+| Secret | 비고 |
+|---|---|
+| `TOSS_SECRET_KEY` | 등록됐으나 계좌이체 전용 운영 중 — 활성화 계획 없으면 방치 가능 |
 
 ### Oracle Cloud에서 wrangler deploy (yongcha-worker.js 등 수동 배포 시)
 ```bash
