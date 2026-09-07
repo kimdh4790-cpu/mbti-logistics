@@ -28,6 +28,7 @@
 | `배송앱_변경내역.md` | 배송앱·emergency.html 수정 시 |
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 | `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
+| `SCAN_MEMO.md` | SCAN AI (mbtico.kr/scan) 문서분석 서비스 작업 시 |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
