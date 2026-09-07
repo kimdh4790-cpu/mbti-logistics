@@ -8511,22 +8511,29 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const emNo2   = env.IROS_EMONEY_NO2;
           const emPwd   = env.IROS_EMONEY_PWD;
           if (oracleUrl && irosId && irosPw) {
+            let oracleErr = null;
             try {
-              const oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  address: stdAddr,
-                  regType: regType === 'land' ? 'land' : 'building',
-                  irosId, irosPw,
-                  emoneyNo1: emNo1 || '', emoneyNo2: emNo2 || '', emoneyPwd: emPwd || ''
-                }),
-                signal: AbortSignal.timeout(120000)
-              });
-              if (oRes.ok) {
+              const ac = new AbortController();
+              const timer = setTimeout(() => ac.abort(), 25000);
+              let oRes;
+              try {
+                oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    address: stdAddr,
+                    regType: regType === 'land' ? 'land' : 'building',
+                    irosId, irosPw,
+                    emoneyNo1: emNo1 || '', emoneyNo2: emNo2 || '', emoneyPwd: emPwd || ''
+                  }),
+                  signal: ac.signal
+                });
+              } finally {
+                clearTimeout(timer);
+              }
+              if (oRes && oRes.ok) {
                 const od = await oRes.json();
                 if (od.ok && od.pdfBase64) {
-                  // PDF를 KV에 저장하고 base64 직접 반환
                   const pdfKey = `iros_pdf_${Date.now()}`;
                   await env.DONWAY_ASSETS.put(pdfKey, od.pdfBase64, { expirationTtl: 3600 });
                   return Response.json({ok:true, mode:'auto', stdAddr,
@@ -8534,18 +8541,21 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
                     guide:'인터넷등기소에서 자동 발급 완료'
                   }, {status:200,headers});
                 }
-                if (!od.ok) {
-                  console.error('[oracle-iros]', od.error);
-                  // Oracle도 실패 → 링크 모드로
-                  return Response.json({ok:false, mode:'link', stdAddr,
-                    error: od.error || 'Oracle 서버 IROS 조회 실패',
-                    irosUrl:'https://www.iros.go.kr'
-                  },{status:200,headers});
-                }
+                oracleErr = od.error || 'Oracle IROS 조회 실패';
+                return Response.json({ok:false, mode:'link', stdAddr,
+                  error: oracleErr, irosUrl:'https://www.iros.go.kr'
+                },{status:200,headers});
               }
+              oracleErr = `Oracle HTTP ${oRes ? oRes.status : 'no-response'}`;
             } catch(oe) {
-              console.error('[oracle-iros]', oe.message);
+              oracleErr = oe.message || String(oe);
+              console.error('[oracle-iros]', oracleErr);
             }
+            // Oracle 실패 상세 반환
+            return Response.json({ok:false, mode:'link', stdAddr,
+              error: `Oracle 오류: ${oracleErr}`,
+              irosUrl:'https://www.iros.go.kr'
+            },{status:200,headers});
           }
 
           // Fallback 2: 인터넷등기소 링크
