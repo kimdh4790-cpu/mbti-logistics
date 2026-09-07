@@ -212,3 +212,4 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **biz-status encodeURIComponent 제거**: BIZ_API_KEY가 이미 URL인코딩됨 → 이중인코딩 제거로 NTS API 인증 정상화 |
 | 2026-09-07 | **Cloudflare Secrets 전수확인**: 대시보드 스크린샷으로 13개 키 모두 설정 확인 (SCAN_MEMO.md 등록) |
 | 2026-09-07 | **Oracle 서버 Playwright 전환**: puppeteer-core → playwright (자체 Chromium ARM 번들). dnf chromium 미지원 → npx playwright install chromium으로 해결. PM2로 oracle-server 영구실행 (--cwd ~/mbti-logistics). VCN Security List TCP 3100 Ingress 추가. 이제 IROS 자동 발급 실동작 확인 완료 |
+| 2026-09-07 | **랜딩 디자인 v2**: 히어로 배경 다크 네이비 그라데이션(#08101f→#162540)+핑크·민트 방사 글로우. 히어로 텍스트 전체 흰색 오버라이드(h1:#FFF, p:rgba(255,255,255,.72), 눈썹:rgba(244,114,182,.18)). 가격 카드 정확한 금액 표기 (19,900P~49,900P). 신규 가입 2,900P 지급 로직(_worker.js signupBonus) + 토스트 표시. 텍스트 직접 입력 탭 추가 (파일 없이도 분석 가능). sly_points → scan_points 컬렉션 메모 불일치 확인 필요 |
