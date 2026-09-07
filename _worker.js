@@ -8162,14 +8162,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               // 설정 오류는 바로 반환
               if (te.message.includes('env 미설정') || te.message.includes('고유번호')) {
                 return Response.json({ok:false, mode:'link', error: te.message,
-                  stdAddr, irosUrl:`https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`
+                  stdAddr, irosUrl:`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?addr=${encodeURIComponent(stdAddr)}`
                 },{status:200,headers});
               }
             }
           }
 
           // Fallback: 인터넷등기소 링크
-          const irosUrl = `https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          const irosUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?addr=${encodeURIComponent(stdAddr)}`;
           const missing = [];
           if (!tilkoKey) missing.push('TILKO_API_KEY');
           if (!tilkoRsa) missing.push('TILKO_RSA_PUBKEY');
@@ -8213,7 +8213,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             stdAddr,
             pnu,
             irosUrl,
-            irosOpenUrl: `https://www.iros.go.kr/ifrontservlet?cmd=IFSRegSrchGubunListCmd&gubun=1`,
+            irosOpenUrl: `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml`,
             regType,
             typeLabel: typeLabels[regType] || '전체현황',
             guide: '인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'
