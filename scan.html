@@ -864,15 +864,34 @@ body {
 
 /* ── Hero ── */
 .sly-landing-hero {
-  background: linear-gradient(160deg, #fff5fb 0%, #f0fdf4 50%, #fffbeb 100%);
+  background: linear-gradient(160deg, #08101f 0%, #0f1e38 40%, #162540 100%);
   padding: 48px 24px 0;
   text-align: center;
   overflow: hidden;
+  position: relative;
+}
+.sly-landing-hero::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -60px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(244,114,182,.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.sly-landing-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: -40px;
+  width: 240px; height: 240px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52,211,153,.12) 0%, transparent 70%);
+  pointer-events: none;
 }
 .sly-hero-eyebrow-landing {
   display: inline-block;
-  background: var(--pink-tint);
-  color: var(--pink-dark);
+  background: rgba(244,114,182,.18);
+  color: #F9A8D4;
   font-size: 12px; font-weight: 700;
   letter-spacing: .08em; text-transform: uppercase;
   padding: 5px 14px; border-radius: 20px;
@@ -883,13 +902,13 @@ body {
   font-size: clamp(26px, 7vw, 36px);
   font-weight: 900; line-height: 1.25;
   margin: 0 0 14px; text-wrap: balance;
-  color: var(--landing-text);
+  color: #FFFFFF;
 }
-.sly-landing-hero h1 .sly-h1-pink { color: var(--pink-dark); }
-.sly-landing-hero h1 .sly-h1-mint { color: var(--mint-dark); }
-.sly-landing-hero h1 .sly-h1-gold { color: var(--sly-gold-dark); }
+.sly-landing-hero h1 .sly-h1-pink { color: #F472B6; }
+.sly-landing-hero h1 .sly-h1-mint { color: #34D399; }
+.sly-landing-hero h1 .sly-h1-gold { color: #FCD34D; }
 .sly-landing-hero > p {
-  font-size: 15px; color: var(--landing-muted);
+  font-size: 15px; color: rgba(255,255,255,0.72);
   margin: 0 0 28px; line-height: 1.7; max-width: 320px;
   margin-left: auto; margin-right: auto;
 }
@@ -906,7 +925,7 @@ body {
 .sly-landing-hero-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(219,39,119,.4); }
 .sly-landing-hero-btn svg { width:20px;height:20px;flex-shrink:0; }
 .sly-cta-sub {
-  font-size: 12px; color: var(--landing-muted);
+  font-size: 12px; color: rgba(255,255,255,0.55);
   margin-top: 12px; margin-bottom: 0;
 }
 
@@ -1276,6 +1295,9 @@ async function loadPoints() {
     window._slyPoints = d.balance || 0;
     const bv = document.getElementById('slyBalanceVal');
     if (bv) bv.textContent = (d.balance || 0).toLocaleString() + ' P';
+    if (d.signupBonus) {
+      setTimeout(() => _slyToast('🎉 신규 가입 축하! 2,900P가 무료로 지급되었습니다. 공문서 분석을 바로 체험해보세요!', 6000), 800);
+    }
   } catch(e) {}
 }
 window._slyLoadPoints = loadPoints;
@@ -1554,9 +1576,38 @@ function _slyRemoveFile() {
 window._slyRemoveFile = _slyRemoveFile;
 window._slyRemoveFile2 = _slyRemoveFile;
 
+let _slyInputMode = 'file';
+function _slySetInputMode(mode) {
+  _slyInputMode = mode;
+  const fileBtn = document.getElementById('slyModeFile');
+  const textBtn = document.getElementById('slyModeText');
+  const dz = document.getElementById('slyDropzone2');
+  const fp = document.getElementById('slyFilePrev2');
+  const tw = document.getElementById('slyTextInputWrap');
+  if (mode === 'text') {
+    if (fileBtn) { fileBtn.style.background = 'transparent'; fileBtn.style.color = 'var(--text-secondary)'; }
+    if (textBtn) { textBtn.style.background = 'var(--gold)'; textBtn.style.color = 'var(--navy)'; }
+    if (dz) dz.style.display = 'none';
+    if (fp) fp.style.display = 'none';
+    if (tw) tw.style.display = 'block';
+  } else {
+    if (fileBtn) { fileBtn.style.background = 'var(--gold)'; fileBtn.style.color = 'var(--navy)'; }
+    if (textBtn) { textBtn.style.background = 'transparent'; textBtn.style.color = 'var(--text-secondary)'; }
+    if (dz) dz.style.display = '';
+    if (tw) tw.style.display = 'none';
+  }
+}
+window._slySetInputMode = _slySetInputMode;
+
 async function _slyAnalyze() {
   if (!window._slyUser) { _slyToast('먼저 로그인해주세요'); return; }
-  if (!_slyFile) { _slyToast('파일을 선택해주세요'); return; }
+  if (_slyInputMode === 'text') {
+    const txt = document.getElementById('slyDirectText')?.value?.trim();
+    if (!txt || txt.length < 30) { _slyToast('내용을 30자 이상 입력해주세요'); return; }
+    const blob = new Blob([txt], { type: 'text/plain' });
+    _slyFile = new File([blob], 'paste_input.txt', { type: 'text/plain' });
+  }
+  if (!_slyFile) { _slyToast('파일을 선택하거나 텍스트를 입력해주세요'); return; }
 
   const svc = SVC.find(s => s.id === _slyService);
   const pts = window._slyPoints || 0;
@@ -2268,7 +2319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M14 12H3"/></svg>
         구글로 무료 시작
       </button>
-      <p class="sly-cta-sub">설치 없음 · 가입 무료 · 홈화면 설치 지원</p>
+      <p class="sly-cta-sub">설치 없음 · <strong style="color:#34D399">신규 가입 2,900P 무료 지급</strong> · 홈화면 설치 지원</p>
 
       <!-- 폰 목업 데모 -->
       <div class="sly-phone-wrap">
@@ -2307,11 +2358,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sly-stat-label">평균 분석 시간</div>
       </div>
       <div class="sly-stat">
-        <div class="sly-stat-num mint">10종</div>
+        <div class="sly-stat-num mint">11종</div>
         <div class="sly-stat-label">지원 서비스</div>
       </div>
       <div class="sly-stat">
-        <div class="sly-stat-num gold">500P~</div>
+        <div class="sly-stat-num gold">2,900P~</div>
         <div class="sly-stat-label">건당 이용 요금</div>
       </div>
     </div>
@@ -2365,7 +2416,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <h3>이력서 분석</h3>
           <p>직무 적합도 채점 + 항목별 개선 포인트 + 합격 문구 샘플 자동 생성</p>
-          <span class="sly-feat-cost">1,000P / 건</span>
+          <span class="sly-feat-cost">29,900P</span>
         </div>
         <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(1)">
           <div class="sly-feat-icon pink">
@@ -2373,7 +2424,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <h3>자기소개서 첨삭</h3>
           <p>STAR 구조 분석 + 어휘 다양성 점수 + 합격률 높은 표현으로 재작성 제안</p>
-          <span class="sly-feat-cost">1,000P / 건</span>
+          <span class="sly-feat-cost">39,900P~</span>
         </div>
         <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(2)">
           <div class="sly-feat-icon mint">
@@ -2381,7 +2432,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <h3>계약서 검토</h3>
           <p>불리한 조항 자동 하이라이트 + 법적 리스크 등급 + 수정 권장 문구 제안</p>
-          <span class="sly-feat-cost">1,500P / 건</span>
+          <span class="sly-feat-cost">39,900P</span>
         </div>
         <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(3)">
           <div class="sly-feat-icon mint">
@@ -2389,23 +2440,23 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <h3>면접 질문 생성</h3>
           <p>이력서 기반 예상 면접 질문 + 모범 답변 구조 + 취약 포인트 대비 전략</p>
-          <span class="sly-feat-cost">1,500P / 건</span>
+          <span class="sly-feat-cost">19,900P</span>
         </div>
         <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(4)">
           <div class="sly-feat-icon gold">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <h3>공문서 발급·분석</h3>
-          <p>등기부·사업자·건강보험 발급 안내 + AI 해설 + 핵심 항목 요약</p>
-          <span class="sly-feat-cost">1,000~2,000P</span>
+          <h3>등기부 전세사기 분석</h3>
+          <p>전세가율·선순위채권·깡통전세 위험도 자동 산정 + 5대 체크포인트</p>
+          <span class="sly-feat-cost">34,900P</span>
         </div>
         <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(5)">
           <div class="sly-feat-icon gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M16 2l4 4-4 4"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
-          <h3>범용 문서 분석</h3>
-          <p>HWP · DOCX · PDF 어떤 형식이든 — 요약·분석·개선안 자동 제시</p>
-          <span class="sly-feat-cost">500P / 건</span>
+          <h3>공문서·범용 분석</h3>
+          <p>HWP · DOCX · PDF · 사업자·건강보험 어떤 서류든 AI 즉시 해설</p>
+          <span class="sly-feat-cost">2,900P~</span>
         </div>
       </div>
 
@@ -2522,8 +2573,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- CTA -->
     <div class="sly-cta-section">
-      <h2>지금 바로 써보세요<br><span style="color:var(--pink-dark)">첫 분석은 무료로 체험</span></h2>
-      <p>구글 계정 하나면 충분합니다<br>설치 없이 홈화면에 추가해서 앱처럼 사용</p>
+      <h2>지금 바로 써보세요<br><span style="color:var(--pink-dark)">신규 가입 2,900P 무료 지급</span></h2>
+      <p>구글 계정 하나면 충분합니다 · 공문서 분석 1건 바로 체험<br>설치 없이 홈화면에 추가해서 앱처럼 사용</p>
       <button class="sly-landing-hero-btn" onclick="_slySignIn()" style="font-size:17px;padding:16px 40px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:22px;height:22px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M14 12H3"/></svg>
         구글로 무료 시작하기
@@ -2609,6 +2660,23 @@ document.addEventListener('DOMContentLoaded', () => {
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div class="sly-card-title" style="margin-bottom:0" id="slyUploadTitle">파일 업로드</div>
         <div id="slyServiceBadge" style="background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700"></div>
+      </div>
+      <!-- 입력 모드 탭 -->
+      <div id="slyInputModeTabs" style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg);border-radius:10px;padding:4px">
+        <button id="slyModeFile" onclick="_slySetInputMode('file')"
+          style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:var(--gold);color:var(--navy);transition:all .2s">
+          파일 업로드
+        </button>
+        <button id="slyModeText" onclick="_slySetInputMode('text')"
+          style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all .2s">
+          텍스트 직접 입력
+        </button>
+      </div>
+      <!-- 텍스트 입력 모드 -->
+      <div id="slyTextInputWrap" style="display:none;margin-bottom:14px">
+        <textarea id="slyDirectText" placeholder="이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요..."
+          style="width:100%;min-height:180px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;line-height:1.6;resize:vertical;outline:none;font-family:inherit"></textarea>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Ctrl+A → Ctrl+C로 복사 후 여기에 붙여넣기</div>
       </div>
       <div class="sly-dropzone" id="slyDropzone2">
         <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
