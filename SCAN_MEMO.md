@@ -180,6 +180,10 @@
 | 2026-09-07 | **번역 시스템 전면 개편**: LANG_EXPERTISE 6개 언어 자격증변환·GPA스케일·군복무·인간적 표현 패턴 DB 추가 |
 | 2026-09-07 | **면접 시스템 2026 데이터 주입**: 삼성합격자 평균TOEIC·인턴경험비율·카카오합격률·압박질문10유형·싫어하는답변20가지 추가 |
 | 2026-09-07 | **등기부 모델 업그레이드**: haiku → sonnet-4-6 (34,900P 가격 정당화) |
+| 2026-09-07 | **IROS 딥링크 404 수정**: selectRenf0100List.xhtml → iros.go.kr 메인으로 변경 |
+| 2026-09-07 | **[긴급] uid 객체 버그 수정**: verifyFirebaseToken이 객체 반환 → localId 추출, Firestore sly_points 경로 오류 해소 |
+| 2026-09-07 | **슈퍼어드민 포인트 바이패스**: _SUPERADMIN_EMAILS 검사 후 포인트 차감 스킵 (filo.ai.kr·mbtico.kr 블록 양쪽) |
+| 2026-09-07 | **biz-status debug 필드 추가**: 조회 실패 시 NTS API 응답 상태·matchCount 반환 |
 | 2026-09-07 | **3개 UI 버그 수정**: _isSuperAdmin 스코프 오류·registry 탭 가격 29900→34900·탭 전환 파일 초기화 |
 | 2026-09-07 | **등기부 렌더링 4개 버그 수정**: ownership 객체→owners배열·riskSummary [object Object]·e.risk·e.registeredDate |
 | 2026-09-07 | **_worker.js mbtico 블록**: processingCtx에 targetLang·jeonseDeposit 추가·_slyProcessJob 파라미터 정식화·form 클로저 의존 제거 |

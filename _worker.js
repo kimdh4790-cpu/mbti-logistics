@@ -2681,8 +2681,11 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         // POST /api/seolyuhana/analyze
         if (path === '/api/seolyuhana/analyze' && method === 'POST') {
           try {
-            const uid = await verifyFirebaseToken(request, env);
-            if (!uid) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401,headers});
+            const _authUser2 = await verifyFirebaseToken(request, env);
+            if (!_authUser2) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401,headers});
+            const uid = _authUser2.localId || _authUser2;
+            const userEmail2 = _authUser2.email || '';
+            const isSuperAdmin2 = _SUPERADMIN_EMAILS.includes(userEmail2);
             const form = await request.formData();
             const file = form.get('file');
             const serviceId = form.get('serviceId') || '';
@@ -2701,14 +2704,16 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503,headers});
             const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
             const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
-            if (balance < pointCost) return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402,headers});
+            if (!isSuperAdmin2 && balance < pointCost) return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402,headers});
             const jobId = crypto.randomUUID();
             const filename = file.name || 'document';
             await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {uid:{stringValue:uid},serviceId:{stringValue:serviceId},filename:{stringValue:filename},status:{stringValue:'processing'},progress:{integerValue:0},pointCost:{integerValue:pointCost},createdAt:{stringValue:new Date().toISOString()},jdText:{stringValue:jdText},resumeJobId:{stringValue:resumeJobId}});
-            const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
-            if (!txRes.ok) { await fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}}); return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500,headers}); }
-            const histId = crypto.randomUUID();
-            await fsPatch(token,`${FS_BASE}/sly_point_history/${histId}`,{uid:{stringValue:uid},type:{stringValue:'spend'},amount:{integerValue:-pointCost},serviceId:{stringValue:serviceId},jobId:{stringValue:jobId},balanceAfter:{integerValue:balance-pointCost},createdAt:{stringValue:new Date().toISOString()}});
+            if (!isSuperAdmin2) {
+              const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
+              if (!txRes.ok) { await fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}}); return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500,headers}); }
+              const histId = crypto.randomUUID();
+              await fsPatch(token,`${FS_BASE}/sly_point_history/${histId}`,{uid:{stringValue:uid},type:{stringValue:'spend'},amount:{integerValue:-pointCost},serviceId:{stringValue:serviceId},jobId:{stringValue:jobId},balanceAfter:{integerValue:balance-pointCost},createdAt:{stringValue:new Date().toISOString()}});
+            }
             const fileBuffer = await file.arrayBuffer();
             const processingCtx = {jobId,uid,serviceId,filename,fileBuffer,jdText,resumeJobId,targetLang,jeonseDeposit,env,token};
             ctx.waitUntil(_slyProcessJob(processingCtx));
@@ -8036,8 +8041,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // POST /api/seolyuhana/analyze — 파일 업로드 + 분석 시작 (비동기, jobId 반환)
       if (path === '/api/seolyuhana/analyze' && method === 'POST') {
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401});
+          const _authUser = await verifyFirebaseToken(request, env);
+          if (!_authUser) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401});
+          const uid = _authUser.localId || _authUser;
+          const userEmail = _authUser.email || '';
+          const isSuperAdmin = _SUPERADMIN_EMAILS.includes(userEmail);
 
           const form = await request.formData();
           const file = form.get('file');
@@ -8061,10 +8069,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const enabled   = svcDoc?.fields ? (svcDoc.fields.enabled?.booleanValue ?? true) : true;
           if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503});
 
-          // 포인트 잔액 확인
+          // 포인트 잔액 확인 (슈퍼어드민 바이패스)
           const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
           const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
-          if (balance < pointCost) {
+          if (!isSuperAdmin && balance < pointCost) {
             return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402});
           }
 
@@ -8083,20 +8091,20 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             resumeJobId:   { stringValue: resumeJobId }
           });
 
-          // 포인트 차감 (runTransaction)
-          const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
-          if (!txRes.ok) {
-            await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
-            return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+          // 포인트 차감 (슈퍼어드민 바이패스)
+          if (!isSuperAdmin) {
+            const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
+            if (!txRes.ok) {
+              await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
+              return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+            }
+            const histId = crypto.randomUUID();
+            await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
+              uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
+              serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
+              balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
+            });
           }
-
-          // 포인트 차감 이력
-          const histId = crypto.randomUUID();
-          await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
-            uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
-            serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
-            balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
-          });
 
           // 비동기 처리 (waitUntil 사용)
           const fileBuffer = await file.arrayBuffer();
@@ -8270,7 +8278,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           });
           const data = await r.json().catch(() => ({}));
           const item = data?.data?.[0];
-          if (!item) return Response.json({error:'조회 결과 없음'},{status:404,headers});
+          if (!item) return Response.json({error:'조회 결과 없음', debug: {status:r.status, matchCount:data?.data?.length??0, msg:data?.match_cnt||data?.result||''} },{status:404,headers});
           // Claude로 결과 요약
           const statusLabel = item.b_stt === '01' ? '계속사업자' : item.b_stt === '02' ? '휴업자' : item.b_stt === '03' ? '폐업자' : '알 수 없음';
           const taxLabel = item.tax_type === '01' ? '일반과세자' : item.tax_type === '02' ? '간이과세자' : item.tax_type === '03' ? '면세사업자' : item.tax_type;
