@@ -150,88 +150,96 @@ app.post('/api/iros-pin', async (req, res) => {
              '--disable-blink-features=AutomationControlled'],
       headless: true
     });
-    const page = await (await browser.newContext({
+    const ctx = await browser.newContext({
       viewport: { width: 1280, height: 900 },
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       locale: 'ko-KR'
-    })).newPage();
+    });
+    const page = await ctx.newPage();
     page.setDefaultTimeout(30000);
 
     const typeParam = regType === 'land' ? 'L' : 'B';
-    const jsfUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`;
 
-    // ── Step 1: index.xhtml 먼저 방문 → 세션 속성 초기화 ──────────────────────────
-    // 구 iros-fetch 성공 패턴: index.xhtml 방문 → networkidle → selectRenf0100List.xhtml 이동
-    // selectRenf0100List.xhtml에 직접 goto하면 IROS 서버가 세션 속성 없다고 차단함
-    let targetCtx = page;
-    console.log('[iros-pin] Step1: index.xhtml 방문 (세션 초기화)');
-    await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml',
-      { waitUntil: 'networkidle', timeout: 45000 });
+    // ── Step 1: Gauce SPA 메인 페이지 로드 ────────────────────────────────────────
+    // IROS는 frame 기반 레이아웃: index.jsp(SPA shell) + content frame(JSF 페이지)
+    // selectRenf0100List.xhtml에 직접 goto하면 서버에서 차단 → SPA 통해 nav 클릭 필요
+    console.log('[iros-pin] Step1: index.jsp 로드');
+    await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'networkidle', timeout: 45000 });
     await page.waitForTimeout(2000);
-    console.log('[iros-pin] index URL:', page.url(), '| 제목:', await page.title().catch(() => ''));
 
-    // ── Step 2: 검색 페이지로 이동 (세션 확립된 상태) ────────────────────────────
-    console.log('[iros-pin] Step2: selectRenf0100List.xhtml 이동');
-    await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 60000 });
-    await page.waitForTimeout(3000);
-    const searchUrl   = page.url();
-    const searchTitle = await page.title().catch(() => '');
-    console.log('[iros-pin] 검색 URL:', searchUrl, '| 제목:', searchTitle);
+    // 로드 후 frame 상태 진단
+    const framesBefore = page.frames().map(f => ({ url: f.url(), name: f.name() }));
+    console.log('[iros-pin] 로드 후 frame 목록:', JSON.stringify(framesBefore));
 
-    // 서버 차단 확인
-    const bodyCheck = await page.evaluate(() => document.body?.innerText?.slice(0, 120) || '');
-    console.log('[iros-pin] body 앞 120자:', bodyCheck);
-    if (bodyCheck.includes('찾을 수 없습니다') || bodyCheck.includes('접근 권한')) {
-      throw new Error(`JSF 검색 페이지 접근 실패: ${searchUrl} | ${bodyCheck}`);
+    // ── Step 2: "간편 열람·발급" nav 클릭 (Gauce element ID) ──────────────────────
+    // 알려진 Gauce nav element ID (이전 pm2 로그에서 확인)
+    const navId = 'mf_wfm_potal_main_wf_header_gen_depth1_0_gen_depth2_0_gen_depth3_1_grp_box3';
+    const navEl = page.locator(`#${navId}`);
+    if (await navEl.count() > 0) {
+      console.log('[iros-pin] nav element 발견, force-click');
+      await navEl.click({ force: true }).catch(e => console.log('[iros-pin] nav click err:', e.message));
+    } else {
+      // 텍스트 기반 폴백
+      const fbEl = page.locator('a, span, div').filter({ hasText: /간편\s*열람/ }).first();
+      if (await fbEl.count() > 0) {
+        console.log('[iros-pin] 텍스트 폴백 force-click');
+        await fbEl.click({ force: true }).catch(() => {});
+      } else {
+        console.log('[iros-pin] nav element 없음 — Gauce ID 또는 텍스트 매칭 실패');
+      }
     }
+    await page.waitForTimeout(4000);
 
-    // ── Step 4: JSF 페이지 주소 입력 (targetCtx = page 또는 frame) ────────────────
-    // Gauce input ID 패턴: mf_<form>_<widget>___input
-    const addrSelectors = [
-      'input[id*="sbx_addr"][id$="___input"]',
-      'input[id*="addr"][id*="input"]',
-      'input[id*="Addr"][id*="input"]',
-      'input[id*="addrSearch"]', 'input[id*="searchAddr"]',
-      'input[name*="addr" i]',
+    // 클릭 후 frame 상태 + iframe src 진단
+    const framesAfter = page.frames().map(f => ({ url: f.url(), name: f.name() }));
+    console.log('[iros-pin] 클릭 후 frame 목록:', JSON.stringify(framesAfter));
+    const iframeList = await page.evaluate(() =>
+      [...document.querySelectorAll('iframe, frame')].map(f => ({ id: f.id, name: f.name, src: f.src || f.getAttribute('src') }))
+    );
+    console.log('[iros-pin] iframe/frame DOM:', JSON.stringify(iframeList));
+
+    // ── Step 3: 모든 frame에서 주소 입력 필드 탐색 ───────────────────────────────
+    const addrSels = [
+      'input[id*="addr" i]', 'input[name*="addr" i]',
       'input[placeholder*="주소"]', 'input[placeholder*="지번"]',
       'input[placeholder*="도로명"]', 'input[placeholder*="번지"]',
+      'input[type="text"]',
     ];
     let addrInput = null;
-    for (const sel of addrSelectors) {
-      const loc = targetCtx.locator(sel).first();
-      if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) {
-        addrInput = loc; break;
-      }
-    }
-    if (!addrInput) {
-      const allInputs = targetCtx.locator('input[type="text"], input:not([type])');
-      const cnt = await allInputs.count();
-      for (let i = 0; i < Math.min(cnt, 15); i++) {
-        const inp = allInputs.nth(i);
-        if (await inp.isVisible().catch(() => false)) {
-          const id = await inp.getAttribute('id').catch(() => '');
-          if (id && id.includes('potal_main_wf_header')) continue;
-          addrInput = inp; break;
+    let targetCtx = page;
+
+    for (const frame of [page, ...page.frames()]) {
+      try {
+        for (const sel of addrSels) {
+          const loc = frame.locator(sel).first();
+          if (await loc.count() > 0) {
+            const visible = await loc.isVisible({ timeout: 1000 }).catch(() => false);
+            if (visible) {
+              const id = await loc.getAttribute('id').catch(() => '');
+              if (id && id.includes('potal_main_wf_header')) continue; // 헤더 nav 검색창 제외
+              addrInput = loc;
+              targetCtx = frame;
+              console.log('[iros-pin] 주소 입력 발견! frame:', frame.url(), 'sel:', sel, 'id:', id);
+              break;
+            }
+          }
         }
-      }
-    }
-    if (!addrInput) {
-      const pi = await page.evaluate(() => ({
-        url: location.href, title: document.title,
-        inputs: [...document.querySelectorAll('input')].slice(0, 10).map(e => ({
-          id: e.id, type: e.type, visible: e.offsetParent !== null
-        })),
-        body: document.body.innerText.slice(0, 300)
-      }));
-      throw new Error(`주소 입력 필드 없음 | ${JSON.stringify(pi)}`);
+        if (addrInput) break;
+      } catch {}
     }
 
+    if (!addrInput) {
+      const dbg = { framesBefore, framesAfter, iframeList,
+        mainBody: await page.evaluate(() => document.body.innerText.slice(0, 400)).catch(() => '') };
+      throw new Error(`주소 입력 필드 없음 | ${JSON.stringify(dbg)}`);
+    }
+
+    // ── Step 4: 주소 입력 ────────────────────────────────────────────────────────
     await addrInput.click({ clickCount: 3, force: true });
     await addrInput.fill(address);
 
-    // ── Step 5: 검색 트리거 — force-click 우선, JS-click 폴백 ────────────────────
+    // ── Step 5: 검색 트리거 ──────────────────────────────────────────────────────
     let searchTriggered = false;
-    // input[type=button] value에 "검색" 포함하는 버튼 force-click
     const searchBtns = targetCtx.locator('input[type="button"], input[type="submit"], button')
       .filter({ hasText: /검색|조회/ });
     const sbCnt = await searchBtns.count();
