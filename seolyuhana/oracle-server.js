@@ -167,71 +167,95 @@ app.post('/api/iros-pin', async (req, res) => {
     await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'networkidle', timeout: 45000 });
     await page.waitForTimeout(2000);
 
-    // 로드 후 frame 상태 진단
+    // 로드 후 frame 상태 + 현재 입력 필드 목록 진단
     const framesBefore = page.frames().map(f => ({ url: f.url(), name: f.name() }));
-    console.log('[iros-pin] 로드 후 frame 목록:', JSON.stringify(framesBefore));
+    const inputsBefore = await page.evaluate(() =>
+      [...document.querySelectorAll('input')].map(e => ({ id: e.id, type: e.type, ph: e.placeholder, vis: e.offsetParent !== null }))
+    );
+    console.log('[iros-pin] 로드 후 frame:', JSON.stringify(framesBefore));
+    console.log('[iros-pin] 로드 후 inputs:', JSON.stringify(inputsBefore.slice(0, 10)));
 
     // ── Step 2: "간편 열람·발급" nav 클릭 (Gauce element ID) ──────────────────────
-    // 알려진 Gauce nav element ID (이전 pm2 로그에서 확인)
     const navId = 'mf_wfm_potal_main_wf_header_gen_depth1_0_gen_depth2_0_gen_depth3_1_grp_box3';
     const navEl = page.locator(`#${navId}`);
     if (await navEl.count() > 0) {
       console.log('[iros-pin] nav element 발견, force-click');
       await navEl.click({ force: true }).catch(e => console.log('[iros-pin] nav click err:', e.message));
     } else {
-      // 텍스트 기반 폴백
       const fbEl = page.locator('a, span, div').filter({ hasText: /간편\s*열람/ }).first();
       if (await fbEl.count() > 0) {
         console.log('[iros-pin] 텍스트 폴백 force-click');
         await fbEl.click({ force: true }).catch(() => {});
       } else {
-        console.log('[iros-pin] nav element 없음 — Gauce ID 또는 텍스트 매칭 실패');
+        console.log('[iros-pin] nav element 없음');
       }
     }
-    await page.waitForTimeout(4000);
+    await page.waitForTimeout(5000);
 
-    // 클릭 후 frame 상태 + iframe src 진단
+    // 클릭 후 frame + input 상태
     const framesAfter = page.frames().map(f => ({ url: f.url(), name: f.name() }));
-    console.log('[iros-pin] 클릭 후 frame 목록:', JSON.stringify(framesAfter));
+    const inputsAfter = await page.evaluate(() =>
+      [...document.querySelectorAll('input')].map(e => ({ id: e.id, type: e.type, ph: e.placeholder, vis: e.offsetParent !== null }))
+    );
     const iframeList = await page.evaluate(() =>
       [...document.querySelectorAll('iframe, frame')].map(f => ({ id: f.id, name: f.name, src: f.src || f.getAttribute('src') }))
     );
-    console.log('[iros-pin] iframe/frame DOM:', JSON.stringify(iframeList));
+    console.log('[iros-pin] 클릭 후 frame:', JSON.stringify(framesAfter));
+    console.log('[iros-pin] 클릭 후 inputs:', JSON.stringify(inputsAfter.slice(0, 15)));
+    console.log('[iros-pin] iframe DOM:', JSON.stringify(iframeList));
 
-    // ── Step 3: 모든 frame에서 주소 입력 필드 탐색 ───────────────────────────────
+    // 클릭 전에 없던 NEW 입력 필드 찾기 (진짜 registry 검색폼)
+    const beforeIds = new Set(inputsBefore.map(i => i.id));
+    const newInputIds = inputsAfter.filter(i => i.vis && !beforeIds.has(i.id)).map(i => i.id);
+    console.log('[iros-pin] 새로 생긴 input IDs:', JSON.stringify(newInputIds));
+
+    // ── Step 3: 주소 입력 필드 탐색 ─────────────────────────────────────────────
+    // 1순위: 새로 생긴 addr 관련 입력 필드 (클릭 후 등장한 검색폼)
+    // 2순위: 모든 frame에서 addr 속성 입력 필드
     const addrSels = [
       'input[id*="addr" i]', 'input[name*="addr" i]',
       'input[placeholder*="주소"]', 'input[placeholder*="지번"]',
       'input[placeholder*="도로명"]', 'input[placeholder*="번지"]',
-      'input[type="text"]',
     ];
     let addrInput = null;
     let targetCtx = page;
 
-    for (const frame of [page, ...page.frames()]) {
-      try {
-        for (const sel of addrSels) {
-          const loc = frame.locator(sel).first();
-          if (await loc.count() > 0) {
-            const visible = await loc.isVisible({ timeout: 1000 }).catch(() => false);
-            if (visible) {
-              const id = await loc.getAttribute('id').catch(() => '');
-              if (id && id.includes('potal_main_wf_header')) continue; // 헤더 nav 검색창 제외
-              addrInput = loc;
-              targetCtx = frame;
-              console.log('[iros-pin] 주소 입력 발견! frame:', frame.url(), 'sel:', sel, 'id:', id);
-              break;
+    // 새로 생긴 visible input 중 addr 관련 선택
+    for (const nid of newInputIds) {
+      if (!nid) continue;
+      const loc = page.locator(`#${CSS.escape ? CSS.escape(nid) : nid}`).first();
+      if (await loc.count() > 0 && await loc.isVisible({ timeout: 1000 }).catch(() => false)) {
+        addrInput = loc;
+        console.log('[iros-pin] 새 input 사용:', nid);
+        break;
+      }
+    }
+
+    // 모든 frame에서 addr 속성 입력 탐색
+    if (!addrInput) {
+      for (const frame of [page, ...page.frames()]) {
+        try {
+          for (const sel of addrSels) {
+            const loc = frame.locator(sel).first();
+            if (await loc.count() > 0) {
+              const visible = await loc.isVisible({ timeout: 1000 }).catch(() => false);
+              if (visible) {
+                const id = await loc.getAttribute('id').catch(() => '');
+                if (id && (id.includes('wf_header') || id.includes('potal_main_wf_header'))) continue;
+                addrInput = loc;
+                targetCtx = frame;
+                console.log('[iros-pin] 주소 입력 발견! frame:', frame.url(), 'sel:', sel, 'id:', id);
+                break;
+              }
             }
           }
-        }
-        if (addrInput) break;
-      } catch {}
+          if (addrInput) break;
+        } catch {}
+      }
     }
 
     if (!addrInput) {
-      const dbg = { framesBefore, framesAfter, iframeList,
-        mainBody: await page.evaluate(() => document.body.innerText.slice(0, 400)).catch(() => '') };
-      throw new Error(`주소 입력 필드 없음 | ${JSON.stringify(dbg)}`);
+      throw new Error(`주소 입력 필드 없음 | frames:${JSON.stringify(framesAfter)} | newInputs:${JSON.stringify(newInputIds)} | iframes:${JSON.stringify(iframeList)}`);
     }
 
     // ── Step 4: 주소 입력 ────────────────────────────────────────────────────────
