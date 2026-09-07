@@ -160,93 +160,52 @@ app.post('/api/iros-pin', async (req, res) => {
     const typeParam = regType === 'land' ? 'L' : 'B';
     const jsfUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`;
 
-    // ── 내부 헬퍼: JSF 열람 페이지에 있는지 확인 (URL 기반만 — 메인 페이지도 "등기" 포함) ──
-    const _onJsfPage = () => {
-      const u = page.url();
-      return u.includes('selectRenf') || u.includes('jsf/renf');
-    };
+    // ── Step 1: JSF 검색 페이지 직접 이동 (/api/iros-fetch와 동일한 방식) ─────────
+    // Referer 헤더나 Gauce 네비게이션 없이 직접 goto → 60초 networkidle 대기
+    // (setExtraHTTPHeaders Referer 설정 시 IROS 서버가 거부함 — 제거)
+    let targetCtx = page;
+    console.log('[iros-pin] Step1: JSF 직접 이동');
+    await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForTimeout(3000);
+    const afterGotoUrl   = page.url();
+    const afterGotoTitle = await page.title().catch(() => '');
+    console.log('[iros-pin] goto URL:', afterGotoUrl, '| 제목:', afterGotoTitle);
 
-    // ── Step 1: 메인 페이지 방문 (HttpSession 수립) ────────────────────────────────
-    console.log('[iros-pin] Step1: 메인 페이지 방문');
-    await page.goto('https://www.iros.go.kr', { waitUntil: 'networkidle', timeout: 45000 });
-    await page.waitForTimeout(2000);
-    console.log('[iros-pin] 메인 URL:', page.url());
-
-    // ── Step 2: Gauce 메뉴 trusted force-click (isTrusted:true via CDP) ─────────
-    // dispatchEvent 는 isTrusted:false → Gauce 무시. Playwright click({ force:true }) 는
-    // CDP 레벨 OS 이벤트 → isTrusted:true → Gauce 정상 처리
-    let targetCtx = page; // Gauce가 iframe에 JSF를 로드할 수 있음
-    console.log('[iros-pin] Step2: Gauce nav force-click');
-    try {
-      // 부모 depth1("열람·발급") hover → Gauce 드롭다운 상태 활성화
-      const depth1 = page.locator('a.w2anchor2.link-depth1, a.link-depth1').first();
-      if (await depth1.count() > 0) {
-        await depth1.hover({ force: true, timeout: 5000 }).catch(() => {});
-        await page.waitForTimeout(500);
-      }
-      // depth2 "간편 열람·발급" force-click (pointer-event 오버레이 무시)
-      const depth2 = page.locator('a.w2anchor2.link-depth2, a.link-depth2')
-        .filter({ hasText: '간편' }).first();
-      if (await depth2.count() > 0) {
-        await depth2.click({ force: true, timeout: 8000 });
-        console.log('[iros-pin] depth2 force-click OK');
-      } else {
-        // 텍스트 매칭 폴백: textContent에 "간편 열람" 포함 모든 앵커
-        const fbAnchors = page.locator('a').filter({ hasText: '간편 열람' });
-        const fbCnt = await fbAnchors.count();
-        if (fbCnt > 0) {
-          await fbAnchors.first().click({ force: true, timeout: 8000 });
-          console.log('[iros-pin] 폴백 anchor force-click OK');
-        } else {
-          console.log('[iros-pin] 간편 열람 앵커 없음, Referer 직접 이동으로 전환');
-        }
-      }
-      await page.waitForLoadState('networkidle', { timeout: 25000 }).catch(() => {});
-      await page.waitForTimeout(3000);
-      console.log('[iros-pin] force-click 후 URL:', page.url());
-
-      // Gauce가 JSF 콘텐츠를 iframe에 로드했는지 확인
-      for (const frame of page.frames()) {
-        const fu = frame.url();
-        if (fu.includes('selectRenf') || fu.includes('jsf/renf')) {
-          targetCtx = frame;
-          console.log('[iros-pin] JSF iframe 감지:', fu);
-          break;
-        }
-      }
-    } catch (navErr) {
-      console.log('[iros-pin] force-click 오류:', navErr.message.slice(0, 200));
+    // IROS가 로그인 페이지로 리다이렉트한 경우
+    if (afterGotoUrl.includes('login') || afterGotoUrl.includes('Login')) {
+      throw new Error(`IROS 로그인 필요: ${afterGotoUrl} — 비회원 열람 페이지 경로 확인 필요`);
     }
 
-    // ── Step 3: JSF 페이지 접근 확인 / Referer 직접 이동 폴백 ──────────────────────
-    const _onJsfCtx = () => {
-      const u = targetCtx === page ? page.url() : targetCtx.url();
-      return u.includes('selectRenf') || u.includes('jsf/renf');
-    };
-    if (!_onJsfCtx()) {
-      console.log('[iros-pin] Step3: Referer 헤더로 JSF 직접 이동');
-      await page.setExtraHTTPHeaders({ 'Referer': 'https://www.iros.go.kr/index.jsp' });
-      await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 45000 });
+    // 서버가 에러 페이지를 반환한 경우 (URL은 JSF지만 body가 "찾을 수 없습니다")
+    const bodyCheck = await page.evaluate(() => document.body?.innerText?.slice(0, 100) || '');
+    console.log('[iros-pin] body 앞 100자:', bodyCheck);
+    if (bodyCheck.includes('찾을 수 없습니다') || bodyCheck.includes('접근 권한')) {
+      // 메인 페이지 방문 후 재시도 (세션 없이 직접 접근 차단된 경우)
+      console.log('[iros-pin] 접근 차단 감지 → 메인 페이지 방문 후 재시도');
+      await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml',
+        { waitUntil: 'networkidle', timeout: 45000 });
+      await page.waitForTimeout(2000);
+      await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 60000 });
       await page.waitForTimeout(3000);
-      // iframe 재확인
-      for (const frame of page.frames()) {
-        const fu = frame.url();
-        if (fu.includes('selectRenf') || fu.includes('jsf/renf')) {
-          targetCtx = frame;
-          console.log('[iros-pin] JSF iframe(직접이동):', fu);
-          break;
-        }
+      console.log('[iros-pin] 재시도 URL:', page.url(), '| 제목:', await page.title().catch(() => ''));
+    }
+
+    // iframe 감지 (Gauce SPA일 경우 iframe에 콘텐츠 로드)
+    for (const frame of page.frames()) {
+      const fu = frame.url();
+      if (fu.includes('selectRenf') || fu.includes('jsf/renf')) {
+        targetCtx = frame;
+        console.log('[iros-pin] JSF iframe 감지:', fu);
+        break;
       }
     }
-    console.log('[iros-pin] JSF URL:', targetCtx === page ? page.url() : targetCtx.url());
 
-    if (!_onJsfCtx()) {
-      const snap = await page.evaluate(() => ({
-        url: location.href, title: document.title,
-        body: document.body?.innerText?.slice(0, 500),
-        frames: window.frames?.length
-      }));
-      throw new Error(`JSF 열람 페이지 접근 실패: ${JSON.stringify(snap)}`);
+    // 최종 접근 확인
+    const finalUrl = targetCtx === page ? page.url() : targetCtx.url();
+    const finalBody = await targetCtx.evaluate(() => document.body?.innerText?.slice(0, 150) || '');
+    console.log('[iros-pin] 최종 URL:', finalUrl, '| body:', finalBody.slice(0, 80));
+    if (finalBody.includes('찾을 수 없습니다') || finalBody.includes('접근 권한')) {
+      throw new Error(`JSF 열람 페이지 접근 실패 (서버 차단): ${finalUrl} | ${finalBody.slice(0, 200)}`);
     }
 
     // ── Step 4: JSF 페이지 주소 입력 (targetCtx = page 또는 frame) ────────────────
