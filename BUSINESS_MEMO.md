@@ -207,14 +207,20 @@
 | CE 인증 | 미확인 |
 | OEM | 불가 (기성품) |
 
-#### Product 2 — Shenzhen Skyblue Technology (권장 — CE 인증)
+#### Product 2 — Meirun Technology (meirunstar / Shenzhen Skyblue Technology, 권장 — CE 인증)
 | 항목 | 내용 |
 |---|---|
 | 단가 | ₩116,439~271,233 |
 | 화면 | 듀얼 스크린 (고객용 화면 포함) |
 | CE 인증 | ✅ 인증 완료 → KC 신청 가능 |
 | OEM | 불가 (기성품) |
+| 알리바바 스토어 | meirunstar.en.alibaba.com |
+| 연락처 | meirun4@meirunstar.com (CC: meirun10, meirun18) |
+| 담당자 | Elva Peng (Overseas Sales Manager) / Tel: +86-755-83775243 |
 | 추천 이유 | CE 인증 + 듀얼 스크린으로 FILO 고객 화면 활용 가능 |
+
+#### 진행 상황
+- [x] 2026-09-07: 문의 이메일 발송 (kimdh4790@gmail.com → meirun4@meirunstar.com)
 
 #### 10대 총비용 비교 (관세 8% + VAT 10% + 배송 포함)
 | 업체 | 10대 합계 |
