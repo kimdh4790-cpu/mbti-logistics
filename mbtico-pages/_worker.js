@@ -1333,6 +1333,12 @@ function _ctrlInit() {
   _auth    = firebase.auth();
   _storage = firebase.storage();
 
+  _auth.getRedirectResult().catch(function(e) {
+    if (e && e.code && e.code !== 'auth/no-auth-event') {
+      _ctrlToast('❌ Google 로그인 오류: ' + (e.code || e.message));
+    }
+  });
+
   _auth.onAuthStateChanged(function(user) {
     if (!user || !SA_EMAILS.includes(user.email)) {
       document.getElementById('login-screen').style.display = 'flex';
@@ -1356,13 +1362,9 @@ function _ctrlLogin() {
 }
 function _ctrlGoogleLogin() {
   var provider = new firebase.auth.GoogleAuthProvider();
-  _auth.signInWithPopup(provider)
+  _auth.signInWithRedirect(provider)
     .catch(function(e) {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
-        _auth.signInWithRedirect(provider);
-      } else {
-        _ctrlToast('❌ Google 로그인 실패: ' + (e.code || e.message));
-      }
+      _ctrlToast('❌ Google 로그인 실패: ' + (e.code || e.message));
     });
 }
 

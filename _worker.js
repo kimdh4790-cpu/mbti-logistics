@@ -8132,9 +8132,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
       // POST /api/seolyuhana/registry-direct — Tilko API 등기부 직접 조회
       if (path === '/api/seolyuhana/registry-direct' && method === 'POST') {
+        try {
         const _ru = await requireAuth(request, env);
         if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
-        try {
           const { address, regType = 'all', pin } = await request.json();
           if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
 

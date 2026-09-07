@@ -1266,13 +1266,9 @@ getRedirectResult(auth).then(result => {
 window._slySignIn = async () => {
   const provider = new GoogleAuthProvider();
   try {
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   } catch(e) {
-    if (['auth/popup-blocked','auth/cancelled-popup-request','auth/popup-closed-by-user'].includes(e.code) || e.message?.includes('Pending promise')) {
-      try { await signInWithRedirect(auth, provider); } catch(e2) { _slyToast('로그인 실패. 다시 시도해주세요'); }
-    } else {
-      _slyToast('로그인 실패: ' + (e.code || e.message));
-    }
+    _slyToast('로그인 실패: ' + (e.code || e.message));
   }
 };
 window._slySignOut = async () => {
