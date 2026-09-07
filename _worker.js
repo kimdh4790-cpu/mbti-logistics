@@ -8271,7 +8271,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (!/^\d{10}$/.test(cleanBiz)) return Response.json({error:'유효하지 않은 사업자번호 형식'},{status:400,headers});
           const apiKey = env.BIZ_API_KEY;
           if (!apiKey) return Response.json({error:'BIZ_API_KEY 미설정'},{status:500,headers});
-          const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`, {
+          const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${apiKey}`, {
             method: 'POST',
             headers: {'Content-Type':'application/json','Accept':'application/json'},
             body: JSON.stringify({ b_no: [cleanBiz] })
