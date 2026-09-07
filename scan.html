@@ -1252,7 +1252,12 @@ window.addEventListener('popstate', e => {
 // 페이지 로드 시 redirect 결과 처리
 getRedirectResult(auth).then(result => {
   if (result?.user) updateAuthUI(result.user);
-}).catch(() => {});
+}).catch(e => {
+  if (e && e.code && e.code !== 'auth/no-auth-event') {
+    console.error('getRedirectResult error:', e.code, e.message);
+    _slyToast('로그인 오류: ' + e.code);
+  }
+});
 
 window._slySignIn = async () => {
   const provider = new GoogleAuthProvider();
