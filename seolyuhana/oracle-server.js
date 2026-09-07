@@ -166,57 +166,93 @@ app.post('/api/iros-pin', async (req, res) => {
       return u.includes('selectRenf') || u.includes('jsf/renf');
     };
 
-    // ── 내부 헬퍼: JS로 Gauce nav 클릭 (pointer-event 오버레이 우회) ──────────────
-    const _jsClick = async (textMatch) => {
-      return page.evaluate((txt) => {
-        const all = [...document.querySelectorAll('a, button, li, span')];
-        const el = all.find(e => {
-          const t = (e.textContent || '').trim().replace(/\s+/g, ' ');
-          return t === txt || t.startsWith(txt);
-        });
-        if (!el) return null;
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-        return el.id || el.tagName;
-      }, textMatch);
-    };
-
     // ── Step 1: 메인 페이지 방문 (HttpSession 수립) ────────────────────────────────
     console.log('[iros-pin] Step1: 메인 페이지 방문');
     await page.goto('https://www.iros.go.kr', { waitUntil: 'networkidle', timeout: 45000 });
     await page.waitForTimeout(2000);
     console.log('[iros-pin] 메인 URL:', page.url());
 
-    // ── Step 2: "간편 열람·발급" Gauce 메뉴 JS-click ──────────────────────────────
-    console.log('[iros-pin] Step2: 간편 열람·발급 JS-click');
-    const r2 = await _jsClick('간편 열람·발급');
-    console.log('[iros-pin] JS-click 결과:', r2);
-    if (r2) {
-      await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
-      await page.waitForTimeout(2000);
+    // ── Step 2: Gauce 메뉴 trusted force-click (isTrusted:true via CDP) ─────────
+    // dispatchEvent 는 isTrusted:false → Gauce 무시. Playwright click({ force:true }) 는
+    // CDP 레벨 OS 이벤트 → isTrusted:true → Gauce 정상 처리
+    let targetCtx = page; // Gauce가 iframe에 JSF를 로드할 수 있음
+    console.log('[iros-pin] Step2: Gauce nav force-click');
+    try {
+      // 부모 depth1("열람·발급") hover → Gauce 드롭다운 상태 활성화
+      const depth1 = page.locator('a.w2anchor2.link-depth1, a.link-depth1').first();
+      if (await depth1.count() > 0) {
+        await depth1.hover({ force: true, timeout: 5000 }).catch(() => {});
+        await page.waitForTimeout(500);
+      }
+      // depth2 "간편 열람·발급" force-click (pointer-event 오버레이 무시)
+      const depth2 = page.locator('a.w2anchor2.link-depth2, a.link-depth2')
+        .filter({ hasText: '간편' }).first();
+      if (await depth2.count() > 0) {
+        await depth2.click({ force: true, timeout: 8000 });
+        console.log('[iros-pin] depth2 force-click OK');
+      } else {
+        // 텍스트 매칭 폴백: textContent에 "간편 열람" 포함 모든 앵커
+        const fbAnchors = page.locator('a').filter({ hasText: '간편 열람' });
+        const fbCnt = await fbAnchors.count();
+        if (fbCnt > 0) {
+          await fbAnchors.first().click({ force: true, timeout: 8000 });
+          console.log('[iros-pin] 폴백 anchor force-click OK');
+        } else {
+          console.log('[iros-pin] 간편 열람 앵커 없음, Referer 직접 이동으로 전환');
+        }
+      }
+      await page.waitForLoadState('networkidle', { timeout: 25000 }).catch(() => {});
+      await page.waitForTimeout(3000);
+      console.log('[iros-pin] force-click 후 URL:', page.url());
+
+      // Gauce가 JSF 콘텐츠를 iframe에 로드했는지 확인
+      for (const frame of page.frames()) {
+        const fu = frame.url();
+        if (fu.includes('selectRenf') || fu.includes('jsf/renf')) {
+          targetCtx = frame;
+          console.log('[iros-pin] JSF iframe 감지:', fu);
+          break;
+        }
+      }
+    } catch (navErr) {
+      console.log('[iros-pin] force-click 오류:', navErr.message.slice(0, 200));
     }
 
-    // JSF 페이지에 못 들어간 경우 → Referer 헤더로 직접 navigate
-    if (!_onJsfPage()) {
+    // ── Step 3: JSF 페이지 접근 확인 / Referer 직접 이동 폴백 ──────────────────────
+    const _onJsfCtx = () => {
+      const u = targetCtx === page ? page.url() : targetCtx.url();
+      return u.includes('selectRenf') || u.includes('jsf/renf');
+    };
+    if (!_onJsfCtx()) {
       console.log('[iros-pin] Step3: Referer 헤더로 JSF 직접 이동');
       await page.setExtraHTTPHeaders({ 'Referer': 'https://www.iros.go.kr/index.jsp' });
       await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 45000 });
       await page.waitForTimeout(3000);
+      // iframe 재확인
+      for (const frame of page.frames()) {
+        const fu = frame.url();
+        if (fu.includes('selectRenf') || fu.includes('jsf/renf')) {
+          targetCtx = frame;
+          console.log('[iros-pin] JSF iframe(직접이동):', fu);
+          break;
+        }
+      }
     }
-    console.log('[iros-pin] JSF URL:', page.url());
+    console.log('[iros-pin] JSF URL:', targetCtx === page ? page.url() : targetCtx.url());
 
-    // 여전히 접근 불가
-    if (!_onJsfPage()) {
+    if (!_onJsfCtx()) {
       const snap = await page.evaluate(() => ({
         url: location.href, title: document.title,
-        body: document.body?.innerText?.slice(0, 500)
+        body: document.body?.innerText?.slice(0, 500),
+        frames: window.frames?.length
       }));
       throw new Error(`JSF 열람 페이지 접근 실패: ${JSON.stringify(snap)}`);
     }
 
-    // ── Step 4: JSF 페이지 주소 입력 ──────────────────────────────────────────────
+    // ── Step 4: JSF 페이지 주소 입력 (targetCtx = page 또는 frame) ────────────────
     // Gauce input ID 패턴: mf_<form>_<widget>___input
     const addrSelectors = [
-      'input[id*="sbx_addr"][id$="___input"]',   // Gauce 주소 search-box 패턴
+      'input[id*="sbx_addr"][id$="___input"]',
       'input[id*="addr"][id*="input"]',
       'input[id*="Addr"][id*="input"]',
       'input[id*="addrSearch"]', 'input[id*="searchAddr"]',
@@ -226,20 +262,18 @@ app.post('/api/iros-pin', async (req, res) => {
     ];
     let addrInput = null;
     for (const sel of addrSelectors) {
-      const loc = page.locator(sel).first();
+      const loc = targetCtx.locator(sel).first();
       if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) {
         addrInput = loc; break;
       }
     }
     if (!addrInput) {
-      // 폼 내 첫 번째 visible text input (nav 제외: 헤더 영역 밖)
-      const allInputs = page.locator('input[type="text"], input:not([type])');
+      const allInputs = targetCtx.locator('input[type="text"], input:not([type])');
       const cnt = await allInputs.count();
       for (let i = 0; i < Math.min(cnt, 15); i++) {
         const inp = allInputs.nth(i);
         if (await inp.isVisible().catch(() => false)) {
           const id = await inp.getAttribute('id').catch(() => '');
-          // 메인 헤더 검색창 제외
           if (id && id.includes('potal_main_wf_header')) continue;
           addrInput = inp; break;
         }
@@ -259,37 +293,46 @@ app.post('/api/iros-pin', async (req, res) => {
     await addrInput.click({ clickCount: 3, force: true });
     await addrInput.fill(address);
 
-    // ── Step 5: 검색 트리거 (JS-click으로 Gauce 검색 버튼 실행) ───────────────────
-    // Gauce 검색 버튼: input[type="button"]이 대부분, a:has-text는 nav 오염 위험
-    const searchTriggered = await page.evaluate(() => {
-      // 1) input[type=button] value에 "검색" 포함
-      const btns = [...document.querySelectorAll('input[type="button"], input[type="submit"], button')];
-      for (const b of btns) {
-        const v = (b.value || b.textContent || '').trim();
-        if (v.includes('검색') && b.offsetParent !== null) {
-          b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-          return 'btn:' + (b.id || b.value);
-        }
+    // ── Step 5: 검색 트리거 — force-click 우선, JS-click 폴백 ────────────────────
+    let searchTriggered = false;
+    // input[type=button] value에 "검색" 포함하는 버튼 force-click
+    const searchBtns = targetCtx.locator('input[type="button"], input[type="submit"], button')
+      .filter({ hasText: /검색|조회/ });
+    const sbCnt = await searchBtns.count();
+    for (let i = 0; i < sbCnt; i++) {
+      const btn = searchBtns.nth(i);
+      if (await btn.isVisible().catch(() => false)) {
+        await btn.click({ force: true, timeout: 5000 }).catch(() => {});
+        searchTriggered = true;
+        console.log('[iros-pin] 검색 버튼 force-click');
+        break;
       }
-      // 2) onclick에 search 키워드 포함 앵커 (헤더 nav ID 제외)
-      const anchors = [...document.querySelectorAll('a[onclick]')];
-      for (const a of anchors) {
-        if (a.id && a.id.includes('header')) continue;
-        const oc = a.getAttribute('onclick') || '';
-        if (oc.toLowerCase().includes('search') || oc.includes('조회')) {
-          a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-          return 'anchor:' + a.id;
+    }
+    if (!searchTriggered) {
+      // onclick에 search/조회 포함 앵커 (헤더 nav 제외)
+      const triggered = await targetCtx.evaluate(() => {
+        const anchors = [...document.querySelectorAll('a[onclick]')];
+        for (const a of anchors) {
+          if (a.id && a.id.includes('header')) continue;
+          const oc = a.getAttribute('onclick') || '';
+          if (oc.toLowerCase().includes('search') || oc.includes('조회')) {
+            a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            return 'anchor:' + a.id;
+          }
         }
-      }
-      return null;
-    });
-    console.log('[iros-pin] 검색 트리거:', searchTriggered);
-    if (!searchTriggered) await addrInput.press('Enter');
+        return null;
+      });
+      if (triggered) { searchTriggered = true; console.log('[iros-pin] JS anchor 검색:', triggered); }
+    }
+    if (!searchTriggered) {
+      await addrInput.press('Enter');
+      console.log('[iros-pin] Enter 검색');
+    }
     await page.waitForTimeout(4000);
-    console.log('[iros-pin] 검색 후 URL:', page.url());
+    console.log('[iros-pin] 검색 후 URL:', targetCtx === page ? page.url() : targetCtx.url());
 
     // ── Step 6: 결과에서 고유번호(PIN) 파싱 ──────────────────────────────────────
-    const resultText = await page.evaluate(() => {
+    const resultText = await targetCtx.evaluate(() => {
       // 테이블/스팬/div에서 XXXX-XXXX-XXXXXX 또는 13~14자리 숫자 패턴
       const els = [...document.querySelectorAll('td, span, div, p')];
       for (const el of els) {
@@ -308,7 +351,7 @@ app.post('/api/iros-pin', async (req, res) => {
     });
 
     if (!resultText || !resultText.pin) {
-      const dbg = await page.evaluate(() => ({
+      const dbg = await targetCtx.evaluate(() => ({
         url: location.href, title: document.title,
         body: document.body.innerText.slice(0, 700)
       }));
