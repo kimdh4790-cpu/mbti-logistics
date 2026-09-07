@@ -322,6 +322,15 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | `FIREBASE_API_KEY` | `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0` | **등록완료** (Cloudflare 대시보드 확인 2026-08-30) |
 | `ANTHROPIC_API_KEY` | (별도 관리) | 등록완료 |
 | `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 등록완료 |
+| `SOLAPI_KEY` | (별도 관리) | ❓ 사용자 확인 필요 (SMS·알림톡) |
+| `SOLAPI_SECRET` | (별도 관리) | ❓ 사용자 확인 필요 |
+| `SOLAPI_SENDER` | `05171133103` (기본값) | ❓ 사용자 확인 필요 |
+| `TILKO_API_KEY` | (별도 관리) | ❓ 사용자가 등록했다고 했으나 메모 미기재 — 확인 필요 (등기부 직접 조회) |
+| `TILKO_RSA_PUBKEY` | (별도 관리) | ❓ 사용자가 등록했다고 했으나 메모 미기재 — 확인 필요 |
+
+> ⚠️ SOLAPI/TILKO 미등록 시 동작:
+> - SOLAPI 없으면 SMS·알림톡 발송 안 됨 (앱은 정상 작동)
+> - TILKO 없으면 등기부 직접조회 불가 → 인터넷등기소 딥링크 폴백으로 자동 전환
 
 ### Oracle Cloud에서 wrangler deploy (yongcha-worker.js 등 수동 배포 시)
 ```bash
