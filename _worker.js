@@ -2725,13 +2725,15 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         if (path.startsWith('/api/seolyuhana/result/') && method === 'GET') {
           const jobId = path.replace('/api/seolyuhana/result/', '');
           try {
-            const uid = await verifyFirebaseToken(request, env);
-            if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const uid = _au.localId || _au;
             const token = await getAccessToken(env);
             const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
             if (!doc?.fields) return Response.json({ok:false,error:'잡을 찾을 수 없습니다.'},{status:404,headers});
             const f = doc.fields;
-            if (f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403,headers});
+            const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+            if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403,headers});
             return Response.json({ok:true,status:f.status?.stringValue||'unknown',progress:f.progress?.integerValue|0||0,summary:f.summary?.stringValue||null,downloadUrls:f.downloadUrls?.mapValue?.fields?{docx:f.downloadUrls.mapValue.fields.docx?.stringValue,pdf:f.downloadUrls.mapValue.fields.pdf?.stringValue}:null,error:f.error?.stringValue||null,completedAt:f.completedAt?.stringValue||null},{headers});
           } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
         }
@@ -2741,13 +2743,15 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
           const jobId = path.replace('/api/seolyuhana/download/', '');
           const fileType = url.searchParams.get('type') || 'docx';
           try {
-            const uid = await verifyFirebaseToken(request, env);
-            if (!uid) return new Response('Unauthorized', {status:401});
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return new Response('Unauthorized', {status:401});
+            const uid = _au.localId || _au;
             const token = await getAccessToken(env);
             const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
             if (!doc?.fields) return new Response('Not found', {status:404});
             const f = doc.fields;
-            if (f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
+            const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+            if (!isSA && f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
             if (f.status?.stringValue !== 'completed') return new Response('Not ready', {status:202});
             const kvKey = `sly_job_${jobId}_${fileType}`;
             const fileData = await env.DONWAY_ASSETS.get(kvKey, {type:'arrayBuffer'});
@@ -2761,8 +2765,9 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         // GET /api/seolyuhana/points
         if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
           try {
-            const uid = await verifyFirebaseToken(request, env);
-            if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const uid = _au.localId || _au;
             const token = await getAccessToken(env);
             const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
             const balance = doc?.fields?.balance?.integerValue|0 || 0;
@@ -2776,8 +2781,9 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         // POST /api/seolyuhana/point-request
         if (path === '/api/seolyuhana/point-request' && method === 'POST') {
           try {
-            const uid = await verifyFirebaseToken(request, env);
-            if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const uid = _au.localId || _au;
             const body = await request.json();
             const depositorName = (body.depositorName||'').trim();
             const amount = parseInt(body.amount) || 0;
@@ -8126,13 +8132,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path.startsWith('/api/seolyuhana/result/') && method === 'GET') {
         const jobId = path.replace('/api/seolyuhana/result/', '');
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
           if (!doc?.fields) return Response.json({ok:false,error:'잡을 찾을 수 없습니다.'},{status:404});
           const f = doc.fields;
-          if (f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+          if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
           return Response.json({
             ok:true,
             status:    f.status?.stringValue || 'unknown',
@@ -8153,13 +8161,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         const jobId = path.replace('/api/seolyuhana/download/', '');
         const fileType = new URL(request.url).searchParams.get('type') || 'docx';
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return new Response('Unauthorized', {status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return new Response('Unauthorized', {status:401});
+          const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
           if (!doc?.fields) return new Response('Not found', {status:404});
           const f = doc.fields;
-          if (f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
+          const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+          if (!isSA && f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
           if (f.status?.stringValue !== 'completed') return new Response('Not ready', {status:202});
 
           // KV에서 파일 가져오기
@@ -8182,8 +8192,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // GET /api/seolyuhana/points — 포인트 잔액 조회
       if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
           const balance = doc?.fields?.balance?.integerValue|0 || 0;
@@ -8211,8 +8222,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // POST /api/seolyuhana/point-request — 포인트 충전 신청 (계좌이체)
       if (path === '/api/seolyuhana/point-request' && method === 'POST') {
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const uid = _au.localId || _au;
           const body = await request.json();
           const depositorName = (body.depositorName||'').trim();
           const amount = parseInt(body.amount) || 0;
