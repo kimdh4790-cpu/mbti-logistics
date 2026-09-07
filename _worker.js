@@ -8401,19 +8401,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               body: JSON.stringify({ SearchAddr: await enc(address) }),
               signal: AbortSignal.timeout(15000)
             });
-            if (addrRes.ok) {
-              const adText = await addrRes.text();
-              let ad = {};
-              try { ad = JSON.parse(adText); } catch(_) {}
-              // 응답 구조 확인용: 키 목록 + 첫 300자 노출
-              const adKeys = Object.keys(ad).join(',');
-              const listVal = ad.realty_list || ad.RealtyList || ad.Result || ad.data || ad.items || ad.list || [];
-              const first = Array.isArray(listVal) ? listVal[0] : null;
-              if (first) {
-                pin = (first.pin || first.Pin || first.고유번호 || first.uniqueNo || first.UniqueNo || '').replace(/-/g,'');
-              }
-              if (!pin) throw new Error(`주소검색 응답 키: [${adKeys}] | 원문: ${adText.slice(0,300)}`);
-            }
+            const adText = await addrRes.text();
+            let ad = {};
+            try { ad = JSON.parse(adText); } catch(_) {}
+            throw new Error(`주소검색 HTTP${addrRes.status} | 키:[${Object.keys(ad).join(',')}] | ${adText.slice(0,400)}`);
           } catch(ae) { if (ae.message.startsWith('주소검색')) throw ae; }
         }
         if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (${address}). 14자리 고유번호를 직접 입력해주세요.`);
