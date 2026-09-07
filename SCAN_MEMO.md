@@ -129,19 +129,24 @@
 
 ---
 
-## 등록된 API 키 (Cloudflare Secrets, 2026-09-07 전수확인)
-| Secret | 용도 |
-|---|---|
-| `ANTHROPIC_API_KEY` | Claude AI 분석 전체 |
-| `TILKO_API_KEY` | 등기부 직접조회 (AES-CBC-128+RSA-OAEP) |
-| `TILKO_RSA_PUBKEY` | Tilko RSA 공개키 |
-| `IROS_USER_ID` | **인터넷등기소 로그인 ID** (직접 발급 가능) |
-| `IROS_USER_PW` | **인터넷등기소 비밀번호** |
-| `IROS_EMONEY_NO1` | **전자화폐 번호 1** (등기부 유료 발급용) |
-| `IROS_EMONEY_NO2` | **전자화폐 번호 2** |
-| `IROS_EMONEY_PWD` | **전자화폐 비밀번호** |
-| `BIZ_API_KEY` | 국세청 사업자 조회 |
-| `ORACLE_SERVER_URL` | Oracle 변환서버 HWP→DOCX (포트 3100) |
+## 등록된 API 키 (Cloudflare Secrets — 대시보드 스크린샷 2026-09-07 직접 확인 완료)
+> ⚠️ 앞으로 "이 키 설정됐나?" 다시 묻지 말 것. 아래 목록 = 이미 설정 완료.
+
+| Secret | 용도 | 상태 |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Claude AI 분석 전체 | ✅ 설정됨 |
+| `BIZ_API_KEY` | 국세청 사업자 조회 (data.go.kr 발급, 이미 URL인코딩됨 → encodeURIComponent 사용 금지) | ✅ 설정됨 |
+| `CF_GLOBAL_KEY` | Cloudflare 전역 API 키 | ✅ 설정됨 |
+| `CLAUDE_API_KEY` | (별도 Claude API 키) | ✅ 설정됨 |
+| `CRON_SECRET` | Cron 트리거 인증 | ✅ 설정됨 |
+| `TILKO_API_KEY` | 등기부 직접조회 (AES-CBC-128+RSA-OAEP) | ✅ 설정됨 |
+| `TILKO_RSA_PUBKEY` | Tilko RSA 공개키 | ✅ 설정됨 |
+| `IROS_USER_ID` | 인터넷등기소 로그인 ID | ✅ 설정됨 |
+| `IROS_USER_PW` | 인터넷등기소 비밀번호 | ✅ 설정됨 |
+| `IROS_EMONEY_NO1` | 전자화폐 번호 1 (등기부 유료 발급용) | ✅ 설정됨 |
+| `IROS_EMONEY_NO2` | 전자화폐 번호 2 | ✅ 설정됨 |
+| `IROS_EMONEY_PWD` | 전자화폐 비밀번호 | ✅ 설정됨 |
+| `ORACLE_SERVER_URL` | Oracle 변환서버 HWP→DOCX (포트 3100) | ✅ 설정됨 |
 
 ---
 
@@ -189,3 +194,5 @@
 | 2026-09-07 | **_worker.js mbtico 블록**: processingCtx에 targetLang·jeonseDeposit 추가·_slyProcessJob 파라미터 정식화·form 클로저 의존 제거 |
 | 2026-09-07 | **getScannedPrompt에 registry_analysis 추가**: 스캔 PDF 등기부 정상 분석 가능 |
 | 2026-09-07 | **에이전트 조사 결과 반영**: 신탁원부 감지·HUG 보증보험 판단·선순위안전도%·법인임대인 위험분석 (경쟁사 전무 영역) |
+| 2026-09-07 | **biz-status encodeURIComponent 제거**: BIZ_API_KEY가 이미 URL인코딩됨 → 이중인코딩 제거로 NTS API 인증 정상화 |
+| 2026-09-07 | **Cloudflare Secrets 전수확인**: 대시보드 스크린샷으로 13개 키 모두 설정 확인 (SCAN_MEMO.md 등록) |
