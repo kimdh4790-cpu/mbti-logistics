@@ -104,6 +104,61 @@ app.post('/api/iros-fetch', async (req, res) => {
 
   let browser = null;
   let tmpDir  = null;
+
+  // IROS 로그인 헬퍼 — 현재 페이지에 로그인 폼이 있으면 채워서 제출
+  async function _irosLogin(page) {
+    try {
+      // 페이지 안에 실제 로그인 폼이 있는지 확인 (로그인 페이지 URL 또는 #userId 존재)
+      const curUrl = page.url();
+      const hasLoginForm = curUrl.includes('login') || curUrl.includes('Login') ||
+        await page.locator('#userId, input[name="userId"], input[id*="userId"]').count() > 0;
+      if (!hasLoginForm) return false;
+
+      // 팝업·레이어 로그인 폼 포함, 넓은 셀렉터로 시도
+      const userSel = '#userId, input[name="userId"], input[id*="userId"], input[name="id"], input[autocomplete="username"]';
+      const pwSel   = '#userPwd, input[name="userPwd"], input[id*="Pwd"], input[type="password"], input[name="pw"], input[autocomplete="current-password"]';
+      await page.waitForSelector(userSel, { timeout: 8000 });
+      await page.locator(userSel).first().fill(irosId);
+      await page.locator(pwSel).first().fill(irosPw);
+
+      const btnSel = '#loginBtn, button[id*="login"], button[onclick*="login"], input[type="submit"][value*="로그인"], button[type="submit"]';
+      const btn = page.locator(btnSel).first();
+      if (await btn.count() > 0) await btn.click();
+      else await page.keyboard.press('Enter');
+
+      await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+      console.log('[iros] 로그인 후 URL:', page.url());
+      return true;
+    } catch (le) {
+      console.log('[iros] 로그인 폼 없음 또는 이미 로그인:', le.message);
+      return false;
+    }
+  }
+
+  // 첫 번째 visible text 입력 필드 찾기 (page.evaluate 기반)
+  async function _findAddrInput(page) {
+    // 1순위: addr 관련 ID/name/placeholder
+    const candidates = [
+      'input[id*="addr" i]', 'input[id*="Addr"]',
+      'input[name*="addr" i]', 'input[name*="Addr"]',
+      '#searchAddr', 'input[placeholder*="주소"]',
+      'input[placeholder*="지번"]', 'input[placeholder*="도로명"]',
+      'input[placeholder*="번지"]',
+    ];
+    for (const sel of candidates) {
+      const loc = page.locator(sel).first();
+      if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) return loc;
+    }
+    // 2순위: 페이지 내 첫 번째 visible text input (form 안)
+    const allInputs = page.locator('form input[type="text"], input[type="text"]');
+    const cnt = await allInputs.count();
+    for (let i = 0; i < Math.min(cnt, 10); i++) {
+      const inp = allInputs.nth(i);
+      if (await inp.isVisible().catch(() => false)) return inp;
+    }
+    return null;
+  }
+
   try {
     tmpDir  = await mkdtemp(join(tmpdir(), 'iros-'));
     browser = await chromium.launch({
@@ -113,82 +168,91 @@ app.post('/api/iros-fetch', async (req, res) => {
     });
     const context = await browser.newContext({
       viewport: { width: 1280, height: 900 },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36',
-      acceptDownloads: true
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      acceptDownloads: true,
+      locale: 'ko-KR'
     });
     const page = await context.newPage();
+    page.setDefaultTimeout(30000);
 
-    // 1단계: 인터넷등기소 메인 접속
-    await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml', { waitUntil: 'networkidle', timeout: 60000 });
+    // 1단계: 인터넷등기소 메인 (domcontentloaded — JSF 페이지는 networkidle이 지연됨)
+    await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml', { waitUntil: 'domcontentloaded', timeout: 60000 });
     console.log('[iros] 메인 URL:', page.url());
+    await page.waitForTimeout(1000);
 
-    // 2단계: 로그인
-    try {
-      await page.waitForSelector('#userId, input[name="userId"], input[id*="userId"], input[id*="Id"]', { timeout: 10000 });
-      const userIdFld = page.locator('#userId, input[name="userId"], input[id*="userId"]').first();
-      const userPwFld = page.locator('#userPwd, input[name="userPwd"], input[id*="Pwd"], input[type="password"]').first();
-      await userIdFld.fill(irosId);
-      await userPwFld.fill(irosPw);
-      const loginBtn = page.locator('#loginBtn, button[onclick*="login"], input[type="submit"], button[type="submit"]').first();
-      if (await loginBtn.count() > 0) await loginBtn.click();
-      else await page.keyboard.press('Enter');
-      await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
-      console.log('[iros] 로그인 후 URL:', page.url());
-    } catch (le) {
-      console.log('[iros] 로그인 셀렉터 없음(이미 로그인 또는 팝업):', le.message);
-    }
+    // 2단계: 로그인 시도
+    await _irosLogin(page);
 
-    // 3단계: 건물·토지 검색 페이지 (selectRenf0100List = 신 JSF URL)
+    // 3단계: 등기부 검색 페이지로 이동
     const searchUrl = regType === 'land'
       ? 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=L'
       : 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=B';
-    await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(2000); // JSF JS 초기화 대기
     console.log('[iros] 검색페이지 URL:', page.url(), '| 제목:', await page.title());
 
-    // 4단계: 주소 입력 (다양한 셀렉터 폴백)
-    const ADDR_SEL = [
-      'input[id*="addr"]', 'input[id*="Addr"]', '#searchAddr',
-      'input[placeholder*="주소"]', 'input[placeholder*="지번"]',
-      'input[name*="addr"]', 'input[name*="Addr"]',
-      'input[type="text"]'
-    ].join(', ');
-    await page.waitForSelector(ADDR_SEL, { timeout: 20000 });
-    const addrInput = page.locator(ADDR_SEL).first();
+    // 검색 페이지에서 로그인으로 리다이렉트된 경우 재로그인
+    if (page.url().includes('login') || page.url().includes('Login')) {
+      console.log('[iros] 검색 페이지에서 로그인 리다이렉트 감지, 재로그인');
+      await _irosLogin(page);
+      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await page.waitForTimeout(2000);
+      console.log('[iros] 재로그인 후 검색페이지 URL:', page.url());
+    }
+
+    // 4단계: 주소 입력 필드 찾기
+    const addrInput = await _findAddrInput(page);
+    if (!addrInput) {
+      // 디버그용 스크린샷 저장
+      const ssPath = join(tmpDir, 'debug.png');
+      await page.screenshot({ path: ssPath, fullPage: true }).catch(() => {});
+      const pageHtml = await page.content().catch(() => '');
+      throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, 입력필드 수=${await page.locator('input').count()}`);
+    }
     await addrInput.click({ clickCount: 3 });
     await addrInput.fill(address);
 
-    const searchBtn = page.locator('button[onclick*="search"], a[onclick*="search"], #searchBtn, .btn-search').first();
+    // 검색 버튼 클릭 또는 Enter
+    const searchBtnSel = 'button[onclick*="search"], a[onclick*="search"], #searchBtn, .btn-search, button:has-text("검색"), input[type="button"][value*="검색"], input[type="submit"]';
+    const searchBtn = page.locator(searchBtnSel).first();
     if (await searchBtn.count() > 0) await searchBtn.click();
-    else await page.keyboard.press('Enter');
-    await page.waitForTimeout(2000);
+    else await addrInput.press('Enter');
+    await page.waitForTimeout(3000);
 
-    // 5단계: 첫 번째 결과 선택
-    const resultRow = page.locator('table tbody tr:first-child td a, .result-list li:first-child a, #resultList tr:first-child a').first();
-    if (!(await resultRow.count())) throw new Error(`"${address}" 검색 결과가 없습니다. 더 상세한 주소(동·호수 포함)로 검색해주세요.`);
+    // 5단계: 검색 결과 첫 번째 행 선택
+    const resultSel = 'table tbody tr:first-child td a, .result-list li:first-child a, #resultList tr:first-child a, tbody tr:first-child a, .tbl-result tbody tr:first-child td a';
+    const resultRow = page.locator(resultSel).first();
+    if (!(await resultRow.count())) {
+      throw new Error(`"${address}" 검색 결과 없음. 더 상세한 주소(동·호수 포함)로 검색해주세요.`);
+    }
     await resultRow.click();
-    await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
+    await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(1000);
 
-    // 6단계: 발급 버튼
-    const issueBtn = page.locator('a[onclick*="issue"], button[onclick*="issue"], #issueBtn, .btn-issue').first();
+    // 6단계: 열람/발급 버튼
+    const issueSel = 'a[onclick*="issue"], button[onclick*="issue"], #issueBtn, .btn-issue, button:has-text("열람"), button:has-text("발급"), a:has-text("열람"), a:has-text("발급")';
+    const issueBtn = page.locator(issueSel).first();
     if (await issueBtn.count() > 0) {
       await issueBtn.click();
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2000);
     }
 
     // 전자화폐 결제
     if (emoneyNo1 && emoneyPwd) {
       try {
-        const payEmoneyRadio = page.locator('input[value*="emoney"], input[value*="전자화폐"], label[for*="emoney"]').first();
+        const payRadioSel = 'input[value*="emoney"], input[value*="전자화폐"], label[for*="emoney"], input[value="03"]';
+        const payEmoneyRadio = page.locator(payRadioSel).first();
         if (await payEmoneyRadio.count() > 0) {
           await payEmoneyRadio.click();
           await page.waitForTimeout(500);
-          const emoNo1Field = page.locator('input[id*="emoneyNo1"], input[name*="emoneyNo1"]').first();
-          const emoNo2Field = page.locator('input[id*="emoneyNo2"], input[name*="emoneyNo2"]').first();
-          const emoPwdField  = page.locator('input[id*="emoneyPwd"], input[name*="emoneyPwd"], input[type="password"]').first();
+          const emoNo1Field = page.locator('input[id*="emoneyNo1" i], input[name*="emoneyNo1" i]').first();
+          const emoNo2Field = page.locator('input[id*="emoneyNo2" i], input[name*="emoneyNo2" i]').first();
+          const emoPwdField = page.locator('input[id*="emoneyPwd" i], input[name*="emoneyPwd" i], input[id*="emoPwd" i]').first();
           if (await emoNo1Field.count() > 0) await emoNo1Field.fill(emoneyNo1);
           if (emoneyNo2 && await emoNo2Field.count() > 0) await emoNo2Field.fill(emoneyNo2);
           if (await emoPwdField.count() > 0) await emoPwdField.fill(emoneyPwd);
-          const payBtn = page.locator('#payBtn, button[onclick*="pay"], .btn-pay').first();
+          const payBtnSel = '#payBtn, button[onclick*="pay"], .btn-pay, button:has-text("결제"), button:has-text("확인")';
+          const payBtn = page.locator(payBtnSel).first();
           if (await payBtn.count() > 0) {
             await payBtn.click();
             await page.waitForTimeout(3000);
@@ -199,9 +263,10 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
     }
 
-    // 7단계: PDF 저장
+    // 7단계: PDF 저장 (다운로드 링크 우선, 없으면 화면 PDF)
     const pdfPath = join(tmpDir, 'registry.pdf');
-    const dlLink = page.locator('a[href*=".pdf"], a[onclick*="download"], a[onclick*="pdf"], #downloadBtn').first();
+    const dlSel = 'a[href*=".pdf"], a[onclick*="download"], a[onclick*="pdf"], #downloadBtn, a:has-text("다운로드"), a:has-text("저장")';
+    const dlLink = page.locator(dlSel).first();
 
     if (await dlLink.count() > 0) {
       try {
@@ -211,7 +276,6 @@ app.post('/api/iros-fetch', async (req, res) => {
         ]);
         await download.saveAs(pdfPath);
       } catch {
-        // 다운로드 실패 시 화면 PDF
         const pdfBuffer2 = await page.pdf({ format: 'A4', printBackground: true });
         await writeFile(pdfPath, pdfBuffer2);
       }
