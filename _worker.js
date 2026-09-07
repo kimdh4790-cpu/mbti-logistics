@@ -8513,14 +8513,21 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
 
           let stdAddr = address, pnuHint = pin || null;
+          // 주소 정규화: 광역시·특별시 약칭 확장 + 번지 앞 공백
+          stdAddr = stdAddr
+            .replace(/^서울시\b/, '서울특별시').replace(/^부산시\b/, '부산광역시')
+            .replace(/^대구시\b/, '대구광역시').replace(/^인천시\b/, '인천광역시')
+            .replace(/^대전시\b/, '대전광역시').replace(/^울산시\b/, '울산광역시')
+            .replace(/^세종시\b/, '세종특별자치시')
+            .replace(/([가-힣로길])(\d)/, '$1 $2'); // 도로명 뒤 번지 공백
           const vkey = env.VWORLD_API_KEY;
           if (vkey) {
             try {
-              const vr = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`);
+              const vr = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(stdAddr)}&refine=true&simple=false&format=json&type=road&key=${vkey}`);
               if (vr.ok) {
                 const vd = await vr.json();
                 const rs = vd?.response?.result;
-                if (rs) { stdAddr = rs.refined?.text || address; }
+                if (rs) { stdAddr = rs.refined?.text || stdAddr; }
               }
             } catch(_) {}
           }
