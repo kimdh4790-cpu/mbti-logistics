@@ -1,0 +1,152 @@
+{
+  "A": {
+    "clip": "카카오알림톡",
+    "clipId": "1668",
+    "url": "https://www.inflearn.com/clip/1668",
+    "youtube_title": "월 0원 서버로 카카오 알림톡 자동화 | n8n 워크플로우 3종 인프런",
+    "youtube_description": "카카오 알림톡 매번 수동으로 보내고 계신가요?\n오라클 클라우드 무료 서버 + n8n으로 정산·예약·알림 완전 자동화.\n워크플로우 파일 3종 포함 — 바로 복붙해서 씁니다.\n\n▶ 인프런에서 'n8n 카카오알림톡' 검색\nhttps://www.inflearn.com/clip/1668\n\n#n8n #카카오알림톡 #업무자동화 #소상공인자동화 #인프런",
+    "instagram_caption": "카카오 알림톡 자동화, 월 0원으로 됩니다\n\nn8n + 오라클 무료 서버 조합\n정산·예약·알림 워크플로우 3종 포함\n\n인프런에서 'n8n 카카오알림톡' 검색\n\n#n8n #카카오알림톡 #업무자동화 #소상공인자동화 #인프런 #자동화",
+    "blog_title": "카카오 알림톡 자동화 월 0원으로 하는 법 | n8n + Oracle Cloud (인프런 워크플로우 3종)",
+    "blog_keywords": ["카카오알림톡자동화", "n8n카카오", "소상공인자동화", "Oracle Cloud무료"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "카카오 알림톡, 매번 손으로 보내고 계신가요?" },
+      { "startSec": 5.0, "text": "오라클 클라우드 무료 서버랑 n8n 쓰면 자동으로 다 보낼 수 있어요." },
+      { "startSec": 12.0, "text": "정산 알림, 예약 확인, 고객 알림 — 워크플로우 파일 세 개 그대로 복붙하면 됩니다." },
+      { "startSec": 20.0, "text": "서버 비용 월 0원이에요. 인프런에서 n8n 카카오알림톡 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "카카오 알림톡", "pain": "매번 수동으로 보내시나요?", "solution": "n8n으로 완전 자동화" },
+      { "type": "feature", "icon": "📱", "title": "워크플로우 3종 포함", "points": ["정산 자동 알림", "예약 확인 자동 발송", "고객 알림 자동화"] },
+      { "type": "feature", "icon": "☁️", "title": "월 0원 서버", "points": ["Oracle Cloud Always Free", "4코어 24GB 영구무료", "Docker n8n 설치 가이드"] },
+      { "type": "cta", "price": "₩22,000", "keyword": "n8n 카카오알림톡" }
+    ],
+    "hashtags": ["n8n", "카카오알림톡", "업무자동화", "소상공인자동화", "인프런"]
+  },
+  "B": {
+    "clip": "급여명세서",
+    "clipId": "1669",
+    "url": "https://www.inflearn.com/clip/1669",
+    "youtube_title": "2026 4대보험 급여명세서 자동계산 | 실수령액 엑셀 자동 인프런",
+    "youtube_description": "직원 급여 줄 때마다 4대보험 계산 헷갈리시죠?\n이름·급여 입력하면 국민연금·건강보험·고용보험·소득세 자동 계산.\n2026년 최신 요율 완전 반영 — 명세서 출력까지 한 번에.\n\n▶ 인프런에서 '급여명세서 자동계산' 검색\nhttps://www.inflearn.com/clip/1669\n\n#4대보험 #급여계산 #실수령액 #소상공인 #인프런",
+    "instagram_caption": "직원 급여 계산, 이제 엑셀이 알아서 합니다\n\n2026 4대보험 최신 요율 자동 적용\n국민연금 4.5% · 건강보험 3.545%\n실수령액 + 급여명세서 출력까지\n\n인프런에서 '급여명세서 자동계산' 검색\n\n#4대보험 #급여계산 #실수령액 #소상공인 #인프런",
+    "blog_title": "2026 4대보험 급여명세서 엑셀 자동계산 — 실수령액·소득세 한번에 (인프런)",
+    "blog_keywords": ["4대보험계산", "급여명세서양식", "실수령액계산", "간이세액표2026"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "직원 급여 줄 때마다 4대보험 얼마 떼야 하는지 검색하시나요?" },
+      { "startSec": 6.0, "text": "이름이랑 급여만 입력하면 국민연금, 건강보험, 고용보험, 소득세 다 자동으로 계산됩니다." },
+      { "startSec": 14.0, "text": "2026년 최신 요율 반영됐고, 급여명세서 출력까지 한 번에 됩니다." },
+      { "startSec": 21.0, "text": "인프런에서 급여명세서 자동계산 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "급여명세서", "pain": "4대보험 매번 검색하시나요?", "solution": "엑셀이 자동으로 계산" },
+      { "type": "feature", "icon": "💰", "title": "4대보험 완전 자동", "points": ["국민연금 4.5%", "건강보험 3.545%", "소득세·지방소득세 간이세액표"] },
+      { "type": "feature", "icon": "📄", "title": "명세서 출력까지", "points": ["실수령액 자동 계산", "급여명세서 인쇄 가능", "2026년 최신 요율"] },
+      { "type": "cta", "price": "₩19,000", "keyword": "급여명세서 자동계산" }
+    ],
+    "hashtags": ["4대보험", "급여계산", "실수령액", "소상공인", "인프런"]
+  },
+  "C": {
+    "clip": "부가세신고",
+    "clipId": "1670",
+    "url": "https://www.inflearn.com/clip/1670",
+    "youtube_title": "부가세 신고 납부세액 자동계산 | 매출매입 입력만 하면 끝 인프런",
+    "youtube_description": "부가세 신고 기간마다 납부세액 계산 어렵지 않으신가요?\n매출·매입 입력만 하면 공제 가능 세액 자동 분리, 납부세액 자동 산출.\n연 4회 신고 기간(1·4·7·10월) 자동 표시.\n\n▶ 인프런에서 '부가세 신고 자동계산' 검색\nhttps://www.inflearn.com/clip/1670\n\n#부가세신고 #납부세액 #소상공인부가세 #인프런",
+    "instagram_caption": "부가세 신고, 이제 계산기 필요 없어요\n\n매출·매입 숫자만 입력\n→ 납부세액 자동 산출\n→ 공제 가능 세액 자동 분리\n\n인프런에서 '부가세 신고 자동계산' 검색\n\n#부가세신고 #납부세액 #소상공인 #자영업자 #인프런",
+    "blog_title": "부가세 신고 납부세액 자동계산 엑셀 — 매출·매입 입력만 하면 끝 (인프런)",
+    "blog_keywords": ["부가세신고", "납부세액계산", "소상공인부가세", "부가세계산기"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "부가세 신고 기간마다 납부세액 계산 때문에 고민하시나요?" },
+      { "startSec": 6.0, "text": "매출이랑 매입 숫자만 입력하면 납부세액이 자동으로 계산됩니다." },
+      { "startSec": 13.0, "text": "공제 가능한 매입세액도 자동으로 분리해줘요. 세무사 맡기기 전에 먼저 확인해보기 딱 좋아요." },
+      { "startSec": 21.0, "text": "인프런에서 부가세 신고 자동계산 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "부가세 신고", "pain": "납부세액 계산 헷갈리시죠?", "solution": "매출·매입만 입력하면 자동" },
+      { "type": "feature", "icon": "🧾", "title": "납부세액 자동 산출", "points": ["매출세액 자동 계산", "매입세액공제 자동 분리", "연 4회 신고기간 표시"] },
+      { "type": "feature", "icon": "📊", "title": "바로 활용 가능", "points": ["홈택스 신고 전 미리 확인", "일반과세자 기준", "환급액도 자동 표시"] },
+      { "type": "cta", "price": "₩25,000", "keyword": "부가세 신고 자동계산" }
+    ],
+    "hashtags": ["부가세신고", "납부세액", "소상공인부가세", "자영업자", "인프런"]
+  },
+  "D": {
+    "clip": "경비장부",
+    "clipId": "1671",
+    "url": "https://www.inflearn.com/clip/1671",
+    "youtube_title": "소상공인 경비 장부 자동계산 | 영수증 입력 → 부가세 분리 월별 집계",
+    "youtube_description": "영수증 쌓아놨다가 종합소득세 신고 때 당황하신 적 있으신가요?\n항목·금액 입력하면 부가세 포함·별도 자동 분리, 카테고리별 공제 기준 자동 표시.\n월별·연간 집계 자동 — 종합소득세 신고 시 바로 활용.\n\n▶ 인프런에서 '소상공인 경비장부' 검색\nhttps://www.inflearn.com/clip/1671\n\n#경비장부 #간편장부 #소상공인경비 #종합소득세 #인프런",
+    "instagram_caption": "영수증 정리, 이젠 엑셀 한 장으로\n\n항목 입력 → 부가세 자동 분리\n카테고리별 공제 기준 자동 표시\n월별·연간 집계까지 한번에\n\n인프런에서 '소상공인 경비장부' 검색\n\n#경비장부 #간편장부 #소상공인 #자영업자 #인프런",
+    "blog_title": "소상공인 경비 장부 자동계산 엑셀 — 영수증 입력만 하면 부가세 분리·월별 집계 완료 (인프런)",
+    "blog_keywords": ["경비장부", "간편장부", "소상공인경비처리", "종합소득세경비"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "영수증 쌓아놨다가 종합소득세 신고 때 한꺼번에 정리하시나요?" },
+      { "startSec": 6.0, "text": "항목이랑 금액만 입력하면 부가세 자동으로 분리되고 월별로 집계가 돼요." },
+      { "startSec": 13.0, "text": "카테고리별 세금 공제 기준도 자동으로 표시해줘서 뭐가 공제되는지 바로 알 수 있어요." },
+      { "startSec": 21.0, "text": "인프런에서 소상공인 경비 장부 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "경비 장부", "pain": "영수증 정리 막막하시죠?", "solution": "입력만 하면 자동 분류" },
+      { "type": "feature", "icon": "📒", "title": "자동 분류·집계", "points": ["부가세 포함/별도 자동 분리", "카테고리별 공제 기준 표시", "월별·연간 집계 자동"] },
+      { "type": "feature", "icon": "✅", "title": "세금 신고에 바로 활용", "points": ["종합소득세 신고용", "임차료·인건비·소모품 분류", "간편장부 대체 가능"] },
+      { "type": "cta", "price": "₩15,000", "keyword": "소상공인 경비장부" }
+    ],
+    "hashtags": ["경비장부", "간편장부", "소상공인", "종합소득세", "인프런"]
+  },
+  "E": {
+    "clip": "오라클클라우드",
+    "clipId": "1672",
+    "url": "https://www.inflearn.com/clip/1672",
+    "youtube_title": "Oracle Cloud 무료 서버 완전 정복 | 4코어 24GB 영구무료 n8n 설치",
+    "youtube_description": "AWS·카페24 서버 비용 매달 나가는 거 아깝지 않으신가요?\nOracle Cloud Always Free — 4코어 24GB ARM 서버 영구 무료.\n계정 생성부터 n8n Docker 설치, VCN 방화벽 오픈까지 단계별 가이드.\n\n▶ 인프런에서 'Oracle Cloud 무료 서버' 검색\nhttps://www.inflearn.com/clip/1672\n\n#OracleCloud #무료서버 #n8n #클라우드서버 #인프런",
+    "instagram_caption": "서버 비용 월 0원 가능합니다\n\nOracle Cloud Always Free\n4코어 24GB ARM 영구무료\n계정 생성 → n8n 설치까지 단계별\n\n인프런에서 'Oracle Cloud 무료 서버' 검색\n\n#OracleCloud #무료서버 #n8n #AWS대안 #인프런",
+    "blog_title": "Oracle Cloud 무료 서버 완전 정복 — 4코어 24GB 영구무료 서버에 n8n 설치하기 (인프런)",
+    "blog_keywords": ["오라클클라우드무료", "OracleCloudAlwaysFree", "무료VPS", "무료서버n8n"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "서버 비용이 매달 부담스러우신가요?" },
+      { "startSec": 4.0, "text": "오라클 클라우드는 4코어에 24기가바이트 서버를 영구적으로 무료로 줘요." },
+      { "startSec": 11.0, "text": "계정 만들기부터 n8n 도커 설치까지 단계별로 따라하면 누구나 할 수 있어요." },
+      { "startSec": 19.0, "text": "인프런에서 Oracle Cloud 무료 서버 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "Oracle Cloud", "pain": "서버 비용 매달 나가시나요?", "solution": "영구무료 서버로 해결" },
+      { "type": "feature", "icon": "☁️", "title": "영구무료 서버", "points": ["4코어 24GB ARM A1.Flex", "Always Free — 과금 없음", "AWS·카페24 대체 가능"] },
+      { "type": "feature", "icon": "🔧", "title": "처음부터 끝까지", "points": ["계정 생성 · SSH 접속", "VCN 방화벽 설정", "n8n Docker 설치"] },
+      { "type": "cta", "price": "₩22,000", "keyword": "Oracle Cloud 무료 서버" }
+    ],
+    "hashtags": ["OracleCloud", "무료서버", "n8n", "클라우드서버", "인프런"]
+  },
+  "F": {
+    "clip": "AI프롬프트",
+    "clipId": "1673",
+    "url": "https://www.inflearn.com/clip/1673",
+    "youtube_title": "소상공인 AI 프롬프트 100선 | ChatGPT Claude 마케팅·회계·계약서 즉시 사용",
+    "youtube_description": "ChatGPT·Claude 쓰고 싶은데 뭘 물어봐야 할지 모르시나요?\n소상공인 실무에 바로 쓸 수 있는 프롬프트 100개.\n마케팅·회계·직원관리·계약서·고객응대 — 대괄호만 바꾸면 즉시 사용.\n\n▶ 인프런에서 'AI 프롬프트 소상공인' 검색\nhttps://www.inflearn.com/clip/1673\n\n#AI프롬프트 #ChatGPT #Claude #소상공인AI #인프런",
+    "instagram_caption": "AI 어떻게 써야 할지 모르시나요?\n\n소상공인 실무용 프롬프트 100개\n마케팅·회계·직원관리·계약서·고객응대\n대괄호 변수만 바꾸면 즉시 사용\n\n인프런에서 'AI 프롬프트 소상공인' 검색\n\n#AI프롬프트 #ChatGPT #소상공인AI #인프런 #Claude",
+    "blog_title": "소상공인 AI 프롬프트 100선 — ChatGPT·Claude로 마케팅·회계·계약서 즉시 작성 (인프런)",
+    "blog_keywords": ["AI프롬프트", "ChatGPT프롬프트", "소상공인AI활용", "Claude프롬프트"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "챗지피티나 클로드 써보고 싶은데 뭘 물어봐야 할지 막막하시죠?" },
+      { "startSec": 7.0, "text": "소상공인 업무에 바로 쓸 수 있는 프롬프트 백 개를 정리했어요." },
+      { "startSec": 13.0, "text": "마케팅 홍보글, 직원 공지, 계약서 초안, 고객 응대 답변 — 대괄호 안 단어만 바꾸면 바로 사용됩니다." },
+      { "startSec": 22.0, "text": "인프런에서 AI 프롬프트 소상공인 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "AI 프롬프트 100선", "pain": "AI 어떻게 써야 할지 모르겠다?", "solution": "100개 복붙하면 끝" },
+      { "type": "feature", "icon": "🤖", "title": "8개 카테고리 100개", "points": ["마케팅·SNS 홍보글", "직원관리·계약서 초안", "고객응대·불만 처리"] },
+      { "type": "feature", "icon": "⚡", "title": "즉시 사용 가능", "points": ["[대괄호] 변수만 교체", "ChatGPT·Claude 모두 사용", "PDF 파일 제공"] },
+      { "type": "cta", "price": "₩29,000", "keyword": "AI 프롬프트 소상공인" }
+    ],
+    "hashtags": ["AI프롬프트", "ChatGPT", "소상공인AI", "인프런", "Claude"]
+  }
+}

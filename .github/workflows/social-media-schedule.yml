@@ -4,6 +4,8 @@ name: 소셜미디어 자동 스케줄 업로드
 # KST = UTC+9  →  09:00 KST = 00:00 UTC
 #
 # 스케줄:
+#   일 09:00 KST → 인프런 YouTube Shorts
+#   일 10:30 KST → 인프런 Instagram Reels
 #   월 09:00 KST → 용차앱 YouTube Shorts
 #   화 09:00 KST → FILO YouTube Shorts
 #   화 10:30 KST → FILO Instagram Reels
@@ -17,6 +19,8 @@ name: 소셜미디어 자동 스케줄 업로드
 
 on:
   schedule:
+    - cron: '0 0 * * 0'   # 일 09:00 KST → 인프런 YouTube
+    - cron: '30 1 * * 0'  # 일 10:30 KST → 인프런 Instagram
     - cron: '0 0 * * 1'   # 월 09:00 KST → 용차앱 YouTube
     - cron: '0 0 * * 2'   # 화 09:00 KST → FILO YouTube
     - cron: '30 1 * * 2'  # 화 10:30 KST → FILO Instagram
@@ -114,16 +118,18 @@ jobs:
             # github.event.schedule 값으로 정확히 매칭 (시간 지연에 무관)
             SCHEDULE="${{ github.event.schedule }}"
             case "$SCHEDULE" in
-              "0 0 * * 1")  PRODUCT="yongcha";  PLATFORMS="youtube";   REASON="월 09:00 KST 자동" ;;
-              "0 0 * * 2")  PRODUCT="filo";      PLATFORMS="youtube";   REASON="화 09:00 KST 자동" ;;
-              "30 1 * * 2") PRODUCT="filo";      PLATFORMS="instagram"; REASON="화 10:30 KST 자동" ;;
-              "0 0 * * 3")  PRODUCT="inflearn";  PLATFORMS="youtube";   REASON="수 09:00 KST 자동" ;;
-              "30 1 * * 3") PRODUCT="inflearn";  PLATFORMS="instagram"; REASON="수 10:30 KST 자동" ;;
-              "0 0 * * 4")  PRODUCT="donway";    PLATFORMS="youtube";   REASON="목 09:00 KST 자동" ;;
-              "30 1 * * 4") PRODUCT="donway";    PLATFORMS="instagram"; REASON="목 10:30 KST 자동" ;;
-              "0 0 * * 5")  PRODUCT="dine";      PLATFORMS="youtube";   REASON="금 09:00 KST 자동" ;;
-              "30 1 * * 5") PRODUCT="dine";      PLATFORMS="instagram"; REASON="금 10:30 KST 자동" ;;
-              "0 0 * * 6")  PRODUCT="inflearn";  PLATFORMS="youtube";   REASON="토 09:00 KST 자동" ;;
+              "0 0 * * 0")  PRODUCT="inflearn";  PLATFORMS="youtube";   REASON="일 09:00 KST 자동" ;;
+              "30 1 * * 0") PRODUCT="inflearn";  PLATFORMS="instagram"; REASON="일 10:30 KST 자동" ;;
+              "0 0 * * 1")  PRODUCT="yongcha";   PLATFORMS="youtube";   REASON="월 09:00 KST 자동" ;;
+              "0 0 * * 2")  PRODUCT="filo";       PLATFORMS="youtube";   REASON="화 09:00 KST 자동" ;;
+              "30 1 * * 2") PRODUCT="filo";       PLATFORMS="instagram"; REASON="화 10:30 KST 자동" ;;
+              "0 0 * * 3")  PRODUCT="inflearn";   PLATFORMS="youtube";   REASON="수 09:00 KST 자동" ;;
+              "30 1 * * 3") PRODUCT="inflearn";   PLATFORMS="instagram"; REASON="수 10:30 KST 자동" ;;
+              "0 0 * * 4")  PRODUCT="donway";     PLATFORMS="youtube";   REASON="목 09:00 KST 자동" ;;
+              "30 1 * * 4") PRODUCT="donway";     PLATFORMS="instagram"; REASON="목 10:30 KST 자동" ;;
+              "0 0 * * 5")  PRODUCT="dine";       PLATFORMS="youtube";   REASON="금 09:00 KST 자동" ;;
+              "30 1 * * 5") PRODUCT="dine";       PLATFORMS="instagram"; REASON="금 10:30 KST 자동" ;;
+              "0 0 * * 6")  PRODUCT="inflearn";   PLATFORMS="youtube";   REASON="토 09:00 KST 자동" ;;
               *)
                 echo "스케줄 매칭 없음: SCHEDULE=$SCHEDULE — 건너뜀"
                 echo "PRODUCT=skip" >> $GITHUB_OUTPUT
@@ -205,6 +211,17 @@ jobs:
           DRY_FLAG="${{ steps.target.outputs.DRY_FLAG }}"
           echo "[$PRODUCT] Instagram Reels 업로드..."
           node scripts/upload/upload-instagram-api.js --product "$PRODUCT" $DRY_FLAG
+
+      - name: 네이버 블로그 게시
+        if: >-
+          steps.target.outputs.PRODUCT != 'skip' &&
+          contains(steps.target.outputs.PLATFORMS, 'youtube')
+        run: |
+          PRODUCT="${{ steps.target.outputs.PRODUCT }}"
+          DRY_FLAG="${{ steps.target.outputs.DRY_FLAG }}"
+          echo "[$PRODUCT] 네이버 블로그 게시..."
+          node scripts/upload/post-naver-blog.js --product "$PRODUCT" $DRY_FLAG \
+            || echo "[$PRODUCT] 블로그 게시 건너뜀 (세션 없거나 차단)"
 
       - name: 결과 아티팩트 업로드
         if: always() && steps.target.outputs.PRODUCT != 'skip'

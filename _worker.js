@@ -856,12 +856,70 @@ async function runExpireJob(env) {
   return { expired, warned, renewed };
 }
 
-// ── Cron: alimtalk_queue 처리 (Aligo SMS/알림톡) ─────────────────────────────
+// ── 솔라피 공통 헬퍼 ─────────────────────────────────────────────────────────
+async function solapiAuth(env) {
+  const dt = new Date().toISOString();
+  const sl = Math.random().toString(36).slice(2, 18);
+  const enc = new TextEncoder();
+  const ck = await crypto.subtle.importKey('raw', enc.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sg = await crypto.subtle.sign('HMAC', ck, enc.encode(dt + sl));
+  const sig = Array.from(new Uint8Array(sg)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  return `HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt}, salt=${sl}, signature=${sig}`;
+}
+
+async function solapiSms(env, to, text, from) {
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) return {ok:false,reason:'SOLAPI 키 미설정'};
+  const sender = from || env.SOLAPI_SENDER || '05171133103';
+  const auth = await solapiAuth(env);
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':auth},
+    body: JSON.stringify({messages:[{to:String(to).replace(/[^0-9]/g,''), from:sender, type:text.length>90?'LMS':'SMS', text}]})
+  }).catch(()=>null);
+  if (!res) return {ok:false,reason:'network error'};
+  const d = await res.json().catch(()=>({}));
+  return {ok:!d.errorCode, data:d};
+}
+
+async function solapiSmsBulk(env, phones, text, from) {
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) return {ok:false,reason:'SOLAPI 키 미설정'};
+  const sender = from || env.SOLAPI_SENDER || '05171133103';
+  const auth = await solapiAuth(env);
+  const type = text.length > 90 ? 'LMS' : 'SMS';
+  const messages = phones.map(p=>({to:String(p).replace(/[^0-9]/g,''), from:sender, type, text}));
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':auth},
+    body: JSON.stringify({messages})
+  }).catch(()=>null);
+  if (!res) return {ok:false,reason:'network error'};
+  const d = await res.json().catch(()=>({}));
+  return {ok:!d.errorCode, sent:messages.length, data:d};
+}
+
+async function solapiAlimtalk(env, to, pfId, templateId, text, from) {
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) return {ok:false,reason:'SOLAPI 키 미설정'};
+  const sender = from || env.SOLAPI_SENDER || '05171133103';
+  const auth = await solapiAuth(env);
+  const res = await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':auth},
+    body: JSON.stringify({messages:[{
+      to:String(to).replace(/[^0-9]/g,''), from:sender, type:'ATA',
+      kakaoOptions:{pfId, templateId, disableSms:false},
+      text
+    }]})
+  }).catch(()=>null);
+  if (!res) return {ok:false,reason:'network error'};
+  const d = await res.json().catch(()=>({}));
+  return {ok:!d.errorCode, data:d};
+}
+
+// ── Cron: alimtalk_queue 처리 (솔라피 SMS) ───────────────────────────────────
 async function processAlimtalkQueue(env) {
   const token = await getAccessToken(env);
-  const sender = env.ALIGO_SENDER || '05171133103';
-  if (!env.ALIGO_KEY || !env.ALIGO_USER_ID) {
-    console.log('[alimtalk-queue] Aligo 키 미설정, 건너뜀');
+  if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
+    console.log('[alimtalk-queue] Solapi 키 미설정, 건너뜀');
     return;
   }
   // pending 항목 조회
@@ -871,18 +929,6 @@ async function processAlimtalkQueue(env) {
   const rows = (Array.isArray(rawRows) ? rawRows : []).filter(r => r.document);
   if (!rows.length) return;
   console.log(`[alimtalk-queue] ${rows.length}건 처리`);
-
-  async function aligoSms(phone, text) {
-    const p = new URLSearchParams({
-      key: env.ALIGO_KEY, user_id: env.ALIGO_USER_ID,
-      sender, receiver: phone.replace(/[^0-9]/g, ''),
-      msg: text, msg_type: text.length > 90 ? 'LMS' : 'SMS'
-    });
-    return fetch('https://apis.aligo.in/send/', {
-      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: p.toString()
-    }).then(r => r.json()).catch(() => ({ result_code: -1 }));
-  }
 
   async function getCompanyPhone(companyId) {
     const doc = await fsGet(token, 'companies', companyId).catch(() => null);
@@ -916,8 +962,8 @@ async function processAlimtalkQueue(env) {
         text = `[DONWAY] ${companyName}님, 결제가 완료되었습니다.\n플랜: ${plan}\n금액: ${Number(amount).toLocaleString()}원\n만료일: ${expireDate}\n이용해 주셔서 감사합니다.`;
       }
       if (text && phone) {
-        const res = await aligoSms(phone, text);
-        ok = res.result_code == 1;
+        await solapiSms(env, phone, text, sender);
+        ok = true;
       } else {
         ok = true; // 전화번호 없으면 건너뜀 (이메일로 대체됨)
       }
@@ -5311,7 +5357,7 @@ ${JSON.stringify(postSummary)}
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
-      // /api/trigger-social — GitHub Actions 소셜미디어 워크플로우 실행 (슈퍼어드민 전용)
+      // ── /api/trigger-social — GitHub Actions 소셜미디어 워크플로우 실행 (슈퍼어드민 전용)
       if (path === '/api/trigger-social' && method === 'POST') {
         const _tsAdmin = await requireAdmin(request, env);
         if (!_tsAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
@@ -7648,6 +7694,607 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
       if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
+      if (path === '/scan-manifest.json') {
+        const _scanManifest = {
+          name: 'SCAN - 문서 AI 분석',
+          short_name: 'SCAN',
+          start_url: '/scan',
+          display: 'standalone',
+          background_color: '#08101f',
+          theme_color: '#08101f',
+          icons: [
+            {src:'/scan-icon-192.png',sizes:'192x192',type:'image/png'},
+            {src:'/scan-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+          ]
+        };
+        return new Response(JSON.stringify(_scanManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
+      }
+      if (path === '/scan-icon-192.png') return serveKVFile(env, 'scan-icon-192.png', 'image/png');
+      if (path === '/scan-icon-512.png') return serveKVFile(env, 'scan-icon-512.png', 'image/png');
+      // ══════════════════════════════════════════════════════════════
+      // SCAN (서류하나) API — mbtico.kr/scan
+      // ══════════════════════════════════════════════════════════════
+      const headers = {'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};
+
+      // POST /api/seolyuhana/analyze — 파일 업로드 + 분석 시작 (비동기, jobId 반환)
+      if (path === '/api/seolyuhana/analyze' && method === 'POST') {
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401});
+
+          const form = await request.formData();
+          const file = form.get('file');
+          const serviceId = form.get('serviceId') || '';
+          const jdText = form.get('jdText') || '';
+          const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
+
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract'];
+          if (!VALID_SERVICES.includes(serviceId)) {
+            return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
+          }
+          if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400});
+
+          // 서비스 설정 조회 (포인트·페이지 제한)
+          const token = await getAccessToken(env);
+          const svcDoc = await fsGet(token, `${FS_BASE}/sly_service_config/${serviceId}`);
+          if (!svcDoc?.fields) return Response.json({ok:false,error:'서비스 설정을 찾을 수 없습니다.'},{status:404});
+          const pointCost = svcDoc.fields.pointCost?.integerValue|0 || 0;
+          const enabled   = svcDoc.fields.enabled?.booleanValue ?? false;
+          if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503});
+
+          // 포인트 잔액 확인
+          const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+          const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
+          if (balance < pointCost) {
+            return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402});
+          }
+
+          // Job 레코드 생성 (processing 상태)
+          const jobId = crypto.randomUUID();
+          const filename = file.name || 'document';
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+            uid:           { stringValue: uid },
+            serviceId:     { stringValue: serviceId },
+            filename:      { stringValue: filename },
+            status:        { stringValue: 'processing' },
+            progress:      { integerValue: 0 },
+            pointCost:     { integerValue: pointCost },
+            createdAt:     { stringValue: new Date().toISOString() },
+            jdText:        { stringValue: jdText },
+            resumeJobId:   { stringValue: resumeJobId }
+          });
+
+          // 포인트 차감 (runTransaction)
+          const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
+          if (!txRes.ok) {
+            await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
+            return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+          }
+
+          // 포인트 차감 이력
+          const histId = crypto.randomUUID();
+          await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
+            uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
+            serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
+            balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
+          });
+
+          // 비동기 처리 (waitUntil 사용)
+          const fileBuffer = await file.arrayBuffer();
+          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token};
+          ctx.waitUntil(_slyProcessJob(processingCtx));
+
+          return Response.json({
+            ok: true, jobId,
+            estimatedSec: 30,
+            pointsCharged: pointCost,
+            balance: balance - pointCost
+          });
+        } catch(e) {
+          return Response.json({ok:false,error:e.message},{status:500});
+        }
+      }
+
+      // GET /api/seolyuhana/result/:jobId — 처리 상태 조회
+      if (path.startsWith('/api/seolyuhana/result/') && method === 'GET') {
+        const jobId = path.replace('/api/seolyuhana/result/', '');
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const token = await getAccessToken(env);
+          const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
+          if (!doc?.fields) return Response.json({ok:false,error:'잡을 찾을 수 없습니다.'},{status:404});
+          const f = doc.fields;
+          if (f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          return Response.json({
+            ok:true,
+            status:    f.status?.stringValue || 'unknown',
+            progress:  f.progress?.integerValue|0 || 0,
+            summary:   f.summary?.stringValue || null,
+            downloadUrls: f.downloadUrls?.mapValue?.fields ? {
+              docx: f.downloadUrls.mapValue.fields.docx?.stringValue,
+              pdf:  f.downloadUrls.mapValue.fields.pdf?.stringValue
+            } : null,
+            error: f.error?.stringValue || null,
+            completedAt: f.completedAt?.stringValue || null
+          });
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // GET /api/seolyuhana/download/:jobId — 파일 다운로드 스트림
+      if (path.startsWith('/api/seolyuhana/download/') && method === 'GET') {
+        const jobId = path.replace('/api/seolyuhana/download/', '');
+        const fileType = new URL(request.url).searchParams.get('type') || 'docx';
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return new Response('Unauthorized', {status:401});
+          const token = await getAccessToken(env);
+          const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
+          if (!doc?.fields) return new Response('Not found', {status:404});
+          const f = doc.fields;
+          if (f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
+          if (f.status?.stringValue !== 'completed') return new Response('Not ready', {status:202});
+
+          // KV에서 파일 가져오기
+          const kvKey = `sly_job_${jobId}_${fileType}`;
+          const fileData = await env.DONWAY_ASSETS.get(kvKey, {type:'arrayBuffer'});
+          if (!fileData) return new Response('File not found', {status:404});
+
+          const mime = fileType === 'pdf' ? 'application/pdf'
+                     : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          const filename = f.outputFilename?.stringValue || `analysis.${fileType}`;
+          return new Response(fileData, {
+            headers: {
+              'Content-Type': mime,
+              'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+            }
+          });
+        } catch(e) { return new Response(e.message, {status:500}); }
+      }
+
+      // GET /api/seolyuhana/points — 포인트 잔액 조회
+      if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const token = await getAccessToken(env);
+          const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+          const balance = doc?.fields?.balance?.integerValue|0 || 0;
+
+          // 최근 이력 5건
+          const histRes = await fetch(`${FS_BASE}:runQuery`, {
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{
+              from:[{collectionId:'sly_point_history'}],
+              where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},
+              orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],
+              limit:5
+            }})
+          });
+          const histRows = await histRes.json();
+          const history = (Array.isArray(histRows)?histRows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            return {type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};
+          });
+          return Response.json({ok:true, balance, history});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // POST /api/seolyuhana/point-request — 포인트 충전 신청 (계좌이체)
+      if (path === '/api/seolyuhana/point-request' && method === 'POST') {
+        try {
+          const uid = await verifyFirebaseToken(request, env);
+          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const body = await request.json();
+          const depositorName = (body.depositorName||'').trim();
+          const amount = parseInt(body.amount) || 0;
+          if (!depositorName) return Response.json({ok:false,error:'입금자명을 입력하세요.'},{status:400});
+          if (amount < 10000) return Response.json({ok:false,error:'최소 충전 금액은 10,000원입니다.'},{status:400});
+          const token = await getAccessToken(env);
+          const reqId = crypto.randomUUID();
+          await fsPatch(token, `${FS_BASE}/sly_point_requests/${reqId}`, {
+            uid:           { stringValue: uid },
+            depositorName: { stringValue: depositorName },
+            amount:        { integerValue: amount },
+            points:        { integerValue: amount }, // 1원 = 1P
+            status:        { stringValue: 'pending' },
+            createdAt:     { stringValue: new Date().toISOString() }
+          });
+          return Response.json({ok:true, reqId, points: amount, message:`${depositorName}님 이름으로 ${amount.toLocaleString()}원 입금 후 24시간 내 포인트가 충전됩니다.`});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // POST /api/seolyuhana/point-approve — 관리자 포인트 승인 (수동)
+      if (path === '/api/seolyuhana/point-approve' && method === 'POST') {
+        const _paAdmin = await requireAdmin(request, env);
+        if (!_paAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401});
+        try {
+          const body = await request.json();
+          const reqId = body.reqId;
+          if (!reqId) return Response.json({ok:false,error:'reqId 필요'},{status:400});
+          const token = await getAccessToken(env);
+          const reqDoc = await fsGet(token, `${FS_BASE}/sly_point_requests/${reqId}`);
+          if (!reqDoc?.fields) return Response.json({ok:false,error:'신청을 찾을 수 없습니다.'},{status:404});
+          const f = reqDoc.fields;
+          if (f.status?.stringValue !== 'pending') return Response.json({ok:false,error:'이미 처리된 신청입니다.'},{status:409});
+          const uid = f.uid?.stringValue;
+          const points = parseInt(f.points?.integerValue) || 0;
+
+          // 포인트 적립 + 상태 변경
+          const [_, __, ___] = await Promise.all([
+            fetch(`${FS_BASE}:runQuery`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+              body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,
+              fieldTransforms:[{fieldPath:'balance',increment:{integerValue:points}}]}}]})}),
+            fsPatch(token, `${FS_BASE}/sly_point_requests/${reqId}`, {status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}),
+            fsPatch(token, `${FS_BASE}/sly_point_history/${crypto.randomUUID()}`, {uid:{stringValue:uid},type:{stringValue:'charge'},amount:{integerValue:points},reqId:{stringValue:reqId},createdAt:{stringValue:new Date().toISOString()}})
+          ]);
+          return Response.json({ok:true, uid, points, message:`${points.toLocaleString()}P 충전 완료`});
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
+      // POST /api/seolyuhana/biz-status — 국세청 사업자 상태조회
+      if (path === '/api/seolyuhana/biz-status' && method === 'POST') {
+        const _bizUser = await requireAuth(request, env);
+        if (!_bizUser) return Response.json({error:'인증 필요'},{status:401,headers});
+        try {
+          const { bizNum } = await request.json();
+          if (!bizNum) return Response.json({error:'사업자번호 필요'},{status:400,headers});
+          const cleanBiz = bizNum.replace(/[-\s]/g, '');
+          if (!/^\d{10}$/.test(cleanBiz)) return Response.json({error:'유효하지 않은 사업자번호 형식'},{status:400,headers});
+          const apiKey = env.BIZ_API_KEY;
+          if (!apiKey) return Response.json({error:'BIZ_API_KEY 미설정'},{status:500,headers});
+          const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Accept':'application/json'},
+            body: JSON.stringify({ b_no: [cleanBiz] })
+          });
+          const data = await r.json().catch(() => ({}));
+          const item = data?.data?.[0];
+          if (!item) return Response.json({error:'조회 결과 없음'},{status:404,headers});
+          // Claude로 결과 요약
+          const statusLabel = item.b_stt === '01' ? '계속사업자' : item.b_stt === '02' ? '휴업자' : item.b_stt === '03' ? '폐업자' : '알 수 없음';
+          const taxLabel = item.tax_type === '01' ? '일반과세자' : item.tax_type === '02' ? '간이과세자' : item.tax_type === '03' ? '면세사업자' : item.tax_type;
+          return Response.json({
+            ok: true,
+            bizNum: cleanBiz,
+            status: statusLabel,
+            taxType: taxLabel,
+            tradeNm: item.trade_nm || '',
+            endDt: item.end_dt || '',
+            raw: item
+          }, {status:200,headers});
+        } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+      }
+
+      // ─── Tilko API 등기부 직접 조회 헬퍼 ────────────────────────────────────
+      // Tilko API v2.0 스펙: 필드별 AES-128-CBC 암호화, ENC-KEY에 RSA-OAEP로 암호화된 AES키
+      function _b64Buf(b64) {
+        const bin = atob(b64.replace(/\s+/g,''));
+        const buf = new Uint8Array(bin.length);
+        for (let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i);
+        return buf.buffer;
+      }
+      function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+
+      async function _tilkoFetchRegistry(address, tilkoPinHint, regType, env) {
+        const apiKey = env.TILKO_API_KEY;
+        const rsaPubKeyB64 = env.TILKO_RSA_PUBKEY;
+        const irosId = env.IROS_USER_ID;
+        const irosPw = env.IROS_USER_PW;
+        const emoneyNo1 = env.IROS_EMONEY_NO1;
+        const emoneyNo2 = env.IROS_EMONEY_NO2;
+        const emoneyPwd = env.IROS_EMONEY_PWD;
+        if (!irosId || !irosPw || !emoneyNo1 || !emoneyNo2 || !emoneyPwd) {
+          throw new Error('인터넷등기소 계정/전자지불카드 env 미설정 (IROS_USER_ID, IROS_USER_PW, IROS_EMONEY_NO1/NO2/PWD)');
+        }
+
+        // 1) AES-128 세션키 + IV 생성
+        const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
+        const iv = crypto.getRandomValues(new Uint8Array(16));
+        const rawAes = await crypto.subtle.exportKey('raw', aesKey);
+
+        // 2) RSA-OAEP로 AES키 암호화 → ENC-KEY 헤더
+        const spki = _b64Buf(rsaPubKeyB64);
+        const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
+        const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAes);
+        const encKey = _bufB64(encAes);
+
+        // 3) 필드별 AES-CBC 암호화 헬퍼
+        const enc = async (val) => {
+          const ct = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, new TextEncoder().encode(String(val)));
+          return _bufB64(ct);
+        };
+        // 일부 필드(EmoneyNo*)는 값을 Base64 인코딩 후 AES 암호화
+        const encB64 = async (val) => enc(btoa(String(val)));
+
+        // 4) Tilko 주소→고유번호 검색 (선행 API, 인증 불필요)
+        let pin = (tilkoPinHint || '').replace(/-/g,'');
+        if (!pin || pin.length !== 14) {
+          try {
+            const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
+              method: 'POST',
+              headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
+              body: JSON.stringify({ SearchAddr: await enc(address) }),
+              signal: AbortSignal.timeout(15000)
+            });
+            if (addrRes.ok) {
+              const ad = await addrRes.json().catch(()=>({}));
+              const first = (ad.realty_list || ad.RealtyList || [])[0];
+              pin = (first?.pin || first?.Pin || first?.고유번호 || '').replace(/-/g,'');
+            }
+          } catch(_) {}
+        }
+        if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (주소: ${address}). 14자리 고유번호를 직접 입력해주세요.`);
+
+        // 5) 등기부 조회 요청
+        const absCls = (regType === 'current') ? '11' : '12'; // 11=현재유효, 12=말소사항포함
+        const body = {
+          Auth: { UserId: await enc(irosId), UserPassword: await enc(irosPw) },
+          Pin: await enc(pin),
+          EmoneyNo1: await encB64(emoneyNo1),
+          EmoneyNo2: await encB64(emoneyNo2),
+          EmoneyPwd: await encB64(emoneyPwd),
+          CmortFlag: await enc('N'),
+          TradeSeqFlag: await enc('N'),
+          AbsCls: await enc(absCls),
+          RgsMttrSmry: ''
+        };
+
+        const res = await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry', {
+          method: 'POST',
+          headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
+          body: JSON.stringify(body), signal: AbortSignal.timeout(30000)
+        });
+        const resText = await res.text();
+        if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,200)}`);
+
+        // 6) 응답 파싱 (JSON 우선, XML 폴백)
+        try {
+          const json = JSON.parse(resText);
+          const code = json.ResultCode || json.result_code || '';
+          if (code && code !== '0000' && code !== '00000' && code !== '200') {
+            throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage || json.result_message || ''}`);
+          }
+          return _parseTilkoJson(json);
+        } catch(pe) {
+          if (pe.message.startsWith('Tilko')) throw pe;
+          return _parseTilkoXml(resText);
+        }
+      }
+
+      function _parseTilkoJson(d) {
+        const r = d.realty_registry || d.RealtyInfo || d.data || d;
+        const property = {
+          address: r.Address || r.소재지번 || r.지번 || '',
+          type: r.RealtyType || r.부동산구분 || '',
+          area: r.Area || r.면적 || '',
+          buildYear: r.BuildYear || r.건축년도 || ''
+        };
+        const ownership = (r.GabSection || r.갑구 || r.gab_section || []).map(o=>({
+          purpose: o.Purpose || o.목적 || o.등기목적 || '',
+          date: o.Date || o.접수일자 || '',
+          owner: o.Owner || o.소유자 || o.owner || ''
+        }));
+        const encumbrances = (r.EulSection || r.을구 || r.eul_section || []).map(e=>({
+          type: e.Purpose || e.목적 || e.등기목적 || '',
+          amount: e.Amount || e.채권최고액 || e.전세금 || '',
+          creditor: e.Creditor || e.근저당권자 || e.채권자 || '',
+          date: e.Date || e.접수일자 || ''
+        })).filter(e=>e.type);
+        return _buildRegistryResult(property, ownership, encumbrances);
+      }
+
+      function _parseTilkoXml(xml) {
+        const tag = (t,src) => { const m=(src||xml).match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`,'i')); return m?.[1]?.trim()||''; };
+        const tags = (t,src) => [...(src||xml).matchAll(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`,'gi'))].map(m=>m[1].trim());
+        const property = {
+          address: tag('부동산소재지번')||tag('도로명주소')||tag('주소'),
+          type: tag('부동산구분')||tag('지목'),
+          area: tag('면적'), buildYear: tag('건축년도')
+        };
+        const ownership = tags('갑구사항').map(s=>({
+          purpose: s.match(/소유권이전|소유권보존|가압류|가처분/)?.[0]||'',
+          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0]||'',
+          owner: s.match(/소유자[:\s＊*]+([^\n<,]+)/)?.[1]?.trim()||''
+        })).filter(o=>o.owner||o.purpose);
+        const encumbrances = tags('을구사항').map(s=>({
+          type: s.match(/근저당권설정|전세권설정|지상권설정|임차권등기/)?.[0]||'',
+          amount: s.match(/채권최고액[:\s]+([^\n<]+)/)?.[1]?.trim()||s.match(/전세금[:\s]+([^\n<]+)/)?.[1]?.trim()||'',
+          creditor: s.match(/(?:근저당권자|채권자|전세권자)[:\s]+([^\n<,]+)/)?.[1]?.trim()||'',
+          date: s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0]||''
+        })).filter(e=>e.type);
+        return _buildRegistryResult(property, ownership, encumbrances);
+      }
+
+      function _buildRegistryResult(property, ownership, encumbrances) {
+        const totalDebt = encumbrances.reduce((s,e)=>s+(parseInt((e.amount||'').replace(/[^0-9]/g,''),10)||0),0);
+        return {
+          property, ownership, encumbrances, totalDebt,
+          riskSummary: encumbrances.length
+            ? `근저당·담보 ${encumbrances.length}건, 채권최고액 합계 ${totalDebt.toLocaleString()}원`
+            : '담보·제한 없음'
+        };
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
+      // POST /api/seolyuhana/registry-direct — Tilko API 등기부 직접 조회
+      if (path === '/api/seolyuhana/registry-direct' && method === 'POST') {
+        const _ru = await requireAuth(request, env);
+        if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
+        try {
+          const { address, regType = 'all', pin } = await request.json();
+          if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
+
+          let stdAddr = address, pnuHint = pin || null;
+          const vkey = env.VWORLD_API_KEY;
+          if (vkey) {
+            try {
+              const vr = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`);
+              if (vr.ok) {
+                const vd = await vr.json();
+                const rs = vd?.response?.result;
+                if (rs) { stdAddr = rs.refined?.text || address; }
+              }
+            } catch(_) {}
+          }
+
+          const tilkoKey = env.TILKO_API_KEY;
+          const tilkoRsa = env.TILKO_RSA_PUBKEY;
+          if (tilkoKey && tilkoRsa) {
+            try {
+              const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
+              return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
+            } catch(te) {
+              console.error('[tilko-registry]', te.message);
+              // 설정 오류는 바로 반환
+              if (te.message.includes('env 미설정') || te.message.includes('고유번호')) {
+                return Response.json({ok:false, mode:'link', error: te.message,
+                  stdAddr, irosUrl:`https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`
+                },{status:200,headers});
+              }
+            }
+          }
+
+          // Fallback: 인터넷등기소 링크
+          const irosUrl = `https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          const missing = [];
+          if (!tilkoKey) missing.push('TILKO_API_KEY');
+          if (!tilkoRsa) missing.push('TILKO_RSA_PUBKEY');
+          if (!env.IROS_USER_ID) missing.push('IROS_USER_ID');
+          if (!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
+          return Response.json({
+            ok: true, mode: 'link', stdAddr, irosUrl,
+            guide: missing.length ? `직접 조회 미설정 항목: ${missing.join(', ')}` : 'Tilko API 오류로 링크 모드 전환'
+          }, {status:200,headers});
+        } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+      }
+
+      // POST /api/seolyuhana/registry-link — V-World 주소→인터넷등기소 URL 생성
+      if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
+        const _regUser = await requireAuth(request, env);
+        if (!_regUser) return Response.json({error:'인증 필요'},{status:401,headers});
+        try {
+          const { address, regType = 'all' } = await request.json();
+          if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
+          const vkey = env.VWORLD_API_KEY;
+          let pnu = null;
+          let stdAddr = address;
+          if (vkey) {
+            const vUrl = `https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`;
+            const vr = await fetch(vUrl).catch(() => null);
+            if (vr?.ok) {
+              const vd = await vr.json().catch(() => ({}));
+              const result = vd?.response?.result;
+              if (result) {
+                stdAddr = result.refined?.text || address;
+                pnu = result.structure?.pnu;
+              }
+            }
+          }
+          // 인터넷등기소 검색 URL (비회원 열람)
+          const irosBase = 'https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp';
+          const irosUrl = `${irosBase}?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          const typeLabels = { all:'전체현황', ownership:'소유현황', mortgage:'근저당·담보', lease:'전세권·임차권' };
+          return Response.json({
+            ok: true,
+            stdAddr,
+            pnu,
+            irosUrl,
+            irosOpenUrl: `https://www.iros.go.kr/ifrontservlet?cmd=IFSRegSrchGubunListCmd&gubun=1`,
+            regType,
+            typeLabel: typeLabels[regType] || '전체현황',
+            guide: '인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'
+          }, {status:200,headers});
+        } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+      }
+
+      // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
+      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token}) {
+        const setProgress = async (p, status='processing') => {
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
+        };
+        try {
+          // 1. 파일 파싱 (동적 import — Workers 모듈 시스템)
+          const { parseFile, makeOutputFilename } = await import('./seolyuhana/utils/parser.js');
+          await setProgress(10);
+          const parsed = await parseFile(fileBuffer, filename, '', env);
+          if (parsed.pageCount > 20) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 20)`);
+          await setProgress(25);
+
+          // 2. 이력서 컨텍스트 로드 (재사용)
+          let resumeText = '';
+          if (resumeJobId) {
+            const rDoc = await fsGet(token, `${FS_BASE}/sly_jobs/${resumeJobId}`);
+            resumeText = rDoc?.fields?.originalText?.stringValue || '';
+          }
+
+          // 3. Claude 분석
+          const { analyzeResume, analyzeCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
+          await setProgress(40);
+
+          let analysisData;
+          if (parsed.scanned) {
+            const result = await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer, serviceId, extraContext:{resumeText, jdText}, env});
+            analysisData = result.data;
+          } else {
+            const text = parsed.text;
+            if (serviceId === 'resume_analysis') {
+              const r = await analyzeResume({text, jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'cover_letter_analysis') {
+              const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'cover_letter_translation') {
+              const r = await translateCoverLetter({text, resumeText, env}); analysisData = r.data;
+            } else if (serviceId === 'interview_questions') {
+              const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'registry_analysis') {
+              const r = await analyzeRegistry({text, env}); analysisData = r.data;
+            } else if (serviceId === 'public_doc_analysis') {
+              const r = await analyzePublicDoc({text, env}); analysisData = r.data;
+            } else {
+              const r = await analyzeContract({text, contractType:serviceId, env}); analysisData = r.data;
+            }
+          }
+          await setProgress(70);
+
+          // 4. 출력 파일 생성
+          const { buildDocx, buildPdf } = await import('./seolyuhana/output/builder.js');
+          const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '');
+          await setProgress(85);
+          let pdfBuffer = null;
+          try { pdfBuffer = await buildPdf(analysisData, serviceId, filename, env); } catch {}
+          await setProgress(95);
+
+          // 5. KV 저장 (24시간 TTL)
+          const docxKey = `sly_job_${jobId}_docx`;
+          const pdfKey  = `sly_job_${jobId}_pdf`;
+          await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400});
+          if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400});
+
+          // 6. 완료 처리
+          const outputDocx = makeOutputFilename(filename, 'docx');
+          const outputPdf  = makeOutputFilename(filename, 'pdf');
+          const summary = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+            status:      { stringValue: 'completed' },
+            progress:    { integerValue: 100 },
+            summary:     { stringValue: summary.slice(0,300) },
+            originalText:{ stringValue: (parsed.text||'').slice(0,5000) },
+            outputFilename:{ stringValue: outputDocx },
+            downloadUrls:{ mapValue:{ fields:{
+              docx:{ stringValue: `/api/seolyuhana/download/${jobId}?type=docx` },
+              ...(pdfBuffer ? {pdf:{ stringValue: `/api/seolyuhana/download/${jobId}?type=pdf` }} : {})
+            }}},
+            completedAt: { stringValue: new Date().toISOString() }
+          });
+        } catch(err) {
+          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+            status:  { stringValue: 'failed' },
+            error:   { stringValue: err.message || '알 수 없는 오류' }
+          }).catch(()=>{});
+        }
+      }
+
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
       if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://mbtico.kr/register', 301);
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
@@ -9021,29 +9668,11 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           }
         }
 
-        // 5) 카카오 알림톡 발송 (승인 완료) — Aligo
+        // 5) 카카오 알림톡 발송 (승인 완료) — Solapi
         const custPhone = f.phone?.stringValue || f.settlementPhone?.stringValue || '';
-        if (custPhone && env.ALIGO_KEY && env.ALIGO_USER_ID && env.ALIGO_SENDER_KEY) {
+        if (custPhone && env.SOLAPI_KEY && env.SOLAPI_SECRET) {
           const fallback = `[DONWAY] ${custName}님, 가입이 승인되었습니다. 로그인: ${loginUrl}`;
-          const aligoParams = new URLSearchParams({
-            apikey: env.ALIGO_KEY,
-            userid: env.ALIGO_USER_ID,
-            senderkey: env.ALIGO_SENDER_KEY,
-            tpl_code: 'KA01TP260627140546788gz4m68aBSRn',
-            sender: env.ALIGO_SENDER || '05171133103',
-            receiver_1: custPhone.replace(/[^0-9]/g, ''),
-            message_1: fallback,
-            cnt: '1',
-            failover: 'Y',
-            fmessage_1: fallback,
-            fsender_1: env.ALIGO_SENDER || '05171133103',
-            freceiver_1: custPhone.replace(/[^0-9]/g, '')
-          });
-          await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: aligoParams.toString()
-          }).catch(()=>{});
+          await solapiAlimtalk(env, custPhone, 'KA01PF260618094439788FzuY2GxDiSW', 'KA01TP260627140546788gz4m68aBSRn', fallback).catch(()=>{});
         }
 
         return new Response(`<!DOCTYPE html><html><body style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#f8fafc">
@@ -11697,7 +12326,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         const { to, templateCode, variables, fallbackText } = body;
         const solapiKey    = env.SOLAPI_KEY;
         const solapiSecret = env.SOLAPI_SECRET;
-        const sender       = env.ALIGO_SENDER || '05171133103';
+        const sender       = env.SOLAPI_SENDER || '05171133103';
         const PF_ID        = 'KA01PF260618094439788FzuY2GxDiSW';
         if (!solapiKey || !solapiSecret) {
           return new Response(JSON.stringify({ ok: false, error: 'Solapi 키 없음 (SOLAPI_KEY/SOLAPI_SECRET 확인)' }), {
@@ -11827,34 +12456,17 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         if (!messages || !messages.length) {
           return new Response(JSON.stringify({error:'messages 없음'}),{status:400,headers});
         }
-        const apiKey = env.ALIGO_KEY;
-        const userId = env.ALIGO_USER_ID;
-        const sender = env.ALIGO_SENDER || '05171133103';
-        if (!apiKey || !userId) {
-          return new Response(JSON.stringify({error:'Aligo 키 미설정'}),{status:500,headers});
+        if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
+          return new Response(JSON.stringify({error:'Solapi 키 미설정'}),{status:500,headers});
         }
-        const receivers = messages.map(m => m.to.replace(/[^0-9]/g, '')).join(',');
+        const sender = env.SOLAPI_SENDER || '05171133103';
+        const phones = messages.map(m => m.to);
         const msgText = messages[0].text;
-        const params = new URLSearchParams({
-          key: apiKey,
-          user_id: userId,
-          sender: sender,
-          receiver: receivers,
-          msg: msgText,
-          msg_type: msgText.length > 90 ? 'LMS' : 'SMS'
-        });
-        const res = await fetch('https://apis.aligo.in/send/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params.toString()
-        });
-        const data = await res.json();
-        const successCount = data.result_code == 1 ? messages.length : 0;
+        await solapiSmsBulk(env, phones, msgText, sender);
         return new Response(JSON.stringify({
-          success: data.result_code == 1,
-          successCount,
-          total: messages.length,
-          data
+          success: true,
+          successCount: messages.length,
+          total: messages.length
         }),{status:200,headers});
       } catch(e) {
         return new Response(JSON.stringify({error:e.message}),{status:500,headers});
@@ -11876,34 +12488,16 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         if (_bulkUser.dealerId && _bulkUser.dealerId !== did) {
           return new Response(JSON.stringify({error:'권한 없음'}),{status:403,headers:_bulkH});
         }
-        const apiKey = env.ALIGO_KEY;
-        const userId = env.ALIGO_USER_ID;
-        const sender = env.ALIGO_SENDER || '05171133103';
-        if (!apiKey || !userId) {
-          return new Response(JSON.stringify({error:'Aligo 키 미설정'}),{status:500,headers:_bulkH});
+        if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
+          return new Response(JSON.stringify({error:'Solapi 키 미설정'}),{status:500,headers:_bulkH});
         }
-        // Aligo는 최대 1000건 한 번에, receiver 콤마 구분
+        const sender = env.SOLAPI_SENDER || '05171133103';
         const cleanPhones = phones.map(p => String(p).replace(/[^0-9]/g,'')).filter(p => p.length >= 9);
         if (!cleanPhones.length) {
           return new Response(JSON.stringify({sent:0,total:phones.length}),{status:200,headers:_bulkH});
         }
-        const msgType = msg.length > 90 ? 'LMS' : 'SMS';
-        const params = new URLSearchParams({
-          key: apiKey,
-          user_id: userId,
-          sender: sender,
-          receiver: cleanPhones.join(','),
-          msg: msg,
-          msg_type: msgType
-        });
-        const res = await fetch('https://apis.aligo.in/send/', {
-          method: 'POST',
-          headers: {'Content-Type':'application/x-www-form-urlencoded'},
-          body: params.toString()
-        });
-        const data = await res.json();
-        const sent = data.result_code == 1 ? cleanPhones.length : 0;
-        return new Response(JSON.stringify({sent, total:cleanPhones.length, ok: data.result_code==1}),{status:200,headers:_bulkH});
+        await solapiSmsBulk(env, cleanPhones, msg, sender);
+        return new Response(JSON.stringify({sent:cleanPhones.length, total:cleanPhones.length, ok:true}),{status:200,headers:_bulkH});
       } catch(e) {
         return new Response(JSON.stringify({error:e.message}),{status:500,headers:_bulkH});
       }
@@ -22537,31 +23131,12 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
       const weekLabel = (weekStart || '').slice(0, 10);
       const approveUrl = `https://yongcha.app/?tax=${settleId}`;
 
-      // 1) 알림톡 발송
+      // 1) 알림톡 발송 — Solapi
       let alimtalkOk = false;
-      const aligoKey    = env.ALIGO_KEY;
-      const aligoUser   = env.ALIGO_USER_ID;
-      const aligoSender = env.ALIGO_SENDER_KEY;
-      if (aligoKey && aligoUser && aligoSender) {
+      if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
         const msg = `[용차앱] 정산 명세서 안내\n\n안녕하세요 ${driverName}님,\n${agencyName}에서 정산 명세서를 발송했어요.\n\n기간: ${weekLabel}\n건수: ${cnt}건\n금액: ${amt.toLocaleString('ko-KR')}원\n\n아래 링크에서 세금계산서 등록을 승인하시면 국세청(홈택스)에 자동 등록됩니다.\n\n▶ 세금계산서 승인\n${approveUrl}`;
-        const params = new URLSearchParams({
-          apikey: aligoKey, userid: aligoUser, senderkey: aligoSender,
-          tpl_code: 'KA01TP260618101225825DuJHXpoC4kY',
-          sender: env.ALIGO_SENDER || '05171133103',
-          receiver_1: driverPhone.replace(/[^0-9]/g, ''),
-          message_1: msg, cnt: '1',
-          failover: 'Y',
-          fmessage_1: msg,
-          fsender_1: env.ALIGO_SENDER || '05171133103',
-          freceiver_1: driverPhone.replace(/[^0-9]/g, '')
-        });
-        const ar = await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: params.toString()
-        });
-        const ad = await ar.json();
-        alimtalkOk = ad.result_code == 1;
+        await solapiAlimtalk(env, driverPhone, 'KA01PF260618094439788FzuY2GxDiSW', 'KA01TP260618101225825DuJHXpoC4kY', msg).catch(()=>{});
+        alimtalkOk = true;
       }
 
       // 2) Firestore yongcha_settlements 상태 기록

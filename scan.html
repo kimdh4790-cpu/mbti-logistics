@@ -1,1357 +1,1771 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#185FA5">
-<title>간선차 스캔 | LogiNet</title>
-<script src="/jsQR.min.js"></script>
+<title>SCAN - 문서 AI 분석</title>
+<link rel="manifest" href="/scan-manifest.json">
+<meta name="theme-color" content="#08101f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SCAN">
+<link rel="apple-touch-icon" href="/scan-icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/scan-icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap">
+
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Malgun Gothic',sans-serif;-webkit-tap-highlight-color:transparent}
-body{background:#f0f4f8;min-height:100vh;color:#1a1a18}
-.app{max-width:500px;margin:0 auto;padding:12px;padding-bottom:80px}
-.topbar{background:#185FA5;color:#fff;padding:14px 16px;border-radius:12px;margin-bottom:12px}
-.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:10px;border:1px solid rgba(0,0,0,.08)}
-.btn{padding:11px 16px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;width:100%;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn:active{transform:scale(.97)}
-.btn-blue{background:#185FA5;color:#fff}
-.btn-green{background:#0F6E56;color:#fff}
-.btn-orange{background:#f59e0b;color:#fff}
-.btn-gray{background:#f0f4f8;color:#444;border:1px solid #dde3ed}
-.btn-red{background:#dc2626;color:#fff}
-.btn-sm{width:auto;padding:6px 12px;font-size:12px;border-radius:8px}
-.field{margin-bottom:10px}
-.field label{font-size:11px;font-weight:600;color:#888;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
-.field input,.field select{width:100%;padding:9px 11px;border:1.5px solid #dde3ed;border-radius:8px;font-size:13px;outline:none}
-.field input:focus,.field select:focus{border-color:#185FA5}
-/* 모드 탭 */
-.mode-tab{display:flex;gap:0;background:#dde3ed;border-radius:10px;padding:3px;margin-bottom:12px}
-.mode-btn{flex:1;padding:10px;border-radius:8px;border:none;background:transparent;font-size:13px;font-weight:700;cursor:pointer;color:#888;transition:all .15s;text-align:center}
-.mode-btn.on{background:#fff;color:#185FA5;box-shadow:0 1px 4px rgba(0,0,0,.12)}
-/* 요약 바 */
-.sum-bar{border-radius:14px;padding:16px;color:#fff;margin-bottom:10px}
-.sum-bar-load{background:linear-gradient(135deg,#185FA5,#0c447c)}
-.sum-bar-recv{background:linear-gradient(135deg,#0F6E56,#064e3b)}
-.sum-total{font-size:52px;font-weight:900;line-height:1}
-.prog-bar{background:rgba(255,255,255,.25);border-radius:100px;height:8px;margin-top:10px;overflow:hidden}
-.prog-fill{background:#fff;border-radius:100px;height:100%;transition:width .3s}
-/* 노선 카드 */
-.route-row{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:6px;border:1px solid #dde3ed;display:flex;align-items:center;justify-content:space-between}
-.route-row.highlight{border-color:#185FA5;background:#e6f1fb}
-.route-cnt{font-size:26px;font-weight:900;color:#185FA5;min-width:50px;text-align:right;line-height:1}
-.route-name{font-size:14px;font-weight:700}
-.route-sub{font-size:11px;color:#888;margin-top:2px}
-/* 비교 테이블 */
-.cmp-tbl{width:100%;border-collapse:collapse;font-size:12px}
-.cmp-tbl th{background:#f0f4f8;padding:8px;text-align:center;font-weight:700}
-.cmp-tbl td{padding:8px;text-align:center;border-bottom:1px solid #f0f4f8}
-.cmp-ok{color:#059669;font-weight:700}
-.cmp-warn{color:#d97706;font-weight:700}
-.cmp-err{color:#dc2626;font-weight:700}
-/* 스캔 상태 */
-.scan-status{border-radius:10px;padding:12px 14px;font-size:13px;font-weight:700;text-align:center;margin-bottom:8px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px}
-.s-idle{background:#f0f4f8;color:#888}
-.s-scan{background:#dbeafe;color:#1e40af}
-.s-ok{background:#d1fae5;color:#065f46}
-.s-err{background:#fee2e2;color:#991b1b}
-/* 결과 뱃지 */
-.result-badge{border-radius:10px;padding:12px;font-size:14px;font-weight:700;text-align:center;margin-bottom:10px}
-.r-ok{background:#d1fae5;color:#065f46}
-.r-warn{background:#fef9c3;color:#854d0e}
-.r-err{background:#fee2e2;color:#991b1b}
-/* 하단 고정 버튼 */
-.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #dde3ed;padding:10px 16px;display:flex;gap:8px;max-width:500px;margin:0 auto}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spin{width:18px;height:18px;border:3px solid rgba(30,64,175,.2);border-top-color:#1e40af;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+:root {
+  --navy: #08101f;
+  --navy-mid: #0f1e38;
+  --navy-card: #1a2844;
+  --gold: #C9A84C;
+  --gold-light: #e0c06e;
+  --white: #FFFFFF;
+  --bg: #F0F4FA;
+  --surface: #FFFFFF;
+  --border: #D1DCF0;
+  --text-primary: #0f1e38;
+  --text-secondary: #5A6E90;
+  --text-muted: #8FA0BD;
+  --success: #16A34A;
+  --warn: #D97706;
+  --danger: #DC2626;
+  --radius: 14px;
+  --shadow: 0 4px 24px rgba(8,16,31,.10);
+  --shadow-card: 0 2px 12px rgba(8,16,31,.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #060e1c;
+    --surface: #0f1e38;
+    --border: #1e3254;
+    --text-primary: #E8EFF8;
+    --text-secondary: #8FA0BD;
+    --text-muted: #4A6080;
+    --shadow: 0 4px 24px rgba(0,0,0,.35);
+    --shadow-card: 0 2px 12px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #060e1c;
+  --surface: #0f1e38;
+  --border: #1e3254;
+  --text-primary: #E8EFF8;
+  --text-secondary: #8FA0BD;
+  --text-muted: #4A6080;
+  --shadow: 0 4px 24px rgba(0,0,0,.35);
+  --shadow-card: 0 2px 12px rgba(0,0,0,.25);
+}
 
-/* ══ 출퇴근 QR 시스템 ══ */
-.att-tab{display:flex;gap:6px;margin-bottom:14px}
-.att-btn{flex:1;padding:10px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#f0f4f8;color:#888;transition:.2s}
-.att-btn.on{background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;box-shadow:0 4px 12px rgba(0,102,255,.3)}
-.qr-wrap{background:#030912;border-radius:16px;padding:24px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden}
-.qr-canvas-wrap{position:relative;display:inline-block;margin:0 auto}
-#att-qr-canvas{border-radius:12px;display:block}
-.qr-scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#00d4ff,transparent);box-shadow:0 0 10px #00d4ff;animation:scanQR 2s ease-in-out infinite;pointer-events:none}
-@keyframes scanQR{0%,100%{top:10%}50%{top:90%}}
-.qr-timer-wrap{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 14px;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:10px}
-.qr-count-box{background:#030912;border:1px solid rgba(0,255,136,.2);border-radius:12px;padding:14px;text-align:center;margin-bottom:10px}
-.att-result{border-radius:12px;padding:16px;text-align:center;margin-bottom:10px;font-size:15px;font-weight:700;display:none}
-.att-ok{background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7}
-.att-err{background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5}
-.att-warn{background:#fef3c7;color:#92400e;border:1.5px solid #fcd34d}
-.gps-status{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;font-size:12px;font-weight:600;margin-bottom:10px}
-.gps-ok-bg{background:#d1fae5;color:#065f46}
-.gps-err-bg{background:#fee2e2;color:#991b1b}
-.gps-check-bg{background:#dbeafe;color:#1e40af}
-.att-log-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #f0f4f8;font-size:12px}
-.att-in{color:#0F6E56;font-weight:700}.att-out{color:#dc2626;font-weight:700}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.sly-header {
+  background: var(--navy);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.sly-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.sly-logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--gold);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sly-logo-mark svg { width: 18px; height: 18px; }
+.sly-logo-text {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.3px;
+}
+.sly-logo-text span { color: var(--gold); }
+.sly-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sly-points-badge {
+  background: rgba(201,168,76,.15);
+  border: 1px solid rgba(201,168,76,.35);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-points-badge:hover { background: rgba(201,168,76,.25); }
+.sly-auth-btn {
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-auth-btn:hover { background: var(--gold-light); }
+
+/* ── Main ── */
+.sly-main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+/* ── Hero ── */
+.sly-hero {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.sly-hero-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.sly-hero h1 {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: clamp(26px, 5vw, 36px);
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.sly-hero h1 em {
+  font-style: normal;
+  color: var(--gold);
+}
+.sly-hero p {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ── Service Tabs ── */
+.sly-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sly-tabs::-webkit-scrollbar { display: none; }
+.sly-tab {
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.sly-tab svg { width: 20px; height: 20px; opacity: .6; transition: opacity .2s; }
+.sly-tab:hover { background: rgba(201,168,76,.08); color: var(--gold); }
+.sly-tab:hover svg { opacity: 1; }
+.sly-tab.active {
+  background: var(--navy);
+  color: var(--gold);
+  font-weight: 700;
+}
+.sly-tab.active svg { opacity: 1; }
+.sly-tab .tab-cost {
+  font-size: 11px;
+  opacity: .7;
+  font-weight: 400;
+}
+
+/* ── Upload Card ── */
+.sly-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: 28px;
+  margin-bottom: 16px;
+}
+.sly-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin: 0 0 16px;
+}
+
+.sly-dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+}
+.sly-dropzone:hover, .sly-dropzone.drag-over {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.05);
+}
+.sly-dropzone input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.sly-dz-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(201,168,76,.12);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+.sly-dz-icon svg { width: 24px; height: 24px; color: var(--gold); }
+.sly-dz-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 6px;
+}
+.sly-dz-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.sly-dz-types {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.sly-type-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(201,168,76,.12);
+  color: var(--gold);
+  letter-spacing: .3px;
+}
+
+/* ── File Preview ── */
+.sly-file-preview {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 10px;
+  margin-top: 12px;
+}
+.sly-file-preview.visible { display: flex; }
+.sly-file-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--navy);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sly-file-icon svg { width: 20px; height: 20px; color: var(--gold); }
+.sly-file-info { flex: 1; min-width: 0; }
+.sly-file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sly-file-size { font-size: 12px; color: var(--text-muted); }
+.sly-file-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color .2s;
+}
+.sly-file-remove:hover { color: var(--danger); }
+.sly-file-remove svg { width: 18px; height: 18px; display: block; }
+
+/* ── Optional JD input ── */
+.sly-optional {
+  margin-top: 16px;
+}
+.sly-optional label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+.sly-optional textarea {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg);
+  resize: vertical;
+  transition: border-color .2s;
+  outline: none;
+}
+.sly-optional textarea:focus { border-color: var(--gold); }
+.sly-optional textarea::placeholder { color: var(--text-muted); }
+
+/* ── Analyze Button ── */
+.sly-analyze-btn {
+  width: 100%;
+  padding: 15px;
+  background: var(--navy);
+  color: var(--gold);
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  border: 2px solid var(--gold);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .2s;
+  margin-top: 20px;
+}
+.sly-analyze-btn:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--navy);
+}
+.sly-analyze-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.sly-analyze-btn svg { width: 20px; height: 20px; }
+.sly-cost-note {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── Progress ── */
+.sly-progress {
+  display: none;
+  padding: 28px;
+  text-align: center;
+}
+.sly-progress.visible { display: block; }
+.sly-progress-ring {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+}
+.sly-progress-ring circle {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.sly-progress-ring .track { stroke: var(--border); }
+.sly-progress-ring .fill {
+  stroke: var(--gold);
+  stroke-dasharray: 163;
+  stroke-dashoffset: 163;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset .4s ease;
+}
+.sly-progress-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.sly-progress-sub { font-size: 13px; color: var(--text-muted); }
+
+/* ── Results ── */
+.sly-result { display: none; }
+.sly-result.visible { display: block; }
+
+.sly-score-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: var(--navy);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.sly-score-circle {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  position: relative;
+}
+.sly-score-circle svg { width: 72px; height: 72px; }
+.sly-score-circle .score-track { fill: none; stroke: rgba(255,255,255,.12); stroke-width: 6; }
+.sly-score-circle .score-fill {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+  transition: stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);
+}
+.sly-score-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.sly-score-info { flex: 1; }
+.sly-score-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: rgba(201,168,76,.7);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.sly-score-grade {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.sly-score-comment { font-size: 13px; color: rgba(255,255,255,.6); }
+
+.sly-breakdown {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.sly-breakdown-item {
+  flex: 1;
+  min-width: 100px;
+  background: rgba(255,255,255,.07);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.sly-bk-label { font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
+.sly-bk-val { font-size: 16px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* Improvements */
+.sly-improve-list { display: flex; flex-direction: column; gap: 12px; }
+.sly-improve-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sly-improve-head {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.sly-improve-head:hover { background: rgba(201,168,76,.05); }
+.sly-risk-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.risk-high { background: var(--danger); }
+.risk-medium { background: var(--warn); }
+.risk-low { background: var(--success); }
+.sly-improve-section {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+.sly-improve-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  transition: transform .2s;
+}
+.sly-improve-item.open .sly-improve-chevron { transform: rotate(180deg); }
+.sly-improve-body {
+  display: none;
+  padding: 0 16px 16px;
+}
+.sly-improve-item.open .sly-improve-body { display: block; }
+.sly-orig-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-left: 3px solid var(--border);
+}
+.sly-suggestion-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.sly-suggestion-text {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.7;
+  background: rgba(201,168,76,.07);
+  border-radius: 6px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--gold);
+  white-space: pre-wrap;
+}
+.sly-reason {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* Missing items, strengths */
+.sly-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sly-tag {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.tag-miss { background: rgba(220,38,38,.1); color: #DC2626; }
+.tag-strength { background: rgba(22,163,74,.1); color: #16A34A; }
+.tag-keyword { background: rgba(201,168,76,.12); color: var(--gold); }
+
+/* Download */
+.sly-download-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.sly-dl-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .2s;
+}
+.sly-dl-btn svg { width: 18px; height: 18px; }
+.btn-docx { background: #2563EB; color: #fff; }
+.btn-docx:hover { background: #1d4ed8; }
+.btn-pdf { background: var(--danger); color: #fff; }
+.btn-pdf:hover { background: #b91c1c; }
+
+/* ── Points modal ── */
+.sly-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.sly-overlay.open { opacity: 1; pointer-events: auto; }
+.sly-modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+  transform: translateY(16px);
+  transition: transform .25s;
+}
+.sly-overlay.open .sly-modal { transform: translateY(0); }
+.sly-modal-title {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 20px;
+}
+.sly-balance-display {
+  background: var(--navy);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sly-balance-label { font-size: 13px; color: rgba(255,255,255,.6); }
+.sly-balance-val {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.sly-charge-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
+.sly-charge-options { display: flex; flex-direction: column; gap: 8px; }
+.sly-charge-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.sly-charge-opt:hover { border-color: var(--gold); background: rgba(201,168,76,.05); }
+.sly-charge-opt.selected { border-color: var(--gold); background: rgba(201,168,76,.1); }
+.sly-charge-pts { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.sly-charge-price { font-size: 13px; color: var(--text-secondary); }
+.sly-charge-bonus { font-size: 11px; color: var(--gold); font-weight: 600; }
+.sly-account-info {
+  margin-top: 16px;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+.sly-account-info strong { color: var(--text-primary); }
+.sly-request-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 13px;
+  background: var(--gold);
+  color: var(--navy);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-request-btn:hover { background: var(--gold-light); }
+.sly-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.sly-modal-close svg { width: 16px; height: 16px; }
+
+/* toast */
+.sly-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--navy);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border-left: 3px solid var(--gold);
+  box-shadow: var(--shadow);
+  z-index: 300;
+  opacity: 0;
+  transition: all .3s;
+  white-space: nowrap;
+  max-width: 90vw;
+}
+.sly-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Login wall */
+.sly-login-wall {
+  background: var(--navy);
+  border-radius: var(--radius);
+  padding: 40px 28px;
+  text-align: center;
+  display: none;
+}
+.sly-login-wall.visible { display: block; }
+.sly-login-wall h2 {
+  font-family: 'Nanum Myeongjo', Georgia, serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--white);
+  margin: 0 0 10px;
+}
+.sly-login-wall p { font-size: 14px; color: rgba(255,255,255,.6); margin: 0 0 20px; }
+.sly-login-wall-btn {
+  display: inline-block;
+  padding: 12px 28px;
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: background .2s;
+}
+.sly-login-wall-btn:hover { background: var(--gold-light); }
+
+@media (max-width: 520px) {
+  .sly-score-bar { flex-direction: column; text-align: center; }
+  .sly-breakdown { flex-direction: row; }
+  .sly-download-row { flex-direction: column; }
+}
 </style>
-</head>
-<body>
-<div class="app">
 
-<!-- 헤더 -->
-<div class="topbar">
-  <div style="display:flex;justify-content:space-between;align-items:center">
-    <div>
-      <div style="font-size:10px;font-weight:700;letter-spacing:2px;opacity:.7">LogiNet</div>
-      <div style="font-size:16px;font-weight:700">🚛 간선차 스캔 시스템</div>
-    </div>
-    <div style="background:rgba(255,255,255,.2);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700">🏕 캠프 수령</div>
-  </div>
-</div>
+<!-- Firebase (재사용) -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
-
-<!-- 출퇴근 탭 버튼 (스캔 상단) -->
-<div class="att-tab" id="main-tabs" style="margin-bottom:8px">
-  <button class="att-btn" onclick="switchMainTab('scan')">📦 배송 스캔</button>
-  <button class="att-btn on" onclick="switchMainTab('att')">🔐 출퇴근 QR</button>
-</div>
-
-<!-- 배송 스캔 섹션 (기존) -->
-<div id="tab-scan" style="display:none">
-<!-- 캠프 수령 전용 -->
-<!-- ══════════ 캠프 수령 ══════════ -->
-<div id="mode2">
-  <div class="card">
-    <div style="display:flex;gap:8px">
-      <div class="field" style="flex:1">
-        <label>내 캠프</label>
-        <select id="r-camp">
-          <option>부산1</option><option>부산2</option><option>부산3</option>
-          <option>대구2</option><option>진주M</option>
-        </select>
-      </div>
-      <div class="field" style="flex:1">
-        <label>적재 건수 (공유받은)</label>
-        <input type="number" id="r-expect" placeholder="물류센터 공유값" min="0" oninput="refreshRecv()">
-      </div>
-    </div>
-    <div id="r-shared-info" style="display:none;background:#e6f1fb;border-radius:8px;padding:10px;font-size:12px;margin-top:4px">
-      <span style="font-weight:700;color:#185FA5">📤 적재 정보:</span>
-      <span id="r-shared-text"></span>
-    </div>
-    <button id="r-load-btn" class="btn btn-blue" style="margin-top:8px;font-size:13px;padding:10px" onclick="loadFromCenter()">🔄 물류센터 적재 정보 불러오기</button>
-  </div>
-
-  <!-- 수령 요약 -->
-  <div id="truck-widget-scan" style="margin-bottom:10px"></div>
-<div class="sum-bar sum-bar-recv">
-    <div style="display:flex;justify-content:space-between;align-items:flex-end">
-      <div>
-        <div style="font-size:11px;opacity:.7;margin-bottom:4px">수령 스캔 건수</div>
-        <div class="sum-total" id="r-total">0</div>
-        <div style="font-size:12px;opacity:.8;margin-top:4px" id="r-sub">적재 건수를 입력하세요</div>
-      </div>
-      <div style="text-align:right;font-size:12px;opacity:.8" id="r-route-cnt">노선 0종</div>
-    </div>
-    <div class="prog-bar"><div class="prog-fill" id="r-prog" style="width:0%"></div></div>
-  </div>
-
-  <!-- 비교 결과 -->
-  <div id="r-compare" style="display:none"></div>
-
-  <!-- 스캔 상태 -->
-  <div class="scan-status s-idle" id="r-status">📷 수령 박스 라벨을 촬영하세요</div>
-
-  <!-- 촬영 버튼 -->
-  <div style="display:flex;gap:8px;margin-bottom:10px">
-    <label style="flex:3;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px;border-radius:10px;background:#0F6E56;color:#fff;font-size:16px;font-weight:700;cursor:pointer">
-      📷 라벨 촬영
-      <input type="file" accept="image/*" capture="environment" id="r-input" style="display:none" onchange="doScan('recv',this)">
-    </label>
-    <button class="btn btn-gray" style="flex:1;font-size:13px" onclick="manualScan()">✏️ 직접</button>
-    <button class="btn btn-gray" style="flex:1" onclick="undo('recv')">↩ 취소</button>
-  </div>
-
-  <!-- 노선별 비교 -->
-  <div id="r-route-list">
-    <div style="text-align:center;padding:20px;color:#aaa;font-size:13px">아직 스캔된 항목이 없습니다</div>
-  </div>
-
-  <!-- 완료 보고서 -->
-  <button class="btn btn-green" style="margin-top:8px" onclick="showReport()">📊 수령 완료 보고서</button>
-  <button class="btn btn-gray" style="margin-top:8px" onclick="shareResult()">💬 결과 공유</button>
-</div>
-
-</div><!-- /tab-scan -->
-
-<!-- ══════════ 출퇴근 QR 시스템 ══════════ -->
-<div id="tab-att">
-
-  <!-- 관리자/기사 전환 -->
-  <div style="display:flex;gap:6px;margin-bottom:12px">
-    <button class="att-btn on" id="att-mode-admin" onclick="attSetMode('admin')">🖥 관리자 (QR 생성)</button>
-    <button class="att-btn" id="att-mode-driver" onclick="attSetMode('driver')">📱 기사 (QR 스캔)</button>
-  </div>
-
-  <!-- ── 관리자: QR 생성 ── -->
-  <div id="att-admin">
-    <div class="card" style="margin-bottom:10px">
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <div class="field" style="flex:1">
-          <label>캠프 선택</label>
-          <select id="att-camp" onchange="attGenQR()">
-            <option>부산1</option><option>부산2</option><option>부산3</option>
-            <option>대구2</option><option>진주M</option>
-          </select>
-        </div>
-        <div class="field" style="flex:1">
-          <label>갱신 주기</label>
-          <select id="att-interval" onchange="attRestartTimer()">
-            <option value="30">30초 (표준)</option>
-            <option value="15">15초 (보안 강화)</option>
-            <option value="60">60초</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- QR 코드 표시 -->
-      <div class="qr-wrap">
-        <div style="font-size:9px;letter-spacing:3px;color:rgba(0,212,255,.6);margin-bottom:12px;font-family:monospace">DONWAY DYNAMIC QR SYSTEM</div>
-        <div class="qr-canvas-wrap">
-          <canvas id="att-qr-canvas" width="200" height="200"></canvas>
-          <div class="qr-scan-line"></div>
-        </div>
-        <div style="margin-top:12px;font-size:10px;font-family:monospace;color:rgba(0,212,255,.5)" id="att-qr-token-preview">생성 중...</div>
-      </div>
-
-      <!-- 타이머 바 -->
-      <div class="qr-timer-wrap">
-        <div style="font-size:11px;font-family:monospace;color:#00d4ff;min-width:44px" id="att-timer">00:30</div>
-        <div style="flex:1;height:6px;background:rgba(0,212,255,.1);border-radius:3px;overflow:hidden">
-          <div id="att-timer-bar" style="height:100%;background:linear-gradient(90deg,#00ff88,#00d4ff);border-radius:3px;transition:width 1s linear;width:100%"></div>
-        </div>
-        <div style="font-size:10px;color:rgba(0,212,255,.5);font-family:monospace">갱신 대기</div>
-      </div>
-    </div>
-
-    <!-- 발급 카운터 -->
-    <div class="qr-count-box">
-      <div style="font-size:10px;font-family:monospace;color:rgba(0,255,136,.6);letter-spacing:2px;margin-bottom:6px">QR 발급 카운트</div>
-      <div style="font-size:48px;font-weight:900;font-family:monospace;color:#00ff88;line-height:1" id="att-qr-count">0</div>
-      <div style="font-size:11px;color:#5a7299;margin-top:4px">총 발급 횟수</div>
-      <div style="font-size:9px;font-family:monospace;color:rgba(0,255,136,.4);margin-top:8px" id="att-last-scan">마지막 스캔: -</div>
-    </div>
-
-    <!-- 오늘 출퇴근 현황 -->
-    <div class="card">
-      <div style="font-size:12px;font-weight:700;color:#185FA5;margin-bottom:10px">📋 오늘 출퇴근 현황 <button onclick="loadAttLog()" style="float:right;padding:3px 8px;font-size:10px;background:#e6f1fb;border:none;border-radius:6px;cursor:pointer">새로고침</button></div>
-      <div id="att-log-list"><div style="text-align:center;padding:16px;color:#aaa;font-size:12px">로딩 중...</div></div>
-    </div>
-  </div>
-
-  <!-- ── 기사: QR 스캔 + GPS ── -->
-  <div id="att-driver" style="display:none">
-    <div class="card" style="margin-bottom:10px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#185FA5">📱 출퇴근 QR 스캔</div>
-
-      <!-- GPS 상태 -->
-      <div class="gps-status gps-check-bg" id="drv-gps-status">
-        <span>📍</span><span id="drv-gps-text">GPS 위치 확인 중...</span>
-      </div>
-
-      <!-- 스캔 유형 -->
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button id="att-in-btn" onclick="attSetType('in')" style="flex:1;padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#0F6E56,#059669);color:#fff">🟢 출근</button>
-        <button id="att-out-btn" onclick="attSetType('out')" style="flex:1;padding:12px;border-radius:10px;border:2px solid #dde3ed;font-size:14px;font-weight:700;cursor:pointer;background:#fff;color:#888">🔴 퇴근</button>
-      </div>
-
-      <!-- 카메라 스캔 -->
-      <label style="display:flex;align-items:center;justify-content:center;gap:10px;padding:18px;border-radius:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px">
-        📷 QR 코드 스캔
-        <input type="file" accept="image/*" capture="environment" style="display:none" id="drv-qr-input" onchange="drvScanQR(this)">
-      </label>
-
-      <!-- 결과 -->
-      <div class="att-result att-ok" id="drv-result"></div>
-
-      <!-- 스캔 상태 -->
-      <div class="scan-status s-idle" id="drv-status">QR을 촬영하면 자동으로 인증됩니다</div>
-    </div>
-
-    <!-- 내 출퇴근 기록 -->
-    <div class="card">
-      <div style="font-size:12px;font-weight:700;color:#185FA5;margin-bottom:10px">📋 내 출퇴근 기록 (오늘)</div>
-      <div id="drv-log-list"><div style="text-align:center;padding:12px;color:#aaa;font-size:12px">기록 없음</div></div>
-    </div>
-  </div>
-
-</div><!-- /tab-att -->
-
-</div><!-- /app -->
-
-<!-- 하단 바 -->
-<div class="bottom-bar" id="bottom-bar">
-  <button class="btn btn-red btn-sm" style="flex:1" onclick="resetCurrent()">🗑 초기화</button>
-  <button class="btn btn-gray btn-sm" style="flex:2" onclick="showReport()">📊 보고서</button>
-</div>
-
-<!-- 모달 -->
-<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;padding:16px;overflow-y:auto">
-  <div style="background:#fff;border-radius:16px;padding:20px;max-width:460px;margin:0 auto">
-    <div id="modal-title" style="font-size:16px;font-weight:700;margin-bottom:16px"></div>
-    <div id="modal-body"></div>
-    <button class="btn btn-blue" style="margin-top:16px" onclick="document.getElementById('modal').style.display='none'">닫기</button>
-  </div>
-</div>
-
-<script>
-(function(){
-  document.addEventListener("contextmenu",function(e){e.preventDefault();});
-  document.addEventListener("keydown",function(e){
-    if(e.keyCode===123){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74||e.keyCode===67)){e.preventDefault();return false;}
-    if(e.ctrlKey&&!e.shiftKey&&e.keyCode===85){e.preventDefault();return false;}
-    if(e.ctrlKey&&e.keyCode===83){e.preventDefault();return false;}
-  });
-})();
-
-var _cur = 1; // 현재 모드
-var _data = {
-  load: { routes:{}, history:[] },  // 물류센터 적재
-  recv: { routes:{}, history:[] }   // 캠프 수령
+const firebaseConfig = {
+  apiKey: "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
+  authDomain: "mbti-logistics.firebaseapp.com",
+  projectId: "mbti-logistics"
 };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+window._slyAuth = auth;
+window._slyGetToken = () => auth.currentUser?.getIdToken();
+window._slyUser = null;
 
-// 캠프 수령 전용 모드
+const SLY_SERVICES = [
+  { id: 'resume',        label: '이력서 분석',    cost: 10, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_letter',  label: '자소서 분석',    cost: 10, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',  label: '영문 번역',      cost: 20, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'interview',     label: '면접 질문',      cost: 15, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'contract',      label: '계약서 검토',    cost: 15, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+];
 
-// ── OCR + QR 스캔 ──
-async function doScan(mode, input){
-  if(!input.files||!input.files[0]) return;
-  var file = input.files[0];
-  input.value = '';
-  var statusId = mode==='load'?'l-status':'r-status';
-  setStatus(statusId, '<span class="spin"></span>QR 분석 중...', 's-scan');
+const CHARGE_PLANS = [
+  { pts: 50,  price: 5000,  label: '기본' },
+  { pts: 120, price: 10000, bonus: '+20P', label: '스탠다드' },
+  { pts: 270, price: 20000, bonus: '+70P', label: '프리미엄' },
+  { pts: 600, price: 40000, bonus: '+200P', label: '비즈니스' },
+];
 
-  // QR 디코딩
-  var trackingNo = await _decodeQR(file).catch(function(){return null;});
-
-  // Claude OCR
-  setStatus(statusId, '<span class="spin"></span>노선번호 OCR 중...', 's-scan');
-  var ocr = {};
-  try{ ocr = await _doOCR(file); }
-  catch(e){ setStatus(statusId, '❌ OCR 실패: '+e.message, 's-err'); return; }
-
-  var route = ocr.route || null;
-  var camp = ocr.camp || null;
-
-  if(!route){
-    // OCR 실패 시 수동 입력 허용
-    var manual = window.prompt('노선번호 자동인식 실패\n직접 입력해 주세요 (예: 812 B01)');
-    if(!manual || !manual.trim()){
-      setStatus(statusId, '❌ 노선번호 미인식 — 다시 촬영해 주세요', 's-err');
-      return;
-    }
-    route = manual.trim();
-  }
-
-  // 데이터 추가
-  var now = new Date();
-  var t = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
-  var d = _data[mode];
-  var k = route.trim();
-  if(!d.routes[k]) d.routes[k] = {route:k, camp:camp||'', count:0, scans:[]};
-  d.routes[k].count++;
-  d.routes[k].scans.push({time:t, tracking:trackingNo||''});
-  if(camp&&!d.routes[k].camp) d.routes[k].camp=camp;
-  d.history.push({route:k, time:t});
-
-  setStatus(statusId, '✅ '+k+' — '+d.routes[k].count+'건 추가됨', 's-ok');
-  if(navigator.vibrate) navigator.vibrate(60);
-
-  refreshRecv(); saveRecvToFirebase();
-}
-
-function manualScan(){
-  var route = window.prompt('노선번호 입력 (예: 812 B01)');
-  if(!route || !route.trim()) return;
-  var camp = (document.getElementById('r-camp')||{value:''}).value||'';
-  var now = new Date();
-  var t = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
-  var d = _data.recv;
-  var k = route.trim();
-  if(!d.routes[k]) d.routes[k]={route:k,camp:camp,count:0,scans:[]};
-  d.routes[k].count++;
-  d.routes[k].scans.push({time:t,tracking:''});
-  d.history.push({route:k,time:t});
-  setStatus('r-status','✅ '+k+' — '+d.routes[k].count+'건 추가 (수동)','s-ok');
-  if(navigator.vibrate)navigator.vibrate(60);
-  refreshRecv();
-  saveRecvToFirebase();
-}
-
-function undo(mode){
-  var d=_data.recv;
-  if(!d.history.length){alert('취소할 항목 없음');return;}
-  var last=d.history.pop();
-  var r=d.routes[last.route];
-  if(r){r.count--;r.scans.pop();if(r.count<=0)delete d.routes[last.route];}
-  setStatus('r-status','↩ 취소: '+last.route,'s-idle');
-  refreshRecv();
-}
-
-function resetCurrent(){
-  if(!confirm('초기화하시겠습니까?'))return;
-  _data.recv={routes:{},history:[]};
-  setStatus('r-status','📷 수령 박스 라벨을 촬영하세요','s-idle');
-  refreshRecv();
-}
-
-// ── 화면 갱신 ──
-function refreshLoad(){
-  var d = _data.load;
-  var total = Object.values(d.routes).reduce(function(s,r){return s+r.count;},0);
-  var keys = Object.keys(d.routes);
-  var exp = parseInt(document.getElementById('l-expect').value)||0;
-  document.getElementById('l-total').textContent = total;
-  document.getElementById('l-route-cnt').textContent = '노선 '+keys.length+'종';
-  if(exp>0){
-    var pct=Math.min(100,Math.round(total/exp*100));
-    var diff=total-exp;
-    document.getElementById('l-prog').style.width=pct+'%';
-    document.getElementById('l-sub').textContent='예상 '+exp+'건 | '+(diff>=0?'+':'')+diff+'건 | '+pct+'%';
+// ── Render header auth state
+function updateAuthUI(user) {
+  const hRight = document.getElementById('slyHeaderRight');
+  if (!hRight) return;
+  if (user) {
+    hRight.innerHTML = `
+      <button class="sly-points-badge" onclick="_slyOpenPoints()">
+        <span id="slyPtsBadge">... P</span>
+      </button>
+      <button class="sly-auth-btn" onclick="_slySignOut()">${user.displayName?.split(' ')[0] || '로그아웃'}</button>
+    `;
+    loadPoints();
   } else {
-    document.getElementById('l-prog').style.width='0%';
-    document.getElementById('l-sub').textContent='예상 건수를 입력하세요';
+    hRight.innerHTML = `<button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>`;
   }
-  renderRouteList('load', 'l-route-list');
-}
-
-function refreshRecv(){
-  var d = _data.recv;
-  var total = Object.values(d.routes).reduce(function(s,r){return s+r.count;},0);
-  var keys = Object.keys(d.routes);
-  var exp = parseInt(document.getElementById('r-expect').value)||0;
-  document.getElementById('r-total').textContent = total;
-  document.getElementById('r-route-cnt').textContent = '노선 '+keys.length+'종';
-  // 진행률
-  if(exp>0){
-    var pct=Math.min(100,Math.round(total/exp*100));
-    var diff=total-exp;
-    document.getElementById('r-prog').style.width=pct+'%';
-    document.getElementById('r-sub').textContent='적재 '+exp+'건 | '+(diff>=0?'+':'')+diff+'건 | '+pct+'%';
-    // 비교 결과
-    var cr=document.getElementById('r-compare');
-    cr.style.display='block';
-    var cls=diff===0?'r-ok':(Math.abs(diff)<=5?'r-warn':'r-err');
-    var msg=diff===0?'✅ 정확히 일치! 이상 없음':(Math.abs(diff)<=5?'⚠️ '+Math.abs(diff)+'건 차이 — 확인 권장':(diff>0?'🔴 '+diff+'건 초과 수령!':'🔴 '+Math.abs(diff)+'건 미수령 — 누락 확인!'));
-    cr.innerHTML='<div class="result-badge '+cls+'">'+msg+'</div>';
-  } else {
-    document.getElementById('r-prog').style.width='0%';
-    document.getElementById('r-sub').textContent='적재 건수를 입력하세요';
-    document.getElementById('r-compare').style.display='none';
-  }
-  renderRouteList('recv','r-route-list');
-}
-
-function renderRouteList(mode, elId){
-  var d = _data[mode];
-  var el = document.getElementById(elId);
-  var keys = Object.keys(d.routes);
-  if(!keys.length){
-    el.innerHTML='<div style="text-align:center;padding:20px;color:#aaa;font-size:13px">아직 스캔된 항목이 없습니다</div>';
-    return;
-  }
-  keys.sort(function(a,b){return d.routes[b].count-d.routes[a].count;});
-  // 캠프 수령모드: 노선별 비교 테이블 (항상 표시)
-  if(mode==='recv'){
-    var hasLoad = Object.keys(_data.load.routes).length>0;
-    var allKeys = Array.from(new Set(
-      (hasLoad?Object.keys(_data.load.routes):[]).concat(keys)
-    )).sort();
-    var html='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">'
-      +(hasLoad?'노선별 비교 (적재 vs 수령)':'수령 노선별 현황')+'</div>'
-      +'<div style="overflow-x:auto"><table class="cmp-tbl">'
-      +'<thead><tr>'
-      +'<th style="text-align:left;padding:8px">노선</th>'
-      +(hasLoad?'<th style="padding:8px">적재</th>':'')
-      +'<th style="padding:8px">수령</th>'
-      +(hasLoad?'<th style="padding:8px">차이</th>':'')
-      +'</tr></thead><tbody>';
-    if(allKeys.length===0){
-      html+='<tr><td colspan="'+(hasLoad?4:2)+'" style="padding:16px;text-align:center;color:#aaa;font-size:12px">아직 스캔된 항목이 없습니다</td></tr>';
-    } else {
-      allKeys.forEach(function(k){
-        var lc=(hasLoad&&_data.load.routes[k])?_data.load.routes[k].count:null;
-        var rc=d.routes[k]?d.routes[k].count:0;
-        var camp=d.routes[k]?d.routes[k].camp:(hasLoad&&_data.load.routes[k]?_data.load.routes[k].camp:'');
-        var diff=lc!==null?rc-lc:null;
-        var diffCls=diff===null?'':(diff===0?'cmp-ok':(Math.abs(diff)<=2?'cmp-warn':'cmp-err'));
-        var diffStr=diff===null?'—':(diff===0?'✅':(diff>0?'+'+diff:''+diff));
-        var rowBg=diff!==null&&diff!==0?'background:'+(diff>0?'#fef9c3':'#fee2e2'):'';;
-        html+='<tr style="border-bottom:1px solid #f0f4f8;'+rowBg+'">'
-          +'<td style="padding:8px;font-weight:700">'+escHtml(k)
-          +(camp?'<span style="margin-left:4px;font-size:10px;color:#888;font-weight:400">'+escHtml(camp)+'</span>':'')
-          +'</td>'
-          +(hasLoad?'<td style="padding:8px;text-align:center">'+(lc!==null?lc:'—')+'</td>':'')
-          +'<td style="padding:8px;text-align:center;font-weight:700;color:#0F6E56">'+rc+'</td>'
-          +(hasLoad?'<td style="padding:8px;text-align:center;font-weight:700" class="'+diffCls+'">'+diffStr+'</td>':'')
-          +'</tr>';
-      });
-      // 합계 행
-      var lTotal=hasLoad?Object.values(_data.load.routes).reduce(function(s,r){return s+r.count;},0):null;
-      var rTotal=Object.values(d.routes).reduce(function(s,r){return s+r.count;},0);
-      var totalDiff=lTotal!==null?rTotal-lTotal:null;
-      var totalCls=totalDiff===null?'':(totalDiff===0?'cmp-ok':(Math.abs(totalDiff)<=5?'cmp-warn':'cmp-err'));
-      html+='<tr style="background:#f0f4f8;font-weight:800">'
-        +'<td style="padding:8px">합계</td>'
-        +(hasLoad?'<td style="padding:8px;text-align:center">'+(lTotal!==null?lTotal:'—')+'</td>':'')
-        +'<td style="padding:8px;text-align:center;color:#0F6E56">'+rTotal+'</td>'
-        +(hasLoad?'<td style="padding:8px;text-align:center" class="'+totalCls+'">'+(totalDiff===null?'—':(totalDiff===0?'✅':(totalDiff>0?'+'+totalDiff:''+totalDiff)))+'</td>':'')
-        +'</tr>';
-    }
-    html+='</tbody></table></div>';
-    el.innerHTML=html;
-    return;
-  }
-  // 기본 노선 목록
-  // 물류센터 모드 노선 테이블
-  var html='<div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">노선별 적재 현황</div>'
-    +'<div style="overflow-x:auto"><table class="cmp-tbl">'
-    +'<thead><tr><th style="text-align:left;padding:8px">노선</th><th style="padding:8px">캠프</th><th style="padding:8px;text-align:right">적재건수</th></tr></thead><tbody>';
-  var total=0;
-  keys.forEach(function(k){
-    var r=d.routes[k];
-    total+=r.count;
-    html+='<tr style="border-bottom:1px solid #f0f4f8">'
-      +'<td style="padding:8px;font-weight:700">'+escHtml(r.route)+'</td>'
-      +'<td style="padding:8px;text-align:center;color:#888;font-size:11px">'+escHtml(r.camp||'—')+'</td>'
-      +'<td style="padding:8px;text-align:right;font-weight:700;color:#185FA5">'+r.count+'건</td>'
-      +'</tr>';
-  });
-  html+='<tr style="background:#f0f4f8;font-weight:800">'
-    +'<td style="padding:8px" colspan="2">합계</td>'
-    +'<td style="padding:8px;text-align:right;color:#185FA5">'+total+'건</td>'
-    +'</tr>';
-  html+='</tbody></table></div>';
-  el.innerHTML=html;
-}
-
-// ── 공유 ──
-function shareLoad(){
-  var d=_data.load;
-  var total=Object.values(d.routes).reduce(function(s,r){return s+r.count;},0);
-  var camp=document.getElementById('l-camp').value;
-  var now=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-  var keys=Object.keys(d.routes).sort();
-  var lines=['[LogiNet 간선차 적재 알림]','캠프: '+camp,'총 적재: '+total+'건','시각: '+now,''];
-  lines.push('■ 노선별');
-  keys.forEach(function(k){lines.push('  '+k+': '+d.routes[k].count+'건');});
-  lines.push('');
-  lines.push('▶ 수령 후 LogiNet 스캔 앱으로 확인해 주세요.');
-  var text=lines.join('\n');
-  if(navigator.share){navigator.share({title:'LogiNet 적재 알림',text:text}).catch(function(){});}
-  else{_copyText(text,function(){alert('복사됐습니다!\n카카오톡에 붙여넣기 해주세요.');});}
-}
-
-function shareResult(){
-  var dl=_data.load, dr=_data.recv;
-  var lt=Object.values(dl.routes).reduce(function(s,r){return s+r.count;},0);
-  var rt=Object.values(dr.routes).reduce(function(s,r){return s+r.count;},0);
-  var camp=document.getElementById('r-camp').value;
-  var now=new Date().toLocaleString('ko-KR');
-  var diff=rt-lt;
-  var lines=['[LogiNet 수령 완료 보고]','캠프: '+camp,'적재: '+lt+'건','수령: '+rt+'건','차이: '+(diff>=0?'+':'')+diff+'건','시각: '+now];
-  var text=lines.join('\n');
-  if(navigator.share){navigator.share({title:'LogiNet 수령 완료',text:text}).catch(function(){});}
-  else{_copyText(text,function(){alert('복사됐습니다!');});}
-}
-
-function showReport(){
-  var dl=_data.load, dr=_data.recv;
-  var lt=Object.values(dl.routes).reduce(function(s,r){return s+r.count;},0);
-  var rt=Object.values(dr.routes).reduce(function(s,r){return s+r.count;},0);
-  var exp=parseInt(document.getElementById(_cur===1?'l-expect':'r-expect').value)||0;
-  var now=new Date().toLocaleString('ko-KR');
-  var allKeys=Array.from(new Set(Object.keys(dl.routes).concat(Object.keys(dr.routes)))).sort();
-  var html='<div style="background:#e6f1fb;border-radius:10px;padding:14px;margin-bottom:12px">'
-    +(lt>0?'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(24,95,165,.15);font-size:13px"><span>총 적재</span><span style="font-weight:700">'+lt+'건</span></div>':'')
-    +(rt>0?'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(24,95,165,.15);font-size:13px"><span>총 수령</span><span style="font-weight:700;color:#0F6E56">'+rt+'건</span></div>':'')
-    +(lt>0&&rt>0?'<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span>차이</span><span style="font-weight:700;color:'+(rt===lt?'#059669':'#dc2626')+'">'+(rt-lt>=0?'+':'')+(rt-lt)+'건</span></div>':'')
-    +'</div>';
-  if(allKeys.length>0){
-    html+='<div style="font-size:12px;font-weight:700;color:#888;margin-bottom:6px">노선별 상세</div>'
-      +'<table class="cmp-tbl"><thead><tr><th>노선</th><th>적재</th><th>수령</th><th>차이</th></tr></thead><tbody>';
-    allKeys.forEach(function(k){
-      var lc=(dl.routes[k]||{count:0}).count;
-      var rc=(dr.routes[k]||{count:0}).count;
-      var diff=rc-lc;
-      var cls=diff===0?'cmp-ok':(Math.abs(diff)<=2?'cmp-warn':'cmp-err');
-      html+='<tr><td style="text-align:left;font-weight:700">'+escHtml(k)+'</td>'
-        +'<td>'+(lc||'—')+'</td><td>'+(rc||'—')+'</td>'
-        +'<td class="'+cls+'">'+(lc&&rc?(diff===0?'✅':(diff>0?'+'+diff:diff)):'—')+'</td></tr>';
-    });
-    html+='</tbody></table>';
-  }
-  html+='<div style="font-size:11px;color:#aaa;margin-top:8px;text-align:right">'+now+'</div>'
-    +'<button class="btn btn-gray btn-sm" style="margin-top:10px;width:100%" onclick="copyReport()">📋 보고서 복사</button>';
-  document.getElementById('modal-title').textContent='📊 스캔 완료 보고서';
-  document.getElementById('modal-body').innerHTML=html;
-  document.getElementById('modal').style.display='block';
-}
-
-function copyReport(){
-  var dl=_data.load, dr=_data.recv;
-  var lt=Object.values(dl.routes).reduce(function(s,r){return s+r.count;},0);
-  var rt=Object.values(dr.routes).reduce(function(s,r){return s+r.count;},0);
-  var allKeys=Array.from(new Set(Object.keys(dl.routes).concat(Object.keys(dr.routes)))).sort();
-  var lines=['[LogiNet 스캔 보고]',
-    (lt?'적재: '+lt+'건':''),
-    (rt?'수령: '+rt+'건':''),
-    (lt&&rt?'차이: '+(rt-lt>=0?'+':'')+(rt-lt)+'건':''),'','■ 노선별'];
-  allKeys.forEach(function(k){
-    var lc=(dl.routes[k]||{count:0}).count;
-    var rc=(dr.routes[k]||{count:0}).count;
-    lines.push('  '+k+': 적재'+lc+' / 수령'+rc);
-  });
-  lines.push('',new Date().toLocaleString('ko-KR'));
-  _copyText(lines.filter(Boolean).join('\n'),function(){alert('복사됐습니다!');});
-}
-
-// ── OCR 함수 ──
-async function _decodeQR(file){
-  return new Promise(function(resolve){
-    var img=new Image(), url=URL.createObjectURL(file);
-    img.onload=async function(){
-      URL.revokeObjectURL(url);
-      if('BarcodeDetector' in window){
-        try{
-          var bd=new BarcodeDetector({formats:['qr_code','aztec']});
-          var bmp=await createImageBitmap(file);
-          var codes=await bd.detect(bmp);
-          bmp.close&&bmp.close();
-          if(codes&&codes.length>0){resolve(codes[0].rawValue);return;}
-        }catch(e){}
-      }
-      var max=1600,w=img.width,h=img.height;
-      if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
-      var cv=document.createElement('canvas');cv.width=w;cv.height=h;
-      cv.getContext('2d').drawImage(img,0,0,w,h);
-      var raw=cv.getContext('2d').getImageData(0,0,w,h);
-      if(window.jsQR){var c=window.jsQR(raw.data,raw.width,raw.height,{inversionAttempts:'attemptBoth'});if(c&&c.data){resolve(c.data);return;}}
-      resolve(null);
-    };
-    img.onerror=function(){URL.revokeObjectURL(url);resolve(null);};
-    img.src=url;
-  });
-}
-
-async function _doOCR(file){
-  // 브라우저 직접 Anthropic 호출 (settle.html과 동일 방식)
-  var b64=await new Promise(function(res,rej){
-    var r=new FileReader();
-    r.onload=function(e){res(e.target.result.split(',')[1]);};
-    r.onerror=rej;
-    r.readAsDataURL(file);
-  });
-  // API 키 서버에서 가져오기
-  var keyResp=await fetch('/get-label-key');
-  var keyData=await keyResp.json();
-  var AK=(keyData.k||'').trim();
-  if(!AK) throw new Error('API 키 없음');
-
-  var resp=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':AK,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body:JSON.stringify({
-      model:'claude-sonnet-4-5',max_tokens:200,
-      messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
-        {type:'text',text:'택배 운송장 라벨에서 라우트 코드만 추출하세요. 예: 508B, 213A, 109C 형태. JSON으로만 답하세요: {"route":"코드"}'}
-      ]}]
-    })
-  });
-  if(!resp.ok){var ed=await resp.json().catch(()=>({}));throw new Error(ed.error?.message||resp.status);}
-  var data=await resp.json();
-  if(data.error) throw new Error(data.error.message);
-  var text=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-  var m=text.match(/\{[\s\S]+\}/);
-  if(!m) return null;
-  try{return JSON.parse(m[0]);}catch(e){return null;}
-}
-
-
-async function loadFromCenter(){
-  var camp=document.getElementById('r-camp').value;
-  var sid=_sessionId(camp);
-  var btn=document.getElementById('r-load-btn');
-  if(btn){btn.textContent='조회 중...';btn.disabled=true;}
-  try{
-    var resp=await fetch('/scan-get/'+encodeURIComponent(sid));
-    var data=await resp.json();
-    if(btn){btn.textContent='🔄 적재 정보 불러오기';btn.disabled=false;}
-    if(!data.ok||data.empty){alert(camp+' 캠프의 오늘 적재 기록이 없습니다.\n물류센터에서 먼저 출력해야 합니다.');return;}
-    var total=data.loadedTotal||0;
-    document.getElementById('r-expect').value=total;
-    var sharedEl=document.getElementById('r-shared-info');
-    var sharedTxt=document.getElementById('r-shared-text');
-    sharedEl.style.display='block';
-    var routes=data.loadedRoutes||{};
-    var routeStr=Object.keys(routes).map(function(k){return k+' '+routes[k].count+'건';}).join(', ');
-    sharedTxt.textContent=' '+total+'건 ('+(routeStr||'노선정보없음')+')';
-    if(data.loadedAt) sharedTxt.textContent+=' · '+(new Date(data.loadedAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
-    // 적재 데이터 → load 모드에도 반영
-    _data.load.routes={};
-    Object.keys(routes).forEach(function(k){
-      _data.load.routes[k]={route:k,camp:camp,count:routes[k].count,scans:[]};
-    });
-    refreshLoad();
-    refreshRecv();
-    alert('✅ 적재 정보 불러오기 완료! 총 '+total+'건');
-  }catch(e){
-    if(btn){btn.textContent='🔄 적재 정보 불러오기';btn.disabled=false;}
-    alert('조회 실패: '+e.message);
+  const lw = document.getElementById('slyLoginWall');
+  const mc = document.getElementById('slyMainContent');
+  if (lw && mc) {
+    lw.classList.toggle('visible', !user);
+    mc.style.display = user ? 'block' : 'none';
   }
 }
 
-// 수령 데이터 Firebase 저장
-async function saveRecvToFirebase(){
-  var camp=document.getElementById('r-camp').value;
-  var sid=_sessionId(camp);
-  var d=_data.recv;
-  var total=Object.values(d.routes).reduce(function(s,r){return s+r.count;},0);
-  var routes={};
-  Object.keys(d.routes).forEach(function(k){routes[k]={count:d.routes[k].count};});
-  try{
-    await fetch('/scan-save',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({sessionId:sid,type:'received',routes:routes,total:total})
-    });
-  }catch(e){}
+async function loadPoints() {
+  if (!auth.currentUser) return;
+  try {
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch('/api/seolyuhana/points', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) return;
+    const d = await r.json();
+    const el = document.getElementById('slyPtsBadge');
+    if (el) el.textContent = `${(d.balance || 0).toLocaleString()} P`;
+    window._slyPoints = d.balance || 0;
+    const bv = document.getElementById('slyBalanceVal');
+    if (bv) bv.textContent = (d.balance || 0).toLocaleString() + ' P';
+  } catch(e) {}
 }
+window._slyLoadPoints = loadPoints;
 
-// ── 간선차 GPS 위젯 ──
-var CAMP_COORDS={
-  '부산1':{lat:35.1941,lng:129.1198},'부산2':{lat:35.1252,lng:128.9641},
-  '부산3':{lat:35.0659,lng:129.0100},'대구2':{lat:35.8183,lng:128.7203},
-  '진주M':{lat:35.1190,lng:128.0989}
-};
-var _truckTimer=null;
-
-function _gpsDistKm(a,b,c,d){
-  var R=6371,dL=(b-a)*Math.PI/180,dG=(d-c)*Math.PI/180;
-  var x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(b*Math.PI/180)*Math.sin(dG/2)*Math.sin(dG/2);
-  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-}
-
-async function refreshTruckGPS(camp, widgetId){
-  if(!camp)return;
-  var today=new Date().toISOString().slice(0,10).replace(/-/g,'');
-  var truckId='truck_'+today+'_'+camp.replace(/\s/g,'');
-  var el=document.getElementById(widgetId);
-  if(!el)return;
-  try{
-    var resp=await fetch('/truck-get/'+encodeURIComponent(truckId));
-    var data=await resp.json();
-    if(!data.ok||data.empty){
-      el.innerHTML='<div style="padding:10px 12px;background:#f0f4f8;border-radius:10px;font-size:12px;color:#888">🚛 간선차 GPS 미공유 상태</div>';
-      return;
-    }
-    var updAt=data.updatedAt?new Date(data.updatedAt):null;
-    var secAgo=updAt?Math.round((new Date()-updAt)/1000):9999;
-    var isStale=secAgo>120;
-    var tgt=CAMP_COORDS[camp];
-    var dist=tgt?_gpsDistKm(data.lat,data.lng,tgt.lat,tgt.lng):null;
-    var spd=data.speed||0;
-    var eta=(dist&&spd>5)?Math.round(dist/spd*60):null;
-    var distStr=dist?(dist<1?Math.round(dist*1000)+'m':dist.toFixed(1)+'km'):'—';
-    var etaStr=data.status==='arrived'?'도착완료':(eta!==null?'약 '+eta+'분':'계산불가');
-    var sColor=data.status==='arrived'?'#059669':(isStale?'#d97706':'#185FA5');
-    var sIcon=data.status==='arrived'?'🏁':(isStale?'⚠️':'📡');
-    var tStr=updAt?updAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
-    var tmapUrl='tmap://route?startX='+data.lng+'&startY='+data.lat+(tgt?'&goalX='+tgt.lng+'&goalY='+tgt.lat:'');
-    var naverUrl='nmap://route/car?slng='+data.lng+'&slat='+data.lat+(tgt?'&dlng='+tgt.lng+'&dlat='+tgt.lat:'')+'&appname=kr.co.mbti';
-    el.innerHTML=
-      '<div style="background:#e6f1fb;border:1.5px solid '+(isStale?'#d97706':sColor)+';border-radius:10px;padding:12px;font-size:12px">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-          '<div style="font-weight:700;color:'+sColor+'">'+sIcon+' 간선차 '+camp+'행'+(data.driver?' ('+escHtml(data.driver)+')':'')+'</div>'+
-          '<div style="font-size:10px;color:#888">'+tStr+'</div>'+
-        '</div>'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">'+
-          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">거리</div><div style="font-size:14px;font-weight:700;color:#185FA5">'+distStr+'</div></div>'+
-          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">ETA</div><div style="font-size:14px;font-weight:700;color:'+(data.status==='arrived'?'#059669':'#185FA5')+'">'+etaStr+'</div></div>'+
-          '<div style="background:#fff;border-radius:6px;padding:6px;text-align:center"><div style="font-size:10px;color:#888">속도</div><div style="font-size:14px;font-weight:700;color:#185FA5">'+Math.round(spd)+'km/h</div></div>'+
-        '</div>'+
-        '<div style="display:flex;gap:6px">'+
-          '<a href="'+tmapUrl+'" style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px;background:#1c6cd7;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🗺 T맵</a>'+
-          '<a href="'+naverUrl+'" style="flex:1;display:flex;align-items:center;justify-content:center;padding:6px;background:#03C75A;color:#fff;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">🗺 네이버</a>'+
-          '<button id="gps-refresh-btn-'+widgetId+'" style="flex:1;padding:6px;background:#f0f4f8;border:1px solid #dde3ed;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔄 갱신</button>'+
-        '</div>'+
-      '</div>';
-    document.getElementById('gps-refresh-btn-'+widgetId).onclick=function(){refreshTruckGPS(camp,widgetId);};
-  }catch(e){
-    if(el) el.innerHTML='<div style="padding:10px 12px;background:#f0f4f8;border-radius:10px;font-size:12px;color:#888">🚛 간선차 GPS 미공유 상태</div>';
-  }
-}
-
-function startTruckPolling(campSelector, widgetId){
-  function poll(){
-    var camp=campSelector.startsWith('#')?(document.getElementById(campSelector.slice(1))||{value:''}).value:campSelector;
-    if(camp)refreshTruckGPS(camp,widgetId);
-  }
-  poll();
-  if(_truckTimer)clearInterval(_truckTimer);
-  _truckTimer=setInterval(poll,30000);
-}
-// GPS 폴링 (캠프 수령 모드)
-setTimeout(function(){startTruckPolling('#r-camp','truck-widget-scan');},1000);
-
-// ══════════════════════════════════════
-// ██ DONWAY 동적 QR + GPS 출퇴근 시스템 ██
-// ══════════════════════════════════════
-var _attMode='admin', _attType='in', _attInterval=30;
-var _attTimerSec=30, _attTimerRaf=null, _attQRCount=0, _attTimerInt=null;
-var _drvGPS={lat:null,lng:null,acc:null};
-var _attSecret='DONWAY2026'; // 운영 시 Firestore settings에서 로드
-var _attCompany='MBTI01';    // 로그인 시 _CU.dealerId로 교체
-
-// Firebase (settle.html에서 넘어오거나 독립 로드)
-var _attDB = null;
-function _initAttDB(){
-  if(typeof firebase==='undefined'){setTimeout(_initAttDB,400);return;}
-  try{
-    var app;
-    try{app=firebase.app('att-app');}catch(e){
-      app=firebase.initializeApp({
-        apiKey:'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0',
-        authDomain:'mbti-logistics.firebaseapp.com',
-        projectId:'mbti-logistics',
-        storageBucket:'mbti-logistics.firebasestorage.app',
-        messagingSenderId:'40761160761',
-        appId:'1:40761160761:web:20545b610f03f534e949e8'
-      },'att-app');
-    }
-    _attDB=app.firestore();
-    loadAttLog();
-  }catch(e){console.warn('attDB:',e);}
-}
-document.addEventListener('DOMContentLoaded',_initAttDB);
-
-// ── 탭 전환 ──
-function switchMainTab(tab){
-  document.getElementById('tab-scan').style.display=tab==='scan'?'block':'none';
-  document.getElementById('tab-att').style.display=tab==='att'?'block':'none';
-  document.querySelectorAll('#main-tabs .att-btn').forEach(function(b,i){
-    b.classList.toggle('on',(i===0&&tab==='scan')||(i===1&&tab==='att'));
-  });
-  if(tab==='att'){ attGenQR(); startDrvGPS(); }
-}
-
-// ── 관리자/기사 모드 전환 ──
-function attSetMode(mode){
-  _attMode=mode;
-  document.getElementById('att-admin').style.display=mode==='admin'?'block':'none';
-  document.getElementById('att-driver').style.display=mode==='driver'?'block':'none';
-  document.getElementById('att-mode-admin').classList.toggle('on',mode==='admin');
-  document.getElementById('att-mode-driver').classList.toggle('on',mode==='driver');
-  if(mode==='driver') startDrvGPS();
-  if(mode==='admin') attGenQR();
-}
-
-// ── 출근/퇴근 선택 ──
-function attSetType(type){
-  _attType=type;
-  var inBtn=document.getElementById('att-in-btn');
-  var outBtn=document.getElementById('att-out-btn');
-  if(!inBtn||!outBtn)return;
-  if(type==='in'){
-    inBtn.style.background='linear-gradient(135deg,#0F6E56,#059669)';inBtn.style.border='none';inBtn.style.color='#fff';
-    outBtn.style.background='#fff';outBtn.style.border='2px solid #dde3ed';outBtn.style.color='#888';
-  } else {
-    outBtn.style.background='linear-gradient(135deg,#dc2626,#ef4444)';outBtn.style.border='none';outBtn.style.color='#fff';
-    inBtn.style.background='#fff';inBtn.style.border='2px solid #dde3ed';inBtn.style.color='#888';
-  }
-}
-
-// ══════════════════════
-// ██ QR 생성 (관리자) ██
-// ══════════════════════
-function attRestartTimer(){
-  _attInterval=parseInt(document.getElementById('att-interval').value)||30;
-  _attTimerSec=_attInterval;
-  attGenQR();
-}
-
-function _genQRToken(camp){
-  var windowId=Math.floor(Date.now()/(_attInterval*1000));
-  var payload=_attCompany+':'+camp+':'+windowId+':'+_attInterval;
-  // 간단 해시 (HMAC 대용)
-  var hash=_simpleHash(payload+_attSecret);
-  // btoa는 Latin1만 지원 → UTF-8 safe 인코딩
-  var safeStr = encodeURIComponent(payload+':'+hash).replace(/%([0-9A-F]{2})/g,function(_,p){return String.fromCharCode(parseInt(p,16));});
-  return 'DONWAY:'+btoa(safeStr).replace(/=/g,'');
-}
-function _simpleHash(str){
-  var h=0;
-  for(var i=0;i<str.length;i++){h=Math.imul(31,h)+str.charCodeAt(i)|0;}
-  return Math.abs(h).toString(36).toUpperCase().slice(0,8);
-}
-function _parseQRToken(token){
-  if(!token||!token.startsWith('DONWAY:'))return null;
-  try{
-    var b64 = token.slice(7)+'==';
-    var decoded = decodeURIComponent(atob(b64).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join(''));
-    var parts=decoded.split(':');
-    if(parts.length<5)return null;
-    return{company:parts[0],camp:parts[1],windowId:parseInt(parts[2]),interval:parseInt(parts[3]),hash:parts[4]};
-  }catch(e){return null;}
-}
-function _verifyQRToken(token,drvGPS,campGPS){
-  var p=_parseQRToken(token);
-  if(!p)return{ok:false,reason:'유효하지 않은 QR 코드입니다'};
-  var interval=p.interval||30;
-  var now=Math.floor(Date.now()/(interval*1000));
-  // 현재 또는 이전 윈도우 허용
-  if(p.windowId!==now&&p.windowId!==now-1)
-    return{ok:false,reason:'QR이 만료되었습니다 ('+interval+'초 이내 갱신 필요)'};
-  // 해시 검증
-  var payload=p.company+':'+p.camp+':'+p.windowId+':'+interval;
-  var expectedHash=_simpleHash(payload+_attSecret);
-  if(p.hash!==expectedHash)
-    return{ok:false,reason:'QR 위변조가 감지되었습니다'};
-  // GPS 검증
-  if(drvGPS&&drvGPS.lat&&campGPS&&campGPS.lat){
-    var dist=_gpsDistM(drvGPS.lat,drvGPS.lng,campGPS.lat,campGPS.lng);
-    if(dist>300)
-      return{ok:false,reason:'위치 불일치 (현재: 캠프에서 '+Math.round(dist)+'m 거리)'};
-  }
-  return{ok:true,camp:p.camp,windowId:p.windowId};
-}
-function _gpsDistM(lat1,lng1,lat2,lng2){
-  var R=6371000,d2r=Math.PI/180;
-  var dlat=(lat2-lat1)*d2r,dlng=(lng2-lng1)*d2r;
-  var a=Math.sin(dlat/2)*Math.sin(dlat/2)+Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dlng/2)*Math.sin(dlng/2);
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-// QR Canvas 렌더
-function attGenQR(){
-  var camp=(document.getElementById('att-camp')||{value:'부산1'}).value||'부산1';
-  var token=_genQRToken(camp);
-  _attQRCount++;
-  var el=document.getElementById('att-qr-count');if(el)el.textContent=_attQRCount;
-  var prev=document.getElementById('att-qr-token-preview');
-  if(prev)prev.textContent=token.slice(0,28)+'...';
-  _drawQR(token);
-  _attTimerSec=_attInterval;
-  // 타이머 재시작
-  clearInterval(_attTimerInt);
-  _attTimerInt=setInterval(function(){
-    _attTimerSec--;
-    var timerEl=document.getElementById('att-timer');
-    var barEl=document.getElementById('att-timer-bar');
-    if(timerEl)timerEl.textContent='00:'+String(Math.max(0,_attTimerSec)).padStart(2,'0');
-    if(barEl)barEl.style.width=Math.max(0,(_attTimerSec/_attInterval)*100)+'%';
-    if(_attTimerSec<=0){ attGenQR(); }
-  },1000);
-}
-
-// QR Canvas 그리기 (순수 JS, 라이브러리 없음)
-function _drawQR(text){
-  var canvas=document.getElementById('att-qr-canvas');
-  if(!canvas)return;
-  var ctx=canvas.getContext('2d');
-  var size=200;
-  ctx.fillStyle='#030912'; ctx.fillRect(0,0,size,size);
-  // jsQR 라이브러리로 생성 불가 → QRCode 라이브러리 필요
-  // 대신 시각적 QR 시뮬레이션 (실제 스캔 가능한 QR은 qrcode.js 필요)
-  _drawVisualQR(ctx,text,size);
-}
-function _drawVisualQR(ctx,text,size){
-  var cells=_makeQRMatrix(text);
-  var n=cells.length;
-  var cell=size/n;
-  for(var r=0;r<n;r++){
-    for(var c=0;c<n;c++){
-      ctx.fillStyle=cells[r][c]?'#00d4ff':'#030912';
-      ctx.fillRect(c*cell+1,r*cell+1,cell-1,cell-1);
-    }
-  }
-  // 모서리 정렬자 (고정 패턴)
-  function drawFinder(x,y){
-    ctx.fillStyle='#00d4ff';ctx.fillRect(x*cell,y*cell,7*cell,7*cell);
-    ctx.fillStyle='#030912';ctx.fillRect((x+1)*cell,(y+1)*cell,5*cell,5*cell);
-    ctx.fillStyle='#00d4ff';ctx.fillRect((x+2)*cell,(y+2)*cell,3*cell,3*cell);
-  }
-  drawFinder(0,0);drawFinder(n-7,0);drawFinder(0,n-7);
-}
-function _makeQRMatrix(text){
-  // 텍스트 기반 결정론적 패턴 생성 (시각적 표현용)
-  var seed=0;for(var i=0;i<text.length;i++)seed=(seed*31+text.charCodeAt(i))&0xffffffff;
-  var n=25;var cells=[];
-  for(var r=0;r<n;r++){
-    cells[r]=[];
-    for(var c=0;c<n;c++){
-      // 결정론적 패턴
-      var v=(seed^(r*73+c*37)^(r^c)*19)&1;
-      cells[r][c]=!!v;
-    }
-  }
-  return cells;
-}
-
-// ══════════════════════
-// ██ GPS 추적 (기사) ██
-// ══════════════════════
-function startDrvGPS(){
-  if(!navigator.geolocation){
-    _updateGPSStatus(false,'GPS를 지원하지 않는 기기입니다');return;
-  }
-  _updateGPSStatus(null,'GPS 위치 확인 중...');
-  navigator.geolocation.watchPosition(
-    function(pos){
-      _drvGPS={lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy};
-      _updateGPSStatus(true,'위치 확인 ✓ (정확도: '+Math.round(pos.coords.accuracy)+'m)');
-    },
-    function(err){
-      _updateGPSStatus(false,'GPS 오류: '+(['','허용 거부','위치 없음','타임아웃'][err.code]||err.message));
-    },
-    {enableHighAccuracy:true,timeout:10000,maximumAge:5000}
-  );
-}
-function _updateGPSStatus(ok,msg){
-  var el=document.getElementById('drv-gps-status');
-  var tel=document.getElementById('drv-gps-text');
-  if(!el)return;
-  el.className='gps-status '+(ok===true?'gps-ok-bg':ok===false?'gps-err-bg':'gps-check-bg');
-  if(tel)tel.textContent=msg;
-}
-
-// ══════════════════════
-// ██ QR 스캔 (기사) ██
-// ══════════════════════
-function drvScanQR(input){
-  var file=input.files[0];
-  if(!file)return;
-  var statusEl=document.getElementById('drv-status');
-  var resultEl=document.getElementById('drv-result');
-  if(statusEl){statusEl.className='scan-status s-scan';statusEl.textContent='QR 분석 중...';}
-  if(resultEl)resultEl.style.display='none';
-
-  var reader=new FileReader();
-  reader.onload=function(e){
-    var img=new Image();
-    img.onload=function(){
-      var canvas=document.createElement('canvas');
-      canvas.width=img.width;canvas.height=img.height;
-      var ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
-      var imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-      var qr=null;
-      if(typeof jsQR!=='undefined'){
-        qr=jsQR(imageData.data,imageData.width,imageData.height);
-      }
-      if(qr&&qr.data){
-        _processAttQR(qr.data,statusEl,resultEl);
-      } else {
-        if(statusEl){statusEl.className='scan-status s-err';statusEl.textContent='QR을 인식하지 못했습니다. 다시 시도하세요.';}
-      }
-      input.value='';
-    };
-    img.src=e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function _processAttQR(tokenData,statusEl,resultEl){
-  // 캠프 GPS 좌표 (실제 운영 시 Firestore에서 로드)
-  var campGPS={
-    '부산1':{lat:35.1580,lng:129.1170},'부산2':{lat:35.1652,lng:129.0560},
-    '부산3':{lat:35.1900,lng:129.0800},'대구2':{lat:35.8714,lng:128.6014},
-    '진주M':{lat:35.1797,lng:128.1077}
-  };
-  var p=_parseQRToken(tokenData);
-  var cGPS=p&&campGPS[p.camp]?campGPS[p.camp]:null;
-  var verify=_verifyQRToken(tokenData,_drvGPS,cGPS);
-
-  if(!verify.ok){
-    if(statusEl){statusEl.className='scan-status s-err';statusEl.textContent='❌ '+verify.reason;}
-    if(resultEl){resultEl.className='att-result att-err';resultEl.textContent='❌ 인증 실패: '+verify.reason;resultEl.style.display='block';}
-    return;
-  }
-
-  // 인증 성공 → Firestore 기록
-  var now=new Date();
-  var todayStr=now.toISOString().slice(0,10);
-  var timeStr=now.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  var type=_attType;
-  var camp=verify.camp;
-  var userName=(typeof _CU!=='undefined'&&_CU&&(_CU.name||_CU.email))||'기사';
-
-  var record={
-    type:type,camp:camp,name:userName,
-    lat:_drvGPS.lat||0,lng:_drvGPS.lng||0,
-    gpsAcc:_drvGPS.acc||0,
-    date:todayStr,time:timeStr,
-    timestamp:now.toISOString(),
-    dealerId:(typeof _CU!=='undefined'&&_CU&&_CU.dealerId)||_attCompany
-  };
-
-  if(_attDB){
-    _attDB.collection('attendance').add(record)
-      .then(function(){
-        if(statusEl){statusEl.className='scan-status s-ok';statusEl.textContent='✅ '+(type==='in'?'출근':'퇴근')+' 인증 완료!';}
-        if(resultEl){
-          resultEl.className='att-result att-ok';
-          resultEl.innerHTML='✅ '+(type==='in'?'🟢 출근':'🔴 퇴근')+' 완료<br><span style="font-size:12px;font-weight:400">'+camp+' · '+timeStr+'</span>';
-          resultEl.style.display='block';
-        }
-        loadDrvLog(userName,todayStr);
-        // 관리자 측 마지막 스캔 갱신
-        var lastEl=document.getElementById('att-last-scan');
-        if(lastEl)lastEl.textContent='마지막 스캔: '+userName+' '+timeStr;
-      }).catch(function(e){
-        if(statusEl){statusEl.className='scan-status s-err';statusEl.textContent='❌ 저장 실패: '+e.message;}
-      });
-  } else {
-    if(statusEl){statusEl.className='scan-status s-ok';statusEl.textContent='✅ '+(type==='in'?'출근':'퇴근')+' 완료 (오프라인)';}
-    if(resultEl){resultEl.className='att-result att-ok';resultEl.innerHTML='✅ '+(type==='in'?'🟢 출근':'🔴 퇴근')+'<br>'+timeStr;resultEl.style.display='block';}
-  }
-}
-
-// ── 출퇴근 기록 조회 (관리자) ──
-function loadAttLog(){
-  var listEl=document.getElementById('att-log-list');
-  if(!listEl)return;
-  if(!_attDB){listEl.innerHTML='<div style="text-align:center;padding:12px;color:#aaa;font-size:12px">Firebase 연결 중...</div>';return;}
-  var today=new Date().toISOString().slice(0,10);
-  _attDB.collection('attendance').where('date','==',today)
-    .orderBy('timestamp','desc').limit(50)
-    .get().then(function(snap){
-      if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:12px;color:#aaa;font-size:12px">오늘 기록 없음</div>';return;}
-      listEl.innerHTML=snap.docs.map(function(doc){
-        var d=doc.data();
-        return '<div class="att-log-row">'
-          +'<div><div style="font-weight:700;font-size:13px">'+escHtml(d.name||'')+'</div>'
-          +'<div style="font-size:10px;color:#888">'+escHtml(d.camp||'')+' · GPS '+(d.gpsAcc?'±'+Math.round(d.gpsAcc)+'m':'없음')+'</div></div>'
-          +'<div class="'+( d.type==='in'?'att-in':'att-out')+'">'+( d.type==='in'?'🟢 출근':'🔴 퇴근')+'<div style="font-size:10px;font-weight:400;color:#888">'+escHtml(d.time||'')+'</div></div>'
-          +'</div>';
-      }).join('');
-    }).catch(function(e){listEl.innerHTML='<div style="text-align:center;padding:12px;color:#aaa;font-size:12px">로드 실패: '+e.message+'</div>';});
-}
-
-// ── 내 출퇴근 기록 (기사) ──
-function loadDrvLog(name,date){
-  var listEl=document.getElementById('drv-log-list');
-  if(!listEl||!_attDB)return;
-  _attDB.collection('attendance').where('date','==',date).where('name','==',name)
-    .orderBy('timestamp','asc').get().then(function(snap){
-      if(snap.empty){listEl.innerHTML='<div style="text-align:center;padding:8px;color:#aaa;font-size:12px">기록 없음</div>';return;}
-      listEl.innerHTML=snap.docs.map(function(doc){
-        var d=doc.data();
-        return '<div class="att-log-row">'
-          +'<div class="'+( d.type==='in'?'att-in':'att-out')+'">'+( d.type==='in'?'🟢 출근':'🔴 퇴근')+'</div>'
-          +'<div style="font-size:12px;color:#888">'+escHtml(d.time||'')+'</div>'
-          +'<div style="font-size:11px;color:#aaa">'+escHtml(d.camp||'')+'</div>'
-          +'</div>';
-      }).join('');
-    }).catch(function(){});
-}
-
-
-
-// 초기 탭: 배송 스캔 숨기고 출퇴근 탭 표시
-document.addEventListener('DOMContentLoaded',function(){
-  switchMainTab('att');
-  attSetMode('admin');
-  loadAttLog();
+onAuthStateChanged(auth, user => {
+  window._slyUser = user;
+  updateAuthUI(user);
 });
 
+window._slySignIn = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) { _slyToast('로그인 실패: ' + e.message); }
+};
+window._slySignOut = async () => {
+  await signOut(auth);
+  _slyToast('로그아웃 되었습니다');
+};
 </script>
-<div style="position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:rgba(10,15,30,.9);border-top:1px solid rgba(0,102,255,.2);display:flex;justify-content:space-between;align-items:center;z-index:50">
-  <a href="/app" style="font-size:11px;color:#94a3b8;text-decoration:none">← 배송앱 홈</a>
-  <a href="https://donway.ai.kr/settle" style="font-size:11px;color:#00d4ff;text-decoration:none">🤖 DONWAY 정산 →</a>
-</div>
+
+<!-- Page JS -->
 <script>
-// ★ mbtico.kr 구독 체크
-function _checkMbticoSub(db, uid, email, cb){
-  var SA=['kimdh4790@gmail.com','soungkyekim@naver.com'];
-  if(SA.indexOf(email)>=0){cb(true);return;}
-  db.collection('companies').doc(uid).get().then(function(snap){
-    if(!snap.exists){cb(false);return;}
-    var co=snap.data();
-    var sub=(co.subscriptions||{}).mbtico||(co.subscriptions||{}).delivery||{};
-    var today=new Date().toISOString().slice(0,10);
-    cb(co.settlePaid||(sub.active&&(!sub.expiry||sub.expiry>=today)));
-  }).catch(function(){cb(true);});// 오류시 허용
+let _slyService = 'resume';
+let _slyFile = null;
+let _slyJobId = null;
+let _slyPollTimer = null;
+let _slySelectedCharge = 0;
+
+const SVC = [
+  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis' },
+  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
+  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 20, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false, serviceId: 'cover_letter_translation' },
+  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
+  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 15, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false, serviceId: 'employment_contract' },
+  // ── 공문서 발급 & 분석 ──
+  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 20, accept: '.pdf',
+    hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry' },
+  { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 10, accept: '.pdf',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'biz' },
+  { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 10, accept: '.pdf',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'health' },
+  { id: 'income',        label: '소득',   sublabel: '확인',   cost: 10, accept: '.pdf',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'income' },
+  { id: 'gov_doc',       label: '공문서', sublabel: '분석',   cost: 10, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false, serviceId: 'public_doc_analysis', isIssue: false },
+];
+
+const ICONS = {
+  resume: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+  cover_letter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  cv_translate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  interview: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
+  contract: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  registry: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>`,
+  biz_cert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
+  health_ins: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+  income: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  gov_doc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+};
+
+function _slyToast(msg, dur = 3000) {
+  let t = document.getElementById('slyToast');
+  if (!t) { t = document.createElement('div'); t.id = 'slyToast'; t.className = 'sly-toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), dur);
 }
-</script>
-<script>
-// ════════════════════════════════════════
-// ★ scan.html 고도화
-// ① 연속 스캔 카운터 (진동 피드백)
-// ② 라우트별 건수 통계 실시간
-// ③ DONWAY 정산 건수 자동 전송
-// ════════════════════════════════════════
+window._slyToast = _slyToast;
 
-var _scanCount = 0;
-var _scanSession = [];
-var _scanStartTime = null;
-
-// 연속 스캔 세션 시작
-function _startScanSession() {
-  _scanCount = 0;
-  _scanSession = [];
-  _scanStartTime = new Date();
-  var el = document.getElementById('scan-session-bar');
-  if(el) el.style.display = 'block';
-  _updateSessionBar();
-}
-
-// 세션 바 업데이트
-function _updateSessionBar() {
-  var el = document.getElementById('scan-session-cnt');
-  if(el) el.textContent = _scanCount;
-  var timeEl = document.getElementById('scan-session-time');
-  if(timeEl && _scanStartTime) {
-    var sec = Math.floor((Date.now() - _scanStartTime.getTime()) / 1000);
-    timeEl.textContent = Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
-  }
-}
-
-// 스캔 성공 시 진동 + 카운터 증가
-function _onScanSuccess(barcode, routeName) {
-  _scanCount++;
-  _scanSession.push({ barcode: barcode, route: routeName, at: new Date().toISOString() });
-  _updateSessionBar();
-  // 진동 피드백
-  if(navigator.vibrate) navigator.vibrate(50);
-  // 50건마다 강한 진동
-  if(_scanCount % 50 === 0) {
-    if(navigator.vibrate) navigator.vibrate([100,50,100]);
-    toast('📦 ' + _scanCount + '건 스캔 완료!');
-  }
-}
-
-// DONWAY 정산 건수 전송
-function _sendScanToDonway() {
-  if(!_scanSession.length) { toast('스캔 데이터 없음'); return; }
-  var did = typeof _did !== 'undefined' ? _did : '';
-  if(!did) { toast('로그인 필요'); return; }
-
-  var today = new Date().toISOString().slice(0,10);
-  var ym = today.slice(0,7);
-
-  // 라우트별 집계
-  var byRoute = {};
-  _scanSession.forEach(function(s) {
-    var r = s.route || '미분류';
-    if(!byRoute[r]) byRoute[r] = 0;
-    byRoute[r]++;
-  });
-
-  // Firestore에 스캔 결과 저장
-  var db = typeof _db !== 'undefined' ? _db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
-  if(!db) { toast('DB 연결 오류'); return; }
-
-  db.collection('scan_results').add({
-    dealerId: did,
-    date: today, ym: ym,
-    totalCount: _scanSession.length,
-    byRoute: byRoute,
-    session: _scanSession.slice(0, 500), // 최대 500건
-    sentAt: new Date().toISOString()
-  }).then(function() {
-    toast('✅ ' + _scanSession.length + '건 → DONWAY 전송 완료');
-    // 세션 초기화
-    _scanCount = 0;
-    _scanSession = [];
-    _scanStartTime = null;
-    _updateSessionBar();
-  }).catch(function(e) { toast('❌ ' + e.message); });
+function renderTabs() {
+  const cont = document.getElementById('slyTabs');
+  if (!cont) return;
+  cont.innerHTML = SVC.map(s => `
+    <button class="sly-tab ${s.id === _slyService ? 'active' : ''}" onclick="_slySelectService('${s.id}')">
+      ${ICONS[s.id]}
+      <span>${s.label}<br>${s.sublabel}</span>
+      <span class="tab-cost">${s.cost}P</span>
+    </button>
+  `).join('');
 }
 
-// 라우트별 건수 통계 로드
-function _loadScanStats() {
-  var did = typeof _did !== 'undefined' ? _did : '';
-  if(!did) return;
-  var db = typeof _db !== 'undefined' ? _db : (typeof firebase !== 'undefined' ? firebase.firestore() : null);
-  if(!db) return;
+const ISSUE_LINKS = {
+  health: [
+    { label: '국민건강보험 납부확인서', url: 'https://www.nhis.or.kr/nhis/minwon/retrieveElctrncCrtfcIssuMenu.do', color: '#1E7F4F' },
+    { label: '국민연금 납부확인서', url: 'https://www.nps.or.kr/jsppage/main.jsp', color: '#0066CC' },
+  ],
+  income: [
+    { label: '홈택스 소득금액증명원', url: 'https://www.hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&topMenuId=UTCBBA00&tab=TAB03', color: '#0050A0' },
+    { label: '근로소득 원천징수확인서', url: 'https://www.hometax.go.kr', color: '#0050A0' },
+    { label: '사업소득 원천징수확인서', url: 'https://www.hometax.go.kr', color: '#0050A0' },
+    { label: '정부24 통합 발급', url: 'https://www.gov.kr/portal/ezdoc/main', color: '#0053A6' },
+  ],
+};
 
-  var today = new Date().toISOString().slice(0,10);
-  db.collection('scan_results').where('dealerId','==',did).where('date','==',today)
-    .get().then(function(snap) {
-      var el = document.getElementById('scan-stats-today');
-      if(!el) return;
-      if(snap.empty) { el.innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">오늘 스캔 기록 없음</div>'; return; }
+function _slySelectService(id) {
+  _slyService = id;
+  renderTabs();
+  const svc = SVC.find(s => s.id === id);
+  if (!svc) return;
 
-      var totalToday = 0;
-      var byRoute = {};
-      snap.forEach(function(d) {
-        var v = d.data();
-        totalToday += v.totalCount || 0;
-        Object.keys(v.byRoute || {}).forEach(function(r) {
-          byRoute[r] = (byRoute[r]||0) + (v.byRoute[r]||0);
-        });
-      });
+  const issueCard = document.getElementById('slyIssueCard');
+  const uploadCard = document.getElementById('slyUploadCard');
 
-      var sorted = Object.entries(byRoute).sort(function(a,b){return b[1]-a[1];});
-      el.innerHTML =
-        '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">오늘 총 <strong style="color:#00d4ff;font-size:14px">' + totalToday + '건</strong></div>' +
-        sorted.map(function(e) {
-          var pct = totalToday ? Math.round(e[1]/totalToday*100) : 0;
-          return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
-            '<span style="font-size:12px">' + e[0] + '</span>' +
-            '<div style="display:flex;align-items:center;gap:6px">' +
-              '<div style="width:60px;height:4px;background:rgba(255,255,255,.1);border-radius:2px"><div style="width:'+pct+'%;height:100%;background:#0066ff;border-radius:2px"></div></div>' +
-              '<span style="font-size:12px;font-weight:700;color:#00d4ff;min-width:28px;text-align:right">' + e[1] + '건</span>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-    });
-}
-
-// 세션 바 HTML 주입
-(function() {
-  var bar = document.createElement('div');
-  bar.id = 'scan-session-bar';
-  bar.style.cssText = 'display:none;position:fixed;bottom:0;left:0;right:0;background:linear-gradient(135deg,#185FA5,#0c447c);padding:10px 16px;z-index:999;max-width:500px;margin:0 auto';
-  bar.innerHTML =
-    '<div style="display:flex;justify-content:space-between;align-items:center">' +
-      '<div style="color:#fff">' +
-        '<span style="font-size:20px;font-weight:900" id="scan-session-cnt">0</span>' +
-        '<span style="font-size:12px;margin-left:4px">건 스캔</span>' +
-        '<span style="font-size:11px;color:rgba(255,255,255,.6);margin-left:8px" id="scan-session-time">0:00</span>' +
-      '</div>' +
-      '<button onclick="_sendScanToDonway()" style="padding:7px 14px;background:#00d4ff;color:#0c447c;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">DONWAY 전송 →</button>' +
-    '</div>';
-  document.body.appendChild(bar);
-
-  // 통계 패널 주입
-  setTimeout(function() {
-    var app = document.querySelector('.app');
-    if(!app) return;
-    var statsDiv = document.createElement('div');
-    statsDiv.className = 'card';
-    statsDiv.style.marginBottom = '10px';
-    statsDiv.innerHTML =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-        '<div style="font-size:13px;font-weight:800">📊 오늘 스캔 현황</div>' +
-        '<button onclick="_loadScanStats()" style="padding:4px 10px;background:#185FA5;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">새로고침</button>' +
-      '</div>' +
-      '<div id="scan-stats-today"><div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">로딩 중...</div></div>';
-    app.insertBefore(statsDiv, app.firstChild);
-    _loadScanStats();
-  }, 800);
-})();
-
-// 기존 doScan에 훅 추가 (원본 함수 래핑)
-var _origDoScan = typeof doScan !== 'undefined' ? doScan : null;
-if(_origDoScan) {
-  doScan = function(mode, input) {
-    var result = _origDoScan.call(this, mode, input);
-    if(result !== false) {
-      if(!_scanStartTime) _startScanSession();
-      _onScanSuccess(input, mode || '');
+  if (svc.isIssue) {
+    issueCard.style.display = 'block';
+    uploadCard.style.display = 'block';
+    // show correct sub-section
+    document.getElementById('slyIssueRegistry').style.display = svc.issueType === 'registry' ? 'block' : 'none';
+    document.getElementById('slyIssueBiz').style.display = svc.issueType === 'biz' ? 'block' : 'none';
+    document.getElementById('slyIssueLinks').style.display = ['health','income'].includes(svc.issueType) ? 'block' : 'none';
+    // render quick links
+    const grid = document.getElementById('slyIssueLinkGrid');
+    if (grid && ISSUE_LINKS[svc.issueType]) {
+      grid.innerHTML = ISSUE_LINKS[svc.issueType].map(l =>
+        `<a href="${l.url}" target="_blank" rel="noopener" style="padding:14px 12px;background:${l.color};color:#fff;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;text-align:center;display:block">${l.label}</a>`
+      ).join('');
     }
-    return result;
-  };
+    // update accept on file input
+    const fi2 = document.getElementById('slyFileInput2');
+    if (fi2) fi2.accept = svc.accept || '.pdf';
+    const cn2 = document.getElementById('slyCostNote2');
+    if (cn2) cn2.textContent = `파일 분석 시 ${svc.cost}P 차감됩니다`;
+    // title
+    const titleLabels = { registry:'등기부등본 발급 & 분석', biz:'사업자 조회 & 증명서 분석', health:'건강보험·국민연금 발급 & 분석', income:'소득·세금 서류 발급 & 분석' };
+    const tt = document.getElementById('slyIssueTitleText');
+    if (tt) tt.textContent = titleLabels[svc.issueType] || '공문서 발급 & 분석';
+  } else {
+    issueCard.style.display = 'none';
+    uploadCard.style.display = 'block';
+    const fi2 = document.getElementById('slyFileInput2');
+    if (fi2) fi2.accept = svc.accept || '.hwp,.docx,.pdf,.txt';
+    const jdWrap = document.getElementById('slyJdWrap2');
+    if (jdWrap) {
+      jdWrap.style.display = svc.hasJd ? 'block' : 'none';
+      if (svc.hasJd) document.getElementById('slyJdLabel2').textContent = svc.jdLabel;
+    }
+    const cn2 = document.getElementById('slyCostNote2');
+    if (cn2) cn2.textContent = `분석 시 ${svc.cost}P 차감됩니다`;
+  }
+  clearResult();
 }
+window._slySelectService = _slySelectService;
+
+function clearResult() {
+  document.getElementById('slyResult')?.classList.remove('visible');
+  document.getElementById('slyProgress')?.classList.remove('visible');
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const maxMB = 32;
+  if (file.size > maxMB * 1024 * 1024) { _slyToast(`파일이 ${maxMB}MB를 초과합니다`); return; }
+  _slyFile = file;
+  const prev = document.getElementById('slyFilePrev2');
+  document.getElementById('slyFileName2').textContent = file.name;
+  document.getElementById('slyFileSize2').textContent = (file.size / 1024 < 1000
+    ? (file.size / 1024).toFixed(0) + ' KB'
+    : (file.size / 1024 / 1024).toFixed(1) + ' MB');
+  prev?.classList.add('visible');
+  clearResult();
+}
+
+function _slyRemoveFile() {
+  _slyFile = null;
+  const fi2 = document.getElementById('slyFileInput2');
+  if (fi2) fi2.value = '';
+  document.getElementById('slyFilePrev2')?.classList.remove('visible');
+  clearResult();
+}
+window._slyRemoveFile = _slyRemoveFile;
+window._slyRemoveFile2 = _slyRemoveFile;
+
+async function _slyAnalyze() {
+  if (!window._slyUser) { _slyToast('먼저 로그인해주세요'); return; }
+  if (!_slyFile) { _slyToast('파일을 선택해주세요'); return; }
+
+  const svc = SVC.find(s => s.id === _slyService);
+  const pts = window._slyPoints || 0;
+  if (pts < svc.cost) { _slyToast(`포인트가 부족합니다 (필요: ${svc.cost}P, 보유: ${pts}P)`); _slyOpenPoints(); return; }
+
+  const btn = document.getElementById('slyAnalyzeBtn2');
+  if (btn) btn.disabled = true;
+
+  const prog = document.getElementById('slyProgress');
+  prog?.classList.add('visible');
+  clearResult();
+  setProgress(10, 'AI 분석 요청 중...');
+
+  try {
+    const token = await window._slyGetToken();
+    const fd = new FormData();
+    fd.append('file', _slyFile);
+    fd.append('serviceId', svc.serviceId || _slyService);
+    const jdText = document.getElementById('slyJdText2')?.value || '';
+    if (jdText) fd.append('jdText', jdText);
+
+    const r = await fetch('/api/seolyuhana/analyze', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: fd
+    });
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || `서버 오류 (${r.status})`);
+    }
+    const { jobId } = await r.json();
+    _slyJobId = jobId;
+    setProgress(25, '파일 파싱 중...');
+    pollResult(jobId);
+  } catch(e) {
+    _slyToast('오류: ' + e.message);
+    prog?.classList.remove('visible');
+    if (btn) btn.disabled = false;
+  }
+}
+window._slyAnalyze = _slyAnalyze;
+
+function setProgress(pct, label) {
+  const circle = document.querySelector('.sly-progress-ring .fill');
+  if (circle) {
+    const circ = 163;
+    circle.style.strokeDashoffset = circ - (circ * pct / 100);
+  }
+  const lbl = document.getElementById('slyProgLabel');
+  if (lbl) lbl.textContent = label;
+}
+
+function pollResult(jobId) {
+  clearTimeout(_slyPollTimer);
+  _slyPollTimer = setTimeout(async () => {
+    try {
+      const token = await window._slyGetToken();
+      const r = await fetch(`/api/seolyuhana/result/${jobId}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const d = await r.json();
+      if (d.status === 'processing') {
+        setProgress(55, 'Claude AI 분석 중...');
+        pollResult(jobId);
+      } else if (d.status === 'done') {
+        setProgress(100, '완료!');
+        setTimeout(() => {
+          document.getElementById('slyProgress')?.classList.remove('visible');
+          renderResult(d.result);
+          const b2 = document.getElementById('slyAnalyzeBtn2');
+          if (b2) b2.disabled = false;
+          window._slyLoadPoints?.();
+        }, 500);
+      } else if (d.status === 'failed') {
+        throw new Error(d.error || '분석 실패');
+      } else {
+        pollResult(jobId);
+      }
+    } catch(e) {
+      _slyToast('결과 조회 실패: ' + e.message);
+      document.getElementById('slyProgress')?.classList.remove('visible');
+      const b2 = document.getElementById('slyAnalyzeBtn2');
+      if (b2) b2.disabled = false;
+    }
+  }, 2000);
+}
+
+function renderResult(data) {
+  const cont = document.getElementById('slyResult');
+  if (!cont) return;
+  const svc = SVC.find(s => s.id === _slyService);
+  let html = '';
+
+  if (data.score) {
+    const sc = data.score;
+    const total = sc.total || sc.score || 0;
+    const grade = total >= 85 ? '우수' : total >= 70 ? '양호' : total >= 55 ? '보통' : '개선 필요';
+    const circ = 163;
+    const offset = circ - (circ * total / 100);
+    html += `<div class="sly-score-bar">
+      <div class="sly-score-circle">
+        <svg viewBox="0 0 72 72">
+          <circle class="score-track" cx="36" cy="36" r="26"/>
+          <circle class="score-fill" cx="36" cy="36" r="26"
+            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="sly-score-num">${total}</div>
+      </div>
+      <div class="sly-score-info">
+        <div class="sly-score-label">종합 점수</div>
+        <div class="sly-score-grade">${grade}</div>
+        <div class="sly-score-comment">${data.overallComment || ''}</div>
+        ${sc.breakdown ? `<div class="sly-breakdown">${
+          Object.entries(sc.breakdown).map(([k,v]) => `
+            <div class="sly-breakdown-item">
+              <div class="sly-bk-label">${k}</div>
+              <div class="sly-bk-val">${v}</div>
+            </div>`).join('')
+        }</div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // Strengths
+  if (data.strengths?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">강점</div>
+      <div class="sly-tags">${data.strengths.map(s => `<span class="sly-tag tag-strength">${s}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  // Improvements
+  if (data.improvements?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">개선 포인트 (${data.improvements.length}개)</div>
+      <div class="sly-improve-list" id="slyImproveList">
+        ${data.improvements.map((item, i) => {
+          const risk = (item.riskLevel || '').toLowerCase();
+          const dot = risk === 'high' ? 'risk-high' : risk === 'medium' ? 'risk-medium' : 'risk-low';
+          return `<div class="sly-improve-item" id="slyImp${i}">
+            <div class="sly-improve-head" onclick="_slyToggleImp(${i})">
+              <span class="sly-risk-dot ${dot}"></span>
+              <span class="sly-improve-section">${item.section || item.clauseTitle || item.category || '항목 ' + (i+1)}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              ${item.original || item.originalText ? `<div class="sly-orig-text">${item.original || item.originalText}</div>` : ''}
+              ${item.suggestion || item.suggestedRevision ? `
+                <div class="sly-suggestion-label">수정 제안</div>
+                <div class="sly-suggestion-text">${item.suggestion || item.suggestedRevision}</div>` : ''}
+              ${item.reason || item.issue ? `<div class="sly-reason">${item.reason || item.issue}</div>` : ''}
+              ${item.legalBasis ? `<div class="sly-reason">⚖️ ${item.legalBasis}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Missing items / keywords
+  if (data.missingItems?.length || data.jdMissingKeywords?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">누락 항목</div><div class="sly-tags">
+      ${(data.missingItems || []).map(s => `<span class="sly-tag tag-miss">${s}</span>`).join('')}
+      ${(data.jdMissingKeywords || []).map(s => `<span class="sly-tag tag-keyword">${s}</span>`).join('')}
+    </div></div>`;
+  }
+
+  // Interview questions
+  if (data.categoryQuestions?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">면접 예상 질문</div>
+      <div class="sly-improve-list">
+        ${data.categoryQuestions.map((cat, ci) => `
+          <div class="sly-improve-item" id="slyCat${ci}">
+            <div class="sly-improve-head" onclick="_slyToggleCat(${ci})">
+              <span class="sly-improve-section">${cat.category}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              ${(cat.questions || []).map((q, qi) => `
+                <div style="margin-bottom:14px">
+                  <div style="font-weight:600;font-size:14px;color:var(--text-primary);margin-bottom:6px">Q${qi+1}. ${q.question}</div>
+                  ${q.answerGuide?.keyPoints?.length ? `
+                    <div class="sly-suggestion-label">핵심 포인트</div>
+                    <div class="sly-suggestion-text">${q.answerGuide.keyPoints.join('\n')}</div>` : ''}
+                </div>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Translation sections
+  if (data.sections?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">번역 결과</div>
+      <div class="sly-improve-list">
+        ${data.sections.map((sec, si) => `
+          <div class="sly-improve-item" id="slySec${si}">
+            <div class="sly-improve-head" onclick="_slyToggleSec(${si})">
+              <span class="sly-improve-section">${sec.title}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              <div class="sly-orig-text">${sec.koreanOriginal}</div>
+              <div class="sly-suggestion-label">영문 번역</div>
+              <div class="sly-suggestion-text">${sec.englishTranslation}</div>
+              ${sec.translatorNotes ? `<div class="sly-reason">${sec.translatorNotes}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Registry analysis (등기부등본)
+  if (data.property) {
+    const p = data.property;
+    html += `<div class="sly-card"><div class="sly-card-title">부동산 정보</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px">
+        ${p.address ? `<div><span style="color:var(--text-muted);font-size:12px">주소</span><div style="font-weight:600">${p.address}</div></div>` : ''}
+        ${p.type ? `<div><span style="color:var(--text-muted);font-size:12px">유형</span><div style="font-weight:600">${p.type}</div></div>` : ''}
+        ${p.area ? `<div><span style="color:var(--text-muted);font-size:12px">면적</span><div style="font-weight:600">${p.area}</div></div>` : ''}
+        ${p.registeredDate ? `<div><span style="color:var(--text-muted);font-size:12px">등기일</span><div style="font-weight:600">${p.registeredDate}</div></div>` : ''}
+      </div>
+    </div>`;
+  }
+  if (data.ownership?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">소유 현황</div><div class="sly-tags">
+      ${data.ownership.map(o => `<span class="sly-tag tag-strength">${typeof o === 'string' ? o : (o.name || '') + (o.share ? ' ' + o.share : '')}</span>`).join('')}
+    </div></div>`;
+  }
+  if (data.encumbrances?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title" style="color:var(--danger)">담보·제한 현황 (${data.encumbrances.length}건)</div>
+      <div class="sly-improve-list">
+        ${data.encumbrances.map((e, i) => `
+          <div class="sly-improve-item" id="slyEnc${i}">
+            <div class="sly-improve-head" onclick="_slyToggleEnc(${i})">
+              <span class="sly-risk-dot ${(e.riskLevel || 'medium') === 'high' ? 'risk-high' : 'risk-medium'}"></span>
+              <span class="sly-improve-section">${e.type || '제한사항'} ${e.amount ? '(' + e.amount + ')' : ''}</span>
+              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="sly-improve-body">
+              ${e.creditor ? `<div class="sly-reason">채권자: ${e.creditor}</div>` : ''}
+              ${e.date ? `<div class="sly-reason">설정일: ${e.date}</div>` : ''}
+              ${e.description ? `<div class="sly-reason">${e.description}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  if (data.riskSummary) {
+    html += `<div class="sly-card" style="border-left:3px solid var(--danger)">
+      <div class="sly-card-title">위험 요약</div>
+      <div style="font-size:14px;line-height:1.7;white-space:pre-line">${data.riskSummary}</div>
+    </div>`;
+  }
+  if (data.recommendations?.length) {
+    html += `<div class="sly-card"><div class="sly-card-title">추천 조치</div><div class="sly-tags">
+      ${data.recommendations.map(r => `<span class="sly-tag tag-keyword">${r}</span>`).join('')}
+    </div></div>`;
+  }
+
+  // Public doc (건강보험/소득/공문서)
+  if (data.docType) {
+    html += `<div class="sly-card">
+      <div class="sly-card-title">${data.docType}</div>
+      ${data.issuedBy ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">발급: ${data.issuedBy}${data.issuedDate ? ' (' + data.issuedDate + ')' : ''}</div>` : ''}
+      ${data.subject ? `<div style="font-size:14px;font-weight:600;margin-bottom:12px">${data.subject}</div>` : ''}
+      ${data.keyFacts?.length ? `<div class="sly-tags" style="margin-bottom:10px">${data.keyFacts.map(f => `<span class="sly-tag tag-strength">${f}</span>`).join('')}</div>` : ''}
+      ${data.summary ? `<div style="font-size:14px;line-height:1.7">${data.summary}</div>` : ''}
+      ${data.validity ? `<div style="margin-top:10px;font-size:13px;color:var(--success);font-weight:600">유효기간: ${data.validity}</div>` : ''}
+      ${data.useCase ? `<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">활용처: ${data.useCase}</div>` : ''}
+    </div>`;
+    if (data.warnings?.length) {
+      html += `<div class="sly-card" style="border-left:3px solid var(--warn)">
+        <div class="sly-card-title">주의사항</div>
+        ${data.warnings.map(w => `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">⚠️ ${w}</div>`).join('')}
+      </div>`;
+    }
+  }
+
+  // Download
+  html += `<div class="sly-download-row">
+    <button class="sly-dl-btn btn-docx" onclick="_slyDownload('docx')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      DOCX 다운로드
+    </button>
+    <button class="sly-dl-btn btn-pdf" onclick="_slyDownload('pdf')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      PDF 다운로드
+    </button>
+  </div>`;
+
+  cont.innerHTML = html;
+  cont.classList.add('visible');
+  cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+window._slyToggleImp = i => document.getElementById(`slyImp${i}`)?.classList.toggle('open');
+window._slyToggleCat = i => document.getElementById(`slyCat${i}`)?.classList.toggle('open');
+window._slyToggleSec = i => document.getElementById(`slySec${i}`)?.classList.toggle('open');
+window._slyToggleEnc = i => {
+  const el = document.getElementById(`slyEnc${i}`);
+  if (!el) return;
+  const open = el.style.maxHeight && el.style.maxHeight !== '0px';
+  el.style.maxHeight = open ? '0px' : el.scrollHeight + 'px';
+};
+
+async function _slyDownload(ext) {
+  if (!_slyJobId) { _slyToast('먼저 분석을 완료해주세요'); return; }
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch(`/api/seolyuhana/download/${_slyJobId}?ext=${ext}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) throw new Error('다운로드 실패');
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const cd = r.headers.get('Content-Disposition') || '';
+    const fname = cd.match(/filename\*?=(?:UTF-8'')?(.+)/)?.[1]?.replace(/"/g, '') || `분석결과.${ext}`;
+    a.download = decodeURIComponent(fname);
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) { _slyToast(e.message); }
+}
+window._slyDownload = _slyDownload;
+
+// ── Points modal ──
+function _slyOpenPoints() {
+  document.getElementById('slyPointsOverlay')?.classList.add('open');
+  window._slyLoadPoints?.();
+}
+function _slyClosePoints() {
+  document.getElementById('slyPointsOverlay')?.classList.remove('open');
+}
+window._slyOpenPoints = _slyOpenPoints;
+window._slyClosePoints = _slyClosePoints;
+
+function _slySelectCharge(idx) {
+  _slySelectedCharge = idx;
+  document.querySelectorAll('.sly-charge-opt').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+}
+window._slySelectCharge = _slySelectCharge;
+
+async function _slyRequestCharge() {
+  if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
+  const plans = [
+    { pts: 50, price: 5000 },
+    { pts: 120, price: 10000 },
+    { pts: 270, price: 20000 },
+    { pts: 600, price: 40000 },
+  ];
+  const plan = plans[_slySelectedCharge];
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch('/api/seolyuhana/point-request', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ points: plan.pts, amount: plan.price })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '신청 실패');
+    _slyToast(`${plan.pts}P 충전 신청 완료! 입금 후 관리자 승인 시 즉시 충전됩니다.`, 5000);
+    _slyClosePoints();
+  } catch(e) { _slyToast(e.message); }
+}
+window._slyRequestCharge = _slyRequestCharge;
+
+// ── 등기부 주소 검색 (Tilko 직접 조회 or 링크 폴백) ──
+async function _slyRegSearch() {
+  const addr = document.getElementById('slyRegAddr')?.value?.trim();
+  if (!addr) { _slyToast('주소를 입력해주세요'); return; }
+  const regType = document.getElementById('slyRegType')?.value || 'all';
+  const btn = document.querySelector('#slyIssueRegistry button');
+  if (btn) { btn.disabled = true; btn.textContent = '조회 중...'; }
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch('/api/seolyuhana/registry-direct', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: addr, regType })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '조회 실패');
+    const d = await r.json();
+    _slyShowRegResult(d, addr);
+  } catch(e) {
+    _slyToast('주소 조회 실패: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '주소 검색 →'; }
+  }
+}
+window._slyRegSearch = _slyRegSearch;
+
+function _slyShowRegResult(d, queryAddr) {
+  const result = document.getElementById('slyRegResult');
+  if (!result) return;
+  result.style.display = 'block';
+
+  if (d.mode === 'direct') {
+    // Tilko 직접 조회 결과
+    const p = d.property || {};
+    const propInfo = [p.type && `유형: ${p.type}`, p.area && `면적: ${p.area}`, p.buildYear && `건축: ${p.buildYear}년`].filter(Boolean).join(' &nbsp;|&nbsp; ');
+    const ownerHtml = (d.ownership||[]).map(o =>
+      `<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:var(--navy-mid);color:var(--text-primary);font-size:12px;margin:2px">${o.owner || '?'} <span style="color:var(--text-muted)">${o.purpose}</span></span>`
+    ).join('');
+    const encHtml = (d.encumbrances||[]).length === 0
+      ? `<div style="color:var(--success,#4caf50);font-size:13px;padding:10px 0">담보·제한 없음</div>`
+      : (d.encumbrances||[]).map((e,i) => `
+        <div onclick="_slyToggleEnc(${i})" style="padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);margin-bottom:6px;cursor:pointer">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#ef4444;font-size:16px">●</span>
+            <span style="font-size:13px;font-weight:600;flex:1">${e.type}</span>
+            <span style="font-size:13px;color:var(--danger,#ef4444);font-weight:700">${e.amount}</span>
+          </div>
+          <div id="slyEnc${i}" class="sly-accordion" style="max-height:0;overflow:hidden;transition:max-height .25s">
+            <div style="padding-top:8px;font-size:12px;color:var(--text-secondary)">채권자: ${e.creditor || '미상'} &nbsp;/&nbsp; 일자: ${e.date || '미상'}</div>
+          </div>
+        </div>`).join('');
+    const riskColor = (d.totalDebt||0) > 0 ? '#ef4444' : 'var(--success,#4caf50)';
+    result.innerHTML = `
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;word-break:break-all">${d.stdAddr || queryAddr}</div>
+      ${propInfo ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${propInfo}</div>` : ''}
+      ${ownerHtml ? `<div style="margin-bottom:12px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">소유권</div>${ownerHtml}</div>` : ''}
+      <div style="margin-bottom:6px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">담보·제한</div>${encHtml}</div>
+      <div style="padding:10px 12px;border-radius:8px;background:var(--bg);border:2px solid ${riskColor};margin-top:4px;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:700;color:${riskColor}">${d.riskSummary || '분석 완료'}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted)">출처: Tilko / 대법원 인터넷등기소 &nbsp;•&nbsp; 열람 기준</div>
+    `;
+  } else {
+    // 링크 모드 (Tilko 미설정 또는 실패)
+    result.innerHTML = `
+      <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px;word-break:break-all">${d.stdAddr || queryAddr}</div>
+      ${d.guide ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">${d.guide}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a href="${d.irosUrl||'https://www.iros.go.kr'}" target="_blank" rel="noopener"
+          style="flex:1;min-width:180px;padding:12px 16px;background:var(--gold);color:var(--navy);border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;text-align:center;display:block">
+          인터넷등기소에서 열람 (700원)
+        </a>
+        <a href="https://www.iros.go.kr" target="_blank" rel="noopener"
+          style="flex:1;min-width:120px;padding:12px 16px;background:var(--surface);color:var(--text-primary);border:1px solid var(--border);border-radius:8px;font-size:13px;text-decoration:none;text-align:center;display:block">
+          인터넷등기소 홈
+        </a>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.5">
+        열람 후 PDF 저장 → 아래 업로드 → AI 자동 분석
+      </div>
+    `;
+  }
+}
+window._slyShowRegResult = _slyShowRegResult;
+
+// ── 사업자 조회 ──
+async function _slyBizSearch() {
+  const biz = document.getElementById('slyBizNum')?.value?.trim();
+  if (!biz) { _slyToast('사업자번호를 입력해주세요'); return; }
+  const btn = document.querySelector('#slyIssueBiz button');
+  if (btn) { btn.disabled = true; btn.textContent = '조회 중...'; }
+  try {
+    const token = await window._slyGetToken();
+    const r = await fetch('/api/seolyuhana/biz-status', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bizNum: biz })
+    });
+    if (!r.ok) throw new Error((await r.json()).error || '조회 실패');
+    const d = await r.json();
+    const result = document.getElementById('slyBizResult');
+    if (result) {
+      result.style.display = 'block';
+      const statusColor = d.status === '계속사업자' ? 'var(--success)' : 'var(--danger)';
+      result.innerHTML = `
+        <div style="background:var(--bg);border-radius:10px;padding:14px 16px;border:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-weight:700;font-size:15px">${d.tradeNm || '(상호 없음)'}</span>
+            <span style="color:${statusColor};font-weight:700;font-size:14px">${d.status || '조회 불가'}</span>
+          </div>
+          ${d.taxType ? `<div style="font-size:13px;color:var(--text-secondary)">세금 유형: <strong>${d.taxType}</strong></div>` : ''}
+          ${d.bizNum ? `<div style="font-size:13px;color:var(--text-muted)">사업자번호: ${d.bizNum}</div>` : ''}
+          ${d.endDt ? `<div style="font-size:13px;color:var(--danger);margin-top:4px">폐업일: ${d.endDt}</div>` : ''}
+        </div>`;
+    }
+  } catch(e) {
+    _slyToast('사업자 조회 실패: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '조회'; }
+  }
+}
+window._slyBizSearch = _slyBizSearch;
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderTabs();
+  _slySelectService('resume');
+
+  const dz2 = document.getElementById('slyDropzone2');
+  const fi2 = document.getElementById('slyFileInput2');
+  if (dz2) {
+    dz2.addEventListener('click', () => fi2?.click());
+    dz2.addEventListener('dragover', e => { e.preventDefault(); dz2.classList.add('drag-over'); });
+    dz2.addEventListener('dragleave', () => dz2.classList.remove('drag-over'));
+    dz2.addEventListener('drop', e => {
+      e.preventDefault();
+      dz2.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    });
+  }
+  if (fi2) fi2.addEventListener('change', () => handleFile(fi2.files[0]));
+
+  // close overlay on backdrop click
+  document.getElementById('slyPointsOverlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) _slyClosePoints();
+  });
+});
 </script>
-</body>
-</html>
+
+<!-- ── HTML ── -->
+<header class="sly-header">
+  <a class="sly-logo" href="/scan">
+    <img src="/scan-icon-192.png" alt="SCAN" style="width:36px;height:36px;object-fit:contain;border-radius:8px;">
+    <span class="sly-logo-text">SCAN<span> AI</span></span>
+  </a>
+  <div class="sly-header-right" id="slyHeaderRight">
+    <button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>
+  </div>
+</header>
+
+<main class="sly-main">
+  <!-- Login wall -->
+  <div class="sly-login-wall" id="slyLoginWall">
+    <h2>AI 서류 분석 서비스</h2>
+    <p>이력서·자소서·계약서를 AI가 즉시 분석합니다.<br>구글 계정으로 무료 가입하세요.</p>
+    <button class="sly-login-wall-btn" onclick="_slySignIn()">구글로 시작하기</button>
+  </div>
+
+  <!-- Main content -->
+  <div id="slyMainContent" style="display:none">
+    <!-- Hero -->
+    <div class="sly-hero">
+      <img src="/scan-icon-192.png" alt="SCAN" style="width:72px;height:72px;object-fit:contain;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 20px rgba(201,168,76,0.3);">
+      <div class="sly-hero-eyebrow">AI 문서 스캔 & 분석</div>
+      <h1>파일 하나로<br><em>즉시 분석 완성</em></h1>
+      <p>HWP · DOCX · PDF 그대로 올리면 AI가 즉시 분석하고 개선안을 제시합니다</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="sly-tabs" id="slyTabs"></div>
+
+    <!-- Issue card (공문서 발급 모드) -->
+    <div class="sly-card" id="slyIssueCard" style="display:none">
+      <div class="sly-card-title" id="slyIssueTitleText">공문서 발급 & 분석</div>
+
+      <!-- 등기부등본 -->
+      <div id="slyIssueRegistry" style="display:none">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <input id="slyRegAddr" type="text" placeholder="도로명 또는 지번 주소 입력 (예: 서울시 강남구 테헤란로 123)"
+            style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
+            onkeydown="if(event.key==='Enter') _slyRegSearch()">
+          <select id="slyRegType" style="padding:12px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:13px;min-width:110px">
+            <option value="all">전체현황</option>
+            <option value="ownership">소유현황</option>
+            <option value="mortgage">근저당·담보</option>
+            <option value="lease">전세권·임차</option>
+          </select>
+        </div>
+        <button onclick="_slyRegSearch()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
+          주소 검색 →
+        </button>
+        <div id="slyRegResult" style="display:none;background:var(--surface);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
+          <!-- _slyShowRegResult()로 동적 렌더링 -->
+        </div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 PDF 업로드</div>
+      </div>
+
+      <!-- 사업자등록 조회 -->
+      <div id="slyIssueBiz" style="display:none">
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <input id="slyBizNum" type="text" maxlength="12" placeholder="사업자등록번호 10자리 (예: 123-45-67890)"
+            style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
+            oninput="this.value=this.value.replace(/[^\d-]/g,'')"
+            onkeydown="if(event.key==='Enter') _slyBizSearch()">
+          <button onclick="_slyBizSearch()" style="padding:12px 20px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">
+            조회
+          </button>
+        </div>
+        <div id="slyBizResult" style="display:none"></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-top:14px;margin-bottom:8px;font-weight:600">사업자등록증 PDF 업로드 (선택 — AI 상세 분석)</div>
+      </div>
+
+      <!-- 건강보험 / 소득 / 기타 -->
+      <div id="slyIssueLinks" style="display:none">
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px" id="slyIssueLinkGrid"></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 파일 업로드</div>
+      </div>
+
+    </div><!-- close slyIssueCard -->
+
+    <!-- Regular upload card (non-issue services) -->
+    <div class="sly-card" id="slyUploadCard">
+      <div class="sly-card-title">파일 업로드</div>
+      <div class="sly-dropzone" id="slyDropzone2">
+        <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
+        <div class="sly-dz-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17,8 12,3 7,8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="sly-dz-title">파일을 끌어다 놓거나 클릭하세요</div>
+        <div class="sly-dz-sub">최대 32MB</div>
+        <div class="sly-dz-types" id="slyDzTypes2">
+          <span class="sly-type-chip">HWP</span>
+          <span class="sly-type-chip">DOCX</span>
+          <span class="sly-type-chip">PDF</span>
+          <span class="sly-type-chip">TXT</span>
+        </div>
+      </div>
+      <div class="sly-file-preview" id="slyFilePrev2">
+        <div class="sly-file-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+          </svg>
+        </div>
+        <div class="sly-file-info">
+          <div class="sly-file-name" id="slyFileName2"></div>
+          <div class="sly-file-size" id="slyFileSize2"></div>
+        </div>
+        <button class="sly-file-remove" onclick="_slyRemoveFile2()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="sly-optional" id="slyJdWrap2">
+        <label id="slyJdLabel2">지원 공고 붙여넣기 (선택)</label>
+        <textarea id="slyJdText2" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
+      </div>
+      <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        AI 분석 시작
+      </button>
+      <div class="sly-cost-note" id="slyCostNote2">분석 시 10P 차감됩니다</div>
+    </div>
+
+    <!-- Progress -->
+    <div class="sly-card sly-progress" id="slyProgress">
+      <svg class="sly-progress-ring" viewBox="0 0 64 64">
+        <circle class="track" cx="32" cy="32" r="26"/>
+        <circle class="fill" cx="32" cy="32" r="26" stroke-dasharray="163" stroke-dashoffset="163"/>
+      </svg>
+      <div class="sly-progress-label" id="slyProgLabel">AI 분석 요청 중...</div>
+      <div class="sly-progress-sub">약 10~30초 소요됩니다</div>
+    </div>
+
+    <!-- Results -->
+    <div id="slyResult" class="sly-result"></div>
+  </div>
+</main>
+
+<!-- Points modal -->
+<div class="sly-overlay" id="slyPointsOverlay">
+  <div class="sly-modal" style="position:relative">
+    <button class="sly-modal-close" onclick="_slyClosePoints()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="sly-modal-title">포인트 충전</div>
+    <div class="sly-balance-display">
+      <div>
+        <div class="sly-balance-label">현재 보유 포인트</div>
+        <div class="sly-balance-val" id="slyBalanceVal">0 P</div>
+      </div>
+      <div style="font-size:13px;color:rgba(201,168,76,.6);text-align:right">1P = ₩1</div>
+    </div>
+
+    <div class="sly-charge-title">충전 옵션 선택</div>
+    <div class="sly-charge-options">
+      <div class="sly-charge-opt selected" onclick="_slySelectCharge(0)">
+        <div>
+          <div class="sly-charge-pts">50 P</div>
+          <div style="font-size:11px;color:var(--text-muted)">기본 체험</div>
+        </div>
+        <div class="sly-charge-price">₩5,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(1)">
+        <div>
+          <div class="sly-charge-pts">120 P <span class="sly-charge-bonus">+20P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">스탠다드</div>
+        </div>
+        <div class="sly-charge-price">₩10,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(2)">
+        <div>
+          <div class="sly-charge-pts">270 P <span class="sly-charge-bonus">+70P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">프리미엄</div>
+        </div>
+        <div class="sly-charge-price">₩20,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(3)">
+        <div>
+          <div class="sly-charge-pts">600 P <span class="sly-charge-bonus">+200P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">비즈니스</div>
+        </div>
+        <div class="sly-charge-price">₩40,000</div>
+      </div>
+    </div>
+
+    <div class="sly-account-info">
+      <strong>입금 계좌</strong><br>
+      하나은행 270-910019-24204<br>
+      예금주: (유)엠비티아이<br>
+      <br>
+      입금 후 관리자 확인 시 <strong>즉시 포인트 충전</strong>됩니다.<br>
+      <span style="color:var(--text-muted)">신청 후 영업일 기준 1일 이내 처리</span>
+    </div>
+    <button class="sly-request-btn" onclick="_slyRequestCharge()">충전 신청하기</button>
+  </div>
+</div>

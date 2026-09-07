@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
  * Remotion으로 인프런 클립 홍보 영상 렌더링
- * 사용: node scripts/remotion/render-inflearn.js [--reels] [--dry-run]
+ * 사용: node scripts/remotion/render-inflearn.js [--reels] [--dry-run] [--variant A|B|C|D|E|F]
+ *
+ * 변형 없으면 주차 기반 자동 선택 (A=카카오, B=급여, C=부가세, D=경비, E=오라클, F=AI프롬프트)
  */
 
 const { bundle } = require('@remotion/bundler');
@@ -13,9 +15,46 @@ const args = process.argv.slice(2);
 const reelsMode = args.includes('--reels');
 const dryRun = args.includes('--dry-run');
 
-const ROOT  = path.join(__dirname, '../..');
-const ENTRY = path.join(__dirname, 'index.jsx');
+function getArg(name) {
+  const eq = args.find(a => a.startsWith(`--${name}=`));
+  if (eq) return eq.split('=')[1];
+  const idx = args.indexOf(`--${name}`);
+  return idx !== -1 ? args[idx + 1] : null;
+}
+
+const ROOT    = path.join(__dirname, '../..');
+const ENTRY   = path.join(__dirname, 'index.jsx');
 const OUT_DIR = path.join(ROOT, 'output');
+
+// ── 변형 선택 ───────────────────────────────────────────────────
+const VARIANTS_FILE = path.join(ROOT, 'scripts/content/variants/inflearn-variants.json');
+const NARRATION_FILE = path.join(ROOT, 'scripts/content/inflearn-narration.json');
+
+function loadVariant(forcedKey) {
+  const variants = JSON.parse(fs.readFileSync(VARIANTS_FILE, 'utf8'));
+  const keys = Object.keys(variants); // A-F
+  let key;
+  if (forcedKey && variants[forcedKey]) {
+    key = forcedKey;
+  } else {
+    const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000));
+    key = keys[weekIdx % keys.length];
+  }
+  const variant = variants[key];
+  console.log(`[Remotion] 인프런 변형: ${key} — ${variant.clip} (${variant.clipId})`);
+  return { key, variant };
+}
+
+function writeNarrationFromVariant(variant) {
+  const narration = {
+    product: 'inflearn',
+    voice: variant.voice || 'ko-KR-Neural2-B',
+    speedRate: variant.speedRate || 1.0,
+    lines: variant.lines,
+  };
+  fs.writeFileSync(NARRATION_FILE, JSON.stringify(narration, null, 2), 'utf8');
+  console.log(`[Remotion] 나레이션 파일 업데이트: ${variant.lines.length}줄`);
+}
 
 function findChromium() {
   const candidates = [
@@ -40,16 +79,23 @@ function findChromium() {
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
+  const forcedKey = getArg('variant');
+  const { key: variantKey, variant } = loadVariant(forcedKey);
+
+  // 나레이션 JSON을 variant 기반으로 덮어쓰기 (generate-narration.js가 이 파일 읽음)
+  writeNarrationFromVariant(variant);
+
   const compositionId = reelsMode ? 'InflearnReels' : 'InflearnPromo';
   const outFile = reelsMode
     ? path.join(OUT_DIR, 'inflearn-reels.mp4')
     : path.join(OUT_DIR, 'inflearn-promo.mp4');
 
-  console.log(`[Remotion] 인프런 홍보 영상 렌더링 시작 (${compositionId})`);
+  console.log(`[Remotion] 인프런 홍보 영상 렌더링 시작 (${compositionId}, 변형 ${variantKey})`);
 
   if (dryRun) {
     console.log('[Remotion][DRY-RUN] 렌더링 건너뜀.');
     console.log(`  출력 파일: ${outFile}`);
+    console.log(`  변형: ${variantKey} — ${variant.clip}`);
     return;
   }
 
@@ -86,11 +132,21 @@ async function main() {
     publicDir: pubDir,
   });
 
+  // clipVariant: Remotion 컴포지션에 전달할 변형 정보 (직렬화 가능 데이터만)
+  const clipVariant = {
+    key: variantKey,
+    clip: variant.clip,
+    clipId: variant.clipId,
+    url: variant.url,
+    slides: variant.slides || [],
+    hashtags: variant.hashtags || [],
+  };
+
   console.log('[Remotion] 컴포지션 로딩...');
   const composition = await selectComposition({
     serveUrl: bundled,
     id: compositionId,
-    inputProps: { hasNarration, hasBgm },
+    inputProps: { hasNarration, hasBgm, clipVariant },
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
   });
 
@@ -100,7 +156,7 @@ async function main() {
     serveUrl: bundled,
     codec: 'h264',
     outputLocation: outFile,
-    inputProps: { hasNarration, hasBgm },
+    inputProps: { hasNarration, hasBgm, clipVariant },
     videoBitrate: '8M',
     backgroundColor: '#08101f',
     ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),

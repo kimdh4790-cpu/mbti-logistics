@@ -1,10 +1,23 @@
 const React = require('react');
 const { useCurrentFrame, useVideoConfig, interpolate, Sequence, AbsoluteFill, Easing, Audio, staticFile } = require('remotion');
 
-const NAVY  = '#030f1e';
-const BLUE  = '#0ea5e9';
-const CYAN  = '#38bdf8';
 const WHITE = '#ffffff';
+
+// 변형별 완전히 다른 색상 테마 — 채널 피드에서 각 영상이 구별되도록
+var THEMES = [
+  // A: 긴박/빨강 — "정산 3일→3분" 충격
+  { bg: '#100000', mid: '#8B0000', accent: '#FF3B30', accent2: '#FF6B60' },
+  // B: 카카오/노랑 — "300명 카톡 동시발송" 임팩트
+  { bg: '#0a0900', mid: '#5a4500', accent: '#FFE000', accent2: '#FFF176' },
+  // C: 경고/주황 — "정산 실수 → 기사 이탈" 공포
+  { bg: '#100500', mid: '#7a3000', accent: '#FF6B00', accent2: '#FF9500' },
+  // D: 절약/초록 — "경쟁사 반값" 가격 충격
+  { bg: '#001208', mid: '#005a20', accent: '#00E676', accent2: '#69F0AE' },
+];
+// WEEK_VARIANT는 아래 VARIANTS 정의 후 설정됨
+var T.bg  = '#030f1e'; // 공통 배경 fallback
+var T.mid  = '#0ea5e9'; // 공통 accent fallback
+var T.accent  = '#38bdf8'; // 공통 accent fallback
 
 function fadeIn(frame, start, dur) {
   return interpolate(frame, [start, start + dur], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
@@ -21,12 +34,12 @@ var BASE = {
   width: '100%', height: '100%', overflow: 'hidden',
 };
 
-// 주차별 A/B/C/D 콘텐츠 로테이션
+// 주차별 A/B/C/D 콘텐츠 로테이션 (공포→대비→충격 3단 구조)
 var WEEK_VARIANT = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 4;
 var VARIANTS = [
   {
-    hook: ['수백 명 정산이', '3초면 끝난다'],
-    sub:  '엑셀 업로드 · 자동 정산 · 알림톡 발송',
+    hook: ['매달 정산 때마다 야근하세요?', '저는 안 해요'],
+    sub:  '엑셀 업로드 하나 → 500명 동시 정산 → 알림톡 자동발송',
     rows: [
       { name: '김민준', trips: 48, amount: '1,248,000' },
       { name: '이서윤', trips: 62, amount: '1,612,000' },
@@ -41,8 +54,8 @@ var VARIANTS = [
     ],
   },
   {
-    hook: ['엑셀 파일 하나로', '전원 자동 정산'],
-    sub:  '오류 없이 · 누락 없이 · 3초 완료',
+    hook: ['기사들이 정산 연락을', '먼저 하는 이유'],
+    sub:  '명세서가 자동 발송되니까 · 수작업 0분 · 분쟁 0건',
     rows: [
       { name: '이정우', trips: 55, amount: '1,430,000' },
       { name: '박서연', trips: 41, amount: '1,066,000' },
@@ -57,8 +70,8 @@ var VARIANTS = [
     ],
   },
   {
-    hook: ['기사 300명 정산', '클릭 한 번이면 끝'],
-    sub:  '자동 계산 · 명세서 발송 · 세금계산서',
+    hook: ['이 실수 하나가', '기사를 떠나게 합니다'],
+    sub:  '자동 검증으로 오류 제로 · 이의제기 0건 달성',
     rows: [
       { name: '오현우', trips: 52, amount: '1,352,000' },
       { name: '임지현', trips: 38, amount: '988,000' },
@@ -73,8 +86,8 @@ var VARIANTS = [
     ],
   },
   {
-    hook: ['정산 실수', '이제 없앱시다'],
-    sub:  'AI 검증 · 자동 정산 · 이의제기 0건',
+    hook: ['배달대행 소장님들이', '갑자기 이걸 쓰는 이유'],
+    sub:  '경쟁사 절반 가격 · 같은 기능 · 7일 무료체험',
     rows: [
       { name: '조민재', trips: 60, amount: '1,560,000' },
       { name: '신하은', trips: 43, amount: '1,118,000' },
@@ -90,6 +103,7 @@ var VARIANTS = [
   },
 ];
 var V = VARIANTS[WEEK_VARIANT];
+var T = THEMES[WEEK_VARIANT]; // 이번 주 색상 테마
 
 function Particles(props) {
   var count = props.count || 14;
@@ -104,7 +118,7 @@ function Particles(props) {
     var opacity = 0.05 + (i % 3) * 0.04;
     items.push(React.createElement('div', {
       key: i,
-      style: { position: 'absolute', left: x + '%', top: y + '%', width: size, height: size, borderRadius: '50%', background: CYAN, opacity: opacity },
+      style: { position: 'absolute', left: x + '%', top: y + '%', width: size, height: size, borderRadius: '50%', background: T.accent, opacity: opacity },
     }));
   }
   return React.createElement(AbsoluteFill, { style: { pointerEvents: 'none' } }, items);
@@ -134,21 +148,21 @@ function SceneIntro() {
   var lineW  = interpolate(frame, [86, 138], [0, 260], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: NAVY, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: T.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <Particles count={13} />
-      <div style={{ position: 'absolute', left: 0, right: 0, top: scanY + '%', height: 2, background: 'linear-gradient(90deg, transparent, ' + CYAN + '77, ' + CYAN + ', ' + CYAN + '77, transparent)', opacity: scanOp, boxShadow: '0 0 18px ' + CYAN + '55' }} />
-      <div style={{ position: 'absolute', top: '18%', left: '50%', transform: 'translateX(-50%)', width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, ' + BLUE + '18 0%, transparent 70%)' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: scanY + '%', height: 2, background: 'linear-gradient(90deg, transparent, ' + T.accent + '77, ' + T.accent + ', ' + T.accent + '77, transparent)', opacity: scanOp, boxShadow: '0 0 18px ' + T.accent + '55' }} />
+      <div style={{ position: 'absolute', top: '18%', left: '50%', transform: 'translateX(-50%)', width: 520, height: 520, borderRadius: '50%', background: 'radial-gradient(circle, ' + T.mid + '18 0%, transparent 70%)' }} />
 
       {/* 로고 — frame 0부터 즉시 노출 */}
       <div style={{ transform: 'scale(' + logoSc + ')', textAlign: 'center', marginBottom: 52 }}>
-        <div style={{ fontSize: 100, fontWeight: 900, color: CYAN, letterSpacing: -2, textShadow: '0 0 ' + Math.round(60 * glow) + 'px ' + CYAN + '88, 0 0 ' + Math.round(140 * glow) + 'px ' + CYAN + '22' }}>DONWAY</div>
-        <div style={{ fontSize: 18, color: CYAN + '99', letterSpacing: 8, marginTop: -8, fontWeight: 300 }}>배달대행 정산 SaaS</div>
+        <div style={{ fontSize: 100, fontWeight: 900, color: T.accent, letterSpacing: -2, textShadow: '0 0 ' + Math.round(60 * glow) + 'px ' + T.accent + '88, 0 0 ' + Math.round(140 * glow) + 'px ' + T.accent + '22' }}>DONWAY</div>
+        <div style={{ fontSize: 18, color: T.accent + '99', letterSpacing: 8, marginTop: -8, fontWeight: 300 }}>배달대행 정산 SaaS</div>
       </div>
 
       {/* 메인 카피 */}
       <div style={{ transform: 'translateY(' + textY + 'px)', opacity: textOp, textAlign: 'center', marginBottom: 16 }}>
         <div style={{ fontSize: 50, fontWeight: 900, color: WHITE, lineHeight: 1.2 }}>{V.hook[0]}</div>
-        <div style={{ fontSize: 50, fontWeight: 900, color: CYAN, lineHeight: 1.2, textShadow: '0 0 26px ' + CYAN + '44' }}>{V.hook[1]}</div>
+        <div style={{ fontSize: 50, fontWeight: 900, color: T.accent, lineHeight: 1.2, textShadow: '0 0 26px ' + T.accent + '44' }}>{V.hook[1]}</div>
       </div>
 
       {/* 서브 */}
@@ -159,17 +173,17 @@ function SceneIntro() {
       {/* 기능 태그 */}
       <div style={{ opacity: tagOp, display: 'flex', gap: 14, justifyContent: 'center', marginBottom: 48, flexWrap: 'wrap', padding: '0 24px' }}>
         {['📊 자동 정산', '💬 알림톡 발송', '📄 세금계산서'].map(function(t, i) {
-          return <div key={i} style={{ background: CYAN + '18', border: '1px solid ' + CYAN + '44', borderRadius: 24, padding: '10px 20px', color: CYAN, fontSize: 15, fontWeight: 600 }}>{t}</div>;
+          return <div key={i} style={{ background: T.accent + '18', border: '1px solid ' + T.accent + '44', borderRadius: 24, padding: '10px 20px', color: T.accent, fontSize: 15, fontWeight: 600 }}>{t}</div>;
         })}
       </div>
 
       {/* 핵심 수치 */}
       <div style={{ opacity: statOp, textAlign: 'center' }}>
-        <div style={{ color: CYAN, fontSize: 42, fontWeight: 900 }}>500명+</div>
+        <div style={{ color: T.accent, fontSize: 42, fontWeight: 900 }}>500명+</div>
         <div style={{ color: WHITE + '55', fontSize: 16, marginTop: 4 }}>동시 정산 가능</div>
       </div>
 
-      <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', width: lineW, height: 1, background: 'linear-gradient(90deg, transparent, ' + CYAN + '99, transparent)' }} />
+      <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', width: lineW, height: 1, background: 'linear-gradient(90deg, transparent, ' + T.accent + '99, transparent)' }} />
     </AbsoluteFill>
   );
 }
@@ -184,11 +198,11 @@ function SceneExcel() {
   return (
     <AbsoluteFill style={{ ...BASE, background: '#030e1c' }}>
       <Particles count={9} />
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 35%, ' + BLUE + '12 0%, transparent 60%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 35%, ' + T.mid + '12 0%, transparent 60%)' }} />
 
       {/* 배지 */}
-      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: CYAN + '18', border: '1px solid ' + CYAN + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
-        <span style={{ color: CYAN, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>FEATURE 01</span>
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: T.accent + '18', border: '1px solid ' + T.accent + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
+        <span style={{ color: T.accent, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>FEATURE 01</span>
       </div>
 
       {/* 메인 콘텐츠 — 수직 균등 배분 */}
@@ -197,7 +211,7 @@ function SceneExcel() {
         {/* 타이틀 */}
         <div style={{ textAlign: 'center', opacity: fadeIn(frame, 8, 20), transform: 'translateY(' + slideUp(frame, 8, 22) + 'px)', width: '100%' }}>
           <div style={{ fontSize: 54, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>엑셀 한 번에</div>
-          <div style={{ fontSize: 54, fontWeight: 900, color: CYAN, lineHeight: 1.15, textShadow: '0 0 22px ' + CYAN + '44' }}>전원 자동 정산</div>
+          <div style={{ fontSize: 54, fontWeight: 900, color: T.accent, lineHeight: 1.15, textShadow: '0 0 22px ' + T.accent + '44' }}>전원 자동 정산</div>
           <div style={{ fontSize: 17, color: WHITE + '55', marginTop: 10 }}>수백 명도 3초 · 오류·누락 제로</div>
         </div>
 
@@ -214,12 +228,12 @@ function SceneExcel() {
 
           {/* 화살표 */}
           <div style={{ transform: 'translateX(' + arrowX + 'px)', opacity: arrowOp }}>
-            <div style={{ color: CYAN, fontSize: 44, textShadow: '0 0 14px ' + CYAN + '88' }}>→</div>
+            <div style={{ color: T.accent, fontSize: 44, textShadow: '0 0 14px ' + T.accent + '88' }}>→</div>
           </div>
 
           {/* DONWAY 정산 목업 */}
-          <div style={{ width: 272, height: 410, background: 'linear-gradient(160deg, #0d1e33, #061828)', borderRadius: 22, border: '1px solid ' + CYAN + '33', overflow: 'hidden', opacity: fadeIn(frame, 12, 18), transform: 'translateY(' + slideUp(frame, 12, 22) + 'px)', boxShadow: '0 30px 80px #000000aa' }}>
-            <div style={{ background: 'linear-gradient(135deg, ' + BLUE + 'ee, #0284c7)', height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <div style={{ width: 272, height: 410, background: 'linear-gradient(160deg, #0d1e33, #061828)', borderRadius: 22, border: '1px solid ' + T.accent + '33', overflow: 'hidden', opacity: fadeIn(frame, 12, 18), transform: 'translateY(' + slideUp(frame, 12, 22) + 'px)', boxShadow: '0 30px 80px #000000aa' }}>
+            <div style={{ background: 'linear-gradient(135deg, ' + T.mid + 'ee, #0284c7)', height: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
               <span style={{ color: WHITE, fontSize: 13, fontWeight: 800 }}>DONWAY 정산 완료</span>
               <span style={{ background: WHITE + '22', borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 800, color: WHITE }}>{rows.length}명</span>
             </div>
@@ -230,7 +244,7 @@ function SceneExcel() {
                     <div style={{ color: WHITE, fontSize: 13, fontWeight: 600 }}>{row.name}</div>
                     <div style={{ color: WHITE + '44', fontSize: 11, marginTop: 2 }}>{row.trips}건</div>
                   </div>
-                  <div style={{ color: CYAN, fontSize: 13, fontWeight: 700 }}>{row.amount}원</div>
+                  <div style={{ color: T.accent, fontSize: 13, fontWeight: 700 }}>{row.amount}원</div>
                 </div>
               );
             })}
@@ -240,13 +254,13 @@ function SceneExcel() {
         {/* 기능 뱃지 */}
         <div style={{ display: 'flex', gap: 12, opacity: fadeIn(frame, 42, 18) }}>
           {['✅ 오류 제로', '⚡ 3초 완료', '📱 알림톡 자동'].map(function(t, i) {
-            return <div key={i} style={{ background: CYAN + '14', border: '1px solid ' + CYAN + '33', borderRadius: 20, padding: '10px 18px', color: WHITE + 'cc', fontSize: 14 }}>{t}</div>;
+            return <div key={i} style={{ background: T.accent + '14', border: '1px solid ' + T.accent + '33', borderRadius: 20, padding: '10px 18px', color: WHITE + 'cc', fontSize: 14 }}>{t}</div>;
           })}
         </div>
 
         {/* 카운터 */}
         <div style={{ textAlign: 'center', opacity: fadeIn(frame, 60, 18) }}>
-          <span style={{ color: CYAN, fontSize: 50, fontWeight: 900 }}>
+          <span style={{ color: T.accent, fontSize: 50, fontWeight: 900 }}>
             <AnimatedCounter from={0} to={500} startFrame={64} suffix="+" />
           </span>
           <span style={{ color: WHITE + '66', fontSize: 18, marginLeft: 10 }}>명 동시 정산 가능</span>
@@ -266,11 +280,11 @@ function SceneAlimtalk() {
   return (
     <AbsoluteFill style={{ ...BASE, background: '#020c1a' }}>
       <Particles count={8} />
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 65%, ' + BLUE + '10 0%, transparent 60%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 65%, ' + T.mid + '10 0%, transparent 60%)' }} />
 
       {/* 배지 */}
-      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: CYAN + '18', border: '1px solid ' + CYAN + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
-        <span style={{ color: CYAN, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>FEATURE 02</span>
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: T.accent + '18', border: '1px solid ' + T.accent + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
+        <span style={{ color: T.accent, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>FEATURE 02</span>
       </div>
 
       {/* 발송 완료 알림 */}
@@ -313,8 +327,8 @@ function SceneAlimtalk() {
             { label: '기사 만족도', value: '4.9', unit: '★' },
           ].map(function(s, i) {
             return (
-              <div key={i} style={{ flex: 1, background: '#0d1a28', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid ' + CYAN + '22' }}>
-                <div style={{ color: CYAN, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{s.value}<span style={{ fontSize: 14 }}>{s.unit}</span></div>
+              <div key={i} style={{ flex: 1, background: '#0d1a28', borderRadius: 16, padding: '18px 12px', textAlign: 'center', border: '1px solid ' + T.accent + '22' }}>
+                <div style={{ color: T.accent, fontSize: 28, fontWeight: 900, lineHeight: 1 }}>{s.value}<span style={{ fontSize: 14 }}>{s.unit}</span></div>
                 <div style={{ color: WHITE + '44', fontSize: 11, marginTop: 6 }}>{s.label}</div>
               </div>
             );
@@ -323,8 +337,8 @@ function SceneAlimtalk() {
 
         {/* 발송 카운터 */}
         <div style={{ textAlign: 'center', opacity: fadeIn(frame, 76, 18) }}>
-          <div style={{ background: CYAN + '18', border: '1px solid ' + CYAN + '44', borderRadius: 28, padding: '16px 44px', display: 'inline-block' }}>
-            <span style={{ color: CYAN, fontSize: 22, fontWeight: 800 }}>
+          <div style={{ background: T.accent + '18', border: '1px solid ' + T.accent + '44', borderRadius: 28, padding: '16px 44px', display: 'inline-block' }}>
+            <span style={{ color: T.accent, fontSize: 22, fontWeight: 800 }}>
               <AnimatedCounter from={0} to={312} startFrame={80} suffix="명" />
             </span>
             <span style={{ color: WHITE + '66', fontSize: 16, marginLeft: 6 }}>동시 발송 완료</span>
@@ -348,11 +362,11 @@ function ScenePricing() {
   return (
     <AbsoluteFill style={{ ...BASE, background: '#020b18' }}>
       <Particles count={12} />
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, ' + BLUE + '0e 0%, transparent 65%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, ' + T.mid + '0e 0%, transparent 65%)' }} />
 
       {/* 배지 */}
-      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: CYAN + '18', border: '1px solid ' + CYAN + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
-        <span style={{ color: CYAN, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>PRICING</span>
+      <div style={{ position: 'absolute', top: 72, left: '50%', transform: 'translateX(-50%)', background: T.accent + '18', border: '1px solid ' + T.accent + '44', borderRadius: 20, padding: '8px 24px', opacity: fadeIn(frame, 5, 14) }}>
+        <span style={{ color: T.accent, fontSize: 15, fontWeight: 600, letterSpacing: 2 }}>PRICING</span>
       </div>
 
       {/* 메인 콘텐츠 — 수직 균등 배분 */}
@@ -362,7 +376,7 @@ function ScenePricing() {
         <div style={{ textAlign: 'center', opacity: fadeIn(frame, 12, 18), transform: 'translateY(' + slideUp(frame, 12, 18) + 'px)', width: '100%' }}>
           <div style={{ fontSize: 46, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>기사 1인당</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-            <span style={{ fontSize: 72, fontWeight: 900, color: CYAN, textShadow: '0 0 26px ' + CYAN + '44' }}>₩2,500</span>
+            <span style={{ fontSize: 72, fontWeight: 900, color: T.accent, textShadow: '0 0 26px ' + T.accent + '44' }}>₩2,500</span>
             <span style={{ fontSize: 22, color: WHITE + '66' }}>/월</span>
           </div>
           <div style={{ fontSize: 16, color: WHITE + '55', marginTop: 8 }}>카드 등록 없이 · 7일 무료체험</div>
@@ -372,10 +386,10 @@ function ScenePricing() {
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {tiers.map(function(tier, i) {
             return (
-              <div key={tier.label} style={{ background: tier.highlight ? CYAN + '18' : '#0d1e33', borderRadius: 18, padding: '20px 24px', border: '1.5px solid ' + (tier.highlight ? CYAN + '55' : CYAN + '1e'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: fadeIn(frame, 28 + i * 12, 18), transform: 'translateX(' + interpolate(frame, [28 + i * 12, 44 + i * 12], [-30, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) + 'px)' }}>
-                <span style={{ color: tier.highlight ? CYAN : WHITE + '99', fontSize: 18, fontWeight: 700 }}>{tier.label}</span>
+              <div key={tier.label} style={{ background: tier.highlight ? T.accent + '18' : '#0d1e33', borderRadius: 18, padding: '20px 24px', border: '1.5px solid ' + (tier.highlight ? T.accent + '55' : T.accent + '1e'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: fadeIn(frame, 28 + i * 12, 18), transform: 'translateX(' + interpolate(frame, [28 + i * 12, 44 + i * 12], [-30, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) + 'px)' }}>
+                <span style={{ color: tier.highlight ? T.accent : WHITE + '99', fontSize: 18, fontWeight: 700 }}>{tier.label}</span>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ color: tier.highlight ? CYAN : WHITE, fontSize: 24, fontWeight: 900 }}>₩{tier.price}</span>
+                  <span style={{ color: tier.highlight ? T.accent : WHITE, fontSize: 24, fontWeight: 900 }}>₩{tier.price}</span>
                   <span style={{ color: WHITE + '44', fontSize: 13, marginLeft: 3 }}>{tier.unit}</span>
                 </div>
               </div>
@@ -387,7 +401,7 @@ function ScenePricing() {
         <div style={{ width: '100%', opacity: fadeIn(frame, 66, 18) }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
             {features.map(function(f, i) {
-              return <div key={i} style={{ background: '#0d1a28', borderRadius: 20, padding: '10px 18px', border: '1px solid ' + CYAN + '22', color: WHITE + '88', fontSize: 14, opacity: fadeIn(frame, 70 + i * 3, 12) }}>{f}</div>;
+              return <div key={i} style={{ background: '#0d1a28', borderRadius: 20, padding: '10px 18px', border: '1px solid ' + T.accent + '22', color: WHITE + '88', fontSize: 14, opacity: fadeIn(frame, 70 + i * 3, 12) }}>{f}</div>;
             })}
           </div>
         </div>
@@ -411,24 +425,24 @@ function SceneCTA() {
   var glowHex = glowAlpha.toString(16).padStart(2, '0');
 
   return (
-    <AbsoluteFill style={{ ...BASE, background: NAVY, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <AbsoluteFill style={{ ...BASE, background: T.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <Particles count={18} />
       {[0, 0.34, 0.67].map(function(off, i) {
         var f = (frame + off * 120) % 120;
         var s = interpolate(f, [0, 120], [0.65, 3.4], { extrapolateRight: 'clamp' });
         var o = interpolate(f, [0, 120], [0.4, 0], { extrapolateRight: 'clamp' });
-        return <div key={i} style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', border: '1.5px solid ' + CYAN, transform: 'scale(' + s + ')', opacity: o }} />;
+        return <div key={i} style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', border: '1.5px solid ' + T.accent, transform: 'scale(' + s + ')', opacity: o }} />;
       })}
       <div style={{ transform: 'scale(' + sc + ')', textAlign: 'center', padding: '0 40px' }}>
-        <div style={{ fontSize: 80, fontWeight: 900, color: CYAN, letterSpacing: -2, textShadow: '0 0 40px ' + CYAN + '88, 0 0 100px ' + CYAN + '22' }}>DONWAY</div>
+        <div style={{ fontSize: 80, fontWeight: 900, color: T.accent, letterSpacing: -2, textShadow: '0 0 40px ' + T.accent + '88, 0 0 100px ' + T.accent + '22' }}>DONWAY</div>
         <div style={{ fontSize: 22, color: WHITE, fontWeight: 700, marginTop: -8, marginBottom: 14, opacity: fadeIn(frame, 20, 18) }}>7일 무료체험 시작</div>
         <div style={{ fontSize: 16, color: WHITE + '44', marginBottom: 48, opacity: fadeIn(frame, 28, 18), lineHeight: 1.6 }}>기사 1인당 ₩2,500/월<br/>계좌이체 · 카드 등록 불필요</div>
-        <div style={{ background: 'linear-gradient(135deg, ' + BLUE + ', #0284c7)', borderRadius: 24, padding: '22px 68px', fontSize: 26, fontWeight: 900, color: WHITE, opacity: fadeIn(frame, 34, 18), boxShadow: '0 8px 36px ' + BLUE + '55, 0 0 80px ' + BLUE + glowHex, display: 'inline-block', letterSpacing: 0.5, minWidth: 240, textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ background: 'linear-gradient(135deg, ' + T.mid + ', #0284c7)', borderRadius: 24, padding: '22px 68px', fontSize: 26, fontWeight: 900, color: WHITE, opacity: fadeIn(frame, 34, 18), boxShadow: '0 8px 36px ' + T.mid + '55, 0 0 80px ' + T.mid + glowHex, display: 'inline-block', letterSpacing: 0.5, minWidth: 240, textAlign: 'center', marginBottom: 32 }}>
           {url.slice(0, charsVisible)}{charsVisible < url.length ? <span style={{ opacity: 0.35 }}>|</span> : null}
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', opacity: fadeIn(frame, 55, 18), flexWrap: 'wrap' }}>
           {['📊 자동 정산', '💬 알림톡', '📄 세금계산서'].map(function(t, i) {
-            return <div key={i} style={{ background: CYAN + '14', border: '1px solid ' + CYAN + '33', borderRadius: 20, padding: '8px 16px', color: CYAN + 'cc', fontSize: 13 }}>{t}</div>;
+            return <div key={i} style={{ background: T.accent + '14', border: '1px solid ' + T.accent + '33', borderRadius: 20, padding: '8px 16px', color: T.accent + 'cc', fontSize: 13 }}>{t}</div>;
           })}
         </div>
       </div>
@@ -439,17 +453,57 @@ function SceneCTA() {
   );
 }
 
-var SUBTITLES_DATA = [
-  { from: 0,   to: 90,  text: "배달대행 기사 정산, 엑셀 하나면 끝나요" },
-  { from: 90,  to: 150, text: "수백 명도 3초면 완료됩니다" },
-  { from: 150, to: 270, text: "기사 이름 적고 건수 입력하면" },
-  { from: 270, to: 360, text: "정산금 계산이 자동으로 나와요" },
-  { from: 360, to: 480, text: "정산 완료되면 카카오 알림톡" },
-  { from: 480, to: 570, text: "기사별로 전부 자동 발송됩니다" },
-  { from: 570, to: 690, text: "기사 1인당 2,500원 월정액" },
-  { from: 690, to: 780, text: "50명이면 12만 5천 원이에요" },
-  { from: 780, to: 900, text: "7일 무료체험 · donway.ai.kr" },
+var SUBTITLES_ALL = [
+  // A: 야근 → 3분 비밀
+  [
+    { from: 0,   to: 80,  text: "저도 매달 야근했어요 정산 때문에" },
+    { from: 80,  to: 160, text: "이거 쓰고 나서 3분으로 줄었습니다" },
+    { from: 160, to: 270, text: "엑셀 한 번 올리면..." },
+    { from: 270, to: 360, text: "500명 정산이 자동으로 완료" },
+    { from: 360, to: 480, text: "그 즉시 알림톡도 전원 발송" },
+    { from: 480, to: 570, text: "기사들이 먼저 확인 문자를 보내요" },
+    { from: 570, to: 690, text: "기사 1인당 2,500원이에요" },
+    { from: 690, to: 780, text: "이 가격에 이게 된다고?" },
+    { from: 780, to: 900, text: "donway.ai.kr 7일 무료체험" },
+  ],
+  // B: 기사들이 먼저 연락하는 이유
+  [
+    { from: 0,   to: 80,  text: "기사들이 정산 연락을 먼저 해요" },
+    { from: 80,  to: 160, text: "이유가 뭔지 아세요?" },
+    { from: 160, to: 270, text: "정산 완료되는 즉시..." },
+    { from: 270, to: 360, text: "카카오로 명세서가 자동 발송돼요" },
+    { from: 360, to: 480, text: "기사 입장에선 투명한 거잖아요" },
+    { from: 480, to: 570, text: "이의제기가 0건이 됐어요" },
+    { from: 570, to: 690, text: "300명 동시 발송이 3초면 끝나요" },
+    { from: 690, to: 780, text: "기사 신뢰 = 매출로 직결됩니다" },
+    { from: 780, to: 900, text: "donway.ai.kr 무료체험 가능" },
+  ],
+  // C: 이 실수가 기사 이탈 1위
+  [
+    { from: 0,   to: 80,  text: "기사 이탈 이유 1위 아세요?" },
+    { from: 80,  to: 160, text: "정산 오류입니다" },
+    { from: 160, to: 270, text: "DONWAY는 자동으로 검증해요" },
+    { from: 270, to: 360, text: "입력값 이상하면 바로 경고" },
+    { from: 360, to: 480, text: "오류 0건 · 이의제기 0건" },
+    { from: 480, to: 570, text: "기사들이 오래 남는 이유예요" },
+    { from: 570, to: 690, text: "기사 1인당 2,500원으로" },
+    { from: 690, to: 780, text: "신뢰를 살 수 있어요" },
+    { from: 780, to: 900, text: "donway.ai.kr 7일 무료체험" },
+  ],
+  // D: 왜 갑자기 다들 쓰냐면
+  [
+    { from: 0,   to: 80,  text: "배달대행 소장님들 사이에서" },
+    { from: 80,  to: 160, text: "갑자기 이게 뜨는 이유 있어요" },
+    { from: 160, to: 270, text: "경쟁사 대비 절반 가격인데" },
+    { from: 270, to: 360, text: "기능은 똑같거든요" },
+    { from: 360, to: 480, text: "엑셀 정산 · 알림톡 · 세금계산서" },
+    { from: 480, to: 570, text: "전부 포함이에요" },
+    { from: 570, to: 690, text: "50명이면 12만5천원" },
+    { from: 690, to: 780, text: "모르면 손해 보는 거잖아요" },
+    { from: 780, to: 900, text: "donway.ai.kr 7일 무료" },
+  ],
 ];
+var SUBTITLES_DATA = SUBTITLES_ALL[WEEK_VARIANT];
 
 function SubtitleBar() {
   var frame = useCurrentFrame();
@@ -475,7 +529,7 @@ function TransitionOverlay(props) {
   var progress = props.direction === 'out'
     ? interpolate(frame, [end - 15, end], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
     : interpolate(frame, [0, 15], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  return React.createElement(AbsoluteFill, { style: { background: NAVY, opacity: progress, pointerEvents: 'none' } });
+  return React.createElement(AbsoluteFill, { style: { background: T.bg, opacity: progress, pointerEvents: 'none' } });
 }
 
 function DonwayPromo(props) {
@@ -489,7 +543,7 @@ function DonwayPromo(props) {
     { component: SceneCTA,      start: 780, duration: 120 },
   ];
   return (
-    <AbsoluteFill style={{ background: NAVY }}>
+    <AbsoluteFill style={{ background: T.bg }}>
       {hasNarration && <Audio src={staticFile('donway-narration.mp3')} volume={1} />}
       {hasBgm && <Audio src={staticFile('bgm.mp3')} volume={0.12} />}
       {SCENES.map(function(scene, idx) {

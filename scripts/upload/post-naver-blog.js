@@ -43,6 +43,8 @@ function buildBlogContent(product, meta) {
     filo: { name: 'FILO', domain: 'filo.ai.kr', emoji: '매장' },
     donway: { name: 'DONWAY', domain: 'donway.ai.kr', emoji: '정산' },
     yongcha: { name: '용차앱', domain: 'yongcha.app', emoji: '택배' },
+    inflearn: { name: '인프런 소상공인 자동화', domain: 'inflearn.com', emoji: '자동화' },
+    dine: { name: 'DINE', domain: 'dine.ne.kr', emoji: '직원' },
     mbtico: { name: '물류배송앱 MBTICO', domain: 'mbtico.kr', emoji: '배송' },
   };
   const p = productMap[product] || productMap.filo;

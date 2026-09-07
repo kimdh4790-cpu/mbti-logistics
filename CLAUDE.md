@@ -489,6 +489,14 @@ cd mbtico-pages && npx wrangler deploy
 - 인프런 자동 업로드 주 2회: 수요일(YouTube+Instagram) + 토요일(YouTube)
 - **inflearn-narration.json 신규** — 5구간 나레이션 스크립트 (나레이션 없이 배포된 영상 재업로드 필요)
 
+### ✅ 완료 (2026-09-05 인프런 6개 클립 변형 시스템)
+- **inflearn-variants.json 신규** — A~F 6개 클립별 변형 (카카오알림톡/급여/부가세/경비/Oracle/AI프롬프트)
+  - 각 변형: 클립 URL·나레이션 lines·slides·YouTube 제목·Instagram 캡션·해시태그
+- **render-inflearn.js 업데이트** — 주차 기반 A-F 자동 선택 (weekIdx % 6), narration JSON 덮어쓰기, clipVariant → Remotion inputProps 전달, --variant 수동 지정 옵션
+- **InflearnPromo.jsx 업데이트** — SceneClipSpotlight 신규 (클립별 집중 홍보 씬, CLIP_META 6종 색상/특징/검색어), clipVariant prop 있으면 SceneBest → SceneClipSpotlight 자동 교체
+- **social-media-schedule.yml 업데이트** — 일 09:00/10:30 KST 인프런 슬롯 추가 (주 3회 → 4회: 수·토·일), 블로그 게시 스텝 추가
+- **post-naver-blog.js 업데이트** — inflearn·dine productMap 추가
+
 ### ✅ 완료 (2026-09-04 정보수집 자동화 시스템 구축)
 - **scripts/monitor/inflearn-monitor.js 신규** — 인프런 인기 클립 트렌드 HTTP 수집 (10개 키워드, 주 1회)
 - **scripts/monitor/producthunt-monitor.js 신규** — Product Hunt SaaS/AI 신제품 수집 (5개 토픽, 주 1회)
@@ -520,6 +528,21 @@ cd mbtico-pages && npx wrangler deploy
   - Routine ID: trig_0195xXdFo2j8BrfmDbqFjg5m
   - 다음 실행: 2026-09-05T12:07 UTC (KST 21:07)
   - 동작: /api/error-digest 조회 → 오류 분석 → 코드 수정 → push → 푸시 알림
+
+### ✅ 완료 (2026-09-06)
+- **서류하나 백엔드 코어 구현**: seolyuhana/utils/parser.js, seolyuhana/services/analyze.js, seolyuhana/output/builder.js
+- **서류하나 API 6개 추가** (_worker.js): /api/seolyuhana/analyze·result·download·points·point-request·point-approve
+- **서류하나 프론트엔드** (seolyuhana.html): Firebase Auth + 파일 업로드 + 분석 UI + 포인트 충전 모달
+- **서류하나 공문서 발급·분석 원스톱** (seolyuhana.html + _worker.js + analyze.js):
+  - 등기부(주소→인터넷등기소 딥링크), 사업자(국세청 API 즉시 조회), 건강보험/소득(기관 딥링크), 공문서 범용 분석
+  - /api/seolyuhana/biz-status, /api/seolyuhana/registry-link 엔드포인트
+  - analyzeRegistry(), analyzePublicDoc() AI 분석 함수
+  - 직접 발급: 사업자 조회만 가능 (공인인증서 필요 서류는 딥링크 제공)
+- **서류하나 Oracle 변환서버** (seolyuhana/oracle-server.js): LibreOffice HWP→DOCX + Puppeteer HTML→PDF (포트 3100)
+- **서류하나 등기부 직접 조회** (_worker.js `/api/seolyuhana/registry-direct`): Tilko API(AES-CBC-128+RSA-OAEP) 연동, TILKO_API_KEY+TILKO_RSA_PUBKEY 설정 시 직접 조회. 미설정 시 인터넷등기소 링크 폴백. seolyuhana.html `_slyShowRegResult()` 결과 동적 렌더링.
+- **_worker.js /seolyuhana 라우트 추가** (filo.ai.kr 블록)
+- **Aligo SMS/알림톡 → Solapi 전환 완료**: ALIGO_KEY/ALIGO_USER_ID 의존성 코드베이스에서 완전 제거
+  - processAlimtalkQueue, DONWAY 승인 알림톡, /api/send-sms, /api/send-sms-bulk, 용차앱 정산 알림톡 모두 solapiSms()/solapiAlimtalk() 교체
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
@@ -666,9 +689,11 @@ cd mbtico-pages && npx wrangler deploy
 - **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
 - **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
 
-### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-04 기준)
+### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-05 기준)
 | 요일 | KST | 제품 | 플랫폼 |
 |---|---|---|---|
+| 일 | 09:00 | 인프런 | YouTube |
+| 일 | 10:30 | 인프런 | Instagram |
 | 월 | 09:00 | 용차앱 | YouTube |
 | 화 | 09:00 | FILO | YouTube |
 | 화 | 10:30 | FILO | Instagram |
@@ -676,9 +701,12 @@ cd mbtico-pages && npx wrangler deploy
 | 수 | 10:30 | 인프런 | Instagram |
 | 목 | 09:00 | DONWAY | YouTube |
 | 목 | 10:30 | DONWAY | Instagram |
+| 금 | 09:00 | DINE | YouTube |
+| 금 | 10:30 | DINE | Instagram |
 | 토 | 09:00 | 인프런 | YouTube |
 
 > mbtico는 홍보 준비 완료 전까지 스케줄 제외
+> 인프런: 주 4회 (수·토·일 YouTube, 수·일 Instagram) — 6주 순환으로 클립별 집중 홍보
 
 ### 프로필 이미지 (회사 로고)
 - 파일: `assets/logo.png`
