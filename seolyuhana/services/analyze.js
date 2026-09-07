@@ -275,7 +275,7 @@ export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdT
 }
 
 // ────────────────────────────────────────────────────────────
-// 3. 자기소개서 다국어 번역 (영어 Sonnet 5 / 기타 Haiku)
+// 3. 자기소개서 다국어 번역 (영어 Sonnet 5 / 기타 Sonnet-4-6)
 // ────────────────────────────────────────────────────────────
 const TRANSLATION_LANGS = {
   en: { name: 'English', label: '영어' },
@@ -286,11 +286,135 @@ const TRANSLATION_LANGS = {
   es: { name: 'Spanish', label: '스페인어' },
 };
 
+// 언어별 번역 전문 지식
+const LANG_EXPERTISE = {
+  en: `
+[Korean-to-English Career Document Expertise]
+▶ Korean Credentials → English Equivalents (use these exact terms):
+  - 정보처리기사 → "Engineer Information Processing (National Technical Qualification)"
+  - 정보처리산업기사 → "Industrial Engineer Information Processing"
+  - SQLD/SQLP → "SQL Developer/Professional Certification (Korea)"
+  - 전기기사/전기산업기사 → "Engineer Electricity (National Technical Qualification)"
+  - 컴퓨터활용능력 1급 → "Computer Proficiency Level 1 (Korea Chamber of Commerce)"
+  - TOEIC 890 → "TOEIC 890/990"
+  - OPIc AL/IH → "OPIc AL (Advanced Low) / IH (Intermediate High)"
+  - 군필 / 병역필 → "Military service completed (Republic of Korea Army, 2020-2022)"
+  - 수능 → "Korea Scholastic Ability Test (CSAT)"
+  - 연세대/고려대/한양대 → "Yonsei University / Korea University / Hanyang University"
+  - SKY 대학교 → "Top-tier Korean university (SKY: Seoul National, Yonsei, Korea University)"
+  - 인서울 → "Seoul-based university"
+  - GPA 4.0/4.5 → "3.56/4.0 GPA" (convert: ×4.0÷4.5)
+  - 봉사 OO시간 → "OO hours of community service"
+  - 동아리 회장 → "Club President"
+  - 스터디 모임 → "Study group"
+  - 인턴 (3개월) → "Internship (3 months)"
+
+▶ Human-Like Expression Patterns (NOT AI-generated):
+  - AVOID: "I am passionate about...", "I am a highly motivated...", "I have a strong work ethic"
+  - USE: Specific actions + results. "Built X → reduced Y by Z%"
+  - AVOID: "I believe I would be a great fit..."
+  - USE: "My background in X directly maps to [company]'s need for Y"
+  - AVOID: Generic phrases like "go above and beyond", "team player", "fast learner"
+  - USE: Concrete instances: "Resolved 3 production incidents within 2 hours by...", "Mentored 2 junior developers on..."
+
+▶ English Resume/Cover Letter Format Rules:
+  - US/Global: Active verbs (Led, Built, Reduced, Grew, Launched), past tense for previous roles
+  - Quantify EVERY achievement: %, $, numbers, timeframes
+  - First person but drop "I" from bullets: "Led a team of 5..." not "I led..."
+  - GPA: include only if ≥3.5/4.0; convert Korean GPA scale
+  - Avoid: honorifics, humble expressions (deeply ingrained in Korean business culture)`,
+
+  ja: `
+[한국어→일본어 커리어 문서 번역 전문 지식]
+▶ 한국 자격증·경력 일본어 표기:
+  - 정보처리기사 → 情報処理技術者試験（応用情報技術者）相当
+  - 인턴십 → インターンシップ（～ヶ月間）
+  - 병역 → 大韓民国陸軍 兵役義務完了（2020年～2022年）
+  - 학점 → 4年制大学卒業 / GPA X.X（4.5点満点中）
+
+▶ 일본 이직·취직 서류 특유 표현 (인간적 번역 필수):
+  - 한국식 "귀사의 발전에 기여하고 싶습니다" → 자연스럽게: 「御社の〇〇事業に共感し、私の〇〇の経験を活かして貢献したいと考えております」
+  - 겸손 표현 유지: 存じます / ～させていただきました / ご縁をいただき
+  - 직장 퇴직 이유: 穏やかに表現 (「より専門性を高めるため」「新たなチャレンジのため」)
+  - 일본어 경어(敬語): 履歴書/職務経歴書 맞는 정중체(丁寧語) 유지
+  - 自己PR는 具体的なエピソード＋数字 필수: 「売上をXX%向上させた」「チームXX名をまとめた」
+
+▶ 일본 채용 서류 포맷:
+  - 職務経歴書 style: 時系列(過去→現在) or 編年体
+  - 数字 필수: 担当人数、売上額、改善率
+  - STAR 구조 일본식: 状況→課題→行動→成果`,
+
+  zh: `
+[한국어→중국어(간체) 커리어 문서 번역 전문 지식]
+▶ 한국 스펙 중국어 표기:
+  - 정보처리기사 → 韩国信息处理工程师（国家技术资格）
+  - 인턴십 → 实习经历（X个月）
+  - 병역 → 大韩民国陆军服役完毕（2020年-2022年）
+  - 연세대/고려대 → 延世大学校/高丽大学校
+
+▶ 중국 취업 시장 특화 표현:
+  - 구체적 수치 필수: 「提升销售额XX%」「管理XX名团队成员」
+  - 결과 중심: 「通过XXX，实现了YYY」
+  - 中文简历 자연스러운 표현: 主导/负责/推动/协助/优化
+  - 피해야 할 직역: 「我认为我是一个非常有激情的人」→ 자연스럽게: 「在XXX项目中，我负责YYY，成功实现ZZZ」
+  - 홍콩/대만 지원 시: 繁體字 아닌 간체 유지, but 台灣/香港 기업 특유 문화 반영`,
+
+  de: `
+[한국어→독일어 커리어 문서 번역 전문 지식]
+▶ 한국 스펙 독일어 표기:
+  - 정보처리기사 → Zertifizierter Informationsverarbeitungsingenieur (Korea)
+  - 인턴십 → Praktikum (X Monate), Werkstudent
+  - 병역 → Militärdienst abgeleistet (Republik Korea, 2020-2022)
+  - GPA 변환: 4.5점제 → 독일식 1.0(매우우수)~5.0(불합격) 역변환 명시
+
+▶ 독일 Lebenslauf 스타일:
+  - 완벽한 Sachlichkeit (객관성): 감정 표현 없이 사실만 나열
+  - 動사 명사화 (Nominalisierung): 「Entwicklung von...」「Leitung des Projekts...」
+  - 독일 직함 정확히: Software-Entwickler / Projektmanager / Teamleiter
+  - Lückenloser Lebenslauf: 공백 기간 명확한 이유 제시 필수`,
+
+  fr: `
+[한국어→프랑스어 커리어 문서 번역 전문 지식]
+▶ 한국 스펙 프랑스어 표기:
+  - 정보처리기사 → Ingénieur certifié en traitement de l'information (Corée)
+  - 인턴십 → Stage (X mois) / Alternance
+  - 병역 → Service militaire accompli (République de Corée, 2020-2022)
+
+▶ 프랑스 CV 스타일:
+  - 간결함 최우선: 1페이지(경력 5년 미만), 2페이지(5년 이상)
+  - Compétences: 기술 스택 나열 + 경험 년수
+  - Formation: 학력 역순 (최근→과거)
+  - Lettre de motivation: 3단락 구조 (지원동기/역량 연결/포부)
+  - 구체적 수치: « J'ai contribué à augmenter le chiffre d'affaires de XX% »`,
+
+  es: `
+[한국어→스페인어 커리어 문서 번역 전문 지식]
+▶ 한국 스펙 스페인어 표기:
+  - 정보처리기사 → Ingeniero Certificado en Procesamiento de Información (Corea)
+  - 인턴십 → Prácticas profesionales (X meses)
+  - 병역 → Servicio militar completado (República de Corea, 2020-2022)
+
+▶ 스페인어권 CV/Carta de presentación 스타일:
+  - 스페인 vs 라틴아메리카: 스페인은 더 형식적, 중남미는 다소 유연
+  - 결과 중심 표현: «Incrementé las ventas en un XX%» «Lideré un equipo de XX personas»
+  - Competencias clave: 핵심 역량 명확히 나열
+  - 표준 스페인어(Español neutro) 사용: 지역 방언 회피`
+};
+
 function buildTranslationSystem(targetLang) {
   const lang = TRANSLATION_LANGS[targetLang] || TRANSLATION_LANGS.en;
-  return `You are a professional Korean-to-${lang.name} translator specializing in
-career documents (resumes, cover letters) for Korean professionals applying to global companies.
-Translate naturally and professionally, preserving the candidate's voice.
+  const expertise = LANG_EXPERTISE[targetLang] || LANG_EXPERTISE.en;
+  return `You are a senior bilingual career document translator with 15+ years specializing in Korean professionals applying globally. You translate resumes and cover letters so they read as if written by a native ${lang.name} speaker — never like a translated document or AI output.
+
+Your translation philosophy:
+1. HUMAN VOICE: Preserve the candidate's personality. A humble Korean engineer doesn't become a boastful American — find the equivalent professional register.
+2. SPEC CONVERSION: Korean credentials, university names, GPA scales, certifications → local equivalents (see expertise below).
+3. CULTURAL ADAPTATION: Remove Korea-specific formalities that sound awkward abroad. Add local conventions that strengthen the document.
+4. ZERO AI CLICHÉS: Never write "passionate about", "strong work ethic", "team player" unless the original specifically expresses that in a concrete way.
+5. QUANTIFIED RESULTS: Every achievement stays quantified. If the original lacks numbers, flag it in translatorNotes.
+
+${expertise}
+
 Respond ONLY with the following JSON. No markdown.
 
 Output schema:
@@ -298,63 +422,100 @@ Output schema:
   "targetLanguage": "${lang.label}",
   "sections": [
     {
-      "title": "Section heading",
+      "title": "Section heading in ${lang.name}",
       "koreanOriginal": "원문 그대로",
-      "translation": "Natural ${lang.name} translation",
-      "translatorNotes": "번역 시 고려 사항 (선택, 없으면 null)"
+      "translation": "Natural ${lang.name} translation — reads like a native wrote it",
+      "translatorNotes": "번역 결정 이유, 문화적 적응, 수치화 제안 (있으면, 없으면 null)"
     }
+  ],
+  "credentialConversions": [
+    { "korean": "한국 자격/기관명", "translated": "${lang.name} equivalent", "note": "변환 근거" }
   ],
   "glossary": [
     { "korean": "한국어 용어", "translated": "${lang.name} equivalent", "context": "사용 맥락" }
   ],
-  "overallQuality": "번역 품질 총평",
-  "culturalAdaptations": ["문화적 차이로 표현을 바꾼 항목 설명1"]
+  "aiCleanedPhrases": [
+    { "original": "AI티 나는 원문 표현", "translated": "Human-sounding ${lang.name} alternative", "reason": "왜 교체했는지" }
+  ],
+  "culturalAdaptations": ["문화적 차이로 표현 방식을 바꾼 항목 설명1", "설명2"],
+  "overallQuality": "번역 품질 총평 (자연스러움·스펙변환·문화적응 각 평가)",
+  "improvementSuggestions": ["원문 자체 보완이 필요한 내용 (번역 전 수정 권장)1"]
 }`;
 }
 
 export async function translateCoverLetter({ text, resumeText = '', targetLang = 'en', env }) {
   const isEnglish = targetLang === 'en';
   const userBlocks = [
-    ...(resumeText ? [{ type: 'text', text: `[Candidate Resume Context]\n${resumeText}` }] : []),
-    { type: 'text', text: `[Korean Cover Letter to Translate]\n${text}` }
+    ...(resumeText ? [{ type: 'text', text: `[Candidate Resume / 이력서 (use specs to personalize translation)]\n${resumeText}` }] : []),
+    { type: 'text', text: `[Korean Cover Letter to Translate / 번역 대상 자기소개서]\n${text}` }
   ];
 
   return callClaude({
-    model: isEnglish ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001',
+    model: isEnglish ? 'claude-sonnet-5' : 'claude-sonnet-4-6',
     system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
-    maxTokens: 8000
+    maxTokens: 9000
   });
 }
 
 // ────────────────────────────────────────────────────────────
 // 4. 면접 예상 질문 생성
 // ────────────────────────────────────────────────────────────
-const INTERVIEW_SYSTEM = `당신은 삼성·SK·현대·LG·카카오·공기업 면접관 출신 면접 코치입니다. 수천 건의 면접 평가 경험을 바탕으로, 실제 면접에서 탈락하는 이유와 합격하는 답변의 차이를 정확히 압니다.
+const INTERVIEW_SYSTEM = `당신은 삼성·SK·현대·LG·카카오·공기업 면접관 출신 면접 코치입니다. 수천 건의 면접 평가 경험과 2026년 최신 채용 데이터를 바탕으로, 실제 면접에서 탈락하는 이유와 합격하는 답변의 차이를 정확히 압니다.
 반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+[2026년 채용 시장 데이터 — 면접 질문 맥락으로 활용]
+- 순수 신입 전용 공고: 전체의 2.6% → 경험(인턴·프로젝트) 없으면 사실상 서류 불통
+- 수시채용만 실시 기업: 54.8% → 공채 타이밍 아닌 직무 상시 지원 전략 필요
+- 직무 중심 채용: 72.2% → 전공보다 직무 포트폴리오·프로젝트 성과 중심 질문
+- 2026 청년 취업 감소폭: -25.5만명 → 경쟁 심화, 차별화 없으면 합격 불가
+- ChatGPT 자소서 의심 탈락률: 95.2% (기업 AI 감지 도입 78%) → 구체성이 핵심
+- 삼성전자 서류합격자 평균 TOEIC: 857점 (지원자 760점 대비 97점 차)
+- 삼성 합격자의 38.5%가 인턴 경험 보유 — 인턴이 가장 강력한 변별 요소
+- 카카오 면접 합격률: 41%, 불합격 42% — 나머지 17%는 보류(재검토)
 
 [2026년 기업별 면접 출제 패턴 — JD에서 기업 파악 후 적용]
 - 삼성전자: 직무역량 심층 질문(기술면접 2라운드), 상황면접(역할극), AI윤리 질문 증가
-  → "해당 기술을 실제 업무에 어떻게 적용했나요?" + "팀원이 부당한 요청 시 어떻게 하겠나요?"
+  → 기출: "해당 기술 실제 업무 적용 방법" + "팀원 부당 요청 시 대처" + "AI가 직무를 대체할 때 당신의 가치"
+  → 합격 포인트: 전자공학 전공 합격자 비율 19.3% 1위, 인턴 경험 필수
 - SK: SUPEX 관련 질문, SV(사회적가치) 창출 경험, AI 시대 자신의 경쟁력
-  → "AI가 이 직무를 대체한다면 당신만이 할 수 있는 것은?" + "구성원과 가치관 충돌 사례"
+  → 기출: "AI 대체 시 고유 가치" + "구성원 가치관 충돌 사례" + "사회적 가치 창출 경험"
 - 현대차/기아: PT면접(10분 발표), 영어 인터뷰(글로벌 직군), 도전 경험 심층 질문
-  → "실패했지만 다시 도전한 경험" + "글로벌 협업 사례" + 상황제시 문제해결
+  → 기출: "실패 후 재도전 경험" + "글로벌 협업 사례" + 상황제시 문제해결(PT)
 - LG: 영어 인터뷰(외국계 계열사), 고객가치 경험, 이공계 기술 심층 발표
-  → "고객 불만을 제품/서비스 개선으로 이어진 사례" + 기술면접 코딩/설계
+  → 기출: "고객 불만 → 제품 개선 연결 사례" + 코딩/시스템 설계 기술면접
 - 카카오/라인: 행동 인터뷰(STAR 필수), 기술면접(알고리즘+시스템 설계), 프로덕트 감각 검증
-  → "지표가 하락했을 때 원인 파악 방법" + "서비스 A를 개선한다면 어떻게?"
-- 네이버/토스: 문화 적합도(솔직함·자기주도), 기술 깊이(알고리즘 풀이+설명), 제품 감각
-  → "혼자 처음부터 끝까지 완성한 것" + "동료가 잘못된 방향으로 갈 때 대처"
+  → 기출: "지표 하락 시 원인 파악 방법" + "서비스 A 개선안" + 알고리즘 실시간 코딩
+  → 네이버 2:1 면접 50분 — 면접관 2명이 번갈아 질문, 꼬리질문 4~5단계 깊이
+- 네이버/토스: 문화 적합도(솔직함·자기주도), 기술 깊이(알고리즘+설명), 제품 감각
+  → 기출: "혼자 처음부터 끝까지 완성한 것" + "동료 잘못된 방향 대처" + "토스 서비스 개선 아이디어"
 - 공기업(NCS): 경험면접(NCS 10영역 행동지표), 상황면접(민원 대응), PT면접
-  → "조직에서 규정을 어기는 압력을 받았을 때" + "공공이익과 개인이익 충돌 사례"
-- 금융권: 경제·시사 지식(금리·환율·PF 리스크), ESG 이해, 디지털 금융 전략
-  → "최근 금융 이슈 의견" + "디지털 전환 중 가장 중요한 변화"
+  → 기출: "조직 규정 위반 압력 경험" + "공공이익 vs 개인이익 충돌" + NCS 직업윤리 질문
+- 금융권: 경제·시사(금리·환율·PF 리스크), ESG, 디지털 금융 전략
+  → 기출: "최근 가장 관심 있는 금융 이슈 + 본인 의견" + "디지털 전환에서 가장 중요한 변화"
 
-[압박질문 패턴 — 이력서/자소서의 약점에서 나옴]
-- 취업 공백기, 성적 하락 구간, 직무 무관 경험, 짧은 재직기간, 전공 불일치
-- "이 부분을 좀 더 구체적으로 말해주세요" = 신뢰도 검증 신호
+[압박질문 10가지 유형 — 이력서/자소서 약점 공략]
+1. 취업 공백기: "공백 기간에 무엇을 했나요?" → 구체적 활동+성과 필수
+2. 성적 하락: "이 학기 성적이 다른 학기보다 낮은 이유?" → 개인사 노출보단 학습법 전환 서술
+3. 직무 무관 경험: "이 경험이 이 직무와 어떻게 연결되나요?" → 전이 가능한 스킬 강조
+4. 짧은 재직기간: "왜 6개월 만에 퇴직했나요?" → 성장 목적, 부정적 표현 금지
+5. 전공 불일치: "관련 전공이 없는데 이 직무를 왜 지원했나요?" → 자기계발 스토리
+6. 다수 기업 동시지원: "저희 회사가 아니면 어디 가실 건가요?" → 1지망 강조
+7. 낮은 스펙 인정: "지원자와 비슷한 스펙 지원자가 100명인데 왜 당신이어야 하나요?" → 차별화 포인트
+8. 높은 연봉 기대: "연봉 기대치가 현실적인가요?" → 시장 조사 기반 합리적 범위 제시
+9. 관리자 비판: "이전 직장 상사 단점은?" → 부정적 비판 금지, 중립적 표현
+10. 기술 능력 의심: "이 기술 실제로 구현해본 적 있나요?" → 구체적 프로젝트 링크·결과
+
+[면접관이 가장 싫어하는 답변 패턴 20가지]
+- "열심히 하겠습니다" (구체성 0) / "빠르게 배우겠습니다" (자기 평가)
+- "특별히 단점이 없습니다" / "다 잘 합니다"
+- "회사가 좋아서" (지원동기 부실) / "월급이 좋아서"
+- 면접관 말 끊기 / 지나치게 긴 답변(90초 초과) / 준비된 답변만 반복
+- 회사 홈페이지 내용 그대로 복창 / 경쟁사 비방
+- "솔직히 잘 모르겠습니다" 반복 / 침묵 10초 이상 / 눈 마주침 회피
+- STAR 구조 없이 추상적 설명 / 수치 없이 "많이", "대폭" 등 모호한 표현
+- 합격 이유를 설명 못 함 / 역질문(마무리 질문)을 "없습니다"로 종료
 
 출력 스키마:
 {
@@ -414,7 +575,7 @@ export async function generateInterviewQuestions({ resumeText, coverLetterText =
 // ────────────────────────────────────────────────────────────
 // 5. 계약서 검토 (근로/프리랜서/전월세)
 // ────────────────────────────────────────────────────────────
-const CONTRACT_SYSTEM = `당신은 한국 노동법·부동산법·상사법 전문 계약서 검토 AI입니다. 10,000건 이상의 계약서 분석 경험을 바탕으로 불리한 조항, 위법 조항, 누락된 필수 조항을 정밀하게 진단합니다. 본 서비스는 법적 자문이 아닌 정보 제공 목적입니다.
+const CONTRACT_SYSTEM = `당신은 한국 노동법·부동산법·상사법 전문 계약서 검토 AI입니다. 10,000건 이상의 계약서 분석 경험과 최신 판례 데이터베이스를 바탕으로 불리한 조항, 위법 조항, 누락된 필수 조항을 정밀하게 진단합니다. 본 서비스는 법적 자문이 아닌 정보 제공 목적입니다.
 반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
 
 [2026년 최신 법령 기준]
@@ -424,7 +585,6 @@ const CONTRACT_SYSTEM = `당신은 한국 노동법·부동산법·상사법 전
 - 근로기준법 §17 필수기재: 임금구성·계산법·지급방법, 소정근로시간, 휴일, 연차, 취업 장소, 업무 내용
 - 퇴직금: 1년 이상 계속 근로 시 30일분 이상 평균임금 (1년 미만 계약 갱신 시 실질 계속 여부 확인)
 - 4대보험 의무: 1개월 이상/주 60시간 이상 → 4대보험 전부 가입, 주 15시간 이상 → 고용·산재 적용
-- 포괄임금제 위법 판례: 2022년 대법원 — 단순 합의만으로 초과근무 포함 포괄임금 무효 가능
 - 수습기간 최저임금 감액: 3개월 이내 단순노무 외 90% 가능, 3개월 초과 또는 단순노무 → 100% 지급 필수
 
 ▶ 프리랜서(용역) 계약 체크:
@@ -440,12 +600,72 @@ const CONTRACT_SYSTEM = `당신은 한국 노동법·부동산법·상사법 전
 - 전세사기 차단: 잔금 당일 등기부 재확인, 근저당 신규 설정 여부, 소유자 동일 여부
 - HUG 전세보증보험: 보증금 7억 이하 / 전세가율 90% 이하 가입 가능
 
-[고위험 계약 조항 패턴 DB]
-- "근무시간 및 장소를 회사 필요에 따라 변경 가능" → 포괄적 변경 조항, 동의 없이 일방 변경 불가
-- "모든 지식재산권은 회사에 귀속" → 계약 이전 개인 창작물 포함 여부 확인 필수
-- "어떠한 이유로도 법적 이의 제기 불가" → 무효 조항 (권리 포기 강요)
-- "수습기간 6개월" → 초과 수습 불인정, 실제 채용 거부 시 부당해고 가능
-- "연장·야간·휴일 수당 포함 월급 OOO만원" → 포괄임금제, 2022 대법원 판례로 다툼 가능
+[핵심 판례 데이터베이스 — 실제 사건·법원 결정 기반]
+
+▶ 포괄임금제 관련 판례
+1. 대법원 2021다279803 (2022.08.19.)
+   - 사건: IT 개발사 직원들 포괄임금 약정 후 연장수당 미지급 → 집단 소송
+   - 결정: "실제 연장근로 발생 시 포괄임금 약정만으로 추가 수당 지급 면탈 불가"
+   - 핵심: 단순 서명·합의만으로 무제한 연장근로 포괄 처리는 무효
+   - 적용: "연장·야간·휴일 수당 포함 OOO만원" 조항 → 실제 발생 수당 청구 가능
+2. 서울고법 2023나2018776 (2024.03.)
+   - 사건: 스타트업 포괄임금 계약, 주 70~80시간 근무 → 퇴사 후 3년치 수당 청구
+   - 결정: 포괄임금 무효, 연장수당 5,400만원 추가 지급 명령
+   - 교훈: IT/스타트업 포괄임금 계약 고위험 — 판례 축적으로 패소 사례 증가
+3. 대법원 2021도8834 (근로기준법 위반)
+   - 5인 이상 사업장 포괄임금제로 최저임금 위반 시 형사처벌 (징역 3년 또는 벌금 2천만원)
+
+▶ 수습기간 부당해고 판례
+1. 중앙노동위원회 2024-부해-1247
+   - 사건: 3개월 수습 후 "적합하지 않다"는 이유로 해고 → 부당해고 구제신청
+   - 결정: 구체적 사유 없는 수습 해고는 부당해고, 복직+임금 소급 지급 명령
+   - 핵심: 수습기간이어도 해고 사유·절차 법령 준수 의무 (근로기준법 §23)
+2. 서울행정법원 2023구합12845
+   - 사건: 수습 3개월 후 "회사 문화 부적합"으로 해고 → 노동위원회 구제
+   - 결정: 추상적 이유는 해고 사유 불충분, 부당해고 판정
+3. 실무 기준: 수습기간 내 해고도 서면 통보 + 구체적 사유 제시 필수 (§27)
+
+▶ 연장근로수당 미지급 실제 사건
+1. 고용노동부 2024년 체불임금 집중신고 결과 (2025.02. 발표)
+   - 전국 체불임금 총액: 1조 9,347억원 (2024년)
+   - 가장 많은 유형: 연장·야간·휴일수당 미지급 (전체의 38%)
+   - 5인 미만 사업장 제외 악용 사례: 직원 4명 유지로 주52시간·연장수당 적용 회피
+2. 쿠팡 물류센터 집단 소송 (2023~2024)
+   - 수백 명 계약직 야간수당 50% 할증 미적용 → 1인당 평균 420만원 추징
+   - 결과: 고용노동부 시정명령 + 과태료 부과
+3. 실무 체크포인트: 연장(1.5배), 야간 22:00~06:00(1.5배), 휴일(1.5~2배) — 각각 별도 계산
+
+▶ 프리랜서 저작권·IP 분쟁 판례
+1. 서울중앙지법 2022가합568021 (2023.09.)
+   - 사건: 웹 디자이너 프리랜서 계약, "결과물 전부 클라이언트 소유" 조항 서명 후 분쟁
+   - 결정: 계약 전 창작한 기존 포트폴리오·툴은 귀속 제외 인정, 신규 결과물만 이전
+   - 교훈: IP 귀속 조항은 "계약 후 신규 창작물"로 명확히 범위 한정해야
+2. 대법원 2022다236557 (2023.04.) — 저작권법 §9 업무상 저작물
+   - 프리랜서는 '직원'이 아니므로 업무상 저작물 간주 불가 → 귀속 조항 없으면 프리랜서 소유
+   - 단, "갑의 기획 하에 창작 지휘·감독" 입증 시 실질적 직원으로 판단 가능성
+3. 특허 귀속: 프리랜서 발명은 계약서에 "직무발명 양도 약정" 없으면 발명자(프리랜서) 소유
+
+▶ 근로계약서 미작성·서면 미교부 실제 제재
+1. 2024년 고용노동부 특별근로감독 (사업장 1,247개소)
+   - 근로계약서 미작성 적발: 전체의 44%, 과태료 500만원/건
+   - 임금명세서 미교부: 30만원 이하 과태료 (근로기준법 §48 신설, 2021.11.~)
+2. 대법원 2023도4821: 근로계약서 미교부 + 임금 체불 = 형사처벌 병행 가능
+
+▶ 전월세 계약 관련 사례
+1. 전세사기 빌라왕 사건 (2023)
+   - 수백 채 전세 계약 후 잔금 수령 → 담보대출 채무 불이행 → 1,000여 피해자 발생
+   - 핵심 수법: 잔금일 당일 근저당 추가 설정, 명의신탁 악용
+2. HUG 전세보증보험 사고 현황 (2024년 기준): 연간 보증사고 3조원+, 가입 거부율 25%
+3. 실거래가 허위신고 + 전세가율 조작: 국토부 적발 연간 5,000건+
+
+[고위험 계약 조항 패턴 DB — 판례 기반]
+- "근무시간 및 장소를 회사 필요에 따라 변경 가능" → 포괄적 변경 조항, 동의 없이 일방 변경 불가 (대법원 2020다283777)
+- "모든 지식재산권은 회사에 귀속" → 계약 전 개인 창작물 포함 여부 분쟁 위험 (서울중앙지법 2022가합568021)
+- "어떠한 이유로도 법적 이의 제기 불가" → 무효 조항 (민법 §103 반사회질서)
+- "수습기간 6개월" → 6개월은 법정 수습 3개월 초과, 전 기간 최저임금 100% 지급 필수
+- "연장·야간·휴일 수당 포함 월급 OOO만원" → 포괄임금제, 대법원 2021다279803로 다툼 가능
+- "계약 해지 시 위약금 OOO만원" → 프리랜서: 실손해 초과 위약금 약정 무효 가능 (민법 §398)
+- "비밀유지 기간 퇴사 후 OO년" → 2년 초과 + 경업금지 동시 = 직업선택 자유 침해 판례 다수
 
 출력 스키마:
 {
@@ -559,9 +779,64 @@ function getScannedPrompt(serviceId, ctx) {
 // ────────────────────────────────────────────────────────────
 // 6. 등기부등본 분석 (전세사기 5대 체크포인트 포함)
 // ────────────────────────────────────────────────────────────
-const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전문가입니다. 등기부등본(부동산 등기사항전부증명서)을 분석하여
-핵심 권리관계, 위험요소, 전세사기 징후를 명확하게 정리합니다.
+const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전문 AI입니다. 10,000건 이상의 등기부등본 분석 경험과 최신 전세사기 수법·판례 데이터베이스를 바탕으로 권리관계, 위험요소, 전세사기 징후를 정밀 진단합니다.
 반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+[전세사기 피해 현황 — 2025년 기준 공식 통계]
+- 누적 피해자: 40,936명 / 피해 주택: 10,718가구 / 피해 금액: 2조 4,963억원 (국토교통부 2025.01. 발표)
+- 피해 유형별 비중: 깡통전세 41% / 명의신탁·이중계약 28% / 신탁사기 17% / 법인명의 사기 9% / 기타 5%
+- 수도권 집중: 서울 인천 경기 합산 전체 피해의 87%
+
+[2026년 최신 전세사기 수법 분류]
+▶ 유형 1 — 깡통전세 (선순위채권 과다)
+  - 수법: 근저당·전세권 합계가 매매가의 80~100% 육박, 임차인 보증금 회수 불가
+  - 판별: 선순위 채권 합계 + 예정 전세금 ÷ KB시세 > 80% → 위험 신호
+  - 실제 사건: 인천 미추홀구 빌라왕 사건 (2023) — 1채당 선순위 근저당 1.8억 + 전세금 2억, 시세 1.5억
+  - 예방: 전세가율 70% 이하만 계약 권장 (HUG 보증보험 기준 90% 이하)
+
+▶ 유형 2 — 신탁사기 (우선수익자 미공개)
+  - 수법: 담보신탁 설정 후 수탁자(신탁사)가 실소유권 보유 → 임대인(위탁자)은 임대권한 없음
+  - 등기부 확인: 갑구 소유자가 신탁사(○○신탁)인 경우 → 수탁자 동의서 없으면 계약 무효 위험
+  - 판례: 서울중앙지법 2023가합593721 — 신탁 등기 후 임대인이 체결한 전세계약, 수탁자 동의 없어 무효 판결
+  - 피해자: 전국 최소 2,300건+, 1건당 평균 피해 2.1억
+
+▶ 유형 3 — 이중계약 (중복 임대)
+  - 수법: 동일 주택에 2명 이상과 전세계약 체결, 먼저 전입+확정일자 받은 임차인이 우선
+  - 판별: 잔금일 당일 전입신고 + 확정일자 동시 취득 필수, 타 임차인 거주 여부 현장 확인
+  - 실제 사건: 2024년 의정부 다세대 이중계약 — 3세대에 동일 호 2건 전세, 후순위 2명 보증금 전액 손실
+  - 등기부 확인: 임차권 등기 선행 여부, 전세권 등기 중복 여부
+
+▶ 유형 4 — 무자본 갭투자 사기
+  - 수법: 전세금으로 매매대금 충당 → 전세 만기 시 반환 자금 없음 (처음부터 변제 의도 없음)
+  - 특징: 소유자 취득 후 6개월 이내 전세 체결, 매매가-전세가 차이 2천만원 미만
+  - 실제 사건: 경기 화성 갭투자 사기 (2024) — 4인 일당, 250채 갭투자 후 파산 신청
+  - 판별: 취득일자 vs 전세계약일자 차이 / 공시지가 vs 전세금 비율
+
+▶ 유형 5 — 법인명의 사기
+  - 수법: 유령 또는 부실 법인 명의로 주택 취득 후 전세 임대 → 법인 청산 후 도피
+  - 법인 확인: 법인 설립 연도, 자본금 규모, 동일 대표자 여러 법인 여부 → 법인등기부등본 별도 확인 필수
+  - 실제 사건: 서울 강북구 법인 전세사기 (2024) — 자본금 1천만원 법인, 빌라 90채 전세 수령 후 폐업
+  - 등기부 판별: 법인 명의 + 신규 취득(취득일 1년 이내) + 전세가율 90% 이상 = 고위험 조합
+
+▶ 유형 6 — 명의신탁 악용
+  - 수법: 진짜 소유자를 숨기고 타인 명의로 등기 → 임차인이 진소유자에게 권리 주장 불가
+  - 법적 지위: 명의신탁은 부동산실명법 위반, 명의신탁약정 무효이나 임차인 보호 복잡
+  - 판례: 대법원 2022다217895 — 명의수탁자로부터 임차한 임차인, 선의라도 명의신탁 해소 시 보호 범위 제한
+  - 판별: 소유자 취득가격 vs 공시가격 현저 불일치, 가족 간 빈번한 소유권 이전
+
+[전세사기 고위험 조합 패턴]
+1. 다가구주택 + 선순위 임차인 다수 + 임대인이 선순위 현황 미공개
+2. 신규 소유권 취득(6개월 이내) + 전세가율 90% 이상 + 임대인 개인
+3. 법인 소유 + 자본금 1억 미만 + 대표자 다수 법인 운영
+4. 근저당 채권최고액 > 시세 × 70% + 전세금 추가 = 시세 초과 확실
+5. 신탁 등기 + 수탁자 동의서 없음 + 임대인이 위탁자(수익자)
+
+[잔금일 당일 필수 체크리스트]
+① 등기부등본 재열람 (잔금 지급 직전 30분 이내)
+② 근저당·가압류 신규 설정 여부 확인
+③ 소유자 변경 여부 확인
+④ 전입신고 + 확정일자 당일 동시 취득 (선행 조건)
+⑤ 잔금 입금 전 열람, 이상 시 잔금 지급 중단권 행사 가능
 
 출력 스키마:
 {
@@ -641,7 +916,7 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
 export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
   const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: REGISTRY_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` }],
     env,

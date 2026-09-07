@@ -1176,7 +1176,7 @@ const SLY_SERVICES = [
   { id: 'resume',          label: '이력서 분석',      cost: 29900, icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt' },
   { id: 'cover_letter',    label: '자소서 수정안',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
   { id: 'cover_rewrite',   label: '자소서 재작성',    cost: 49900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cv_translate',    label: '자소서 번역',      cost: 29900, icon: 'lang',   accept: '.hwp,.docx,.pdf,.txt', hasLangSelect: true },
+  { id: 'cv_translate',    label: '자소서 번역',      cost: 39900, icon: 'lang',   accept: '.hwp,.docx,.pdf,.txt', hasLangSelect: true },
   { id: 'interview',       label: '면접 질문',        cost: 19900, icon: 'mic',    accept: '.hwp,.docx,.pdf,.txt' },
   { id: 'contract',        label: '계약서 검토',      cost: 39900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
   { id: 'registry',        label: '등기부 전세사기',  cost: 34900, icon: 'home',   accept: '.hwp,.docx,.pdf,.txt', hasDepositInput: true },
@@ -1294,7 +1294,7 @@ const SVC = [
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
   { id: 'cover_rewrite', label: '자소서', sublabel: '재작성', cost: 49900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_rewrite' },
-  { id: 'cv_translate',  label: '자소서', sublabel: '번역',   cost: 29900, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cv_translate',  label: '자소서', sublabel: '번역',   cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'cover_letter_translation', hasLangSelect: true },
   { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 19900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
@@ -2353,10 +2353,12 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
       <div class="sly-svc-price-list">
+        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">공문서 분석</div><div class="sly-svc-cost">2,900P</div></div>
         <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">면접 질문 생성</div><div class="sly-svc-cost">19,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 분석 · 계약서 검토</div><div class="sly-svc-cost">29,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">자소서 분석 · 영문 번역</div><div class="sly-svc-cost">39,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">등기부 · 공문서 분석</div><div class="sly-svc-cost">29,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 분석</div><div class="sly-svc-cost">29,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">등기부 전세사기 분석</div><div class="sly-svc-cost">34,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">자소서 수정안 · 계약서 검토 · 번역</div><div class="sly-svc-cost">39,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">자소서 AI 재작성</div><div class="sly-svc-cost">49,900P</div></div>
       </div>
       <p style="font-size:12px;color:var(--landing-muted);margin-top:16px;line-height:1.7">
         충전: 하나은행 270-910019-24204 (유)엠비티아이<br>입금 확인 후 관리자 즉시 적립
