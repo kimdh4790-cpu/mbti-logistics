@@ -1173,11 +1173,13 @@ window._slyGetToken = () => auth.currentUser?.getIdToken();
 window._slyUser = null;
 
 const SLY_SERVICES = [
-  { id: 'resume',        label: '이력서 분석',    cost: 29900, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cover_letter',  label: '자소서 분석',    cost: 39900, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cv_translate',  label: '영문 번역',      cost: 39900, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'interview',     label: '면접 질문',      cost: 19900, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'contract',      label: '계약서 검토',    cost: 29900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'resume',          label: '이력서 분석',      cost: 29900, icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_letter',    label: '자소서 수정안',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_rewrite',   label: '자소서 재작성',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',    label: '자소서 번역',      cost: 39900, icon: 'lang',   accept: '.hwp,.docx,.pdf,.txt', hasLangSelect: true },
+  { id: 'interview',       label: '면접 질문',        cost: 19900, icon: 'mic',    accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'contract',        label: '계약서 검토',      cost: 29900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'registry',        label: '등기부 전세사기',  cost: 29900, icon: 'home',   accept: '.hwp,.docx,.pdf,.txt', hasDepositInput: true },
 ];
 
 const CHARGE_PLANS = [
@@ -1286,19 +1288,21 @@ let _slyPollTimer = null;
 let _slySelectedCharge = 0;
 
 const SVC = [
-  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 9900,  accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'resume',        label: '이력서', sublabel: '분석',   cost: 29900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis' },
-  { id: 'cover_letter',  label: '자소서', sublabel: '분석',   cost: 9900,  accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cover_letter',  label: '자소서', sublabel: '수정안', cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
-  { id: 'cv_translate',  label: '영문',   sublabel: '번역',   cost: 14900, accept: '.hwp,.docx,.pdf,.txt',
-    hasJd: false, serviceId: 'cover_letter_translation' },
-  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 9900,  accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cover_rewrite', label: '자소서', sublabel: '재작성', cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_rewrite' },
+  { id: 'cv_translate',  label: '자소서', sublabel: '번역',   cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false, serviceId: 'cover_letter_translation', hasLangSelect: true },
+  { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 19900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
-  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 14900, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 29900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'employment_contract' },
   // ── 공문서 발급 & 분석 ──
-  { id: 'registry',      label: '등기부', sublabel: '등본',   cost: 4900,  accept: '.pdf',
-    hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry' },
+  { id: 'registry',      label: '등기부', sublabel: '전세사기', cost: 29900, accept: '.pdf',
+    hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry', hasDepositInput: true },
   { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 2900,  accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'biz' },
   { id: 'health_ins',    label: '건강보험', sublabel: '확인', cost: 2900,  accept: '.pdf',
@@ -1312,6 +1316,7 @@ const SVC = [
 const ICONS = {
   resume: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
   cover_letter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  cover_rewrite: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/><circle cx="19" cy="5" r="3" fill="#C9A84C" stroke="none"/></svg>`,
   cv_translate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
   interview: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
   contract: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
@@ -1399,9 +1404,45 @@ function _slySelectService(id) {
       jdWrap.style.display = svc.hasJd ? 'block' : 'none';
       if (svc.hasJd) document.getElementById('slyJdLabel2').textContent = svc.jdLabel;
     }
+    // 언어 선택 (번역 서비스)
+    let langWrap = document.getElementById('slyLangWrap2');
+    if (!langWrap) {
+      langWrap = document.createElement('div');
+      langWrap.id = 'slyLangWrap2';
+      langWrap.style.cssText = 'margin-bottom:12px';
+      langWrap.innerHTML = `<label style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block">번역 언어 선택</label>
+        <select id="slyTargetLang" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text-primary)">
+          <option value="en">영어 (English)</option>
+          <option value="ja">일본어 (日本語)</option>
+          <option value="zh">중국어 간체 (简体中文)</option>
+          <option value="de">독일어 (Deutsch)</option>
+          <option value="fr">프랑스어 (Français)</option>
+          <option value="es">스페인어 (Español)</option>
+        </select>`;
+      const jdBlock = document.getElementById('slyJdWrap2');
+      jdBlock?.parentNode?.insertBefore(langWrap, jdBlock);
+    }
+    langWrap.style.display = svc.hasLangSelect ? 'block' : 'none';
+
     const cn2 = document.getElementById('slyCostNote2');
     if (cn2) cn2.textContent = `분석 시 ${svc.cost.toLocaleString()}P 차감됩니다`;
   }
+
+  // 전세 보증금 입력 (등기부 전세사기 분석)
+  let depositWrap = document.getElementById('slyDepositWrap');
+  if (!depositWrap) {
+    depositWrap = document.createElement('div');
+    depositWrap.id = 'slyDepositWrap';
+    depositWrap.style.cssText = 'margin-bottom:12px';
+    depositWrap.innerHTML = `<label style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;display:block">예정 전세 보증금 (선택)</label>
+      <input id="slyJeonseDeposit" type="number" placeholder="예: 200000000 (2억원)" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text-primary)">
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">입력 시 전세가율·깡통전세 정밀 분석</div>`;
+    // issue card에 삽입
+    const issueRegistry = document.getElementById('slyIssueRegistry');
+    if (issueRegistry) issueRegistry.appendChild(depositWrap);
+  }
+  if (depositWrap) depositWrap.style.display = svc.hasDepositInput ? 'block' : 'none';
+
   const badge = document.getElementById('slyServiceBadge');
   if (badge) badge.textContent = `${svc.cost.toLocaleString()}P`;
   clearResult();
@@ -1460,6 +1501,10 @@ async function _slyAnalyze() {
     fd.append('serviceId', svc.serviceId || _slyService);
     const jdText = document.getElementById('slyJdText2')?.value || '';
     if (jdText) fd.append('jdText', jdText);
+    const targetLang = document.getElementById('slyTargetLang')?.value || 'en';
+    if (svc.hasLangSelect) fd.append('targetLang', targetLang);
+    const jeonseDeposit = document.getElementById('slyJeonseDeposit')?.value || '';
+    if (svc.hasDepositInput && jeonseDeposit) fd.append('jeonseDeposit', jeonseDeposit);
 
     const r = await fetch('/api/seolyuhana/analyze', {
       method: 'POST',
@@ -1801,10 +1846,10 @@ window._slySelectCharge = _slySelectCharge;
 async function _slyRequestCharge() {
   if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
   const plans = [
-    { pts: 10000,  price: 10000 },
-    { pts: 22000,  price: 20000 },
-    { pts: 57000,  price: 50000 },
-    { pts: 120000, price: 100000 },
+    { pts: 30000,  price: 30000 },
+    { pts: 67000,  price: 60000 },
+    { pts: 115000, price: 100000 },
+    { pts: 240000, price: 200000 },
   ];
   const plan = plans[_slySelectedCharge];
   try {
@@ -2218,34 +2263,34 @@ document.addEventListener('DOMContentLoaded', () => {
       <p>1P = 1원 · 써야 할 만큼만 충전 · 크몽 대비 66% 저렴</p>
       <div class="sly-charge-cards">
         <div class="sly-charge-card">
-          <div class="sly-charge-price">₩10,000</div>
-          <div class="sly-charge-pts">10,000P</div>
-          <div class="sly-charge-sub">이력서 1건 분석</div>
+          <div class="sly-charge-price">₩30,000</div>
+          <div class="sly-charge-pts">30,000P</div>
+          <div class="sly-charge-sub">면접 질문 1건</div>
         </div>
         <div class="sly-charge-card featured">
-          <div class="bonus-badge">+2,000P</div>
-          <div class="sly-charge-price">₩20,000</div>
-          <div class="sly-charge-pts">22,000P</div>
+          <div class="bonus-badge">+7,000P</div>
+          <div class="sly-charge-price">₩60,000</div>
+          <div class="sly-charge-pts">67,000P</div>
           <div class="sly-charge-sub">가장 인기 · 이력서 2건</div>
         </div>
         <div class="sly-charge-card">
-          <div class="bonus-badge">+7,000P</div>
-          <div class="sly-charge-price">₩50,000</div>
-          <div class="sly-charge-pts">57,000P</div>
-          <div class="sly-charge-sub">이력서 5건+</div>
+          <div class="bonus-badge">+15,000P</div>
+          <div class="sly-charge-price">₩100,000</div>
+          <div class="sly-charge-pts">115,000P</div>
+          <div class="sly-charge-sub">이력서+자소서 3건</div>
         </div>
         <div class="sly-charge-card">
-          <div class="bonus-badge">+20,000P</div>
-          <div class="sly-charge-price">₩100,000</div>
-          <div class="sly-charge-pts">120,000P</div>
-          <div class="sly-charge-sub">대량 이용</div>
+          <div class="bonus-badge">+40,000P</div>
+          <div class="sly-charge-price">₩200,000</div>
+          <div class="sly-charge-pts">240,000P</div>
+          <div class="sly-charge-sub">대량 이용 · 최대 절약</div>
         </div>
       </div>
       <div class="sly-svc-price-list">
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">공문서 · 사업자 · 건강보험 · 소득</div><div class="sly-svc-cost">2,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">등기부등본 분석</div><div class="sly-svc-cost">4,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 · 자소서 · 면접 질문</div><div class="sly-svc-cost">9,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">영문 번역 · 계약서 검토</div><div class="sly-svc-cost">14,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">면접 질문 생성</div><div class="sly-svc-cost">19,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 분석 · 계약서 검토</div><div class="sly-svc-cost">29,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">자소서 분석 · 영문 번역</div><div class="sly-svc-cost">39,900P</div></div>
+        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">등기부 · 공문서 분석</div><div class="sly-svc-cost">29,900P</div></div>
       </div>
       <p style="font-size:12px;color:var(--landing-muted);margin-top:16px;line-height:1.7">
         충전: 하나은행 270-910019-24204 (유)엠비티아이<br>입금 확인 후 관리자 즉시 적립
@@ -2419,31 +2464,31 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="sly-charge-options">
       <div class="sly-charge-opt selected" onclick="_slySelectCharge(0)">
         <div>
-          <div class="sly-charge-pts">50 P</div>
-          <div style="font-size:11px;color:var(--text-muted)">기본 체험</div>
+          <div class="sly-charge-pts">30,000 P</div>
+          <div style="font-size:11px;color:var(--text-muted)">면접 질문 1건</div>
         </div>
-        <div class="sly-charge-price">₩5,000</div>
+        <div class="sly-charge-price">₩30,000</div>
       </div>
       <div class="sly-charge-opt" onclick="_slySelectCharge(1)">
         <div>
-          <div class="sly-charge-pts">120 P <span class="sly-charge-bonus">+20P</span></div>
-          <div style="font-size:11px;color:var(--text-muted)">스탠다드</div>
+          <div class="sly-charge-pts">67,000 P <span class="sly-charge-bonus">+7,000P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">가장 인기</div>
         </div>
-        <div class="sly-charge-price">₩10,000</div>
+        <div class="sly-charge-price">₩60,000</div>
       </div>
       <div class="sly-charge-opt" onclick="_slySelectCharge(2)">
         <div>
-          <div class="sly-charge-pts">270 P <span class="sly-charge-bonus">+70P</span></div>
-          <div style="font-size:11px;color:var(--text-muted)">프리미엄</div>
+          <div class="sly-charge-pts">115,000 P <span class="sly-charge-bonus">+15,000P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">이력서 3건+</div>
         </div>
-        <div class="sly-charge-price">₩20,000</div>
+        <div class="sly-charge-price">₩100,000</div>
       </div>
       <div class="sly-charge-opt" onclick="_slySelectCharge(3)">
         <div>
-          <div class="sly-charge-pts">600 P <span class="sly-charge-bonus">+200P</span></div>
-          <div style="font-size:11px;color:var(--text-muted)">비즈니스</div>
+          <div class="sly-charge-pts">240,000 P <span class="sly-charge-bonus">+40,000P</span></div>
+          <div style="font-size:11px;color:var(--text-muted)">최대 절약</div>
         </div>
-        <div class="sly-charge-price">₩40,000</div>
+        <div class="sly-charge-price">₩200,000</div>
       </div>
     </div>
 

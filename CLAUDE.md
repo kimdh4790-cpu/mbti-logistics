@@ -551,11 +551,22 @@ cd mbtico-pages && npx wrangler deploy
 - **SCAN PWA 홈화면 설치**: /scan-manifest.json 엔드포인트, scan-icon-192/512.png KV 업로드, PWA 메타태그 추가
 - **SCAN 로고**: 헤더 + 히어로 섹션에 SCAN 로고 이미지 base64 직접 내장 (KV 의존 제거, 48px PNG ~6KB)
 
+### ✅ 완료 (2026-09-07 SCAN 기능 전면 강화)
+- **가격 전면 재조정**: 면접 19,900P / 이력서·계약서 29,900P / 자소서·번역 39,900P (기능 대비 지속가능 가격)
+- **충전 플랜 업데이트**: 30,000/60,000/100,000/200,000원 (보너스 7000/15000/40000P)
+- **자소서 두 모드 분리**: 수정안 제시(cover_letter_analysis) + AI 완전 재작성(cover_letter_rewrite, 39,900P)
+- **다국어 번역 지원**: 영어(Sonnet 5)/일본어/중국어(간체)/독일어/프랑스어/스페인어(Haiku) — 언어 선택 UI 추가
+- **등기부 전세사기 분석 강화**: 전세가율·깡통전세 경보·선순위채권 합계·5대 체크포인트·예정 보증금 입력 필드
+- **_worker.js VALID_SERVICES**: cover_letter_rewrite, targetLang, jeonseDeposit 파라미터 추가
+- **seolyuhana/services/analyze.js**: rewriteCoverLetter() 신규, translateCoverLetter() 다국어 지원, analyzeRegistry() 전세사기 스키마 확장
+- **IROS 등기소 URL 수정**: 구 JSP 404 → 신 JSF URL(pos9/jsf/renf/selectRenf0100List.xhtml)
+- **VALID_SERVICES 버그 수정**: registry_analysis, public_doc_analysis 누락 추가
+
 ### ✅ 완료 (2026-09-06 SCAN 랜딩 리디자인)
 - **scan.html 랜딩 전면 리디자인**: 핑크(#F472B6)·민트(#34D399)·골드(#F59E0B) 3색 + 흰 배경
 - CSS 애니메이션 폰 목업 데모 (slyFloat·slyScanLine·slyFadeSlide·slyPulseRing)
 - 기능 카드 6종 가로 스크롤 스냅 → 탭 시 상세 패널 펼침 (_slyFeatDetail)
-- 포인트 체계 1P=1원: 서비스 500P~2000P, 충전 5000P~55000P (보너스 포함)
+- 포인트 체계 1P=1원: 서비스 19,900P~39,900P, 충전 30,000P~240,000P (보너스 포함)
 - _slyRequestCharge 하드코딩 요금 동기화 (구 50·120·270·600P → 신 5000·10000·22000·55000P)
 - Firebase Auth popup→redirect 폴백 + getRedirectResult 초기화 추가
 - 슈퍼어드민(kimdh4790@gmail.com·soungkyekim@naver.com) 무제한 포인트(∞P) 바이패스
