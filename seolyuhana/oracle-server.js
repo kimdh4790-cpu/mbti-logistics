@@ -160,52 +160,29 @@ app.post('/api/iros-pin', async (req, res) => {
     const typeParam = regType === 'land' ? 'L' : 'B';
     const jsfUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`;
 
-    // ── Step 1: JSF 검색 페이지 직접 이동 (/api/iros-fetch와 동일한 방식) ─────────
-    // Referer 헤더나 Gauce 네비게이션 없이 직접 goto → 60초 networkidle 대기
-    // (setExtraHTTPHeaders Referer 설정 시 IROS 서버가 거부함 — 제거)
+    // ── Step 1: index.xhtml 먼저 방문 → 세션 속성 초기화 ──────────────────────────
+    // 구 iros-fetch 성공 패턴: index.xhtml 방문 → networkidle → selectRenf0100List.xhtml 이동
+    // selectRenf0100List.xhtml에 직접 goto하면 IROS 서버가 세션 속성 없다고 차단함
     let targetCtx = page;
-    console.log('[iros-pin] Step1: JSF 직접 이동');
+    console.log('[iros-pin] Step1: index.xhtml 방문 (세션 초기화)');
+    await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml',
+      { waitUntil: 'networkidle', timeout: 45000 });
+    await page.waitForTimeout(2000);
+    console.log('[iros-pin] index URL:', page.url(), '| 제목:', await page.title().catch(() => ''));
+
+    // ── Step 2: 검색 페이지로 이동 (세션 확립된 상태) ────────────────────────────
+    console.log('[iros-pin] Step2: selectRenf0100List.xhtml 이동');
     await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForTimeout(3000);
-    const afterGotoUrl   = page.url();
-    const afterGotoTitle = await page.title().catch(() => '');
-    console.log('[iros-pin] goto URL:', afterGotoUrl, '| 제목:', afterGotoTitle);
+    const searchUrl   = page.url();
+    const searchTitle = await page.title().catch(() => '');
+    console.log('[iros-pin] 검색 URL:', searchUrl, '| 제목:', searchTitle);
 
-    // IROS가 로그인 페이지로 리다이렉트한 경우
-    if (afterGotoUrl.includes('login') || afterGotoUrl.includes('Login')) {
-      throw new Error(`IROS 로그인 필요: ${afterGotoUrl} — 비회원 열람 페이지 경로 확인 필요`);
-    }
-
-    // 서버가 에러 페이지를 반환한 경우 (URL은 JSF지만 body가 "찾을 수 없습니다")
-    const bodyCheck = await page.evaluate(() => document.body?.innerText?.slice(0, 100) || '');
-    console.log('[iros-pin] body 앞 100자:', bodyCheck);
+    // 서버 차단 확인
+    const bodyCheck = await page.evaluate(() => document.body?.innerText?.slice(0, 120) || '');
+    console.log('[iros-pin] body 앞 120자:', bodyCheck);
     if (bodyCheck.includes('찾을 수 없습니다') || bodyCheck.includes('접근 권한')) {
-      // 메인 페이지 방문 후 재시도 (세션 없이 직접 접근 차단된 경우)
-      console.log('[iros-pin] 접근 차단 감지 → 메인 페이지 방문 후 재시도');
-      await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml',
-        { waitUntil: 'networkidle', timeout: 45000 });
-      await page.waitForTimeout(2000);
-      await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 60000 });
-      await page.waitForTimeout(3000);
-      console.log('[iros-pin] 재시도 URL:', page.url(), '| 제목:', await page.title().catch(() => ''));
-    }
-
-    // iframe 감지 (Gauce SPA일 경우 iframe에 콘텐츠 로드)
-    for (const frame of page.frames()) {
-      const fu = frame.url();
-      if (fu.includes('selectRenf') || fu.includes('jsf/renf')) {
-        targetCtx = frame;
-        console.log('[iros-pin] JSF iframe 감지:', fu);
-        break;
-      }
-    }
-
-    // 최종 접근 확인
-    const finalUrl = targetCtx === page ? page.url() : targetCtx.url();
-    const finalBody = await targetCtx.evaluate(() => document.body?.innerText?.slice(0, 150) || '');
-    console.log('[iros-pin] 최종 URL:', finalUrl, '| body:', finalBody.slice(0, 80));
-    if (finalBody.includes('찾을 수 없습니다') || finalBody.includes('접근 권한')) {
-      throw new Error(`JSF 열람 페이지 접근 실패 (서버 차단): ${finalUrl} | ${finalBody.slice(0, 200)}`);
+      throw new Error(`JSF 검색 페이지 접근 실패: ${searchUrl} | ${bodyCheck}`);
     }
 
     // ── Step 4: JSF 페이지 주소 입력 (targetCtx = page 또는 frame) ────────────────
