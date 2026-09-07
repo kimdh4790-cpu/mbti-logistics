@@ -8044,6 +8044,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const serviceId = form.get('serviceId') || '';
           const jdText = form.get('jdText') || '';
           const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
+          const targetLang = form.get('targetLang') || 'en';
+          const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
           const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
           const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:39900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900};
@@ -8098,7 +8100,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
           // 비동기 처리 (waitUntil 사용)
           const fileBuffer = await file.arrayBuffer();
-          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token};
+          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env, token};
           ctx.waitUntil(_slyProcessJob(processingCtx));
 
           return Response.json({
@@ -8527,7 +8529,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       }
 
       // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
-      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token}) {
+      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang='en', jeonseDeposit=null, env, token}) {
         const setProgress = async (p, status='processing') => {
           await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
         };
@@ -8549,9 +8551,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           // 3. Claude 분석
           const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
-
-          const targetLang = form.get('targetLang') || 'en';
-          const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
           let analysisData;
           if (parsed.scanned) {
