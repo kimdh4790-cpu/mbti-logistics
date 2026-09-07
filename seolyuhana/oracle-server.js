@@ -204,9 +204,10 @@ app.post('/api/iros-pin', async (req, res) => {
     console.log('[iros-pin] 클릭 후 inputs:', JSON.stringify(inputsAfter.slice(0, 15)));
     console.log('[iros-pin] iframe DOM:', JSON.stringify(iframeList));
 
-    // 클릭 전에 없던 NEW 입력 필드 찾기 (진짜 registry 검색폼)
-    const beforeIds = new Set(inputsBefore.map(i => i.id));
-    const newInputIds = inputsAfter.filter(i => i.vis && !beforeIds.has(i.id)).map(i => i.id);
+    // 클릭 전에 없던 NEW 입력 필드 찾기 (vis:false→vis:true 포함)
+    // beforeIds는 클릭 전 가시적(vis:true) ID만 포함 → hidden→visible 전환도 NEW로 감지
+    const beforeVisIds = new Set(inputsBefore.filter(i => i.vis).map(i => i.id));
+    const newInputIds = inputsAfter.filter(i => i.vis && !beforeVisIds.has(i.id)).map(i => i.id);
     console.log('[iros-pin] 새로 생긴 input IDs:', JSON.stringify(newInputIds));
 
     // ── Step 3: 주소 입력 필드 탐색 ─────────────────────────────────────────────
@@ -262,28 +263,63 @@ app.post('/api/iros-pin', async (req, res) => {
     await addrInput.click({ clickCount: 3, force: true });
     await addrInput.fill(address);
 
+    // ── Step 4.5: 라디오 버튼 선택 (건물/토지) ──────────────────────────────────
+    const radioIdx = regType === 'land' ? 1 : 0;
+    const radioSel = `input[id*="sch_realCorp"][id*="input_${radioIdx}"], input[id*="rad_sch_realCorp_input_${radioIdx}"]`;
+    const radioEl = page.locator(radioSel).first();
+    if (await radioEl.count() > 0) {
+      await radioEl.click({ force: true }).catch(() => {});
+      console.log('[iros-pin] 라디오 선택:', radioIdx === 0 ? '건물' : '토지');
+    }
+
     // ── Step 5: 검색 트리거 ──────────────────────────────────────────────────────
+    // Gauce SearchBox 위젯 버튼은 <a> 태그 (id: *sch_realCorp___button)
+    // popup 리스너를 검색 트리거 전에 등록 — 결과가 새 창으로 열릴 수 있음
+    const popupPromise = ctx.waitForEvent('page', { timeout: 15000 }).catch(() => null);
+
     let searchTriggered = false;
-    const searchBtns = targetCtx.locator('input[type="button"], input[type="submit"], button')
-      .filter({ hasText: /검색|조회/ });
-    const sbCnt = await searchBtns.count();
-    for (let i = 0; i < sbCnt; i++) {
-      const btn = searchBtns.nth(i);
-      if (await btn.isVisible().catch(() => false)) {
-        await btn.click({ force: true, timeout: 5000 }).catch(() => {});
+
+    // 1순위: Gauce SearchBox 전용 버튼 ID (force-click — isTrusted:true OS 이벤트)
+    const gauceBtnSels = [
+      '#mf_wfm_potal_main_sch_realCorp___button',
+      'a[id*="sch_realCorp___button"]',
+      'a[id*="sch_realCorp"][id$="button"]',
+      'a[id*="sch_realCorp"][id*="btn"]',
+    ];
+    for (const sel of gauceBtnSels) {
+      const el = page.locator(sel).first();
+      if (await el.count() > 0) {
+        await el.click({ force: true }).catch(e => console.log('[iros-pin] gauce btn err:', e.message));
         searchTriggered = true;
-        console.log('[iros-pin] 검색 버튼 force-click');
+        console.log('[iros-pin] Gauce 버튼 force-click:', sel);
         break;
       }
     }
+
+    // 2순위: visible button/input 태그 텍스트 검색|조회
     if (!searchTriggered) {
-      // onclick에 search/조회 포함 앵커 (헤더 nav 제외)
-      const triggered = await targetCtx.evaluate(() => {
-        const anchors = [...document.querySelectorAll('a[onclick]')];
+      const searchBtns = targetCtx.locator('input[type="button"], input[type="submit"], button')
+        .filter({ hasText: /검색|조회/ });
+      const sbCnt = await searchBtns.count();
+      for (let i = 0; i < sbCnt; i++) {
+        const btn = searchBtns.nth(i);
+        if (await btn.isVisible().catch(() => false)) {
+          await btn.click({ force: true, timeout: 5000 }).catch(() => {});
+          searchTriggered = true;
+          console.log('[iros-pin] 검색 버튼 force-click');
+          break;
+        }
+      }
+    }
+
+    // 3순위: onclick에 search 포함 앵커 (헤더 nav 제외) — JS dispatchEvent
+    if (!searchTriggered) {
+      const triggered = await page.evaluate(() => {
+        const anchors = [...document.querySelectorAll('a[onclick], a[id*="sch_realCorp"]')];
         for (const a of anchors) {
-          if (a.id && a.id.includes('header')) continue;
+          if (a.id && (a.id.includes('header') || a.id.includes('depth'))) continue;
           const oc = a.getAttribute('onclick') || '';
-          if (oc.toLowerCase().includes('search') || oc.includes('조회')) {
+          if (oc.toLowerCase().includes('search') || oc.includes('조회') || a.id.includes('button')) {
             a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
             return 'anchor:' + a.id;
           }
@@ -292,37 +328,85 @@ app.post('/api/iros-pin', async (req, res) => {
       });
       if (triggered) { searchTriggered = true; console.log('[iros-pin] JS anchor 검색:', triggered); }
     }
+
+    // 4순위: Enter 키 폴백
     if (!searchTriggered) {
       await addrInput.press('Enter');
-      console.log('[iros-pin] Enter 검색');
+      console.log('[iros-pin] Enter 검색 (폴백)');
     }
-    await page.waitForTimeout(4000);
-    console.log('[iros-pin] 검색 후 URL:', targetCtx === page ? page.url() : targetCtx.url());
+
+    // 검색 후 최대 8초 대기 — popup 또는 networkidle 중 먼저 온 것
+    const popup = await Promise.race([
+      popupPromise,
+      page.waitForLoadState('networkidle', { timeout: 8000 }).then(() => null).catch(() => null),
+    ]);
+    if (popup) {
+      console.log('[iros-pin] popup 감지:', popup.url());
+      await popup.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    } else {
+      await page.waitForTimeout(3000);
+    }
+
+    // 검색 후 모든 frame + body 상태 진단
+    const framesPost = page.frames().map(f => ({ url: f.url(), name: f.name() }));
+    console.log('[iros-pin] 검색 후 frame:', JSON.stringify(framesPost));
+    console.log('[iros-pin] 검색 후 URL:', page.url());
+    const bodyPost = await page.evaluate(() => document.body.innerText.slice(0, 2000));
+    console.log('[iros-pin] 검색 후 body(2000):', bodyPost);
+
+    // ozReportFrame__ iframe 내용 확인
+    for (const frame of page.frames()) {
+      if (frame.name() === 'ozReportFrame__' || frame.url().includes('ozReport')) {
+        const ozBody = await frame.evaluate(() => document.body?.innerText?.slice(0, 500) || '').catch(() => '');
+        console.log('[iros-pin] ozReportFrame__ body:', ozBody);
+      }
+    }
 
     // ── Step 6: 결과에서 고유번호(PIN) 파싱 ──────────────────────────────────────
-    const resultText = await targetCtx.evaluate(() => {
-      // 테이블/스팬/div에서 XXXX-XXXX-XXXXXX 또는 13~14자리 숫자 패턴
-      const els = [...document.querySelectorAll('td, span, div, p')];
-      for (const el of els) {
-        const t = el.textContent || '';
-        const m = t.match(/\b(\d{4}-\d{4}-\d{6}|\d{13,14})\b/);
-        if (m) return { pin: m[1].replace(/-/g, ''), raw: m[0], context: t.trim().slice(0, 100) };
+    // 결과는 popup 페이지 or 메인 page DOM or iframe 중 하나에 존재
+    const pinPattern = /(\d{4}-\d{4}-\d{6}|\d{13,14})/;
+
+    const extractPin = async (ctx2) => {
+      return ctx2.evaluate(() => {
+        const pat = /(\d{4}-\d{4}-\d{6}|\d{13,14})/;
+        const els = [...document.querySelectorAll('td, span, div, p, li, a')];
+        for (const el of els) {
+          const t = (el.textContent || '').trim();
+          const m = t.match(pat);
+          if (m && m[1].length >= 13) return { pin: m[1].replace(/-/g, ''), raw: m[0], context: t.slice(0, 100) };
+        }
+        const attrs = [...document.querySelectorAll('[onclick], [data-pin], [data-id], [data-uniq]')];
+        for (const el of attrs) {
+          const oc = [el.getAttribute('onclick'), el.getAttribute('data-pin'), el.getAttribute('data-id'), el.getAttribute('data-uniq')].filter(Boolean).join('|');
+          const m = oc.match(/['"]?(\d{4}-?\d{4}-?\d{6}|\d{13,14})['"]?/);
+          if (m) return { pin: m[1].replace(/-/g, ''), raw: oc.slice(0, 80), context: 'attr' };
+        }
+        return null;
+      });
+    };
+
+    // popup 먼저 확인
+    let resultText = popup ? await extractPin(popup).catch(() => null) : null;
+
+    // popup에 없으면 main page 전체 frame 탐색
+    if (!resultText || !resultText.pin) {
+      for (const frame of [page, ...page.frames()]) {
+        try {
+          const r = await extractPin(frame);
+          if (r && r.pin && r.pin.length >= 13) { resultText = r; break; }
+        } catch {}
       }
-      // onclick / data 속성에서 파싱
-      const linked = [...document.querySelectorAll('[onclick], [data-pin], [data-id]')];
-      for (const el of linked) {
-        const oc = el.getAttribute('onclick') || el.getAttribute('data-pin') || el.getAttribute('data-id') || '';
-        const m = oc.match(/['"]?(\d{4}-?\d{4}-?\d{6}|\d{13,14})['"]?/);
-        if (m) return { pin: m[1].replace(/-/g, ''), raw: oc.slice(0, 80), context: 'attr' };
-      }
-      return null;
-    });
+    }
 
     if (!resultText || !resultText.pin) {
-      const dbg = await targetCtx.evaluate(() => ({
+      const dbg = await page.evaluate(() => ({
         url: location.href, title: document.title,
-        body: document.body.innerText.slice(0, 700)
+        body: document.body.innerText.slice(0, 1000)
       }));
+      if (popup) {
+        const pdbg = await popup.evaluate(() => ({ url: location.href, body: document.body.innerText.slice(0, 500) })).catch(() => ({}));
+        throw new Error(`고유번호 파싱 실패. 주소: ${address} | main:${JSON.stringify(dbg)} | popup:${JSON.stringify(pdbg)}`);
+      }
       throw new Error(`고유번호 파싱 실패. 주소: ${address} | ${JSON.stringify(dbg)}`);
     }
 
