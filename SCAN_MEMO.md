@@ -180,3 +180,8 @@
 | 2026-09-07 | **번역 시스템 전면 개편**: LANG_EXPERTISE 6개 언어 자격증변환·GPA스케일·군복무·인간적 표현 패턴 DB 추가 |
 | 2026-09-07 | **면접 시스템 2026 데이터 주입**: 삼성합격자 평균TOEIC·인턴경험비율·카카오합격률·압박질문10유형·싫어하는답변20가지 추가 |
 | 2026-09-07 | **등기부 모델 업그레이드**: haiku → sonnet-4-6 (34,900P 가격 정당화) |
+| 2026-09-07 | **3개 UI 버그 수정**: _isSuperAdmin 스코프 오류·registry 탭 가격 29900→34900·탭 전환 파일 초기화 |
+| 2026-09-07 | **등기부 렌더링 4개 버그 수정**: ownership 객체→owners배열·riskSummary [object Object]·e.risk·e.registeredDate |
+| 2026-09-07 | **_worker.js mbtico 블록**: processingCtx에 targetLang·jeonseDeposit 추가·_slyProcessJob 파라미터 정식화·form 클로저 의존 제거 |
+| 2026-09-07 | **getScannedPrompt에 registry_analysis 추가**: 스캔 PDF 등기부 정상 분석 가능 |
+| 2026-09-07 | **에이전트 조사 결과 반영**: 신탁원부 감지·HUG 보증보험 판단·선순위안전도%·법인임대인 위험분석 (경쟁사 전무 영역) |

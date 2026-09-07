@@ -1746,27 +1746,34 @@ function renderResult(data) {
       </div>
     </div>`;
   }
-  if (data.ownership?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">소유 현황</div><div class="sly-tags">
-      ${data.ownership.map(o => `<span class="sly-tag tag-strength">${typeof o === 'string' ? o : (o.name || '') + (o.share ? ' ' + o.share : '')}</span>`).join('')}
-    </div></div>`;
+  const _owners = data.ownership?.owners || (Array.isArray(data.ownership) ? data.ownership : []);
+  if (_owners.length) {
+    const multiRisk = data.ownership?.multiOwnerRisk;
+    html += `<div class="sly-card"><div class="sly-card-title">소유 현황</div>
+      <div class="sly-tags">${_owners.map(o => `<span class="sly-tag tag-strength">${typeof o === 'string' ? o : (o.name || '') + (o.share ? ' ' + o.share : '') + (o.acquireType ? ' (' + o.acquireType + ')' : '')}</span>`).join('')}</div>
+      ${multiRisk ? `<div style="margin-top:8px;font-size:13px;color:var(--warn)">⚠️ ${multiRisk}</div>` : ''}
+    </div>`;
   }
   if (data.encumbrances?.length) {
     html += `<div class="sly-card"><div class="sly-card-title" style="color:var(--danger)">담보·제한 현황 (${data.encumbrances.length}건)</div>
       <div class="sly-improve-list">
-        ${data.encumbrances.map((e, i) => `
-          <div class="sly-improve-item" id="slyEnc${i}">
+        ${data.encumbrances.map((e, i) => {
+          const rv = e.risk || e.riskLevel || '';
+          const dc = rv === '높음' || rv === 'high' ? 'risk-high' : rv === '낮음' || rv === 'low' ? 'risk-low' : 'risk-medium';
+          return `<div class="sly-improve-item" id="slyEnc${i}">
             <div class="sly-improve-head" onclick="_slyToggleEnc(${i})">
-              <span class="sly-risk-dot ${(e.riskLevel || 'medium') === 'high' ? 'risk-high' : 'risk-medium'}"></span>
-              <span class="sly-improve-section">${e.type || '제한사항'} ${e.amount ? '(' + e.amount + ')' : ''}</span>
+              <span class="sly-risk-dot ${dc}"></span>
+              <span class="sly-improve-section">${e.type || '제한사항'} ${e.amount ? '(' + e.amount + ')' : ''} ${e.status === '말소됨' ? '<span style="font-size:11px;color:var(--success)">[말소]</span>' : ''}</span>
               <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
             </div>
             <div class="sly-improve-body">
               ${e.creditor ? `<div class="sly-reason">채권자: ${e.creditor}</div>` : ''}
-              ${e.date ? `<div class="sly-reason">설정일: ${e.date}</div>` : ''}
+              ${(e.registeredDate || e.date) ? `<div class="sly-reason">설정일: ${e.registeredDate || e.date}</div>` : ''}
+              ${e.priority ? `<div class="sly-reason">순위: ${e.priority}</div>` : ''}
               ${e.description ? `<div class="sly-reason">${e.description}</div>` : ''}
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
   }
@@ -1797,6 +1804,14 @@ function renderResult(data) {
             </div>
           </div>`;
         }).join('')}` : ''}
+      ${(jr.safetyRatio || jr.hugEligibility || jr.trustRegistryNeeded || jr.corporateOwnerRisk) ? `
+        <div style="font-weight:600;font-size:13px;margin:14px 0 8px">SCAN 독점 추가 분석</div>
+        <div style="display:grid;gap:8px;font-size:13px">
+          ${jr.safetyRatio ? `<div style="background:var(--surface);border-radius:8px;padding:10px 12px"><span style="color:var(--text-muted)">선순위 안전도</span> <strong>${jr.safetyRatio}</strong></div>` : ''}
+          ${jr.hugEligibility ? `<div style="background:var(--surface);border-radius:8px;padding:10px 12px"><span style="color:var(--text-muted)">HUG 보증보험</span> <strong>${jr.hugEligibility}</strong></div>` : ''}
+          ${jr.trustRegistryNeeded ? `<div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:10px 12px;border:1px solid var(--danger)">⚠️ <strong>신탁원부 발급 필요</strong><br><span style="color:var(--text-secondary)">${jr.trustRegistryReason || ''}</span></div>` : ''}
+          ${jr.corporateOwnerRisk ? `<div style="background:rgba(245,158,11,0.08);border-radius:8px;padding:10px 12px;border:1px solid var(--warn)">🏢 <strong>법인 임대인</strong><br><span style="color:var(--text-secondary)">${jr.corporateOwnerRisk}</span></div>` : ''}
+        </div>` : ''}
       ${jr.safetyVerification?.length ? `
         <div style="font-weight:600;font-size:13px;margin:12px 0 6px">안전 확인 사항</div>
         <div class="sly-tags">${jr.safetyVerification.map(v => `<span class="sly-tag tag-strength">${v}</span>`).join('')}</div>` : ''}
@@ -1804,9 +1819,14 @@ function renderResult(data) {
   }
 
   if (data.riskSummary) {
-    html += `<div class="sly-card" style="border-left:3px solid var(--danger)">
-      <div class="sly-card-title">위험 요약</div>
-      <div style="font-size:14px;line-height:1.7;white-space:pre-line">${data.riskSummary}</div>
+    const rs = typeof data.riskSummary === 'string' ? {summary: data.riskSummary} : data.riskSummary;
+    const rsLv = rs.level || '';
+    const rsColor = (rsLv === '고위험' || rsLv === '위험') ? 'var(--danger)' : rsLv === '주의' ? 'var(--warn)' : 'var(--success)';
+    html += `<div class="sly-card" style="border-left:4px solid ${rsColor}">
+      <div class="sly-card-title" style="color:${rsColor}">위험 요약${rsLv ? ' — ' + rsLv : ''}${rs.score ? ' (' + rs.score + '점)' : ''}</div>
+      ${rs.totalDebt ? `<div style="font-size:14px;margin-bottom:8px">총 채권최고액: <strong>${rs.totalDebt}</strong></div>` : ''}
+      ${rs.keyRisks?.length ? `<div class="sly-tags" style="margin-bottom:10px">${rs.keyRisks.map(k => `<span class="sly-tag tag-miss">${k}</span>`).join('')}</div>` : ''}
+      ${rs.summary ? `<div style="font-size:14px;line-height:1.7;white-space:pre-line">${rs.summary}</div>` : ''}
     </div>`;
   }
   if (data.recommendations?.length) {
