@@ -7740,7 +7740,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const jdText = form.get('jdText') || '';
           const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
 
-          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract'];
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
