@@ -157,39 +157,92 @@ export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdT
 }
 
 // ────────────────────────────────────────────────────────────
-// 3. 자기소개서 영문 번역 (Sonnet 5 — 품질 최우선)
+// 2-b. 자기소개서 AI 완전 재작성 (Rewrite mode)
 // ────────────────────────────────────────────────────────────
-const TRANSLATION_SYSTEM = `You are a professional Korean-to-English translator specializing in
+const COVER_LETTER_REWRITE_SYSTEM = `당신은 한국 대기업·공기업·스타트업 합격자 자기소개서를 수백 편 작성한 최고 수준의 자소서 작가입니다.
+지원자의 원본 자소서와 이력서를 바탕으로 더 강력하고 설득력 있는 자소서를 완전히 재작성합니다.
+반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+출력 스키마:
+{
+  "rewrittenSections": [
+    {
+      "title": "항목 제목 (예: 성장과정 / 지원동기 / 직무역량 / 입사 후 포부)",
+      "original": "원본 문단 (200자 이내 요약)",
+      "rewritten": "AI가 재작성한 최종 문장 (완성된 문체, 구체적 수치·사례 강화)",
+      "improvements": ["개선 포인트1", "개선 포인트2"]
+    }
+  ],
+  "writingTips": ["합격 자소서를 위한 핵심 팁1", "팁2", "팁3"],
+  "strengthenedPoints": ["원본 대비 강화된 포인트1", "포인트2"],
+  "wordCount": 전체_재작성_자소서_글자수,
+  "overallNote": "재작성 방향 및 주요 변경 사항 요약 (150자 이내)"
+}`;
+
+export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdText = '', env }) {
+  const userBlocks = [
+    ...(resumeText ? [{ type: 'text', text: `[이력서 (지원자 스펙)]\n${resumeText}` }] : []),
+    ...(jdText ? [{ type: 'text', text: `[채용공고]\n${jdText}` }] : []),
+    { type: 'text', text: `[원본 자기소개서 (재작성 대상)]\n${coverLetterText}` }
+  ];
+
+  return callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    system: COVER_LETTER_REWRITE_SYSTEM,
+    userBlocks,
+    env,
+    maxTokens: 8000
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+// 3. 자기소개서 다국어 번역 (영어 Sonnet 5 / 기타 Haiku)
+// ────────────────────────────────────────────────────────────
+const TRANSLATION_LANGS = {
+  en: { name: 'English', label: '영어' },
+  ja: { name: 'Japanese', label: '일본어' },
+  zh: { name: 'Chinese (Simplified)', label: '중국어(간체)' },
+  de: { name: 'German', label: '독일어' },
+  fr: { name: 'French', label: '프랑스어' },
+  es: { name: 'Spanish', label: '스페인어' },
+};
+
+function buildTranslationSystem(targetLang) {
+  const lang = TRANSLATION_LANGS[targetLang] || TRANSLATION_LANGS.en;
+  return `You are a professional Korean-to-${lang.name} translator specializing in
 career documents (resumes, cover letters) for Korean professionals applying to global companies.
 Translate naturally and professionally, preserving the candidate's voice.
 Respond ONLY with the following JSON. No markdown.
 
 Output schema:
 {
+  "targetLanguage": "${lang.label}",
   "sections": [
     {
-      "title": "Section heading (e.g., Growth Story / Motivation / Strengths)",
+      "title": "Section heading",
       "koreanOriginal": "원문 그대로",
-      "englishTranslation": "Natural English translation",
-      "translatorNotes": "번역 시 고려 사항 또는 문화적 차이 설명 (선택, 없으면 null)"
+      "translation": "Natural ${lang.name} translation",
+      "translatorNotes": "번역 시 고려 사항 (선택, 없으면 null)"
     }
   ],
   "glossary": [
-    { "korean": "한국어 용어", "english": "English equivalent", "context": "사용 맥락" }
+    { "korean": "한국어 용어", "translated": "${lang.name} equivalent", "context": "사용 맥락" }
   ],
-  "overallQuality": "번역 품질 총평 (영어로)",
-  "culturalAdaptations": ["문화적 차이로 표현을 바꾼 항목 설명1", "설명2"]
+  "overallQuality": "번역 품질 총평",
+  "culturalAdaptations": ["문화적 차이로 표현을 바꾼 항목 설명1"]
 }`;
+}
 
-export async function translateCoverLetter({ text, resumeText = '', env }) {
+export async function translateCoverLetter({ text, resumeText = '', targetLang = 'en', env }) {
+  const isEnglish = targetLang === 'en';
   const userBlocks = [
     ...(resumeText ? [{ type: 'text', text: `[Candidate Resume Context]\n${resumeText}` }] : []),
     { type: 'text', text: `[Korean Cover Letter to Translate]\n${text}` }
   ];
 
   return callClaude({
-    model: 'claude-sonnet-5',
-    system: TRANSLATION_SYSTEM,
+    model: isEnglish ? 'claude-sonnet-5' : 'claude-haiku-4-5-20251001',
+    system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
     maxTokens: 8000
@@ -361,10 +414,10 @@ function getScannedPrompt(serviceId, ctx) {
 }
 
 // ────────────────────────────────────────────────────────────
-// 6. 등기부등본 분석
+// 6. 등기부등본 분석 (전세사기 5대 체크포인트 포함)
 // ────────────────────────────────────────────────────────────
-const REGISTRY_SYSTEM = `당신은 부동산 등기 전문가입니다. 등기부등본(부동산 등기사항전부증명서)을 분석하여
-핵심 권리관계와 위험요소를 명확하게 정리합니다.
+const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전문가입니다. 등기부등본(부동산 등기사항전부증명서)을 분석하여
+핵심 권리관계, 위험요소, 전세사기 징후를 명확하게 정리합니다.
 반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
 
 출력 스키마:
@@ -378,20 +431,57 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 전문가입니다. 등기�
   },
   "ownership": {
     "owners": [{"name": "소유자명", "share": "지분비율", "acquiredDate": "취득일", "acquireType": "매매/증여/상속 등"}],
-    "isMultiOwner": true,
-    "multiOwnerRisk": "공동소유 위험 설명 (해당 시)"
+    "isMultiOwner": false,
+    "multiOwnerRisk": "공동소유 위험 설명 (해당 시, 없으면 null)"
   },
   "encumbrances": [
     {
       "type": "권리종류 (근저당/전세권/지상권/가압류/가처분/예고등기 등)",
       "creditor": "권리자명",
-      "amount": "채권최고액 또는 전세금",
+      "amount": "채권최고액 또는 전세금 (숫자만 추출, 없으면 null)",
+      "amountNum": 0,
       "priority": "순위번호",
       "registeredDate": "등기일",
-      "status": "현재 상태 (말소됨/유효 등)",
-      "risk": "위험도 (높음/중간/낮음)"
+      "status": "현재 상태 (말소됨/유효)",
+      "risk": "높음|중간|낮음"
     }
   ],
+  "jeonseRiskAnalysis": {
+    "totalPriorDebtNum": 0,
+    "totalPriorDebt": "선순위 채권 합계 (근저당+전세권 유효분, 숫자+단위)",
+    "estimatedJeonseDeposit": "분석된 전세 보증금 (등기부에 전세권 있으면 해당 금액, 없으면 null)",
+    "jeonseRatio": "전세가율 추정치 (전세금/시세, 시세 알 수 없으면 null)",
+    "kkangtongAlert": true,
+    "kkangtongReason": "깡통전세 위험 이유 (선순위채권+전세금이 추정 시세 80% 초과 시 경고)",
+    "fraudCheckpoints": [
+      {
+        "checkpoint": "소유자 잦은 변경",
+        "status": "위험|주의|안전",
+        "detail": "확인된 내용"
+      },
+      {
+        "checkpoint": "선순위 근저당 과다",
+        "status": "위험|주의|안전",
+        "detail": "근저당 총액 및 비율"
+      },
+      {
+        "checkpoint": "가압류·가처분 존재",
+        "status": "위험|주의|안전",
+        "detail": "가압류/가처분 건수 및 금액"
+      },
+      {
+        "checkpoint": "예고등기·가등기",
+        "status": "위험|주의|안전",
+        "detail": "예고등기·가등기 유무"
+      },
+      {
+        "checkpoint": "다가구·근린생활시설",
+        "status": "위험|주의|안전",
+        "detail": "용도 및 전세사기 위험 여부"
+      }
+    ],
+    "safetyVerification": ["계약 전 반드시 확인해야 할 사항1", "사항2", "사항3"]
+  },
   "riskSummary": {
     "score": 85,
     "level": "안전|주의|위험|고위험",
@@ -402,16 +492,17 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 전문가입니다. 등기�
     "keyRisks": ["주요 위험 항목1", "항목2"]
   },
   "recommendations": ["권고사항1", "권고사항2", "권고사항3"],
-  "summary": "전체 권리관계 요약 (200자 이내)"
+  "summary": "전체 권리관계 및 전세사기 위험 요약 (200자 이내)"
 }`;
 
-export async function analyzeRegistry({ text, env }) {
+export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
+  const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
   return callClaude({
     model: 'claude-haiku-4-5-20251001',
     system: REGISTRY_SYSTEM,
-    userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요:\n\n${text}` }],
+    userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` }],
     env,
-    maxTokens: 4096
+    maxTokens: 6000
   });
 }
 

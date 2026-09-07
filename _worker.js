@@ -7740,7 +7740,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const jdText = form.get('jdText') || '';
           const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
 
-          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
@@ -8242,8 +8242,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // 3. Claude 분석
-          const { analyzeResume, analyzeCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
+          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
+
+          const targetLang = form.get('targetLang') || 'en';
+          const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
           let analysisData;
           if (parsed.scanned) {
@@ -8255,12 +8258,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               const r = await analyzeResume({text, jdText, env}); analysisData = r.data;
             } else if (serviceId === 'cover_letter_analysis') {
               const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'cover_letter_rewrite') {
+              const r = await rewriteCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
             } else if (serviceId === 'cover_letter_translation') {
-              const r = await translateCoverLetter({text, resumeText, env}); analysisData = r.data;
+              const r = await translateCoverLetter({text, resumeText, targetLang, env}); analysisData = r.data;
             } else if (serviceId === 'interview_questions') {
               const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); analysisData = r.data;
             } else if (serviceId === 'registry_analysis') {
-              const r = await analyzeRegistry({text, env}); analysisData = r.data;
+              const r = await analyzeRegistry({text, jeonseDeposit, env}); analysisData = r.data;
             } else if (serviceId === 'public_doc_analysis') {
               const r = await analyzePublicDoc({text, env}); analysisData = r.data;
             } else {
