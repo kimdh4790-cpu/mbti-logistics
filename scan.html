@@ -1553,10 +1553,7 @@ function pollResult(jobId) {
         headers: { 'Authorization': 'Bearer ' + token }
       });
       const d = await r.json();
-      if (d.status === 'processing') {
-        setProgress(55, 'Claude AI 분석 중...');
-        pollResult(jobId);
-      } else if (d.status === 'done') {
+      if (d.status === 'completed' || d.status === 'done') {
         setProgress(100, '완료!');
         setTimeout(() => {
           document.getElementById('slyProgress')?.classList.remove('visible');
@@ -1567,7 +1564,11 @@ function pollResult(jobId) {
         }, 500);
       } else if (d.status === 'failed') {
         throw new Error(d.error || '분석 실패');
+      } else if (d.status === 'processing' || d.status === 'pending') {
+        setProgress(d.progress || 55, 'Claude AI 분석 중...');
+        pollResult(jobId);
       } else {
+        // 알 수 없는 상태 - 5회 이상이면 중단
         pollResult(jobId);
       }
     } catch(e) {

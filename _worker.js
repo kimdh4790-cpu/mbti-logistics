@@ -2670,6 +2670,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             await setProgress(95);
             await env.DONWAY_ASSETS.put(`sly_job_${jobId}_docx`,docxBuffer,{expirationTtl:86400});
             if(pdfBuffer) await env.DONWAY_ASSETS.put(`sly_job_${jobId}_pdf`,pdfBuffer,{expirationTtl:86400});
+            await env.DONWAY_ASSETS.put(`sly_result_${jobId}`,JSON.stringify(analysisData),{expirationTtl:86400});
             const outputDocx=makeOutputFilename(filename,'docx');
             const summary=analysisData.overallComment||analysisData.riskSummary||'분석이 완료되었습니다.';
             await fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{status:{stringValue:'completed'},progress:{integerValue:100},summary:{stringValue:summary.slice(0,300)},originalText:{stringValue:(parsed.text||'').slice(0,5000)},outputFilename:{stringValue:outputDocx},downloadUrls:{mapValue:{fields:{docx:{stringValue:`/api/seolyuhana/download/${jobId}?type=docx`},...(pdfBuffer?{pdf:{stringValue:`/api/seolyuhana/download/${jobId}?type=pdf`}}:{})}}},completedAt:{stringValue:new Date().toISOString()}});
@@ -2734,7 +2735,13 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const f = doc.fields;
             const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
             if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403,headers});
-            return Response.json({ok:true,status:f.status?.stringValue||'unknown',progress:f.progress?.integerValue|0||0,summary:f.summary?.stringValue||null,downloadUrls:f.downloadUrls?.mapValue?.fields?{docx:f.downloadUrls.mapValue.fields.docx?.stringValue,pdf:f.downloadUrls.mapValue.fields.pdf?.stringValue}:null,error:f.error?.stringValue||null,completedAt:f.completedAt?.stringValue||null},{headers});
+            const status_r = f.status?.stringValue||'unknown';
+            let result_r = null;
+            if (status_r === 'completed') {
+              const rj = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`);
+              if (rj) try { result_r = JSON.parse(rj); } catch {}
+            }
+            return Response.json({ok:true,status:status_r,progress:f.progress?.integerValue|0||0,summary:f.summary?.stringValue||null,result:result_r,downloadUrls:f.downloadUrls?.mapValue?.fields?{docx:f.downloadUrls.mapValue.fields.docx?.stringValue,pdf:f.downloadUrls.mapValue.fields.pdf?.stringValue}:null,error:f.error?.stringValue||null,completedAt:f.completedAt?.stringValue||null},{headers});
           } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
         }
 
@@ -8141,11 +8148,18 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const f = doc.fields;
           const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
           if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          const status = f.status?.stringValue || 'unknown';
+          let result = null;
+          if (status === 'completed') {
+            const resultJson = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`);
+            if (resultJson) try { result = JSON.parse(resultJson); } catch {}
+          }
           return Response.json({
             ok:true,
-            status:    f.status?.stringValue || 'unknown',
+            status,
             progress:  f.progress?.integerValue|0 || 0,
             summary:   f.summary?.stringValue || null,
+            result,
             downloadUrls: f.downloadUrls?.mapValue?.fields ? {
               docx: f.downloadUrls.mapValue.fields.docx?.stringValue,
               pdf:  f.downloadUrls.mapValue.fields.pdf?.stringValue
@@ -8611,6 +8625,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const pdfKey  = `sly_job_${jobId}_pdf`;
           await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400});
           if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400});
+          // 분석 결과 JSON KV 저장 (result 엔드포인트에서 반환용)
+          await env.DONWAY_ASSETS.put(`sly_result_${jobId}`, JSON.stringify(analysisData), {expirationTtl: 86400});
 
           // 6. 완료 처리
           const outputDocx = makeOutputFilename(filename, 'docx');
