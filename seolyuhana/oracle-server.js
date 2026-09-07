@@ -160,12 +160,10 @@ app.post('/api/iros-pin', async (req, res) => {
     const typeParam = regType === 'land' ? 'L' : 'B';
     const jsfUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`;
 
-    // ── 내부 헬퍼: JSF 열람 페이지에 있는지 확인 ──────────────────────────────────
-    const _onJsfPage = async () => {
+    // ── 내부 헬퍼: JSF 열람 페이지에 있는지 확인 (URL 기반만 — 메인 페이지도 "등기" 포함) ──
+    const _onJsfPage = () => {
       const u = page.url();
-      const t = await page.evaluate(() => document.body?.innerText?.slice(0, 200) || '');
-      return u.includes('selectRenf') || u.includes('jsf/renf') ||
-             (t.includes('등기') && !t.includes('찾을 수 없'));
+      return u.includes('selectRenf') || u.includes('jsf/renf');
     };
 
     // ── 내부 헬퍼: JS로 Gauce nav 클릭 (pointer-event 오버레이 우회) ──────────────
@@ -198,7 +196,7 @@ app.post('/api/iros-pin', async (req, res) => {
     }
 
     // JSF 페이지에 못 들어간 경우 → Referer 헤더로 직접 navigate
-    if (!(await _onJsfPage())) {
+    if (!_onJsfPage()) {
       console.log('[iros-pin] Step3: Referer 헤더로 JSF 직접 이동');
       await page.setExtraHTTPHeaders({ 'Referer': 'https://www.iros.go.kr/index.jsp' });
       await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 45000 });
@@ -207,10 +205,10 @@ app.post('/api/iros-pin', async (req, res) => {
     console.log('[iros-pin] JSF URL:', page.url());
 
     // 여전히 접근 불가
-    if (!(await _onJsfPage())) {
+    if (!_onJsfPage()) {
       const snap = await page.evaluate(() => ({
         url: location.href, title: document.title,
-        body: document.body?.innerText?.slice(0, 400)
+        body: document.body?.innerText?.slice(0, 500)
       }));
       throw new Error(`JSF 열람 페이지 접근 실패: ${JSON.stringify(snap)}`);
     }
