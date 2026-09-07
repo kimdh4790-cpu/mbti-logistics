@@ -2581,34 +2581,43 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 
         async function _tilkoFetchRegistry(address, tilkoPinHint, regType, env) {
-          const apiKey=env.TILKO_API_KEY, rsaPubKeyB64=env.TILKO_RSA_PUBKEY, irosId=env.IROS_USER_ID, irosPw=env.IROS_USER_PW, emoneyNo1=env.IROS_EMONEY_NO1, emoneyNo2=env.IROS_EMONEY_NO2, emoneyPwd=env.IROS_EMONEY_PWD;
-          if (!irosId||!irosPw||!emoneyNo1||!emoneyNo2||!emoneyPwd) throw new Error('인터넷등기소 계정/전자지불카드 env 미설정 (IROS_USER_ID, IROS_USER_PW, IROS_EMONEY_NO1/NO2/PWD)');
-          const aesKey=await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
-          const iv=crypto.getRandomValues(new Uint8Array(16));
-          const rawAes=await crypto.subtle.exportKey('raw',aesKey);
-          const spki=_b64Buf(rsaPubKeyB64);
+          const apiKey=env.TILKO_API_KEY, irosId=env.IROS_USER_ID, irosPw=env.IROS_USER_PW;
+          const emoneyNo1=env.IROS_EMONEY_NO1||'', emoneyNo2=env.IROS_EMONEY_NO2||'', emoneyPwd=env.IROS_EMONEY_PWD||'';
+          if (!apiKey) throw new Error('TILKO_API_KEY 미설정');
+          if (!irosId||!irosPw) throw new Error('인터넷등기소 계정 env 미설정 (IROS_USER_ID, IROS_USER_PW)');
+          const hasEmoney=emoneyNo1&&emoneyNo2&&emoneyPwd;
+          // RSA 공개키 동적 조회
+          const pkRes=await fetch(`https://api.tilko.net/api/Auth/GetPublicKey?APIkey=${encodeURIComponent(apiKey)}`,{signal:AbortSignal.timeout(10000)});
+          if (!pkRes.ok) throw new Error(`Tilko 공개키 조회 실패: ${pkRes.status}`);
+          const pkJson=await pkRes.json();
+          const pemBody=(pkJson.PublicKey||pkJson.publicKey||'').replace(/-----[^-]+-----/g,'').replace(/\s/g,'');
+          if (!pemBody) throw new Error('Tilko 공개키 응답 비어있음');
+          // AES-128 생성 + IV=올제로 (Tilko 사양)
+          const rawAesBuf=crypto.getRandomValues(new Uint8Array(16));
+          const iv=new Uint8Array(16);
+          const aesKey=await crypto.subtle.importKey('raw',rawAesBuf,{name:'AES-CBC'},false,['encrypt']);
+          const spki=_b64Buf(pemBody);
           const rsaKey=await crypto.subtle.importKey('spki',spki,{name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
-          const encAes=await crypto.subtle.encrypt({name:'RSA-OAEP'},rsaKey,rawAes);
-          const encKey=_bufB64(encAes);
+          const encKey=_bufB64(await crypto.subtle.encrypt({name:'RSA-OAEP'},rsaKey,rawAesBuf));
           const enc=async(val)=>{const ct=await crypto.subtle.encrypt({name:'AES-CBC',iv},aesKey,new TextEncoder().encode(String(val)));return _bufB64(ct);};
           const encB64=async(val)=>enc(btoa(String(val)));
           let pin=(tilkoPinHint||'').replace(/-/g,'');
-          if (!pin||pin.length!==14) {
+          if (!pin||pin.length<13) {
             try {
               const addrRes=await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch',{method:'POST',headers:{'API-KEY':apiKey,'ENC-KEY':encKey,'Content-Type':'application/json'},body:JSON.stringify({SearchAddr:await enc(address)}),signal:AbortSignal.timeout(15000)});
-              if (addrRes.ok){const ad=await addrRes.json().catch(()=>({}));const first=(ad.realty_list||ad.RealtyList||[])[0];pin=(first?.pin||first?.Pin||first?.고유번호||'').replace(/-/g,'');}
+              if (addrRes.ok){const ad=await addrRes.json().catch(()=>({}));const first=(ad.realty_list||ad.RealtyList||ad.Result||[])[0];pin=(first?.pin||first?.Pin||first?.고유번호||'').replace(/-/g,'');}
             } catch(_){}
           }
-          if (!pin||pin.length<13) throw new Error(`부동산 고유번호 조회 실패 (주소: ${address}). 14자리 고유번호를 직접 입력해주세요.`);
+          if (!pin||pin.length<13) throw new Error(`부동산 고유번호 조회 실패 (${address}). 14자리 고유번호를 직접 입력해주세요.`);
           const absCls=(regType==='current')?'11':'12';
-          const body={Auth:{UserId:await enc(irosId),UserPassword:await enc(irosPw)},Pin:await enc(pin),EmoneyNo1:await encB64(emoneyNo1),EmoneyNo2:await encB64(emoneyNo2),EmoneyPwd:await encB64(emoneyPwd),CmortFlag:await enc('N'),TradeSeqFlag:await enc('N'),AbsCls:await enc(absCls),RgsMttrSmry:''};
+          const body={Auth:{UserId:await enc(irosId),UserPassword:await enc(irosPw)},Pin:await enc(pin),EmoneyNo1:hasEmoney?await encB64(emoneyNo1):await enc(''),EmoneyNo2:hasEmoney?await encB64(emoneyNo2):await enc(''),EmoneyPwd:hasEmoney?await encB64(emoneyPwd):await enc(''),CmortFlag:'',TradeSeqFlag:'',AbsCls:await enc(absCls),RgsMttrSmry:''};
           const res=await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry',{method:'POST',headers:{'API-KEY':apiKey,'ENC-KEY':encKey,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
           const resText=await res.text();
-          if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,200)}`);
+          if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,300)}`);
           try {
             const json=JSON.parse(resText);
             const code=json.ResultCode||json.result_code||'';
-            if (code&&code!=='0000'&&code!=='00000'&&code!=='200') throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage||json.result_message||''}`);
+            if (code&&!['0000','00000','200',''].includes(String(code))) throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage||json.result_message||''}`);
             return _parseTilkoJson(json);
           } catch(pe) { if(pe.message.startsWith('Tilko')) throw pe; return _parseTilkoXml(resText); }
         }
@@ -2860,8 +2869,8 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             if (vkey) {
               try { const vr=await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`); if(vr.ok){const vd=await vr.json();const rs=vd?.response?.result;if(rs){stdAddr=rs.refined?.text||address;}} } catch(_){}
             }
-            const tilkoKey=env.TILKO_API_KEY, tilkoRsa=env.TILKO_RSA_PUBKEY;
-            if (tilkoKey && tilkoRsa) {
+            const tilkoKey=env.TILKO_API_KEY;
+            if (tilkoKey) {
               try {
                 const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
                 return Response.json({ok:true,mode:'direct',stdAddr,...data},{status:200,headers});
@@ -8331,41 +8340,59 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 
       async function _tilkoFetchRegistry(address, tilkoPinHint, regType, env) {
-        const apiKey = env.TILKO_API_KEY;
-        const rsaPubKeyB64 = env.TILKO_RSA_PUBKEY;
-        const irosId = env.IROS_USER_ID;
-        const irosPw = env.IROS_USER_PW;
-        const emoneyNo1 = env.IROS_EMONEY_NO1;
-        const emoneyNo2 = env.IROS_EMONEY_NO2;
-        const emoneyPwd = env.IROS_EMONEY_PWD;
-        if (!irosId || !irosPw) {
-          throw new Error('인터넷등기소 계정 env 미설정 (IROS_USER_ID, IROS_USER_PW)');
+        const apiKey   = env.TILKO_API_KEY;
+        const irosId   = env.IROS_USER_ID;
+        const irosPw   = env.IROS_USER_PW;
+        const emoneyNo1Raw = env.IROS_EMONEY_NO1 || ''; // 전체 카드번호 앞 8자리 (영문포함)
+        const emoneyNo2Raw = env.IROS_EMONEY_NO2 || ''; // 나머지 뒤 4자리
+        const emoneyPwd    = env.IROS_EMONEY_PWD  || '';
+        if (!apiKey)  throw new Error('TILKO_API_KEY 미설정');
+        if (!irosId || !irosPw) throw new Error('인터넷등기소 계정 env 미설정 (IROS_USER_ID, IROS_USER_PW)');
+
+        const hasEmoney = emoneyNo1Raw && emoneyNo2Raw && emoneyPwd;
+
+        // 1) Tilko 서버에서 RSA 공개키 동적 조회
+        const pkRes = await fetch(`https://api.tilko.net/api/Auth/GetPublicKey?APIkey=${encodeURIComponent(apiKey)}`,
+          { signal: AbortSignal.timeout(10000) });
+        if (!pkRes.ok) throw new Error(`Tilko 공개키 조회 실패: ${pkRes.status}`);
+        const pkJson = await pkRes.json();
+        const rsaPubPem = pkJson.PublicKey || pkJson.publicKey || '';
+        if (!rsaPubPem) throw new Error('Tilko 공개키 응답 비어있음');
+
+        // 2) AES-128 세션키 생성 + IV = 올 제로 (Tilko 사양)
+        const rawAesBuf = crypto.getRandomValues(new Uint8Array(16));
+        const iv = new Uint8Array(16); // 16바이트 모두 0x00
+        const aesKey = await crypto.subtle.importKey('raw', rawAesBuf, {name:'AES-CBC'}, false, ['encrypt']);
+
+        // 3) RSA-PKCS1v15로 AES키 암호화 → ENC-KEY 헤더 (Tilko = PKCS1 v1.5, SHA-1 아님)
+        // PEM에서 SPKI 바이트 추출
+        const pemBody = rsaPubPem.replace(/-----[^-]+-----/g,'').replace(/\s/g,'');
+        const spki = _b64Buf(pemBody);
+        // PKCS1 v1.5 RSA (Tilko 샘플 코드: rsaCSP.Encrypt(aesKey, false) = PKCS1v15)
+        // WebCrypto는 PKCS1-v1_5 encrypt 지원 (RSA-OAEP와 다름)
+        let encKey;
+        try {
+          const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'}, false, ['encrypt']);
+          const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAesBuf);
+          encKey = _bufB64(encAes);
+        } catch(_) {
+          // RSA-PKCS1v15 폴백 (일부 환경)
+          const rsaKey2 = await crypto.subtle.importKey('spki', spki, {name:'RSASSA-PKCS1-v1_5',hash:'SHA-1'}, false, ['verify']).catch(()=>null);
+          if (!rsaKey2) throw new Error('RSA 키 임포트 실패');
+          encKey = _bufB64(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', rsaKey2, rawAesBuf));
         }
-        const hasEmoney = emoneyNo1 && emoneyNo2 && emoneyPwd &&
-          !['전자화폐번호1','전자화폐번호2','전자화폐비번'].includes(emoneyNo1);
 
-        // 1) AES-128 세션키 + IV 생성
-        const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
-        const iv = crypto.getRandomValues(new Uint8Array(16));
-        const rawAes = await crypto.subtle.exportKey('raw', aesKey);
-
-        // 2) RSA-OAEP로 AES키 암호화 → ENC-KEY 헤더
-        const spki = _b64Buf(rsaPubKeyB64);
-        const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
-        const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAes);
-        const encKey = _bufB64(encAes);
-
-        // 3) 필드별 AES-CBC 암호화 헬퍼
+        // 4) AES-CBC 암호화 헬퍼 (IV = 올제로)
         const enc = async (val) => {
-          const ct = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, new TextEncoder().encode(String(val)));
+          const ct = await crypto.subtle.encrypt({name:'AES-CBC', iv}, aesKey, new TextEncoder().encode(String(val)));
           return _bufB64(ct);
         };
-        // 일부 필드(EmoneyNo*)는 값을 Base64 인코딩 후 AES 암호화
+        // Emoney 필드: Base64 인코딩 후 AES 암호화 (Tilko 사양)
         const encB64 = async (val) => enc(btoa(String(val)));
 
-        // 4) Tilko 주소→고유번호 검색 (선행 API, 인증 불필요)
+        // 5) 주소 → 고유번호(Pin) 검색
         let pin = (tilkoPinHint || '').replace(/-/g,'');
-        if (!pin || pin.length !== 14) {
+        if (!pin || pin.length < 13) {
           try {
             const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
               method: 'POST',
@@ -8375,44 +8402,43 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             });
             if (addrRes.ok) {
               const ad = await addrRes.json().catch(()=>({}));
-              const first = (ad.realty_list || ad.RealtyList || [])[0];
-              pin = (first?.pin || first?.Pin || first?.고유번호 || '').replace(/-/g,'');
+              const first = (ad.realty_list || ad.RealtyList || ad.Result || [])[0];
+              pin = ((first?.pin || first?.Pin || first?.고유번호 || '')).replace(/-/g,'');
             }
           } catch(_) {}
         }
-        if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (주소: ${address}). 14자리 고유번호를 직접 입력해주세요.`);
+        if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (${address}). 14자리 고유번호를 직접 입력해주세요.`);
 
-        // 5) 등기부 조회 요청
-        const costsYn = hasEmoney ? 'Y' : 'N'; // e-money 없으면 무료 XML 열람
+        // 6) 등기부 조회 — 공식 Body 구조 (Auth.UserId / Auth.UserPassword)
         const body = {
-          IrosID: await enc(irosId),
-          IrosPwd: await enc(irosPw),
-          UniqueNo: await enc(pin),
-          JoinYn: await enc('Y'),
-          CostsYn: await enc(costsYn),
-          DataYn: await enc('Y'),
-          ValidYn: await enc('Y'),
-          IsSummary: await enc('N'),
-          ...(hasEmoney ? {
-            EmoneyNo1: await encB64(emoneyNo1),
-            EmoneyNo2: await encB64(emoneyNo2),
-            EmoneyPwd: await encB64(emoneyPwd),
-          } : {}),
+          Auth: {
+            UserId:       await enc(irosId),
+            UserPassword: await enc(irosPw)
+          },
+          Pin:          await enc(pin),
+          EmoneyNo1:    hasEmoney ? await encB64(emoneyNo1Raw) : await enc(''),
+          EmoneyNo2:    hasEmoney ? await encB64(emoneyNo2Raw) : await enc(''),
+          EmoneyPwd:    hasEmoney ? await encB64(emoneyPwd)    : await enc(''),
+          CmortFlag:    '',
+          TradeSeqFlag: '',
+          AbsCls:       '',
+          RgsMttrSmry:  ''
         };
 
         const res = await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry', {
           method: 'POST',
           headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
-          body: JSON.stringify(body), signal: AbortSignal.timeout(30000)
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(30000)
         });
         const resText = await res.text();
-        if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,200)}`);
+        if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,300)}`);
 
-        // 6) 응답 파싱 (JSON 우선, XML 폴백)
+        // 7) 응답 파싱
         try {
           const json = JSON.parse(resText);
           const code = json.ResultCode || json.result_code || '';
-          if (code && code !== '0000' && code !== '00000' && code !== '200') {
+          if (code && !['0000','00000','200',''].includes(String(code))) {
             throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage || json.result_message || ''}`);
           }
           return _parseTilkoJson(json);
@@ -8499,8 +8525,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           const tilkoKey = env.TILKO_API_KEY;
-          const tilkoRsa = env.TILKO_RSA_PUBKEY;
-          if (tilkoKey && tilkoRsa) {
+          if (tilkoKey) {
             try {
               const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
               return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
