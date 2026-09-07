@@ -1173,18 +1173,18 @@ window._slyGetToken = () => auth.currentUser?.getIdToken();
 window._slyUser = null;
 
 const SLY_SERVICES = [
-  { id: 'resume',        label: '이력서 분석',    cost: 9900,  icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cover_letter',  label: '자소서 분석',    cost: 9900,  icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cv_translate',  label: '영문 번역',      cost: 14900, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'interview',     label: '면접 질문',      cost: 9900,  icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'contract',      label: '계약서 검토',    cost: 14900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'resume',        label: '이력서 분석',    cost: 29900, icon: 'doc', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cover_letter',  label: '자소서 분석',    cost: 39900, icon: 'edit', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',  label: '영문 번역',      cost: 39900, icon: 'lang', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'interview',     label: '면접 질문',      cost: 19900, icon: 'mic', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'contract',      label: '계약서 검토',    cost: 29900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
 ];
 
 const CHARGE_PLANS = [
-  { pts: 10000,  price: 10000,  label: '10,000P' },
-  { pts: 22000,  price: 20000,  bonus: '+2,000P', label: '20,000P' },
-  { pts: 57000,  price: 50000,  bonus: '+7,000P', label: '50,000P' },
-  { pts: 120000, price: 100000, bonus: '+20,000P', label: '100,000P' },
+  { pts: 30000,  price: 30000,  label: '30,000P' },
+  { pts: 67000,  price: 60000,  bonus: '+7,000P', label: '60,000P' },
+  { pts: 115000, price: 100000, bonus: '+15,000P', label: '100,000P' },
+  { pts: 240000, price: 200000, bonus: '+40,000P', label: '200,000P' },
 ];
 
 // ── Render header auth state
