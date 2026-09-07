@@ -8504,7 +8504,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // Fallback 1: Oracle 서버 Puppeteer로 IROS 자동 로그인 + 발급
-          const oracleUrl = env.ORACLE_SERVER_URL;
+          const oracleUrl = env.ORACLE_SERVER_URl || env.ORACLE_SERVER_URL;
           const irosId  = env.IROS_USER_ID;
           const irosPw  = env.IROS_USER_PW;
           const emNo1   = env.IROS_EMONEY_NO1;
