@@ -8531,6 +8531,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
             } catch(te) {
               console.error('[tilko-registry]', te.message);
+              return Response.json({ok:false, mode:'link', stdAddr,
+                error: `Tilko 오류: ${te.message}`,
+                irosUrl:'https://www.iros.go.kr'
+              },{status:200,headers});
             }
           }
 
