@@ -8531,72 +8531,115 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             } catch(_) {}
           }
 
+          let tilkoErr = null;
           const tilkoKey = env.TILKO_API_KEY;
-          if (tilkoKey) {
+          if (tilkoKey && pnuHint) {
+            // PIN 직접 제공된 경우: Tilko 바로 조회 (주소 검색 불필요)
             try {
               const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
               return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
             } catch(te) {
+              console.error('[tilko-registry-pin]', te.message);
+              tilkoErr = te.message;
+            }
+          } else if (tilkoKey) {
+            // PIN 없음: Tilko 주소검색 시도 (RealtyAddrSrch — 플랜에 따라 500 반환 가능)
+            try {
+              const data = await _tilkoFetchRegistry(stdAddr, null, regType, env);
+              return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
+            } catch(te) {
               console.error('[tilko-registry]', te.message);
-              return Response.json({ok:false, mode:'link', stdAddr,
-                error: `Tilko 오류: ${te.message}`,
-                irosUrl:'https://www.iros.go.kr'
-              },{status:200,headers});
+              tilkoErr = te.message;
+              // 주소검색 실패 시 Oracle fallback으로 계속
             }
           }
 
-          // Fallback 1: Oracle 서버 Puppeteer로 IROS 자동 로그인 + 발급
+          // Fallback 1: Oracle 서버 Playwright로 IROS 주소 → PIN 검색 후 Tilko RealtyRegistry 조회
           const oracleUrl = env.ORACLE_SERVER_URl || env.ORACLE_SERVER_URL;
           const irosId  = env.IROS_USER_ID;
           const irosPw  = env.IROS_USER_PW;
           const emNo1   = env.IROS_EMONEY_NO1;
           const emNo2   = env.IROS_EMONEY_NO2;
           const emPwd   = env.IROS_EMONEY_PWD;
-          if (oracleUrl && irosId && irosPw) {
+          if (oracleUrl) {
             let oracleErr = null;
             try {
-              const ac = new AbortController();
-              const timer = setTimeout(() => ac.abort(), 25000);
-              let oRes;
+              // Step A: Oracle PIN 검색 (비회원 가능, 로그인 불필요)
+              let pin = null;
               try {
-                oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    address: stdAddr,
-                    regType: regType === 'land' ? 'land' : 'building',
-                    irosId, irosPw,
-                    emoneyNo1: emNo1 || '', emoneyNo2: emNo2 || '', emoneyPwd: emPwd || ''
-                  }),
-                  signal: ac.signal
-                });
-              } finally {
-                clearTimeout(timer);
-              }
-              if (oRes && oRes.ok) {
-                const od = await oRes.json();
-                if (od.ok && od.pdfBase64) {
-                  const pdfKey = `iros_pdf_${Date.now()}`;
-                  await env.DONWAY_ASSETS.put(pdfKey, od.pdfBase64, { expirationTtl: 3600 });
-                  return Response.json({ok:true, mode:'auto', stdAddr,
-                    pdfBase64: od.pdfBase64, pdfKey,
-                    guide:'인터넷등기소에서 자동 발급 완료'
-                  }, {status:200,headers});
+                const pinAc = new AbortController();
+                const pinTimer = setTimeout(() => pinAc.abort(), 30000);
+                let pinRes;
+                try {
+                  pinRes = await fetch(`${oracleUrl}/api/iros-pin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: stdAddr, regType: regType === 'land' ? 'land' : 'building' }),
+                    signal: pinAc.signal
+                  });
+                } finally { clearTimeout(pinTimer); }
+                if (pinRes && pinRes.ok) {
+                  const pd = await pinRes.json();
+                  pin = pd.pin || null;
+                  console.log('[oracle-pin]', pin ? `PIN=${pin}` : `PIN 없음: ${pd.error}`);
+                } else {
+                  console.error('[oracle-pin] HTTP', pinRes?.status);
                 }
-                oracleErr = od.error || 'Oracle IROS 조회 실패';
-                return Response.json({ok:false, mode:'link', stdAddr,
-                  error: oracleErr, irosUrl:'https://www.iros.go.kr'
-                },{status:200,headers});
+              } catch(pe) { console.error('[oracle-pin]', pe.message); }
+
+              // Step B: PIN 있으면 Tilko RealtyRegistry (무결제, 데이터만)
+              if (pin && tilkoKey) {
+                try {
+                  const data = await _tilkoFetchRegistry(stdAddr, pin, regType, env);
+                  return Response.json({ok:true, mode:'hybrid', stdAddr, ...data}, {status:200,headers});
+                } catch(te2) {
+                  console.error('[tilko-registry-oracle-pin]', te2.message);
+                  oracleErr = `Tilko(PIN=${pin}) 오류: ${te2.message}`;
+                }
               }
-              oracleErr = `Oracle HTTP ${oRes ? oRes.status : 'no-response'}`;
+
+              // Step C: Tilko 없거나 실패 → Oracle 전체 플로우 (로그인+발급)
+              if (irosId && irosPw) {
+                const ac = new AbortController();
+                const timer = setTimeout(() => ac.abort(), 55000);
+                let oRes;
+                try {
+                  oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      address: stdAddr,
+                      regType: regType === 'land' ? 'land' : 'building',
+                      irosId, irosPw,
+                      emoneyNo1: emNo1 || '', emoneyNo2: emNo2 || '', emoneyPwd: emPwd || ''
+                    }),
+                    signal: ac.signal
+                  });
+                } finally { clearTimeout(timer); }
+                if (oRes && oRes.ok) {
+                  const od = await oRes.json();
+                  if (od.ok && od.pdfBase64) {
+                    const pdfKey = `iros_pdf_${Date.now()}`;
+                    await env.DONWAY_ASSETS.put(pdfKey, od.pdfBase64, { expirationTtl: 3600 });
+                    return Response.json({ok:true, mode:'auto', stdAddr,
+                      pdfBase64: od.pdfBase64, pdfKey,
+                      guide:'인터넷등기소에서 자동 발급 완료'
+                    }, {status:200,headers});
+                  }
+                  oracleErr = od.error || 'Oracle IROS 조회 실패';
+                } else {
+                  oracleErr = `Oracle HTTP ${oRes ? oRes.status : 'no-response'}`;
+                }
+              }
             } catch(oe) {
               oracleErr = oe.message || String(oe);
               console.error('[oracle-iros]', oracleErr);
             }
             // Oracle 실패 상세 반환
             const _oHost = oracleUrl ? oracleUrl.replace(/^https?:\/\//,'').split('/')[0] : 'URL미설정';
+            const _tlkErrPart = tilkoErr ? ` (Tilko: ${tilkoErr.slice(0,80)})` : '';
             return Response.json({ok:false, mode:'link', stdAddr,
-              error: `Oracle 오류: ${oracleErr} [${_oHost}]`,
+              error: `Oracle 오류: ${oracleErr||'알 수 없음'} [${_oHost}]${_tlkErrPart}`,
               irosUrl:'https://www.iros.go.kr'
             },{status:200,headers});
           }
@@ -8607,9 +8650,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (!oracleUrl) missing.push('ORACLE_SERVER_URL');
           if (!irosId) missing.push('IROS_USER_ID');
           if (!irosPw) missing.push('IROS_USER_PW');
+          const tilkoNote = tilkoErr ? ` | Tilko 오류: ${tilkoErr.slice(0,100)}` : '';
           return Response.json({
             ok: true, mode: 'link', stdAddr, irosUrl,
-            guide: missing.length ? `직접 조회 미설정 항목: ${missing.join(', ')}` : 'Oracle 서버 오류로 링크 모드 전환'
+            guide: (missing.length ? `직접 조회 미설정: ${missing.join(', ')}` : '자동 조회 불가') + tilkoNote
           }, {status:200,headers});
         } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
       }

@@ -69,6 +69,7 @@ app.post('/api/pdf-render', async (req, res) => {
   let browser = null;
   try {
     browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_PATH || undefined,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
       headless: true
     });
@@ -91,6 +92,174 @@ app.post('/api/pdf-render', async (req, res) => {
   } catch (e) {
     console.error('[pdf-render]', e.message);
     res.status(500).json({ error: e.message });
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+});
+
+// ── /api/iros-debug  IROS 페이지 실시간 진단 ────────────────────────────────────
+app.post('/api/iros-debug', async (req, res) => {
+  const { url = 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=B' } = req.body || {};
+  let browser = null;
+  try {
+    browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      headless: true
+    });
+    const page = await (await browser.newContext({
+      viewport: { width: 1280, height: 900 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      locale: 'ko-KR'
+    })).newPage();
+    page.setDefaultTimeout(30000);
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 45000 });
+    await page.waitForTimeout(2000);
+    const info = await page.evaluate(() => ({
+      title: document.title,
+      url: location.href,
+      inputs: [...document.querySelectorAll('input')].map(el => ({
+        id: el.id, name: el.name, type: el.type,
+        placeholder: el.placeholder, value: el.value.slice(0, 50)
+      })),
+      buttons: [...document.querySelectorAll('button, input[type=button], input[type=submit], a[onclick]')].slice(0, 20).map(el => ({
+        tag: el.tagName, id: el.id, text: (el.textContent || el.value || '').trim().slice(0, 50),
+        onclick: (el.getAttribute('onclick') || '').slice(0, 100)
+      })),
+      tables: document.querySelectorAll('table').length,
+      forms: [...document.querySelectorAll('form')].map(f => ({ id: f.id, action: f.action })),
+      bodyText: document.body.innerText.slice(0, 1000)
+    }));
+    res.json({ ok: true, info });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+});
+
+// ── /api/iros-pin  인터넷등기소 주소 → 고유번호 검색 (비회원, 결제 없음) ──────────
+app.post('/api/iros-pin', async (req, res) => {
+  const { address, regType = 'building' } = req.body || {};
+  if (!address) return res.status(400).json({ error: '주소 필수' });
+  let browser = null;
+  try {
+    browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
+             '--disable-blink-features=AutomationControlled'],
+      headless: true
+    });
+    const page = await (await browser.newContext({
+      viewport: { width: 1280, height: 900 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      locale: 'ko-KR'
+    })).newPage();
+    page.setDefaultTimeout(30000);
+
+    // 비회원 검색 페이지 (로그인 불필요)
+    const typeParam = regType === 'land' ? 'L' : 'B';
+    await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
+      { waitUntil: 'networkidle', timeout: 45000 });
+    await page.waitForTimeout(3000); // JSF JS 초기화
+
+    // 로그인 리다이렉트 감지 → 비회원 링크 클릭 시도
+    if (page.url().includes('login') || page.url().includes('Login')) {
+      const nonMemberSel = 'a:has-text("비회원"), a[href*="renf"], button:has-text("비회원"), a:has-text("열람")';
+      const nmLink = page.locator(nonMemberSel).first();
+      if (await nmLink.count() > 0) {
+        await nmLink.click();
+        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+        await page.waitForTimeout(2000);
+      }
+    }
+
+    // 주소 입력 필드 찾기 — JSF id 패턴 포함
+    const addrSelectors = [
+      'input[id$="addrSearch"]', 'input[id*="addrSearch"]',
+      'input[id$=":addr"]', 'input[id*=":addr"]',
+      'input[name*="addr" i]', 'input[placeholder*="주소"]',
+      'input[placeholder*="번지"]', 'input[placeholder*="도로명"]',
+      '#searchAddr', 'input[id*="search" i][type="text"]',
+    ];
+    let addrInput = null;
+    for (const sel of addrSelectors) {
+      const loc = page.locator(sel).first();
+      if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) {
+        addrInput = loc; break;
+      }
+    }
+    if (!addrInput) {
+      // 페이지 내 첫 번째 visible text input
+      const allInputs = page.locator('input[type="text"], input:not([type])');
+      const cnt = await allInputs.count();
+      for (let i = 0; i < Math.min(cnt, 10); i++) {
+        const inp = allInputs.nth(i);
+        if (await inp.isVisible().catch(() => false)) { addrInput = inp; break; }
+      }
+    }
+    if (!addrInput) {
+      const pageInfo = await page.evaluate(() => ({
+        url: location.href, title: document.title,
+        inputCount: document.querySelectorAll('input').length,
+        bodySnip: document.body.innerText.slice(0, 400)
+      }));
+      throw new Error(`주소 입력 필드 없음 | ${JSON.stringify(pageInfo)}`);
+    }
+
+    await addrInput.click({ clickCount: 3 });
+    await addrInput.fill(address);
+
+    // 검색 버튼
+    const searchSels = [
+      'button:has-text("검색")', 'input[type="button"][value*="검색"]',
+      'a:has-text("검색")', '#searchBtn', 'button[onclick*="search"]',
+      'a[onclick*="search"]', 'input[type="submit"]'
+    ];
+    let searched = false;
+    for (const sel of searchSels) {
+      const btn = page.locator(sel).first();
+      if (await btn.count() > 0 && await btn.isVisible().catch(() => false)) {
+        await btn.click(); searched = true; break;
+      }
+    }
+    if (!searched) await addrInput.press('Enter');
+    await page.waitForTimeout(4000);
+
+    // 결과에서 고유번호 파싱
+    const resultText = await page.evaluate(() => {
+      // 테이블 셀에서 14자리 고유번호 패턴 찾기 (숫자 13~14자리)
+      const tds = [...document.querySelectorAll('td, span, div')];
+      for (const el of tds) {
+        const t = el.textContent || '';
+        const m = t.match(/\b(\d{4}-\d{4}-\d{6}|\d{13,14})\b/);
+        if (m) return { pin: m[1].replace(/-/g, ''), raw: m[0], context: t.trim().slice(0, 100) };
+      }
+      // 링크 href나 onclick에서 PIN 파라미터 추출
+      const links = [...document.querySelectorAll('a[onclick], tr[onclick], td[onclick]')];
+      for (const el of links) {
+        const oc = el.getAttribute('onclick') || '';
+        const m = oc.match(/['"]([\dA-Z]{13,14})['"]/i);
+        if (m) return { pin: m[1], raw: oc.slice(0, 80), context: 'onclick' };
+      }
+      return null;
+    });
+
+    if (!resultText || !resultText.pin) {
+      // 결과 행 첫 번째 클릭 후 재시도
+      const firstRow = page.locator('table tbody tr:first-child td, .result-row:first-child').first();
+      if (await firstRow.count() > 0) {
+        const rowText = await firstRow.textContent().catch(() => '');
+        const m = rowText.match(/\b(\d{4}-\d{4}-\d{6}|\d{13,14})\b/);
+        if (m) return res.json({ ok: true, pin: m[1].replace(/-/g, ''), source: 'row-text' });
+      }
+      throw new Error(`검색 결과에서 고유번호 파싱 실패. 주소: ${address}`);
+    }
+
+    res.json({ ok: true, pin: resultText.pin, raw: resultText.raw, context: resultText.context });
+  } catch(e) {
+    console.error('[iros-pin]', e.message);
+    res.status(500).json({ ok: false, error: e.message });
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
@@ -162,6 +331,7 @@ app.post('/api/iros-fetch', async (req, res) => {
   try {
     tmpDir  = await mkdtemp(join(tmpdir(), 'iros-'));
     browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_PATH || undefined,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage',
              '--disable-blink-features=AutomationControlled'],
       headless: true
@@ -175,29 +345,27 @@ app.post('/api/iros-fetch', async (req, res) => {
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
 
-    // 1단계: 인터넷등기소 메인 (domcontentloaded — JSF 페이지는 networkidle이 지연됨)
-    await page.goto('https://www.iros.go.kr/pos9/jsf/renf/index.xhtml', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    console.log('[iros] 메인 URL:', page.url());
-    await page.waitForTimeout(1000);
+    // 1단계: 인터넷등기소 검색 페이지 (networkidle — JSF JS 완전 초기화 필요)
+    const typeParam = regType === 'land' ? 'L' : 'B';
+    await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
+      { waitUntil: 'networkidle', timeout: 60000 });
+    console.log('[iros] 검색페이지 URL:', page.url());
+    await page.waitForTimeout(3000);
 
-    // 2단계: 로그인 시도
-    await _irosLogin(page);
-
-    // 3단계: 등기부 검색 페이지로 이동
-    const searchUrl = regType === 'land'
-      ? 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=L'
-      : 'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=B';
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await page.waitForTimeout(2000); // JSF JS 초기화 대기
-    console.log('[iros] 검색페이지 URL:', page.url(), '| 제목:', await page.title());
-
-    // 검색 페이지에서 로그인으로 리다이렉트된 경우 재로그인
+    // 2단계: 로그인 시도 (검색 페이지가 로그인 리다이렉트된 경우)
     if (page.url().includes('login') || page.url().includes('Login')) {
-      console.log('[iros] 검색 페이지에서 로그인 리다이렉트 감지, 재로그인');
+      console.log('[iros] 로그인 리다이렉트 감지, 로그인 시도');
       await _irosLogin(page);
-      await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.waitForTimeout(2000);
-      console.log('[iros] 재로그인 후 검색페이지 URL:', page.url());
+      await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
+        { waitUntil: 'networkidle', timeout: 60000 });
+      await page.waitForTimeout(3000);
+      // 재시도 후도 로그인 리다이렉트
+      if (page.url().includes('login') || page.url().includes('Login')) {
+        throw new Error(`로그인 실패: ${page.url()}`);
+      }
+    } else if (irosId && irosPw) {
+      // 로그인 폼이 현재 페이지에 있으면 채우기 시도
+      await _irosLogin(page);
     }
 
     // 4단계: 주소 입력 필드 찾기
