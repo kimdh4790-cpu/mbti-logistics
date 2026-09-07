@@ -263,103 +263,151 @@ app.post('/api/iros-pin', async (req, res) => {
     await addrInput.click({ clickCount: 3, force: true });
     await addrInput.fill(address);
 
+    // ── Step 4.3: sch_realCorp 전체 요소 덤프 (버튼 탐색) ────────────────────
+    const scrElems = await page.evaluate(() => {
+      const els = [...document.querySelectorAll('[id*="sch_realCorp"]')];
+      return els.map(e => ({
+        tag: e.tagName,
+        id: e.id,
+        vis: e.offsetParent !== null,
+        cls: (e.className || '').slice(0, 80),
+        onclick: (e.getAttribute('onclick') || '').slice(0, 100),
+        type: e.getAttribute('type') || ''
+      }));
+    });
+    console.log('[iros-pin] sch_realCorp 요소:', JSON.stringify(scrElems));
+
     // ── Step 4.5: 라디오 버튼 선택 (건물/토지) ──────────────────────────────────
     const radioIdx = regType === 'land' ? 1 : 0;
-    const radioSel = `input[id*="sch_realCorp"][id*="input_${radioIdx}"], input[id*="rad_sch_realCorp_input_${radioIdx}"]`;
-    const radioEl = page.locator(radioSel).first();
-    if (await radioEl.count() > 0) {
-      await radioEl.click({ force: true }).catch(() => {});
+    const radioElem = scrElems.find(e => e.id.includes(`rad_sch_realCorp_input_${radioIdx}`) && e.vis);
+    if (radioElem) {
+      await page.locator(`#${radioElem.id}`).click({ force: true }).catch(() => {});
       console.log('[iros-pin] 라디오 선택:', radioIdx === 0 ? '건물' : '토지');
     }
 
     // ── Step 5: 검색 트리거 ──────────────────────────────────────────────────────
-    // Gauce SearchBox 위젯 버튼은 <a> 태그 (id: *sch_realCorp___button)
-    // popup 리스너를 검색 트리거 전에 등록 — 결과가 새 창으로 열릴 수 있음
-    const popupPromise = ctx.waitForEvent('page', { timeout: 15000 }).catch(() => null);
+    // popup 리스너 먼저 등록 + 네트워크 요청 캡처
+    const popupPromise = ctx.waitForEvent('page', { timeout: 20000 }).catch(() => null);
+    const searchRequests = [];
+    const reqHandler = req => {
+      const u = req.url();
+      if (u.includes('iros') || u.includes('renf') || u.includes('Renf') || u.includes('addr') || u.includes('search')) {
+        searchRequests.push({ url: u.slice(0, 200), method: req.method() });
+      }
+    };
+    page.on('request', reqHandler);
 
     let searchTriggered = false;
 
-    // 1순위: Gauce SearchBox 전용 버튼 ID (force-click — isTrusted:true OS 이벤트)
-    const gauceBtnSels = [
-      '#mf_wfm_potal_main_sch_realCorp___button',
-      'a[id*="sch_realCorp___button"]',
-      'a[id*="sch_realCorp"][id$="button"]',
-      'a[id*="sch_realCorp"][id*="btn"]',
-    ];
-    for (const sel of gauceBtnSels) {
-      const el = page.locator(sel).first();
-      if (await el.count() > 0) {
-        await el.click({ force: true }).catch(e => console.log('[iros-pin] gauce btn err:', e.message));
-        searchTriggered = true;
-        console.log('[iros-pin] Gauce 버튼 force-click:', sel);
-        break;
-      }
+    // 1순위: ANY element (tag 무관) with sch_realCorp___button or ___btn in ID
+    const btnElem = scrElems.find(e => e.vis && (
+      e.id.endsWith('___button') || e.id.endsWith('___btn') ||
+      e.id.includes('___button') || e.id.includes('___btn')
+    ) && !e.id.includes('input') && !e.id.includes('radio'));
+    if (btnElem) {
+      await page.locator(`#${btnElem.id}`).click({ force: true }).catch(e2 => console.log('[iros-pin] btn err:', e2.message));
+      searchTriggered = true;
+      console.log('[iros-pin] SearchBox 버튼 클릭 (덤프):', btnElem.id, btnElem.tag);
     }
 
-    // 2순위: visible button/input 태그 텍스트 검색|조회
+    // 2순위: window.scwin WebSquare 핸들러 직접 호출
     if (!searchTriggered) {
-      const searchBtns = targetCtx.locator('input[type="button"], input[type="submit"], button')
-        .filter({ hasText: /검색|조회/ });
+      const jsResult = await page.evaluate(() => {
+        const wid = 'mf_wfm_potal_main_sch_realCorp';
+        const cands = [
+          `${wid}_onSearch`, `${wid}_onClick`, `${wid}_btnSearch_onClick`,
+          'fn_search', 'fn_schAddr', 'fn_schRealty', 'searchAddr', 'schAddr', 'go_search'
+        ];
+        if (window.scwin) {
+          for (const h of cands) {
+            if (typeof window.scwin[h] === 'function') {
+              try { window.scwin[h](); return 'scwin:' + h; } catch(e) { continue; }
+            }
+          }
+        }
+        // Gauce/WebSquare 위젯 API 호출
+        if (window.w2) {
+          try {
+            const wgt = window.w2.getComponentById?.(wid) || window.w2.getWidget?.(wid);
+            if (wgt && typeof wgt.search === 'function') { wgt.search(); return 'w2.search'; }
+          } catch {}
+        }
+        // 버튼처럼 보이는 sch_realCorp 요소 클릭
+        const all = [...document.querySelectorAll('[id*="sch_realCorp"]')];
+        for (const el of all) {
+          if (!el.offsetParent) continue;
+          const id = el.id;
+          const cls = (el.className || '').toLowerCase();
+          const tag = el.tagName.toLowerCase();
+          if (id.includes('input') || id.includes('radio') || id.includes('mymenu')) continue;
+          if (id.includes('button') || id.includes('btn') || cls.includes('btn') ||
+              cls.includes('button') || cls.includes('search') || tag === 'a' || tag === 'button') {
+            el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            return 'dispatch:' + id + ':' + tag;
+          }
+        }
+        return null;
+      });
+      if (jsResult) { searchTriggered = true; console.log('[iros-pin] JS 검색:', jsResult); }
+    }
+
+    // 3순위: visible button/input/a 태그 텍스트 검색|조회
+    if (!searchTriggered) {
+      const searchBtns = page.locator('input[type="button"], input[type="submit"], button, a').filter({ hasText: /검색|조회/ });
       const sbCnt = await searchBtns.count();
       for (let i = 0; i < sbCnt; i++) {
         const btn = searchBtns.nth(i);
+        const bid = await btn.getAttribute('id').catch(() => '');
+        if (bid && (bid.includes('header') || bid.includes('depth'))) continue;
         if (await btn.isVisible().catch(() => false)) {
           await btn.click({ force: true, timeout: 5000 }).catch(() => {});
           searchTriggered = true;
-          console.log('[iros-pin] 검색 버튼 force-click');
+          console.log('[iros-pin] 텍스트 검색 버튼 클릭:', bid);
           break;
         }
       }
     }
 
-    // 3순위: onclick에 search 포함 앵커 (헤더 nav 제외) — JS dispatchEvent
-    if (!searchTriggered) {
-      const triggered = await page.evaluate(() => {
-        const anchors = [...document.querySelectorAll('a[onclick], a[id*="sch_realCorp"]')];
-        for (const a of anchors) {
-          if (a.id && (a.id.includes('header') || a.id.includes('depth'))) continue;
-          const oc = a.getAttribute('onclick') || '';
-          if (oc.toLowerCase().includes('search') || oc.includes('조회') || a.id.includes('button')) {
-            a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            return 'anchor:' + a.id;
-          }
-        }
-        return null;
-      });
-      if (triggered) { searchTriggered = true; console.log('[iros-pin] JS anchor 검색:', triggered); }
-    }
-
-    // 4순위: Enter 키 폴백
+    // 4순위: Enter 키 (마지막 폴백)
     if (!searchTriggered) {
       await addrInput.press('Enter');
-      console.log('[iros-pin] Enter 검색 (폴백)');
+      console.log('[iros-pin] Enter 검색 (최후 폴백)');
     }
 
-    // 검색 후 최대 8초 대기 — popup 또는 networkidle 중 먼저 온 것
+    // 검색 결과 대기 — popup or networkidle (최대 12초)
     const popup = await Promise.race([
       popupPromise,
-      page.waitForLoadState('networkidle', { timeout: 8000 }).then(() => null).catch(() => null),
+      page.waitForLoadState('networkidle', { timeout: 12000 }).then(() => null).catch(() => null),
     ]);
-    if (popup) {
-      console.log('[iros-pin] popup 감지:', popup.url());
-      await popup.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
-    } else {
-      await page.waitForTimeout(3000);
-    }
+    page.off('request', reqHandler);
+    console.log('[iros-pin] 검색 중 요청:', JSON.stringify(searchRequests.slice(0, 15)));
 
-    // 검색 후 모든 frame + body 상태 진단
-    const framesPost = page.frames().map(f => ({ url: f.url(), name: f.name() }));
+    // ozReportFrame__ 폴링 (최대 15초 × 500ms)
+    let ozFrame = null;
+    for (let i = 0; i < 30; i++) {
+      await page.waitForTimeout(500);
+      for (const f of page.frames()) {
+        const fu = f.url();
+        if ((f.name() === 'ozReportFrame__' || fu.includes('ozReport') || fu.includes('renf')) &&
+            fu && fu !== 'about:blank') {
+          ozFrame = f;
+          console.log('[iros-pin] ozReportFrame__ 로드:', fu.slice(0, 200));
+          break;
+        }
+      }
+      if (ozFrame || popup) break;
+    }
+    if (!ozFrame && !popup) await page.waitForTimeout(2000);
+
+    // 검색 후 frame + body 진단
+    const framesPost = page.frames().map(f => ({ url: f.url().slice(0, 120), name: f.name() }));
     console.log('[iros-pin] 검색 후 frame:', JSON.stringify(framesPost));
-    console.log('[iros-pin] 검색 후 URL:', page.url());
     const bodyPost = await page.evaluate(() => document.body.innerText.slice(0, 2000));
     console.log('[iros-pin] 검색 후 body(2000):', bodyPost);
-
-    // ozReportFrame__ iframe 내용 확인
-    for (const frame of page.frames()) {
-      if (frame.name() === 'ozReportFrame__' || frame.url().includes('ozReport')) {
-        const ozBody = await frame.evaluate(() => document.body?.innerText?.slice(0, 500) || '').catch(() => '');
-        console.log('[iros-pin] ozReportFrame__ body:', ozBody);
-      }
+    if (popup) {
+      console.log('[iros-pin] popup URL:', popup.url());
+      const popBody = await popup.evaluate(() => document.body.innerText.slice(0, 500)).catch(() => '');
+      console.log('[iros-pin] popup body:', popBody);
     }
 
     // ── Step 6: 결과에서 고유번호(PIN) 파싱 ──────────────────────────────────────
