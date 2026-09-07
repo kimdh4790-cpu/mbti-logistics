@@ -8383,19 +8383,21 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (주소: ${address}). 14자리 고유번호를 직접 입력해주세요.`);
 
         // 5) 등기부 조회 요청
-        const absCls = (regType === 'current') ? '11' : '12'; // 11=현재유효, 12=말소사항포함
+        const costsYn = hasEmoney ? 'Y' : 'N'; // e-money 없으면 무료 XML 열람
         const body = {
-          Auth: { UserId: await enc(irosId), UserPassword: await enc(irosPw) },
-          Pin: await enc(pin),
+          IrosID: await enc(irosId),
+          IrosPwd: await enc(irosPw),
+          UniqueNo: await enc(pin),
+          JoinYn: await enc('Y'),
+          CostsYn: await enc(costsYn),
+          DataYn: await enc('Y'),
+          ValidYn: await enc('Y'),
+          IsSummary: await enc('N'),
           ...(hasEmoney ? {
             EmoneyNo1: await encB64(emoneyNo1),
             EmoneyNo2: await encB64(emoneyNo2),
             EmoneyPwd: await encB64(emoneyPwd),
           } : {}),
-          CmortFlag: await enc('N'),
-          TradeSeqFlag: await enc('N'),
-          AbsCls: await enc(absCls),
-          RgsMttrSmry: ''
         };
 
         const res = await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry', {
