@@ -8356,8 +8356,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           { signal: AbortSignal.timeout(10000) });
         if (!pkRes.ok) throw new Error(`Tilko 공개키 조회 실패: ${pkRes.status}`);
         const pkJson = await pkRes.json();
-        const rsaPubPem = pkJson.PublicKey || pkJson.publicKey || '';
-        if (!rsaPubPem) throw new Error('Tilko 공개키 응답 비어있음');
+        // 응답 구조 탐색 (Response.PublicKey, publicKey, Result.PublicKey, data 등)
+        const rsaPubPem = pkJson.PublicKey || pkJson.publicKey || pkJson.Result?.PublicKey || pkJson.result?.PublicKey || pkJson.data?.PublicKey || (typeof pkJson === 'string' ? pkJson : '');
+        if (!rsaPubPem) throw new Error(`Tilko 공개키 응답 비어있음: ${JSON.stringify(pkJson).slice(0,200)}`);
 
         // 2) AES-128 세션키 생성 + IV = 올 제로 (Tilko 사양)
         const rawAesBuf = crypto.getRandomValues(new Uint8Array(16));
