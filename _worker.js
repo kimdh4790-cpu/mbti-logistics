@@ -8338,9 +8338,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         const emoneyNo1 = env.IROS_EMONEY_NO1;
         const emoneyNo2 = env.IROS_EMONEY_NO2;
         const emoneyPwd = env.IROS_EMONEY_PWD;
-        if (!irosId || !irosPw || !emoneyNo1 || !emoneyNo2 || !emoneyPwd) {
-          throw new Error('인터넷등기소 계정/전자지불카드 env 미설정 (IROS_USER_ID, IROS_USER_PW, IROS_EMONEY_NO1/NO2/PWD)');
+        if (!irosId || !irosPw) {
+          throw new Error('인터넷등기소 계정 env 미설정 (IROS_USER_ID, IROS_USER_PW)');
         }
+        const hasEmoney = emoneyNo1 && emoneyNo2 && emoneyPwd &&
+          !['전자화폐번호1','전자화폐번호2','전자화폐비번'].includes(emoneyNo1);
 
         // 1) AES-128 세션키 + IV 생성
         const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
@@ -8385,9 +8387,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         const body = {
           Auth: { UserId: await enc(irosId), UserPassword: await enc(irosPw) },
           Pin: await enc(pin),
-          EmoneyNo1: await encB64(emoneyNo1),
-          EmoneyNo2: await encB64(emoneyNo2),
-          EmoneyPwd: await encB64(emoneyPwd),
+          ...(hasEmoney ? {
+            EmoneyNo1: await encB64(emoneyNo1),
+            EmoneyNo2: await encB64(emoneyNo2),
+            EmoneyPwd: await encB64(emoneyPwd),
+          } : {}),
           CmortFlag: await enc('N'),
           TradeSeqFlag: await enc('N'),
           AbsCls: await enc(absCls),
