@@ -2870,9 +2870,9 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
             const vkey=env.VWORLD_API_KEY; let pnu=null, stdAddr=address;
             if (vkey) { const vUrl=`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`; const vr=await fetch(vUrl).catch(()=>null); if(vr?.ok){const vd=await vr.json().catch(()=>({}));const result=vd?.response?.result;if(result){stdAddr=result.refined?.text||address;pnu=result.structure?.pnu;}} }
-            const irosUrl=`https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+            const irosUrl=`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml`;
             const typeLabels={all:'전체현황',ownership:'소유현황',mortgage:'근저당·담보',lease:'전세권·임차권'};
-            return Response.json({ok:true,stdAddr,pnu,irosUrl,irosOpenUrl:'https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml',regType,typeLabel:typeLabels[regType]||'전체현황',guide:'인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'},{status:200,headers});
+            return Response.json({ok:true,stdAddr,pnu,irosUrl,regType,typeLabel:typeLabels[regType]||'전체현황',guide:'인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'},{status:200,headers});
           } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
         }
       }
