@@ -8220,7 +8220,17 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
-          const balance = doc?.fields?.balance?.integerValue|0 || 0;
+          let balance = doc?.fields?.balance?.integerValue|0 || 0;
+          let signupBonus = false;
+          if (!doc?.fields) {
+            // 신규 가입: 2,900P 무료 지급
+            const SIGNUP_BONUS = 2900;
+            await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:SIGNUP_BONUS},createdAt:{stringValue:new Date().toISOString()}});
+            const bId = crypto.randomUUID();
+            await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:SIGNUP_BONUS},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:SIGNUP_BONUS},createdAt:{stringValue:new Date().toISOString()}});
+            balance = SIGNUP_BONUS;
+            signupBonus = true;
+          }
 
           // 최근 이력 5건
           const histRes = await fetch(`${FS_BASE}:runQuery`, {
@@ -8238,7 +8248,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             const f=r.document.fields||{};
             return {type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};
           });
-          return Response.json({ok:true, balance, history});
+          return Response.json({ok:true, balance, history, signupBonus});
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
