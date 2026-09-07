@@ -253,7 +253,7 @@ function xmlToPlainText(xml) {
     .trim();
 }
 
-const PORT = process.env.PORT || 3100;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[seolyuhana-oracle] 서버 시작 port=${PORT}`);
 });
