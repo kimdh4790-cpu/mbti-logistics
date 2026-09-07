@@ -7947,7 +7947,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
       // POST /api/seolyuhana/biz-status — 국세청 사업자 상태조회
       if (path === '/api/seolyuhana/biz-status' && method === 'POST') {
-        const _bizUser = await requireAuth(request, env);
+        const _bizUser = await verifyFirebaseToken(request, env);
         if (!_bizUser) return Response.json({error:'인증 필요'},{status:401,headers});
         try {
           const { bizNum } = await request.json();
@@ -8133,7 +8133,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // POST /api/seolyuhana/registry-direct — Tilko API 등기부 직접 조회
       if (path === '/api/seolyuhana/registry-direct' && method === 'POST') {
         try {
-        const _ru = await requireAuth(request, env);
+        const _ru = await verifyFirebaseToken(request, env);
         if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
           const { address, regType = 'all', pin } = await request.json();
           if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
@@ -8184,7 +8184,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
       // POST /api/seolyuhana/registry-link — V-World 주소→인터넷등기소 URL 생성
       if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
-        const _regUser = await requireAuth(request, env);
+        const _regUser = await verifyFirebaseToken(request, env);
         if (!_regUser) return Response.json({error:'인증 필요'},{status:401,headers});
         try {
           const { address, regType = 'all' } = await request.json();
