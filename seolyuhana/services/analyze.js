@@ -977,7 +977,22 @@ const PUBLIC_DOC_SYSTEM = `당신은 한국 공공문서 분석 전문가입니�
   "warnings": ["주의사항1", "주의사항2"]
 }`;
 
-export async function analyzePublicDoc({ text, env }) {
+export async function analyzePublicDoc({ text, serviceId = 'public_doc_analysis', env }) {
+  const prompts = {
+    workplace_tone: `당신은 직장 커뮤니케이션 전문가입니다. 다음 텍스트를 분석하고 상황에 맞게 어조를 변환해주세요.\n반드시 JSON으로만 응답: {"situation":"파악된 상황(거절/항의/사과/요청 등)","original_issues":["원본의 문제점"],"transformed":"변환된 전문적 문장","tone_notes":"어조 변환 포인트 설명","alternatives":["대안 표현 2개"]}`,
+    career_saju: `당신은 커리어 컨설턴트이자 재미있는 이력서 분석가입니다. 이력서를 바탕으로 직업운과 성격을 유머 있게 분석하세요.\n반드시 JSON으로만 응답: {"character_type":"캐릭터 유형 이름","career_fortune":"직업운 총평(2~3문장, 유머 포함)","strengths":["강점 3가지"],"growth_areas":["성장 포인트 2가지"],"ideal_jobs":["잘 맞는 직종 3가지"],"work_style":"업무 스타일 설명","lucky_industry":"행운의 업종","warning":"조심해야 할 점(재미있게)"}`,
+    notice_summary: `당신은 바쁜 학부모를 위한 문서 요약 전문가입니다. 가정통신문을 핵심만 추출해 정리하세요.\n반드시 JSON으로만 응답: {"title":"통신문 제목","summary_3lines":["요약 1","요약 2","요약 3"],"deadlines":[{"item":"제출/이행 항목","date":"기한","note":"비고"}],"preparations":["준비물 목록"],"required_signatures":["서명 필요 항목"],"important_notes":["꼭 확인할 사항"]}`,
+  };
+  const customPrompt = prompts[serviceId];
+  if (customPrompt) {
+    return callClaude({
+      model: 'claude-haiku-4-5-20251001',
+      system: customPrompt,
+      userBlocks: [{ type: 'text', text }],
+      env,
+      maxTokens: 3000
+    });
+  }
   return callClaude({
     model: 'claude-haiku-4-5-20251001',
     system: PUBLIC_DOC_SYSTEM,
