@@ -157,86 +157,74 @@ app.post('/api/iros-pin', async (req, res) => {
     })).newPage();
     page.setDefaultTimeout(30000);
 
-    // Step 1: 메인 페이지 방문 — 세션 쿠키 & HttpSession 수립 (JSF는 직접 접근 시 ViewState 오류)
+    const typeParam = regType === 'land' ? 'L' : 'B';
+    const jsfUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`;
+
+    // ── 내부 헬퍼: JSF 열람 페이지에 있는지 확인 ──────────────────────────────────
+    const _onJsfPage = async () => {
+      const u = page.url();
+      const t = await page.evaluate(() => document.body?.innerText?.slice(0, 200) || '');
+      return u.includes('selectRenf') || u.includes('jsf/renf') ||
+             (t.includes('등기') && !t.includes('찾을 수 없'));
+    };
+
+    // ── 내부 헬퍼: JS로 Gauce nav 클릭 (pointer-event 오버레이 우회) ──────────────
+    const _jsClick = async (textMatch) => {
+      return page.evaluate((txt) => {
+        const all = [...document.querySelectorAll('a, button, li, span')];
+        const el = all.find(e => {
+          const t = (e.textContent || '').trim().replace(/\s+/g, ' ');
+          return t === txt || t.startsWith(txt);
+        });
+        if (!el) return null;
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        return el.id || el.tagName;
+      }, textMatch);
+    };
+
+    // ── Step 1: 메인 페이지 방문 (HttpSession 수립) ────────────────────────────────
     console.log('[iros-pin] Step1: 메인 페이지 방문');
     await page.goto('https://www.iros.go.kr', { waitUntil: 'networkidle', timeout: 45000 });
     await page.waitForTimeout(2000);
     console.log('[iros-pin] 메인 URL:', page.url());
 
-    const typeParam = regType === 'land' ? 'L' : 'B';
-    const jsfUrl = `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`;
-
-    // Step 2: 메인 페이지 링크에서 간편열람 페이지 진입 (세션 컨텍스트 유지)
-    console.log('[iros-pin] Step2: 간편열람 링크 탐색');
-    const navLink = page.locator('a[href*="selectRenf0100List"]').first();
-    if (await navLink.count() > 0) {
-      console.log('[iros-pin] 간편열람 링크 클릭');
-      await navLink.click();
-      await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
-      await page.waitForTimeout(3000);
-    } else {
-      // 링크 없으면 메뉴 텍스트로 찾기
-      const menuLink = page.locator('a:has-text("간편 열람"), a:has-text("간편열람"), a:has-text("열람·발급"), a:has-text("등기열람")').first();
-      if (await menuLink.count() > 0) {
-        console.log('[iros-pin] 메뉴 텍스트 링크 클릭');
-        await menuLink.click();
-        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
-        await page.waitForTimeout(2000);
-        // 하위 메뉴에서 부동산 링크 재탐색
-        const subLink = page.locator('a[href*="selectRenf0100List"]').first();
-        if (await subLink.count() > 0) {
-          await subLink.click();
-          await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
-          await page.waitForTimeout(3000);
-        } else {
-          await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 45000 });
-          await page.waitForTimeout(3000);
-        }
-      } else {
-        // 메인 페이지에서 세션만 수립 후 JSF 직접 이동
-        console.log('[iros-pin] 링크 없음 → 세션 수립 후 JSF 직접 이동');
-        await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 45000 });
-        await page.waitForTimeout(3000);
-      }
-    }
-    console.log('[iros-pin] 열람 페이지 URL:', page.url());
-
-    // Step 3: 여전히 "페이지 없음" 오류 → 메인 검색 시도 (부동산 선택 후 주소 검색)
-    const pageBody = await page.evaluate(() => document.body?.innerText?.slice(0, 300) || '');
-    if (pageBody.includes('찾을 수 없') || pageBody.includes('오류') || page.url().includes('index')) {
-      console.log('[iros-pin] Step3: 메인 페이지 주소 검색 폴백');
-      await page.goto('https://www.iros.go.kr', { waitUntil: 'networkidle', timeout: 45000 });
+    // ── Step 2: "간편 열람·발급" Gauce 메뉴 JS-click ──────────────────────────────
+    console.log('[iros-pin] Step2: 간편 열람·발급 JS-click');
+    const r2 = await _jsClick('간편 열람·발급');
+    console.log('[iros-pin] JS-click 결과:', r2);
+    if (r2) {
+      await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => {});
       await page.waitForTimeout(2000);
-
-      // 부동산 라디오 선택
-      const radioSel = '#mf_wfm_potal_main_rad_sch_realCorp_input_0';
-      const radio = page.locator(radioSel);
-      if (await radio.count() > 0) {
-        await radio.click().catch(() => {});
-        await page.waitForTimeout(500);
-      }
-
-      // 검색어 입력 후 Enter
-      const searchInputSel = '#mf_wfm_potal_main_wf_header_sbx_swrd___input';
-      const searchInput = page.locator(searchInputSel);
-      if (await searchInput.count() > 0 && await searchInput.isVisible().catch(() => false)) {
-        await searchInput.fill(address);
-        await searchInput.press('Enter');
-        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
-        await page.waitForTimeout(3000);
-        console.log('[iros-pin] 메인 검색 후 URL:', page.url());
-      }
     }
 
-    // Step 4: 열람 페이지 주소 입력 필드 찾기
+    // JSF 페이지에 못 들어간 경우 → Referer 헤더로 직접 navigate
+    if (!(await _onJsfPage())) {
+      console.log('[iros-pin] Step3: Referer 헤더로 JSF 직접 이동');
+      await page.setExtraHTTPHeaders({ 'Referer': 'https://www.iros.go.kr/index.jsp' });
+      await page.goto(jsfUrl, { waitUntil: 'networkidle', timeout: 45000 });
+      await page.waitForTimeout(3000);
+    }
+    console.log('[iros-pin] JSF URL:', page.url());
+
+    // 여전히 접근 불가
+    if (!(await _onJsfPage())) {
+      const snap = await page.evaluate(() => ({
+        url: location.href, title: document.title,
+        body: document.body?.innerText?.slice(0, 400)
+      }));
+      throw new Error(`JSF 열람 페이지 접근 실패: ${JSON.stringify(snap)}`);
+    }
+
+    // ── Step 4: JSF 페이지 주소 입력 ──────────────────────────────────────────────
+    // Gauce input ID 패턴: mf_<form>_<widget>___input
     const addrSelectors = [
-      // IROS JSF Gauce 패턴
-      'input[id*="addr"][id*="input"]', 'input[id*="Addr"][id*="input"]',
+      'input[id*="sbx_addr"][id$="___input"]',   // Gauce 주소 search-box 패턴
+      'input[id*="addr"][id*="input"]',
+      'input[id*="Addr"][id*="input"]',
       'input[id*="addrSearch"]', 'input[id*="searchAddr"]',
-      // 일반 패턴
-      'input[name*="addr" i]', 'input[placeholder*="주소"]',
-      'input[placeholder*="번지"]', 'input[placeholder*="도로명"]',
-      '#searchAddr', 'input[id*="search" i][type="text"]',
+      'input[name*="addr" i]',
+      'input[placeholder*="주소"]', 'input[placeholder*="지번"]',
+      'input[placeholder*="도로명"]', 'input[placeholder*="번지"]',
     ];
     let addrInput = null;
     for (const sel of addrSelectors) {
@@ -246,72 +234,87 @@ app.post('/api/iros-pin', async (req, res) => {
       }
     }
     if (!addrInput) {
+      // 폼 내 첫 번째 visible text input (nav 제외: 헤더 영역 밖)
       const allInputs = page.locator('input[type="text"], input:not([type])');
       const cnt = await allInputs.count();
-      for (let i = 0; i < Math.min(cnt, 10); i++) {
+      for (let i = 0; i < Math.min(cnt, 15); i++) {
         const inp = allInputs.nth(i);
-        if (await inp.isVisible().catch(() => false)) { addrInput = inp; break; }
+        if (await inp.isVisible().catch(() => false)) {
+          const id = await inp.getAttribute('id').catch(() => '');
+          // 메인 헤더 검색창 제외
+          if (id && id.includes('potal_main_wf_header')) continue;
+          addrInput = inp; break;
+        }
       }
     }
     if (!addrInput) {
-      const pageInfo = await page.evaluate(() => ({
+      const pi = await page.evaluate(() => ({
         url: location.href, title: document.title,
-        inputCount: document.querySelectorAll('input').length,
-        bodySnip: document.body.innerText.slice(0, 400)
+        inputs: [...document.querySelectorAll('input')].slice(0, 10).map(e => ({
+          id: e.id, type: e.type, visible: e.offsetParent !== null
+        })),
+        body: document.body.innerText.slice(0, 300)
       }));
-      throw new Error(`주소 입력 필드 없음 | ${JSON.stringify(pageInfo)}`);
+      throw new Error(`주소 입력 필드 없음 | ${JSON.stringify(pi)}`);
     }
 
-    // Step 5: 주소 입력 & 검색
-    await addrInput.click({ clickCount: 3 });
+    await addrInput.click({ clickCount: 3, force: true });
     await addrInput.fill(address);
 
-    const searchSels = [
-      'button:has-text("검색")', 'input[type="button"][value*="검색"]',
-      'a:has-text("검색")', '#searchBtn', 'button[onclick*="search"]',
-      'a[onclick*="search"]', 'input[type="submit"]'
-    ];
-    let searched = false;
-    for (const sel of searchSels) {
-      const btn = page.locator(sel).first();
-      if (await btn.count() > 0 && await btn.isVisible().catch(() => false)) {
-        await btn.click(); searched = true; break;
+    // ── Step 5: 검색 트리거 (JS-click으로 Gauce 검색 버튼 실행) ───────────────────
+    // Gauce 검색 버튼: input[type="button"]이 대부분, a:has-text는 nav 오염 위험
+    const searchTriggered = await page.evaluate(() => {
+      // 1) input[type=button] value에 "검색" 포함
+      const btns = [...document.querySelectorAll('input[type="button"], input[type="submit"], button')];
+      for (const b of btns) {
+        const v = (b.value || b.textContent || '').trim();
+        if (v.includes('검색') && b.offsetParent !== null) {
+          b.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          return 'btn:' + (b.id || b.value);
+        }
       }
-    }
-    if (!searched) await addrInput.press('Enter');
+      // 2) onclick에 search 키워드 포함 앵커 (헤더 nav ID 제외)
+      const anchors = [...document.querySelectorAll('a[onclick]')];
+      for (const a of anchors) {
+        if (a.id && a.id.includes('header')) continue;
+        const oc = a.getAttribute('onclick') || '';
+        if (oc.toLowerCase().includes('search') || oc.includes('조회')) {
+          a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          return 'anchor:' + a.id;
+        }
+      }
+      return null;
+    });
+    console.log('[iros-pin] 검색 트리거:', searchTriggered);
+    if (!searchTriggered) await addrInput.press('Enter');
     await page.waitForTimeout(4000);
     console.log('[iros-pin] 검색 후 URL:', page.url());
 
-    // Step 6: 결과에서 고유번호 파싱 (IROS PIN: 13~14자리 숫자, 또는 XXXX-XXXX-XXXXXX 형식)
+    // ── Step 6: 결과에서 고유번호(PIN) 파싱 ──────────────────────────────────────
     const resultText = await page.evaluate(() => {
-      const tds = [...document.querySelectorAll('td, span, div')];
-      for (const el of tds) {
+      // 테이블/스팬/div에서 XXXX-XXXX-XXXXXX 또는 13~14자리 숫자 패턴
+      const els = [...document.querySelectorAll('td, span, div, p')];
+      for (const el of els) {
         const t = el.textContent || '';
         const m = t.match(/\b(\d{4}-\d{4}-\d{6}|\d{13,14})\b/);
         if (m) return { pin: m[1].replace(/-/g, ''), raw: m[0], context: t.trim().slice(0, 100) };
       }
-      const links = [...document.querySelectorAll('a[onclick], tr[onclick], td[onclick]')];
-      for (const el of links) {
-        const oc = el.getAttribute('onclick') || '';
-        const m = oc.match(/['"]([\dA-Z]{13,14})['"]/i);
-        if (m) return { pin: m[1], raw: oc.slice(0, 80), context: 'onclick' };
+      // onclick / data 속성에서 파싱
+      const linked = [...document.querySelectorAll('[onclick], [data-pin], [data-id]')];
+      for (const el of linked) {
+        const oc = el.getAttribute('onclick') || el.getAttribute('data-pin') || el.getAttribute('data-id') || '';
+        const m = oc.match(/['"]?(\d{4}-?\d{4}-?\d{6}|\d{13,14})['"]?/);
+        if (m) return { pin: m[1].replace(/-/g, ''), raw: oc.slice(0, 80), context: 'attr' };
       }
       return null;
     });
 
     if (!resultText || !resultText.pin) {
-      const firstRow = page.locator('table tbody tr:first-child td, .result-row:first-child').first();
-      if (await firstRow.count() > 0) {
-        const rowText = await firstRow.textContent().catch(() => '');
-        const m = rowText.match(/\b(\d{4}-\d{4}-\d{6}|\d{13,14})\b/);
-        if (m) return res.json({ ok: true, pin: m[1].replace(/-/g, ''), source: 'row-text' });
-      }
-      // 디버그: 현재 페이지 상태 반환
       const dbg = await page.evaluate(() => ({
         url: location.href, title: document.title,
-        bodySnip: document.body.innerText.slice(0, 600)
+        body: document.body.innerText.slice(0, 700)
       }));
-      throw new Error(`검색 결과에서 고유번호 파싱 실패. 주소: ${address} | 페이지: ${JSON.stringify(dbg)}`);
+      throw new Error(`고유번호 파싱 실패. 주소: ${address} | ${JSON.stringify(dbg)}`);
     }
 
     res.json({ ok: true, pin: resultText.pin, raw: resultText.raw, context: resultText.context });
