@@ -7406,6 +7406,11 @@ async function _submit(){
 
         // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
+      // Firebase Auth 핸들러 프록시 (signInWithRedirect 크로스도메인 쿠키 이슈 해결)
+      if (path.startsWith('/__/auth/')) {
+        const firebaseUrl = 'https://mbti-logistics.firebaseapp.com' + path + (url.search || '');
+        return fetch(firebaseUrl, { method: request.method, headers: request.headers, body: request.body });
+      }
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
         const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
