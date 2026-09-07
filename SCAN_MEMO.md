@@ -11,21 +11,23 @@
 
 ---
 
-## 포인트·요금 체계 (2026-09-07 확정)
+## 포인트·요금 체계 (2026-09-07 v2 확정)
 
 ### 서비스별 차감 포인트
-| 서비스 | 포인트 | 비고 |
-|---|---|---|
-| 면접 질문 생성 | 19,900P | claude-haiku-4-5 |
-| 이력서 분석 | 29,900P | claude-haiku-4-5 |
-| 계약서 검토 | 29,900P | claude-haiku-4-5 |
-| 등기부 전세사기 분석 | 29,900P | claude-haiku-4-5 |
-| 자소서 수정안 제시 | 39,900P | claude-haiku-4-5 |
-| 자소서 AI 전면 재작성 | 39,900P | claude-haiku-4-5 |
-| 자소서 다국어 번역 (영어) | 39,900P | **claude-sonnet-5** |
-| 자소서 다국어 번역 (일/중/독/불/스) | 39,900P | claude-haiku-4-5 |
-| 공문서 분석 (사업자·건강보험·소득) | 2,900P | claude-haiku-4-5 |
-| 슈퍼어드민 | ∞P | kimdh4790@gmail.com·soungkyekim@naver.com |
+| 서비스 | serviceId | 포인트 | 모델 |
+|---|---|---|---|
+| 면접 질문 생성 | interview_questions | **19,900P** | claude-haiku-4-5 |
+| 이력서 분석 | resume_analysis | **29,900P** | **claude-sonnet-4-6** |
+| 자소서 번역 (6개 언어) | cover_letter_translation | **29,900P** | sonnet-5(영어)/haiku(기타) |
+| 등기부 전세사기 분석 | registry_analysis | **34,900P** | **claude-sonnet-4-6** |
+| 자소서 수정안 제시 | cover_letter_analysis | **39,900P** | **claude-sonnet-4-6** |
+| 계약서 검토 | employment/freelance/rental_contract | **39,900P** | **claude-sonnet-4-6** |
+| 자소서 AI 전면 재작성 | cover_letter_rewrite | **49,900P** | **claude-sonnet-5** |
+| 공문서 분석 | public_doc_analysis | **2,900P** | claude-haiku-4-5 |
+| 슈퍼어드민 | — | ∞P | kimdh4790@gmail.com·soungkyekim@naver.com |
+
+> **가격 근거**: 번역 < 이력서 < 등기부 < 수정안 = 계약서 < 재작성 (기능 복잡도 순)
+> **모델 업그레이드**: 모든 유료 서비스 haiku→sonnet-4-6, 재작성만 sonnet-5 사용
 
 ### 충전 플랜
 | 결제금액 | 지급포인트 | 보너스 | 비고 |
@@ -89,18 +91,18 @@
 
 ## 구현된 기능 전체 목록
 
-### 분석 서비스 (analyze.js)
-| 함수 | serviceId | 모델 |
-|---|---|---|
-| `analyzeResume()` | resume_analysis | haiku |
-| `analyzeCoverLetter()` | cover_letter_analysis | haiku |
-| `rewriteCoverLetter()` | cover_letter_rewrite | haiku |
-| `translateCoverLetter()` | cover_letter_translation | sonnet-5(영어)/haiku(기타) |
-| `generateInterviewQuestions()` | interview_questions | haiku |
-| `analyzeContract()` | employment_contract, freelance_contract, rental_contract | haiku |
-| `analyzeScannedPdf()` | — | haiku |
-| `analyzeRegistry()` | registry_analysis | haiku |
-| `analyzePublicDoc()` | public_doc_analysis | haiku |
+### 분석 서비스 (analyze.js) — v2 모델 업그레이드
+| 함수 | serviceId | 모델 | 주요 강화 내용 |
+|---|---|---|---|
+| `analyzeResume()` | resume_analysis | **sonnet-4-6** | 기업별 이력서 평가기준(삼성/SK/현대/LG/카카오/네이버/쿠팡/공기업), ATS 전략 |
+| `analyzeCoverLetter()` | cover_letter_analysis | **sonnet-4-6** | 기업별 자소서 심사기준+불합격 5대 패턴, 기업문화적합도 |
+| `rewriteCoverLetter()` | cover_letter_rewrite | **sonnet-5** | 합격자소서 5원칙+기업별 스타일 가이드+불합격→합격 변환 DB |
+| `translateCoverLetter()` | cover_letter_translation | sonnet-5(영어)/haiku(기타) | 6개 언어, 커리어 특화 번역 |
+| `generateInterviewQuestions()` | interview_questions | haiku | 기업별 면접 출제패턴(2026)+압박질문 패턴 |
+| `analyzeContract()` | employment/freelance/rental_contract | **sonnet-4-6** | 2026 최저임금 10,030원·주52시간·고위험 조항 패턴 DB |
+| `analyzeRegistry()` | registry_analysis | **sonnet-4-6** | 전세사기 5대체크포인트·깡통전세·선순위채권 |
+| `analyzePublicDoc()` | public_doc_analysis | haiku | 공문서 범용 분석 |
+| `analyzeScannedPdf()` | — | haiku | PDF 스캔 전처리 |
 
 ### 번역 지원 언어
 영어(en) / 일본어(ja) / 중국어 간체(zh) / 독일어(de) / 프랑스어(fr) / 스페인어(es)
@@ -170,3 +172,7 @@
 | 2026-09-07 | 등기부 전세사기 분석 강화: 깡통전세·5대체크포인트·보증금입력 |
 | 2026-09-07 | 렌더링 버그 3개 수정: 번역 필드명, 재작성 섹션, 전세사기 섹션 누락 |
 | 2026-09-07 | SCAN_MEMO.md 신규 생성. 경쟁사 조사결과·API현황 기록 |
+| 2026-09-07 | **v2 가격 재조정**: 재작성 49,900P / 번역 29,900P / 등기부 34,900P / 계약서 39,900P (차별화) |
+| 2026-09-07 | **v2 AI 프롬프트 전면 강화**: 기업별 맞춤 데이터 추가 (삼성/SK/현대/LG/카카오/네이버/공기업) |
+| 2026-09-07 | **v2 모델 업그레이드**: 유료 서비스 haiku→sonnet-4-6, 재작성→sonnet-5 |
+| 2026-09-07 | **_worker.js SERVICE_COSTS 하드코딩**: Firestore 미설정 시 0P 취약점 해소 |

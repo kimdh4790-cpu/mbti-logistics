@@ -1175,11 +1175,11 @@ window._slyUser = null;
 const SLY_SERVICES = [
   { id: 'resume',          label: '이력서 분석',      cost: 29900, icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt' },
   { id: 'cover_letter',    label: '자소서 수정안',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cover_rewrite',   label: '자소서 재작성',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'cv_translate',    label: '자소서 번역',      cost: 39900, icon: 'lang',   accept: '.hwp,.docx,.pdf,.txt', hasLangSelect: true },
+  { id: 'cover_rewrite',   label: '자소서 재작성',    cost: 49900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'cv_translate',    label: '자소서 번역',      cost: 29900, icon: 'lang',   accept: '.hwp,.docx,.pdf,.txt', hasLangSelect: true },
   { id: 'interview',       label: '면접 질문',        cost: 19900, icon: 'mic',    accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'contract',        label: '계약서 검토',      cost: 29900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
-  { id: 'registry',        label: '등기부 전세사기',  cost: 29900, icon: 'home',   accept: '.hwp,.docx,.pdf,.txt', hasDepositInput: true },
+  { id: 'contract',        label: '계약서 검토',      cost: 39900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt' },
+  { id: 'registry',        label: '등기부 전세사기',  cost: 34900, icon: 'home',   accept: '.hwp,.docx,.pdf,.txt', hasDepositInput: true },
 ];
 
 const CHARGE_PLANS = [
@@ -1292,13 +1292,13 @@ const SVC = [
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis' },
   { id: 'cover_letter',  label: '자소서', sublabel: '수정안', cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_analysis' },
-  { id: 'cover_rewrite', label: '자소서', sublabel: '재작성', cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cover_rewrite', label: '자소서', sublabel: '재작성', cost: 49900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_rewrite' },
-  { id: 'cv_translate',  label: '자소서', sublabel: '번역',   cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'cv_translate',  label: '자소서', sublabel: '번역',   cost: 29900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'cover_letter_translation', hasLangSelect: true },
   { id: 'interview',     label: '면접',   sublabel: '질문',   cost: 19900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions' },
-  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 29900, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'employment_contract' },
   // ── 공문서 발급 & 분석 ──
   { id: 'registry',      label: '등기부', sublabel: '전세사기', cost: 29900, accept: '.pdf',
