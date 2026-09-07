@@ -62,6 +62,20 @@ jobs:
             CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.yongcha.toml 2>&1
           fi
 
+      - name: Deploy MBTICO Pages Worker
+        env:
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CF_EMAIL: kimdh4790@gmail.com
+        run: |
+          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          cd mbtico-pages
+          if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy 2>&1; then
+            echo "✅ MBTICO Pages Worker 배포 (API Token)"
+          else
+            echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
+            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy 2>&1
+          fi
+
       - name: Upload HTML/JS assets to KV
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
