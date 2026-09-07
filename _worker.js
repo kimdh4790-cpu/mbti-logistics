@@ -2691,13 +2691,13 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const targetLang = form.get('targetLang') || 'en';
             const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
             const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
+            const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:29900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900};
             if (!VALID_SERVICES.includes(serviceId)) return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400,headers});
             if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400,headers});
             const token = await getAccessToken(env);
             const svcDoc = await fsGet(token, `${FS_BASE}/sly_service_config/${serviceId}`);
-            if (!svcDoc?.fields) return Response.json({ok:false,error:'서비스 설정을 찾을 수 없습니다.'},{status:404,headers});
-            const pointCost = svcDoc.fields.pointCost?.integerValue|0 || 0;
-            const enabled   = svcDoc.fields.enabled?.booleanValue ?? false;
+            const pointCost = (svcDoc?.fields?.pointCost?.integerValue|0) || SERVICE_COSTS[serviceId] || 0;
+            const enabled   = svcDoc?.fields ? (svcDoc.fields.enabled?.booleanValue ?? true) : true;
             if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503,headers});
             const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
             const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
@@ -8046,17 +8046,17 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
 
           const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
+          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:29900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900};
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
           if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400});
 
-          // 서비스 설정 조회 (포인트·페이지 제한)
+          // 서비스 설정 조회 (포인트·페이지 제한) — Firestore 없으면 하드코딩 가격 폴백
           const token = await getAccessToken(env);
           const svcDoc = await fsGet(token, `${FS_BASE}/sly_service_config/${serviceId}`);
-          if (!svcDoc?.fields) return Response.json({ok:false,error:'서비스 설정을 찾을 수 없습니다.'},{status:404});
-          const pointCost = svcDoc.fields.pointCost?.integerValue|0 || 0;
-          const enabled   = svcDoc.fields.enabled?.booleanValue ?? false;
+          const pointCost = (svcDoc?.fields?.pointCost?.integerValue|0) || SERVICE_COSTS[serviceId] || 0;
+          const enabled   = svcDoc?.fields ? (svcDoc.fields.enabled?.booleanValue ?? true) : true;
           if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503});
 
           // 포인트 잔액 확인
