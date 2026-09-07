@@ -1239,10 +1239,12 @@ const SLY_SERVICES = [
 ];
 
 const CHARGE_PLANS = [
-  { pts: 30000,  price: 30000,  label: '30,000P' },
-  { pts: 67000,  price: 60000,  bonus: '+7,000P', label: '60,000P' },
-  { pts: 115000, price: 100000, bonus: '+15,000P', label: '100,000P' },
-  { pts: 240000, price: 200000, bonus: '+40,000P', label: '200,000P' },
+  { pts: 5000,   price: 5000,   label: '5,000P',  desc: '공문서 분석 1~2건' },
+  { pts: 10000,  price: 10000,  label: '10,000P', desc: '면접 질문 1건' },
+  { pts: 30000,  price: 30000,  label: '30,000P', desc: '이력서+자소서 세트' },
+  { pts: 67000,  price: 60000,  bonus: '+7,000P', label: '60,000P', desc: '가장 인기' },
+  { pts: 115000, price: 100000, bonus: '+15,000P', label: '100,000P', desc: '이력서 3건+' },
+  { pts: 240000, price: 200000, bonus: '+40,000P', label: '200,000P', desc: '최대 절약' },
 ];
 
 // ── Render header auth state
@@ -1394,6 +1396,23 @@ const SVC = [
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: false,
     desc: '관공서·법원·세무서에서 받은 공문서를 업로드하면 핵심 내용을 요약합니다',
     bullets: ['HWP·PDF·DOCX 모든 공문서 형식 지원', '법률·행정 용어를 쉬운 말로 해설', '주의사항·이행기한·제출처 자동 추출', '어떤 공문서든 업로드 → AI 즉시 분석'] },
+  // ── 놀이방 서비스 ──
+  { id: 'workplace_tone', label: '직장인', sublabel: '말투 변환기', cost: 2900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'workplace_tone',
+    desc: '딱딱한 거절·반박·사과 메일을 부드럽고 프로답게 바꿔드립니다',
+    bullets: ['거절/항의/사과/요청 상황별 어조 변환', '파일 또는 텍스트 직접 붙여넣기', '단어·문장 레벨 세밀 조정', '상대방 기분 살리면서 내 의도 명확히'] },
+  { id: 'career_saju', label: '커리어', sublabel: '사주풀이', cost: 9900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'career_saju',
+    desc: '이력서·자소서로 직업운·성격유형·맞는 업종을 재미있게 풀어드립니다',
+    bullets: ['이력서 기반 직업 기질 분석', '강점·약점·잠재력 캐릭터 표현', '잘 맞는 직종·근무 환경 추천', '진지한 분석 + 유머 있는 스타일'] },
+  { id: 'notice_summary', label: '가정통신문', sublabel: '요약', cost: 2900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'notice_summary',
+    desc: '학교·유치원에서 온 긴 가정통신문을 3줄+일정 목록으로 요약합니다',
+    bullets: ['핵심 일정·준비물·기한 자동 추출', '필수 서명·제출 항목 별도 강조', '복잡한 교육 안내도 쉽게 정리', '3줄 요약 + 체크리스트 형태 제공'] },
+  { id: 'insurance_scan', label: '보험약관', sublabel: '면책조항 스캐너', cost: 14900, accept: '.hwp,.docx,.pdf,.txt',
+    hasJd: false, serviceId: 'insurance_scan',
+    desc: '보험약관의 보상 안 되는 면책 조항을 찾아 쉬운 말로 알려드립니다',
+    bullets: ['면책조항·예외조건 전수 탐지', '보상 가능 vs 불가 케이스 구분', '동일 유형 분쟁 판례 참고 제공', '가입 전 꼭 확인해야 할 핵심 포인트'] },
 ];
 
 const ICONS = {
@@ -1408,6 +1427,10 @@ const ICONS = {
   health_ins: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
   income: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
   gov_doc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  workplace_tone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h8M8 14h5"/></svg>`,
+  career_saju: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg>`,
+  notice_summary: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+  insurance_scan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9,12 11,14 15,10"/></svg>`,
 };
 
 function _slyToast(msg, dur = 3000) {
@@ -2060,6 +2083,8 @@ window._slySelectCharge = _slySelectCharge;
 async function _slyRequestCharge() {
   if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
   const plans = [
+    { pts: 5000,   price: 5000 },
+    { pts: 10000,  price: 10000 },
     { pts: 30000,  price: 30000 },
     { pts: 67000,  price: 60000 },
     { pts: 115000, price: 100000 },
@@ -2358,7 +2383,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="sly-stat-label">평균 분석 시간</div>
       </div>
       <div class="sly-stat">
-        <div class="sly-stat-num mint">11종</div>
+        <div class="sly-stat-num mint">15종</div>
         <div class="sly-stat-label">지원 서비스</div>
       </div>
       <div class="sly-stat">
@@ -2458,6 +2483,38 @@ document.addEventListener('DOMContentLoaded', () => {
           <p>HWP · DOCX · PDF · 사업자·건강보험 어떤 서류든 AI 즉시 해설</p>
           <span class="sly-feat-cost">2,900P~</span>
         </div>
+        <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(6)">
+          <div class="sly-feat-icon pink">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3>직장인 말투 변환기</h3>
+          <p>딱딱한 거절·항의 메일을 부드럽고 프로답게 · 텍스트 직접 입력 가능</p>
+          <span class="sly-feat-cost">2,900P</span>
+        </div>
+        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(7)">
+          <div class="sly-feat-icon mint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <h3>커리어 사주풀이</h3>
+          <p>이력서로 직업운·성격유형·잘 맞는 업종을 재미있게 분석</p>
+          <span class="sly-feat-cost">9,900P</span>
+        </div>
+        <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(8)">
+          <div class="sly-feat-icon gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
+          </div>
+          <h3>가정통신문 요약</h3>
+          <p>긴 학교 공지를 3줄 + 체크리스트로 · 일정·준비물 자동 추출</p>
+          <span class="sly-feat-cost">2,900P</span>
+        </div>
+        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(9)">
+          <div class="sly-feat-icon mint">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
+          <h3>보험약관 스캐너</h3>
+          <p>면책조항·예외조건 전수 탐지 · 보상 가능 vs 불가 케이스 정리</p>
+          <span class="sly-feat-cost">14,900P</span>
+        </div>
       </div>
 
       <!-- 상세 패널 -->
@@ -2527,6 +2584,50 @@ document.addEventListener('DOMContentLoaded', () => {
         </ul>
         <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
       </div>
+      <div class="sly-feat-detail pink-detail" id="slyFeatDetail6">
+        <h4>직장인 말투 변환기</h4>
+        <ul>
+          <li>거절·항의·사과·요청 상황별 어조 변환</li>
+          <li>파일 업로드 또는 텍스트 직접 붙여넣기</li>
+          <li>단어·문장 레벨 세밀 조정</li>
+          <li>상대방 기분 살리면서 내 의도 명확히</li>
+          <li>직장 내 갈등 상황 대응 문구 제안</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail mint-detail" id="slyFeatDetail7">
+        <h4>커리어 사주풀이</h4>
+        <ul>
+          <li>이력서 기반 직업 기질·성격 분석</li>
+          <li>강점·약점·잠재력 캐릭터 표현</li>
+          <li>잘 맞는 직종·근무 환경 추천</li>
+          <li>진지한 분석 + 유머 있는 스타일</li>
+          <li>SNS 공유 용도로도 딱</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail gold-detail" id="slyFeatDetail8">
+        <h4>가정통신문 요약</h4>
+        <ul>
+          <li>핵심 일정·준비물·기한 자동 추출</li>
+          <li>필수 서명·제출 항목 별도 강조</li>
+          <li>복잡한 교육 안내도 쉽게 정리</li>
+          <li>3줄 요약 + 체크리스트 형태 제공</li>
+          <li>파일 업로드 또는 텍스트 입력 가능</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
+      <div class="sly-feat-detail mint-detail" id="slyFeatDetail9">
+        <h4>보험약관 스캐너</h4>
+        <ul>
+          <li>면책조항·예외조건 전수 탐지</li>
+          <li>보상 가능 vs 불가 케이스 구분</li>
+          <li>동일 유형 분쟁 판례 참고 제공</li>
+          <li>가입 전 꼭 확인해야 할 핵심 포인트</li>
+          <li>실손·종신·자동차보험 전 유형 지원</li>
+        </ul>
+        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
+      </div>
     </div>
 
     <!-- 요금 안내 -->
@@ -2535,9 +2636,19 @@ document.addEventListener('DOMContentLoaded', () => {
       <p>1P = 1원 · 써야 할 만큼만 충전 · 크몽 대비 66% 저렴</p>
       <div class="sly-charge-cards">
         <div class="sly-charge-card">
+          <div class="sly-charge-price">₩5,000</div>
+          <div class="sly-charge-pts">5,000P</div>
+          <div class="sly-charge-sub">공문서·가정통신문 체험</div>
+        </div>
+        <div class="sly-charge-card">
+          <div class="sly-charge-price">₩10,000</div>
+          <div class="sly-charge-pts">10,000P</div>
+          <div class="sly-charge-sub">면접 질문 1건</div>
+        </div>
+        <div class="sly-charge-card">
           <div class="sly-charge-price">₩30,000</div>
           <div class="sly-charge-pts">30,000P</div>
-          <div class="sly-charge-sub">면접 질문 1건</div>
+          <div class="sly-charge-sub">이력서+자소서 세트</div>
         </div>
         <div class="sly-charge-card featured">
           <div class="bonus-badge">+7,000P</div>
@@ -2758,26 +2869,40 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="sly-charge-options">
       <div class="sly-charge-opt selected" onclick="_slySelectCharge(0)">
         <div>
-          <div class="sly-charge-pts">30,000 P</div>
+          <div class="sly-charge-pts">5,000 P</div>
+          <div style="font-size:11px;color:var(--text-muted)">공문서 분석 1~2건</div>
+        </div>
+        <div class="sly-charge-price">₩5,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(1)">
+        <div>
+          <div class="sly-charge-pts">10,000 P</div>
           <div style="font-size:11px;color:var(--text-muted)">면접 질문 1건</div>
+        </div>
+        <div class="sly-charge-price">₩10,000</div>
+      </div>
+      <div class="sly-charge-opt" onclick="_slySelectCharge(2)">
+        <div>
+          <div class="sly-charge-pts">30,000 P</div>
+          <div style="font-size:11px;color:var(--text-muted)">이력서+자소서 세트</div>
         </div>
         <div class="sly-charge-price">₩30,000</div>
       </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(1)">
+      <div class="sly-charge-opt" onclick="_slySelectCharge(3)">
         <div>
           <div class="sly-charge-pts">67,000 P <span class="sly-charge-bonus">+7,000P</span></div>
           <div style="font-size:11px;color:var(--text-muted)">가장 인기</div>
         </div>
         <div class="sly-charge-price">₩60,000</div>
       </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(2)">
+      <div class="sly-charge-opt" onclick="_slySelectCharge(4)">
         <div>
           <div class="sly-charge-pts">115,000 P <span class="sly-charge-bonus">+15,000P</span></div>
           <div style="font-size:11px;color:var(--text-muted)">이력서 3건+</div>
         </div>
         <div class="sly-charge-price">₩100,000</div>
       </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(3)">
+      <div class="sly-charge-opt" onclick="_slySelectCharge(5)">
         <div>
           <div class="sly-charge-pts">240,000 P <span class="sly-charge-bonus">+40,000P</span></div>
           <div style="font-size:11px;color:var(--text-muted)">최대 절약</div>
