@@ -8552,8 +8552,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               console.error('[oracle-iros]', oracleErr);
             }
             // Oracle 실패 상세 반환
+            const _oHost = oracleUrl ? oracleUrl.replace(/^https?:\/\//,'').split('/')[0] : 'URL미설정';
             return Response.json({ok:false, mode:'link', stdAddr,
-              error: `Oracle 오류: ${oracleErr}`,
+              error: `Oracle 오류: ${oracleErr} [${_oHost}]`,
               irosUrl:'https://www.iros.go.kr'
             },{status:200,headers});
           }
