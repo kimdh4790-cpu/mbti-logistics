@@ -216,8 +216,12 @@ body {
 .sly-tab.active svg { opacity: 1; }
 .sly-tab .tab-cost {
   font-size: 11px;
-  opacity: .7;
-  font-weight: 400;
+  font-weight: 700;
+  color: var(--gold);
+  opacity: 1;
+}
+.sly-tab.active .tab-cost {
+  color: #fff;
 }
 
 /* ── Upload Card ── */
@@ -1384,7 +1388,7 @@ function _slySelectService(id) {
     const fi2 = document.getElementById('slyFileInput2');
     if (fi2) fi2.accept = svc.accept || '.pdf';
     const cn2 = document.getElementById('slyCostNote2');
-    if (cn2) cn2.textContent = `파일 분석 시 ${svc.cost}P 차감됩니다`;
+    if (cn2) cn2.textContent = `파일 분석 시 ${svc.cost.toLocaleString()}P 차감됩니다`;
     // title
     const titleLabels = { registry:'등기부등본 발급 & 분석', biz:'사업자 조회 & 증명서 분석', health:'건강보험·국민연금 발급 & 분석', income:'소득·세금 서류 발급 & 분석' };
     const tt = document.getElementById('slyIssueTitleText');
@@ -1400,8 +1404,10 @@ function _slySelectService(id) {
       if (svc.hasJd) document.getElementById('slyJdLabel2').textContent = svc.jdLabel;
     }
     const cn2 = document.getElementById('slyCostNote2');
-    if (cn2) cn2.textContent = `분석 시 ${svc.cost}P 차감됩니다`;
+    if (cn2) cn2.textContent = `분석 시 ${svc.cost.toLocaleString()}P 차감됩니다`;
   }
+  const badge = document.getElementById('slyServiceBadge');
+  if (badge) badge.textContent = `${svc.cost.toLocaleString()}P`;
   clearResult();
 }
 window._slySelectService = _slySelectService;
@@ -2333,7 +2339,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- Regular upload card (non-issue services) -->
     <div class="sly-card" id="slyUploadCard">
-      <div class="sly-card-title">파일 업로드</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="sly-card-title" style="margin-bottom:0" id="slyUploadTitle">파일 업로드</div>
+        <div id="slyServiceBadge" style="background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700"></div>
+      </div>
       <div class="sly-dropzone" id="slyDropzone2">
         <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
         <div class="sly-dz-icon">
