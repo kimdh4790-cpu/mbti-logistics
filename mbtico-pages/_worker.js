@@ -557,6 +557,16 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
+    // SCAN AI proxy: mbtico.kr/scan → filo.ai.kr handles /api/seolyuhana/*
+    if (path.startsWith('/api/seolyuhana/')) {
+      const proxyUrl = 'https://filo.ai.kr' + path + (url.search || '');
+      return fetch(new Request(proxyUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: (request.method !== 'GET' && request.method !== 'HEAD') ? request.body : null,
+        duplex: 'half'
+      }));
+    }
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
