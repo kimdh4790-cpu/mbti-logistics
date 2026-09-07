@@ -8398,7 +8398,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
               method: 'POST',
               headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
-              body: JSON.stringify({ SearchAddr: await enc(address) }),
+              body: JSON.stringify({ SearchAddr: address }),
               signal: AbortSignal.timeout(15000)
             });
             const adText = await addrRes.text();
