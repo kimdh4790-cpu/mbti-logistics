@@ -1277,6 +1277,8 @@ window._slySignOut = async () => {
   await signOut(auth);
   _slyToast('로그아웃 되었습니다');
 };
+window._isSuperAdmin = _isSuperAdmin;
+window._SUPER_ADMINS = _SUPER_ADMINS;
 </script>
 
 <!-- Page JS -->
@@ -1301,7 +1303,7 @@ const SVC = [
   { id: 'contract',      label: '계약서', sublabel: '검토',   cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'employment_contract' },
   // ── 공문서 발급 & 분석 ──
-  { id: 'registry',      label: '등기부', sublabel: '전세사기', cost: 29900, accept: '.pdf',
+  { id: 'registry',      label: '등기부', sublabel: '전세사기', cost: 34900, accept: '.pdf',
     hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry', hasDepositInput: true },
   { id: 'biz_cert',      label: '사업자', sublabel: '조회',   cost: 2900,  accept: '.pdf',
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: true, issueType: 'biz' },
@@ -1364,6 +1366,11 @@ const ISSUE_LINKS = {
 
 function _slySelectService(id) {
   _slyService = id;
+  // 탭 전환 시 파일 상태 초기화
+  _slyFile = null;
+  const fi2 = document.getElementById('slyFileInput2');
+  if (fi2) fi2.value = '';
+  document.getElementById('slyFilePrev2')?.classList.remove('visible');
   renderTabs();
   const svc = SVC.find(s => s.id === id);
   if (!svc) return;
