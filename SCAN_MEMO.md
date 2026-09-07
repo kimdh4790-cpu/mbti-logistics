@@ -141,12 +141,23 @@
 | `CRON_SECRET` | Cron 트리거 인증 | ✅ 설정됨 |
 | `TILKO_API_KEY` | 등기부 직접조회 (AES-CBC-128+RSA-OAEP) | ✅ 설정됨 |
 | `TILKO_RSA_PUBKEY` | Tilko RSA 공개키 | ✅ 설정됨 |
-| `IROS_USER_ID` | 인터넷등기소 로그인 ID | ✅ 설정됨 |
+| `IROS_USER_ID` | 인터넷등기소 로그인 ID | ✅ 설정됨 (Cloudflare 대시보드 확인) |
 | `IROS_USER_PW` | 인터넷등기소 비밀번호 | ✅ 설정됨 |
-| `IROS_EMONEY_NO1` | 전자화폐 번호 1 (등기부 유료 발급용) | ✅ 설정됨 |
-| `IROS_EMONEY_NO2` | 전자화폐 번호 2 | ✅ 설정됨 |
+| `IROS_EMONEY_NO1` | 전자화폐 번호 앞 8자리 — 전자민원캐시 10,000원권 (2026-09-07 구매) | ✅ 설정됨 |
+| `IROS_EMONEY_NO2` | 전자화폐 번호 뒤 4자리 | ✅ 설정됨 |
 | `IROS_EMONEY_PWD` | 전자화폐 비밀번호 | ✅ 설정됨 |
 | `ORACLE_SERVER_URL` | Oracle 변환서버 HWP→DOCX (포트 3100) | ✅ 설정됨 |
+| `ORACLE_SERVER_URl` | Oracle IROS 자동발급 서버 http://161.33.136.154 (오타 'l' 그대로 유지) | ✅ 설정됨 |
+
+### Cloudflare Secrets 수동 등록 명령어 (Oracle VM에서 실행 — wrangler 4.x Global Key 인식 안 됨, curl 직접 사용)
+```bash
+# X-Auth-Key 값은 Cloudflare 대시보드 My Profile → API Keys → Global API Key 에서 확인
+curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913b4246015b9148f/workers/scripts/mbti-logistics/secrets" \
+  -H "X-Auth-Key: <GLOBAL_API_KEY>" \
+  -H "X-Auth-Email: kimdh4790@gmail.com" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"SECRET_NAME","text":"SECRET_VALUE","type":"secret_text"}'
+```
 
 ---
 
@@ -176,6 +187,9 @@
 | 2026-09-07 | 다국어 번역 6개 언어 지원 + 언어선택 UI |
 | 2026-09-07 | 등기부 전세사기 분석 강화: 깡통전세·5대체크포인트·보증금입력 |
 | 2026-09-07 | 렌더링 버그 3개 수정: 번역 필드명, 재작성 섹션, 전세사기 섹션 누락 |
+| 2026-09-07 | IROS e-money 전자민원캐시 구매·등록 완료 (O355 9083 6517 / 10,000원권) |
+| 2026-09-07 | nginx 역방향 프록시 설정 (Oracle VM 포트 80→8080, SELinux httpd_can_network_connect 허용) |
+| 2026-09-07 | _tilkoFetchRegistry e-money 선택사항으로 변경 (IROS 계정만으로도 Tilko API 호출 가능) |
 | 2026-09-07 | SCAN_MEMO.md 신규 생성. 경쟁사 조사결과·API현황 기록 |
 | 2026-09-07 | **v2 가격 재조정**: 재작성 49,900P / 번역 39,900P / 등기부 34,900P / 계약서 39,900P (차별화) |
 | 2026-09-07 | **v2 AI 프롬프트 전면 강화**: 기업별 맞춤 데이터 추가 (삼성/SK/현대/LG/카카오/네이버/공기업) |
