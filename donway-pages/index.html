@@ -10638,6 +10638,88 @@ function _dwSaveMonthly(){
   });
 }
 
+window._dwApplyEdit=function(cardId,idx){
+  var r=window._dwResults&&window._dwResults[idx];if(!r)return;
+  var cntEl=document.getElementById(cardId+'-edit-cnt');
+  var adjEl=document.getElementById(cardId+'-edit-adj');
+  var dateEl=document.getElementById(cardId+'-edit-date');
+  var newCnt=parseInt(cntEl&&cntEl.value)||r.totalCount;
+  var adj=parseInt(adjEl&&adjEl.value)||0;
+  var dateStr=dateEl&&dateEl.value||'';
+  r.totalCount=newCnt;
+  r.editAdj=(r.editAdj||0)+adj;
+  r.editDate=dateStr;
+  r.preTax=Math.max(0,(r.preTax||0)+adj);
+  var tax=Math.floor(r.preTax*0.033);
+  var sanjae=Math.floor(r.preTax*0.0088);
+  var goyal=Math.floor(r.preTax*0.008);
+  r.net=Math.max(0,r.preTax-tax-sanjae-goyal);
+  r.totalTax=tax;
+  var u=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  u(cardId+'-cnt',newCnt+'건');
+  u(cardId+'-net','₩'+r.net.toLocaleString());
+  u(cardId+'-pre','₩'+r.preTax.toLocaleString());
+  if(adjEl)adjEl.value='0';
+  toast('✅ '+r.riderId+' 수정 적용');
+};
+
+window._dwSendRiderAlimtalk=async function(idx,btn){
+  var r=window._dwResults&&window._dwResults[idx];if(!r)return;
+  if(btn){btn.disabled=true;btn.textContent='발송 중...';}
+  var did=_CU&&(_CU.dealerId||_CU.uid);
+  var coName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'대리점';
+  var riderId=r.riderId||'';
+  var cardId=riderId.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  var dateEl=document.getElementById(cardId+'-edit-date');
+  var period=r.editDate||(dateEl&&dateEl.value)||
+    (document.getElementById('dw-save-week')?document.getElementById('dw-save-week').value:'');
+  try {
+    var snap=await _db.collection('drivers').where('dealerId','==',did).get();
+    var phone='';
+    snap.forEach(function(d){
+      var data=d.data();
+      if(data.name===riderId||data.userId===riderId||data.id===riderId){phone=data.phone||'';}
+    });
+    if(!phone){
+      toast('⚠️ '+riderId+' 전화번호 없음 — 기사 관리에서 등록 필요');
+      if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
+      return;
+    }
+    var token=_db.collection('statement_share').doc().id;
+    var net=r.net||0;
+    var preTax=r.preTax||0;
+    var tax=r.totalTax||Math.floor(preTax*0.033);
+    var sanjae=Math.floor(preTax*0.0088);
+    var goyal=Math.floor(preTax*0.008);
+    await _db.collection('statement_share').doc(token).set({
+      dealerId:did,userId:riderId,name:riderId,
+      month:period||new Date().toISOString().slice(0,7),
+      netPay:net,preTax:preTax,tax:tax,sanjae:sanjae,goyal:goyal,
+      totalCount:r.totalCount||0,injected:r.injected||0,extracted:r.extracted||0,
+      type:'delivery',companyName:coName,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    var stmtUrl='https://donway.ai.kr/s/'+token;
+    var variables={
+      '#{고객회사명}':coName,'#{이름}':riderId,'#{월}':period,
+      '#{명세서링크}':stmtUrl,'#{담당자명}':(_CU&&_CU.settlementContact)||'',
+      '#{문의전화}':(_CU&&_CU.settlementPhone)||'051-711-3103'
+    };
+    var fallbackText='['+coName+'] '+riderId+'님 '+period+' 정산명세서\n실지급: ₩'+net.toLocaleString()+'원\n명세서: '+stmtUrl;
+    var tkn='';try{if(_auth&&_auth.currentUser)tkn=await _auth.currentUser.getIdToken();}catch(e2){}
+    var res=await fetch('/api/send-alimtalk',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
+      body:JSON.stringify({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',variables:variables,fallbackText:fallbackText})});
+    var data=await res.json();
+    if(data.ok){toast('✅ '+riderId+' 알림톡 발송 완료');}
+    else{toast('❌ 발송 실패: '+(data.error||(data.result&&data.result.message)||'오류'));}
+    if(btn){btn.disabled=false;btn.textContent='✅ 발송됨';}
+  } catch(e){
+    toast('❌ '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
+  }
+};
+
 function _dwSaveWeeklySettlement(result){
   if(!_db||!_CU){
     toast('ℹ️ 시뮬레이터 모드: DB 저장 생략 (실제 정산은 엑셀 업로드 후 정산 저장 버튼 사용)');
@@ -11195,7 +11277,8 @@ window.dwRunLiveCalculations=function(){
           '<span style="color:var(--text3)">산재 <span id="'+cardId+'-sanjae" style="color:var(--red)">-₩0</span></span>'+
           '<span style="color:var(--text3)">고용 <span id="'+cardId+'-goyal" style="color:var(--red)">-₩0</span></span>'+
           '<span style="color:var(--text3)">원천세 <span id="'+cardId+'-tax" style="color:var(--red)">-₩0</span></span>'+
-        '</div>';
+        '</div>'+
+        '<div id="'+cardId+'-actions" style="display:none;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;padding:8px 12px;border-top:1px dashed var(--border)"></div>';
       if(resultsEl) resultsEl.appendChild(card);
       setTimeout(function(){card.style.opacity='1';card.style.transform='translateY(0)';},50);
 
@@ -11263,6 +11346,24 @@ window.dwRunLiveCalculations=function(){
           u2(cardId+'-sanjae','-₩'+sanjae2.toLocaleString());
           u2(cardId+'-goyal','-₩'+goyal2.toLocaleString());
           u2(cardId+'-net','₩'+net2.toLocaleString());
+          // ★ 기사 카드 편집/알림톡 행 채우기
+          (function(_ri,_cid,_cnt,_n2,_pt){
+            var _ae=document.getElementById(_cid+'-actions');
+            var _pw=document.getElementById('dw-save-week');
+            var _pd=_pw?_pw.value:'';
+            if(_ae){
+              _ae.style.display='flex';
+              _ae.innerHTML=
+                '<label style="color:var(--text3);white-space:nowrap;font-size:10px">✏️ 건수</label>'+
+                '<input id="'+_cid+'-edit-cnt" type="number" value="'+_cnt+'" style="width:58px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:11px">'+
+                '<label style="color:var(--text3);white-space:nowrap;font-size:10px">추가금액</label>'+
+                '<input id="'+_cid+'-edit-adj" type="number" value="0" placeholder="±원" style="width:80px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:11px">'+
+                '<label style="color:var(--text3);white-space:nowrap;font-size:10px">날짜</label>'+
+                '<input id="'+_cid+'-edit-date" type="text" value="'+_pd+'" placeholder="2026-09-04~09-08" style="width:145px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:11px">'+
+                '<button onclick="_dwApplyEdit(\''+_cid+'\','+_ri+')" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;cursor:pointer;font-weight:700;color:var(--text)">적용</button>'+
+                '<button onclick="_dwSendRiderAlimtalk('+_ri+',this)" style="padding:3px 10px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:700">📲 알림톡</button>';
+            }
+          })(window._dwResults.length-1, cardId, _validCnt, net2, preTax);
           // ★ 전체 누적 합산
           if(!window._dwTotalInj) window._dwTotalInj=0;
           if(!window._dwTotalExt) window._dwTotalExt=0;
