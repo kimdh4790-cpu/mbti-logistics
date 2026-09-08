@@ -10727,8 +10727,17 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
       headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
       body:JSON.stringify({to:phone,templateCode:'KA01TP260618101225825DuJHXpoC4kY',variables:variables,fallbackText:fallbackText})});
     var data=await res.json();
-    if(data.ok){toast('✅ '+riderId+' 알림톡 발송 완료');}
-    else{toast('❌ 발송 실패: '+(data.error||(data.result&&data.result.message)||'오류'));}
+    if(data.ok){
+      toast('✅ '+riderId+' 알림톡 발송 완료');
+      // 발송 버튼 옆에 명세서 링크 노출
+      if(btn&&btn.parentNode){
+        var _la=document.createElement('a');
+        _la.href=stmtUrl;_la.target='_blank';
+        _la.textContent='📄 명세서 보기';
+        _la.style.cssText='font-size:10px;color:#2563eb;text-decoration:underline;cursor:pointer;white-space:nowrap';
+        btn.parentNode.appendChild(_la);
+      }
+    } else{toast('❌ 발송 실패: '+(data.error||(data.result&&data.result.message)||'오류'));}
     if(btn){btn.disabled=false;btn.textContent='✅ 발송됨';}
   } catch(e){
     toast('❌ '+e.message);
