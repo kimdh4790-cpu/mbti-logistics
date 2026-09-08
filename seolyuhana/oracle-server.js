@@ -1418,92 +1418,82 @@ app.post('/api/iros-fetch', async (req, res) => {
       throw new Error(`등기부 내용 미감지 — IROS 발급 흐름 미완료 (URL: ${resultPage.url()}, hint: ${domHint.slice(0,300)})`);
     }
 
-    console.log('[iros] 열람/발급 버튼 클릭');
-    // 열람 버튼 클릭 후 새 팝업(결제 or 뷰어) 또는 현재 페이지 변환
+    console.log('[iros] 열람 버튼 클릭');
+    // 간편열람: 열람 버튼 클릭 후 팝업이 열리거나 동일 페이지에 내용이 나타남 (무료 — 결제 없음)
     const [issuePopup] = await Promise.all([
       context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
       issueBtn.click({ force: true }).catch(async (e) => {
-        console.log('[iros] issueBtn click 실패:', e.message);
+        console.log('[iros] issueBtn click 실패:', e.message, '— evaluate 폴백');
         const eh = await issueBtn.elementHandle().catch(() => null);
         if (eh) await issuePage.evaluate(el => el.click(), eh).catch(() => {});
       }),
     ]);
+
+    // 열린 팝업 수집 (간편열람은 새 팝업창으로 내용을 보여줌)
+    let viewPage = resultPage;
     if (issuePopup) {
       console.log('[iros] 열람 팝업 감지:', issuePopup.url());
       await issuePopup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
-      resultPage = issuePopup;
+      viewPage = issuePopup;
     }
-    await resultPage.waitForTimeout(3000);
-    await resultPage.screenshot({ path: '/home/opc/iros-debug/step6-after-issue.png', fullPage: false }).catch(() => {});
-    console.log('[iros] 열람 버튼 클릭 후 URL:', resultPage.url());
-    console.log('[iros] 발급버튼클릭후 URL:', resultPage.url());
+    // context 내 모든 페이지에서 등기부 내용 확인 (팝업이 다른 경로로 열릴 수 있음)
+    await viewPage.waitForTimeout(3000);
+    const allCtxPages = context.pages();
+    console.log('[iros] 열람 후 페이지 수:', allCtxPages.length, allCtxPages.map(p => p.url().slice(0, 60)));
 
-    // 전자화폐 결제
-    if (emoneyNo1 && emoneyPwd) {
+    // 7단계: 등기부 내용 추출 (간편열람 = HTML 직접 — 다운로드 없음)
+    // 등기부 키워드 정규식
+    const REGISTRY_RE = /표제부|갑구|을구|소유권|순위번호|접수|등기원인|등기목적|근저당|채권최고액|채무자|저당권|전세권/;
+
+    async function extractRegistryText(page) {
       try {
-        const payRadioSel = 'input[value*="emoney"], input[value*="전자화폐"], label[for*="emoney"], input[value="03"]';
-        const payEmoneyRadio = resultPage.locator(payRadioSel).first();
-        if (await payEmoneyRadio.count() > 0) {
-          await payEmoneyRadio.click();
-          await resultPage.waitForTimeout(500);
-          const emoNo1Field = resultPage.locator('input[id*="emoneyNo1" i], input[name*="emoneyNo1" i]').first();
-          const emoNo2Field = resultPage.locator('input[id*="emoneyNo2" i], input[name*="emoneyNo2" i]').first();
-          const emoPwdField = resultPage.locator('input[id*="emoneyPwd" i], input[name*="emoneyPwd" i], input[id*="emoPwd" i]').first();
-          if (await emoNo1Field.count() > 0) await emoNo1Field.fill(emoneyNo1);
-          if (emoneyNo2 && await emoNo2Field.count() > 0) await emoNo2Field.fill(emoneyNo2);
-          if (await emoPwdField.count() > 0) await emoPwdField.fill(emoneyPwd);
-          const payBtnSel = '#payBtn, button[onclick*="pay"], .btn-pay, button:has-text("결제"), button:has-text("확인")';
-          const payBtn = resultPage.locator(payBtnSel).first();
-          if (await payBtn.count() > 0) {
-            await payBtn.click();
-            await resultPage.waitForTimeout(3000);
+        // iframe 포함 모든 컨텍스트 확인
+        const ctxList = [page, ...page.frames()];
+        for (const ctx of ctxList) {
+          const txt = await ctx.evaluate(() => (document.body || document.documentElement).innerText || '').catch(() => '');
+          if (REGISTRY_RE.test(txt)) {
+            // 표/전체 HTML도 함께 추출
+            const html = await ctx.evaluate(() => (document.body || document.documentElement).innerHTML || '').catch(() => '');
+            return { text: txt, html: html.slice(0, 80000) };
           }
         }
-      } catch (pe) {
-        console.error('[iros] 결제 단계 오류:', pe.message);
+      } catch {}
+      return null;
+    }
+
+    let registryExtracted = null;
+    // 열람 팝업부터 체크
+    for (const pg of [viewPage, ...allCtxPages]) {
+      registryExtracted = await extractRegistryText(pg);
+      if (registryExtracted) {
+        console.log('[iros] 등기부 내용 감지 URL:', pg.url(), '텍스트 길이:', registryExtracted.text.length);
+        await pg.screenshot({ path: '/home/opc/iros-debug/step7-registry.png', fullPage: true }).catch(() => {});
+        break;
       }
     }
 
-    // 7단계: PDF 확보 (다운로드 이벤트 우선 → 뷰어 캡처 → 에러)
-    const pdfPath = join(tmpDir, 'registry.pdf');
-
-    // 7-1: 다운로드 이벤트 대기 (발급 클릭 후 30초)
-    let pdfSaved = false;
-    try {
-      const dlPromise = context.waitForEvent('download', { timeout: 30000 });
-      const dl = await dlPromise;
-      await dl.saveAs(pdfPath);
-      console.log('[iros] PDF 다운로드 성공:', pdfPath);
-      pdfSaved = true;
-    } catch {
-      console.log('[iros] 다운로드 이벤트 없음 → 뷰어 캡처 시도');
-    }
-
-    // 7-2: 다운로드 없으면 현재 페이지에 등기부 내용이 있는지 확인
-    if (!pdfSaved) {
-      const hasRegistryContent = await resultPage.evaluate(() => {
-        const txt = document.body.innerText || '';
-        return /표제부|갑구|을구|소유권|순위번호|접수|등기원인|등기목적/.test(txt);
-      }).catch(() => false);
-
-      if (hasRegistryContent) {
-        console.log('[iros] 뷰어에서 등기부 내용 감지 → page.pdf() 캡처');
-        const pdfBuffer2 = await resultPage.pdf({
-          format: 'A4', printBackground: true,
-          margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
-        });
-        await writeFile(pdfPath, pdfBuffer2);
-        pdfSaved = true;
-      } else {
-        const curUrl = resultPage.url();
-        const bodySnip = await resultPage.evaluate(() => (document.body.innerText||'').slice(0, 300)).catch(() => '');
-        console.log('[iros] 등기부 내용 없음. URL:', curUrl, '| 내용:', bodySnip);
-        throw new Error(`등기부 내용 미감지 — IROS 발급 흐름 미완료 (URL: ${curUrl})`);
+    if (!registryExtracted) {
+      // 더 기다려 본 후 재시도
+      await viewPage.waitForTimeout(3000);
+      for (const pg of [viewPage, ...context.pages()]) {
+        registryExtracted = await extractRegistryText(pg);
+        if (registryExtracted) {
+          console.log('[iros] 재시도 후 등기부 감지:', pg.url());
+          break;
+        }
       }
     }
 
-    const pdfBuffer = await readFile(pdfPath);
-    res.json({ ok: true, pdfBase64: pdfBuffer.toString('base64'), address });
+    if (!registryExtracted) {
+      const curUrl = viewPage.url();
+      const bodySnip = await viewPage.evaluate(() => (document.body?.innerText||'').slice(0, 400)).catch(() => '');
+      console.log('[iros] 등기부 내용 없음. URL:', curUrl, '| 내용:', bodySnip);
+      await viewPage.screenshot({ path: '/home/opc/iros-debug/step7-fail.png', fullPage: true }).catch(() => {});
+      throw new Error(`등기부 내용 미감지 — IROS 발급 흐름 미완료 (URL: ${curUrl})`);
+    }
+
+    console.log('[iros] 등기부 추출 성공. 텍스트:', registryExtracted.text.slice(0, 200));
+    res.json({ ok: true, registryText: registryExtracted.text, registryHtml: registryExtracted.html, address });
   } catch (e) {
     console.error('[iros-fetch]', e.message);
     res.status(500).json({ ok: false, error: e.message });
