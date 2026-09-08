@@ -765,10 +765,24 @@ app.post('/api/iros-fetch', async (req, res) => {
     const inputVal = await addrInput.inputValue().catch(() => '');
     console.log('[iros] 입력 설정값:', inputVal);
 
+    // 스크린샷 — 주소 입력 후 상태
+    await page.screenshot({ path: '/home/opc/iros-debug/01-after-fill.png', fullPage: false }).catch(() => {});
+
+    // 전체 버튼 덤프 — 실제 검색 버튼 ID 파악
+    const btnDump = await page.evaluate(() => {
+      try {
+        return Array.from(document.querySelectorAll('a[id],button[id],input[type="button"][id],div[id*="btn_"]:not([id*="gridstart"])'))
+          .map(el => ({ id: el.id, tag: el.tagName, cls: (el.className||'').substring(0,60), txt: (el.innerText||el.value||'').trim().replace(/\s+/g,' ').substring(0,40) }))
+          .filter(el => el.id && el.id.length < 100 && !el.id.includes('scrollX') && !el.id.includes('_div'))
+          .slice(0, 60);
+      } catch(e) { return []; }
+    }).catch(() => []);
+    console.log('[iros] 버튼 전체 덤프:', JSON.stringify(btnDump));
+
     // 검색 트리거: Gauce WebSquare 내부 함수 직접 호출 (Enter 키는 Gauce 무시)
     const urlBefore = page.url();
 
-    // 전역 검색 함수 목록 덤프 (디버그)
+    // 전역 검색 함수 목록 덤프
     const globalFns = await page.evaluate(() => {
       try { return Object.keys(window).filter(k => typeof window[k] === 'function' && /srch|smpl|search|fn_/i.test(k)); } catch(e) { return []; }
     }).catch(() => []);
@@ -784,34 +798,52 @@ app.post('/api/iros-fetch', async (req, res) => {
         // 3순위: 범용 검색 함수
         if (typeof fn_search === 'function') { fn_search(); return 'fn_search'; }
         if (typeof fn_srch === 'function') { fn_srch(); return 'fn_srch'; }
-        // 4순위: WebSquare2 w2 객체로 onenterkey 이벤트 발화
+        // 4순위: WebSquare w2 객체로 onenterkey 이벤트 발화
         if (typeof w2 !== 'undefined' && w2.getById) {
           var inp = w2.getById('mf_wfm_potal_main_sch_realCorp');
           if (inp && inp.fireEvent) { inp.fireEvent('onenterkey', {keyCode:13}); return 'w2.onenterkey'; }
           if (inp && inp.trigger) { inp.trigger('onenterkey', {keyCode:13}); return 'w2.trigger.onenterkey'; }
         }
-        // 5순위: sch_realCorp 인근 버튼 (헤더/top_menu 제외)
-        var btn = document.querySelector('[id*="btn_smpl_srch"],[id*="btn_sch_realCorp"],[id*="btn_srch"]:not([id*="header"]):not([id*="top_menu"])');
-        if (btn) { btn.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true})); return 'btn:' + btn.id; }
-        return null;
+        // 5순위: sch_realCorp / smpl_srch / btn_sch 패턴 버튼 (헤더/top_menu 제외)
+        var btn = document.querySelector(
+          '[id*="btn_smpl_srch"],[id*="btn_sch_realCorp"],[id*="btn_sch"]:not([id*="header"]):not([id*="top_menu"]),[id*="btn_srch"]:not([id*="header"]):not([id*="top_menu"])'
+        );
+        if (btn) { btn.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:window})); return 'dispatchEvent:' + btn.id; }
+        return 'notfound';
       } catch(e) { return 'err:' + e.message; }
     }).catch(e => 'catch:' + e.message);
     console.log('[iros] Gauce JS 검색 결과:', jsFnResult);
 
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(2000);
 
-    // Fallback: DOM 키보드 이벤트 + Playwright press (최후 수단)
-    if (!jsFnResult || jsFnResult.startsWith('err') || jsFnResult.startsWith('catch') || jsFnResult === 'null') {
-      console.log('[iros] Fallback — DOM keyboard events + press(Enter)');
-      await page.evaluate(() => {
-        var el = document.getElementById('mf_wfm_potal_main_sch_realCorp___input');
-        if (!el) return;
-        ['keydown','keypress','keyup'].forEach(t => {
-          el.dispatchEvent(new KeyboardEvent(t, {key:'Enter',keyCode:13,which:13,bubbles:true,cancelable:true}));
-        });
-      }).catch(() => {});
-      await addrInput.press('Enter').catch(() => {});
-      await page.waitForTimeout(1500);
+    // 스크린샷 — 검색 트리거 직후
+    await page.screenshot({ path: '/home/opc/iros-debug/02-after-trigger.png', fullPage: false }).catch(() => {});
+
+    // Fallback: Playwright로 버튼 직접 클릭 (dispatchEvent가 안 먹힐 때)
+    if (jsFnResult === 'notfound' || jsFnResult.startsWith('err') || jsFnResult.startsWith('catch')) {
+      console.log('[iros] Fallback — Playwright 버튼 직접 클릭');
+      const searchBtnSelectors = [
+        '[id*="btn_smpl_srch"]',
+        '[id*="btn_sch_realCorp"]',
+        '[id*="btn_sch"]:not([id*="header"]):not([id*="top_menu"])',
+        '[id*="btn_srch"]:not([id*="header"]):not([id*="top_menu"])',
+        // WebSquare 버튼 스타일 — mf_wfm_potal_main 내 버튼
+        'a.w2button[id*="main"]:not([id*="header"]):not([id*="menu"])',
+        'div.w2button[id*="main"]:not([id*="header"]):not([id*="menu"])',
+      ];
+      for (const sel of searchBtnSelectors) {
+        try {
+          const btn = page.locator(sel).first();
+          if (await btn.count() > 0) {
+            const bid = await btn.getAttribute('id').catch(() => '');
+            if (bid && (bid.includes('header') || bid.includes('top_menu'))) continue;
+            console.log('[iros] 버튼 직접 클릭:', bid, sel);
+            await btn.click({ force: true, timeout: 5000 });
+            await page.waitForTimeout(2000);
+            break;
+          }
+        } catch {}
+      }
     }
     console.log('[iros] 검색 트리거 완료');
 
