@@ -1090,6 +1090,36 @@ app.post('/api/iros-fetch', async (req, res) => {
       throw new Error(`"${searchAddr}" (키워드: ${addrKey}) 검색 결과 없음 (resultPage=${resultPage.url()}, frames: ${JSON.stringify(frameUrls)})`);
     }
     console.log('[iros] 결과 행 클릭');
+
+    // Gauce WebSquare API로 행 선택 (dispatchEvent 무시됨 — JS API 필요)
+    const gridId = 'mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt';
+    const gauceSelect = await resultPage.evaluate((gid) => {
+      try {
+        // scwin 네임스페이스 (WebSquare 글로벌 객체)
+        if (window.scwin && window.scwin[gid]) {
+          var g = window.scwin[gid];
+          if (typeof g.selectRow === 'function') { g.selectRow(0); return 'scwin.selectRow(0)'; }
+          if (typeof g.setCellValue === 'function') { g.setCellValue(0, 'col_chk', 'Y'); return 'scwin.setCellValue'; }
+          if (typeof g.setSelectRow === 'function') { g.setSelectRow(0); return 'scwin.setSelectRow(0)'; }
+        }
+        // w2 네임스페이스 (WebSquare 다른 버전)
+        if (window.w2 && typeof window.w2.getById === 'function') {
+          var g2 = window.w2.getById(gid);
+          if (g2 && typeof g2.selectRow === 'function') { g2.selectRow(0); return 'w2.selectRow(0)'; }
+        }
+        // 직접 DOM 이벤트 (Gauce 네임스페이스 없는 경우)
+        var tbody = document.getElementById(gid + '_body_tbody');
+        var firstRow = tbody && tbody.querySelector('tr');
+        if (firstRow) {
+          firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          return 'dom.click(firstRow)';
+        }
+        return 'no_api';
+      } catch(e) { return 'err:' + e.message; }
+    }, gridId).catch(() => 'catch');
+    console.log('[iros] Gauce 행 선택:', gauceSelect);
+    await resultPage.waitForTimeout(1000);
+
     // WebSquare: 반드시 Playwright 직접 click() — dispatchEvent는 무시됨
     // 행 클릭 후 IROS는 보통 새 팝업창을 엶 → context.waitForEvent('page')로 감지
     const [rowPopup] = await Promise.all([
@@ -1187,34 +1217,74 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 가시 버튼/링크:', btns.slice(0, 500));
     }
 
-    // 6단계: 열람/발급 버튼 — 모든 컨텍스트(resultPage + frames) 탐색
-    const issueSel = [
-      'button:has-text("열람")', 'a:has-text("열람")',
-      'button:has-text("발급")', 'a:has-text("발급")',
-      'a[onclick*="issue"]', 'button[onclick*="issue"]',
-      '#issueBtn', '.btn-issue',
-      'input[type="button"][value*="열람"]', 'input[type="button"][value*="발급"]',
-    ].join(', ');
+    // 6단계: 열람/발급 버튼 탐색
+    // ⚠️ IROS SPA 특성: 상단 nav에 항상 "열람·발급" 텍스트가 있음 (중간점 ·)
+    //    content area의 실제 열람 버튼은 "열람" 또는 "발급"만 포함 (중간점 없음)
+    //    nav 제외 기준: id에 gnb/menu/lnb 포함, 또는 텍스트에 "·" 포함
+    const issueCandidates = [
+      // ID 기반: content 영역 버튼 (gnb/메뉴 제외)
+      '[id*="wfm_content"][id*="btn"]',
+      // input 버튼 (value 기준 — nav에는 input type=button 없음)
+      'input[type="button"][value*="열람"]',
+      'input[type="button"][value*="발급"]',
+      'input[type="button"][value*="VIEW"]',
+      // onclick 패턴 (IROS 소문자/대문자 혼용)
+      'a[onclick*="열람"], a[onclick*="발급"], a[onclick*="view"], a[onclick*="View"]',
+      'button[onclick*="열람"], button[onclick*="발급"]',
+      // td 내부 링크/버튼 (grid row action cell — nav에는 td 없음)
+      'td > a:has-text("열람"), td > a:has-text("발급")',
+      'td > button:has-text("열람"), td > button:has-text("발급")',
+      // content 영역 내 any — 마지막 폴백
+      '[id*="wfm_content"] a:has-text("열람"), [id*="wfm_content"] button:has-text("열람")',
+      '[id*="wfm_content"] a:has-text("발급"), [id*="wfm_content"] button:has-text("발급")',
+    ];
 
     let issueBtn = null;
     let issuePage = resultPage;
     for (const ctx of [resultPage, ...resultPage.frames()]) {
       try {
-        const loc = ctx.locator(issueSel).first();
-        if (await loc.count() > 0) { issueBtn = loc; issuePage = ctx; break; }
+        for (const sel of issueCandidates) {
+          const locs = ctx.locator(sel);
+          const cnt = await locs.count().catch(() => 0);
+          for (let bi = 0; bi < Math.min(cnt, 5); bi++) {
+            const loc = locs.nth(bi);
+            const info = await loc.evaluate(el => ({
+              id: el.id || '',
+              txt: (el.textContent || el.getAttribute('value') || '').trim().slice(0, 40),
+              vis: el.offsetParent !== null || getComputedStyle(el).display !== 'none',
+            })).catch(() => null);
+            if (!info) continue;
+            // nav 메뉴 제외: "·" 중간점 포함(열람·발급), gnb/menu/lnb ID
+            if (info.txt.includes('·')) continue;
+            if (/gnb|wf_menu|lnb|_top_|breadcrumb|_nav/i.test(info.id)) continue;
+            if (!info.vis) continue;
+            console.log('[iros] 열람버튼 후보:', JSON.stringify(info), '| selector:', sel);
+            issueBtn = loc;
+            issuePage = ctx;
+            break;
+          }
+          if (issueBtn) break;
+        }
+        if (issueBtn) break;
       } catch {}
     }
 
     if (!issueBtn) {
-      const domHint = await resultPage.evaluate(() =>
-        Array.from(document.querySelectorAll('*')).filter(el =>
-          el.children.length === 0 && /열람|발급|조회|확인/.test(el.textContent||'')
-        ).slice(0, 10).map(el =>
-          `${el.tagName}#${el.id}.${el.className} "${(el.textContent||'').trim().slice(0,30)}"`
-        ).join(' | ')
-      ).catch(() => '');
-      console.log('[iros] 열람/발급 버튼 못 찾음. DOM 힌트:', domHint);
-      throw new Error(`열람/발급 버튼 없음 (URL: ${resultPage.url()}, hint: ${domHint.slice(0,200)})`);
+      // 디버깅: 페이지의 모든 클릭 가능 요소 로그
+      const domHint = await resultPage.evaluate(() => {
+        return Array.from(document.querySelectorAll('a,button,input[type="button"]'))
+          .filter(el => {
+            const txt = (el.textContent || el.getAttribute('value') || '').trim();
+            return /열람|발급|조회|확인/.test(txt) && txt.length < 30;
+          })
+          .slice(0, 15)
+          .map(el => `${el.tagName}#${el.id} "${(el.textContent||el.getAttribute('value')||'').trim().slice(0,20)}" vis=${el.offsetParent!==null}`)
+          .join(' | ');
+      }).catch(() => '');
+      console.log('[iros] 열람/발급 버튼 못 찾음. 전체 DOM 힌트:', domHint);
+      // 스크린샷도 저장
+      await resultPage.screenshot({ path: '/home/opc/iros-debug/step6-no-issue-btn.png', fullPage: true }).catch(() => {});
+      throw new Error(`등기부 내용 미감지 — IROS 발급 흐름 미완료 (URL: ${resultPage.url()}, hint: ${domHint.slice(0,300)})`);
     }
 
     console.log('[iros] 열람/발급 버튼 클릭');
