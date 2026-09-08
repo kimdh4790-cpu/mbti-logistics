@@ -647,11 +647,19 @@ app.post('/api/iros-fetch', async (req, res) => {
       throw new Error(`"${searchAddr}" 검색 결과 없음 (frames: ${JSON.stringify(frameUrls)})`);
     }
     console.log('[iros] 결과 행 클릭');
-    // Gauce SPA가 오버레이로 pointer events 차단 → force click + JS evaluate 이중 시도
-    await resultRow.click({ force: true, timeout: 10000 }).catch(async () => {
-      console.log('[iros] force click 실패, JS evaluate로 재시도');
-      await resultCtx.evaluate(el => el.click(), await resultRow.elementHandle().catch(() => null)).catch(() => {});
-    });
+    // Gauce SPA 오버레이 우회: dispatchEvent → force click → JS click 순으로 시도
+    const eh = await resultRow.elementHandle().catch(() => null);
+    if (eh) {
+      await resultCtx.evaluate(el => {
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      }, eh).catch(() => {});
+    } else {
+      await resultRow.click({ force: true, timeout: 8000 }).catch(async () => {
+        console.log('[iros] force click 실패, evaluate 재시도');
+        const eh2 = await resultRow.elementHandle().catch(() => null);
+        if (eh2) await resultCtx.evaluate(el => el.click(), eh2).catch(() => {});
+      });
+    }
     await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(1000);
 
