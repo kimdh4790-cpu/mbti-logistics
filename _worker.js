@@ -241,6 +241,13 @@ async function serveKVFile(env, fileName, contentType) {
     // KV 우선 서빙
     const _e = env || _env_ref;
     if (_e && _e.DONWAY_ASSETS) {
+      // PNG/이미지는 arrayBuffer로 읽어야 바이너리 보존
+      if (contentType && (contentType.startsWith('image/') || contentType === 'application/octet-stream')) {
+        const ab_sf = await _e.DONWAY_ASSETS.get(fileName, 'arrayBuffer');
+        if (ab_sf) {
+          return new Response(ab_sf, { headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=86400', 'X-Served-From': 'KV' } });
+        }
+      }
       const kvVal_sf = await _e.DONWAY_ASSETS.get(fileName, 'text');
       if (kvVal_sf) {
         const body_sf = contentType === 'text/html' ? _injectMeta(kvVal_sf) : kvVal_sf;
@@ -1015,7 +1022,7 @@ async function syncKVFromGitHub(env) {
 // subscriptions 구조: donway/filo/mbtico modules 배열로 메뉴 제어
 export default {
   // scheduled: KV sync moved to main scheduled handler below
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
     _env_ref = env;
     const url      = new URL(request.url);
@@ -2840,6 +2847,338 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
     }
 
     if (hostname === 'filo.ai.kr' || hostname === 'www.filo.ai.kr') {
+      // ── SCAN AI (mbtico.kr/scan) API ─────────────────────────────────────────
+      if (path.startsWith('/api/seolyuhana/')) {
+        const headers = {'Access-Control-Allow-Origin':'https://mbtico.kr','Access-Control-Allow-Headers':'Authorization,Content-Type','Access-Control-Allow-Methods':'GET,POST,OPTIONS'};
+        if (method === 'OPTIONS') return new Response(null, {status:204, headers});
+
+        function _b64Buf(b64) { const bin=atob(b64.replace(/\s+/g,'')); const buf=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) buf[i]=bin.charCodeAt(i); return buf.buffer; }
+        function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+
+        async function _tilkoFetchRegistry(address, tilkoPinHint, regType, env) {
+          const apiKey=env.TILKO_API_KEY, irosId=env.IROS_USER_ID, irosPw=env.IROS_USER_PW;
+          const emoneyNo1=env.IROS_EMONEY_NO1||'', emoneyNo2=env.IROS_EMONEY_NO2||'', emoneyPwd=env.IROS_EMONEY_PWD||'';
+          if (!apiKey) throw new Error('TILKO_API_KEY 미설정');
+          if (!irosId||!irosPw) throw new Error('인터넷등기소 계정 env 미설정 (IROS_USER_ID, IROS_USER_PW)');
+          const hasEmoney=emoneyNo1&&emoneyNo2&&emoneyPwd;
+          // RSA 공개키 동적 조회
+          const pkRes=await fetch(`https://api.tilko.net/api/Auth/GetPublicKey?APIkey=${encodeURIComponent(apiKey)}`,{signal:AbortSignal.timeout(10000)});
+          if (!pkRes.ok) throw new Error(`Tilko 공개키 조회 실패: ${pkRes.status}`);
+          const pkJson=await pkRes.json();
+          const pemBody=(pkJson.PublicKey||pkJson.publicKey||'').replace(/-----[^-]+-----/g,'').replace(/\s/g,'');
+          if (!pemBody) throw new Error('Tilko 공개키 응답 비어있음');
+          // AES-128 생성 + IV=올제로 (Tilko 사양)
+          const rawAesBuf=crypto.getRandomValues(new Uint8Array(16));
+          const iv=new Uint8Array(16);
+          const aesKey=await crypto.subtle.importKey('raw',rawAesBuf,{name:'AES-CBC'},false,['encrypt']);
+          const spki=_b64Buf(pemBody);
+          const rsaKey=await crypto.subtle.importKey('spki',spki,{name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
+          const encKey=_bufB64(await crypto.subtle.encrypt({name:'RSA-OAEP'},rsaKey,rawAesBuf));
+          const enc=async(val)=>{const ct=await crypto.subtle.encrypt({name:'AES-CBC',iv},aesKey,new TextEncoder().encode(String(val)));return _bufB64(ct);};
+          const encB64=async(val)=>enc(btoa(String(val)));
+          let pin=(tilkoPinHint||'').replace(/-/g,'');
+          if (!pin||pin.length<13) {
+            try {
+              const addrRes=await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch',{method:'POST',headers:{'API-KEY':apiKey,'ENC-KEY':encKey,'Content-Type':'application/json'},body:JSON.stringify({SearchAddr:await enc(address)}),signal:AbortSignal.timeout(15000)});
+              if (addrRes.ok){const ad=await addrRes.json().catch(()=>({}));const first=(ad.realty_list||ad.RealtyList||ad.Result||[])[0];pin=(first?.pin||first?.Pin||first?.고유번호||'').replace(/-/g,'');}
+            } catch(_){}
+          }
+          if (!pin||pin.length<13) throw new Error(`부동산 고유번호 조회 실패 (${address}). 14자리 고유번호를 직접 입력해주세요.`);
+          const absCls=(regType==='current')?'11':'12';
+          const body={Auth:{UserId:await enc(irosId),UserPassword:await enc(irosPw)},Pin:await enc(pin),EmoneyNo1:hasEmoney?await encB64(emoneyNo1):await enc(''),EmoneyNo2:hasEmoney?await encB64(emoneyNo2):await enc(''),EmoneyPwd:hasEmoney?await encB64(emoneyPwd):await enc(''),CmortFlag:'',TradeSeqFlag:'',AbsCls:await enc(absCls),RgsMttrSmry:''};
+          const res=await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry',{method:'POST',headers:{'API-KEY':apiKey,'ENC-KEY':encKey,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
+          const resText=await res.text();
+          if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,300)}`);
+          try {
+            const json=JSON.parse(resText);
+            const code=json.ResultCode||json.result_code||'';
+            if (code&&!['0000','00000','200',''].includes(String(code))) throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage||json.result_message||''}`);
+            return _parseTilkoJson(json);
+          } catch(pe) { if(pe.message.startsWith('Tilko')) throw pe; return _parseTilkoXml(resText); }
+        }
+
+        function _parseTilkoJson(d) {
+          const r=d.realty_registry||d.RealtyInfo||d.data||d;
+          const property={address:r.Address||r.소재지번||r.지번||'',type:r.RealtyType||r.부동산구분||'',area:r.Area||r.면적||'',buildYear:r.BuildYear||r.건축년도||''};
+          const ownership=(r.GabSection||r.갑구||r.gab_section||[]).map(o=>({purpose:o.Purpose||o.목적||o.등기목적||'',date:o.Date||o.접수일자||'',owner:o.Owner||o.소유자||o.owner||''}));
+          const encumbrances=(r.EulSection||r.을구||r.eul_section||[]).map(e=>({type:e.Purpose||e.목적||e.등기목적||'',amount:e.Amount||e.채권최고액||e.전세금||'',creditor:e.Creditor||e.근저당권자||e.채권자||'',date:e.Date||e.접수일자||''})).filter(e=>e.type);
+          return _buildRegistryResult(property,ownership,encumbrances);
+        }
+
+        function _parseTilkoXml(xml) {
+          const tag=(t,src)=>{const m=(src||xml).match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`,'i'));return m?.[1]?.trim()||'';};
+          const tags=(t,src)=>[...(src||xml).matchAll(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`,'gi'))].map(m=>m[1].trim());
+          const property={address:tag('부동산소재지번')||tag('도로명주소')||tag('주소'),type:tag('부동산구분')||tag('지목'),area:tag('면적'),buildYear:tag('건축년도')};
+          const ownership=tags('갑구사항').map(s=>({purpose:s.match(/소유권이전|소유권보존|가압류|가처분/)?.[0]||'',date:s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0]||'',owner:s.match(/소유자[:\s＊*]+([^\n<,]+)/)?.[1]?.trim()||''})).filter(o=>o.owner||o.purpose);
+          const encumbrances=tags('을구사항').map(s=>({type:s.match(/근저당권설정|전세권설정|지상권설정|임차권등기/)?.[0]||'',amount:s.match(/채권최고액[:\s]+([^\n<]+)/)?.[1]?.trim()||s.match(/전세금[:\s]+([^\n<]+)/)?.[1]?.trim()||'',creditor:s.match(/(?:근저당권자|채권자|전세권자)[:\s]+([^\n<,]+)/)?.[1]?.trim()||'',date:s.match(/\d{4}[년.]\s*\d{1,2}[월.]\s*\d{1,2}/)?.[0]||''})).filter(e=>e.type);
+          return _buildRegistryResult(property,ownership,encumbrances);
+        }
+
+        function _buildRegistryResult(property,ownership,encumbrances) {
+          const totalDebt=encumbrances.reduce((s,e)=>s+(parseInt((e.amount||'').replace(/[^0-9]/g,''),10)||0),0);
+          return {property,ownership,encumbrances,totalDebt,riskSummary:encumbrances.length?`근저당·담보 ${encumbrances.length}건, 채권최고액 합계 ${totalDebt.toLocaleString()}원`:'담보·제한 없음'};
+        }
+
+        // targetLang/jeonseDeposit now passed via processingCtx (form closure bug fixed)
+        async function _slyProcessJob({jobId,uid,serviceId,filename,fileBuffer,jdText,resumeJobId,targetLang='en',jeonseDeposit=null,env,token}) {
+          const setProgress=async(p,status='processing')=>fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{progress:{integerValue:p},status:{stringValue:status}});
+          try {
+            const {parseFile,makeOutputFilename}=await import('./seolyuhana/utils/parser.js');
+            await setProgress(10);
+            const parsed=await parseFile(fileBuffer,filename,'',env);
+            if(parsed.pageCount>20) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 20)`);
+            await setProgress(25);
+            let resumeText='';
+            if(resumeJobId){const rDoc=await fsGet(token,`${FS_BASE}/sly_jobs/${resumeJobId}`);resumeText=rDoc?.fields?.originalText?.stringValue||'';}
+            const {analyzeResume,analyzeCoverLetter,rewriteCoverLetter,translateCoverLetter,generateInterviewQuestions,analyzeContract,analyzeScannedPdf,analyzeRegistry,analyzePublicDoc}=await import('./seolyuhana/services/analyze.js');
+            await setProgress(40);
+            let analysisData;
+            if(parsed.scanned){const result=await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer,serviceId,extraContext:{resumeText,jdText},env});analysisData=result.data;}
+            else {
+              const text=parsed.text;
+              if(serviceId==='resume_analysis'){const r=await analyzeResume({text,jdText,env});analysisData=r.data;}
+              else if(serviceId==='cover_letter_analysis'){const r=await analyzeCoverLetter({coverLetterText:text,resumeText,jdText,env});analysisData=r.data;}
+              else if(serviceId==='cover_letter_rewrite'){const r=await rewriteCoverLetter({coverLetterText:text,resumeText,jdText,env});analysisData=r.data;}
+              else if(serviceId==='cover_letter_translation'){const r=await translateCoverLetter({text,resumeText,targetLang,env});analysisData=r.data;}
+              else if(serviceId==='interview_questions'){const r=await generateInterviewQuestions({resumeText:text,coverLetterText:'',jdText,env});analysisData=r.data;}
+              else if(serviceId==='registry_analysis'){const r=await analyzeRegistry({text,jeonseDeposit,env});analysisData=r.data;}
+              else if(serviceId==='public_doc_analysis'||serviceId==='workplace_tone'||serviceId==='career_saju'||serviceId==='notice_summary'){const r=await analyzePublicDoc({text,serviceId,env});analysisData=r.data;}
+              else{const r=await analyzeContract({text,contractType:serviceId,env});analysisData=r.data;}
+            }
+            await setProgress(70);
+            const {buildDocx,buildPdf}=await import('./seolyuhana/output/builder.js');
+            const docxBuffer=await buildDocx(analysisData,serviceId,filename,parsed.text||'');
+            await setProgress(85);
+            let pdfBuffer=null;
+            try{pdfBuffer=await buildPdf(analysisData,serviceId,filename,env);}catch{}
+            await setProgress(95);
+            await env.DONWAY_ASSETS.put(`sly_job_${jobId}_docx`,docxBuffer,{expirationTtl:86400});
+            if(pdfBuffer) await env.DONWAY_ASSETS.put(`sly_job_${jobId}_pdf`,pdfBuffer,{expirationTtl:86400});
+            await env.DONWAY_ASSETS.put(`sly_result_${jobId}`,JSON.stringify(analysisData),{expirationTtl:86400});
+            const outputDocx=makeOutputFilename(filename,'docx');
+            const summary=analysisData.overallComment||analysisData.riskSummary||'분석이 완료되었습니다.';
+            await fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{status:{stringValue:'completed'},progress:{integerValue:100},summary:{stringValue:summary.slice(0,300)},originalText:{stringValue:(parsed.text||'').slice(0,5000)},outputFilename:{stringValue:outputDocx},downloadUrls:{mapValue:{fields:{docx:{stringValue:`/api/seolyuhana/download/${jobId}?type=docx`},...(pdfBuffer?{pdf:{stringValue:`/api/seolyuhana/download/${jobId}?type=pdf`}}:{})}}},completedAt:{stringValue:new Date().toISOString()}});
+          } catch(err) {
+            await fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{status:{stringValue:'failed'},error:{stringValue:err.message||'알 수 없는 오류'}}).catch(()=>{});
+          }
+        }
+
+        // POST /api/seolyuhana/analyze
+        if (path === '/api/seolyuhana/analyze' && method === 'POST') {
+          try {
+            const _authUser2 = await verifyFirebaseToken(request, env);
+            if (!_authUser2) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401,headers});
+            const uid = _authUser2.localId || _authUser2;
+            const userEmail2 = _authUser2.email || '';
+            const isSuperAdmin2 = _SUPERADMIN_EMAILS.includes(userEmail2);
+            const form = await request.formData();
+            const file = form.get('file');
+            const serviceId = form.get('serviceId') || '';
+            const jdText = form.get('jdText') || '';
+            const resumeJobId = form.get('resumeJobId') || '';
+            const targetLang = form.get('targetLang') || 'en';
+            const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
+            const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','workplace_tone','career_saju','notice_summary','insurance_scan'];
+            const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:39900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,workplace_tone:2900,career_saju:9900,notice_summary:2900,insurance_scan:14900};
+            if (!VALID_SERVICES.includes(serviceId)) return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400,headers});
+            if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400,headers});
+            const token = await getAccessToken(env);
+            const svcDoc = await fsGet(token, `${FS_BASE}/sly_service_config/${serviceId}`);
+            const pointCost = (svcDoc?.fields?.pointCost?.integerValue|0) || SERVICE_COSTS[serviceId] || 0;
+            const enabled   = svcDoc?.fields ? (svcDoc.fields.enabled?.booleanValue ?? true) : true;
+            if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503,headers});
+            const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+            const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
+            if (!isSuperAdmin2 && balance < pointCost) return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402,headers});
+            const jobId = crypto.randomUUID();
+            const filename = file.name || 'document';
+            await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {uid:{stringValue:uid},serviceId:{stringValue:serviceId},filename:{stringValue:filename},status:{stringValue:'processing'},progress:{integerValue:0},pointCost:{integerValue:pointCost},createdAt:{stringValue:new Date().toISOString()},jdText:{stringValue:jdText},resumeJobId:{stringValue:resumeJobId}});
+            if (!isSuperAdmin2) {
+              const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
+              if (!txRes.ok) { await fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}}); return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500,headers}); }
+              const histId = crypto.randomUUID();
+              await fsPatch(token,`${FS_BASE}/sly_point_history/${histId}`,{uid:{stringValue:uid},type:{stringValue:'spend'},amount:{integerValue:-pointCost},serviceId:{stringValue:serviceId},jobId:{stringValue:jobId},balanceAfter:{integerValue:balance-pointCost},createdAt:{stringValue:new Date().toISOString()}});
+            }
+            const fileBuffer = await file.arrayBuffer();
+            const processingCtx = {jobId,uid,serviceId,filename,fileBuffer,jdText,resumeJobId,targetLang,jeonseDeposit,env,token};
+            ctx.waitUntil(_slyProcessJob(processingCtx));
+            return Response.json({ok:true,jobId,estimatedSec:30,pointsCharged:pointCost,balance:balance-pointCost},{headers});
+          } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
+        }
+
+        // GET /api/seolyuhana/result/:jobId
+        if (path.startsWith('/api/seolyuhana/result/') && method === 'GET') {
+          const jobId = path.replace('/api/seolyuhana/result/', '');
+          try {
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const uid = _au.localId || _au;
+            const token = await getAccessToken(env);
+            const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
+            if (!doc?.fields) return Response.json({ok:false,error:'잡을 찾을 수 없습니다.'},{status:404,headers});
+            const f = doc.fields;
+            const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+            if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403,headers});
+            const status_r = f.status?.stringValue||'unknown';
+            let result_r = null;
+            if (status_r === 'completed') {
+              const rj = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`);
+              if (rj) try { result_r = JSON.parse(rj); } catch {}
+            }
+            return Response.json({ok:true,status:status_r,progress:f.progress?.integerValue|0||0,summary:f.summary?.stringValue||null,result:result_r,downloadUrls:f.downloadUrls?.mapValue?.fields?{docx:f.downloadUrls.mapValue.fields.docx?.stringValue,pdf:f.downloadUrls.mapValue.fields.pdf?.stringValue}:null,error:f.error?.stringValue||null,completedAt:f.completedAt?.stringValue||null},{headers});
+          } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
+        }
+
+        // GET /api/seolyuhana/download/:jobId
+        if (path.startsWith('/api/seolyuhana/download/') && method === 'GET') {
+          const jobId = path.replace('/api/seolyuhana/download/', '');
+          const fileType = url.searchParams.get('type') || 'docx';
+          try {
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return new Response('Unauthorized', {status:401});
+            const uid = _au.localId || _au;
+            const token = await getAccessToken(env);
+            const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
+            if (!doc?.fields) return new Response('Not found', {status:404});
+            const f = doc.fields;
+            const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+            if (!isSA && f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
+            if (f.status?.stringValue !== 'completed') return new Response('Not ready', {status:202});
+            const kvKey = `sly_job_${jobId}_${fileType}`;
+            const fileData = await env.DONWAY_ASSETS.get(kvKey, {type:'arrayBuffer'});
+            if (!fileData) return new Response('File not found', {status:404});
+            const mime = fileType === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            const outputFilename = f.outputFilename?.stringValue || `analysis.${fileType}`;
+            return new Response(fileData, {headers:{'Content-Type':mime,'Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(outputFilename)}`}});
+          } catch(e) { return new Response(e.message, {status:500}); }
+        }
+
+        // GET /api/seolyuhana/points
+        if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
+          try {
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const uid = _au.localId || _au;
+            const token = await getAccessToken(env);
+            const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+            const balance = doc?.fields?.balance?.integerValue|0 || 0;
+            const histRes = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'sly_point_history'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],limit:5}})});
+            const histRows = await histRes.json();
+            const history = (Array.isArray(histRows)?histRows:[]).filter(r=>r.document).map(r=>{const f=r.document.fields||{};return{type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};});
+            return Response.json({ok:true,balance,history},{headers});
+          } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
+        }
+
+        // POST /api/seolyuhana/point-request
+        if (path === '/api/seolyuhana/point-request' && method === 'POST') {
+          try {
+            const _au = await verifyFirebaseToken(request, env);
+            if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+            const uid = _au.localId || _au;
+            const body = await request.json();
+            const depositorName = (body.depositorName||'').trim();
+            const amount = parseInt(body.amount) || 0;
+            if (!depositorName) return Response.json({ok:false,error:'입금자명을 입력하세요.'},{status:400,headers});
+            if (amount < 10000) return Response.json({ok:false,error:'최소 충전 금액은 10,000원입니다.'},{status:400,headers});
+            const token = await getAccessToken(env);
+            const reqId = crypto.randomUUID();
+            await fsPatch(token,`${FS_BASE}/sly_point_requests/${reqId}`,{uid:{stringValue:uid},depositorName:{stringValue:depositorName},amount:{integerValue:amount},points:{integerValue:amount},status:{stringValue:'pending'},createdAt:{stringValue:new Date().toISOString()}});
+            return Response.json({ok:true,reqId,points:amount,message:`${depositorName}님 이름으로 ${amount.toLocaleString()}원 입금 후 24시간 내 포인트가 충전됩니다.`},{headers});
+          } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
+        }
+
+        // POST /api/seolyuhana/point-approve (admin)
+        if (path === '/api/seolyuhana/point-approve' && method === 'POST') {
+          const _paAdmin = await requireAdmin(request, env);
+          if (!_paAdmin) return Response.json({ok:false,error:'관리자 인증 필요'},{status:401,headers});
+          try {
+            const body = await request.json();
+            const reqId = body.reqId;
+            if (!reqId) return Response.json({ok:false,error:'reqId 필요'},{status:400,headers});
+            const token = await getAccessToken(env);
+            const reqDoc = await fsGet(token,`${FS_BASE}/sly_point_requests/${reqId}`);
+            if (!reqDoc?.fields) return Response.json({ok:false,error:'신청을 찾을 수 없습니다.'},{status:404,headers});
+            const f = reqDoc.fields;
+            if (f.status?.stringValue !== 'pending') return Response.json({ok:false,error:'이미 처리된 신청입니다.'},{status:409,headers});
+            const uid = f.uid?.stringValue;
+            const points = parseInt(f.points?.integerValue) || 0;
+            await Promise.all([
+              fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:points}}]}}]})}),
+              fsPatch(token,`${FS_BASE}/sly_point_requests/${reqId}`,{status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}),
+              fsPatch(token,`${FS_BASE}/sly_point_history/${crypto.randomUUID()}`,{uid:{stringValue:uid},type:{stringValue:'charge'},amount:{integerValue:points},reqId:{stringValue:reqId},createdAt:{stringValue:new Date().toISOString()}})
+            ]);
+            return Response.json({ok:true,uid,points,message:`${points.toLocaleString()}P 충전 완료`},{headers});
+          } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
+        }
+
+        // POST /api/seolyuhana/biz-status
+        if (path === '/api/seolyuhana/biz-status' && method === 'POST') {
+          const _bizUser = await verifyFirebaseToken(request, env);
+          if (!_bizUser) return Response.json({error:'인증 필요'},{status:401,headers});
+          try {
+            const {bizNum} = await request.json();
+            if (!bizNum) return Response.json({error:'사업자번호 필요'},{status:400,headers});
+            const cleanBiz = bizNum.replace(/[-\s]/g,'');
+            if (!/^\d{10}$/.test(cleanBiz)) return Response.json({error:'유효하지 않은 사업자번호 형식'},{status:400,headers});
+            const apiKey = env.BIZ_API_KEY;
+            if (!apiKey) return Response.json({error:'BIZ_API_KEY 미설정'},{status:500,headers});
+            const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({b_no:[cleanBiz]})});
+            const data = await r.json().catch(()=>({}));
+            const item = data?.data?.[0];
+            if (!item) return Response.json({error:'조회 결과 없음'},{status:404,headers});
+            const statusLabel = item.b_stt==='01'?'계속사업자':item.b_stt==='02'?'휴업자':item.b_stt==='03'?'폐업자':'알 수 없음';
+            const taxLabel = item.tax_type==='01'?'일반과세자':item.tax_type==='02'?'간이과세자':item.tax_type==='03'?'면세사업자':item.tax_type;
+            return Response.json({ok:true,bizNum:cleanBiz,status:statusLabel,taxType:taxLabel,tradeNm:item.trade_nm||'',endDt:item.end_dt||'',raw:item},{status:200,headers});
+          } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+        }
+
+        // POST /api/seolyuhana/registry-direct
+        if (path === '/api/seolyuhana/registry-direct' && method === 'POST') {
+          try {
+            const _ru = await verifyFirebaseToken(request, env);
+            if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
+            const {address, regType='all', pin} = await request.json();
+            if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
+            let stdAddr=address, pnuHint=pin||null;
+            const vkey = env.VWORLD_API_KEY;
+            if (vkey) {
+              try { const vr=await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`); if(vr.ok){const vd=await vr.json();const rs=vd?.response?.result;if(rs){stdAddr=rs.refined?.text||address;}} } catch(_){}
+            }
+            const tilkoKey=env.TILKO_API_KEY;
+            if (tilkoKey) {
+              try {
+                const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
+                return Response.json({ok:true,mode:'direct',stdAddr,...data},{status:200,headers});
+              } catch(te) {
+                console.error('[tilko-registry]', te.message);
+                if (te.message.includes('env 미설정')||te.message.includes('고유번호')) {
+                  return Response.json({ok:false,mode:'link',error:te.message,stdAddr,irosUrl:'https://www.iros.go.kr'},{status:200,headers});
+                }
+              }
+            }
+            const irosUrl='https://www.iros.go.kr';
+            const missing=[];
+            if(!tilkoKey) missing.push('TILKO_API_KEY'); if(!tilkoRsa) missing.push('TILKO_RSA_PUBKEY'); if(!env.IROS_USER_ID) missing.push('IROS_USER_ID'); if(!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
+            return Response.json({ok:true,mode:'link',stdAddr,irosUrl,guide:missing.length?`직접 조회 미설정 항목: ${missing.join(', ')}`:'Tilko API 오류로 링크 모드 전환'},{status:200,headers});
+          } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+        }
+
+        // POST /api/seolyuhana/registry-link
+        if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
+          const _regUser = await verifyFirebaseToken(request, env);
+          if (!_regUser) return Response.json({error:'인증 필요'},{status:401,headers});
+          try {
+            const {address, regType='all'} = await request.json();
+            if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
+            const vkey=env.VWORLD_API_KEY; let pnu=null, stdAddr=address;
+            if (vkey) { const vUrl=`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`; const vr=await fetch(vUrl).catch(()=>null); if(vr?.ok){const vd=await vr.json().catch(()=>({}));const result=vd?.response?.result;if(result){stdAddr=result.refined?.text||address;pnu=result.structure?.pnu;}} }
+            const irosUrl=`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml`;
+            const typeLabels={all:'전체현황',ownership:'소유현황',mortgage:'근저당·담보',lease:'전세권·임차권'};
+            return Response.json({ok:true,stdAddr,pnu,irosUrl,regType,typeLabel:typeLabels[regType]||'전체현황',guide:'인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'},{status:200,headers});
+          } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
+        }
+      }
+
       // ── FILO PWA 아이콘 + 매니페스트 ────────────────────────────────────────
       if (path === '/filo-manifest.json' || path === '/mbtico-manifest.json') {
         return new Response(JSON.stringify({
@@ -5710,6 +6049,49 @@ ${JSON.stringify(postSummary)}
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
+      // /api/admin/companies — Claude 전용: 가입 완료된 companies 조회
+      if (path === '/api/admin/companies' && method === 'GET') {
+        const adminKey = request.headers.get('X-Admin-Key') || '';
+        if (!adminKey || adminKey !== (env.CLAUDE_ADMIN_KEY || '')) {
+          return Response.json({ok:false,error:'인증 필요'},{status:401});
+        }
+        try {
+          const token = await getAccessToken(env);
+          const platform = new URL(request.url).searchParams.get('platform'); // donway/filo/yongcha
+          const query = {structuredQuery:{
+            from:[{collectionId:'companies'}],
+            orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],
+            limit:50
+          }};
+          if (platform) {
+            query.structuredQuery.where = {fieldFilter:{
+              field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}
+            }};
+          }
+          const res = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify(query)
+          });
+          const rows = await res.json();
+          const items = (Array.isArray(rows)?rows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            const id=r.document.name.split('/').pop();
+            return {
+              id,
+              name:f.name?.stringValue||f.company?.stringValue||'',
+              email:f.email?.stringValue||'',
+              phone:f.phone?.stringValue||'',
+              platform:f.platform?.stringValue||'',
+              status:f.status?.stringValue||'',
+              plan:f.plan?.stringValue||'',
+              createdAt:f.createdAt?.stringValue||f.joinedAt?.stringValue||''
+            };
+          });
+          return Response.json({ok:true,items,count:items.length});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
       // /api/error-resolve — 오류 해결됨 표시 (Routine이 수정 후 호출)
       if (path === '/api/error-resolve' && method === 'POST') {
         const _erAdmin = await requireAdmin(request, env);
@@ -7771,6 +8153,11 @@ async function _submit(){
 
         // ★ mbtico.kr → 엠비티아이 배송앱
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
+      // Firebase Auth 핸들러 프록시 (signInWithRedirect 크로스도메인 쿠키 이슈 해결)
+      if (path.startsWith('/__/auth/')) {
+        const firebaseUrl = 'https://mbti-logistics.firebaseapp.com' + path + (url.search || '');
+        return fetch(firebaseUrl, { method: request.method, headers: request.headers, body: request.body });
+      }
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
         const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
@@ -8079,7 +8466,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             {src:'/scan-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
           ]
         };
-        return new Response(JSON.stringify(_scanManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
+        return new Response(JSON.stringify(_scanManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'}});
       }
       if (path === '/scan-icon-192.png') return serveKVFile(env, 'scan-icon-192.png', 'image/png');
       if (path === '/scan-icon-512.png') return serveKVFile(env, 'scan-icon-512.png', 'image/png');
@@ -8091,33 +8478,38 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // POST /api/seolyuhana/analyze — 파일 업로드 + 분석 시작 (비동기, jobId 반환)
       if (path === '/api/seolyuhana/analyze' && method === 'POST') {
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401});
+          const _authUser = await verifyFirebaseToken(request, env);
+          if (!_authUser) return Response.json({ok:false,error:'로그인이 필요합니다.'},{status:401});
+          const uid = _authUser.localId || _authUser;
+          const userEmail = _authUser.email || '';
+          const isSuperAdmin = _SUPERADMIN_EMAILS.includes(userEmail);
 
           const form = await request.formData();
           const file = form.get('file');
           const serviceId = form.get('serviceId') || '';
           const jdText = form.get('jdText') || '';
           const resumeJobId = form.get('resumeJobId') || ''; // 이력서 재사용
+          const targetLang = form.get('targetLang') || 'en';
+          const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
-          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract'];
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis'];
+          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:39900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,workplace_tone:2900,career_saju:9900,notice_summary:2900,insurance_scan:14900};
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
           if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400});
 
-          // 서비스 설정 조회 (포인트·페이지 제한)
+          // 서비스 설정 조회 (포인트·페이지 제한) — Firestore 없으면 하드코딩 가격 폴백
           const token = await getAccessToken(env);
           const svcDoc = await fsGet(token, `${FS_BASE}/sly_service_config/${serviceId}`);
-          if (!svcDoc?.fields) return Response.json({ok:false,error:'서비스 설정을 찾을 수 없습니다.'},{status:404});
-          const pointCost = svcDoc.fields.pointCost?.integerValue|0 || 0;
-          const enabled   = svcDoc.fields.enabled?.booleanValue ?? false;
+          const pointCost = (svcDoc?.fields?.pointCost?.integerValue|0) || SERVICE_COSTS[serviceId] || 0;
+          const enabled   = svcDoc?.fields ? (svcDoc.fields.enabled?.booleanValue ?? true) : true;
           if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503});
 
-          // 포인트 잔액 확인
+          // 포인트 잔액 확인 (슈퍼어드민 바이패스)
           const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
           const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
-          if (balance < pointCost) {
+          if (!isSuperAdmin && balance < pointCost) {
             return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402});
           }
 
@@ -8136,24 +8528,24 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             resumeJobId:   { stringValue: resumeJobId }
           });
 
-          // 포인트 차감 (runTransaction)
-          const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
-          if (!txRes.ok) {
-            await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
-            return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+          // 포인트 차감 (슈퍼어드민 바이패스)
+          if (!isSuperAdmin) {
+            const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
+            if (!txRes.ok) {
+              await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
+              return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+            }
+            const histId = crypto.randomUUID();
+            await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
+              uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
+              serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
+              balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
+            });
           }
-
-          // 포인트 차감 이력
-          const histId = crypto.randomUUID();
-          await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
-            uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
-            serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
-            balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
-          });
 
           // 비동기 처리 (waitUntil 사용)
           const fileBuffer = await file.arrayBuffer();
-          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token};
+          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env, token};
           ctx.waitUntil(_slyProcessJob(processingCtx));
 
           return Response.json({
@@ -8171,18 +8563,27 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path.startsWith('/api/seolyuhana/result/') && method === 'GET') {
         const jobId = path.replace('/api/seolyuhana/result/', '');
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
           if (!doc?.fields) return Response.json({ok:false,error:'잡을 찾을 수 없습니다.'},{status:404});
           const f = doc.fields;
-          if (f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+          if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          const status = f.status?.stringValue || 'unknown';
+          let result = null;
+          if (status === 'completed') {
+            const resultJson = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`);
+            if (resultJson) try { result = JSON.parse(resultJson); } catch {}
+          }
           return Response.json({
             ok:true,
-            status:    f.status?.stringValue || 'unknown',
+            status,
             progress:  f.progress?.integerValue|0 || 0,
             summary:   f.summary?.stringValue || null,
+            result,
             downloadUrls: f.downloadUrls?.mapValue?.fields ? {
               docx: f.downloadUrls.mapValue.fields.docx?.stringValue,
               pdf:  f.downloadUrls.mapValue.fields.pdf?.stringValue
@@ -8198,13 +8599,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         const jobId = path.replace('/api/seolyuhana/download/', '');
         const fileType = new URL(request.url).searchParams.get('type') || 'docx';
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return new Response('Unauthorized', {status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return new Response('Unauthorized', {status:401});
+          const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_jobs/${jobId}`);
           if (!doc?.fields) return new Response('Not found', {status:404});
           const f = doc.fields;
-          if (f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
+          const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
+          if (!isSA && f.uid?.stringValue !== uid) return new Response('Forbidden', {status:403});
           if (f.status?.stringValue !== 'completed') return new Response('Not ready', {status:202});
 
           // KV에서 파일 가져오기
@@ -8227,11 +8630,22 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // GET /api/seolyuhana/points — 포인트 잔액 조회
       if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const uid = _au.localId || _au;
           const token = await getAccessToken(env);
           const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
-          const balance = doc?.fields?.balance?.integerValue|0 || 0;
+          let balance = doc?.fields?.balance?.integerValue|0 || 0;
+          let signupBonus = false;
+          if (!doc?.fields) {
+            // 신규 가입: 2,900P 무료 지급
+            const SIGNUP_BONUS = 2900;
+            await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:SIGNUP_BONUS},createdAt:{stringValue:new Date().toISOString()}});
+            const bId = crypto.randomUUID();
+            await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:SIGNUP_BONUS},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:SIGNUP_BONUS},createdAt:{stringValue:new Date().toISOString()}});
+            balance = SIGNUP_BONUS;
+            signupBonus = true;
+          }
 
           // 최근 이력 5건
           const histRes = await fetch(`${FS_BASE}:runQuery`, {
@@ -8249,15 +8663,16 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             const f=r.document.fields||{};
             return {type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};
           });
-          return Response.json({ok:true, balance, history});
+          return Response.json({ok:true, balance, history, signupBonus});
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
       // POST /api/seolyuhana/point-request — 포인트 충전 신청 (계좌이체)
       if (path === '/api/seolyuhana/point-request' && method === 'POST') {
         try {
-          const uid = await verifyFirebaseToken(request, env);
-          if (!uid) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
+          const uid = _au.localId || _au;
           const body = await request.json();
           const depositorName = (body.depositorName||'').trim();
           const amount = parseInt(body.amount) || 0;
@@ -8307,7 +8722,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
       // POST /api/seolyuhana/biz-status — 국세청 사업자 상태조회
       if (path === '/api/seolyuhana/biz-status' && method === 'POST') {
-        const _bizUser = await requireAuth(request, env);
+        const _bizUser = await verifyFirebaseToken(request, env);
         if (!_bizUser) return Response.json({error:'인증 필요'},{status:401,headers});
         try {
           const { bizNum } = await request.json();
@@ -8316,14 +8731,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (!/^\d{10}$/.test(cleanBiz)) return Response.json({error:'유효하지 않은 사업자번호 형식'},{status:400,headers});
           const apiKey = env.BIZ_API_KEY;
           if (!apiKey) return Response.json({error:'BIZ_API_KEY 미설정'},{status:500,headers});
-          const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${encodeURIComponent(apiKey)}`, {
+          const r = await fetch(`https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${apiKey}`, {
             method: 'POST',
             headers: {'Content-Type':'application/json','Accept':'application/json'},
             body: JSON.stringify({ b_no: [cleanBiz] })
           });
           const data = await r.json().catch(() => ({}));
           const item = data?.data?.[0];
-          if (!item) return Response.json({error:'조회 결과 없음'},{status:404,headers});
+          if (!item) return Response.json({error:'조회 결과 없음', debug: {status:r.status, matchCount:data?.data?.length??0, msg:data?.match_cnt||data?.result||''} },{status:404,headers});
           // Claude로 결과 요약
           const statusLabel = item.b_stt === '01' ? '계속사업자' : item.b_stt === '02' ? '휴업자' : item.b_stt === '03' ? '폐업자' : '알 수 없음';
           const taxLabel = item.tax_type === '01' ? '일반과세자' : item.tax_type === '02' ? '간이과세자' : item.tax_type === '03' ? '면세사업자' : item.tax_type;
@@ -8350,39 +8765,60 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       function _bufB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
 
       async function _tilkoFetchRegistry(address, tilkoPinHint, regType, env) {
-        const apiKey = env.TILKO_API_KEY;
-        const rsaPubKeyB64 = env.TILKO_RSA_PUBKEY;
-        const irosId = env.IROS_USER_ID;
-        const irosPw = env.IROS_USER_PW;
-        const emoneyNo1 = env.IROS_EMONEY_NO1;
-        const emoneyNo2 = env.IROS_EMONEY_NO2;
-        const emoneyPwd = env.IROS_EMONEY_PWD;
-        if (!irosId || !irosPw || !emoneyNo1 || !emoneyNo2 || !emoneyPwd) {
-          throw new Error('인터넷등기소 계정/전자지불카드 env 미설정 (IROS_USER_ID, IROS_USER_PW, IROS_EMONEY_NO1/NO2/PWD)');
+        const apiKey   = env.TILKO_API_KEY;
+        const irosId   = env.IROS_USER_ID;
+        const irosPw   = env.IROS_USER_PW;
+        const emoneyNo1Raw = env.IROS_EMONEY_NO1 || ''; // 전체 카드번호 앞 8자리 (영문포함)
+        const emoneyNo2Raw = env.IROS_EMONEY_NO2 || ''; // 나머지 뒤 4자리
+        const emoneyPwd    = env.IROS_EMONEY_PWD  || '';
+        if (!apiKey)  throw new Error('TILKO_API_KEY 미설정');
+        if (!irosId || !irosPw) throw new Error('인터넷등기소 계정 env 미설정 (IROS_USER_ID, IROS_USER_PW)');
+
+        const hasEmoney = emoneyNo1Raw && emoneyNo2Raw && emoneyPwd;
+
+        // 1) Tilko 서버에서 RSA 공개키 동적 조회
+        const pkRes = await fetch(`https://api.tilko.net/api/Auth/GetPublicKey?APIkey=${encodeURIComponent(apiKey)}`,
+          { signal: AbortSignal.timeout(10000) });
+        if (!pkRes.ok) throw new Error(`Tilko 공개키 조회 실패: ${pkRes.status}`);
+        const pkJson = await pkRes.json();
+        // 응답 구조 탐색 (Response.PublicKey, publicKey, Result.PublicKey, data 등)
+        const rsaPubPem = pkJson.PublicKey || pkJson.publicKey || pkJson.Result?.PublicKey || pkJson.result?.PublicKey || pkJson.data?.PublicKey || (typeof pkJson === 'string' ? pkJson : '');
+        if (!rsaPubPem) throw new Error(`Tilko 공개키 응답 비어있음: ${JSON.stringify(pkJson).slice(0,200)}`);
+
+        // 2) AES-128 세션키 생성 + IV = 올 제로 (Tilko 사양)
+        const rawAesBuf = crypto.getRandomValues(new Uint8Array(16));
+        const iv = new Uint8Array(16); // 16바이트 모두 0x00
+        const aesKey = await crypto.subtle.importKey('raw', rawAesBuf, {name:'AES-CBC'}, false, ['encrypt']);
+
+        // 3) RSA-PKCS1v15로 AES키 암호화 → ENC-KEY 헤더 (Tilko = PKCS1 v1.5, SHA-1 아님)
+        // PEM에서 SPKI 바이트 추출
+        const pemBody = rsaPubPem.replace(/-----[^-]+-----/g,'').replace(/\s/g,'');
+        const spki = _b64Buf(pemBody);
+        // PKCS1 v1.5 RSA (Tilko 샘플 코드: rsaCSP.Encrypt(aesKey, false) = PKCS1v15)
+        // WebCrypto는 PKCS1-v1_5 encrypt 지원 (RSA-OAEP와 다름)
+        let encKey;
+        try {
+          const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'}, false, ['encrypt']);
+          const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAesBuf);
+          encKey = _bufB64(encAes);
+        } catch(_) {
+          // RSA-PKCS1v15 폴백 (일부 환경)
+          const rsaKey2 = await crypto.subtle.importKey('spki', spki, {name:'RSASSA-PKCS1-v1_5',hash:'SHA-1'}, false, ['verify']).catch(()=>null);
+          if (!rsaKey2) throw new Error('RSA 키 임포트 실패');
+          encKey = _bufB64(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', rsaKey2, rawAesBuf));
         }
 
-        // 1) AES-128 세션키 + IV 생성
-        const aesKey = await crypto.subtle.generateKey({name:'AES-CBC',length:128},true,['encrypt','decrypt']);
-        const iv = crypto.getRandomValues(new Uint8Array(16));
-        const rawAes = await crypto.subtle.exportKey('raw', aesKey);
-
-        // 2) RSA-OAEP로 AES키 암호화 → ENC-KEY 헤더
-        const spki = _b64Buf(rsaPubKeyB64);
-        const rsaKey = await crypto.subtle.importKey('spki', spki, {name:'RSA-OAEP',hash:'SHA-1'},false,['encrypt']);
-        const encAes = await crypto.subtle.encrypt({name:'RSA-OAEP'}, rsaKey, rawAes);
-        const encKey = _bufB64(encAes);
-
-        // 3) 필드별 AES-CBC 암호화 헬퍼
+        // 4) AES-CBC 암호화 헬퍼 (IV = 올제로)
         const enc = async (val) => {
-          const ct = await crypto.subtle.encrypt({name:'AES-CBC',iv}, aesKey, new TextEncoder().encode(String(val)));
+          const ct = await crypto.subtle.encrypt({name:'AES-CBC', iv}, aesKey, new TextEncoder().encode(String(val)));
           return _bufB64(ct);
         };
-        // 일부 필드(EmoneyNo*)는 값을 Base64 인코딩 후 AES 암호화
+        // Emoney 필드: Base64 인코딩 후 AES 암호화 (Tilko 사양)
         const encB64 = async (val) => enc(btoa(String(val)));
 
-        // 4) Tilko 주소→고유번호 검색 (선행 API, 인증 불필요)
+        // 5) 주소 → 고유번호(Pin) 검색
         let pin = (tilkoPinHint || '').replace(/-/g,'');
-        if (!pin || pin.length !== 14) {
+        if (!pin || pin.length < 13) {
           try {
             const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
               method: 'POST',
@@ -8391,41 +8827,49 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               signal: AbortSignal.timeout(15000)
             });
             if (addrRes.ok) {
-              const ad = await addrRes.json().catch(()=>({}));
-              const first = (ad.realty_list || ad.RealtyList || [])[0];
-              pin = (first?.pin || first?.Pin || first?.고유번호 || '').replace(/-/g,'');
+              const ad = await addrRes.json().catch(() => ({}));
+              const first = (ad.realty_list || ad.RealtyList || ad.Result || [])[0];
+              pin = (first?.pin || first?.Pin || first?.고유번호 || '').replace(/-/g, '');
+            } else {
+              const adText = await addrRes.text();
+              let ad = {};
+              try { ad = JSON.parse(adText); } catch(_) {}
+              throw new Error(`주소검색 HTTP${addrRes.status} | 키:[${Object.keys(ad).join(',')}] | ${adText.slice(0,400)}`);
             }
-          } catch(_) {}
+          } catch(ae) { if (ae.message.startsWith('주소검색')) throw ae; }
         }
-        if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (주소: ${address}). 14자리 고유번호를 직접 입력해주세요.`);
+        if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (${address}). 14자리 고유번호를 직접 입력해주세요.`);
 
-        // 5) 등기부 조회 요청
-        const absCls = (regType === 'current') ? '11' : '12'; // 11=현재유효, 12=말소사항포함
+        // 6) 등기부 조회 — 공식 Body 구조 (Auth.UserId / Auth.UserPassword)
         const body = {
-          Auth: { UserId: await enc(irosId), UserPassword: await enc(irosPw) },
-          Pin: await enc(pin),
-          EmoneyNo1: await encB64(emoneyNo1),
-          EmoneyNo2: await encB64(emoneyNo2),
-          EmoneyPwd: await encB64(emoneyPwd),
-          CmortFlag: await enc('N'),
-          TradeSeqFlag: await enc('N'),
-          AbsCls: await enc(absCls),
-          RgsMttrSmry: ''
+          Auth: {
+            UserId:       await enc(irosId),
+            UserPassword: await enc(irosPw)
+          },
+          Pin:          await enc(pin),
+          EmoneyNo1:    hasEmoney ? await encB64(emoneyNo1Raw) : await enc(''),
+          EmoneyNo2:    hasEmoney ? await encB64(emoneyNo2Raw) : await enc(''),
+          EmoneyPwd:    hasEmoney ? await encB64(emoneyPwd)    : await enc(''),
+          CmortFlag:    '',
+          TradeSeqFlag: '',
+          AbsCls:       '',
+          RgsMttrSmry:  ''
         };
 
         const res = await fetch('https://api.tilko.net/api/v2.0/Iros2IdLogin/RealtyRegistry', {
           method: 'POST',
           headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
-          body: JSON.stringify(body), signal: AbortSignal.timeout(30000)
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(30000)
         });
         const resText = await res.text();
-        if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,200)}`);
+        if (!res.ok) throw new Error(`Tilko ${res.status}: ${resText.slice(0,300)}`);
 
-        // 6) 응답 파싱 (JSON 우선, XML 폴백)
+        // 7) 응답 파싱
         try {
           const json = JSON.parse(resText);
           const code = json.ResultCode || json.result_code || '';
-          if (code && code !== '0000' && code !== '00000' && code !== '200') {
+          if (code && !['0000','00000','200',''].includes(String(code))) {
             throw new Error(`Tilko 오류 ${code}: ${json.ResultMessage || json.result_message || ''}`);
           }
           return _parseTilkoJson(json);
@@ -8492,59 +8936,177 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
       // POST /api/seolyuhana/registry-direct — Tilko API 등기부 직접 조회
       if (path === '/api/seolyuhana/registry-direct' && method === 'POST') {
-        const _ru = await requireAuth(request, env);
-        if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
         try {
+        const _ru = await verifyFirebaseToken(request, env);
+        if (!_ru) return Response.json({error:'인증 필요'},{status:401,headers});
           const { address, regType = 'all', pin } = await request.json();
           if (!address) return Response.json({error:'주소 필요'},{status:400,headers});
 
           let stdAddr = address, pnuHint = pin || null;
+          // 주소 정규화: 광역시·특별시 약칭 확장 + 번지 앞 공백
+          stdAddr = stdAddr
+            .replace(/^서울시\b/, '서울특별시').replace(/^부산시\b/, '부산광역시')
+            .replace(/^대구시\b/, '대구광역시').replace(/^인천시\b/, '인천광역시')
+            .replace(/^대전시\b/, '대전광역시').replace(/^울산시\b/, '울산광역시')
+            .replace(/^세종시\b/, '세종특별자치시')
+            .replace(/([가-힣로길])(\d)/, '$1 $2'); // 도로명 뒤 번지 공백
           const vkey = env.VWORLD_API_KEY;
           if (vkey) {
             try {
-              const vr = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(address)}&refine=true&simple=false&format=json&type=road&key=${vkey}`);
+              const vr = await fetch(`https://api.vworld.kr/req/address?service=address&request=getcoord&version=2.0&crs=epsg:4326&address=${encodeURIComponent(stdAddr)}&refine=true&simple=false&format=json&type=road&key=${vkey}`);
               if (vr.ok) {
                 const vd = await vr.json();
                 const rs = vd?.response?.result;
-                if (rs) { stdAddr = rs.refined?.text || address; }
+                if (rs) { stdAddr = rs.refined?.text || stdAddr; }
               }
             } catch(_) {}
           }
 
+          let tilkoErr = null;
           const tilkoKey = env.TILKO_API_KEY;
-          const tilkoRsa = env.TILKO_RSA_PUBKEY;
-          if (tilkoKey && tilkoRsa) {
+          if (tilkoKey && pnuHint) {
+            // PIN 직접 제공된 경우: Tilko 바로 조회 (주소 검색 불필요)
             try {
               const data = await _tilkoFetchRegistry(stdAddr, pnuHint, regType, env);
               return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
             } catch(te) {
+              console.error('[tilko-registry-pin]', te.message);
+              tilkoErr = te.message;
+            }
+          } else if (tilkoKey) {
+            // PIN 없음: Tilko 주소검색 시도 (RealtyAddrSrch — 플랜에 따라 500 반환 가능)
+            try {
+              const data = await _tilkoFetchRegistry(stdAddr, null, regType, env);
+              return Response.json({ok:true, mode:'direct', stdAddr, ...data}, {status:200,headers});
+            } catch(te) {
               console.error('[tilko-registry]', te.message);
-              // 설정 오류는 바로 반환
-              if (te.message.includes('env 미설정') || te.message.includes('고유번호')) {
-                return Response.json({ok:false, mode:'link', error: te.message,
-                  stdAddr, irosUrl:`https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`
-                },{status:200,headers});
-              }
+              tilkoErr = te.message;
+              // 주소검색 실패 시 Oracle fallback으로 계속
             }
           }
 
-          // Fallback: 인터넷등기소 링크
-          const irosUrl = `https://www.iros.go.kr/pos9/jsp/main/mainHtml.jsp?sch_gubun=02&searchRoadBld=${encodeURIComponent(stdAddr)}`;
+          // Fallback 1: Oracle 서버 Playwright로 IROS 주소 → PIN 검색 후 Tilko RealtyRegistry 조회
+          const _rawOUrl = (env.ORACLE_SERVER_URL || '');
+          const _oMatch = _rawOUrl.match(/https?:\/\/[^\s]+/);
+          const oracleUrl = _oMatch ? _oMatch[0].replace(/\/+$/, '') : '';
+          const irosId  = env.IROS_USER_ID;
+          const irosPw  = env.IROS_USER_PW;
+          const emNo1   = env.IROS_EMONEY_NO1;
+          const emNo2   = env.IROS_EMONEY_NO2;
+          const emPwd   = env.IROS_EMONEY_PWD;
+          if (oracleUrl) {
+            let oracleErr = null;
+            try {
+              // Oracle 전체 플로우: 로그인+자동발급 (iros-pin 건너뜀 — IROS Gauce SPA는 PIN을 가상DOM에 숨겨 비회원 추출 불가)
+              if (irosId && irosPw) {
+                const ac = new AbortController();
+                const timer = setTimeout(() => ac.abort(), 90000);
+                let oRes;
+                try {
+                  oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      address: stdAddr,
+                      regType: regType === 'land' ? 'land' : 'building',
+                      irosId, irosPw,
+                      emoneyNo1: emNo1 || '', emoneyNo2: emNo2 || '', emoneyPwd: emPwd || ''
+                    }),
+                    signal: ac.signal
+                  });
+                } finally { clearTimeout(timer); }
+                if (oRes && oRes.ok) {
+                  const od = await oRes.json();
+                  if (od.ok && od.registryText) {
+                    // 간편열람: HTML 텍스트 추출 성공 → 그대로 반환 (사용자가 원문 확인 가능)
+                    return Response.json({ok:true, mode:'auto', stdAddr,
+                      registryText: od.registryText,
+                      registryHtml: od.registryHtml || '',
+                      guide:'인터넷등기소 간편열람 완료'
+                    }, {status:200,headers});
+                  }
+                  if (od.ok && od.pdfBase64) {
+                    const pdfKey = `iros_pdf_${Date.now()}`;
+                    await env.DONWAY_ASSETS.put(pdfKey, od.pdfBase64, { expirationTtl: 3600 });
+                    return Response.json({ok:true, mode:'auto', stdAddr,
+                      pdfBase64: od.pdfBase64, pdfKey,
+                      guide:'인터넷등기소에서 자동 발급 완료'
+                    }, {status:200,headers});
+                  }
+                  oracleErr = od.error || 'Oracle IROS 조회 실패';
+                } else {
+                  const _oBody = oRes ? await oRes.text().catch(() => '') : '';
+                  const _oJson = (() => { try { return JSON.parse(_oBody); } catch { return null; } })();
+                  const _oMsg = _oJson?.error || _oBody.slice(0, 300);
+                  oracleErr = `Oracle HTTP ${oRes ? oRes.status : 'no-response'} | ${_oMsg}`;
+                }
+              }
+            } catch(oe) {
+              oracleErr = oe.message || String(oe);
+              console.error('[oracle-iros]', oracleErr);
+            }
+            // Oracle 실패 상세 반환
+            const _oHost = oracleUrl ? oracleUrl.replace(/^https?:\/\//,'').split('/')[0] : 'URL미설정';
+            const _tlkErrPart = tilkoErr ? ` | Tilko: ${tilkoErr.slice(0,80)}` : '';
+            const _oNote = oracleErr && (oracleErr.includes('403') || oracleErr.includes('ECONNREFUSED') || oracleErr.includes('aborted'))
+              ? ' (Oracle 서버가 꺼져있거나 포트 불일치. pm2 list 확인 필요)' : '';
+            return Response.json({ok:false, mode:'link', stdAddr,
+              error: `Oracle 오류: ${oracleErr||'알 수 없음'} [${_oHost}]${_tlkErrPart}${_oNote}`,
+              irosUrl:'https://www.iros.go.kr'
+            },{status:200,headers});
+          }
+
+          // Fallback 2: 인터넷등기소 링크
+          const irosUrl = `https://www.iros.go.kr`;
           const missing = [];
-          if (!tilkoKey) missing.push('TILKO_API_KEY');
-          if (!tilkoRsa) missing.push('TILKO_RSA_PUBKEY');
-          if (!env.IROS_USER_ID) missing.push('IROS_USER_ID');
-          if (!env.IROS_EMONEY_NO1) missing.push('IROS_EMONEY_NO1/NO2/PWD');
+          if (!oracleUrl) missing.push('ORACLE_SERVER_URL');
+          if (!irosId) missing.push('IROS_USER_ID');
+          if (!irosPw) missing.push('IROS_USER_PW');
+          const tilkoNote = tilkoErr ? ` | Tilko 오류: ${tilkoErr.slice(0,100)}` : '';
           return Response.json({
             ok: true, mode: 'link', stdAddr, irosUrl,
-            guide: missing.length ? `직접 조회 미설정 항목: ${missing.join(', ')}` : 'Tilko API 오류로 링크 모드 전환'
+            guide: (missing.length ? `직접 조회 미설정: ${missing.join(', ')}` : '자동 조회 불가') + tilkoNote
           }, {status:200,headers});
         } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
       }
 
+      // GET /api/seolyuhana/iros-autotest — 슈퍼어드민 전용: Oracle 서버 IROS 자동 테스트
+      if (path === '/api/seolyuhana/iros-autotest' && method === 'GET') {
+        const _atUser = await verifyFirebaseToken(request, env);
+        if (!_atUser) return Response.json({error:'인증 필요'},{status:401,headers});
+        const SUPER = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+        if (!SUPER.includes(_atUser.email)) return Response.json({error:'슈퍼어드민 전용'},{status:403,headers});
+        const oUrl = (env.ORACLE_SERVER_URL || '').replace(/\/+$/, '');
+        if (!oUrl) return Response.json({ok:false,error:'ORACLE_SERVER_URL 미설정'},{status:200,headers});
+        const testAddress = new URL(request.url).searchParams.get('address') || '부산광역시 수영구 수영로 668';
+        try {
+          const ac = new AbortController();
+          const timer = setTimeout(() => ac.abort(), 160000);
+          let stRes;
+          try {
+            stRes = await fetch(`${oUrl}/api/iros-selftest`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                irosId: env.IROS_USER_ID,
+                irosPw: env.IROS_USER_PW,
+                address: testAddress,
+              }),
+              signal: ac.signal,
+            });
+          } finally { clearTimeout(timer); }
+          const stData = stRes.ok ? await stRes.json().catch(() => ({ok:false,error:'JSON parse fail'}))
+                                  : {ok:false,error:`HTTP ${stRes.status}`};
+          return Response.json({ ok: stData.ok, elapsed: stData.elapsed, address: testAddress,
+            preview: stData.preview, error: stData.error || null }, {status:200,headers});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message},{status:200,headers});
+        }
+      }
+
       // POST /api/seolyuhana/registry-link — V-World 주소→인터넷등기소 URL 생성
       if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
-        const _regUser = await requireAuth(request, env);
+        const _regUser = await verifyFirebaseToken(request, env);
         if (!_regUser) return Response.json({error:'인증 필요'},{status:401,headers});
         try {
           const { address, regType = 'all' } = await request.json();
@@ -8573,7 +9135,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             stdAddr,
             pnu,
             irosUrl,
-            irosOpenUrl: `https://www.iros.go.kr/ifrontservlet?cmd=IFSRegSrchGubunListCmd&gubun=1`,
+            irosOpenUrl: `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml`,
             regType,
             typeLabel: typeLabels[regType] || '전체현황',
             guide: '인터넷등기소에서 열람(700원) 후 PDF를 업로드하면 AI 분석이 시작됩니다.'
@@ -8582,7 +9144,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       }
 
       // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
-      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, env, token}) {
+      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang='en', jeonseDeposit=null, env, token}) {
         const setProgress = async (p, status='processing') => {
           await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
         };
@@ -8602,7 +9164,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // 3. Claude 분석
-          const { analyzeResume, analyzeCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
+          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
           let analysisData;
@@ -8615,14 +9177,16 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               const r = await analyzeResume({text, jdText, env}); analysisData = r.data;
             } else if (serviceId === 'cover_letter_analysis') {
               const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
+            } else if (serviceId === 'cover_letter_rewrite') {
+              const r = await rewriteCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
             } else if (serviceId === 'cover_letter_translation') {
-              const r = await translateCoverLetter({text, resumeText, env}); analysisData = r.data;
+              const r = await translateCoverLetter({text, resumeText, targetLang, env}); analysisData = r.data;
             } else if (serviceId === 'interview_questions') {
               const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); analysisData = r.data;
             } else if (serviceId === 'registry_analysis') {
-              const r = await analyzeRegistry({text, env}); analysisData = r.data;
-            } else if (serviceId === 'public_doc_analysis') {
-              const r = await analyzePublicDoc({text, env}); analysisData = r.data;
+              const r = await analyzeRegistry({text, jeonseDeposit, env}); analysisData = r.data;
+            } else if (serviceId === 'public_doc_analysis' || serviceId === 'workplace_tone' || serviceId === 'career_saju' || serviceId === 'notice_summary') {
+              const r = await analyzePublicDoc({text, serviceId, env}); analysisData = r.data;
             } else {
               const r = await analyzeContract({text, contractType:serviceId, env}); analysisData = r.data;
             }
@@ -8642,6 +9206,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const pdfKey  = `sly_job_${jobId}_pdf`;
           await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400});
           if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400});
+          // 분석 결과 JSON KV 저장 (result 엔드포인트에서 반환용)
+          await env.DONWAY_ASSETS.put(`sly_result_${jobId}`, JSON.stringify(analysisData), {expirationTtl: 86400});
 
           // 6. 완료 처리
           const outputDocx = makeOutputFilename(filename, 'docx');

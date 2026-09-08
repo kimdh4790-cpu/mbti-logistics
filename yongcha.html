@@ -1339,7 +1339,7 @@ function _yLogin(){
     clearTimeout(_loginTimer);
     btn.textContent='로그인';btn.disabled=false;
     var c=ex.code||'';
-    err.textContent=c==='auth/wrong-password'||c==='auth/invalid-credential'?'비밀번호가 틀렸어요':
+    err.textContent=c==='auth/wrong-password'||c==='auth/invalid-credential'||c==='auth/invalid-login-credentials'?'비밀번호가 틀렸어요':
                     c==='auth/user-not-found'?'없는 계정이에요':
                     c==='auth/too-many-requests'?'잠시 후 다시 시도하세요':
                     c==='auth/invalid-email'?'이메일 형식을 확인하세요':

@@ -557,6 +557,16 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
+    // SCAN AI proxy: mbtico.kr/scan → filo.ai.kr handles /api/seolyuhana/*
+    if (path.startsWith('/api/seolyuhana/')) {
+      const proxyUrl = 'https://filo.ai.kr' + path + (url.search || '');
+      return fetch(new Request(proxyUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: (request.method !== 'GET' && request.method !== 'HEAD') ? request.body : null,
+        duplex: 'half'
+      }));
+    }
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
@@ -1198,6 +1208,12 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       style="padding:12px;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
       로그인
     </button>
+    <div style="text-align:center;color:var(--tx2);font-size:12px;margin:2px 0">또는</div>
+    <button onclick="_ctrlGoogleLogin()"
+      style="padding:12px;background:#fff;color:#333;border:1px solid #ddd;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.7C34.2 33.9 29.7 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.5 20-21 0-1.3-.2-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3c-7.6 0-14.2 4.6-17.7 11.7z"/><path fill="#FBBC05" d="M24 45c5.5 0 10.4-1.8 14.2-4.9l-6.6-5.4C29.6 36.6 26.9 37 24 37c-5.7 0-10.2-3.1-11.7-7.5l-7 5.4C8.8 41.6 15.8 45 24 45z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.7c-.8 2.3-2.3 4.3-4.3 5.7l6.6 5.4C41.8 36.2 45 30.6 45 24c0-1.3-.2-2.7-.5-4z"/></svg>
+      Google로 로그인
+    </button>
   </div>
 </div>
 
@@ -1327,6 +1343,12 @@ function _ctrlInit() {
   _auth    = firebase.auth();
   _storage = firebase.storage();
 
+  _auth.getRedirectResult().catch(function(e) {
+    if (e && e.code && e.code !== 'auth/no-auth-event') {
+      _ctrlToast('❌ Google 로그인 오류: ' + (e.code || e.message));
+    }
+  });
+
   _auth.onAuthStateChanged(function(user) {
     if (!user || !SA_EMAILS.includes(user.email)) {
       document.getElementById('login-screen').style.display = 'flex';
@@ -1346,7 +1368,14 @@ function _ctrlLogin() {
   var email = document.getElementById('l-email').value.trim();
   var pw    = document.getElementById('l-pw').value;
   _auth.signInWithEmailAndPassword(email, pw)
-    .catch(function(e) { _ctrlToast('❌ ' + e.message); });
+    .catch(function(e) { _ctrlToast('❌ 로그인 실패: ' + (e.code || e.message)); });
+}
+function _ctrlGoogleLogin() {
+  var provider = new firebase.auth.GoogleAuthProvider();
+  _auth.signInWithRedirect(provider)
+    .catch(function(e) {
+      _ctrlToast('❌ Google 로그인 실패: ' + (e.code || e.message));
+    });
 }
 
 function _ctrlLogout() {
