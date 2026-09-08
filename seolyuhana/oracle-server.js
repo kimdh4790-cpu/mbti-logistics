@@ -765,39 +765,53 @@ app.post('/api/iros-fetch', async (req, res) => {
     const inputVal = await addrInput.inputValue().catch(() => '');
     console.log('[iros] 입력 설정값:', inputVal);
 
-    // 검색 트리거: Enter 우선 → 특정 search 버튼 (헤더/nav 버튼 제외)
+    // 검색 트리거: Gauce WebSquare 내부 함수 직접 호출 (Enter 키는 Gauce 무시)
     const urlBefore = page.url();
 
-    // Enter 키 직접 입력 (가장 안정적 — 헤더 버튼 오클릭 방지)
-    console.log('[iros] Enter 키로 검색 트리거');
-    await addrInput.press('Enter');
+    // 전역 검색 함수 목록 덤프 (디버그)
+    const globalFns = await page.evaluate(() => {
+      try { return Object.keys(window).filter(k => typeof window[k] === 'function' && /srch|smpl|search|fn_/i.test(k)); } catch(e) { return []; }
+    }).catch(() => []);
+    console.log('[iros] 전역 검색 함수:', JSON.stringify(globalFns));
+
+    // Gauce 내부 함수 직접 호출 시퀀스
+    const jsFnResult = await page.evaluate(() => {
+      try {
+        // 1순위: fn_smplSrch (IROS 간편검색 전용)
+        if (typeof fn_smplSrch === 'function') { fn_smplSrch(); return 'fn_smplSrch'; }
+        // 2순위: scwin 네임스페이스 내
+        if (typeof scwin !== 'undefined' && typeof scwin.fn_smplSrch === 'function') { scwin.fn_smplSrch(); return 'scwin.fn_smplSrch'; }
+        // 3순위: 범용 검색 함수
+        if (typeof fn_search === 'function') { fn_search(); return 'fn_search'; }
+        if (typeof fn_srch === 'function') { fn_srch(); return 'fn_srch'; }
+        // 4순위: WebSquare2 w2 객체로 onenterkey 이벤트 발화
+        if (typeof w2 !== 'undefined' && w2.getById) {
+          var inp = w2.getById('mf_wfm_potal_main_sch_realCorp');
+          if (inp && inp.fireEvent) { inp.fireEvent('onenterkey', {keyCode:13}); return 'w2.onenterkey'; }
+          if (inp && inp.trigger) { inp.trigger('onenterkey', {keyCode:13}); return 'w2.trigger.onenterkey'; }
+        }
+        // 5순위: sch_realCorp 인근 버튼 (헤더/top_menu 제외)
+        var btn = document.querySelector('[id*="btn_smpl_srch"],[id*="btn_sch_realCorp"],[id*="btn_srch"]:not([id*="header"]):not([id*="top_menu"])');
+        if (btn) { btn.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true})); return 'btn:' + btn.id; }
+        return null;
+      } catch(e) { return 'err:' + e.message; }
+    }).catch(e => 'catch:' + e.message);
+    console.log('[iros] Gauce JS 검색 결과:', jsFnResult);
+
     await page.waitForTimeout(1500);
 
-    // Enter로 팝업/URL변경 없으면 sch_realCorp 인근 버튼 시도
-    const earlyPopup = context.pages().length > 1;
-    if (!earlyPopup && page.url() === urlBefore) {
-      console.log('[iros] Enter 후 변화 없음 — 검색 버튼 탐색 (header 제외)');
-      for (const ctx of [page, ...page.frames()]) {
-        try {
-          const btnSelectors = [
-            // sch_realCorp 인근 버튼 (가장 정확)
-            'button[id*="sch_realCorp"], a[id*="sch_realCorp"]',
-            'button[id*="btn_sch"], a[id*="btn_sch"]',
-            'button[id*="btn_search"]:not([id*="header"]):not([id*="top_menu"])',
-            'a[id*="btn_search"]:not([id*="header"]):not([id*="top_menu"])',
-          ];
-          for (const sel of btnSelectors) {
-            const btn = ctx.locator(sel).first();
-            if (await btn.count() > 0 && await btn.isVisible().catch(() => false)) {
-              const btnId = await btn.getAttribute('id').catch(() => '');
-              if (btnId && (btnId.includes('header') || btnId.includes('top_menu'))) continue;
-              console.log('[iros] 검색 버튼 클릭 sel=', sel, 'id=', btnId);
-              await btn.click({ force: true, timeout: 5000 });
-              break;
-            }
-          }
-        } catch {}
-      }
+    // Fallback: DOM 키보드 이벤트 + Playwright press (최후 수단)
+    if (!jsFnResult || jsFnResult.startsWith('err') || jsFnResult.startsWith('catch') || jsFnResult === 'null') {
+      console.log('[iros] Fallback — DOM keyboard events + press(Enter)');
+      await page.evaluate(() => {
+        var el = document.getElementById('mf_wfm_potal_main_sch_realCorp___input');
+        if (!el) return;
+        ['keydown','keypress','keyup'].forEach(t => {
+          el.dispatchEvent(new KeyboardEvent(t, {key:'Enter',keyCode:13,which:13,bubbles:true,cancelable:true}));
+        });
+      }).catch(() => {});
+      await addrInput.press('Enter').catch(() => {});
+      await page.waitForTimeout(1500);
     }
     console.log('[iros] 검색 트리거 완료');
 
@@ -831,6 +845,18 @@ app.post('/api/iros-fetch', async (req, res) => {
         break;
       }
     }
+
+    // ── 메인 페이지 그리드 직접 확인 (검색 성공 여부 진단) ─────────────────────────
+    const mainGridRows = await page.evaluate(() => {
+      try {
+        var tbody = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt_body_tbody');
+        if (!tbody) return { found: false };
+        var rows = tbody.querySelectorAll('tr');
+        var texts = Array.from(rows).slice(0,3).map(r => r.innerText.trim().substring(0,80));
+        return { found: true, rowCount: rows.length, samples: texts };
+      } catch(e) { return { found: false, err: e.message }; }
+    }).catch(() => ({ found: false }));
+    console.log('[iros] 메인 그리드 행 수:', JSON.stringify(mainGridRows));
 
     // ── Prvw 팝업 처리: 시스템 점검 공지 닫기 + 팝업 내 주소 재검색 ─────────────
     // Pm10P0IrosPopupPrvw = IROS 간편열람 검색 결과 팝업 (정상 팝업)
