@@ -11654,13 +11654,182 @@ function _dwRenderEngine(){
   var wrap=document.createElement('div');
   wrap.id='dw-engine-wrap';
   wrap.style.cssText='max-width:960px;margin:0 auto 20px';
+  var tabBar=document.createElement('div');
+  tabBar.style.cssText='display:flex;gap:6px;margin-bottom:14px;background:var(--bg2);border-radius:12px;padding:4px';
+  tabBar.innerHTML='<button id="dw-tab-btn-engine" onclick="_dwSwitchTab(\'engine\')" style="flex:1;padding:8px;border-radius:8px;border:none;background:var(--brand);color:#fff;font-size:12px;font-weight:800;cursor:pointer">⚡ 정산 엔진</button>'
+    +'<button id="dw-tab-btn-analysis" onclick="_dwSwitchTab(\'analysis\')" style="flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:var(--text3);font-size:12px;font-weight:700;cursor:pointer">📈 분석</button>';
+  wrap.appendChild(tabBar);
   var simWrap=document.createElement('div');
   simWrap.id='dw-simulator-wrap';
   wrap.appendChild(simWrap);
+  var analysisWrap=document.createElement('div');
+  analysisWrap.id='dw-analysis-wrap';
+  analysisWrap.style.display='none';
+  wrap.appendChild(analysisWrap);
   el.appendChild(wrap);
   _dwRenderSimulator();
   var _did=_CU&&_CU.dealerId;
   if(_did) _dwLoadCfg(_did);
+}
+
+// ── 탭 전환
+function _dwSwitchTab(tab){
+  var simWrap=document.getElementById('dw-simulator-wrap');
+  var anWrap=document.getElementById('dw-analysis-wrap');
+  var btnE=document.getElementById('dw-tab-btn-engine');
+  var btnA=document.getElementById('dw-tab-btn-analysis');
+  if(tab==='engine'){
+    if(simWrap)simWrap.style.display='';
+    if(anWrap)anWrap.style.display='none';
+    if(btnE){btnE.style.background='var(--brand)';btnE.style.color='#fff';}
+    if(btnA){btnA.style.background='transparent';btnA.style.color='var(--text3)';}
+  } else {
+    if(simWrap)simWrap.style.display='none';
+    if(anWrap){anWrap.style.display='';_dwRenderAnalysis(anWrap);}
+    if(btnE){btnE.style.background='transparent';btnE.style.color='var(--text3)';}
+    if(btnA){btnA.style.background='var(--brand)';btnA.style.color='#fff';}
+  }
+}
+
+// ── 분석 탭 메인 렌더
+function _dwRenderAnalysis(wrap){
+  if(!wrap)return;
+  if(!_db||!_CU){wrap.innerHTML='<div class="empty">로그인 필요</div>';return;}
+  var today=new Date();
+  var monday=new Date(today);
+  var dow=today.getDay();
+  monday.setDate(today.getDate()-(dow===0?6:dow-1));
+  var fmt=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  wrap.innerHTML='<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📅 기간 선택</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +'<input id="dw-an-start" type="date" value="'+fmt(monday)+'" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px">'
+      +'<span style="color:var(--text3)">~</span>'
+      +'<input id="dw-an-end" type="date" value="'+fmt(today)+'" style="padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px">'
+      +'<button onclick="_dwRunAnalysis()" style="padding:7px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer">조회</button>'
+    +'</div>'
+  +'</div>'
+  +'<div id="dw-analysis-result"><div style="text-align:center;padding:30px;color:var(--text3)">⏳ 불러오는 중...</div></div>';
+  _dwRunAnalysis();
+}
+
+function _dwRunAnalysis(){
+  var start=(document.getElementById('dw-an-start')||{value:''}).value;
+  var end=(document.getElementById('dw-an-end')||{value:''}).value;
+  var el=document.getElementById('dw-analysis-result');
+  if(!el)return;
+  if(!start||!end){el.innerHTML='<div class="empty">기간을 선택하세요</div>';return;}
+  el.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">⏳ 분석 중...</div>';
+  var did=_CU.dealerId||'';
+  _db.collection('delivery_sessions').where('dealerId','==',did).get().then(function(snap){
+    var allEntries=[];
+    snap.forEach(function(doc){
+      var s=doc.data();
+      var rid=s.driverId||s.driverName||doc.id;
+      var rName=s.driverName||rid;
+      (s.entries||[]).forEach(function(e){
+        var dt=(e.at||'').slice(0,10);
+        if(dt&&dt>=start&&dt<=end){
+          allEntries.push({date:dt,hour:e.hour||12,price:e.price||0,slot:e.slot||'',riderId:rid,riderName:rName});
+        }
+      });
+    });
+    if(!allEntries.length){el.innerHTML='<div class="empty">해당 기간에 데이터가 없습니다</div>';return;}
+    _dwRenderAnalysisResult(el,allEntries);
+  }).catch(function(e){el.innerHTML='<div class="empty">로드 실패: '+esc(e.message)+'</div>';});
+}
+
+function _dwRenderAnalysisResult(el,entries){
+  var priceBuckets={};
+  var riderMap={};
+  var dateMap={};
+  entries.forEach(function(e){
+    var pk=String(e.price);
+    if(!priceBuckets[pk])priceBuckets[pk]={count:0,riders:{},dates:{}};
+    priceBuckets[pk].count++;
+    priceBuckets[pk].riders[e.riderId]=(priceBuckets[pk].riders[e.riderId]||0)+1;
+    priceBuckets[pk].dates[e.date]=(priceBuckets[pk].dates[e.date]||0)+1;
+    if(!riderMap[e.riderId])riderMap[e.riderId]={name:e.riderName,priceMap:{},dateMap:{},hourMap:{},total:0};
+    riderMap[e.riderId].total++;
+    riderMap[e.riderId].priceMap[pk]=(riderMap[e.riderId].priceMap[pk]||0)+1;
+    riderMap[e.riderId].dateMap[e.date]=(riderMap[e.riderId].dateMap[e.date]||0)+1;
+    riderMap[e.riderId].hourMap[e.hour]=(riderMap[e.riderId].hourMap[e.hour]||0)+1;
+    if(!dateMap[e.date])dateMap[e.date]={count:0,priceMap:{},riderMap:{}};
+    dateMap[e.date].count++;
+    dateMap[e.date].priceMap[pk]=(dateMap[e.date].priceMap[pk]||0)+1;
+    dateMap[e.date].riderMap[e.riderId]=(dateMap[e.date].riderMap[e.riderId]||0)+1;
+  });
+  var totalCount=entries.length;
+  var prices=Object.keys(priceBuckets).sort(function(a,b){return Number(a)-Number(b);});
+  var dates=Object.keys(dateMap).sort();
+  var riders=Object.keys(riderMap).sort();
+  var html='';
+  // 요약
+  html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'
+    +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3)">총 건수</div><div style="font-size:24px;font-weight:900;color:var(--brand)">'+totalCount.toLocaleString()+'</div><div style="font-size:10px;color:var(--text3)">건</div></div>'
+    +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3)">기사 수</div><div style="font-size:24px;font-weight:900">'+riders.length+'</div><div style="font-size:10px;color:var(--text3)">명</div></div>'
+    +'<div style="background:var(--bg2);border-radius:12px;padding:12px;text-align:center"><div style="font-size:10px;color:var(--text3)">조회 일수</div><div style="font-size:24px;font-weight:900">'+dates.length+'</div><div style="font-size:10px;color:var(--text3)">일</div></div>'
+  +'</div>';
+  // 금액대별
+  var maxCnt=Math.max.apply(null,prices.map(function(p){return priceBuckets[p].count;}));
+  html+='<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:12px">'
+    +'<div style="font-size:12px;font-weight:800;margin-bottom:10px">💰 금액대별 집계</div>';
+  prices.forEach(function(pk){
+    var b=priceBuckets[pk];
+    var barW=maxCnt>0?Math.round(b.count/maxCnt*100):0;
+    var rList=Object.keys(b.riders).map(function(rid){return esc(riderMap[rid]&&riderMap[rid].name||rid)+' '+b.riders[rid]+'건';}).join(' · ');
+    html+='<div style="margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:800">₩'+Number(pk).toLocaleString()+'/건</span><span style="font-size:13px;font-weight:900;color:var(--brand)">'+b.count+'건</span></div>'
+      +'<div style="background:var(--bg3);border-radius:999px;height:8px;margin-bottom:4px"><div style="background:var(--brand);border-radius:999px;height:8px;width:'+barW+'%"></div></div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+rList+'</div>'
+    +'</div>';
+  });
+  html+='</div>';
+  // 날짜 × 금액 테이블
+  html+='<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:12px;overflow-x:auto">'
+    +'<div style="font-size:12px;font-weight:800;margin-bottom:10px">📅 날짜 × 금액 × 기사 상세</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:380px">'
+    +'<thead><tr style="background:var(--bg3)">'
+    +'<th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--border)">날짜</th>'
+    +'<th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--border)">합계</th>'
+    +prices.map(function(pk){return '<th style="padding:7px 8px;text-align:center;border-bottom:1px solid var(--border);color:var(--brand)">₩'+Number(pk).toLocaleString()+'</th>';}).join('')
+    +'<th style="padding:7px 8px;text-align:left;border-bottom:1px solid var(--border)">기사</th>'
+    +'</tr></thead><tbody>'
+    +dates.map(function(d){
+      var dm=dateMap[d];
+      var rNames=Object.keys(dm.riderMap).map(function(rid){return esc(riderMap[rid]&&riderMap[rid].name||rid);}).join(', ');
+      return '<tr style="border-bottom:1px solid var(--border)">'
+        +'<td style="padding:7px 8px;font-weight:700">'+d.slice(5)+'</td>'
+        +'<td style="padding:7px 8px;text-align:center;font-weight:900;color:var(--brand)">'+dm.count+'</td>'
+        +prices.map(function(pk){var c=dm.priceMap[pk]||0;return '<td style="padding:7px 8px;text-align:center'+(c>0?';font-weight:700':';color:var(--text3)')+'">'+( c>0?c:'-')+'</td>';}).join('')
+        +'<td style="padding:7px 8px;font-size:10px;color:var(--text3)">'+rNames+'</td>'
+      +'</tr>';
+    }).join('')
+    +'</tbody><tfoot><tr style="background:var(--bg3);font-weight:900">'
+    +'<td style="padding:7px 8px">합계</td>'
+    +'<td style="padding:7px 8px;text-align:center;color:var(--brand)">'+totalCount+'</td>'
+    +prices.map(function(pk){return '<td style="padding:7px 8px;text-align:center;color:var(--brand)">'+priceBuckets[pk].count+'</td>';}).join('')
+    +'<td></td></tr></tfoot></table></div>';
+  // 기사별 상세
+  html+='<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:12px">'
+    +'<div style="font-size:12px;font-weight:800;margin-bottom:10px">👤 기사별 상세</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">';
+  riders.forEach(function(rid){
+    var r=riderMap[rid];
+    var dDates=Object.keys(r.dateMap).sort().reverse();
+    html+='<div style="background:var(--bg3);border-radius:10px;padding:10px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<span style="font-size:12px;font-weight:800">'+esc(r.name||rid)+'</span>'
+        +'<span style="font-size:13px;font-weight:900;color:var(--brand)">총 '+r.total+'건</span>'
+      +'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">';
+    prices.forEach(function(pk){var c=r.priceMap[pk]||0;if(!c)return;html+='<span style="background:var(--brand-l);color:var(--brand);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px">₩'+Number(pk).toLocaleString()+'×'+c+'건</span>';});
+    html+='</div><div style="font-size:10px;color:var(--text3)">'
+      +dDates.map(function(d){return d.slice(5)+' <strong>'+r.dateMap[d]+'건</strong>';}).join(' · ')
+    +'</div></div>';
+  });
+  html+='</div></div>';
+  el.innerHTML=html;
 }
 
 // ★ 통합 로드 - 아래 업로드 섹션 파일 선택 시 시뮬레이터 자동 실행
@@ -13388,6 +13557,34 @@ function _dwRenderDriverDash(s){
       +'</div>'
     +'</div>'
   :'')
+
+  // ── 날짜별 내역
+  +(cnt>0&&(s.entries||[]).length>0?(function(){
+    var dMap={};
+    (s.entries||[]).forEach(function(e){
+      var dt=(e.at||'').slice(0,10)||'';
+      if(!dt)return;
+      if(!dMap[dt])dMap[dt]={count:0,priceMap:{},preTax:0};
+      dMap[dt].count++;
+      var pk=String(e.price||0);
+      dMap[dt].priceMap[pk]=(dMap[dt].priceMap[pk]||0)+1;
+      dMap[dt].preTax+=e.price||0;
+    });
+    var dKeys=Object.keys(dMap).sort().reverse();
+    if(!dKeys.length)return '';
+    return '<div style="background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:14px">'
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:10px">📅 날짜별 내역</div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px">'
+      +dKeys.map(function(d){
+        var dm=dMap[d];
+        var breakdown=Object.keys(dm.priceMap).sort(function(a,b){return Number(a)-Number(b);}).map(function(pk){return '₩'+Number(pk).toLocaleString()+'×'+dm.priceMap[pk]+'건';}).join(' / ');
+        return '<div style="background:var(--bg3);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center">'
+          +'<div><div style="font-size:12px;font-weight:800">'+d+'</div><div style="font-size:10px;color:var(--text3);margin-top:2px">'+breakdown+'</div></div>'
+          +'<div style="text-align:right"><div style="font-size:15px;font-weight:900;color:var(--brand)">'+dm.count+'건</div><div style="font-size:10px;color:var(--text3)">₩'+dm.preTax.toLocaleString()+'</div></div>'
+        +'</div>';
+      }).join('')
+      +'</div></div>';
+  })():'')
 
   // ── 알림 안내
   +'<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:14px;padding:14px;color:#fff;text-align:center">'
