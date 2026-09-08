@@ -2228,7 +2228,7 @@ async function _slyAutoAnalyzeRegistry(encodedPdf, encodedAddr) {
   // 분석 파이프라인 실행 (기존 _slySubmit 로직 재사용)
   const fd = new FormData();
   fd.append('file', file);
-  fd.append('service', 'registry_analysis');
+  fd.append('serviceId', 'registry_analysis');
   fd.append('jeonseDeposit', '');
 
   const token = await window._slyGetToken();
