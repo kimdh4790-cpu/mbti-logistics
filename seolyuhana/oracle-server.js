@@ -1099,6 +1099,20 @@ app.post('/api/iros-fetch', async (req, res) => {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step3b-popup-search.png', fullPage: false }).catch(() => {});
     }
 
+    // ── 네트워크 요청 캡처 (WebSquare AJAX API 역분석) ───────────────────────────
+    const _capturedPosts = [];
+    const _reqHandler = (req) => {
+      const rt = req.resourceType();
+      if (['xhr', 'fetch'].includes(rt) || req.url().includes('/pos9/')) {
+        _capturedPosts.push({
+          url: req.url().replace('https://www.iros.go.kr','').slice(0,200),
+          m: req.method(),
+          body: (req.postData()||'').slice(0,400),
+        });
+      }
+    };
+    resultPage.on('request', _reqHandler);
+
     // ── 5단계: 검색 후 전체 컨텍스트 스캔 (디버깅 + 결과 탐색) ───────────────────
     {
       const debugDir = '/home/opc/iros-debug';
@@ -1358,6 +1372,322 @@ app.post('/api/iros-fetch', async (req, res) => {
       await resultPage.waitForTimeout(2000);
       rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
       console.log('[iros] smpl 함수 호출 후 btn_smpl_rlrg 출현:', rlrgCount);
+    }
+
+    // ── 네트워크 캡처 로그 분석 → IROS XHR API 직접 호출 ─────────────────────────────
+    if (rlrgCount === 0) {
+      await resultPage.waitForTimeout(1000);
+      const capLog = _capturedPosts.slice(-20);
+      console.log('[iros] 캡처된 네트워크 요청:', JSON.stringify(capLog));
+
+      // 캡처된 요청 중 XHR/fetch 패턴에서 등기부 조회 API 찾기
+      const rlrgReqs = capLog.filter(r => /rlrg|renf|smpl|view|inqr|info/i.test(r.url) && r.m === 'POST');
+      if (rlrgReqs.length) {
+        console.log('[iros] 등기부 관련 XHR 발견:', JSON.stringify(rlrgReqs));
+        // 같은 세션 쿠키로 직접 재호출
+        const firstReq = rlrgReqs[0];
+        try {
+          const xhrResult = await resultPage.evaluate(async (url, body) => {
+            try {
+              const resp = await fetch(url.startsWith('http') ? url : 'https://www.iros.go.kr' + url, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: body || '',
+              });
+              const txt = await resp.text();
+              return txt.slice(0, 3000);
+            } catch(e) { return 'err:' + e.message; }
+          }, firstReq.url, firstReq.body);
+          console.log('[iros] XHR 직접 호출 결과:', xhrResult.slice(0, 500));
+          if (/표제부|갑구|을구|소유권|순위번호|등기원인/.test(xhrResult)) {
+            console.log('[iros] XHR API 등기부 검출 성공!');
+            res.json({ ok: true, registryText: xhrResult, registryHtml: '', address });
+            return;
+          }
+        } catch(e) { console.log('[iros] XHR 재호출 오류:', e.message); }
+      }
+    }
+
+    // ── 방법B: WebSquare 내부 전역변수 직접 변경 + onclick 핸들러 실행 ───────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법B: WebSquare 전역변수 강제 설정 + onclick 실행');
+      const wsDeep = await resultPage.evaluate((gid) => {
+        try {
+          const results = {};
+          // WebSquare 전역변수 탐색
+          const gvKeys = Object.keys(window).filter(k => /gv_|_chk|smpl|rlrg/i.test(k));
+          results.gvKeys = gvKeys.slice(0, 20);
+          // scwin 함수 목록 중 btn_smpl_rlrg 참조하는 것 찾기
+          const scFns = [];
+          if (typeof scwin !== 'undefined') {
+            Object.keys(scwin).forEach(k => {
+              try {
+                const s = (scwin[k] || '').toString();
+                if (/btn_smpl_rlrg|smpl_rlrg|smplRlrg/i.test(s)) scFns.push(k);
+              } catch {}
+            });
+          }
+          results.scFns = scFns;
+          // window 함수도 탐색
+          const winFns = [];
+          Object.keys(window).forEach(k => {
+            try {
+              if (typeof window[k] !== 'function') return;
+              const s = window[k].toString();
+              if (/btn_smpl_rlrg|smpl_rlrg|smplRlrg/i.test(s)) winFns.push(k);
+            } catch {}
+          });
+          results.winFns = winFns;
+          // gv_smpl_chk_yn 또는 유사 변수에 'Y' 대입
+          ['gv_smpl_chk_yn', 'gv_chk_yn', 'smpl_chk_yn', 'gv_smpl'].forEach(gv => {
+            if (typeof window[gv] !== 'undefined') { window[gv] = 'Y'; results['set_' + gv] = true; }
+          });
+          // btn_smpl_rlrg 요소의 onclick 직접 실행
+          const btn = document.querySelector('[id*="btn_smpl_rlrg"]');
+          if (btn) {
+            const oc = btn.getAttribute('onclick') || '';
+            results.btnOnclick = oc.slice(0,200);
+            if (oc) eval(oc);
+            btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            results.btnClicked = true;
+          }
+          return results;
+        } catch(e) { return { err: e.message }; }
+      }, gridId).catch(e => ({ err: e.message }));
+      console.log('[iros] WebSquare 전역변수 탐색:', JSON.stringify(wsDeep));
+
+      // scFns에서 발견된 함수 직접 호출
+      if (wsDeep.scFns && wsDeep.scFns.length) {
+        for (const fn of wsDeep.scFns) {
+          await resultPage.evaluate((fnName) => {
+            try { scwin[fnName](); return 'called'; } catch(e) { return 'err:' + e.message; }
+          }, fn).catch(() => {});
+        }
+      }
+      if (wsDeep.winFns && wsDeep.winFns.length) {
+        for (const fn of wsDeep.winFns) {
+          await resultPage.evaluate((fnName) => {
+            try { window[fnName](); return 'called'; } catch(e) { return 'err:' + e.message; }
+          }, fn).catch(() => {});
+        }
+      }
+      await resultPage.waitForTimeout(2000);
+      rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+      console.log('[iros] 방법B 후 btn_smpl_rlrg:', rlrgCount);
+    }
+
+    // ── 방법C: 키보드 Tab+Space로 체크박스 토글 ──────────────────────────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법C: 키보드 Tab+Space 체크박스 토글');
+      try {
+        // 그리드 행 포커스 후 Tab 여러 번 → Space
+        const cellEl = resultPage.locator(`[id="${cellId}"]`).first();
+        if (await cellEl.count() > 0) {
+          await cellEl.focus({ timeout: 3000 }).catch(() => {});
+        } else {
+          await resultRow.focus({ timeout: 3000 }).catch(() => {});
+        }
+        for (let i = 0; i < 5; i++) {
+          await resultPage.keyboard.press('Tab');
+          await resultPage.waitForTimeout(200);
+          const focused = await resultPage.evaluate(() => document.activeElement?.id || document.activeElement?.type || 'none');
+          if (/check|chk/i.test(focused)) break;
+        }
+        await resultPage.keyboard.press('Space');
+        await resultPage.waitForTimeout(2000);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법C(Tab+Space) 후 btn_smpl_rlrg:', rlrgCount);
+      } catch(e) { console.log('[iros] 방법C 오류:', e.message); }
+    }
+
+    // ── 방법D: 헤더 전체선택 체크박스 클릭 ──────────────────────────────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법D: 헤더 전체선택 체크박스 클릭');
+      try {
+        const hdrChk = resultPage.locator(
+          `[id*="hd_chk"], [id*="hdChk"], [id*="allChk"], [id*="chkAll"], thead input[type="checkbox"], th input[type="checkbox"]`
+        ).first();
+        if (await hdrChk.count() > 0) {
+          const hdrBox = await getBbox(hdrChk);
+          if (hdrBox) {
+            await resultPage.mouse.click(hdrBox.x + hdrBox.width / 2, hdrBox.y + hdrBox.height / 2);
+          } else {
+            await hdrChk.click({ force: true, timeout: 3000 }).catch(() => {});
+          }
+          await resultPage.waitForTimeout(2000);
+          rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+          console.log('[iros] 방법D(헤더 전체선택) 후 btn_smpl_rlrg:', rlrgCount);
+        } else {
+          console.log('[iros] 방법D: 헤더 체크박스 없음');
+        }
+      } catch(e) { console.log('[iros] 방법D 오류:', e.message); }
+    }
+
+    // ── 방법E: 고유번호검색 탭으로 PIN 직접 입력 (완전히 다른 검색 흐름) ─────────────
+    if (rlrgCount === 0 && pinFromRow) {
+      console.log('[iros] 방법E: 고유번호검색 탭 직접 입력 시도 PIN=', pinFromRow);
+      try {
+        // 탭 클릭: id에 "pin" 또는 "고유번호" 포함
+        const tabPinLoc = resultPage.locator(
+          '[id*="pin_srch"], [id*="pinSrch"], [id*="tab_pin"], ' +
+          '[id*="고유번호"], li:has-text("고유번호"), a:has-text("고유번호")'
+        ).first();
+        let pinTabClicked = false;
+        if (await tabPinLoc.count() > 0) {
+          await tabPinLoc.click({ force: true, timeout: 5000 }).catch(() => {});
+          await resultPage.waitForTimeout(1500);
+          pinTabClicked = true;
+          console.log('[iros] 고유번호 탭 클릭');
+        } else {
+          // 페이지 소스에서 탭 ID 탐색
+          const tabInfo = await resultPage.evaluate(() => {
+            const tabs = Array.from(document.querySelectorAll('[id*="tab"], li, a')).filter(el =>
+              /(고유번호|pin|PIN)/.test(el.id + el.textContent)
+            );
+            return tabs.slice(0,5).map(el => ({ id: el.id, txt: (el.textContent||'').trim().slice(0,30) }));
+          });
+          console.log('[iros] 고유번호 탭 후보:', JSON.stringify(tabInfo));
+          if (tabInfo.length) {
+            for (const ti of tabInfo) {
+              const loc = resultPage.locator(`[id="${ti.id}"]`).first();
+              if (await loc.count() > 0) { await loc.click({ force: true }).catch(() => {}); pinTabClicked = true; break; }
+            }
+          }
+        }
+
+        if (pinTabClicked) {
+          await resultPage.waitForTimeout(1500);
+          // PIN 입력 필드 찾기
+          const pinInput = resultPage.locator('input[id*="pin" i], input[placeholder*="고유번호"], input[id*="unq"]').first();
+          if (await pinInput.count() > 0) {
+            const pinDash = pinFromRow; // e.g. 1843-1996-070590
+            await pinInput.click({ clickCount: 3 });
+            await pinInput.fill(pinDash);
+            console.log('[iros] PIN 입력:', pinDash);
+            await resultPage.keyboard.press('Enter');
+            await resultPage.waitForTimeout(3000);
+            rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+            console.log('[iros] 방법E(고유번호 검색) 후 btn_smpl_rlrg:', rlrgCount);
+            // 결과 행 자동 클릭 (단일 결과면 1행)
+            if (rlrgCount === 0) {
+              const pinResultRow = resultPage.locator('tr').filter({ hasText: pinFromRow.replace(/-/g,'') }).first();
+              if (await pinResultRow.count() > 0) {
+                await pinResultRow.click({ force: true }).catch(() => {});
+                await resultPage.waitForTimeout(2000);
+                rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+                console.log('[iros] 방법E 행 클릭 후 btn_smpl_rlrg:', rlrgCount);
+              }
+            }
+          } else {
+            console.log('[iros] 방법E: PIN 입력 필드 없음');
+          }
+        }
+      } catch(e) { console.log('[iros] 방법E 오류:', e.message); }
+    }
+
+    // ── 방법F: CDP 저레벨 마우스 이벤트 (Playwright mouse가 안 먹을 때) ─────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법F: CDP 저레벨 마우스 이벤트');
+      try {
+        const cdpSession = await context.newCDPSession(resultPage);
+        // 체크박스 셀 좌표 재취득
+        const chkEh = await resultPage.locator(`#${cellId}, [id="${cellId}"]`).first().elementHandle().catch(() => null)
+          || await resultRow.locator('input[type="checkbox"], td').first().elementHandle().catch(() => null);
+        if (chkEh) {
+          const cBox = await chkEh.boundingBox().catch(() => null);
+          if (cBox) {
+            const mx = cBox.x + cBox.width / 2;
+            const my = cBox.y + cBox.height / 2;
+            await cdpSession.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: mx, y: my, button: 'left', clickCount: 1 });
+            await resultPage.waitForTimeout(50);
+            await cdpSession.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: mx, y: my, button: 'left', clickCount: 1 });
+            await resultPage.waitForTimeout(2000);
+            rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+            console.log('[iros] 방법F(CDP) 후 btn_smpl_rlrg:', rlrgCount);
+          }
+        }
+        await cdpSession.detach().catch(() => {});
+      } catch(e) { console.log('[iros] 방법F 오류:', e.message); }
+    }
+
+    // ── 방법G: 직접 등기부열람 상세 페이지 POST 폼 제출 ─────────────────────────────
+    if (rlrgCount === 0 && pinFromRow) {
+      console.log('[iros] 방법G: POST 폼 제출로 등기부열람 직접 시도');
+      try {
+        const pinClean = pinFromRow.replace(/-/g, '');
+        const formResult = await resultPage.evaluate(async (pClean) => {
+          // 세션 쿠키 포함 상태로 POST 시도 (WebSquare form submit 패턴)
+          const endpoints = [
+            { url: '/pos9/jsf/renf/selectRenf0200View.xhtml', body: `selGbn=UNI&rnum=${pClean}&rlrgGbn=1` },
+            { url: '/pos9/PGetRenf0100.do', body: `selGbn=UNI&rnum=${pClean}` },
+            { url: '/pos9/jsf/renf/selectRenf0100Info.xhtml', body: `rnum=${pClean}` },
+          ];
+          for (const ep of endpoints) {
+            try {
+              const resp = await fetch('https://www.iros.go.kr' + ep.url, {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: ep.body,
+              });
+              const txt = await resp.text();
+              if (/표제부|갑구|을구|소유권|순위번호|등기원인/.test(txt)) return { ok: true, txt: txt.slice(0, 10000), url: ep.url };
+              return { ok: false, url: ep.url, status: resp.status, preview: txt.slice(0, 200) };
+            } catch(e) { return { ok: false, url: ep.url, err: e.message }; }
+          }
+          return { ok: false, tried: endpoints.length };
+        }, pinClean);
+        console.log('[iros] 방법G POST 결과:', JSON.stringify(formResult).slice(0, 400));
+        if (formResult.ok) {
+          res.json({ ok: true, registryText: formResult.txt, registryHtml: '', address });
+          return;
+        }
+      } catch(e) { console.log('[iros] 방법G 오류:', e.message); }
+    }
+
+    // ── 방법H: scwin.grd_smpl_srch_rslt 그리드 API로 직접 행 선택 ───────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법H: scwin 그리드 API 직접 행 선택');
+      const wsGridResult = await resultPage.evaluate((gid) => {
+        try {
+          const log = [];
+          // WebSquare 그리드 객체 직접 접근
+          if (typeof scwin !== 'undefined') {
+            const gridKey = Object.keys(scwin).find(k => k.includes('grd_smpl_srch_rslt') || k.includes('smpl'));
+            if (gridKey) {
+              log.push('found:' + gridKey);
+              const g = scwin[gridKey];
+              if (g) {
+                if (typeof g.selectRow === 'function') { g.selectRow(0); log.push('selectRow(0)'); }
+                if (typeof g.setCheckValue === 'function') { g.setCheckValue(0, 'col_chk', 'Y'); log.push('setCheckValue'); }
+                if (typeof g.setFocusedRowIndex === 'function') { g.setFocusedRowIndex(0); log.push('setFocusedRowIndex'); }
+              }
+            }
+          }
+          // 모든 Gauce/WebSquare 그리드 인스턴스 탐색
+          if (window._w2 || window.w2ui || window.webSquare) {
+            const ws = window._w2 || window.w2ui || window.webSquare;
+            log.push('wsType:' + typeof ws);
+          }
+          return log;
+        } catch(e) { return ['err:' + e.message]; }
+      }, gridId).catch(e => ['catch:' + e.message]);
+      console.log('[iros] 방법H 결과:', JSON.stringify(wsGridResult));
+      await resultPage.waitForTimeout(2000);
+      rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+      console.log('[iros] 방법H 후 btn_smpl_rlrg:', rlrgCount);
+    }
+
+    // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
+    {
+      await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
+      const finalPageInfo = await resultPage.evaluate(() => ({
+        url: location.href,
+        rlrgBtns: Array.from(document.querySelectorAll('[id*="btn_smpl_rlrg"],[id*="smpl_rlrg"]')).map(el => ({ id: el.id, vis: el.style.display !== 'none', txt: el.textContent.trim().slice(0,20) })),
+        allBtns: Array.from(document.querySelectorAll('button,a,input[type=button]')).filter(el => /(열람|발급|조회|간편)/.test(el.textContent || el.value || el.id)).slice(0,10).map(el => ({ id: el.id, txt: (el.textContent||el.value||'').trim().slice(0,30) })),
+        capturedReqs: typeof _capturedPosts !== 'undefined' ? 'external' : 'none',
+      })).catch(() => ({}));
+      console.log('[iros] 최종 상태:', JSON.stringify(finalPageInfo));
     }
 
     // 열람 버튼 활성화 대기
