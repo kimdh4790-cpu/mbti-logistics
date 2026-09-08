@@ -8626,7 +8626,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               // Oracle 전체 플로우: 로그인+자동발급 (iros-pin 건너뜀 — IROS Gauce SPA는 PIN을 가상DOM에 숨겨 비회원 추출 불가)
               if (irosId && irosPw) {
                 const ac = new AbortController();
-                const timer = setTimeout(() => ac.abort(), 55000);
+                const timer = setTimeout(() => ac.abort(), 90000);
                 let oRes;
                 try {
                   oRes = await fetch(`${oracleUrl}/api/iros-fetch`, {
