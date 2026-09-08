@@ -1105,6 +1105,20 @@ export default {
           const _sName    = _sg('name') || _sg('userId');
           const _sPeriod  = _sg('month');
           const _sCoName  = _sg('companyName') || 'DONWAY';
+          const _sDealerId = _sg('dealerId');
+          // 기사 은행 정보 조회 (drivers 컬렉션에서 name 매칭)
+          let _sDrvBank = ''; let _sDrvBankNum = ''; let _sDrvPhone = '';
+          if (_sDealerId && _sName) {
+            try {
+              const _drvQ = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:_sDealerId}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:_sName}}}]}},limit:1}});
+              const _drvRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`, {method:'POST',headers:{Authorization:'Bearer '+_sFsToken,'Content-Type':'application/json'},body:_drvQ});
+              const _drvData = await _drvRes.json();
+              const _drvDoc = _drvData[0]?.document?.fields || {};
+              _sDrvBank    = _drvDoc.bankName?.stringValue || '';
+              _sDrvBankNum = _drvDoc.bankAccount?.stringValue || '';
+              _sDrvPhone   = _drvDoc.phone?.stringValue || '';
+            } catch(_de){}
+          }
           const _sCnt     = _sn('totalCount');
           const _sPfSum   = _sn('pfSum');
           const _sInj     = _sn('injected');
@@ -1247,14 +1261,14 @@ ${_sDateRows ? `<div class="sec" style="margin-top:8px">
   </table>
 </div>` : ''}
 <div class="sec" style="margin-top:8px;padding-bottom:4px">
-  <div class="sec-hd"><span class="ico">🏢</span><span class="ttl">영업점 정보</span></div>
+  <div class="sec-hd"><span class="ico">👤</span><span class="ttl">기사 정보</span></div>
   <div style="padding:8px 16px 12px">
     <div class="co-box">
-      <div class="co-name">${_sCoName}</div>
-      <div class="co-row"><span>사업자번호</span><span class="cv">373-86-02536</span></div>
-      <div class="co-row"><span>문의전화</span><span class="cv">051-711-3103</span></div>
-      <div class="co-row"><span>입금 은행</span><span class="cv">하나은행</span></div>
-      <div class="co-row" style="border:none"><span>계좌번호</span><span class="cv">270-910019-24204 (유)엠비티아이</span></div>
+      <div class="co-name">${_sName}</div>
+      ${_sDrvPhone ? `<div class="co-row"><span>연락처</span><span class="cv">${_sDrvPhone}</span></div>` : ''}
+      <div class="co-row"><span>정산 주체</span><span class="cv">${_sCoName}</span></div>
+      ${_sDrvBank ? `<div class="co-row"><span>수령 은행</span><span class="cv">${_sDrvBank}</span></div>` : ''}
+      ${_sDrvBankNum ? `<div class="co-row" style="border:none"><span>계좌번호</span><span class="cv">${_sDrvBankNum} (${_sName})</span></div>` : (!_sDrvBank ? `<div class="co-row" style="border:none"><span>계좌 정보</span><span class="cv" style="color:#94a3b8">미등록</span></div>` : '')}
     </div>
   </div>
 </div>
