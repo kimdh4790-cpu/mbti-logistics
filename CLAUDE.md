@@ -425,6 +425,16 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: `_filoPageHqNotice()` 전가맹점 공지 일괄 발송 신규 구현 (hq_notices 컬렉션)
 - filo-auth.js: `_filoPageQSC()` QSC 체크리스트 신규 구현 (hq_qsc 컬렉션, 9항목 5점 채점)
 
+### ✅ 완료 (2026-09-08)
+- **배달대행 통계 페이지 ₩0 버그 수정** (donway-pages/index.html):
+  - `delivery_sessions` 저장 필드명(`rawTotal`, `pfSum`, `preTax`) vs 통계 집계 읽기 필드명 불일치
+  - `pageDeliveryStats2()` 라인 32032-32033에 폴백 체인 추가
+- **기사 카드 건수·금액·날짜 편집 + 알림톡 발송** (donway-pages/index.html):
+  - 각 기사 카드 하단 편집 행: 건수/추가금액/날짜 input + 적용 버튼
+  - 적용 버튼: 카드 표시 건수·실지급 즉시 재계산, `_dwResults[idx]` 업데이트
+  - 📲 알림톡 버튼: `drivers` 컬렉션에서 전화번호 조회 → `statement_share` 토큰 생성 → 정산명세서 알림톡 발송 (`KA01TP260618101225825DuJHXpoC4kY`)
+  - `_dwApplyEdit()`, `_dwSendRiderAlimtalk()` 전역 함수 추가
+
 ### ✅ 완료 (2026-09-03)
 - DONWAY PWA 홈화면 설치 아이콘: manifest 경로 /icon-192.png → /donway-icon-192.png (신규 PNG)로 변경
 - DINE PWA 홈화면 설치 아이콘: _PWA_ICONS + _DINE_ICON_192/_DINE_APPLE_ICON 신규 로고 base64로 교체
