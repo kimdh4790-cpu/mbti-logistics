@@ -1260,34 +1260,69 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch { return null; }
     };
 
-    // 1차: 셀 ID로 체크박스 TD 좌표 → page.mouse.click (실제 마우스 이벤트)
-    const checkCellLoc = resultPage.locator(`#${cellId}, [id="${cellId}"]`).first();
-    let bbox = await getBbox(checkCellLoc);
-    if (!bbox) {
-      // fallback: tbody 첫 행 첫 TD
-      bbox = await getBbox(resultPage.locator('[id*="grd_smpl_srch_rslt"] tbody tr:first-child td:first-child').first());
-    }
-    if (!bbox) {
-      // fallback: resultRow 첫 TD
-      bbox = await getBbox(resultRow.locator('td').first());
-    }
-    console.log('[iros] 체크박스 셀 bbox:', bbox ? `x=${Math.round(bbox.x)} y=${Math.round(bbox.y)}` : 'null');
+    // ── 그리드 첫 행 모든 셀 ID·좌표 덤프 (어느 열이 체크박스인지 확인) ──────────────
+    const allCellsInfo = await resultPage.evaluate((gid) => {
+      const cells = Array.from(document.querySelectorAll(`[id^="${gid}_cell_0_"]`));
+      return cells.map(el => ({
+        id: el.id,
+        txt: (el.textContent||'').trim().slice(0,30),
+        cls: (el.className||'').slice(0,60),
+        hasInput: !!el.querySelector('input'),
+        hasImg: !!el.querySelector('img,svg'),
+      }));
+    }, gridId).catch(() => []);
+    console.log('[iros] 그리드 첫 행 모든 셀:', JSON.stringify(allCellsInfo));
 
-    if (bbox) {
-      // 셀 중앙을 실제 마우스 클릭 — WebSquare 좌표 기반 이벤트 발생
-      const cx = bbox.x + bbox.width / 2;
-      const cy = bbox.y + bbox.height / 2;
-      await resultPage.mouse.click(cx, cy);
-      console.log('[iros] 마우스 클릭 완료:', Math.round(cx), Math.round(cy));
-    } else {
-      // bbox 못 얻으면 Playwright locator click fallback
-      console.log('[iros] bbox 없음 — locator click 폴백');
-      await resultRow.locator('td').first().click({ force: true, timeout: 5000 }).catch(() => {});
+    // ── 페이지 JavaScript 소스에서 smpl_rlrg 참조 함수 추출 ──────────────────────────
+    const scriptAnalysis = await resultPage.evaluate(() => {
+      const scripts = Array.from(document.querySelectorAll('script')).map(s => s.textContent||'').join('\n');
+      const found = [];
+      // btn_smpl_rlrg 참조 라인 추출
+      scripts.split('\n').forEach((line, i) => {
+        if (/smpl_rlrg|smplRlrg|간편열람|smpl_view/i.test(line)) {
+          found.push({ line: i, txt: line.trim().slice(0,200) });
+        }
+      });
+      return found.slice(0,20);
+    }).catch(() => []);
+    console.log('[iros] smpl_rlrg 스크립트 참조:', JSON.stringify(scriptAnalysis));
+
+    // ── 1차: 모든 셀 순서대로 클릭해서 btn_smpl_rlrg 활성화 시도 ────────────────────
+    let rlrgCount = 0;
+    // Gauce 그리드에서 col 0 = 행번호, col 1 = 체크박스인 경우가 많음 → col 0~4 순서대로 시도
+    const cellCols = [0, 1, 2, 3, 4];
+    for (const col of cellCols) {
+      const cid = `${gridId}_cell_0_${col}`;
+      const cellLoc = resultPage.locator(`#${cid}, [id="${cid}"]`).first();
+      const cellBbox = await getBbox(cellLoc);
+      if (cellBbox) {
+        const cx = cellBbox.x + cellBbox.width / 2;
+        const cy = cellBbox.y + cellBbox.height / 2;
+        console.log(`[iros] 셀 클릭 col=${col} id=${cid} x=${Math.round(cx)} y=${Math.round(cy)}`);
+        await resultPage.mouse.click(cx, cy);
+        await resultPage.waitForTimeout(2000);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log(`[iros] col=${col} 클릭 후 btn_smpl_rlrg:`, rlrgCount);
+        if (rlrgCount > 0) break;
+      } else {
+        console.log(`[iros] 셀 col=${col} bbox 없음`);
+      }
     }
 
-    await resultPage.waitForTimeout(2000);
-    let rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
-    console.log('[iros] btn_smpl_rlrg 출현:', rlrgCount);
+    // 1차 실패 시 첫 행 전체 bbox로 폴백
+    if (rlrgCount === 0) {
+      const rowBbox = await getBbox(resultRow);
+      if (rowBbox) {
+        // 행의 좌측 1/5 지점 (체크박스 위치 추정)
+        const cx = rowBbox.x + rowBbox.width * 0.1;
+        const cy = rowBbox.y + rowBbox.height / 2;
+        console.log('[iros] 행 좌측 클릭:', Math.round(cx), Math.round(cy));
+        await resultPage.mouse.click(cx, cy);
+        await resultPage.waitForTimeout(2000);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 행 좌측 클릭 후 btn_smpl_rlrg:', rlrgCount);
+      }
+    }
 
     if (rlrgCount === 0) {
       // 2차: 체크박스 input 직접 클릭 (fallback)
