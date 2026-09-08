@@ -1191,6 +1191,14 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
     console.log('[iros] 결과 행 클릭');
 
+    // 그리드 행에서 부동산고유번호 추출 (직접 URL 이동 폴백용)
+    const pinFromRow = await resultRow.evaluate(el => {
+      const txt = el.innerText || el.textContent || '';
+      const m = txt.match(/(\d{4}-\d{4}-\d{6})/);
+      return m ? m[1] : null;
+    }).catch(() => null);
+    console.log('[iros] 그리드 행 PIN:', pinFromRow);
+
     // Gauce WebSquare API로 행 선택 + UI 이벤트 발생
     // setCheckValue만 호출하면 데이터값만 바뀌고 onCheck 이벤트가 안 발생 → btn_smpl_rlrg 비활성화 유지
     const gridId = 'mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt';
@@ -1297,6 +1305,59 @@ app.post('/api/iros-fetch', async (req, res) => {
       await resultPage.waitForTimeout(2000);
       rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
       console.log('[iros] 3차 후 btn_smpl_rlrg 출현:', rlrgCount);
+    }
+
+    // ── 직접 URL 이동 시도 (PIN 기반, WebSquare 체크박스 우회) ─────────────────────
+    // btn_smpl_rlrg가 끝내 나타나지 않으면 부동산고유번호로 직접 뷰 페이지 이동
+    let directRegistryResult = null;
+    if (rlrgCount === 0 && pinFromRow) {
+      const pinClean = pinFromRow.replace(/-/g, '');
+      console.log('[iros] btn_smpl_rlrg 미출현 → PIN 직접 URL 시도:', pinClean);
+      const directUrls = [
+        `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0200View.xhtml?selGbn=UNI&rnum=${pinClean}`,
+        `https://www.iros.go.kr/pos9/jsf/renf/selectRenf0200View.xhtml?rnum=${pinClean}`,
+        `https://www.iros.go.kr/pos9/PGetRenf0100.do?rnum=${pinClean}`,
+      ];
+      for (const dUrl of directUrls) {
+        const dPage = await context.newPage().catch(() => null);
+        if (!dPage) break;
+        try {
+          await dPage.goto(dUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+          await dPage.waitForTimeout(3000);
+          const dTxt = await dPage.evaluate(() => document.body?.innerText || '').catch(() => '');
+          const dHtml = await dPage.evaluate(() => document.body?.innerHTML || '').catch(() => '');
+          await dPage.screenshot({ path: '/home/opc/iros-debug/step6-direct-url.png', fullPage: true }).catch(() => {});
+          if (REGISTRY_RE.test(dTxt)) {
+            console.log('[iros] 직접 URL 성공! 등기부 검출:', dUrl);
+            directRegistryResult = { text: dTxt, html: dHtml.slice(0, 80000) };
+            await dPage.close().catch(() => {});
+            break;
+          }
+          console.log('[iros] 직접 URL 등기부 없음:', dUrl, '|', dTxt.slice(0, 150));
+        } catch (e) {
+          console.log('[iros] 직접 URL 오류:', dUrl, e.message);
+        }
+        await dPage.close().catch(() => {});
+      }
+      if (directRegistryResult) {
+        console.log('[iros] 직접 URL 경로로 등기부 추출 성공 — 즉시 응답');
+        res.json({ ok: true, registryText: directRegistryResult.text, registryHtml: directRegistryResult.html, address });
+        return;
+      }
+      // 직접 URL도 실패하면 smpl 전역 함수 직접 호출 시도
+      const smplFnResult = await resultPage.evaluate(() => {
+        try {
+          if (typeof fn_smplRlrg === 'function') { fn_smplRlrg(); return 'fn_smplRlrg'; }
+          if (typeof scwin !== 'undefined' && typeof scwin.fn_smplRlrg === 'function') { scwin.fn_smplRlrg(); return 'scwin.fn_smplRlrg'; }
+          if (typeof fn_rlrg === 'function') { fn_rlrg(); return 'fn_rlrg'; }
+          const fns = Object.keys(window).filter(k => typeof window[k] === 'function' && /smpl|rlrg/i.test(k));
+          return fns.length ? 'found_but_not_called:' + fns.join(',') : 'no_smpl_fn';
+        } catch(e) { return 'err:' + e.message; }
+      }).catch(() => 'catch');
+      console.log('[iros] smpl 전역 함수 호출:', smplFnResult);
+      await resultPage.waitForTimeout(2000);
+      rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+      console.log('[iros] smpl 함수 호출 후 btn_smpl_rlrg 출현:', rlrgCount);
     }
 
     // 열람 버튼 활성화 대기
@@ -1453,6 +1514,9 @@ app.post('/api/iros-fetch', async (req, res) => {
             if (/초기화|smpl_init|btn_init/i.test(info.txt) || /smpl_init|btn_init/i.test(info.id)) continue;
             if (/btn_smpl_srch|btn_srch|btn_search/i.test(info.id)) continue;
             if (/^검색$|^전체선택|^전제선택|^초기화$/.test(info.txt)) continue;
+            // 전세사기 피해예방 체크리스트, 전체선택 등 비열람 버튼 제외
+            if (/btn_check_list|check_list|btn_chk_all/i.test(info.id)) continue;
+            if (/체크리스트|피해예방|전세사기/.test(info.txt)) continue;
             // 간편열람(smpl) 전용 버튼은 vis 무관하게 포함 (체크박스 선택 직후 disabled 상태일 수 있음)
             const isSmplBtn = /btn_smpl_rlrg|btn_smpl_view|btn_smpl_issue/.test(info.id);
             if (!info.vis && !isSmplBtn) continue;
@@ -1633,6 +1697,46 @@ app.get('/api/iros-screenshot', async (req, res) => {
     res.send(imgBuf);
   } catch {
     res.status(404).json({ error: '스크린샷 없음 — IROS 테스트 먼저 실행. ?list=1 로 파일 목록 확인' });
+  }
+});
+
+// ── /api/iros-selftest  자동 IROS 테스트 (루틴·CI용, POST로 credentials 수신) ─────
+// 사용: curl -X POST http://localhost:8080/api/iros-selftest \
+//        -H 'Content-Type: application/json' \
+//        -d '{"irosId":"kdh3103","irosPw":"PASSWORD","address":"부산광역시 수영구 수영로 668"}'
+app.post('/api/iros-selftest', async (req, res) => {
+  const {
+    irosId = process.env.IROS_USER_ID,
+    irosPw = process.env.IROS_USER_PW,
+    address = '부산광역시 수영구 수영로 668',
+  } = req.body || {};
+  if (!irosId || !irosPw) {
+    return res.status(400).json({ error: 'irosId/irosPw 필수 (또는 IROS_USER_ID/IROS_USER_PW 환경변수)' });
+  }
+  const startMs = Date.now();
+  try {
+    const port = process.env.PORT || 8080;
+    const ctrl = new AbortController();
+    const tout = setTimeout(() => ctrl.abort(), 150000);
+    const resp = await fetch(`http://localhost:${port}/api/iros-fetch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address, irosId, irosPw }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(tout);
+    const data = await resp.json().catch(() => ({ ok: false, error: 'JSON parse fail' }));
+    const elapsed = Date.now() - startMs;
+    console.log(`[iros-selftest] ${data.ok ? 'OK' : 'FAIL'} ${elapsed}ms`);
+    res.json({
+      ok: data.ok,
+      elapsed,
+      preview: data.registryText ? data.registryText.slice(0, 300) : null,
+      error: data.error || null,
+      address,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, elapsed: Date.now() - startMs });
   }
 });
 

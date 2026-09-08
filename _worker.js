@@ -8655,6 +8655,40 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         } catch(e) { return Response.json({error:e.message},{status:500,headers}); }
       }
 
+      // GET /api/seolyuhana/iros-autotest — 슈퍼어드민 전용: Oracle 서버 IROS 자동 테스트
+      if (path === '/api/seolyuhana/iros-autotest' && method === 'GET') {
+        const _atUser = await verifyFirebaseToken(request, env);
+        if (!_atUser) return Response.json({error:'인증 필요'},{status:401,headers});
+        const SUPER = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+        if (!SUPER.includes(_atUser.email)) return Response.json({error:'슈퍼어드민 전용'},{status:403,headers});
+        const oUrl = (env.ORACLE_SERVER_URL || '').replace(/\/+$/, '');
+        if (!oUrl) return Response.json({ok:false,error:'ORACLE_SERVER_URL 미설정'},{status:200,headers});
+        const testAddress = new URL(request.url).searchParams.get('address') || '부산광역시 수영구 수영로 668';
+        try {
+          const ac = new AbortController();
+          const timer = setTimeout(() => ac.abort(), 160000);
+          let stRes;
+          try {
+            stRes = await fetch(`${oUrl}/api/iros-selftest`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                irosId: env.IROS_USER_ID,
+                irosPw: env.IROS_USER_PW,
+                address: testAddress,
+              }),
+              signal: ac.signal,
+            });
+          } finally { clearTimeout(timer); }
+          const stData = stRes.ok ? await stRes.json().catch(() => ({ok:false,error:'JSON parse fail'}))
+                                  : {ok:false,error:`HTTP ${stRes.status}`};
+          return Response.json({ ok: stData.ok, elapsed: stData.elapsed, address: testAddress,
+            preview: stData.preview, error: stData.error || null }, {status:200,headers});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message},{status:200,headers});
+        }
+      }
+
       // POST /api/seolyuhana/registry-link — V-World 주소→인터넷등기소 URL 생성
       if (path === '/api/seolyuhana/registry-link' && method === 'POST') {
         const _regUser = await verifyFirebaseToken(request, env);
