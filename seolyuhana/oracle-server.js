@@ -762,10 +762,43 @@ app.post('/api/iros-fetch', async (req, res) => {
     })).catch(() => ({}));
     console.log('[iros] addrInput 프레임:', JSON.stringify(addrInputFrame));
 
-    // 입력값 설정: fill() — 실제 키 입력 시뮬레이션 (WebSquare input event 안정적)
+    // 입력값 설정: WebSquare API setValue() 우선 → keyboard.type 폴백
+    // fill()은 DOM value만 변경 — WebSquare는 내부 컴포넌트 상태를 별도로 관리하므로
+    // fill() 후 검색 시 WebSquare가 빈 값으로 검색 → 0결과
     await addrInput.click({ clickCount: 3 }).catch(() => {});
-    await addrInput.fill(searchAddr);
-    await page.waitForTimeout(500);
+
+    const w2SetResult = await page.evaluate((addr) => {
+      try {
+        const compId = 'mf_wfm_potal_main_sch_realCorp';
+        if (window.w2 && typeof window.w2.getById === 'function') {
+          const inp = window.w2.getById(compId);
+          if (inp) {
+            if (typeof inp.setValue === 'function') { inp.setValue(addr); return 'w2.setValue'; }
+            if (typeof inp.set === 'function') { inp.set('value', addr); return 'w2.set'; }
+            if (typeof inp.val === 'function') { inp.val(addr); return 'w2.val'; }
+          }
+        }
+        if (window.scwin) {
+          const inp = window.scwin[compId] || window.scwin[compId + '___input'];
+          if (inp && typeof inp.setValue === 'function') { inp.setValue(addr); return 'scwin.setValue'; }
+        }
+        return 'no_api';
+      } catch(e) { return 'err:' + e.message; }
+    }, searchAddr);
+    console.log('[iros] WebSquare setValue:', w2SetResult);
+
+    if (!w2SetResult || w2SetResult === 'no_api' || w2SetResult.startsWith('err')) {
+      // WebSquare API 실패 — keyboard.type으로 실제 키보드 이벤트 발생
+      await page.keyboard.press('Control+a');
+      await page.keyboard.press('Delete');
+      await page.keyboard.type(searchAddr, { delay: 30 });
+      console.log('[iros] keyboard.type 폴백 입력');
+    } else {
+      // WebSquare API 성공해도 DOM 동기화 (inputValue() 확인용)
+      await addrInput.fill(searchAddr).catch(() => {});
+    }
+
+    await page.waitForTimeout(600);
     const inputVal = await addrInput.inputValue().catch(() => '');
     console.log('[iros] 입력 설정값:', inputVal);
 
