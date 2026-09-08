@@ -613,7 +613,7 @@ app.post('/api/iros-fetch', async (req, res) => {
     // 전략: native value setter로 값 설정 → 포커스 → keyboard Enter
     // (pressSequentially는 문자 입력 시 헤더 팝업 트리거 → 사용 불가)
     const inputSel = 'input[id*="sch_realCorp___input"]';
-    const inputPlaced = await page.evaluate((sel, addr) => {
+    const inputPlaced = await page.evaluate(({ sel, addr }) => {
       const el = document.querySelector(sel);
       if (!el) return false;
       // React/Gauce의 value setter 우회: native prototype setter 사용
@@ -623,7 +623,7 @@ app.post('/api/iros-fetch', async (req, res) => {
       el.dispatchEvent(new Event('change', { bubbles: true }));
       el.focus();
       return true;
-    }, inputSel, searchAddr);
+    }, { sel: inputSel, addr: searchAddr });
     console.log('[iros] native setter 입력:', inputPlaced ? '성공' : '폴백');
 
     if (!inputPlaced) {
