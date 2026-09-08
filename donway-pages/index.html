@@ -10388,6 +10388,11 @@ function _dwParseExcel(file, cb){
         // 건수 컬럼
         if(colCnt<0&&(hn.includes('건수')||hn.includes('배달건')||hn.includes('완료건')
           ||hn.includes('count')||hn.includes('cnt')||hn.includes('qty')))colCnt=ci;
+        // 매장명 컬럼
+        if(typeof colStore==='undefined')var colStore=-1;
+        if(colStore<0&&(hn.includes('매장명')||hn.includes('영업점')||hn.includes('거래처')
+          ||hn.includes('업체명')||hn.includes('소상공인')||hn.includes('store')
+          ||hn.includes('상호')||hn.includes('고객사')))colStore=ci;
         // 날짜 컬럼
         if(typeof colDate==='undefined')var colDate=-1;
         if(colDate<0&&(hn.includes('날짜')||hn.includes('배달일')||hn.includes('완료일')
@@ -10456,8 +10461,10 @@ function _dwParseExcel(file, cb){
           else{var dm2=ds.match(/(\d{1,2})[-./](\d{1,2})/);
             if(dm2)rowDate=new Date().getFullYear()+'-'+('0'+dm2[1]).slice(-2)+'-'+('0'+dm2[2]).slice(-2);}
         }
+        var storeName='';
+        if(typeof colStore!=='undefined'&&colStore>=0&&row[colStore])storeName=String(row[colStore]).trim();
         if(!riderMap[rid])riderMap[rid]=[];
-        riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour,completedAt:rowDate?rowDate+'T'+('0'+hour).slice(-2)+':00:00':''});
+        riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour,storeName:storeName,completedAt:rowDate?rowDate+'T'+('0'+hour).slice(-2)+':00:00':''});
       });
 
       if(!Object.keys(riderMap).length){
@@ -10692,24 +10699,36 @@ window._dwPreviewStatement=async function(idx,btn){
   try {
     // 이미 토큰이 있으면 재사용
     if(!r.stmtToken){
-      var dateMap={};
+      var dateMap={};var storeMap={};
       var riderRows=(window._dwRiderMap&&window._dwRiderMap[riderId])||[];
+      var _tp=r.targetPrice||0;
       riderRows.forEach(function(row){
         var dt=(row.completedAt||'').slice(0,10);
-        if(!dt||dt==='Invalid')return;
-        if(!dateMap[dt])dateMap[dt]={cnt:0,pfAmt:0};
-        dateMap[dt].cnt++;
-        dateMap[dt].pfAmt+=row.platformPrice||0;
+        var pf=row.platformPrice||0;
+        var fee=_tp>0?_tp:pf; // 계약단가 있으면 단가, 없으면 플랫폼 수령
+        if(dt&&dt!=='Invalid'){
+          if(!dateMap[dt])dateMap[dt]={cnt:0,pfAmt:0,fee:0};
+          dateMap[dt].cnt++;dateMap[dt].pfAmt+=pf;dateMap[dt].fee+=fee;
+        }
+        var sn=row.storeName||'';
+        if(sn){
+          if(!storeMap[sn])storeMap[sn]={cnt:0,pfAmt:0};
+          storeMap[sn].cnt++;storeMap[sn].pfAmt+=pf;
+        }
       });
       var dateBreakdown=Object.keys(dateMap).sort().map(function(dt){
-        return {date:dt,cnt:dateMap[dt].cnt,pfAmt:dateMap[dt].pfAmt};
+        return {date:dt,cnt:dateMap[dt].cnt,pfAmt:dateMap[dt].pfAmt,fee:dateMap[dt].fee};
       });
       // 날짜 정보 없으면 기간 단일 행으로 대체
       if(!dateBreakdown.length&&riderRows.length>0){
         var _totalCnt=riderRows.length;
         var _totalPf=riderRows.reduce(function(s,row){return s+(row.platformPrice||0);},0);
-        dateBreakdown=[{date:period||new Date().toISOString().slice(0,10),cnt:_totalCnt,pfAmt:_totalPf}];
+        var _totalFee=_tp>0?_tp*_totalCnt:_totalPf;
+        dateBreakdown=[{date:period||new Date().toISOString().slice(0,10),cnt:_totalCnt,pfAmt:_totalPf,fee:_totalFee}];
       }
+      var storeBreakdown=Object.keys(storeMap).sort().map(function(sn){
+        return {store:sn,cnt:storeMap[sn].cnt,pfAmt:storeMap[sn].pfAmt};
+      });
       var token=_db.collection('statement_share').doc().id;
       var net=r.net||0;var preTax=r.preTax||0;
       var tax=r.totalTax||Math.floor(preTax*0.033);
@@ -10721,6 +10740,7 @@ window._dwPreviewStatement=async function(idx,btn){
         totalCount:r.totalCount||0,injected:r.injected||0,extracted:r.extracted||0,
         pfSum:r.pfSum||0,targetPrice:r.targetPrice||0,
         dateBreakdown:dateBreakdown,
+        storeBreakdown:storeBreakdown,
         type:'delivery',companyName:coName,
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
       });

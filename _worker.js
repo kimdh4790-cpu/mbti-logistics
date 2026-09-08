@@ -1139,14 +1139,25 @@ export default {
           const _sDeduct  = _sTax + _sSanjae + _sGoyal;
           // 날짜별 상세 내역
           const _sDateArr = _sf['dateBreakdown']?.arrayValue?.values || [];
-          let _sDateRows = ''; let _sDtCnt = 0; let _sDtPf = 0;
+          let _sDateRows = ''; let _sDtCnt = 0; let _sDtPf = 0; let _sDtFee = 0;
           _sDateArr.forEach(item => {
             const fi = item.mapValue?.fields || {};
             const dt  = fi.date?.stringValue || '';
             const cnt = parseFloat(fi.cnt?.integerValue || fi.cnt?.doubleValue || 0);
             const pf  = parseFloat(fi.pfAmt?.integerValue || fi.pfAmt?.doubleValue || 0);
-            _sDtCnt += cnt; _sDtPf += pf;
-            _sDateRows += `<tr><td class="dt" style="color:#185FA5;font-weight:600">${dt}</td><td class="num">${cnt}건</td><td class="num" style="color:#1e3a5f;font-weight:600">₩${pf.toLocaleString()}</td></tr>`;
+            const fee = parseFloat(fi.fee?.integerValue || fi.fee?.doubleValue || 0) || pf;
+            _sDtCnt += cnt; _sDtPf += pf; _sDtFee += fee;
+            _sDateRows += `<tr><td class="dt" style="color:#185FA5;font-weight:600">${dt}</td><td class="num">${cnt}건</td><td class="num" style="color:#1e3a5f;font-weight:600">₩${fee.toLocaleString()}</td><td class="num" style="color:#475569">₩${pf.toLocaleString()}</td></tr>`;
+          });
+          // 매장별 실적
+          const _sStoreArr = _sf['storeBreakdown']?.arrayValue?.values || [];
+          let _sStoreRows = '';
+          _sStoreArr.forEach(item => {
+            const fi = item.mapValue?.fields || {};
+            const sn  = fi.store?.stringValue || '';
+            const cnt = parseFloat(fi.cnt?.integerValue || fi.cnt?.doubleValue || 0);
+            const pf  = parseFloat(fi.pfAmt?.integerValue || fi.pfAmt?.doubleValue || 0);
+            _sStoreRows += `<tr><td style="padding:8px 16px;font-weight:600;color:#1e3a5f">${sn}</td><td class="num">${cnt}건</td><td class="num" style="color:#1e3a5f;font-weight:600">₩${pf.toLocaleString()}</td></tr>`;
           });
           const _sHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>배달대행 정산명세서 — ${_sName}</title>
 <style>
@@ -1260,11 +1271,18 @@ tfoot td{font-weight:800;background:#eff6ff;color:#1e3a5f;border-top:2px solid #
   <div class="amt">₩${_sNet.toLocaleString()}</div>
 </div>
 ${_sDateRows ? `<div class="sec" style="margin-top:8px">
-  <div class="sec-hd"><span class="ico">📅</span><span class="ttl">일일 상세 내역 (날짜별 배달 건수)</span></div>
+  <div class="sec-hd"><span class="ico">📅</span><span class="ttl">일일 상세 내역</span></div>
   <table>
-    <thead><tr><th>날짜</th><th style="text-align:right">건수</th><th style="text-align:right">플랫폼 수령</th></tr></thead>
+    <thead><tr><th>날짜</th><th style="text-align:right">건수</th><th style="text-align:right">배달비</th><th style="text-align:right">플랫폼 수령</th></tr></thead>
     <tbody>${_sDateRows}</tbody>
-    <tfoot><tr><td>합계</td><td class="num">${_sDtCnt}건</td><td class="num">₩${_sDtPf.toLocaleString()}</td></tr></tfoot>
+    <tfoot><tr><td>합계</td><td class="num">${_sDtCnt}건</td><td class="num">₩${_sDtFee.toLocaleString()}</td><td class="num">₩${_sDtPf.toLocaleString()}</td></tr></tfoot>
+  </table>
+</div>` : ''}
+${_sStoreRows ? `<div class="sec" style="margin-top:8px">
+  <div class="sec-hd"><span class="ico">🏪</span><span class="ttl">매장별 실적</span></div>
+  <table>
+    <thead><tr><th>매장명</th><th style="text-align:right">건수</th><th style="text-align:right">배달비</th></tr></thead>
+    <tbody>${_sStoreRows}</tbody>
   </table>
 </div>` : ''}
 <div class="sec" style="margin-top:8px;padding-bottom:4px">
