@@ -1,10 +1,6 @@
 name: Reset Firebase Password (One-Time)
 on:
   workflow_dispatch:
-    inputs:
-      new_cf_key:
-        description: 'Cloudflare Global API Key (CF_GLOBAL_KEY 새 값)'
-        required: true
 
 jobs:
   reset:
@@ -15,38 +11,38 @@ jobs:
       - name: Install wrangler
         run: npm install -g wrangler@4 --silent
 
-      - name: Update CF_GLOBAL_KEY secret and reset admin passwords
+      - name: Sync CF_GLOBAL_KEY Worker secret and reset admin passwords
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CF_EMAIL: kimdh4790@gmail.com
-          NEW_KEY: ${{ github.event.inputs.new_cf_key }}
         run: |
           CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          NEW_KEY="$(printf '%s' "$NEW_KEY" | tr -d '\r\n\t ')"
 
-          echo "--- Step 1: Worker CF_GLOBAL_KEY 업데이트 ---"
-          if printf '%s' "$NEW_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put CF_GLOBAL_KEY 2>&1; then
+          echo "--- Step 1: Worker CF_GLOBAL_KEY = GitHub CF_GLOBAL_KEY 업데이트 ---"
+          if printf '%s' "$CF_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put CF_GLOBAL_KEY 2>&1; then
             echo "Updated via API Token"
           else
-            printf '%s' "$NEW_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put CF_GLOBAL_KEY 2>&1
-            echo "Updated via Global API Key"
+            printf '%s' "$CF_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put CF_GLOBAL_KEY 2>&1
           fi
 
           echo "--- Worker 반영 대기 (5초) ---"
           sleep 5
 
-          echo "--- Step 2: kimdh4790@gmail.com 비밀번호 설정 ---"
-          R1=$(curl -s -X POST https://filo.ai.kr/api/admin-set-pw \
-            -H "Content-Type: application/json" \
-            -d "{\"key\":\"${NEW_KEY}\",\"email\":\"kimdh4790@gmail.com\",\"password\":\"khw3103!!\"}")
-          echo "Result: $R1"
-          echo "$R1" | grep -q '"ok":true' && echo 'SUCCESS: kimdh4790' || echo 'FAILED: kimdh4790'
+          echo "--- Step 2: 모든 도메인에서 admin-set-pw 호출 시도 ---"
+          for DOMAIN in filo.ai.kr donway.ai.kr dine.ne.kr; do
+            R=$(curl -s -X POST https://$DOMAIN/api/admin-set-pw \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"${CF_KEY}\",\"email\":\"kimdh4790@gmail.com\",\"password\":\"khw3103!!!\"}")
+            echo "[$DOMAIN] kimdh4790: $R"
+            echo "$R" | grep -q '"ok":true' && break
+          done
 
-          echo "--- Step 3: soungkyekim@naver.com 비밀번호 설정 ---"
-          R2=$(curl -s -X POST https://filo.ai.kr/api/admin-set-pw \
-            -H "Content-Type: application/json" \
-            -d "{\"key\":\"${NEW_KEY}\",\"email\":\"soungkyekim@naver.com\",\"password\":\"khw3103!!!\"}")
-          echo "Result: $R2"
-          echo "$R2" | grep -q '"ok":true' && echo 'SUCCESS: soungkyekim' || echo 'FAILED: soungkyekim'
+          for DOMAIN in filo.ai.kr donway.ai.kr dine.ne.kr; do
+            R=$(curl -s -X POST https://$DOMAIN/api/admin-set-pw \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"${CF_KEY}\",\"email\":\"soungkyekim@naver.com\",\"password\":\"khw3103!!!\"}")
+            echo "[$DOMAIN] soungkyekim: $R"
+            echo "$R" | grep -q '"ok":true' && break
+          done
 
           echo "--- 완료 ---"
