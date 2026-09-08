@@ -1206,12 +1206,56 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] 결과 행 클릭');
 
     // 그리드 행에서 부동산고유번호 추출 (직접 URL 이동 폴백용)
-    const pinFromRow = await resultRow.evaluate(el => {
+    let pinFromRow = await resultRow.evaluate(el => {
       const txt = el.innerText || el.textContent || '';
       const m = txt.match(/(\d{4}-\d{4}-\d{6})/);
       return m ? m[1] : null;
     }).catch(() => null);
     console.log('[iros] 그리드 행 PIN:', pinFromRow);
+
+    // datalist에서 PIN 추출 (WebSquare 그리드는 innerText가 빈 경우 많음)
+    if (!pinFromRow) {
+      pinFromRow = await resultPage.evaluate(() => {
+        try {
+          const dltKey = Object.keys(window).find(k => /dlt_smpl_srch_rslt$/.test(k));
+          if (dltKey && window[dltKey]) {
+            const d = window[dltKey];
+            // getRowData 시도
+            if (typeof d.getRowData === 'function') {
+              const row = d.getRowData(0);
+              if (row) {
+                const rnumKey = Object.keys(row).find(k => /rnum|uniq|pin/i.test(k));
+                if (rnumKey) {
+                  const v = String(row[rnumKey]);
+                  // 13자리 숫자이면 포맷 변환
+                  if (/^\d{13}$/.test(v)) return v.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+                  const m = v.match(/(\d{4}-\d{4}-\d{6})/);
+                  if (m) return m[1];
+                }
+                // 전체 값에서 PIN 패턴 검색
+                const txt = JSON.stringify(row);
+                const m2 = txt.match(/(\d{4}-?\d{4}-?\d{6})/);
+                if (m2) return m2[1].replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+              }
+            }
+            // getAllRowData 시도
+            if (typeof d.getAllRowData === 'function') {
+              const all = d.getAllRowData();
+              if (all && all[0]) {
+                const txt = JSON.stringify(all[0]);
+                const m = txt.match(/(\d{4}-?\d{4}-?\d{6})/);
+                if (m) return m[1].replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+              }
+            }
+          }
+          // 페이지 전체 텍스트에서 PIN 패턴 검색
+          const all = document.body.innerText || '';
+          const m3 = all.match(/(\d{4}-\d{4}-\d{6})/);
+          return m3 ? m3[1] : null;
+        } catch { return null; }
+      }).catch(() => null);
+      if (pinFromRow) console.log('[iros] datalist에서 PIN 추출:', pinFromRow);
+    }
 
     // Gauce WebSquare API로 행 선택 + UI 이벤트 발생
     // setCheckValue만 호출하면 데이터값만 바뀌고 onCheck 이벤트가 안 발생 → btn_smpl_rlrg 비활성화 유지
@@ -1790,6 +1834,128 @@ app.post('/api/iros-fetch', async (req, res) => {
         rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
         console.log('[iros] 방법I 후 btn_smpl_rlrg:', rlrgCount);
       } catch(e) { console.log('[iros] 방법I 오류:', e.message); }
+    }
+
+    // ── 방법J: page.waitForResponse + WebSquare submit binding 직접 트리거 ────────────
+    // 핵심: 체크박스 UI 없이도 submit binding이 서버 XHR을 발생시키면 응답 본문 캡처
+    if (rlrgCount === 0 && pinFromRow) {
+      console.log('[iros] 방법J: waitForResponse + submit binding 직접 트리거');
+      const pinClean = pinFromRow.replace(/-/g, '');
+      try {
+        // 1) datalist 체크 상태 강제 설정
+        const dltSetResult = await resultPage.evaluate((pinC) => {
+          try {
+            const log = [];
+            // dlt_smpl_srch_rslt (메인 결과 datalist) 첫 행 데이터 읽기
+            const resKey = Object.keys(window).find(k => /dlt_smpl_srch_rslt$/.test(k));
+            if (resKey && window[resKey]) {
+              const d = window[resKey];
+              let row0 = null;
+              if (typeof d.getRowData === 'function') row0 = d.getRowData(0);
+              else if (typeof d.getAllRowData === 'function') { const a = d.getAllRowData(); row0 = a && a[0]; }
+              window.__iros_row0 = row0 ? JSON.stringify(row0) : null;
+              log.push('row0:' + (window.__iros_row0 ? window.__iros_row0.slice(0,150) : 'null'));
+            }
+            // dlt_smpl_srch_rslt_check 체크 상태 설정
+            const chkKey = Object.keys(window).find(k => /dlt_smpl_srch_rslt_check/i.test(k));
+            if (chkKey && window[chkKey]) {
+              const dc = window[chkKey];
+              ['setRowData','setValue','setData'].forEach(m => {
+                if (typeof dc[m] === 'function') {
+                  try {
+                    if (m === 'setRowData') dc.setRowData(0, { col_chk: 'Y', rnum: pinC });
+                    else if (m === 'setValue') dc.setValue('col_chk', 'Y', 0);
+                    else if (m === 'setData') dc.setData([{ col_chk: 'Y', rnum: pinC }]);
+                    log.push('chk.' + m);
+                  } catch(e2) { log.push('chk_err:' + e2.message); }
+                }
+              });
+            }
+            return log;
+          } catch(e) { return ['err:' + e.message]; }
+        }, pinClean);
+        console.log('[iros] 방법J datalist 설정:', JSON.stringify(dltSetResult));
+
+        // 2) waitForResponse 설정 후 submit binding 호출 (Playwright 레벨에서 응답 캡처)
+        const responsePromise = resultPage.waitForResponse(
+          r => r.url().includes('retrievePinSrchCont'),
+          { timeout: 8000 }
+        ).catch(() => null);
+
+        // submit binding 직접 호출 (EXACT key from confirmed gvKeys)
+        const sbmCallResult = await resultPage.evaluate(() => {
+          try {
+            const sbmKey = Object.keys(window).find(k => /sbm.*retrievePinSrchCont|retrievePinSrchCont/i.test(k));
+            if (!sbmKey) return 'sbmKey_not_found';
+            const sbm = window[sbmKey];
+            if (!sbm) return 'sbm_null';
+            if (typeof sbm.submit === 'function') { sbm.submit(); return 'sbm.submit():' + sbmKey; }
+            if (typeof sbm === 'function') { sbm(); return 'sbm():' + sbmKey; }
+            return 'no_submit_method:' + typeof sbm;
+          } catch(e) { return 'err:' + e.message; }
+        });
+        console.log('[iros] 방법J submit 호출:', sbmCallResult);
+
+        const apiResponse = await responsePromise;
+        if (apiResponse) {
+          const respStatus = apiResponse.status();
+          const respText = await apiResponse.text().catch(() => '');
+          console.log('[iros] 방법J 응답 status=' + respStatus + ' len=' + respText.length + ' preview:', respText.slice(0, 400));
+          if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(respText)) {
+            console.log('[iros] 방법J 등기부 검출 성공!');
+            res.json({ ok: true, registryText: respText, registryHtml: '', address });
+            return;
+          }
+        } else {
+          console.log('[iros] 방법J waitForResponse 타임아웃 (XHR 미발생)');
+        }
+
+        // 3) 직접 XHR: row0 데이터 + 다양한 파라미터 조합
+        const row0Raw = await resultPage.evaluate(() => window.__iros_row0 || null);
+        const xhrResult = await resultPage.evaluate(async (pinC, r0Raw) => {
+          const row0 = r0Raw ? JSON.parse(r0Raw) : {};
+          const baseParams = Object.keys(row0)
+            .map(k => `${k}=${encodeURIComponent(row0[k] == null ? '' : row0[k])}`)
+            .join('&');
+          const bodies = [
+            `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`,
+            `rnum=${pinC}&rlrgGbn=1&selGbn=UNI&smplKindCls=1`,
+            `rnum=${pinC}&rlrgGbn=1`,
+            baseParams ? `${baseParams}&rnum=${pinC}&rlrgGbn=1&selGbn=UNI` : '',
+          ].filter(Boolean);
+          for (const body of bodies) {
+            try {
+              const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
+                method: 'POST', credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                  'X-Requested-With': 'XMLHttpRequest',
+                  'Accept': 'application/json, text/javascript, */*; q=0.01',
+                  'Referer': location.href,
+                },
+                body,
+              });
+              const txt = await r.text();
+              if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
+                return { ok: true, txt, body };
+              }
+              if (r.status === 200 && txt.length > 50) {
+                return { ok: false, status: r.status, preview: txt.slice(0, 400), body };
+              }
+            } catch(e) { /* try next */ }
+          }
+          return { ok: false };
+        }, pinClean, row0Raw);
+        console.log('[iros] 방법J XHR:', JSON.stringify(xhrResult).slice(0, 600));
+        if (xhrResult && xhrResult.ok) {
+          res.json({ ok: true, registryText: xhrResult.txt, registryHtml: '', address });
+          return;
+        }
+
+        await resultPage.waitForTimeout(2000);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법J 후 btn_smpl_rlrg:', rlrgCount);
+      } catch(e) { console.log('[iros] 방법J 오류:', e.message); }
     }
 
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
