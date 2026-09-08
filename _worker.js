@@ -8580,41 +8580,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (oracleUrl) {
             let oracleErr = null;
             try {
-              // Step A: Oracle PIN 검색 (비회원 가능, 로그인 불필요)
-              let pin = null;
-              try {
-                const pinAc = new AbortController();
-                const pinTimer = setTimeout(() => pinAc.abort(), 30000);
-                let pinRes;
-                try {
-                  pinRes = await fetch(`${oracleUrl}/api/iros-pin`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address: stdAddr, regType: regType === 'land' ? 'land' : 'building' }),
-                    signal: pinAc.signal
-                  });
-                } finally { clearTimeout(pinTimer); }
-                if (pinRes && pinRes.ok) {
-                  const pd = await pinRes.json();
-                  pin = pd.pin || null;
-                  console.log('[oracle-pin]', pin ? `PIN=${pin}` : `PIN 없음: ${pd.error}`);
-                } else {
-                  console.error('[oracle-pin] HTTP', pinRes?.status);
-                }
-              } catch(pe) { console.error('[oracle-pin]', pe.message); }
-
-              // Step B: PIN 있으면 Tilko RealtyRegistry (무결제, 데이터만)
-              if (pin && tilkoKey) {
-                try {
-                  const data = await _tilkoFetchRegistry(stdAddr, pin, regType, env);
-                  return Response.json({ok:true, mode:'hybrid', stdAddr, ...data}, {status:200,headers});
-                } catch(te2) {
-                  console.error('[tilko-registry-oracle-pin]', te2.message);
-                  oracleErr = `Tilko(PIN=${pin}) 오류: ${te2.message}`;
-                }
-              }
-
-              // Step C: Tilko 없거나 실패 → Oracle 전체 플로우 (로그인+발급)
+              // Oracle 전체 플로우: 로그인+자동발급 (iros-pin 건너뜀 — IROS Gauce SPA는 PIN을 가상DOM에 숨겨 비회원 추출 불가)
               if (irosId && irosPw) {
                 const ac = new AbortController();
                 const timer = setTimeout(() => ac.abort(), 55000);
