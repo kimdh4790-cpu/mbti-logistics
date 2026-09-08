@@ -1796,12 +1796,15 @@ app.post('/api/iros-fetch', async (req, res) => {
               const sbm = window[sbmKey];
               const sbmKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(sbm) || {}).concat(Object.keys(sbm || {}));
               log.push('sbm_keys:' + JSON.stringify(sbmKeys.slice(0, 20)));
+              log.push('sbm_action:' + (sbm.action || 'none'));
+              log.push('sbm_customHandler_type:' + typeof sbm.customHandler);
               if (typeof sbm.submit === 'function') { sbm.submit({ rnum: pinC }); log.push('sbm.submit(rnum)'); }
               else if (typeof sbm === 'function') { sbm({ rnum: pinC }); log.push('sbm(rnum)'); }
               else if (typeof sbm.run === 'function') { sbm.run(); log.push('sbm.run()'); }
               else if (typeof sbm.execute === 'function') { sbm.execute({ rnum: pinC }); log.push('sbm.execute(rnum)'); }
               else if (typeof sbm.send === 'function') { sbm.send(); log.push('sbm.send()'); }
               else if (typeof sbm.call === 'function') { sbm.call(); log.push('sbm.call()'); }
+              else if (typeof sbm.customHandler === 'function') { sbm.customHandler({ rnum: pinC }); log.push('sbm.customHandler(rnum)'); }
               else { log.push('sbm_no_callable:' + typeof sbm); }
             }
             // 4) scwin 내 retrievePinSrchCont 탐색
@@ -1812,32 +1815,31 @@ app.post('/api/iros-fetch', async (req, res) => {
                 try { scwin[scKey]({ rnum: pinC }); log.push('scwin.fn(rnum)'); } catch(e3) { log.push('scFn_err:' + e3.message); }
               }
             }
-            // 5) XHR direct: retrievePinSrchCont.do — 다양한 파라미터 조합
-            const bodies = [
-              `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`,
-              `rnum=${pinDash}&rlrgGbn=1&selGbn=UNI`,
-              `rnum=${pinC}&rlrgGbn=1&selGbn=UNI&smplKindCls=1`,
-              `rnum=${pinC}&rlrgGbn=1`,
-              `rnum=${pinC}`,
+            // 5) XHR direct: WebSquare 포맷 (IS_NMBR_LOGIN__=null + websquare_param JSON)
+            const wsParamBodies = [
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinDash,"selGbn":"UNI","rlrgGbn":"1"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrieveSmplSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
             ];
-            for (const body of bodies) {
+            for (const wb of wsParamBodies) {
               try {
-                const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
+                const r = await fetch(wb.url, {
                   method: 'POST', credentials: 'include',
                   headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Accept': 'application/json, text/plain, */*',
                     'Referer': location.href,
                   },
-                  body,
+                  body: wb.body,
                 });
                 const txt = await r.text();
-                log.push('pinCont_status:' + r.status + ':' + body.slice(0,40) + ' preview:' + txt.slice(0, 200));
+                log.push('ws_status:' + r.status + ' url:' + wb.url.split('/').pop() + ' preview:' + txt.slice(0, 500));
                 if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
                   return { ok: true, log, txt };
                 }
-              } catch(er) { log.push('pinCont_fetch_err:' + er.message); break; }
+              } catch(er) { log.push('ws_fetch_err:' + er.message); break; }
             }
           } catch(e) { log.push('outer_err:' + e.message); }
           return { ok: false, log };
@@ -1938,32 +1940,31 @@ app.post('/api/iros-fetch', async (req, res) => {
             if (Array.isArray(row0) && row0[0]) row0Rnum = String(row0[0]);
             else if (row0 && typeof row0 === 'object' && row0.rnum) row0Rnum = row0.rnum;
           } catch(pe) {}
-          const bodies = [
-            `rnum=${row0Rnum}&rlrgGbn=1&selGbn=UNI`,
-            `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`,
-            `rnum=${row0Rnum}&rlrgGbn=1&selGbn=UNI&smplKindCls=1`,
-            `rnum=${row0Rnum}&rlrgGbn=1`,
-            `rnum=${row0Rnum}`,
+          const wsRequests = [
+            { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":row0Rnum,"selGbn":"UNI","rlrgGbn":"1"}}) },
+            { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
+            { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":row0Rnum,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1"}}) },
+            { url: '/biz/Pr20ViaRlrgSrchCtrl/retrieveSmplSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":row0Rnum,"selGbn":"UNI","rlrgGbn":"1"}}) },
           ];
           const results = [];
-          for (const body of bodies) {
+          for (const wr of wsRequests) {
             try {
-              const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
+              const r = await fetch(wr.url, {
                 method: 'POST', credentials: 'include',
                 headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                  'Content-Type': 'application/json',
                   'X-Requested-With': 'XMLHttpRequest',
-                  'Accept': 'application/json, text/javascript, */*; q=0.01',
+                  'Accept': 'application/json, text/plain, */*',
                   'Referer': location.href,
                 },
-                body,
+                body: wr.body,
               });
               const txt = await r.text();
               if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
-                return { ok: true, txt, body };
+                return { ok: true, txt, url: wr.url };
               }
-              results.push({ status: r.status, preview: txt.slice(0, 200), body: body.slice(0,60) });
-            } catch(e) { results.push({ err: e.message, body: body.slice(0,60) }); }
+              results.push({ status: r.status, preview: txt.slice(0, 500), url: wr.url.split('/').pop() });
+            } catch(e) { results.push({ err: e.message, url: wr.url.split('/').pop() }); }
           }
           return { ok: false, results };
         }, {pinC: pinClean, r0Raw: row0Raw});
