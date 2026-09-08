@@ -609,57 +609,53 @@ app.post('/api/iros-fetch', async (req, res) => {
       .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
     console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
-    // fill() 사용 — pressSequentially는 IROS 헤더 팝업 오픈 트리거가 됨
-    // Gauce 자동완성: fill 후 input/change 이벤트 강제 발생
-    await addrInput.click({ force: true });
-    await page.waitForTimeout(300);
-    // 헤더 팝업이 뜨면 닫기
-    const headerPopup = page.locator('#mf_wfm_potal_main_wf_header_grp_popup_search');
-    if (await headerPopup.count() > 0 && await headerPopup.isVisible().catch(() => false)) {
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
-    }
-    await addrInput.fill(searchAddr);
-    // Gauce input 이벤트 강제 발생 (자동완성 트리거)
-    const addrEh = await addrInput.elementHandle().catch(() => null);
-    if (addrEh) {
-      await page.evaluate(el => {
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      }, addrEh).catch(() => {});
-    }
-    await page.waitForTimeout(1500);
+    // Gauce SPA는 DOM fill()/input 이벤트가 아닌 키보드 이벤트로 동작
+    // 전략: native value setter로 값 설정 → 포커스 → keyboard Enter
+    // (pressSequentially는 문자 입력 시 헤더 팝업 트리거 → 사용 불가)
+    const inputSel = 'input[id*="sch_realCorp___input"]';
+    const inputPlaced = await page.evaluate((sel, addr) => {
+      const el = document.querySelector(sel);
+      if (!el) return false;
+      // React/Gauce의 value setter 우회: native prototype setter 사용
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+      nativeSetter.call(el, addr);
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: addr }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.focus();
+      return true;
+    }, inputSel, searchAddr);
+    console.log('[iros] native setter 입력:', inputPlaced ? '성공' : '폴백');
 
-    // 검색 버튼: 중앙 검색창 주변 버튼 우선, 폴백 Enter
-    // IROS 홈 중앙 검색버튼: sch_realCorp 그룹 내 버튼 또는 근처 button
-    let searchTriggered = false;
-    const centerSearchBtn = page.locator(
-      'button[id*="sch_realCorp"], a[id*="sch_realCorp"], button[id*="btn_search"], a[id*="btn_search"]'
-    ).first();
-    if (await centerSearchBtn.count() > 0) {
-      const sbEh2 = await centerSearchBtn.elementHandle().catch(() => null);
-      if (sbEh2) {
-        await page.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), sbEh2).catch(() => {});
-        searchTriggered = true;
-        console.log('[iros] 중앙 검색버튼 클릭');
-      }
+    if (!inputPlaced) {
+      // 폴백: addrInput.fill + focus
+      await addrInput.fill(searchAddr);
+      await addrInput.focus();
     }
-    if (!searchTriggered) {
-      await addrInput.press('Enter');
-      console.log('[iros] Enter 검색');
-    }
+    await page.waitForTimeout(500);
+
+    // Enter 키 → 현재 포커스된 중앙 검색창에서 검색 실행
+    await page.keyboard.press('Enter');
+    console.log('[iros] Enter 검색 실행');
     // IROS 응답 대기 (processMsg 사라질 때까지 + 여유)
     await page.waitForTimeout(8000);
 
-    // 5단계: 검색 후 DOM 스냅샷 (디버깅)
+    // 5단계: 검색 후 DOM 스냅샷 (디버깅 — 검색 결과 포함 요소 탐색)
     {
-      const allText = await page.evaluate(() =>
-        Array.from(document.querySelectorAll('tr, li, div[id*="grd"], div[id*="list"]'))
-          .filter(el => el.children.length < 5)
-          .map(el => `[${el.tagName}#${el.id}] "${(el.textContent||'').trim().slice(0,60)}"`)
-          .slice(0, 30).join('\n')
-      ).catch(() => '');
-      console.log('[iros] 검색후 DOM:\n' + allText.slice(0, 1000));
+      const allText = await page.evaluate(() => {
+        const els = document.querySelectorAll(
+          'tr, li, div[id*="grd"], div[id*="grid"], div[id*="list"], ' +
+          'div[id*="result"], div[id*="Result"], div[class*="result"], ' +
+          'div[id*="sch_realCorp"], div[id*="srch"], span[id*="srch"]'
+        );
+        return Array.from(els)
+          .filter(el => {
+            const txt = (el.textContent||'').trim();
+            return txt.length > 3 && txt.length < 300 && el.children.length < 10;
+          })
+          .map(el => `[${el.tagName}#${el.id||''}] "${(el.textContent||'').trim().slice(0,80)}"`)
+          .slice(0, 40).join('\n');
+      }).catch(() => '');
+      console.log('[iros] 검색후 DOM:\n' + allText.slice(0, 2000));
       // 영구 경로에 스크린샷 저장 (tmpDir 삭제 후에도 확인 가능)
       const debugDir = '/home/opc/iros-debug';
       await mkdir(debugDir, { recursive: true }).catch(() => {});
