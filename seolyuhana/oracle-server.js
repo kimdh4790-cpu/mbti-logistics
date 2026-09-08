@@ -1214,29 +1214,34 @@ app.post('/api/iros-fetch', async (req, res) => {
     }, gridId).catch(() => 'catch');
     console.log('[iros] Gauce WebSquare API:', gauceSelect);
 
-    // Playwright 직접 클릭: checkbox input 직접 클릭이 WebSquare 이벤트 핸들러 가장 확실히 트리거
-    const chkInput = resultRow.locator('input[type="checkbox"]').first();
-    const hasChkInput = await chkInput.count().catch(() => 0) > 0;
-    console.log('[iros] 체크박스 input 존재:', hasChkInput);
-    const [rowPopup] = await Promise.all([
-      context.waitForEvent('page', { timeout: 6000 }).catch(() => null),
-      hasChkInput
+    // WebSquare API 성공 여부 판단 — 성공 시 Playwright 클릭 생략 (더블클릭 → 체크해제 방지)
+    const wsApiOk = /^(w2\.|scwin\.)/.test(gauceSelect);
+    let rowPopup = null;
+    if (wsApiOk) {
+      // WebSquare API가 이미 행 선택 → 추가 클릭 없이 버튼 활성화 대기
+      console.log('[iros] WebSquare API 성공 — 추가 클릭 없음, 버튼 대기');
+    } else {
+      // WebSquare API 실패 → checkbox input 또는 TD 직접 클릭
+      const chkInput = resultRow.locator('input[type="checkbox"]').first();
+      const hasChkInput = await chkInput.count().catch(() => 0) > 0;
+      console.log('[iros] 체크박스 input 존재:', hasChkInput, '— 직접 클릭');
+      const clickProm = hasChkInput
         ? chkInput.click({ force: true, timeout: 8000 }).catch(async (e) => {
             console.log('[iros] chkInput.click 실패:', e.message, '— TD 폴백');
-            await resultRow.locator('td').first().click({ force: true, timeout: 5000 }).catch(async () => {
-              const eh = await resultRow.elementHandle().catch(() => null);
-              if (eh) await resultCtx.evaluate(el => el.click(), eh).catch(() => {});
-            });
+            await resultRow.locator('td').nth(1).click({ force: true, timeout: 5000 }).catch(() => {});
           })
-        : resultRow.locator('td').first().click({ force: true, timeout: 8000 }).catch(async (e) => {
+        : resultRow.locator('td').nth(1).click({ force: true, timeout: 8000 }).catch((e) => {
             console.log('[iros] TD.click 실패:', e.message);
-          }),
-    ]);
-    // 체크박스 클릭 후 WebSquare가 열람 버튼 활성화하기까지 대기
-    await resultPage.waitForTimeout(1000);
-    // 열람 버튼 활성화 감지 (btn_smpl_rlrg: 간편열람 전용 버튼)
-    await resultPage.waitForSelector('[id*="btn_smpl_rlrg"]', { timeout: 3000 }).catch(() => {});
-    await resultPage.waitForTimeout(1000);
+          });
+      [rowPopup] = await Promise.all([
+        context.waitForEvent('page', { timeout: 6000 }).catch(() => null),
+        clickProm,
+      ]);
+    }
+    // WebSquare가 열람 버튼 활성화하기까지 대기 (최대 5초)
+    await resultPage.waitForTimeout(1500);
+    await resultPage.waitForSelector('[id*="btn_smpl_rlrg"]', { timeout: 5000 }).catch(() => {});
+    await resultPage.waitForTimeout(500);
 
     if (rowPopup) {
       console.log('[iros] 행 클릭 팝업 감지:', rowPopup.url());
