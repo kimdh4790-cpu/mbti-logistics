@@ -727,18 +727,60 @@ app.post('/api/iros-fetch', async (req, res) => {
       await page.waitForTimeout(1000);
     }
 
-    // 6단계: 열람/발급 버튼
-    const issueSel = 'a[onclick*="issue"], button[onclick*="issue"], #issueBtn, .btn-issue, button:has-text("열람"), button:has-text("발급"), a:has-text("열람"), a:has-text("발급")';
-    const issueBtn = page.locator(issueSel).first();
-    if (await issueBtn.count() > 0) {
-      const issueEh = await issueBtn.elementHandle().catch(() => null);
-      if (issueEh) {
-        await page.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })), issueEh).catch(() => {});
-      } else {
-        await issueBtn.click({ force: true }).catch(() => {});
-      }
-      await page.waitForTimeout(2000);
+    // 5단계 후 현재 URL + DOM 요약 로그 (디버깅)
+    console.log('[iros] Step5 완료 URL:', page.url());
+    {
+      const stepScreenPath = join(tmpDir, 'step5.png');
+      await page.screenshot({ path: stepScreenPath, fullPage: false }).catch(() => {});
+      const btns = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('a,button')).slice(0, 30)
+          .map(el => `${el.tagName}[${el.id||el.className||''}] "${(el.textContent||'').trim().slice(0,20)}"`)
+          .join(' | ')
+      ).catch(() => '');
+      console.log('[iros] 가시 버튼/링크:', btns.slice(0, 500));
     }
+
+    // 6단계: 열람/발급 버튼 — 모든 컨텍스트(page + frames) 탐색
+    const issueSel = [
+      'button:has-text("열람")', 'a:has-text("열람")',
+      'button:has-text("발급")', 'a:has-text("발급")',
+      'a[onclick*="issue"]', 'button[onclick*="issue"]',
+      '#issueBtn', '.btn-issue',
+      'input[type="button"][value*="열람"]', 'input[type="button"][value*="발급"]',
+    ].join(', ');
+
+    let issueBtn = null;
+    let issuePage = page;
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const loc = ctx.locator(issueSel).first();
+        if (await loc.count() > 0) { issueBtn = loc; issuePage = ctx; break; }
+      } catch {}
+    }
+
+    if (!issueBtn) {
+      // DOM에서 열람 관련 텍스트 포함 요소 전체 덤프
+      const domHint = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('*')).filter(el =>
+          el.children.length === 0 && /열람|발급|조회|확인/.test(el.textContent||'')
+        ).slice(0, 10).map(el =>
+          `${el.tagName}#${el.id}.${el.className} "${(el.textContent||'').trim().slice(0,30)}"`
+        ).join(' | ')
+      ).catch(() => '');
+      console.log('[iros] 열람/발급 버튼 못 찾음. DOM 힌트:', domHint);
+      throw new Error(`열람/발급 버튼 없음 (URL: ${page.url()}, hint: ${domHint.slice(0,200)})`);
+    }
+
+    console.log('[iros] 열람/발급 버튼 클릭');
+    const issueEh = await issueBtn.elementHandle().catch(() => null);
+    if (issueEh) {
+      await issuePage.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })), issueEh).catch(() => {});
+    } else {
+      await issueBtn.click({ force: true }).catch(() => {});
+    }
+    await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+    await page.waitForTimeout(3000);
+    console.log('[iros] 발급버튼클릭후 URL:', page.url());
 
     // 전자화폐 결제
     if (emoneyNo1 && emoneyPwd) {
@@ -766,25 +808,43 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
     }
 
-    // 7단계: PDF 저장 (다운로드 링크 우선, 없으면 화면 PDF)
+    // 7단계: PDF 확보 (다운로드 이벤트 우선 → 뷰어 캡처 → 에러)
     const pdfPath = join(tmpDir, 'registry.pdf');
-    const dlSel = 'a[href*=".pdf"], a[onclick*="download"], a[onclick*="pdf"], #downloadBtn, a:has-text("다운로드"), a:has-text("저장")';
-    const dlLink = page.locator(dlSel).first();
 
-    if (await dlLink.count() > 0) {
-      try {
-        const [download] = await Promise.all([
-          context.waitForEvent('download', { timeout: 30000 }),
-          dlLink.click()
-        ]);
-        await download.saveAs(pdfPath);
-      } catch {
-        const pdfBuffer2 = await page.pdf({ format: 'A4', printBackground: true });
+    // 7-1: 다운로드 이벤트 대기 (발급 클릭 후 30초)
+    let pdfSaved = false;
+    try {
+      const dlPromise = context.waitForEvent('download', { timeout: 30000 });
+      const dl = await dlPromise;
+      await dl.saveAs(pdfPath);
+      console.log('[iros] PDF 다운로드 성공:', pdfPath);
+      pdfSaved = true;
+    } catch {
+      console.log('[iros] 다운로드 이벤트 없음 → 뷰어 캡처 시도');
+    }
+
+    // 7-2: 다운로드 없으면 현재 페이지에 등기부 내용이 있는지 확인
+    if (!pdfSaved) {
+      // 등기부 특유 텍스트(표제부, 갑구, 을구, 접수, 순위번호 등) 확인
+      const hasRegistryContent = await page.evaluate(() => {
+        const txt = document.body.innerText || '';
+        return /표제부|갑구|을구|소유권|순위번호|접수|등기원인|등기목적/.test(txt);
+      }).catch(() => false);
+
+      if (hasRegistryContent) {
+        console.log('[iros] 뷰어에서 등기부 내용 감지 → page.pdf() 캡처');
+        const pdfBuffer2 = await page.pdf({
+          format: 'A4', printBackground: true,
+          margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+        });
         await writeFile(pdfPath, pdfBuffer2);
+        pdfSaved = true;
+      } else {
+        const curUrl = page.url();
+        const bodySnip = await page.evaluate(() => (document.body.innerText||'').slice(0, 300)).catch(() => '');
+        console.log('[iros] 등기부 내용 없음. URL:', curUrl, '| 내용:', bodySnip);
+        throw new Error(`등기부 내용 미감지 — IROS 발급 흐름 미완료 (URL: ${curUrl})`);
       }
-    } else {
-      const pdfBuffer2 = await page.pdf({ format: 'A4', printBackground: true });
-      await writeFile(pdfPath, pdfBuffer2);
     }
 
     const pdfBuffer = await readFile(pdfPath);
