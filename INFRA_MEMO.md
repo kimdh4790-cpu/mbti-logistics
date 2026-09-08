@@ -293,7 +293,8 @@ ANTHROPIC_API_KEY=sk-ant-... node scripts/monitor/content-monitor.js
 ### GitHub Secrets 등록 현황
 | Secret | 상태 |
 |---|---|
-| `CF_GLOBAL_KEY` | 등록완료 (Cloudflare) |
+| `CF_GLOBAL_KEY` | 등록완료 (Cloudflare Global API Key `cfk_...`, 2026-09-08 갱신) |
+| `CF_API_TOKEN` | 등록완료 (Cloudflare API Token `cfut_...`, 2026-09-08 신규) |
 | `YOUTUBE_CLIENT_ID` | 등록완료 |
 | `YOUTUBE_CLIENT_SECRET` | 등록완료 |
 | `YOUTUBE_REFRESH_TOKEN` | 등록완료 |
@@ -319,6 +320,8 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 ### Worker Secrets 등록 현황
 | Secret | 값 | 상태 |
 |---|---|---|
+| `CF_GLOBAL_KEY` | 등록완료 (Global API Key `cfk_...`, 2026-09-08 갱신) |
+| `CF_API_TOKEN` | 등록완료 (API Token `cfut_...`, 2026-09-08 신규) |
 | `FIREBASE_API_KEY` | `AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0` | **등록완료** (Cloudflare 대시보드 확인 2026-08-30) |
 | `ANTHROPIC_API_KEY` | (별도 관리) | 등록완료 |
 | `GOOGLE_TRANSLATE_KEY` | (별도 관리) | 등록완료 |
@@ -611,3 +614,5 @@ claude
 | 2026-08-30 | FIREBASE_API_KEY Worker Secret 상태 정정: "미등록" → "등록완료" (Cloudflare 대시보드 스크린샷으로 확인). ANTHROPIC_API_KEY·GOOGLE_TRANSLATE_KEY도 등록완료로 정정. |
 | 2026-09-01 | **Firebase 프로젝트 분리 계획 (미착수)**: DONWAY·용차앱을 별도 Firebase 프로젝트로 분리 → Firestore 무료 읽기 50,000/일 × 4프로젝트 = 200,000/일 확보. FILO+DINE은 컬렉션 공유(members·attendance 등) 구조상 분리 불가 → 동일 프로젝트 유지. 작업 내용: _worker.js 앱별 SA키 분기, Cloudflare Secrets 추가 등록, 기존 데이터 마이그레이션. 예상 기간 1~2주. 우선순위: 시간 날 때 진행 |
 | 2026-08-31 | Oracle VM SSH 접속 확인 완료 (opc@161.33.136.154, ssh-key-2026-08-02.key). naver-blog npm install 완료. naver_draft.js: DISPLAY 없으면 자동 headless 전환 + --headless 플래그 추가. 발행 버튼 셀렉터 개선 (waitForSelector + 진단 스크린샷 자동 저장). naver-blog Oracle VM 실행 방법 INFRA_MEMO 등록. |
+| 2026-09-08 | **Cloudflare API 키 2종 등록 완료**: CF_GLOBAL_KEY(Global API Key `cfk_...`) GitHub Secrets 갱신 + Cloudflare Worker 시크릿 sync. CF_API_TOKEN(API Token `cfut_...`) GitHub Secrets 신규 + Cloudflare Worker 시크릿 신규 등록. |
+| 2026-09-08 | **Firebase 로그인 복구**: _worker.js /api/admin-set-pw JWT base64url 버그 수정 + OAuth2 scope firebase→cloud-platform 수정. kimdh4790(khw3103!!) · soungkyekim(khw3103!!!) 비밀번호 복구 완료. |
