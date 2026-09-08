@@ -1235,19 +1235,22 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] Gauce 행 선택:', gauceSelect);
     await resultPage.waitForTimeout(1500);
 
-    // WebSquare: 반드시 Playwright 직접 click() — dispatchEvent는 무시됨
-    // 행 클릭 후 IROS는 보통 새 팝업창을 엶 → context.waitForEvent('page')로 감지
+    // WebSquare: Playwright 직접 click() 필수 — dispatchEvent는 무시됨
+    // IROS 간편열람: 체크박스 TD(첫 번째 TD) 클릭 → 행 선택 → "열람" 버튼 활성화
+    // 전체 행(텍스트 영역) 클릭은 체크박스 체크 안 됨 → 반드시 첫 번째 TD 클릭
+    const checkboxTd = resultRow.locator('td').first();
     const [rowPopup] = await Promise.all([
-      context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
-      resultRow.click({ force: true, timeout: 8000 }).catch(async (e) => {
-        console.log('[iros] force click 실패:', e.message, '— td 자식 클릭 시도');
-        const tdChild = resultRow.locator('td').first();
-        await tdChild.click({ force: true, timeout: 5000 }).catch(async () => {
+      context.waitForEvent('page', { timeout: 6000 }).catch(() => null),
+      checkboxTd.click({ force: true, timeout: 8000 }).catch(async (e) => {
+        console.log('[iros] checkboxTd click 실패:', e.message, '— 전체 행 클릭 폴백');
+        await resultRow.click({ force: true, timeout: 5000 }).catch(async () => {
           const eh = await resultRow.elementHandle().catch(() => null);
           if (eh) await resultCtx.evaluate(el => el.click(), eh).catch(() => {});
         });
       }),
     ]);
+    // 체크박스 클릭 후 WebSquare UI 반응 대기 (열람 버튼 활성화)
+    await resultPage.waitForTimeout(2000);
 
     if (rowPopup) {
       console.log('[iros] 행 클릭 팝업 감지:', rowPopup.url());
