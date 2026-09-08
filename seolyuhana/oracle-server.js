@@ -961,12 +961,19 @@ app.post('/api/iros-fetch', async (req, res) => {
           await popupInput.press('Enter');
           console.log('[iros] 팝업 Enter 검색');
         }
+        // processMsg는 영구 프레임 — 그리드 상태로 완료 판단
         for (let w = 0; w < 8; w++) {
           await resultPage.waitForTimeout(2000);
-          const fUrls = resultPage.frames().map(f => f.url());
-          const hasProc = fUrls.some(u => u.includes('processMsg'));
-          console.log(`[iros] 팝업 검색 대기 tick=${w+1} processMsg=${hasProc}`);
-          if (!hasProc && w >= 1) break;
+          const popGrid = await resultPage.evaluate(() => {
+            var grid = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt');
+            if (!grid) return { ready: false };
+            var txt = grid.innerText || '';
+            var tbody = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt_body_tbody');
+            var rows = tbody ? tbody.querySelectorAll('tr').length : 0;
+            return { ready: txt.includes('조회결과') || rows > 0, rows };
+          }).catch(() => ({ ready: false }));
+          console.log(`[iros] 팝업 검색 대기 tick=${w+1} grid=${JSON.stringify(popGrid)}`);
+          if (popGrid.ready) break;
         }
       } else {
         // 주소창 없음 → 공지/알림 팝업 → 닫기 (컨텍스트 닫지 않도록 주의)
@@ -1079,19 +1086,19 @@ app.post('/api/iros-fetch', async (req, res) => {
       throw new Error(`"${searchAddr}" (키워드: ${addrKey}) 검색 결과 없음 (resultPage=${resultPage.url()}, frames: ${JSON.stringify(frameUrls)})`);
     }
     console.log('[iros] 결과 행 클릭');
-    // Gauce SPA 오버레이 우회: dispatchEvent → force click → JS click 순으로 시도
-    const eh = await resultRow.elementHandle().catch(() => null);
-    if (eh) {
-      await resultCtx.evaluate(el => {
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-      }, eh).catch(() => {});
-    } else {
-      await resultRow.click({ force: true, timeout: 8000 }).catch(async () => {
-        console.log('[iros] force click 실패, evaluate 재시도');
-        const eh2 = await resultRow.elementHandle().catch(() => null);
-        if (eh2) await resultCtx.evaluate(el => el.click(), eh2).catch(() => {});
-      });
-    }
+    // WebSquare: dispatchEvent로 이벤트 트리거 안 됨 — 반드시 Playwright 직접 click() 사용
+    await resultRow.click({ force: true, timeout: 8000 }).catch(async (e) => {
+      console.log('[iros] force click 실패:', e.message, '— td 자식 클릭 시도');
+      // 행 내 첫 번째 td를 직접 클릭
+      const tdChild = resultRow.locator('td').first();
+      if (await tdChild.count() > 0) {
+        await tdChild.click({ force: true, timeout: 5000 }).catch(async () => {
+          // 최후 수단: JS .click() (일부 Gauce 버전에서 동작)
+          const eh = await resultRow.elementHandle().catch(() => null);
+          if (eh) await resultCtx.evaluate(el => el.click(), eh).catch(() => {});
+        });
+      }
+    });
     await resultPage.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
     await resultPage.waitForTimeout(1500);
 
