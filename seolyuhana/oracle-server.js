@@ -1227,63 +1227,76 @@ app.post('/api/iros-fetch', async (req, res) => {
     const wsApiOk = /^(w2\.|scwin\.)/.test(gauceSelect);
     let rowPopup = null;
 
-    // WebSquare 그리드 셀 직접 클릭 함수 (evaluate로 WebSquare 이벤트 발생)
+    // WebSquare 그리드 체크박스 셀 실제 마우스 클릭 (WebSquare는 좌표 기반 이벤트 시스템)
     const cellId = `${gridId}_cell_0_0`;
-    const clickCellViaEval = async () => {
-      return resultPage.evaluate((id) => {
-        // 방법 1: 셀 요소 직접 click() — WebSquare onCellClick 이벤트 발생
-        const cell = document.getElementById(id);
-        if (cell) {
-          cell.click();
-          // 내부 체크박스/span도 함께 클릭
-          const inner = cell.querySelector('input[type="checkbox"]');
-          if (inner) { inner.checked = true; inner.dispatchEvent(new Event('change', { bubbles: true })); }
-          return 'eval_cell:' + id.slice(-15);
-        }
-        // 방법 2: tbody의 첫 번째 tr의 첫 번째 td
-        const firstTd = document.querySelector('[id*="grd_smpl_srch_rslt"] tbody tr:first-child td:first-child');
-        if (firstTd) { firstTd.click(); return 'eval_firstTd'; }
-        return 'cell_not_found';
-      }, cellId).catch(() => 'err');
+
+    // 체크박스 셀 좌표 가져오기 (Playwright bounding box 방식)
+    const getBbox = async (locOrSel) => {
+      try {
+        const loc = typeof locOrSel === 'string' ? resultPage.locator(locOrSel).first() : locOrSel;
+        return await loc.boundingBox({ timeout: 5000 });
+      } catch { return null; }
     };
 
-    // 1차: evaluate로 셀 직접 클릭
-    const evalResult = await clickCellViaEval();
-    console.log('[iros] evaluate 셀 클릭:', evalResult);
-    await resultPage.waitForTimeout(1500);
+    // 1차: 셀 ID로 체크박스 TD 좌표 → page.mouse.click (실제 마우스 이벤트)
+    const checkCellLoc = resultPage.locator(`#${cellId}, [id="${cellId}"]`).first();
+    let bbox = await getBbox(checkCellLoc);
+    if (!bbox) {
+      // fallback: tbody 첫 행 첫 TD
+      bbox = await getBbox(resultPage.locator('[id*="grd_smpl_srch_rslt"] tbody tr:first-child td:first-child').first());
+    }
+    if (!bbox) {
+      // fallback: resultRow 첫 TD
+      bbox = await getBbox(resultRow.locator('td').first());
+    }
+    console.log('[iros] 체크박스 셀 bbox:', bbox ? `x=${Math.round(bbox.x)} y=${Math.round(bbox.y)}` : 'null');
 
-    // btn_smpl_rlrg 출현 확인
-    let rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
-    console.log('[iros] btn_smpl_rlrg 출현:', rlrgCount, '/ wsApiOk:', wsApiOk);
-
-    if (rlrgCount === 0) {
-      // 2차: Playwright 직접 클릭 (체크박스 input 또는 셀 TD)
-      console.log('[iros] btn_smpl_rlrg 미출현 — Playwright 직접 클릭 시도');
-      const chkInput = resultRow.locator('input[type="checkbox"]').first();
-      const hasChkInput = await chkInput.count().catch(() => 0) > 0;
-      if (hasChkInput) {
-        await chkInput.click({ force: true, timeout: 5000 }).catch(() => {});
-      } else {
-        await resultRow.locator('td').first().click({ force: true, timeout: 5000 }).catch(() => {});
-      }
-      await resultPage.waitForTimeout(1500);
-      rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
-      console.log('[iros] Playwright 클릭 후 btn_smpl_rlrg 출현:', rlrgCount);
+    if (bbox) {
+      // 셀 중앙을 실제 마우스 클릭 — WebSquare 좌표 기반 이벤트 발생
+      const cx = bbox.x + bbox.width / 2;
+      const cy = bbox.y + bbox.height / 2;
+      await resultPage.mouse.click(cx, cy);
+      console.log('[iros] 마우스 클릭 완료:', Math.round(cx), Math.round(cy));
+    } else {
+      // bbox 못 얻으면 Playwright locator click fallback
+      console.log('[iros] bbox 없음 — locator click 폴백');
+      await resultRow.locator('td').first().click({ force: true, timeout: 5000 }).catch(() => {});
     }
 
-    if (rlrgCount === 0 && !wsApiOk) {
-      // 3차: WebSquare API 재시도 (페이지 컨텍스트 변경됐을 수 있음)
+    await resultPage.waitForTimeout(2000);
+    let rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+    console.log('[iros] btn_smpl_rlrg 출현:', rlrgCount);
+
+    if (rlrgCount === 0) {
+      // 2차: 체크박스 input 직접 클릭 (fallback)
+      console.log('[iros] btn_smpl_rlrg 미출현 — input checkbox 직접 클릭');
+      const chkLoc = resultPage.locator(`#${cellId} input[type="checkbox"], [id="${cellId}"] input`).first();
+      const chkBbox = await getBbox(chkLoc);
+      if (chkBbox) {
+        await resultPage.mouse.click(chkBbox.x + chkBbox.width / 2, chkBbox.y + chkBbox.height / 2);
+      } else {
+        await resultRow.locator('input[type="checkbox"]').first().click({ force: true, timeout: 5000 }).catch(() => {});
+      }
+      await resultPage.waitForTimeout(2000);
+      rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+      console.log('[iros] 2차 후 btn_smpl_rlrg 출현:', rlrgCount);
+    }
+
+    // 3차 WebSquare API 재시도
+    if (rlrgCount === 0) {
       const ws2 = await resultPage.evaluate((gid) => {
         try {
           if (window.w2 && typeof window.w2.getById === 'function') {
             const g = window.w2.getById(gid);
-            if (g && typeof g.setCheckValue === 'function') { g.setCheckValue(0, 'col_chk', 'Y'); return 'w2.late'; }
+            if (g && typeof g.setCheckValue === 'function') { g.setCheckValue(0, 'col_chk', 'Y'); return 'w2.retry'; }
           }
         } catch(e) { return 'err:' + e.message; }
         return 'unavail';
       }, gridId).catch(() => 'catch');
       console.log('[iros] 3차 WebSquare API:', ws2);
-      await resultPage.waitForTimeout(1500);
+      await resultPage.waitForTimeout(2000);
+      rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+      console.log('[iros] 3차 후 btn_smpl_rlrg 출현:', rlrgCount);
     }
 
     // 열람 버튼 활성화 대기
