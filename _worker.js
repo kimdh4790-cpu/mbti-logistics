@@ -8408,13 +8408,19 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
               method: 'POST',
               headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
-              body: JSON.stringify({ SearchAddr: address }),
+              body: JSON.stringify({ SearchAddr: await enc(address) }),
               signal: AbortSignal.timeout(15000)
             });
-            const adText = await addrRes.text();
-            let ad = {};
-            try { ad = JSON.parse(adText); } catch(_) {}
-            throw new Error(`주소검색 HTTP${addrRes.status} | 키:[${Object.keys(ad).join(',')}] | ${adText.slice(0,400)}`);
+            if (addrRes.ok) {
+              const ad = await addrRes.json().catch(() => ({}));
+              const first = (ad.realty_list || ad.RealtyList || ad.Result || [])[0];
+              pin = (first?.pin || first?.Pin || first?.고유번호 || '').replace(/-/g, '');
+            } else {
+              const adText = await addrRes.text();
+              let ad = {};
+              try { ad = JSON.parse(adText); } catch(_) {}
+              throw new Error(`주소검색 HTTP${addrRes.status} | 키:[${Object.keys(ad).join(',')}] | ${adText.slice(0,400)}`);
+            }
           } catch(ae) { if (ae.message.startsWith('주소검색')) throw ae; }
         }
         if (!pin || pin.length < 13) throw new Error(`부동산 고유번호 조회 실패 (${address}). 14자리 고유번호를 직접 입력해주세요.`);
@@ -8647,9 +8653,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             }
             // Oracle 실패 상세 반환
             const _oHost = oracleUrl ? oracleUrl.replace(/^https?:\/\//,'').split('/')[0] : 'URL미설정';
-            const _tlkErrPart = tilkoErr ? ` (Tilko: ${tilkoErr.slice(0,80)})` : '';
+            const _tlkErrPart = tilkoErr ? ` | Tilko: ${tilkoErr.slice(0,80)}` : '';
+            const _oNote = oracleErr && (oracleErr.includes('403') || oracleErr.includes('ECONNREFUSED') || oracleErr.includes('aborted'))
+              ? ' (Oracle 서버가 꺼져있거나 포트 불일치. pm2 list 확인 필요)' : '';
             return Response.json({ok:false, mode:'link', stdAddr,
-              error: `Oracle 오류: ${oracleErr||'알 수 없음'} [${_oHost}]${_tlkErrPart}`,
+              error: `Oracle 오류: ${oracleErr||'알 수 없음'} [${_oHost}]${_tlkErrPart}${_oNote}`,
               irosUrl:'https://www.iros.go.kr'
             },{status:200,headers});
           }
