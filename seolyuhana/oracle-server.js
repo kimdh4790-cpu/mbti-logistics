@@ -588,31 +588,65 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
     }
 
-    // 3-1단계: 부동산 > 간편 열람·발급 nav 클릭 (홈 검색창은 헤드리스에서 Gauce 미초기화)
-    // 실제 검색 기능은 SPA 내부 간편 열람·발급 페이지에서만 정상 동작
-    console.log('[iros] 간편 열람·발급 메뉴 탐색');
+    // 3-1단계: 간편 열람·발급 페이지로 이동 (홈 검색창은 헤드리스에서 Gauce 미초기화)
+    // 전략: 1) 직접 JSF URL 이동 (가장 안정적) → 2) nav 링크 클릭 → 3) 홈 검색창 폴백
+    console.log('[iros] 간편 열람·발급 페이지 이동');
     await page.screenshot({ path: '/home/opc/iros-debug/step1-home.png', fullPage: false }).catch(() => {});
 
-    // 스크린샷 전 프레임 목록 로그
     const homeFrames = page.frames().map(f => f.url());
     console.log('[iros] 홈 로드 후 frames:', JSON.stringify(homeFrames));
 
-    // "간편 열람·발급" 링크 직접 탐색 (모든 프레임 포함)
     let navClicked = false;
-    for (const ctx of [page, ...page.frames()]) {
-      try {
-        const ganLink = ctx.locator('a').filter({ hasText: '간편 열람·발급' }).first();
-        if (await ganLink.count() > 0) {
-          const href = await ganLink.getAttribute('href').catch(() => '');
-          console.log('[iros] 간편 열람·발급 링크 발견 href=', href);
-          await ganLink.click({ force: true });
-          navClicked = true;
-          break;
+
+    // 1순위: 직접 URL 이동 (JSF 간편 열람·발급 페이지)
+    try {
+      console.log('[iros] 직접 URL 이동 시도: selectRenf0100List.xhtml');
+      await page.goto('https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml',
+        { waitUntil: 'load', timeout: 30000 });
+      await page.waitForTimeout(2000);
+      const directUrl = page.url();
+      console.log('[iros] 직접 URL 이동 결과:', directUrl);
+      // 리다이렉트 없이 실제 도착했으면 성공 (로그인 페이지로 튀지 않았으면)
+      if (!directUrl.includes('login') && !directUrl.includes('Login') && !directUrl.includes('index.jsp')) {
+        navClicked = true;
+        console.log('[iros] 직접 URL 이동 성공');
+      } else {
+        console.log('[iros] 직접 URL → 로그인/홈 리다이렉트됨 — nav 클릭 시도');
+        // 로그인 후 재시도
+        if (directUrl.includes('login') || directUrl.includes('Login')) {
+          await _irosLogin(page);
+          await page.waitForTimeout(2000);
+          await page.goto('https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml',
+            { waitUntil: 'load', timeout: 30000 });
+          await page.waitForTimeout(2000);
+          const afterLoginUrl = page.url();
+          if (!afterLoginUrl.includes('login') && !afterLoginUrl.includes('index.jsp')) {
+            navClicked = true;
+            console.log('[iros] 로그인 후 직접 URL 이동 성공:', afterLoginUrl);
+          }
         }
-      } catch {}
+      }
+    } catch (e) {
+      console.log('[iros] 직접 URL 이동 실패:', e.message);
+    }
+
+    // 2순위: nav 링크 클릭 (홈에서 출발)
+    if (!navClicked) {
+      for (const ctx of [page, ...page.frames()]) {
+        try {
+          const ganLink = ctx.locator('a').filter({ hasText: '간편 열람·발급' }).first();
+          if (await ganLink.count() > 0) {
+            const href = await ganLink.getAttribute('href').catch(() => '');
+            console.log('[iros] 간편 열람·발급 링크 발견 href=', href);
+            await ganLink.click({ force: true });
+            navClicked = true;
+            break;
+          }
+        } catch {}
+      }
     }
     if (!navClicked) {
-      // 폴백: 부동산 메뉴 hover → 간편 열람·발급 클릭
+      // 부동산 hover → 간편 열람·발급 클릭
       for (const ctx of [page, ...page.frames()]) {
         try {
           const bdsMenu = ctx.locator('li, a, button').filter({ hasText: /^부동산$/ }).first();
@@ -629,14 +663,14 @@ app.post('/api/iros-fetch', async (req, res) => {
         } catch {}
       }
     }
-    console.log('[iros] nav 클릭:', navClicked ? '성공' : '실패 — 홈 검색창 폴백');
+    console.log('[iros] 간편열람 이동:', navClicked ? '성공' : '실패 — 홈 검색창 폴백');
 
-    // 페이지/프레임 전환 대기 (processMsg 소멸 또는 3초 대기)
+    // 페이지/프레임 전환 대기 (processMsg 소멸 또는 최대 10초)
     for (let w = 0; w < 5; w++) {
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2000);
       const fUrls = page.frames().map(f => f.url());
       const hasProc = fUrls.some(u => u.includes('processMsg'));
-      console.log(`[iros] nav 대기 tick=${w+1} frames=${fUrls.length} processMsg=${hasProc}`);
+      console.log(`[iros] nav 대기 tick=${w+1} frames=${fUrls.length} processMsg=${hasProc} url=${page.url().slice(-60)}`);
       if (!hasProc && w >= 1) break;
     }
     await page.screenshot({ path: '/home/opc/iros-debug/step2-after-nav.png', fullPage: false }).catch(() => {});
