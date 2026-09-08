@@ -1,0 +1,34 @@
+{
+  "_comment": "경쟁사 모니터링 설정 — 실제 URL로 교체하세요",
+  "alert_phone": "01000000000",
+  "sites": [
+    {
+      "name": "경쟁POS-A 요금제",
+      "url": "https://example-pos.co.kr/pricing",
+      "selector": ".pricing",
+      "category": "pos",
+      "note": "FILO 주요 경쟁사 — 요금 변경 감시"
+    },
+    {
+      "name": "경쟁POS-B 공지",
+      "url": "https://example-pos2.co.kr/notice",
+      "selector": ".notice-list",
+      "category": "pos",
+      "note": "신기능 출시·가격인하 공지"
+    },
+    {
+      "name": "물류정산-경쟁사 요금제",
+      "url": "https://example-logistics.co.kr/price",
+      "selector": "main",
+      "category": "donway",
+      "note": "DONWAY 경쟁사"
+    },
+    {
+      "name": "배차앱-경쟁사 요금",
+      "url": "https://example-truck.co.kr/plan",
+      "selector": ".plan-wrap",
+      "category": "yongcha",
+      "note": "용차앱 경쟁사"
+    }
+  ]
+}

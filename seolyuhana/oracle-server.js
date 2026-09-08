@@ -102,6 +102,40 @@ app.post('/api/pdf-render', async (req, res) => {
   }
 });
 
+// ── /api/ocr  이미지·PDF → 텍스트 (PaddleOCR, 포트 3101) ──────────────────────
+app.post('/api/ocr', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '파일 없음' });
+
+    const OCR_PORT = process.env.OCR_PORT || '3101';
+    const form = new FormData();
+    form.append('file', new Blob([req.file.buffer], { type: req.file.mimetype }),
+                req.file.originalname || 'file.jpg');
+
+    const ocrRes = await fetch(`http://localhost:${OCR_PORT}/ocr`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(60000)
+    });
+
+    if (!ocrRes.ok) {
+      const err = await ocrRes.json().catch(() => ({}));
+      throw new Error(err.error || `OCR 서버 오류 ${ocrRes.status}`);
+    }
+
+    res.json(await ocrRes.json());
+  } catch (e) {
+    // PaddleOCR 서버 미실행 시 명확한 안내
+    if (e.cause?.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        error: 'OCR 서버 오프라인 — Oracle Cloud에서 paddle_server.py 실행 필요'
+      });
+    }
+    console.error('[ocr]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── DOCX 텍스트 추출 (JSZip + xmldom) ────────────────────────────────────────
 async function extractDocxText(buffer) {
   const zip = await JSZip.loadAsync(buffer);
