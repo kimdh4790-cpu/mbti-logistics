@@ -1048,10 +1048,11 @@ export default {
         const _apKey = await crypto.subtle.importKey('pkcs8',
           Uint8Array.from(atob(_apSa.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'')),c=>c.charCodeAt(0)).buffer,
           {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
-        const _apH = btoa(JSON.stringify({alg:'RS256',typ:'JWT'}));
-        const _apC = btoa(JSON.stringify({iss:_apSa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:_apNow+3600,iat:_apNow}));
+        const _b64u = v => (typeof v==='string'?btoa(v):btoa(String.fromCharCode(...new Uint8Array(v)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const _apH = _b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
+        const _apC = _b64u(JSON.stringify({iss:_apSa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:_apNow+3600,iat:_apNow}));
         const _apSig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_apKey,new TextEncoder().encode(_apH+'.'+_apC));
-        const _apJwt = _apH+'.'+_apC+'.'+btoa(String.fromCharCode(...new Uint8Array(_apSig)));
+        const _apJwt = _apH+'.'+_apC+'.'+_b64u(new Uint8Array(_apSig));
         const _apTok = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_apJwt}`})).json();
         const _apAT = _apTok.access_token;
         if (!_apAT) return Response.json({ok:false,error:'SA 토큰 실패',detail:_apTok},{status:500,headers:{'Access-Control-Allow-Origin':'*'}});
