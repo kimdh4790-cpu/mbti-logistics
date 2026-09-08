@@ -1150,7 +1150,24 @@ export default {
             const sn  = fi.store?.stringValue || '';
             const cnt = parseFloat(fi.cnt?.integerValue || fi.cnt?.doubleValue || 0);
             const pf  = parseFloat(fi.pfAmt?.integerValue || fi.pfAmt?.doubleValue || 0);
-            _sStoreRows += `<tr><td style="padding:8px 16px;font-weight:600;color:#1e3a5f">${sn}</td><td class="num">${cnt}건</td><td class="num" style="color:#1e3a5f;font-weight:600">₩${pf.toLocaleString()}</td></tr>`;
+            const priceArr = fi.prices?.arrayValue?.values || [];
+            let priceLine = '';
+            if (priceArr.length) {
+              priceLine = priceArr.map(p => {
+                const pf2 = p.mapValue?.fields || {};
+                const price = parseFloat(pf2.price?.integerValue || pf2.price?.doubleValue || 0);
+                const c    = parseFloat(pf2.cnt?.integerValue   || pf2.cnt?.doubleValue   || 0);
+                return `₩${price.toLocaleString()}×${c}건`;
+              }).join(', ');
+            }
+            _sStoreRows += `<tr>
+              <td style="padding:8px 16px">
+                <div style="font-weight:700;color:#1e3a5f;font-size:13px">${sn}</div>
+                ${priceLine ? `<div style="font-size:11px;color:#64748b;margin-top:2px">${priceLine}</div>` : ''}
+              </td>
+              <td class="num" style="vertical-align:middle">${cnt}건</td>
+              <td class="num" style="color:#1e3a5f;font-weight:700;vertical-align:middle">₩${pf.toLocaleString()}</td>
+            </tr>`;
           });
           const _sHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>배달대행 정산명세서 — ${_sName}</title>
 <style>
