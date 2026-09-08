@@ -582,6 +582,32 @@ cd mbtico-pages && npx wrangler deploy
 - Firebase Auth popup→redirect 폴백 + getRedirectResult 초기화 추가
 - 슈퍼어드민(kimdh4790@gmail.com·soungkyekim@naver.com) 무제한 포인트(∞P) 바이패스
 
+### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
+
+#### SCAN 제조 견적 기능 (신규 수익화)
+- `/api/scan/quote` 백엔드 API: 파일(STL·이미지) + 텍스트 → Claude 제조방식 분석 → 견적서 PDF
+- oracle-server.js 활용 (multer·Puppeteer·PaddleOCR 이미 설치됨)
+- scan.html 견적 UI 섹션 추가
+- 제조 카테고리: 3D프린팅 / 레이저 / CNC / 사출
+
+#### 사이트 Reznikov 스타일 리디자인 (레퍼런스: reznikov-eng.com)
+- scan.html 최우선 (견적 UI 포함)
+- mbtico.kr 랜딩 (AIVO를 APEX처럼 전면 배치)
+- filo-landing.html
+
+#### AIVO 대시보드 (mbtico.kr/aivo)
+- Reznikov의 APEX처럼 자율 AI 비서 대시보드
+- 루틴 상태 + 오류 현황 + 소셜미디어 스케줄 + 경쟁사 변동 한눈에
+
+#### Runway Gen-3 Alpha 연동
+- scripts/runway-generate.js + social-media.yml 파이프라인 추가
+- Standard $35/월 테스트 → 만족 시 Unlimited $195/월
+- 사용자 API 키 발급 후 착수
+
+#### PaddleOCR Oracle Cloud 설치 완료 (2026-09-08)
+- pip3 + mesa-libGL 설치 완료, 서버 포트 3101 정상 기동
+- setup_ocr.sh mesa-libGL 의존성 추가 완료
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
 
