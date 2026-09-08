@@ -10433,16 +10433,16 @@ function _dwParseExcel(file, cb){
         var cancelIdx=headers.findIndex(function(h){return String(h||'').includes('취소여부');});
         if(cancelIdx>=0&&String(row[cancelIdx]||'').trim().toUpperCase()==='Y')return;
 
-        // 금액 파싱 (건수×단가 or 직접 금액)
-        var price=0;
-        if(colCnt>=0&&colPrice>=0){
-          var cnt=parseFloat(String(row[colCnt]||'').replace(/[,₩원]/g,''))||0;
-          var unit=parseFloat(String(row[colPrice]||'').replace(/[,₩원]/g,''))||0;
-          price=cnt>0&&unit>0&&unit<50000?cnt*unit:unit; // 단가×건수 or 직접금액
-        } else {
-          price=parseFloat(String(row[colPrice]||'').replace(/[,₩원]/g,''))||0;
+        // 금액·건수 파싱
+        var unit=parseFloat(String(row[colPrice]||'').replace(/[,₩원]/g,''))||0;
+        var rowCnt=1;
+        if(colCnt>=0){
+          var _c=parseFloat(String(row[colCnt]||'').replace(/[,₩원]/g,''))||0;
+          if(_c>0)rowCnt=_c;
         }
-        if(price<=0)return;
+        // 단가×건수 집계행이면 unit이 직접금액일 수도 있음 → 단가로 쓰려면 unit<50000 기준
+        var unitPrice=(colCnt>=0&&unit>0&&unit<50000)?unit:(rowCnt>1?Math.round(unit/rowCnt):unit);
+        if(unitPrice<=0)return;
 
         var hour=0;
         var rowDate='';
@@ -10450,7 +10450,6 @@ function _dwParseExcel(file, cb){
           var ts=String(row[colTime]);
           var hm=ts.match(/(\d{1,2}):(\d{2})/);
           if(hm)hour=parseInt(hm[1]);
-          // 날짜+시간 합친 컬럼(완료일시)에서 날짜 추출
           var dtm=ts.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
           if(dtm)rowDate=dtm[1]+'-'+('0'+dtm[2]).slice(-2)+'-'+('0'+dtm[3]).slice(-2);
         }
@@ -10464,7 +10463,10 @@ function _dwParseExcel(file, cb){
         var storeName='';
         if(typeof colStore!=='undefined'&&colStore>=0&&row[colStore])storeName=String(row[colStore]).trim();
         if(!riderMap[rid])riderMap[rid]=[];
-        riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour,storeName:storeName,completedAt:rowDate?rowDate+'T'+('0'+hour).slice(-2)+':00:00':''});
+        // 건수만큼 개별 row로 펼치기 (날짜별 건수 정확하게 집계)
+        for(var _ei=0;_ei<rowCnt;_ei++){
+          riderMap[rid].push({riderId:rid,platformPrice:unitPrice,hour:hour,storeName:storeName,completedAt:rowDate?rowDate+'T'+('0'+hour).slice(-2)+':00:00':''});
+        }
       });
 
       if(!Object.keys(riderMap).length){
