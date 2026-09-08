@@ -506,9 +506,8 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
   }
 
-  // 첫 번째 visible text 입력 필드 찾기 (page.evaluate 기반)
+  // 모든 frame에서 addr 입력 필드 탐색 (Gauce SPA는 iframe 안에 폼 렌더링)
   async function _findAddrInput(page) {
-    // 1순위: addr 관련 ID/name/placeholder
     const candidates = [
       'input[id*="addr" i]', 'input[id*="Addr"]',
       'input[name*="addr" i]', 'input[name*="Addr"]',
@@ -516,16 +515,24 @@ app.post('/api/iros-fetch', async (req, res) => {
       'input[placeholder*="지번"]', 'input[placeholder*="도로명"]',
       'input[placeholder*="번지"]',
     ];
-    for (const sel of candidates) {
-      const loc = page.locator(sel).first();
-      if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) return loc;
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        for (const sel of candidates) {
+          const loc = ctx.locator(sel).first();
+          if (await loc.count() > 0 && await loc.isVisible().catch(() => false)) return loc;
+        }
+      } catch {}
     }
-    // 2순위: 페이지 내 첫 번째 visible text input (form 안)
-    const allInputs = page.locator('form input[type="text"], input[type="text"]');
-    const cnt = await allInputs.count();
-    for (let i = 0; i < Math.min(cnt, 10); i++) {
-      const inp = allInputs.nth(i);
-      if (await inp.isVisible().catch(() => false)) return inp;
+    // 2순위: 모든 frame에서 첫 번째 visible text input
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const allInputs = ctx.locator('form input[type="text"], input[type="text"]');
+        const cnt = await allInputs.count();
+        for (let i = 0; i < Math.min(cnt, 10); i++) {
+          const inp = allInputs.nth(i);
+          if (await inp.isVisible().catch(() => false)) return inp;
+        }
+      } catch {}
     }
     return null;
   }
@@ -547,37 +554,52 @@ app.post('/api/iros-fetch', async (req, res) => {
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
 
-    // 1단계: 인터넷등기소 검색 페이지 (networkidle — JSF JS 완전 초기화 필요)
-    const typeParam = regType === 'land' ? 'L' : 'B';
-    await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
-      { waitUntil: 'networkidle', timeout: 60000 });
-    console.log('[iros] 검색페이지 URL:', page.url());
+    // 1단계: index.jsp SPA shell 진입 (직접 JSF URL → Gauce 미렌더링 → 입력필드 0개)
+    console.log('[iros] index.jsp 로드');
+    await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForTimeout(3000);
+    console.log('[iros] 진입 URL:', page.url());
 
-    // 2단계: 로그인 시도 (검색 페이지가 로그인 리다이렉트된 경우)
-    if (page.url().includes('login') || page.url().includes('Login')) {
-      console.log('[iros] 로그인 리다이렉트 감지, 로그인 시도');
+    // 2단계: 로그인 처리 (리다이렉트 또는 현재 페이지 폼)
+    const isLoginPage = page.url().includes('login') || page.url().includes('Login') ||
+      await page.locator('#userId, input[name="userId"]').count() > 0;
+    if (isLoginPage) {
+      console.log('[iros] 로그인 필요');
       await _irosLogin(page);
-      await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
-        { waitUntil: 'networkidle', timeout: 60000 });
-      await page.waitForTimeout(3000);
-      // 재시도 후도 로그인 리다이렉트
+      await page.waitForTimeout(2000);
       if (page.url().includes('login') || page.url().includes('Login')) {
         throw new Error(`로그인 실패: ${page.url()}`);
       }
-    } else if (irosId && irosPw) {
-      // 로그인 폼이 현재 페이지에 있으면 채우기 시도
-      await _irosLogin(page);
     }
 
-    // 4단계: 주소 입력 필드 찾기
+    // 3단계: "간편 열람·발급" nav 클릭 → Gauce SPA가 검색폼 렌더링
+    const navId = 'mf_wfm_potal_main_wf_header_gen_depth1_0_gen_depth2_0_gen_depth3_1_grp_box3';
+    const navEl = page.locator(`#${navId}`);
+    if (await navEl.count() > 0) {
+      console.log('[iros] 간편열람 nav 클릭');
+      await navEl.click({ force: true }).catch(e => console.log('[iros] nav err:', e.message));
+    } else {
+      const fbEl = page.locator('a, span, div').filter({ hasText: /간편\s*열람/ }).first();
+      if (await fbEl.count() > 0) {
+        console.log('[iros] 텍스트 폴백 클릭');
+        await fbEl.click({ force: true }).catch(() => {});
+      } else {
+        console.log('[iros] nav element 없음, 직접 URL 시도');
+        const typeParam = regType === 'land' ? 'L' : 'B';
+        await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
+          { waitUntil: 'networkidle', timeout: 60000 });
+      }
+    }
+    await page.waitForTimeout(5000);
+    const framesInfo = page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank');
+    console.log('[iros] frames after nav:', JSON.stringify(framesInfo));
+
+    // 4단계: 주소 입력 필드 찾기 (main page + all frames)
     const addrInput = await _findAddrInput(page);
     if (!addrInput) {
-      // 디버그용 스크린샷 저장
-      const ssPath = join(tmpDir, 'debug.png');
-      await page.screenshot({ path: ssPath, fullPage: true }).catch(() => {});
-      const pageHtml = await page.content().catch(() => '');
-      throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, 입력필드 수=${await page.locator('input').count()}`);
+      const allInputCnt = await page.locator('input').count();
+      const frameInputCnts = await Promise.all(page.frames().map(f => f.locator('input').count().catch(() => 0)));
+      throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, main inputs=${allInputCnt}, frame inputs=${JSON.stringify(frameInputCnts)}`);
     }
     await addrInput.click({ clickCount: 3 });
     await addrInput.fill(address);
