@@ -10712,8 +10712,10 @@ window._dwPreviewStatement=async function(idx,btn){
         }
         var sn=row.storeName||'';
         if(sn){
-          if(!storeMap[sn])storeMap[sn]={cnt:0,pfAmt:0};
+          if(!storeMap[sn])storeMap[sn]={cnt:0,pfAmt:0,priceMap:{}};
           storeMap[sn].cnt++;storeMap[sn].pfAmt+=pf;
+          var pk=String(pf);
+          storeMap[sn].priceMap[pk]=(storeMap[sn].priceMap[pk]||0)+1;
         }
       });
       var dateBreakdown=Object.keys(dateMap).sort().map(function(dt){
@@ -10727,7 +10729,10 @@ window._dwPreviewStatement=async function(idx,btn){
         dateBreakdown=[{date:period||new Date().toISOString().slice(0,10),cnt:_totalCnt,pfAmt:_totalPf,fee:_totalFee}];
       }
       var storeBreakdown=Object.keys(storeMap).sort().map(function(sn){
-        return {store:sn,cnt:storeMap[sn].cnt,pfAmt:storeMap[sn].pfAmt};
+        var pm=storeMap[sn].priceMap;
+        var prices=Object.keys(pm).map(function(p){return {price:Number(p),cnt:pm[p]};})
+          .sort(function(a,b){return b.price-a.price;});
+        return {store:sn,cnt:storeMap[sn].cnt,pfAmt:storeMap[sn].pfAmt,prices:prices};
       });
       var token=_db.collection('statement_share').doc().id;
       var net=r.net||0;var preTax=r.preTax||0;
