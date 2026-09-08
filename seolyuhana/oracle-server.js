@@ -808,19 +808,22 @@ app.post('/api/iros-fetch', async (req, res) => {
     }).catch(e => 'catch:' + e.message);
     console.log('[iros] Gauce JS 검색 결과:', jsFnResult);
 
+    // CSS.escape는 Node.js에 없음 — ID에 특수문자 없으므로 직접 사용
+    const cssId = id => '#' + id.replace(/([!"#$%&'()*+,.\/:;<=>?@[\\\]^`{|}~])/g, '\\$1');
+
     // dispatchEvent는 WebSquare 이벤트를 태우지 않음 → Playwright 실제 클릭 필수
-    if (jsFnResult.startsWith('id:')) {
+    if (jsFnResult && jsFnResult.startsWith('id:')) {
       const btnId = jsFnResult.slice(3);
       console.log('[iros] Playwright 직접 클릭 — btnId:', btnId);
       try {
-        await page.locator('#' + CSS.escape(btnId)).click({ force: true, timeout: 8000 });
+        await page.locator(cssId(btnId)).click({ force: true, timeout: 8000 });
         jsFnResult = 'playwright_click:' + btnId;
+        console.log('[iros] 검색 버튼 클릭 성공');
       } catch(e) {
-        console.log('[iros] 클릭 실패, frame 탐색:', e.message);
-        // frame별 시도
+        console.log('[iros] 메인 클릭 실패:', e.message, '— frame 탐색');
         for (const fr of page.frames()) {
           try {
-            const fb = fr.locator('#' + CSS.escape(btnId));
+            const fb = fr.locator(cssId(btnId));
             if (await fb.count() > 0) { await fb.click({ force: true, timeout: 5000 }); jsFnResult = 'frame_click:' + btnId; break; }
           } catch {}
         }
@@ -883,31 +886,21 @@ app.post('/api/iros-fetch', async (req, res) => {
     }).catch(() => ({ found: false }));
     console.log('[iros] 메인 그리드 행 수:', JSON.stringify(mainGridRows));
 
-    // ── Prvw 팝업 처리: 시스템 점검 공지 닫기 + 팝업 내 주소 재검색 ─────────────
-    // Pm10P0IrosPopupPrvw = IROS 간편열람 검색 결과 팝업 (정상 팝업)
-    const isPrvwPopup = resultPage.url().includes('Pm10P0IrosPopupPrvw') || resultPage.url().includes('popup');
+    // ── Prvw 팝업 처리 ────────────────────────────────────────────────────────────
+    // Pm10P0IrosPopupPrvw: IROS 간편열람 결과 팝업 OR 시스템 공지 팝업
+    // 공지인 경우: 주소 입력창 없음 → 닫기 후 메인 페이지에서 재검색
+    // 결과인 경우: 주소 입력창 또는 그리드 행이 있음 → 상호작용
+    const isPrvwPopup = resultPage.url().includes('popup') && resultPage !== page;
     if (isPrvwPopup) {
-      console.log('[iros] Prvw 팝업 감지 — 공지 닫기 시도');
-      // 팝업 내 공지/알림 닫기 (시스템 점검 안내 등)
-      for (const closeText of ['닫기', '확인', '×', 'X', '오늘 다시 보지 않기']) {
-        try {
-          const ctxs = [resultPage, ...resultPage.frames()];
-          for (const ctx of ctxs) {
-            const btn = ctx.locator('a, button, input[type="button"], span').filter({
-              hasText: new RegExp(`^${closeText}$`)
-            }).first();
-            if (await btn.count() > 0) {
-              console.log('[iros] 팝업 공지 닫기:', closeText);
-              await btn.click({ force: true }).catch(() => {});
-              await resultPage.waitForTimeout(600);
-            }
-          }
-        } catch {}
-      }
-      await resultPage.waitForTimeout(1000);
+      console.log('[iros] Prvw 팝업 감지 — 내용 파악 중...');
+      await resultPage.waitForTimeout(1500);
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step3-popup.png', fullPage: false }).catch(() => {});
 
-      // 팝업 내 주소 입력창 확인 (있으면 주소 재입력 + 검색)
+      // 팝업 body 텍스트 로그
+      const popBody = await resultPage.evaluate(() => document.body?.innerText?.slice(0, 500) || '').catch(() => '');
+      console.log('[iros] 팝업 body:', popBody.slice(0, 200));
+
+      // 팝업 내 주소 입력창 있는지 확인
       const popupInput = await _findAddrInput(resultPage);
       if (popupInput) {
         const popupInputInfo = await popupInput.evaluate(el => ({ id: el.id, placeholder: el.placeholder })).catch(() => ({}));
@@ -915,9 +908,18 @@ app.post('/api/iros-fetch', async (req, res) => {
         await popupInput.click({ clickCount: 3 }).catch(() => {});
         await popupInput.fill(searchAddr);
         await resultPage.waitForTimeout(500);
-        await popupInput.press('Enter');
-        console.log('[iros] 팝업 내 주소 재검색 완료');
-        // 결과 로드 대기
+        // Playwright 실제 클릭으로 검색 버튼 트리거
+        const popBtnId = await resultPage.evaluate(() => {
+          var btn = document.querySelector('#mf_wfm_potal_main_btn_sch,[id*="btn_sch"],[id*="btn_srch"],[id*="btn_smpl"]');
+          return btn ? btn.id : null;
+        }).catch(() => null);
+        if (popBtnId) {
+          await resultPage.locator(cssId(popBtnId)).click({ force: true }).catch(() => {});
+          console.log('[iros] 팝업 검색 버튼 클릭:', popBtnId);
+        } else {
+          await popupInput.press('Enter');
+          console.log('[iros] 팝업 Enter 검색');
+        }
         for (let w = 0; w < 8; w++) {
           await resultPage.waitForTimeout(2000);
           const fUrls = resultPage.frames().map(f => f.url());
@@ -926,7 +928,21 @@ app.post('/api/iros-fetch', async (req, res) => {
           if (!hasProc && w >= 1) break;
         }
       } else {
-        console.log('[iros] 팝업 내 주소 입력창 없음 — 현재 팝업 DOM 탐색');
+        // 주소창 없음 → 공지/알림 팝업 → 닫기 (컨텍스트 닫지 않도록 주의)
+        console.log('[iros] 팝업 내 주소 입력창 없음 — 공지 닫기 시도');
+        for (const closeText of ['오늘 다시 보지 않기', '×', 'X']) {
+          try {
+            const btn = resultPage.locator('a, button, span').filter({ hasText: new RegExp(`^${closeText}$`) }).first();
+            if (await btn.count() > 0) {
+              await btn.click({ force: true }).catch(() => {});
+              await resultPage.waitForTimeout(500);
+              console.log('[iros] 공지 팝업 닫기:', closeText);
+            }
+          } catch {}
+        }
+        // 팝업 닫힌 후 메인에서 재검색 (resultPage를 main page로 되돌림)
+        resultPage = page;
+        await page.waitForTimeout(1000);
       }
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step3b-popup-search.png', fullPage: false }).catch(() => {});
     }
