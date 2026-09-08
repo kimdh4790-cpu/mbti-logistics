@@ -507,19 +507,39 @@ app.post('/api/iros-fetch', async (req, res) => {
   }
 
   // IROS Gauce 주소 입력 필드 탐색
-  // 실제 ID: mf_wfm_potal_main_sch_realCorp___input (2026-09-08 확인)
+  // 홈: mf_wfm_potal_main_sch_realCorp___input
+  // 간편열람 콘텐츠: mf_wfm_potal_main_wfm_content_sch_realCorp___input 등 패턴
   async function _findAddrInput(page) {
     const candidates = [
-      // IROS Gauce 고유 셀렉터 (최우선)
+      // IROS Gauce 고유 셀렉터 (최우선) — content 영역 포함
       'input[id*="sch_realCorp___input"]',
+      'input[id*="content_sch"]',
+      'input[id*="wfm_content"][id*="input"]',
+      'input[id*="renf"][id*="input"]',
       'input[placeholder*="열람·발급하려면"]',
       'input[placeholder*="주소를 입력하세요"]',
-      // 일반 addr 셀렉터 (폴백)
+      'input[placeholder*="부동산"]',
+      // 일반 addr 셀렉터
       'input[id*="addr" i]', 'input[id*="Addr"]',
       'input[name*="addr" i]',
       '#searchAddr', 'input[placeholder*="주소"]',
       'input[placeholder*="지번"]', 'input[placeholder*="도로명"]',
     ];
+    // 전체 입력 현황 로그
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const fUrl = ctx.url ? ctx.url() : '';
+        if (fUrl === 'about:blank') continue;
+        const inputs = await ctx.evaluate(() =>
+          Array.from(document.querySelectorAll('input')).slice(0, 20).map(el => ({
+            id: el.id, type: el.type, placeholder: el.placeholder, visible: el.offsetParent !== null
+          }))
+        ).catch(() => []);
+        if (inputs.length > 0) {
+          console.log(`[iros] inputs[${(fUrl||'main').slice(-60)}]:`, JSON.stringify(inputs));
+        }
+      } catch {}
+    }
     for (const ctx of [page, ...page.frames()]) {
       try {
         for (const sel of candidates) {
@@ -531,12 +551,12 @@ app.post('/api/iros-fetch', async (req, res) => {
     // 마지막 폴백: 헤더 제외 첫 번째 visible text input
     for (const ctx of [page, ...page.frames()]) {
       try {
-        const allInputs = ctx.locator('input[type="text"]');
+        const allInputs = ctx.locator('input[type="text"], input:not([type])');
         const cnt = await allInputs.count();
-        for (let i = 0; i < Math.min(cnt, 20); i++) {
+        for (let i = 0; i < Math.min(cnt, 30); i++) {
           const inp = allInputs.nth(i);
           const id = await inp.getAttribute('id').catch(() => '');
-          if (id && id.includes('wf_header')) continue;
+          if (id && (id.includes('wf_header') || id.includes('login'))) continue;
           if (await inp.isVisible().catch(() => false)) return inp;
         }
       } catch {}
@@ -588,92 +608,123 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
     }
 
-    // 3-1단계: 간편 열람·발급 페이지로 이동 (홈 검색창은 헤드리스에서 Gauce 미초기화)
-    // 전략: 1) 직접 JSF URL 이동 (가장 안정적) → 2) nav 링크 클릭 → 3) 홈 검색창 폴백
-    console.log('[iros] 간편 열람·발급 페이지 이동');
+    // 3-1단계: 간편 열람·발급으로 SPA 내 이동
+    // !! 중요: page.goto(selectRenf0100List.xhtml) 금지 !!
+    //    JSF 직접 접근 시 WebSquare 컴포넌트 미초기화 → inputs=0
+    //    반드시 index.jsp SPA 컨텍스트 내에서 nav 클릭으로 이동해야 함
+    console.log('[iros] Gauce 초기화 대기 (processMsg 소멸)');
     await page.screenshot({ path: '/home/opc/iros-debug/step1-home.png', fullPage: false }).catch(() => {});
 
+    // 홈 로드 후 프레임 목록
     const homeFrames = page.frames().map(f => f.url());
-    console.log('[iros] 홈 로드 후 frames:', JSON.stringify(homeFrames));
+    console.log('[iros] 홈 초기 frames:', JSON.stringify(homeFrames));
 
-    let navClicked = false;
+    // Gauce 초기화 완료 대기 — processMsg가 사라질 때까지 최대 30초
+    for (let w = 0; w < 20; w++) {
+      await page.waitForTimeout(1500);
+      const fUrls = page.frames().map(f => f.url());
+      const hasProc = fUrls.some(u => u.includes('processMsg'));
+      const realCount = fUrls.filter(u => u && u !== 'about:blank' && !u.includes('processMsg')).length;
+      console.log(`[iros] Gauce 대기 tick=${w+1} frames=${fUrls.length} processMsg=${hasProc} realFrames=${realCount}`);
+      if (w % 3 === 0) console.log('[iros] frame URLs:', JSON.stringify(fUrls));
+      if (!hasProc) { console.log('[iros] Gauce 초기화 완료'); break; }
+    }
 
-    // 1순위: 직접 URL 이동 (JSF 간편 열람·발급 페이지)
-    try {
-      console.log('[iros] 직접 URL 이동 시도: selectRenf0100List.xhtml');
-      await page.goto('https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml',
-        { waitUntil: 'load', timeout: 30000 });
-      await page.waitForTimeout(2000);
-      const directUrl = page.url();
-      console.log('[iros] 직접 URL 이동 결과:', directUrl);
-      // 리다이렉트 없이 실제 도착했으면 성공 (로그인 페이지로 튀지 않았으면)
-      if (!directUrl.includes('login') && !directUrl.includes('Login') && !directUrl.includes('index.jsp')) {
-        navClicked = true;
-        console.log('[iros] 직접 URL 이동 성공');
-      } else {
-        console.log('[iros] 직접 URL → 로그인/홈 리다이렉트됨 — nav 클릭 시도');
-        // 로그인 후 재시도
-        if (directUrl.includes('login') || directUrl.includes('Login')) {
-          await _irosLogin(page);
-          await page.waitForTimeout(2000);
-          await page.goto('https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml',
-            { waitUntil: 'load', timeout: 30000 });
-          await page.waitForTimeout(2000);
-          const afterLoginUrl = page.url();
-          if (!afterLoginUrl.includes('login') && !afterLoginUrl.includes('index.jsp')) {
-            navClicked = true;
-            console.log('[iros] 로그인 후 직접 URL 이동 성공:', afterLoginUrl);
-          }
+    // 전체 프레임에서 간편 열람·발급 관련 링크 덤프 (디버깅 필수)
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const fUrl = ctx.url ? ctx.url() : '';
+        if (fUrl === 'about:blank') continue;
+        const links = await ctx.evaluate(() =>
+          Array.from(document.querySelectorAll('a, button, li, span'))
+            .filter(el => /열람|발급|부동산|간편|renf/.test((el.textContent||'') + (el.getAttribute('onclick')||'')))
+            .slice(0, 15)
+            .map(el => ({
+              tag: el.tagName, id: el.id||'',
+              text: (el.textContent||'').trim().replace(/\s+/g,' ').slice(0,40),
+              href: (el.getAttribute('href')||'').slice(0,60),
+              onclick: (el.getAttribute('onclick')||'').slice(0,80)
+            }))
+        ).catch(() => []);
+        if (links.length > 0) {
+          console.log(`[iros] nav links[${(fUrl||'main').slice(-50)}]:`, JSON.stringify(links));
         }
-      }
-    } catch (e) {
-      console.log('[iros] 직접 URL 이동 실패:', e.message);
+      } catch {}
     }
 
-    // 2순위: nav 링크 클릭 (홈에서 출발)
-    if (!navClicked) {
-      for (const ctx of [page, ...page.frames()]) {
-        try {
-          const ganLink = ctx.locator('a').filter({ hasText: '간편 열람·발급' }).first();
-          if (await ganLink.count() > 0) {
-            const href = await ganLink.getAttribute('href').catch(() => '');
-            console.log('[iros] 간편 열람·발급 링크 발견 href=', href);
-            await ganLink.click({ force: true });
-            navClicked = true;
-            break;
+    // 간편 열람·발급 nav 클릭 — dispatchEvent 우선 (Gauce 이벤트 리스너 트리거)
+    let navClicked = false;
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const fUrl = ctx.url ? ctx.url() : '';
+        if (fUrl === 'about:blank') continue;
+        const ganLink = ctx.locator('a, span, li').filter({ hasText: /간편.{0,3}열람|열람.{0,3}발급/ }).first();
+        if (await ganLink.count() > 0) {
+          const href = await ganLink.getAttribute('href').catch(() => '');
+          const onclick = await ganLink.getAttribute('onclick').catch(() => '');
+          console.log('[iros] 간편 열람·발급 발견 href=', href, 'onclick=', (onclick||'').slice(0,60));
+          const el = await ganLink.elementHandle().catch(() => null);
+          if (el) {
+            await ctx.evaluate(e => e.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:window})), el).catch(() => {});
+            navClicked = true; break;
           }
-        } catch {}
-      }
+          await ganLink.click({ force: true }).catch(() => {});
+          navClicked = true; break;
+        }
+      } catch {}
     }
+
+    // 폴백: 부동산 hover → 간편 열람·발급
     if (!navClicked) {
-      // 부동산 hover → 간편 열람·발급 클릭
       for (const ctx of [page, ...page.frames()]) {
         try {
+          const fUrl = ctx.url ? ctx.url() : '';
+          if (fUrl === 'about:blank') continue;
           const bdsMenu = ctx.locator('li, a, button').filter({ hasText: /^부동산$/ }).first();
           if (await bdsMenu.count() > 0) {
             await bdsMenu.hover().catch(() => {});
-            await page.waitForTimeout(500);
-            const ganSub = ctx.locator('a').filter({ hasText: '간편 열람·발급' }).first();
+            await page.waitForTimeout(600);
+            const ganSub = ctx.locator('a, span').filter({ hasText: /간편.{0,3}열람/ }).first();
             if (await ganSub.count() > 0) {
-              await ganSub.click({ force: true });
-              navClicked = true;
-              break;
+              const el = await ganSub.elementHandle().catch(() => null);
+              if (el) await ctx.evaluate(e => e.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:window})), el).catch(() => {});
+              else await ganSub.click({ force: true }).catch(() => {});
+              navClicked = true; break;
             }
           }
         } catch {}
       }
     }
-    console.log('[iros] 간편열람 이동:', navClicked ? '성공' : '실패 — 홈 검색창 폴백');
 
-    // 페이지/프레임 전환 대기 (processMsg 소멸 또는 최대 10초)
-    for (let w = 0; w < 5; w++) {
+    // JS 직접 호출 폴백 (Gauce WebSquare nav 함수 패턴)
+    if (!navClicked) {
+      console.log('[iros] JS nav 함수 직접 호출 시도');
+      const jsFns = [
+        `(function(){ var el=document.querySelector('a[onclick*="renf"],a[href*="renf"],a[href*="selectRenf"]'); if(el){el.click();return 'clicked:'+el.textContent.trim().slice(0,20);} return false; })()`,
+        `(function(){ if(typeof fn_goPage==='function') return fn_goPage('renf','selectRenf0100List')||'fn_goPage called'; return false; })()`,
+        `(function(){ if(typeof gfn_callPage==='function') return gfn_callPage('renf/selectRenf0100List')||'gfn called'; return false; })()`,
+        `(function(){ if(typeof w2){var fn=window.fn_movePage||window.fnMovePage||window.fn_go; if(fn) return fn('renf','selectRenf0100List')||'fn called';} return false; })()`,
+      ];
+      for (const fn of jsFns) {
+        const result = await page.evaluate(fn).catch(() => false);
+        console.log('[iros] JS nav 결과:', result);
+        if (result) { navClicked = true; break; }
+      }
+    }
+
+    console.log('[iros] nav 이동:', navClicked ? '성공' : '실패 — 현재 페이지에서 계속');
+
+    // 콘텐츠 로드 대기 (processMsg 소멸 또는 최대 20초)
+    for (let w = 0; w < 10; w++) {
       await page.waitForTimeout(2000);
       const fUrls = page.frames().map(f => f.url());
       const hasProc = fUrls.some(u => u.includes('processMsg'));
-      console.log(`[iros] nav 대기 tick=${w+1} frames=${fUrls.length} processMsg=${hasProc} url=${page.url().slice(-60)}`);
-      if (!hasProc && w >= 1) break;
+      console.log(`[iros] 콘텐츠 대기 tick=${w+1} frames=${fUrls.length} processMsg=${hasProc}`);
+      if (!hasProc && w >= 1) { console.log('[iros] 콘텐츠 로드 완료'); break; }
     }
     await page.screenshot({ path: '/home/opc/iros-debug/step2-after-nav.png', fullPage: false }).catch(() => {});
+    // 현재 모든 프레임 URL 로그
+    console.log('[iros] nav 후 frames:', JSON.stringify(page.frames().map(f => f.url())));
 
     // 주소 추출 (동/호수 분리)
     const dongMatch = address.match(/(\d+)\s*동/);
