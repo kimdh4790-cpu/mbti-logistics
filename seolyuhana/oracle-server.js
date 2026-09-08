@@ -957,6 +957,43 @@ app.post('/api/iros-fetch', async (req, res) => {
         continue;
       }
 
+      // 3.5순위: "검색결과가 많아" 확인 모달 처리 (결과 다수 시 IROS가 확인 요청)
+      // 모달을 닫지 않으면 그리드가 영원히 로드되지 않음
+      const modalDismissed = await page.evaluate(() => {
+        try {
+          // 방법 1: 모달 텍스트 포함 여부로 확인 모달 식별 후 확인 버튼 클릭
+          const body = document.body ? document.body.innerText : '';
+          const hasModal = body.includes('검색결과가 많아') || body.includes('pr20.message.info.web.via.0011');
+          if (!hasModal) return false;
+
+          // 모든 버튼/링크 중 "확인" 텍스트 가진 것 클릭
+          const allBtns = Array.from(document.querySelectorAll('button, input[type="button"], a, div[class*="btn"], span[class*="btn"]'));
+          const okBtn = allBtns.find(b => {
+            const txt = (b.textContent || b.value || b.innerText || '').trim();
+            return txt === '확인' && b.offsetParent !== null;
+          });
+          if (okBtn) { okBtn.click(); return 'clicked:' + (okBtn.id || okBtn.className.slice(0,30)); }
+
+          // 방법 2: WebSquare w2popup/w2window 확인 버튼
+          if (window.w2) {
+            const popups = document.querySelectorAll('[id*="popup"],[id*="window"],[id*="dialog"],[id*="modal"],[id*="Pop"],[id*="Win"]');
+            for (const pop of popups) {
+              if (!pop.innerText || !pop.innerText.includes('많아')) continue;
+              const btn = Array.from(pop.querySelectorAll('*')).find(el => {
+                const t = (el.textContent || '').trim();
+                return t === '확인' && el.offsetParent !== null;
+              });
+              if (btn) { btn.click(); return 'w2popup_clicked'; }
+            }
+          }
+          return 'modal_found_no_btn';
+        } catch(e) { return 'err:' + e.message; }
+      }).catch(() => false);
+      if (modalDismissed) {
+        console.log('[iros] 검색결과 많음 모달 처리:', modalDismissed);
+        await page.waitForTimeout(1500);
+      }
+
       // 4순위: 그리드 상태로 검색 완료 판단
       // processMsg.html은 Gauce SPA 영구 프레임 — 절대 사라지지 않으므로 사용 불가
       const gridState = await page.evaluate(() => {
