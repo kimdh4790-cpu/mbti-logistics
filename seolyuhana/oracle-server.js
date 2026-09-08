@@ -1828,33 +1828,72 @@ app.post('/api/iros-fetch', async (req, res) => {
             log.push('sbmKey:' + sbmKey);
             if (sbmKey && window[sbmKey]) {
               const sbm = window[sbmKey];
-              const sbmKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(sbm) || {}).concat(Object.keys(sbm || {}));
-              log.push('sbm_keys:' + JSON.stringify(sbmKeys.slice(0, 20)));
-              log.push('sbm_action:' + (sbm.action || 'none'));
-              log.push('sbm_customHandler_type:' + typeof sbm.customHandler);
-              if (typeof sbm.submit === 'function') { sbm.submit({ rnum: pinC }); log.push('sbm.submit(rnum)'); }
-              else if (typeof sbm === 'function') { sbm({ rnum: pinC }); log.push('sbm(rnum)'); }
+              // sbm 전체 속성 검사
+              const sbmInspect = {
+                action: sbm.action, bind: sbm.bind, ref: sbm.ref,
+                instance: sbm.instance, mode: sbm.mode, method: sbm.method,
+                customHandler: sbm.customHandler, errorHandler: sbm.errorHandler,
+              };
+              try { if (sbm.xmlNode) sbmInspect.xmlNode = (sbm.xmlNode.outerHTML||sbm.xmlNode.textContent||'').slice(0,300); } catch(xe) {}
+              log.push('sbm_full:' + JSON.stringify(sbmInspect).slice(0, 600));
+
+              // customHandler가 string이면 window path로 해석해서 호출
+              if (typeof sbm.customHandler === 'string' && sbm.customHandler.trim()) {
+                const hName = sbm.customHandler.trim();
+                try {
+                  const parts = hName.split('.');
+                  let fn = window;
+                  for (const p of parts) fn = fn && fn[p];
+                  if (typeof fn === 'function') { fn(); log.push('customHandler_fn_called:' + hName); }
+                  else { log.push('customHandler_not_fn:' + typeof fn + ':' + hName); }
+                } catch(ce) { log.push('customHandler_call_err:' + ce.message); }
+              }
+
+              if (typeof sbm.submit === 'function') { sbm.submit(); log.push('sbm.submit()'); }
+              else if (typeof sbm === 'function') { sbm(); log.push('sbm()'); }
               else if (typeof sbm.run === 'function') { sbm.run(); log.push('sbm.run()'); }
-              else if (typeof sbm.execute === 'function') { sbm.execute({ rnum: pinC }); log.push('sbm.execute(rnum)'); }
+              else if (typeof sbm.execute === 'function') { sbm.execute(); log.push('sbm.execute()'); }
               else if (typeof sbm.send === 'function') { sbm.send(); log.push('sbm.send()'); }
-              else if (typeof sbm.call === 'function') { sbm.call(); log.push('sbm.call()'); }
-              else if (typeof sbm.customHandler === 'function') { sbm.customHandler({ rnum: pinC }); log.push('sbm.customHandler(rnum)'); }
               else { log.push('sbm_no_callable:' + typeof sbm); }
             }
-            // 4) scwin 내 retrievePinSrchCont 탐색
-            if (typeof scwin !== 'undefined') {
-              const scKey = Object.keys(scwin).find(k => /retrievePinSrchCont|pinSrchCont|smplRlrg/i.test(k));
-              log.push('scKey:' + scKey);
-              if (scKey) {
-                try { scwin[scKey]({ rnum: pinC }); log.push('scwin.fn(rnum)'); } catch(e3) { log.push('scFn_err:' + e3.message); }
+            // 4) dlt_smpl_srch_rslt_check datalist 전체 데이터 읽기 + 그대로 body로 제출
+            const chkKey2 = Object.keys(window).find(k => /dlt_smpl_srch_rslt_check/i.test(k));
+            if (chkKey2 && window[chkKey2]) {
+              const dc = window[chkKey2];
+              let chkData = null;
+              try {
+                if (typeof dc.getAllRowData === 'function') chkData = dc.getAllRowData();
+                else if (typeof dc.getData === 'function') chkData = dc.getData();
+                else if (typeof dc.getRowData === 'function') chkData = [dc.getRowData(0)];
+              } catch(de) {}
+              log.push('chkDlt_data:' + JSON.stringify(chkData).slice(0,300));
+              if (chkData) {
+                try {
+                  const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Referer': location.href },
+                    body: JSON.stringify({"websquare_param": chkData})
+                  });
+                  const txt = await r.text();
+                  log.push('chkDlt_submit:' + r.status + ':' + txt.slice(0,400));
+                  if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) return { ok: true, log, txt };
+                } catch(fe) { log.push('chkDlt_fetch_err:' + fe.message); }
               }
             }
-            // 5) XHR direct: WebSquare 포맷 (IS_NMBR_LOGIN__=null + websquare_param JSON)
+            // 5) scwin 내 retrievePinSrchCont / smplRlrg 관련 함수 탐색
+            if (typeof scwin !== 'undefined') {
+              const scKeys = Object.keys(scwin).filter(k => /retrievePinSrchCont|pinSrchCont|smplRlrg|fn_smpl/i.test(k));
+              log.push('scKeys:' + JSON.stringify(scKeys));
+              for (const scKey of scKeys) {
+                try { scwin[scKey](); log.push('scwin.' + scKey + '()'); } catch(e3) { log.push('scwin.' + scKey + '_err:' + e3.message); }
+              }
+            }
+            // 6) XHR direct: WebSquare 포맷 (IS_NMBR_LOGIN__=null + websquare_param JSON) — 다양한 body 조합
             const wsParamBodies = [
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1"}}) },
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinDash,"selGbn":"UNI","rlrgGbn":"1"}}) },
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrieveSmplSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1","payCl":"F"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":[{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","col_chk":"Y"}]}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"smplSrchList":[{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1"}]}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"conn_menu_cls_cd":"01","rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
             ];
             for (const wb of wsParamBodies) {
               try {
@@ -1869,7 +1908,7 @@ app.post('/api/iros-fetch', async (req, res) => {
                   body: wb.body,
                 });
                 const txt = await r.text();
-                log.push('ws_status:' + r.status + ' url:' + wb.url.split('/').pop() + ' preview:' + txt.slice(0, 500));
+                log.push('ws_status:' + r.status + ' body:' + wb.body.slice(0,80) + ' preview:' + txt.slice(0, 300));
                 if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
                   return { ok: true, log, txt };
                 }
