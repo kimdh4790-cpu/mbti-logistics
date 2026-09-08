@@ -32029,8 +32029,8 @@ function pageDeliveryStats2(){
       var mo=(s.ym||s.month||'').slice(0,7); if(!mo)return;
       if(!byMonth[mo])byMonth[mo]={cnt:0,revenue:0,driverPay:0,profit:0};
       byMonth[mo].cnt++;
-      byMonth[mo].revenue += (s.totalRevenue||s.revenue||s.totalAmt||0);
-      byMonth[mo].driverPay += (s.totalDriverPay||s.driverPay||s.driverAmt||0);
+      byMonth[mo].revenue += (s.totalRevenue||s.revenue||s.totalAmt||s.rawTotal||s.pfSum||0);
+      byMonth[mo].driverPay += (s.totalDriverPay||s.driverPay||s.driverAmt||s.preTax||s.netPay||0);
     });
 
     // 경비 반영
