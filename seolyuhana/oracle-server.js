@@ -1802,7 +1802,7 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 방법I: WebSquare submit binding + datalist 직접 조작');
       const pinClean = pinFromRow.replace(/-/g, '');
       try {
-        const wsResult = await resultPage.evaluate(async (pinC, pinDash) => {
+        const wsResult = await resultPage.evaluate(async ({pinC, pinDash}) => {
           const log = [];
           try {
             // 1) datalist 체크 상태 강제 세팅 (WebSquare는 datalist 값으로 버튼 활성 여부 결정)
@@ -1823,16 +1823,20 @@ app.post('/api/iros-fetch', async (req, res) => {
               if (b && typeof b.setEnable === 'function') { b.setEnable(true); log.push('btn.setEnable'); }
               if (b && typeof b.click === 'function') { b.click(); log.push('btn.click:' + bk); }
             }
-            // 3) WebSquare submit binding 직접 호출: retrievePinSrchCont
+            // 3) WebSquare submit binding 직접 호출: retrievePinSrchCont — inspect keys first
             const sbmKey = Object.keys(window).find(k => /retrievePinSrchCont/i.test(k));
             log.push('sbmKey:' + sbmKey);
             if (sbmKey && window[sbmKey]) {
               const sbm = window[sbmKey];
-              if (typeof sbm.submit === 'function') {
-                sbm.submit({ rnum: pinC }); log.push('sbm.submit(rnum)');
-              } else if (typeof sbm === 'function') {
-                sbm({ rnum: pinC }); log.push('sbm(rnum)');
-              }
+              const sbmKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(sbm) || {}).concat(Object.keys(sbm || {}));
+              log.push('sbm_keys:' + JSON.stringify(sbmKeys.slice(0, 20)));
+              if (typeof sbm.submit === 'function') { sbm.submit({ rnum: pinC }); log.push('sbm.submit(rnum)'); }
+              else if (typeof sbm === 'function') { sbm({ rnum: pinC }); log.push('sbm(rnum)'); }
+              else if (typeof sbm.run === 'function') { sbm.run(); log.push('sbm.run()'); }
+              else if (typeof sbm.execute === 'function') { sbm.execute({ rnum: pinC }); log.push('sbm.execute(rnum)'); }
+              else if (typeof sbm.send === 'function') { sbm.send(); log.push('sbm.send()'); }
+              else if (typeof sbm.call === 'function') { sbm.call(); log.push('sbm.call()'); }
+              else { log.push('sbm_no_callable:' + typeof sbm); }
             }
             // 4) scwin 내 retrievePinSrchCont 탐색
             if (typeof scwin !== 'undefined') {
@@ -1842,22 +1846,36 @@ app.post('/api/iros-fetch', async (req, res) => {
                 try { scwin[scKey]({ rnum: pinC }); log.push('scwin.fn(rnum)'); } catch(e3) { log.push('scFn_err:' + e3.message); }
               }
             }
-            // 5) XHR direct: retrievePinSrchCont.do
-            try {
-              const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
-                method: 'POST', credentials: 'include',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' },
-                body: `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`
-              });
-              const txt = await r.text();
-              log.push('pinCont_status:' + r.status + ' preview:' + txt.slice(0, 300));
-              if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
-                return { ok: true, log, txt };
-              }
-            } catch(er) { log.push('pinCont_fetch_err:' + er.message); }
+            // 5) XHR direct: retrievePinSrchCont.do — 다양한 파라미터 조합
+            const bodies = [
+              `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`,
+              `rnum=${pinDash}&rlrgGbn=1&selGbn=UNI`,
+              `rnum=${pinC}&rlrgGbn=1&selGbn=UNI&smplKindCls=1`,
+              `rnum=${pinC}&rlrgGbn=1`,
+              `rnum=${pinC}`,
+            ];
+            for (const body of bodies) {
+              try {
+                const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
+                  method: 'POST', credentials: 'include',
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json, text/javascript, */*; q=0.01',
+                    'Referer': location.href,
+                  },
+                  body,
+                });
+                const txt = await r.text();
+                log.push('pinCont_status:' + r.status + ':' + body.slice(0,40) + ' preview:' + txt.slice(0, 200));
+                if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
+                  return { ok: true, log, txt };
+                }
+              } catch(er) { log.push('pinCont_fetch_err:' + er.message); break; }
+            }
           } catch(e) { log.push('outer_err:' + e.message); }
           return { ok: false, log };
-        }, pinClean, pinFromRow).catch(e => ({ ok: false, log: ['evaluate_err:' + e.message] }));
+        }, {pinC: pinClean, pinDash: pinFromRow}).catch(e => ({ ok: false, log: ['evaluate_err:' + e.message] }));
 
         console.log('[iros] 방법I 결과:', JSON.stringify(wsResult).slice(0, 500));
         if (wsResult && wsResult.ok) {
@@ -1945,18 +1963,23 @@ app.post('/api/iros-fetch', async (req, res) => {
         }
 
         // 3) 직접 XHR: row0 데이터 + 다양한 파라미터 조합
+        // row0는 배열 형식: ["18431996070590","건물","부산광역시...",...]
         const row0Raw = await resultPage.evaluate(() => window.__iros_row0 || null);
-        const xhrResult = await resultPage.evaluate(async (pinC, r0Raw) => {
-          const row0 = r0Raw ? JSON.parse(r0Raw) : {};
-          const baseParams = Object.keys(row0)
-            .map(k => `${k}=${encodeURIComponent(row0[k] == null ? '' : row0[k])}`)
-            .join('&');
+        const xhrResult = await resultPage.evaluate(async ({pinC, r0Raw}) => {
+          let row0Rnum = pinC; // row0[0]이 rnum
+          try {
+            const row0 = r0Raw ? JSON.parse(r0Raw) : null;
+            if (Array.isArray(row0) && row0[0]) row0Rnum = String(row0[0]);
+            else if (row0 && typeof row0 === 'object' && row0.rnum) row0Rnum = row0.rnum;
+          } catch(pe) {}
           const bodies = [
+            `rnum=${row0Rnum}&rlrgGbn=1&selGbn=UNI`,
             `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`,
-            `rnum=${pinC}&rlrgGbn=1&selGbn=UNI&smplKindCls=1`,
-            `rnum=${pinC}&rlrgGbn=1`,
-            baseParams ? `${baseParams}&rnum=${pinC}&rlrgGbn=1&selGbn=UNI` : '',
-          ].filter(Boolean);
+            `rnum=${row0Rnum}&rlrgGbn=1&selGbn=UNI&smplKindCls=1`,
+            `rnum=${row0Rnum}&rlrgGbn=1`,
+            `rnum=${row0Rnum}`,
+          ];
+          const results = [];
           for (const body of bodies) {
             try {
               const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
@@ -1973,13 +1996,11 @@ app.post('/api/iros-fetch', async (req, res) => {
               if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
                 return { ok: true, txt, body };
               }
-              if (r.status === 200 && txt.length > 50) {
-                return { ok: false, status: r.status, preview: txt.slice(0, 400), body };
-              }
-            } catch(e) { /* try next */ }
+              results.push({ status: r.status, preview: txt.slice(0, 200), body: body.slice(0,60) });
+            } catch(e) { results.push({ err: e.message, body: body.slice(0,60) }); }
           }
-          return { ok: false };
-        }, pinClean, row0Raw);
+          return { ok: false, results };
+        }, {pinC: pinClean, r0Raw: row0Raw});
         console.log('[iros] 방법J XHR:', JSON.stringify(xhrResult).slice(0, 600));
         if (xhrResult && xhrResult.ok) {
           res.json({ ok: true, registryText: xhrResult.txt, registryHtml: '', address });
