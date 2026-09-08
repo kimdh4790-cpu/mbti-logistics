@@ -843,9 +843,10 @@ app.post('/api/iros-fetch', async (req, res) => {
     await page.screenshot({ path: '/home/opc/iros-debug/02-after-trigger.png', fullPage: false }).catch(() => {});
     console.log('[iros] 검색 트리거 완료');
 
-    // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 중 최초 발생한 것
+    // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 / 로그인 레이어
     let resultPage = page;
-    for (let tick = 0; tick < 12; tick++) {
+    let loginAttempted = false;
+    for (let tick = 0; tick < 20; tick++) {
       await page.waitForTimeout(2000);
 
       // 1순위: 새 팝업/탭
@@ -864,9 +865,35 @@ app.post('/api/iros-fetch', async (req, res) => {
         break;
       }
 
-      // 상태 로그 (processMsg 사라지면 결과 로드 완료)
+      // 3순위: 로그인 레이어 감지 (processMsg 사라지면서 로그인 폼이 나타나는 경우)
       const frameUrls = page.frames().map(f => f.url());
       const hasProcess = frameUrls.some(u => u.includes('processMsg'));
+      if (!hasProcess && !loginAttempted) {
+        const loginVisible = await page.locator('#userId, input[name="userId"], input[id*="userId"]').count() > 0;
+        if (loginVisible) {
+          console.log('[iros] 로그인 레이어 감지 — 자동 로그인');
+          loginAttempted = true;
+          await _irosLogin(page);
+          await page.waitForTimeout(3000);
+          // 로그인 후 재검색
+          const addrInput2 = await _findAddrInput(page);
+          if (addrInput2) {
+            await addrInput2.click({ clickCount: 3 }).catch(() => {});
+            await addrInput2.fill(searchAddr);
+            await page.waitForTimeout(500);
+            const btnId2 = await page.evaluate(() => {
+              var b = document.querySelector('#mf_wfm_potal_main_btn_sch,[id*="btn_sch"]:not([id*="header"])');
+              return b ? b.id : null;
+            }).catch(() => null);
+            if (btnId2) await page.locator(cssId(btnId2)).click({ force: true }).catch(() => {});
+            else await addrInput2.press('Enter').catch(() => {});
+            console.log('[iros] 로그인 후 재검색');
+          }
+          continue;
+        }
+      }
+
+      // 상태 로그
       console.log(`[iros] tick=${tick+1} frames=${frameUrls.length} processMsg=${hasProcess} pages=${allPages.length}`);
       if (!hasProcess && tick >= 1) {
         console.log('[iros] processMsg 소멸 → 결과 로드 완료');
