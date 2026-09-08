@@ -1,27 +1,24 @@
 #!/usr/bin/env node
 /**
- * Runway Gen-4.5 영상 생성 스크립트
+ * Runway Gen-4 Turbo 영상 생성 스크립트
  * 사용법: node scripts/runway-generate.js --product filo --mode text|image
  *
  * 환경변수: RUNWAY_API_KEY
  * API 문서: https://dev.runwayml.com/docs
  */
 
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const fs   = require('fs');
+const path = require('path');
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const API_BASE  = 'https://api.dev.runwayml.com/v1';
-const API_KEY   = process.env.RUNWAY_API_KEY;
-const OUT_DIR   = path.join(__dirname, '..', 'output');
+const API_BASE = 'https://api.dev.runwayml.com/v1';
+const API_KEY  = process.env.RUNWAY_API_KEY;
+const OUT_DIR  = path.join(__dirname, '..', 'output');
 
 if (!API_KEY) {
   console.error('RUNWAY_API_KEY 환경변수가 설정되지 않았습니다.');
   process.exit(1);
 }
 
-// 제품별 프롬프트 정의
 const PROMPTS = {
   filo: {
     text: 'A sleek modern restaurant POS tablet screen glowing in a busy Korean cafe, smooth cinematic camera pull-back, warm golden lighting, 4K quality, professional product showcase',
@@ -84,7 +81,7 @@ async function runwayGet(endpoint) {
   return res.json();
 }
 
-async function pollTask(taskId, maxWait = 300_000) {
+async function pollTask(taskId, maxWait = 300000) {
   const start = Date.now();
   while (Date.now() - start < maxWait) {
     const task = await runwayGet(`/tasks/${taskId}`);
@@ -112,11 +109,11 @@ async function generateTextToVideo(product) {
   console.log(`  프롬프트: ${cfg.text.slice(0, 60)}...`);
 
   const task = await runwayPost('/text_to_video', {
-    model:          'gen4_turbo',
-    promptText:     cfg.text,
-    ratio:          cfg.ratio,
-    duration:       cfg.duration,
-    watermark:      false,
+    model:       'gen4_turbo',
+    promptText:  cfg.text,
+    ratio:       cfg.ratio,
+    duration:    cfg.duration,
+    watermark:   false,
   });
 
   console.log(`  Task ID: ${task.id}`);
@@ -125,7 +122,6 @@ async function generateTextToVideo(product) {
   const outPath = path.join(OUT_DIR, `${product}-runway.mp4`);
   fs.mkdirSync(OUT_DIR, { recursive: true });
   await downloadVideo(result.output[0], outPath);
-
   return outPath;
 }
 
@@ -136,19 +132,18 @@ async function generateImageToVideo(product, imagePath) {
 
   console.log(`\n[Runway] ${product} 이미지→영상 생성 시작...`);
 
-  // 이미지를 base64로 인코딩
   const imgBuf  = fs.readFileSync(imagePath);
   const ext     = path.extname(imagePath).slice(1).toLowerCase();
   const mime    = ext === 'png' ? 'image/png' : 'image/jpeg';
   const dataUrl = `data:${mime};base64,${imgBuf.toString('base64')}`;
 
   const task = await runwayPost('/image_to_video', {
-    model:          'gen4_turbo',
-    promptImage:    dataUrl,
-    promptText:     cfg.text,
-    ratio:          cfg.ratio,
-    duration:       cfg.duration,
-    watermark:      false,
+    model:        'gen4_turbo',
+    promptImage:  dataUrl,
+    promptText:   cfg.text,
+    ratio:        cfg.ratio,
+    duration:     cfg.duration,
+    watermark:    false,
   });
 
   console.log(`  Task ID: ${task.id}`);
@@ -157,11 +152,9 @@ async function generateImageToVideo(product, imagePath) {
   const outPath = path.join(OUT_DIR, `${product}-runway.mp4`);
   fs.mkdirSync(OUT_DIR, { recursive: true });
   await downloadVideo(result.output[0], outPath);
-
   return outPath;
 }
 
-// CLI 파싱
 const args    = process.argv.slice(2);
 const product = args[args.indexOf('--product') + 1] || 'filo';
 const mode    = args[args.indexOf('--mode')    + 1] || 'text';
