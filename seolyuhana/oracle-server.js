@@ -2225,6 +2225,205 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch(e) { console.log('[iros] 방법K 오류:', e.message); }
     }
 
+    // ── 방법L: 그리드 메서드·sbm 플러그인·대안 endpoint·정확한 체크박스 클릭 ──────────
+    if (pinFromRow) {
+      const pinClean = pinFromRow.replace(/-/g, '');
+      const pinDash  = pinFromRow;
+      console.log('[iros] 방법L: grid메서드+sbm플러그인+대안endpoint+정확click');
+      try {
+        // L-1) cell_0_1 INPUT 정확 bounding rect → 마우스 클릭
+        const cellRect = await resultPage.evaluate(() => {
+          const cell = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt_cell_0_1');
+          if (!cell) return null;
+          const input = cell.querySelector('input') || cell;
+          cell.scrollIntoView({block:'center'});
+          const r = input.getBoundingClientRect();
+          return { cx: r.x + r.width / 2, cy: r.y + r.height / 2, type: input.tagName + (input.type || ''), id: input.id, html: input.outerHTML.slice(0,200) };
+        }).catch(() => null);
+        console.log('[iros] 방법L cellRect:', JSON.stringify(cellRect));
+
+        if (cellRect && cellRect.cx && cellRect.cy) {
+          await resultPage.mouse.move(cellRect.cx, cellRect.cy);
+          await resultPage.waitForTimeout(100);
+          await resultPage.mouse.click(cellRect.cx, cellRect.cy, {button:'left'});
+          await resultPage.waitForTimeout(1500);
+          rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+          console.log('[iros] 방법L 정확click 후 btn_smpl_rlrg:', rlrgCount);
+        }
+
+        // L-2) grid/datalist 위젯 메서드 + sbm 플러그인 탐색
+        const lScanResult = await resultPage.evaluate((pinC) => {
+          const log = [];
+          // grid widget
+          const grdKey = Object.keys(window).find(k => /grd_smpl_srch_rslt$/.test(k) && !k.includes('check'));
+          if (grdKey && window[grdKey]) {
+            const grd = window[grdKey];
+            const ownFns = Object.keys(grd).filter(k => typeof grd[k] === 'function');
+            const protoFns = [];
+            let p = Object.getPrototypeOf(grd);
+            while (p && p !== Object.prototype) { Object.getOwnPropertyNames(p).forEach(k => { if (typeof grd[k] === 'function' && !protoFns.includes(k)) protoFns.push(k); }); p = Object.getPrototypeOf(p); }
+            log.push('grd_own:' + JSON.stringify(ownFns.slice(0,30)));
+            log.push('grd_proto:' + JSON.stringify(protoFns.slice(0,40)));
+            // 체크 관련 메서드 시도
+            for (const fn of ['checkRow','setCheckValue','fireEvent','triggerEvent','oncheckclick','selectRow','setSelectedIndex','checkAll','rowCheck']) {
+              if (typeof grd[fn] === 'function') {
+                try { grd[fn](0, 'Y'); log.push('grd.' + fn + '(0,"Y")'); } catch(e) {
+                  try { grd[fn](0); log.push('grd.' + fn + '(0)'); } catch(e2) { log.push('grd.' + fn + '_err:' + e2.message); }
+                }
+              }
+            }
+            if (typeof grd.fireEvent === 'function') {
+              for (const ev of ['oncheckclick','oncheckChange','oncheckboxclick','onclick','onSelectChange','onrowclick']) {
+                try { grd.fireEvent(ev, {rowIndex:0,colIndex:0,value:'Y',checkFlag:true}); log.push('grd.fireEvent(' + ev + ')'); }
+                catch(e) { log.push('grd.fireEvent(' + ev + ')_err:' + e.message.slice(0,40)); }
+              }
+            }
+            // datalist 컬럼 이름
+            const dltKey = Object.keys(window).find(k => /^mf.*dlt_smpl_srch_rslt$/.test(k));
+            if (dltKey && window[dltKey]) {
+              const dl = window[dltKey];
+              // getColumnId 방식
+              if (typeof dl.getColumnId === 'function') {
+                const cols = []; for (let i=0;i<20;i++) { const c=dl.getColumnId(i); if(!c) break; cols.push(c); }
+                log.push('cols_getColumnId:' + cols.join(','));
+              }
+              // schema/info 직접
+              for (const p of ['_colInfo','_schema','info','schema','columns','_cols']) {
+                if (dl[p]) { log.push('dlt.' + p + ':' + JSON.stringify(dl[p]).slice(0,200)); break; }
+              }
+            }
+          }
+          // sbm 플러그인 탐색
+          const sbmKey = Object.keys(window).find(k => /sbm.*retrievePinSrchCont/i.test(k));
+          if (sbmKey && window[sbmKey]) {
+            const sbm = window[sbmKey];
+            log.push('sbm._pluginName:' + sbm._pluginName);
+            if (sbm.parentElement) {
+              const pe = sbm.parentElement;
+              log.push('sbm.parentElement_id:' + pe.id + ' type:' + typeof pe + ' fns:' + Object.keys(pe).filter(k=>typeof pe[k]==='function').join(',').slice(0,100));
+              // parentElement 클릭/활성화 시도
+              for (const fn of ['click','activate','submit','trigger','fireEvent']) {
+                if (typeof pe[fn] === 'function') { try { pe[fn](); log.push('pe.' + fn + '()'); } catch(e) { log.push('pe.' + fn + '_err:' + e.message.slice(0,40)); } }
+              }
+            }
+            // xmlNode ownerDocument에서 dma_srch_param 탐색
+            if (sbm.xmlNode && sbm.xmlNode.ownerDocument) {
+              const doc = sbm.xmlNode.ownerDocument;
+              const allIds = Array.from(doc.querySelectorAll('[id]')).map(e=>e.id);
+              log.push('xf_doc_ids:' + allIds.slice(0,20).join(','));
+              const dmaEl = doc.getElementById('dma_srch_param') || doc.querySelector('[id*="dma"]');
+              if (dmaEl) {
+                log.push('dmaEl:' + dmaEl.outerHTML.slice(0,300));
+                try { dmaEl.textContent = JSON.stringify([{rnum:pinC,selGbn:'UNI',rlrgGbn:'1',smplKindCls:'1',payCl:'F',col_chk:'Y'}]); log.push('dmaEl_set'); } catch(e) { log.push('dmaEl_set_err:'+e.message); }
+              } else {
+                // xmlNode 형제 탐색
+                const par = sbm.xmlNode.parentNode;
+                if (par) log.push('xf_parent:' + par.tagName + ' children:' + Array.from(par.childNodes).map(c=>c.nodeName+(c.id?'#'+c.id:'')).slice(0,15).join(','));
+              }
+            }
+          }
+          return log;
+        }, pinClean).catch(e => ['L2_err:' + e.message]);
+        console.log('[iros] 방법L scan:', JSON.stringify(lScanResult).slice(0, 1200));
+
+        // L-3) 대안 endpoint: retrieveLocSrchCont / retrieveRdAddrSrchCont (주소 검색 후 내용 조회)
+        const lXhrResult = await resultPage.evaluate(async ({pinC, pinD}) => {
+          const log = [];
+          // row0에서 실제 데이터 읽기
+          const dltKey = Object.keys(window).find(k => /^mf.*dlt_smpl_srch_rslt$/.test(k));
+          let row0Obj = {};
+          if (dltKey && window[dltKey]) {
+            const dl = window[dltKey];
+            try {
+              let r0 = null;
+              if (typeof dl.getRowData === 'function') r0 = dl.getRowData(0);
+              else if (typeof dl.getAllRowData === 'function') { const a = dl.getAllRowData(); r0 = a&&a[0]; }
+              if (Array.isArray(r0)) {
+                // 컬럼 이름 얻기 가능하면 매핑, 아니면 인덱스로
+                row0Obj = { rnum: r0[0], rlrgGbn: r0[1]==='건물'?'1':(r0[1]==='집합건물'?'2':(r0[1]==='토지'?'3':r0[1])), selGbn:'UNI', smplKindCls:'1', payCl:'F', col_chk:'Y' };
+              } else if (r0 && typeof r0 === 'object') { row0Obj = { ...r0, col_chk: 'Y', payCl: 'F' }; }
+            } catch(e) {}
+          }
+          if (!row0Obj.rnum) row0Obj = { rnum: pinC, selGbn:'UNI', rlrgGbn:'1', smplKindCls:'1', payCl:'F', col_chk:'Y' };
+          log.push('row0Obj:' + JSON.stringify(row0Obj));
+
+          const endpoints = [
+            '/biz/Pr20ViaRlrgSrchCtrl/retrieveLocSrchCont.do?IS_NMBR_LOGIN__=null',
+            '/biz/Pr20ViaRlrgSrchCtrl/retrieveRdAddrSrchCont.do?IS_NMBR_LOGIN__=null',
+            '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null',
+          ];
+          const bodies = [
+            JSON.stringify({websquare_param: [row0Obj]}),
+            JSON.stringify({websquare_param: row0Obj}),
+            JSON.stringify({websquare_param: [{rnum:pinC, selGbn:'UNI', rlrgGbn:'1', payCl:'F', smplKindCls:'1', col_chk:'Y', smplSmplCls:'1'}]}),
+            JSON.stringify({websquare_param: [{rnum:pinC, selGbn:'LOC', rlrgGbn:'1', payCl:'F', smplKindCls:'1', col_chk:'Y'}]}),
+          ];
+          for (const url of endpoints) {
+            for (const body of bodies.slice(0, 2)) {
+              try {
+                const r = await fetch(url, {
+                  method:'POST', credentials:'include',
+                  headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','Accept':'application/json, text/plain, */*','Referer':location.href},
+                  body,
+                });
+                const txt = await r.text();
+                const endp = url.split('/').pop().split('?')[0];
+                log.push(endp + ':' + r.status + ':' + body.slice(0,60) + ' → ' + txt.slice(0,200));
+                if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) return {ok:true, txt, log};
+              } catch(e) { log.push('fetch_err:' + e.message); }
+            }
+          }
+          return {ok:false, log};
+        }, {pinC: pinClean, pinD: pinDash}).catch(e => ({ok:false, log:['L3_err:'+e.message]}));
+        console.log('[iros] 방법L XHR:', JSON.stringify(lXhrResult).slice(0, 1200));
+        if (lXhrResult && lXhrResult.ok) {
+          res.json({ok:true, registryText:lXhrResult.txt, registryHtml:'', address});
+          return;
+        }
+
+        // L-4) 고유번호 탭 입력 후 검색 (tab 내 INPUT 탐색 후 PIN 입력)
+        console.log('[iros] 방법L-4: 고유번호탭 PIN 직접 입력');
+        const pinRespPromise = resultPage.waitForResponse(
+          r => r.url().includes('PinSrchCont') || r.url().includes('LocSrchCont'), {timeout:10000}
+        ).catch(() => null);
+
+        await resultPage.locator('[id*="pin_srch_tab"]').first().click({force:true}).catch(() => {});
+        await resultPage.waitForTimeout(1500);
+
+        const pinTabInputs = await resultPage.evaluate(() =>
+          Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
+            .map(el => ({id:el.id, ph:el.placeholder, val:el.value, cls:el.className.slice(0,30)}))
+        ).catch(() => []);
+        console.log('[iros] 방법L-4 PIN탭 입력필드:', JSON.stringify(pinTabInputs).slice(0,400));
+
+        const parts = pinDash.split('-'); // ['1843','1996','070590']
+        let filled = 0;
+        for (const inp of pinTabInputs) {
+          if (!inp.id || filled > 2) break;
+          await resultPage.fill('#' + inp.id.replace(/:/g,'\\:'), parts[filled] || pinClean).catch(() => {});
+          filled++;
+        }
+        if (filled === 0) {
+          // 모든 input에 전체 핀 입력 시도
+          await resultPage.locator('input[type="text"]').first().fill(pinDash).catch(() => {});
+        }
+        await resultPage.waitForTimeout(300);
+        await resultPage.keyboard.press('Enter');
+
+        const pinResp = await pinRespPromise;
+        if (pinResp) {
+          const txt = await pinResp.text().catch(() => '');
+          console.log('[iros] 방법L-4 응답 status=' + pinResp.status() + ' preview:' + txt.slice(0,400));
+          if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
+            res.json({ok:true, registryText:txt, registryHtml:'', address}); return;
+          }
+        }
+        await resultPage.waitForTimeout(1500);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법L 후 btn_smpl_rlrg:', rlrgCount);
+      } catch(e) { console.log('[iros] 방법L 오류:', e.message); }
+    }
+
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
     {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
