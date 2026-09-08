@@ -34,7 +34,7 @@ const PROMPTS = {
     ratio: '9:16',
   },
   donway: {
-    text: 'A logistics dashboard on a laptop screen showing real-time delivery driver settlements, data charts animating, dark blue professional UI, cinematic depth of field',
+    text: 'A logistics manager at a desk uploading an Excel file on laptop, 500 driver names instantly populating a settlement dashboard, numbers calculating rapidly, dark navy professional UI, cinematic close-up, dramatic lighting',
     duration: 5,
     ratio: '9:16',
   },
