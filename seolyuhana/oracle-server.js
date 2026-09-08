@@ -579,56 +579,60 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
     }
 
-    // 3단계: "간편 열람·발급" nav 클릭 → Gauce SPA가 검색폼 렌더링
-    const navId = 'mf_wfm_potal_main_wf_header_gen_depth1_0_gen_depth2_0_gen_depth3_1_grp_box3';
-    const navEl = page.locator(`#${navId}`);
-    if (await navEl.count() > 0) {
-      console.log('[iros] 간편열람 nav 클릭');
-      await navEl.click({ force: true }).catch(e => console.log('[iros] nav err:', e.message));
-    } else {
-      const fbEl = page.locator('a, span, div').filter({ hasText: /간편\s*열람/ }).first();
-      if (await fbEl.count() > 0) {
-        console.log('[iros] 텍스트 폴백 클릭');
-        await fbEl.click({ force: true }).catch(() => {});
-      } else {
-        console.log('[iros] nav element 없음, 직접 URL 시도');
-        const typeParam = regType === 'land' ? 'L' : 'B';
-        await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
-          { waitUntil: 'load', timeout: 30000 });
+    // 3단계: 팝업/공지 닫기 (홈 진입 시 뜨는 오버레이)
+    for (const closeText of ['오늘 다시 보지 않기', '닫기', '×']) {
+      const closeBtn = page.locator('a, button, span').filter({ hasText: new RegExp(`^${closeText}$`) }).first();
+      if (await closeBtn.count() > 0) {
+        await closeBtn.click({ force: true }).catch(() => {});
+        await page.waitForTimeout(500);
       }
     }
-    // Gauce SPA가 검색폼을 렌더링할 때까지 대기 (확인된 ID 우선, 최대 12초)
-    await page.waitForSelector('input[id*="sch_realCorp___input"]', { state: 'visible', timeout: 12000 })
-      .catch(() => page.waitForTimeout(4000));
-    console.log('[iros] frames after nav:', JSON.stringify(page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank')));
+    // 홈페이지 중앙 검색창이 이미 존재 — nav 클릭 불필요
+    // (IROS 홈: "부동산 등기사항증명서를 열람·발급하려면 주소를 입력하세요.")
+    console.log('[iros] 홈 검색창 사용 (nav 클릭 생략)');
 
-    // 4단계: 주소 입력 필드 찾기 (Gauce ID: mf_wfm_potal_main_sch_realCorp___input)
+    // 4단계: 주소 입력 필드 찾기
     const addrInput = await _findAddrInput(page);
     if (!addrInput) {
       const allInputCnt = await page.locator('input').count();
-      throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, inputs=${allInputCnt}`);
+      throw new Error(`주소 검색창 없음. URL=${page.url()}, inputs=${allInputCnt}`);
     }
     // 주소에서 동·호수 추출 (아파트 단위 선택용)
     const dongMatch = address.match(/(\d+)\s*동/);
     const hoMatch   = address.match(/(\d+)\s*호/);
-    const unitDong  = dongMatch ? dongMatch[1] : '';  // '101' (숫자만)
-    const unitHo    = hoMatch   ? hoMatch[1]   : '';  // '1001'
+    const unitDong  = dongMatch ? dongMatch[1] : '';
+    const unitHo    = hoMatch   ? hoMatch[1]   : '';
     if (unitDong || unitHo) console.log('[iros] 아파트 동/호:', unitDong||'?', '/', unitHo||'?');
 
-    // 주소 정제: IROS 검색에 쉼표·호수 포함 시 0건 반환 → 도로명 기본 주소만 추출
+    // 주소 정제: 쉼표·호수 포함 시 IROS 검색 0건
     const searchAddr = address.split(',')[0].trim()
       .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
     console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
+    // 실제 타이핑 시뮬레이션 (pressSequentially → IROS 자동완성/이벤트 트리거)
     await addrInput.click({ clickCount: 3 });
-    await addrInput.fill(searchAddr);
+    await addrInput.pressSequentially(searchAddr, { delay: 40 });
+    await page.waitForTimeout(1000);
 
-    // 검색 버튼 클릭 또는 Enter
-    const searchBtnSel = 'button[onclick*="search"], a[onclick*="search"], #searchBtn, .btn-search, button:has-text("검색"), input[type="button"][value*="검색"], input[type="submit"]';
-    const searchBtn = page.locator(searchBtnSel).first();
-    if (await searchBtn.count() > 0) await searchBtn.click();
-    else await addrInput.press('Enter');
-    await page.waitForTimeout(5000);
+    // 검색 버튼 (돋보기 아이콘 포함) 또는 Enter
+    const searchBtnSel = [
+      'button[title*="검색"]', 'button[aria-label*="검색"]',
+      'button[class*="search"]', 'a[class*="search"]',
+      'button:has-text("검색")', 'a:has-text("검색")',
+      'input[type="submit"]', 'input[type="button"][value*="검색"]',
+    ].join(', ');
+    const searchBtns = page.locator(searchBtnSel);
+    const sbCount = await searchBtns.count();
+    console.log('[iros] 검색버튼 후보 수:', sbCount);
+    if (sbCount > 0) {
+      const sbEh = await searchBtns.first().elementHandle().catch(() => null);
+      if (sbEh) await page.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), sbEh).catch(() => {});
+      else await searchBtns.first().click({ force: true }).catch(() => {});
+    } else {
+      await addrInput.press('Enter');
+    }
+    // IROS 응답 대기 (processMsg 사라질 때까지 + 여유)
+    await page.waitForTimeout(8000);
 
     // 5단계: 검색 후 DOM 스냅샷 (디버깅)
     {
