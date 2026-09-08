@@ -48,6 +48,11 @@ const PROMPTS = {
     duration: 5,
     ratio: '9:16',
   },
+  scan: {
+    text: 'A glowing smartphone screen showing an AI document analysis interface with Korean text, clean minimal UI with pink and mint accent colors, cinematic close-up shot, futuristic tech aesthetic, 4K quality',
+    duration: 5,
+    ratio: '9:16',
+  },
 };
 
 async function runwayPost(endpoint, body) {
