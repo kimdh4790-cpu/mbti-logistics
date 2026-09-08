@@ -161,11 +161,13 @@ jobs:
             for p in filo donway yongcha inflearn dine; do
               runway_run $p \
                 && cp output/${p}-runway.mp4 output/${p}-promo.mp4 \
+                && cp output/${p}-runway.mp4 output/${p}-reels.mp4 \
                 || echo "[$p] Runway 생성 실패 (Remotion 폴백)"
             done
           else
             runway_run $PRODUCT \
               && cp output/${PRODUCT}-runway.mp4 output/${PRODUCT}-promo.mp4 \
+              && cp output/${PRODUCT}-runway.mp4 output/${PRODUCT}-reels.mp4 \
               || echo "[$PRODUCT] Runway 생성 실패 (Remotion 폴백)"
           fi
 
