@@ -627,57 +627,97 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] native setter 입력:', inputPlaced ? '성공' : '폴백');
 
     if (!inputPlaced) {
-      // 폴백: addrInput.fill + focus
       await addrInput.fill(searchAddr);
       await addrInput.focus();
     }
     await page.waitForTimeout(500);
 
-    // Enter 키 → 현재 포커스된 중앙 검색창에서 검색 실행
+    // 팝업 감지 리스너 — Enter 전에 등록
+    const popupP = context.waitForEvent('page', { timeout: 20000 }).catch(() => null);
+    const urlBefore = page.url();
+
+    // Enter 키 → 검색 실행
     await page.keyboard.press('Enter');
     console.log('[iros] Enter 검색 실행');
-    // IROS 응답 대기 (processMsg 사라질 때까지 + 여유)
-    await page.waitForTimeout(8000);
 
-    // 5단계: 검색 후 DOM 스냅샷 (디버깅 — 검색 결과 포함 요소 탐색)
-    {
-      const allText = await page.evaluate(() => {
-        const els = document.querySelectorAll(
-          'tr, li, div[id*="grd"], div[id*="grid"], div[id*="list"], ' +
-          'div[id*="result"], div[id*="Result"], div[class*="result"], ' +
-          'div[id*="sch_realCorp"], div[id*="srch"], span[id*="srch"]'
-        );
-        return Array.from(els)
-          .filter(el => {
-            const txt = (el.textContent||'').trim();
-            return txt.length > 3 && txt.length < 300 && el.children.length < 10;
-          })
-          .map(el => `[${el.tagName}#${el.id||''}] "${(el.textContent||'').trim().slice(0,80)}"`)
-          .slice(0, 40).join('\n');
-      }).catch(() => '');
-      console.log('[iros] 검색후 DOM:\n' + allText.slice(0, 2000));
-      // 영구 경로에 스크린샷 저장 (tmpDir 삭제 후에도 확인 가능)
-      const debugDir = '/home/opc/iros-debug';
-      await mkdir(debugDir, { recursive: true }).catch(() => {});
-      await page.screenshot({ path: join(debugDir, 'step4-search.png'), fullPage: true }).catch(() => {});
-      console.log('[iros] 스크린샷 저장:', join(debugDir, 'step4-search.png'));
+    // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 중 최초 발생한 것
+    let resultPage = page;
+    for (let tick = 0; tick < 8; tick++) {
+      await page.waitForTimeout(2000);
+
+      // 1순위: 새 팝업/탭
+      const allPages = context.pages();
+      if (allPages.length > 1) {
+        resultPage = allPages[allPages.length - 1];
+        console.log('[iros] 팝업/새탭 감지 pages=', allPages.length, resultPage.url());
+        await resultPage.waitForLoadState('domcontentloaded', { timeout: 12000 }).catch(() => {});
+        break;
+      }
+
+      // 2순위: 메인 페이지 URL 변경 (내비게이션)
+      const urlNow = page.url();
+      if (urlNow !== urlBefore) {
+        console.log('[iros] URL 변경:', urlBefore, '->', urlNow);
+        break;
+      }
+
+      // 상태 로그 (processMsg 사라지면 결과 로드 완료)
+      const frameUrls = page.frames().map(f => f.url());
+      const hasProcess = frameUrls.some(u => u.includes('processMsg'));
+      console.log(`[iros] tick=${tick+1} frames=${frameUrls.length} processMsg=${hasProcess} pages=${allPages.length}`);
+      if (!hasProcess && tick >= 1) {
+        console.log('[iros] processMsg 소멸 → 결과 로드 완료');
+        break;
+      }
     }
 
-    // 주소 키워드로 결과 행 찾기 (뉴스 등 무관 요소 회피)
+    // ── 5단계: 검색 후 전체 컨텍스트 스캔 (디버깅 + 결과 탐색) ───────────────────
+    {
+      const debugDir = '/home/opc/iros-debug';
+      await mkdir(debugDir, { recursive: true }).catch(() => {});
+      await resultPage.screenshot({ path: join(debugDir, 'step4-search.png'), fullPage: true }).catch(() => {});
+      console.log('[iros] 스크린샷 저장: step4-search.png');
+
+      // 메인 페이지 + 모든 frame body text 덤프 (cross-origin 제외)
+      const ctxList = [resultPage, ...resultPage.frames()];
+      for (const f of ctxList) {
+        const fu = f.url ? f.url() : '';
+        const ft = await f.evaluate(() => (document.body?.innerText || '').slice(0, 600)).catch(() => '');
+        if (ft.trim().length > 20) {
+          console.log(`[iros] ctx[${(fu||'main').slice(-80)}] body: ${ft.slice(0, 300)}`);
+        }
+      }
+
+      // Gauce 그리드 셀 ID 패턴 덤프
+      const gridEls = await resultPage.evaluate(() => {
+        const sel = 'tr[id], tr[onclick], td[id], div[id*="grd"], div[id*="grid"], ' +
+          'div[id*="Row"], div[id*="Cell"], tbody, table';
+        return Array.from(document.querySelectorAll(sel)).slice(0, 30).map(el => ({
+          tag: el.tagName, id: el.id || '', cls: (el.className||'').slice(0,60),
+          txt: (el.textContent||'').trim().slice(0,100)
+        }));
+      }).catch(() => []);
+      if (gridEls.length) console.log('[iros] 그리드 요소:', JSON.stringify(gridEls.slice(0,15)));
+    }
+
+    // 주소 키워드로 결과 행 찾기
     const addrKeywords = searchAddr.replace(/^(부산|서울|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s*/, '').trim().split(' ');
-    const addrKey = addrKeywords.slice(-2).join(' ');  // "수영로 668" 같은 고유 부분
+    const addrKey = addrKeywords.slice(-2).join(' ');
     console.log('[iros] 결과 탐색 키워드:', addrKey);
 
-    let resultRow = null;
-    let resultCtx = page;
+    // resultPage + 모든 frame 탐색
+    const searchCtxList = [resultPage, ...resultPage.frames()];
 
-    // 1차: 주소 키워드 포함 행 찾기 (가장 정확)
-    for (const ctx of [page, ...page.frames()]) {
+    let resultRow = null;
+    let resultCtx = resultPage;
+
+    // 1차: 주소 키워드 포함 행 (가장 정확)
+    for (const ctx of searchCtxList) {
       try {
-        for (const sel of ['tr', 'li', 'div[id*="Row"], div[id*="row"]']) {
+        for (const sel of ['tr', 'li', 'div[id*="Row"]', 'div[id*="row"]', 'td']) {
           const loc = ctx.locator(sel).filter({ hasText: addrKey }).first();
           if (await loc.count() > 0) {
-            console.log('[iros] 주소키워드 매칭 행 발견:', sel);
+            console.log('[iros] 주소키워드 매칭 발견 sel=', sel, 'ctx=', (ctx.url?.() || '').slice(-60));
             resultRow = loc; resultCtx = ctx; break;
           }
         }
@@ -685,24 +725,39 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch {}
     }
 
-    // 2차: Gauce 그리드 행 (onclick/id 패턴)
+    // 2차: Gauce 그리드 행 패턴 (onclick / id)
     if (!resultRow) {
-      for (const ctx of [page, ...page.frames()]) {
+      for (const ctx of searchCtxList) {
         try {
-          const tbodyRows = ctx.locator('tr[onclick], tr[id*="Row"], tr[id*="grd"]').first();
-          if (await tbodyRows.count() > 0) {
-            console.log('[iros] Gauce 그리드 행 발견');
-            resultRow = tbodyRows; resultCtx = ctx; break;
+          const loc = ctx.locator('tr[onclick], tr[id*="Row"], tr[id*="grd"], tr[id*="row"]').first();
+          if (await loc.count() > 0) {
+            console.log('[iros] Gauce 그리드 행 발견 ctx=', (ctx.url?.() || '').slice(-60));
+            resultRow = loc; resultCtx = ctx; break;
+          }
+        } catch {}
+      }
+    }
+
+    // 3차: 첫 번째 tbody의 첫 번째 tr
+    if (!resultRow) {
+      for (const ctx of searchCtxList) {
+        try {
+          const loc = ctx.locator('tbody tr').first();
+          if (await loc.count() > 0) {
+            const txt = await loc.innerText().catch(() => '');
+            if (txt.trim().length > 5) {
+              console.log('[iros] tbody tr 폴백:', txt.slice(0,60));
+              resultRow = loc; resultCtx = ctx; break;
+            }
           }
         } catch {}
       }
     }
 
     if (!resultRow) {
-      const frameUrls = page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank');
-      throw new Error(`"${searchAddr}" (키워드: ${addrKey}) 검색 결과 없음 (frames: ${JSON.stringify(frameUrls)})`);
+      const frameUrls = resultPage.frames().map(f => f.url()).filter(u => u && u !== 'about:blank');
+      throw new Error(`"${searchAddr}" (키워드: ${addrKey}) 검색 결과 없음 (resultPage=${resultPage.url()}, frames: ${JSON.stringify(frameUrls)})`);
     }
-    console.log('[iros] 결과 행 발견, 클릭');
     console.log('[iros] 결과 행 클릭');
     // Gauce SPA 오버레이 우회: dispatchEvent → force click → JS click 순으로 시도
     const eh = await resultRow.elementHandle().catch(() => null);
@@ -717,30 +772,30 @@ app.post('/api/iros-fetch', async (req, res) => {
         if (eh2) await resultCtx.evaluate(el => el.click(), eh2).catch(() => {});
       });
     }
-    await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(1500);
+    await resultPage.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+    await resultPage.waitForTimeout(1500);
 
     // 5-1단계: 아파트 동·호수 선택 (건물 클릭 후 세부 선택 UI 나타나는 경우)
     if (unitDong || unitHo) {
       console.log('[iros] 동/호수 선택 시도:', unitDong, unitHo);
+      const unitCtxList = [resultPage, ...resultPage.frames()];
+
       // 동 선택 — select 또는 클릭 가능한 행
       if (unitDong) {
-        for (const ctx of [page, ...page.frames()]) {
+        for (const ctx of unitCtxList) {
           try {
-            // select 드롭다운
             const dongSelect = ctx.locator('select').filter({ hasText: new RegExp(unitDong+'동') }).first();
             if (await dongSelect.count() > 0) {
               await dongSelect.selectOption({ label: new RegExp(unitDong) });
               console.log('[iros] 동 select 선택:', unitDong);
               break;
             }
-            // 테이블 행 (Gauce)
-            const dongRow = ctx.locator(`tr, li`).filter({ hasText: new RegExp(`^${unitDong}동$|\\s${unitDong}동\\s`) }).first();
+            const dongRow = ctx.locator('tr, li').filter({ hasText: new RegExp(`^${unitDong}동$|\\s${unitDong}동\\s`) }).first();
             if (await dongRow.count() > 0) {
               const dEh = await dongRow.elementHandle().catch(() => null);
               if (dEh) await ctx.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), dEh).catch(() => {});
               console.log('[iros] 동 행 클릭:', unitDong);
-              await page.waitForTimeout(1000);
+              await resultPage.waitForTimeout(1000);
               break;
             }
           } catch {}
@@ -749,7 +804,7 @@ app.post('/api/iros-fetch', async (req, res) => {
       // 호수 선택 — input fill 또는 행 클릭
       if (unitHo) {
         let hoHandled = false;
-        for (const ctx of [page, ...page.frames()]) {
+        for (const ctx of unitCtxList) {
           try {
             const hoInput = ctx.locator('input[id*="ho" i]:not([type="hidden"]), input[placeholder*="호"]').first();
             if (await hoInput.count() > 0 && await hoInput.isVisible().catch(() => false)) {
@@ -760,29 +815,27 @@ app.post('/api/iros-fetch', async (req, res) => {
               hoHandled = true;
               break;
             }
-            const hoRow = ctx.locator(`tr, li`).filter({ hasText: new RegExp(`^${unitHo}호$|\\s${unitHo}호[\\s)]`) }).first();
+            const hoRow = ctx.locator('tr, li').filter({ hasText: new RegExp(`^${unitHo}호$|\\s${unitHo}호[\\s)]`) }).first();
             if (await hoRow.count() > 0) {
               const hEh = await hoRow.elementHandle().catch(() => null);
               if (hEh) await ctx.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), hEh).catch(() => {});
               console.log('[iros] 호수 행 클릭:', unitHo);
               hoHandled = true;
-              await page.waitForTimeout(1000);
+              await resultPage.waitForTimeout(1000);
               break;
             }
           } catch {}
         }
         if (!hoHandled) console.log('[iros] 호수 선택 UI 없음 (건물 전체 등기부로 진행)');
       }
-      await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
-      await page.waitForTimeout(1000);
+      await resultPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+      await resultPage.waitForTimeout(1000);
     }
 
     // 5단계 후 현재 URL + DOM 요약 로그 (디버깅)
-    console.log('[iros] Step5 완료 URL:', page.url());
+    console.log('[iros] Step5 완료 URL:', resultPage.url());
     {
-      const stepScreenPath = join(tmpDir, 'step5.png');
-      await page.screenshot({ path: stepScreenPath, fullPage: false }).catch(() => {});
-      const btns = await page.evaluate(() =>
+      const btns = await resultPage.evaluate(() =>
         Array.from(document.querySelectorAll('a,button')).slice(0, 30)
           .map(el => `${el.tagName}[${el.id||el.className||''}] "${(el.textContent||'').trim().slice(0,20)}"`)
           .join(' | ')
@@ -790,7 +843,7 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 가시 버튼/링크:', btns.slice(0, 500));
     }
 
-    // 6단계: 열람/발급 버튼 — 모든 컨텍스트(page + frames) 탐색
+    // 6단계: 열람/발급 버튼 — 모든 컨텍스트(resultPage + frames) 탐색
     const issueSel = [
       'button:has-text("열람")', 'a:has-text("열람")',
       'button:has-text("발급")', 'a:has-text("발급")',
@@ -800,8 +853,8 @@ app.post('/api/iros-fetch', async (req, res) => {
     ].join(', ');
 
     let issueBtn = null;
-    let issuePage = page;
-    for (const ctx of [page, ...page.frames()]) {
+    let issuePage = resultPage;
+    for (const ctx of [resultPage, ...resultPage.frames()]) {
       try {
         const loc = ctx.locator(issueSel).first();
         if (await loc.count() > 0) { issueBtn = loc; issuePage = ctx; break; }
@@ -809,8 +862,7 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
 
     if (!issueBtn) {
-      // DOM에서 열람 관련 텍스트 포함 요소 전체 덤프
-      const domHint = await page.evaluate(() =>
+      const domHint = await resultPage.evaluate(() =>
         Array.from(document.querySelectorAll('*')).filter(el =>
           el.children.length === 0 && /열람|발급|조회|확인/.test(el.textContent||'')
         ).slice(0, 10).map(el =>
@@ -818,7 +870,7 @@ app.post('/api/iros-fetch', async (req, res) => {
         ).join(' | ')
       ).catch(() => '');
       console.log('[iros] 열람/발급 버튼 못 찾음. DOM 힌트:', domHint);
-      throw new Error(`열람/발급 버튼 없음 (URL: ${page.url()}, hint: ${domHint.slice(0,200)})`);
+      throw new Error(`열람/발급 버튼 없음 (URL: ${resultPage.url()}, hint: ${domHint.slice(0,200)})`);
     }
 
     console.log('[iros] 열람/발급 버튼 클릭');
@@ -828,29 +880,29 @@ app.post('/api/iros-fetch', async (req, res) => {
     } else {
       await issueBtn.click({ force: true }).catch(() => {});
     }
-    await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(3000);
-    console.log('[iros] 발급버튼클릭후 URL:', page.url());
+    await resultPage.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+    await resultPage.waitForTimeout(3000);
+    console.log('[iros] 발급버튼클릭후 URL:', resultPage.url());
 
     // 전자화폐 결제
     if (emoneyNo1 && emoneyPwd) {
       try {
         const payRadioSel = 'input[value*="emoney"], input[value*="전자화폐"], label[for*="emoney"], input[value="03"]';
-        const payEmoneyRadio = page.locator(payRadioSel).first();
+        const payEmoneyRadio = resultPage.locator(payRadioSel).first();
         if (await payEmoneyRadio.count() > 0) {
           await payEmoneyRadio.click();
-          await page.waitForTimeout(500);
-          const emoNo1Field = page.locator('input[id*="emoneyNo1" i], input[name*="emoneyNo1" i]').first();
-          const emoNo2Field = page.locator('input[id*="emoneyNo2" i], input[name*="emoneyNo2" i]').first();
-          const emoPwdField = page.locator('input[id*="emoneyPwd" i], input[name*="emoneyPwd" i], input[id*="emoPwd" i]').first();
+          await resultPage.waitForTimeout(500);
+          const emoNo1Field = resultPage.locator('input[id*="emoneyNo1" i], input[name*="emoneyNo1" i]').first();
+          const emoNo2Field = resultPage.locator('input[id*="emoneyNo2" i], input[name*="emoneyNo2" i]').first();
+          const emoPwdField = resultPage.locator('input[id*="emoneyPwd" i], input[name*="emoneyPwd" i], input[id*="emoPwd" i]').first();
           if (await emoNo1Field.count() > 0) await emoNo1Field.fill(emoneyNo1);
           if (emoneyNo2 && await emoNo2Field.count() > 0) await emoNo2Field.fill(emoneyNo2);
           if (await emoPwdField.count() > 0) await emoPwdField.fill(emoneyPwd);
           const payBtnSel = '#payBtn, button[onclick*="pay"], .btn-pay, button:has-text("결제"), button:has-text("확인")';
-          const payBtn = page.locator(payBtnSel).first();
+          const payBtn = resultPage.locator(payBtnSel).first();
           if (await payBtn.count() > 0) {
             await payBtn.click();
-            await page.waitForTimeout(3000);
+            await resultPage.waitForTimeout(3000);
           }
         }
       } catch (pe) {
@@ -875,23 +927,22 @@ app.post('/api/iros-fetch', async (req, res) => {
 
     // 7-2: 다운로드 없으면 현재 페이지에 등기부 내용이 있는지 확인
     if (!pdfSaved) {
-      // 등기부 특유 텍스트(표제부, 갑구, 을구, 접수, 순위번호 등) 확인
-      const hasRegistryContent = await page.evaluate(() => {
+      const hasRegistryContent = await resultPage.evaluate(() => {
         const txt = document.body.innerText || '';
         return /표제부|갑구|을구|소유권|순위번호|접수|등기원인|등기목적/.test(txt);
       }).catch(() => false);
 
       if (hasRegistryContent) {
         console.log('[iros] 뷰어에서 등기부 내용 감지 → page.pdf() 캡처');
-        const pdfBuffer2 = await page.pdf({
+        const pdfBuffer2 = await resultPage.pdf({
           format: 'A4', printBackground: true,
           margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
         });
         await writeFile(pdfPath, pdfBuffer2);
         pdfSaved = true;
       } else {
-        const curUrl = page.url();
-        const bodySnip = await page.evaluate(() => (document.body.innerText||'').slice(0, 300)).catch(() => '');
+        const curUrl = resultPage.url();
+        const bodySnip = await resultPage.evaluate(() => (document.body.innerText||'').slice(0, 300)).catch(() => '');
         console.log('[iros] 등기부 내용 없음. URL:', curUrl, '| 내용:', bodySnip);
         throw new Error(`등기부 내용 미감지 — IROS 발급 흐름 미완료 (URL: ${curUrl})`);
       }
