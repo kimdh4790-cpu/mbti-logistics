@@ -630,29 +630,58 @@ app.post('/api/iros-fetch', async (req, res) => {
     else await addrInput.press('Enter');
     await page.waitForTimeout(5000);
 
-    // 5단계: 검색 결과 첫 번째 행 선택 (main page + all frames)
-    const resultSel = 'table tbody tr:first-child td a, .result-list li:first-child a, #resultList tr:first-child a, tbody tr:first-child a, .tbl-result tbody tr:first-child td a, tr:first-child a, li:first-child a';
+    // 5단계: 검색 후 DOM 스냅샷 (디버깅)
+    {
+      const allText = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('tr, li, div[id*="grd"], div[id*="list"]'))
+          .filter(el => el.children.length < 5)
+          .map(el => `[${el.tagName}#${el.id}] "${(el.textContent||'').trim().slice(0,60)}"`)
+          .slice(0, 30).join('\n')
+      ).catch(() => '');
+      console.log('[iros] 검색후 DOM:\n' + allText.slice(0, 1000));
+      await page.screenshot({ path: join(tmpDir, 'step4.png') }).catch(() => {});
+    }
+
+    // 주소 키워드로 결과 행 찾기 (뉴스 등 무관 요소 회피)
+    const addrKeywords = searchAddr.replace(/^(부산|서울|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s*/, '').trim().split(' ');
+    const addrKey = addrKeywords.slice(-2).join(' ');  // "수영로 668" 같은 고유 부분
+    console.log('[iros] 결과 탐색 키워드:', addrKey);
+
     let resultRow = null;
     let resultCtx = page;
+
+    // 1차: 주소 키워드 포함 행 찾기 (가장 정확)
     for (const ctx of [page, ...page.frames()]) {
       try {
-        const loc = ctx.locator(resultSel).first();
-        if (await loc.count() > 0) { resultRow = loc; resultCtx = ctx; break; }
+        for (const sel of ['tr', 'li', 'div[id*="Row"], div[id*="row"]']) {
+          const loc = ctx.locator(sel).filter({ hasText: addrKey }).first();
+          if (await loc.count() > 0) {
+            console.log('[iros] 주소키워드 매칭 행 발견:', sel);
+            resultRow = loc; resultCtx = ctx; break;
+          }
+        }
+        if (resultRow) break;
       } catch {}
     }
+
+    // 2차: Gauce 그리드 행 (onclick/id 패턴)
     if (!resultRow) {
-      // 결과가 Gauce 텍스트로 렌더링된 경우 첫 번째 클릭 가능한 행 탐색
       for (const ctx of [page, ...page.frames()]) {
         try {
-          const tbodyRows = ctx.locator('tr[onclick], tr[id*="row"], tr[class*="row"]').first();
-          if (await tbodyRows.count() > 0) { resultRow = tbodyRows; resultCtx = ctx; break; }
+          const tbodyRows = ctx.locator('tr[onclick], tr[id*="Row"], tr[id*="grd"]').first();
+          if (await tbodyRows.count() > 0) {
+            console.log('[iros] Gauce 그리드 행 발견');
+            resultRow = tbodyRows; resultCtx = ctx; break;
+          }
         } catch {}
       }
     }
+
     if (!resultRow) {
       const frameUrls = page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank');
-      throw new Error(`"${searchAddr}" 검색 결과 없음 (frames: ${JSON.stringify(frameUrls)})`);
+      throw new Error(`"${searchAddr}" (키워드: ${addrKey}) 검색 결과 없음 (frames: ${JSON.stringify(frameUrls)})`);
     }
+    console.log('[iros] 결과 행 발견, 클릭');
     console.log('[iros] 결과 행 클릭');
     // Gauce SPA 오버레이 우회: dispatchEvent → force click → JS click 순으로 시도
     const eh = await resultRow.elementHandle().catch(() => null);
