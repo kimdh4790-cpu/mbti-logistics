@@ -8602,6 +8602,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
                 } finally { clearTimeout(timer); }
                 if (oRes && oRes.ok) {
                   const od = await oRes.json();
+                  if (od.ok && od.registryText) {
+                    // 간편열람: HTML 텍스트 추출 성공 → 그대로 반환 (사용자가 원문 확인 가능)
+                    return Response.json({ok:true, mode:'auto', stdAddr,
+                      registryText: od.registryText,
+                      registryHtml: od.registryHtml || '',
+                      guide:'인터넷등기소 간편열람 완료'
+                    }, {status:200,headers});
+                  }
                   if (od.ok && od.pdfBase64) {
                     const pdfKey = `iros_pdf_${Date.now()}`;
                     await env.DONWAY_ASSETS.put(pdfKey, od.pdfBase64, { expirationTtl: 3600 });
