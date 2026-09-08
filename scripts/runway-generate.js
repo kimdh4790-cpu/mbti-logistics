@@ -34,7 +34,8 @@ const PROMPTS = {
     ratio: '9:16',
   },
   donway: {
-    text: 'A logistics manager at a desk uploading an Excel file on laptop, 500 driver names instantly populating a settlement dashboard, numbers calculating rapidly, dark navy professional UI, cinematic close-up, dramatic lighting',
+    text: 'The 3D metallic DONWAY logo slowly rotates with lens flare, pink and green chrome letters gleaming, gold DONWAY text shimmering, dramatic spotlight on dark blue background, cinematic product reveal, 4K ultra HD',
+    image: 'assets/donway-logo-3d.png',
     duration: 5,
     ratio: '9:16',
   },
