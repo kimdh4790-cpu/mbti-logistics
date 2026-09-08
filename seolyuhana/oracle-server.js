@@ -609,40 +609,53 @@ app.post('/api/iros-fetch', async (req, res) => {
       .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
     console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
-    // Gauce SPA는 DOM fill()/input 이벤트가 아닌 키보드 이벤트로 동작
-    // 전략: native value setter로 값 설정 → 포커스 → keyboard Enter
-    // (pressSequentially는 문자 입력 시 헤더 팝업 트리거 → 사용 불가)
-    const inputSel = 'input[id*="sch_realCorp___input"]';
-    const inputPlaced = await page.evaluate(({ sel, addr }) => {
-      const el = document.querySelector(sel);
-      if (!el) return false;
-      // React/Gauce의 value setter 우회: native prototype setter 사용
+    // addrInput.evaluate()는 입력 필드가 속한 프레임(자식 iframe 포함)에서 실행됨
+    // page.evaluate()는 최상위 프레임만 접근 → 자식 프레임 입력에 효과 없음
+    // Gauce SPA: native value setter + InputEvent로 내부 상태 업데이트
+    const inputPlaced = await addrInput.evaluate((el, addr) => {
       const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
       nativeSetter.call(el, addr);
-      el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: addr }));
+      el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: addr, inputType: 'insertText' }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+      el.dispatchEvent(new Event('focus', { bubbles: true }));
       el.focus();
-      return true;
-    }, { sel: inputSel, addr: searchAddr });
-    console.log('[iros] native setter 입력:', inputPlaced ? '성공' : '폴백');
-
-    if (!inputPlaced) {
+      return el.value;
+    }, searchAddr).catch(async () => {
+      // 폴백: fill() 사용
       await addrInput.fill(searchAddr);
-      await addrInput.focus();
-    }
-    await page.waitForTimeout(500);
+      return null;
+    });
+    console.log('[iros] 입력 설정값:', inputPlaced || '(fill 폴백)');
+    await page.waitForTimeout(300);
 
     // 팝업 감지 리스너 — Enter 전에 등록
     const popupP = context.waitForEvent('page', { timeout: 20000 }).catch(() => null);
     const urlBefore = page.url();
 
-    // Enter 키 → 검색 실행
-    await page.keyboard.press('Enter');
-    console.log('[iros] Enter 검색 실행');
+    // addrInput.press('Enter') — 올바른 프레임 컨텍스트에서 Enter 이벤트 발송
+    // (page.keyboard.press는 최상위 프레임 포커스에서 실행 → 잘못된 프레임)
+    await addrInput.press('Enter');
+    console.log('[iros] Enter 검색 실행 (입력 프레임 컨텍스트)');
+
+    // 검색 버튼도 함께 시도 (Gauce SPA에서 Enter만으로 부족한 경우)
+    await page.waitForTimeout(200);
+    const searchCtxsForBtn = [page, ...page.frames()];
+    for (const ctx of searchCtxsForBtn) {
+      try {
+        const srchBtn = ctx.locator('button[id*="srch"], button[id*="search"], a[id*="srch"], input[type="button"][id*="srch"]').first();
+        if (await srchBtn.count() > 0 && await srchBtn.isVisible().catch(() => false)) {
+          const btnId = await srchBtn.getAttribute('id').catch(() => '');
+          console.log('[iros] 검색 버튼 클릭 시도 id=', btnId);
+          await srchBtn.click({ force: true, timeout: 3000 }).catch(() => {});
+          break;
+        }
+      } catch {}
+    }
 
     // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 중 최초 발생한 것
     let resultPage = page;
-    for (let tick = 0; tick < 8; tick++) {
+    for (let tick = 0; tick < 12; tick++) {
       await page.waitForTimeout(2000);
 
       // 1순위: 새 팝업/탭
@@ -688,16 +701,19 @@ app.post('/api/iros-fetch', async (req, res) => {
         }
       }
 
-      // Gauce 그리드 셀 ID 패턴 덤프
-      const gridEls = await resultPage.evaluate(() => {
-        const sel = 'tr[id], tr[onclick], td[id], div[id*="grd"], div[id*="grid"], ' +
-          'div[id*="Row"], div[id*="Cell"], tbody, table';
-        return Array.from(document.querySelectorAll(sel)).slice(0, 30).map(el => ({
-          tag: el.tagName, id: el.id || '', cls: (el.className||'').slice(0,60),
-          txt: (el.textContent||'').trim().slice(0,100)
-        }));
-      }).catch(() => []);
-      if (gridEls.length) console.log('[iros] 그리드 요소:', JSON.stringify(gridEls.slice(0,15)));
+      // Gauce 그리드 셀 ID 패턴 덤프 — 모든 frame 포함
+      const gridSel = 'tr[id], tr[onclick], td[id], div[id*="grd"], div[id*="grid"], ' +
+        'div[id*="Row"], div[id*="Cell"], tbody, table';
+      for (const f of [resultPage, ...resultPage.frames()]) {
+        const fu = f.url ? f.url() : '';
+        const gridEls = await f.evaluate((sel) => {
+          return Array.from(document.querySelectorAll(sel)).slice(0, 30).map(el => ({
+            tag: el.tagName, id: el.id || '', cls: (el.className||'').slice(0,60),
+            txt: (el.textContent||'').trim().slice(0,100)
+          }));
+        }, gridSel).catch(() => []);
+        if (gridEls.length) console.log(`[iros] 그리드[${(fu||'main').slice(-60)}]:`, JSON.stringify(gridEls.slice(0,10)));
+      }
     }
 
     // 주소 키워드로 결과 행 찾기
