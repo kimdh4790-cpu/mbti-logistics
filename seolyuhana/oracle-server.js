@@ -2019,6 +2019,178 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch(e) { console.log('[iros] 방법J 오류:', e.message); }
     }
 
+    // ── 방법K: dma_srch_param 데이터 인스턴스 직접 탐색·세팅 후 sbm.submit() ────────
+    // sbm.ref = "data:json,{\"id\":\"dma_srch_param\",\"key\":\"websquare_param\"}"
+    // WebSquare 제출 시 dma_srch_param 데이터 모델을 읽어 body로 직렬화함.
+    // 체크박스 클릭 성공 시 자동으로 채워지는 이 모델을 직접 채워야 함.
+    if (pinFromRow) {
+      console.log('[iros] 방법K: dma_srch_param 인스턴스 탐색·세팅 후 sbm.submit()');
+      const pinClean = pinFromRow.replace(/-/g, '');
+      try {
+        const kResult = await resultPage.evaluate(async (pinC) => {
+          const log = [];
+          try {
+            // 1) dlt_smpl_srch_rslt에서 첫 번째 행 데이터 실제 추출
+            const resKey = Object.keys(window).find(k => /^dlt_smpl_srch_rslt$/.test(k));
+            let row0 = null;
+            let row0Obj = {};
+            if (resKey && window[resKey]) {
+              const dl = window[resKey];
+              try {
+                if (typeof dl.getRowData === 'function') row0 = dl.getRowData(0);
+                else if (typeof dl.getAllRowData === 'function') { const a = dl.getAllRowData(); row0 = a && a[0]; }
+              } catch(re) {}
+              log.push('row0_raw:' + JSON.stringify(row0).slice(0, 200));
+              // 배열이면 컬럼명 매핑 시도
+              if (Array.isArray(row0)) {
+                const cols = ['rnum','rlrgGbn','address','selGbn','smplKindCls','payCl'];
+                for (let i = 0; i < cols.length && i < row0.length; i++) row0Obj[cols[i]] = row0[i];
+              } else if (row0 && typeof row0 === 'object') {
+                row0Obj = row0;
+              }
+            }
+            log.push('row0Obj:' + JSON.stringify(row0Obj).slice(0, 200));
+
+            // 2) dma_srch_param 탐색: window 직접, scwin, w2, WebSquare 내부 레지스트리
+            let dma = null;
+            const candidates = [];
+            // 2a) window direct
+            const wDmaKey = Object.keys(window).find(k => k === 'dma_srch_param' || k.endsWith('_dma_srch_param') || k.includes('dma_srch_param'));
+            if (wDmaKey) { dma = window[wDmaKey]; candidates.push('window:' + wDmaKey); }
+            // 2b) scwin namespace
+            if (!dma && typeof scwin !== 'undefined') {
+              const scDmaKey = Object.keys(scwin).find(k => k.includes('dma_srch_param'));
+              if (scDmaKey) { dma = scwin[scDmaKey]; candidates.push('scwin:' + scDmaKey); }
+            }
+            // 2c) DOM element (XForms instance)
+            if (!dma) {
+              const domEl = document.getElementById('dma_srch_param') || document.querySelector('[id*="dma_srch_param"]');
+              if (domEl) { dma = domEl; candidates.push('dom:' + domEl.id); }
+            }
+            // 2d) w2 widget registry
+            if (!dma) {
+              for (const gk of ['w2','w2ui','WebSquare','websquare','$w2']) {
+                if (window[gk] && typeof window[gk] === 'object') {
+                  const sub = window[gk];
+                  if (sub.dma_srch_param) { dma = sub.dma_srch_param; candidates.push(gk + '.dma_srch_param'); break; }
+                  if (sub.widget && sub.widget.dma_srch_param) { dma = sub.widget.dma_srch_param; candidates.push(gk + '.widget.dma_srch_param'); break; }
+                  if (typeof sub.getObject === 'function') {
+                    try { const o = sub.getObject('dma_srch_param'); if (o) { dma = o; candidates.push(gk + '.getObject'); break; } } catch(e2) {}
+                  }
+                }
+              }
+            }
+            // 2e) sbm.xmlNode에서 XForms 인스턴스 탐색
+            if (!dma) {
+              const sbmKey = Object.keys(window).find(k => /sbm.*retrievePinSrchCont/i.test(k) || k === 'sbm_Pr20ViaRlrgSrchCtrl_retrievePinSrchCont');
+              if (sbmKey && window[sbmKey]) {
+                const sbm = window[sbmKey];
+                if (sbm.xmlNode && sbm.xmlNode.ownerDocument) {
+                  const doc = sbm.xmlNode.ownerDocument;
+                  const instanceEls = doc.querySelectorAll('[id*="dma_srch_param"],[name*="dma_srch_param"]');
+                  log.push('xmlNode_instances:' + instanceEls.length + ' ' + Array.from(instanceEls).map(e => e.id||e.name).join(','));
+                  if (instanceEls.length > 0) { dma = instanceEls[0]; candidates.push('sbm.xmlNode.ownerDocument'); }
+                }
+                // sbm 자체에 data 속성이 있을 수도
+                if (!dma && sbm.data) { log.push('sbm.data:' + JSON.stringify(sbm.data).slice(0,100)); }
+                if (!dma && sbm.instance) { log.push('sbm.instance:' + String(sbm.instance).slice(0,100)); }
+              }
+            }
+            // 2f) window 전체에서 dma 접두사 키 목록 로깅
+            const dmaKeys = Object.keys(window).filter(k => k.startsWith('dma_') || k.includes('srch_param'));
+            log.push('dmaKeys:' + JSON.stringify(dmaKeys.slice(0,20)));
+            log.push('dma_found:' + candidates.join('|') + ' type:' + (dma ? typeof dma : 'null'));
+
+            // 3) dma 발견 시 데이터 세팅
+            if (dma) {
+              const setData = row0Obj.rnum ? row0Obj : { rnum: pinC, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F' };
+              const setDataArr = [setData];
+              log.push('setting_dma:' + JSON.stringify(setData));
+              // DOM element인 경우 textContent로 JSON 주입
+              if (dma.nodeType) {
+                try { dma.textContent = JSON.stringify(setDataArr); log.push('dma.textContent_set'); } catch(te) { log.push('dma.textContent_err:' + te.message); }
+              } else {
+                // WebSquare widget의 경우
+                if (typeof dma.setData === 'function') { try { dma.setData(setDataArr); log.push('dma.setData'); } catch(e3) { log.push('dma.setData_err:' + e3.message); } }
+                if (typeof dma.setRowData === 'function') { try { dma.setRowData(0, setData); log.push('dma.setRowData'); } catch(e3) { log.push('dma.setRowData_err:' + e3.message); } }
+                if (typeof dma.setValue === 'function') { try { for (const [k,v] of Object.entries(setData)) dma.setValue(k, v, 0); log.push('dma.setValue'); } catch(e3) { log.push('dma.setValue_err:' + e3.message); } }
+                if (typeof dma.update === 'function') { try { dma.update(setDataArr); log.push('dma.update'); } catch(e3) { log.push('dma.update_err:' + e3.message); } }
+              }
+
+              // 4) sbm.submit() 호출
+              const sbmKey2 = Object.keys(window).find(k => /sbm.*retrievePinSrchCont/i.test(k) || k === 'sbm_Pr20ViaRlrgSrchCtrl_retrievePinSrchCont');
+              if (sbmKey2 && window[sbmKey2]) {
+                const sbm = window[sbmKey2];
+                if (typeof sbm.submit === 'function') {
+                  try {
+                    const submitResult = await new Promise((resolve) => {
+                      const origCustom = sbm.customHandler;
+                      sbm.customHandler = (data) => { resolve({ from: 'customHandler', data: JSON.stringify(data).slice(0, 500) }); };
+                      const origError = sbm.errorHandler;
+                      sbm.errorHandler = (err) => { resolve({ from: 'errorHandler', err: String(err).slice(0, 200) }); };
+                      setTimeout(() => resolve({ from: 'timeout' }), 5000);
+                      sbm.submit();
+                      log.push('sbm.submit_called');
+                    });
+                    sbm.customHandler = origCustom || '';
+                    sbm.errorHandler = origError || '';
+                    log.push('submit_result:' + JSON.stringify(submitResult));
+                    if (submitResult.data && /표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(submitResult.data)) {
+                      return { ok: true, log, txt: submitResult.data };
+                    }
+                  } catch(se) { log.push('sbm.submit_err:' + se.message); }
+                }
+              }
+            }
+
+            // 5) dma 없거나 submit 실패 시: row0 실제 데이터로 retrievePinSrchCont 직접 XHR
+            // dlt_smpl_srch_rslt 행 데이터 컬럼명 확인을 위해 datalist 스키마 탐색
+            let schemaStr = '';
+            if (resKey && window[resKey]) {
+              const dl = window[resKey];
+              try {
+                if (typeof dl.getColumnId === 'function') {
+                  const cols = []; for (let i = 0; i < 20; i++) { const c = dl.getColumnId(i); if (!c) break; cols.push(c); }
+                  schemaStr = cols.join(',');
+                } else if (dl.info && dl.info.cols) schemaStr = JSON.stringify(dl.info.cols).slice(0, 300);
+                else if (dl._cols) schemaStr = JSON.stringify(dl._cols).slice(0, 300);
+                else if (dl.schema) schemaStr = JSON.stringify(dl.schema).slice(0, 300);
+              } catch(ce) {}
+            }
+            log.push('schema:' + schemaStr);
+
+            // 6) 최대한 많은 field 조합으로 XHR 시도
+            const attempts = [
+              { rnum: row0Obj.rnum || pinC, selGbn: row0Obj.selGbn || 'UNI', rlrgGbn: row0Obj.rlrgGbn || '1', smplKindCls: row0Obj.smplKindCls || '1', payCl: row0Obj.payCl || 'F', col_chk: 'Y' },
+              { rnum: pinC, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y' },
+              { rnum: pinC, selGbn: 'UNI', rlrgGbn: '1', col_chk: 'Y' },
+              row0Obj.rnum ? row0Obj : null,
+            ].filter(Boolean);
+            for (const body of attempts) {
+              try {
+                const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', {
+                  method: 'POST', credentials: 'include',
+                  headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json, text/plain, */*', 'Referer': location.href },
+                  body: JSON.stringify({ websquare_param: [body] }),
+                });
+                const txt = await r.text();
+                log.push('xhrK_arr:' + r.status + ':' + JSON.stringify(body).slice(0,80) + ' preview:' + txt.slice(0, 300));
+                if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) return { ok: true, log, txt };
+              } catch(fe) { log.push('xhrK_err:' + fe.message); }
+            }
+          } catch(e) { log.push('K_outer_err:' + e.message); }
+          return { ok: false, log };
+        }, pinClean).catch(e => ({ ok: false, log: ['K_evaluate_err:' + e.message] }));
+
+        console.log('[iros] 방법K 결과:', JSON.stringify(kResult).slice(0, 800));
+        if (kResult && kResult.ok) {
+          res.json({ ok: true, registryText: kResult.txt, registryHtml: '', address });
+          return;
+        }
+        await resultPage.waitForTimeout(2000);
+      } catch(e) { console.log('[iros] 방법K 오류:', e.message); }
+    }
+
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
     {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
