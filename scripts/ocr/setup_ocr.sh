@@ -2,6 +2,9 @@
 # Oracle Cloud에서 한 번만 실행 — PaddleOCR 설치 + 서비스 등록
 set -e
 
+echo "=== 시스템 의존성 설치 ==="
+sudo dnf install -y python3-pip mesa-libGL 2>/dev/null || true
+
 echo "=== PaddleOCR 설치 ==="
 pip3 install paddlepaddle paddleocr flask
 
