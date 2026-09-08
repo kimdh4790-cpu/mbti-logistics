@@ -604,54 +604,54 @@ app.post('/api/iros-fetch', async (req, res) => {
     const unitHo    = hoMatch   ? hoMatch[1]   : '';
     if (unitDong || unitHo) console.log('[iros] 아파트 동/호:', unitDong||'?', '/', unitHo||'?');
 
-    // 주소 정제: 쉼표·호수 포함 시 IROS 검색 0건
-    const searchAddr = address.split(',')[0].trim()
+    // 주소 정제: IROS는 도로명+번지 짧은 형태가 가장 효과적 (시/구 포함 시 0건 케이스 있음)
+    const searchAddrFull = address.split(',')[0].trim()
       .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
+    // 도로명+번지만 추출: 시·광역시·도 + 구·군 제거
+    const searchAddrShort = searchAddrFull
+      .replace(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도|서울시|부산시|대구시|인천시|광주시|대전시|울산시)\s*/i, '')
+      .replace(/^[가-힣]+[시군]\s+/, '') // 잔여 시/군 제거
+      .replace(/^[가-힣]+구\s+/, '')     // 구 제거
+      .trim();
+    const searchAddr = searchAddrShort || searchAddrFull;
     console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
-    // addrInput.evaluate()는 입력 필드가 속한 프레임(자식 iframe 포함)에서 실행됨
-    // page.evaluate()는 최상위 프레임만 접근 → 자식 프레임 입력에 효과 없음
-    // Gauce SPA: native value setter + InputEvent로 내부 상태 업데이트
+    // 1단계: 입력값 설정 — addrInput.evaluate()는 element 소속 프레임에서 실행
+    // (page.evaluate()는 최상위 프레임만 접근 → child iframe input에 효과 없음)
     const inputPlaced = await addrInput.evaluate((el, addr) => {
       const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
       nativeSetter.call(el, addr);
+      // WebSquare(Gauce)는 input + change 이벤트로 내부 모델 동기화
       el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: addr, inputType: 'insertText' }));
       el.dispatchEvent(new Event('change', { bubbles: true }));
-      el.dispatchEvent(new Event('blur', { bubbles: true }));
-      el.dispatchEvent(new Event('focus', { bubbles: true }));
       el.focus();
       return el.value;
     }, searchAddr).catch(async () => {
-      // 폴백: fill() 사용
       await addrInput.fill(searchAddr);
       return null;
     });
     console.log('[iros] 입력 설정값:', inputPlaced || '(fill 폴백)');
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(400);
 
-    // 팝업 감지 리스너 — Enter 전에 등록
+    // 2단계: 검색 트리거 — WebSquare는 keyCode:13 KeyboardEvent 필요 (Enter string 미인식 케이스 있음)
     const popupP = context.waitForEvent('page', { timeout: 20000 }).catch(() => null);
     const urlBefore = page.url();
 
-    // addrInput.press('Enter') — 올바른 프레임 컨텍스트에서 Enter 이벤트 발송
-    // (page.keyboard.press는 최상위 프레임 포커스에서 실행 → 잘못된 프레임)
-    await addrInput.press('Enter');
-    console.log('[iros] Enter 검색 실행 (입력 프레임 컨텍스트)');
-
-    // 검색 버튼도 함께 시도 (Gauce SPA에서 Enter만으로 부족한 경우)
-    await page.waitForTimeout(200);
-    const searchCtxsForBtn = [page, ...page.frames()];
-    for (const ctx of searchCtxsForBtn) {
+    await addrInput.evaluate((el) => {
+      // WebSquare SPA: keydown + keypress(charCode:13) + keyup 순서로 발송
+      const kOpts = { bubbles: true, cancelable: true, keyCode: 13, which: 13, key: 'Enter', code: 'Enter' };
+      el.dispatchEvent(new KeyboardEvent('keydown',  { ...kOpts }));
+      el.dispatchEvent(new KeyboardEvent('keypress', { ...kOpts, charCode: 13 }));
+      el.dispatchEvent(new KeyboardEvent('keyup',    { ...kOpts }));
+      // scwin/w2 함수 직접 호출 시도
+      const win = el.ownerDocument.defaultView;
       try {
-        const srchBtn = ctx.locator('button[id*="srch"], button[id*="search"], a[id*="srch"], input[type="button"][id*="srch"]').first();
-        if (await srchBtn.count() > 0 && await srchBtn.isVisible().catch(() => false)) {
-          const btnId = await srchBtn.getAttribute('id').catch(() => '');
-          console.log('[iros] 검색 버튼 클릭 시도 id=', btnId);
-          await srchBtn.click({ force: true, timeout: 3000 }).catch(() => {});
-          break;
-        }
-      } catch {}
-    }
+        if (win.scwin?.fn_search)    { win.scwin.fn_search();    return; }
+        if (win.scwin?.fn_btnSearch) { win.scwin.fn_btnSearch(); return; }
+        if (win.fn_search)           { win.fn_search();          return; }
+      } catch (_) {}
+    });
+    console.log('[iros] WebSquare keydown/keypress/keyup 발송 + scwin 함수 시도');
 
     // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 중 최초 발생한 것
     let resultPage = page;
@@ -690,6 +690,15 @@ app.post('/api/iros-fetch', async (req, res) => {
       await mkdir(debugDir, { recursive: true }).catch(() => {});
       await resultPage.screenshot({ path: join(debugDir, 'step4-search.png'), fullPage: true }).catch(() => {});
       console.log('[iros] 스크린샷 저장: step4-search.png');
+
+      // window 함수 목록 — scwin/fn_search 유무 확인
+      const winFns = await addrInput.evaluate(() => {
+        const win = document.defaultView;
+        const scKeys = win.scwin ? Object.keys(win.scwin).filter(k => k.includes('search') || k.includes('Search') || k.includes('srch')).slice(0, 20) : [];
+        const gKeys  = Object.keys(win).filter(k => k.includes('search') || k.includes('fn_') || k.includes('Search')).slice(0, 20);
+        return { scwin: scKeys, global: gKeys };
+      }).catch(() => ({}));
+      console.log('[iros] window 함수 목록:', JSON.stringify(winFns));
 
       // 메인 페이지 + 모든 frame body text 덤프 (cross-origin 제외)
       const ctxList = [resultPage, ...resultPage.frames()];
