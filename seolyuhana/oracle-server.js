@@ -608,9 +608,16 @@ app.post('/api/iros-fetch', async (req, res) => {
       const allInputCnt = await page.locator('input').count();
       throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, inputs=${allInputCnt}`);
     }
+    // 주소에서 동·호수 추출 (아파트 단위 선택용)
+    const dongMatch = address.match(/(\d+)\s*동/);
+    const hoMatch   = address.match(/(\d+)\s*호/);
+    const unitDong  = dongMatch ? dongMatch[1] : '';  // '101' (숫자만)
+    const unitHo    = hoMatch   ? hoMatch[1]   : '';  // '1001'
+    if (unitDong || unitHo) console.log('[iros] 아파트 동/호:', unitDong||'?', '/', unitHo||'?');
+
     // 주소 정제: IROS 검색에 쉼표·호수 포함 시 0건 반환 → 도로명 기본 주소만 추출
     const searchAddr = address.split(',')[0].trim()
-      .replace(/\s+(\d+동|동)\s+\d+호.*$/i, '').replace(/\s+\d+호.*$/i, '').trim();
+      .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
     console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
     await addrInput.click({ clickCount: 3 });
@@ -661,7 +668,64 @@ app.post('/api/iros-fetch', async (req, res) => {
       });
     }
     await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
+
+    // 5-1단계: 아파트 동·호수 선택 (건물 클릭 후 세부 선택 UI 나타나는 경우)
+    if (unitDong || unitHo) {
+      console.log('[iros] 동/호수 선택 시도:', unitDong, unitHo);
+      // 동 선택 — select 또는 클릭 가능한 행
+      if (unitDong) {
+        for (const ctx of [page, ...page.frames()]) {
+          try {
+            // select 드롭다운
+            const dongSelect = ctx.locator('select').filter({ hasText: new RegExp(unitDong+'동') }).first();
+            if (await dongSelect.count() > 0) {
+              await dongSelect.selectOption({ label: new RegExp(unitDong) });
+              console.log('[iros] 동 select 선택:', unitDong);
+              break;
+            }
+            // 테이블 행 (Gauce)
+            const dongRow = ctx.locator(`tr, li`).filter({ hasText: new RegExp(`^${unitDong}동$|\\s${unitDong}동\\s`) }).first();
+            if (await dongRow.count() > 0) {
+              const dEh = await dongRow.elementHandle().catch(() => null);
+              if (dEh) await ctx.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), dEh).catch(() => {});
+              console.log('[iros] 동 행 클릭:', unitDong);
+              await page.waitForTimeout(1000);
+              break;
+            }
+          } catch {}
+        }
+      }
+      // 호수 선택 — input fill 또는 행 클릭
+      if (unitHo) {
+        let hoHandled = false;
+        for (const ctx of [page, ...page.frames()]) {
+          try {
+            const hoInput = ctx.locator('input[id*="ho" i]:not([type="hidden"]), input[placeholder*="호"]').first();
+            if (await hoInput.count() > 0 && await hoInput.isVisible().catch(() => false)) {
+              await hoInput.click({ clickCount: 3 });
+              await hoInput.fill(unitHo);
+              await hoInput.press('Enter');
+              console.log('[iros] 호수 input 입력:', unitHo);
+              hoHandled = true;
+              break;
+            }
+            const hoRow = ctx.locator(`tr, li`).filter({ hasText: new RegExp(`^${unitHo}호$|\\s${unitHo}호[\\s)]`) }).first();
+            if (await hoRow.count() > 0) {
+              const hEh = await hoRow.elementHandle().catch(() => null);
+              if (hEh) await ctx.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), hEh).catch(() => {});
+              console.log('[iros] 호수 행 클릭:', unitHo);
+              hoHandled = true;
+              await page.waitForTimeout(1000);
+              break;
+            }
+          } catch {}
+        }
+        if (!hoHandled) console.log('[iros] 호수 선택 UI 없음 (건물 전체 등기부로 진행)');
+      }
+      await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(1000);
+    }
 
     // 6단계: 열람/발급 버튼
     const issueSel = 'a[onclick*="issue"], button[onclick*="issue"], #issueBtn, .btn-issue, button:has-text("열람"), button:has-text("발급"), a:has-text("열람"), a:has-text("발급")';
