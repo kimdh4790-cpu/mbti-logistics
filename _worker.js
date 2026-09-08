@@ -8610,7 +8610,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
                   }
                   oracleErr = od.error || 'Oracle IROS 조회 실패';
                 } else {
-                  oracleErr = `Oracle HTTP ${oRes ? oRes.status : 'no-response'}`;
+                  const _oBody = oRes ? await oRes.text().catch(() => '') : '';
+                  const _oJson = (() => { try { return JSON.parse(_oBody); } catch { return null; } })();
+                  const _oMsg = _oJson?.error || _oBody.slice(0, 300);
+                  oracleErr = `Oracle HTTP ${oRes ? oRes.status : 'no-response'} | ${_oMsg}`;
                 }
               }
             } catch(oe) {
