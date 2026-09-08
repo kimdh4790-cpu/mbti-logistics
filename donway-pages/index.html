@@ -10388,6 +10388,10 @@ function _dwParseExcel(file, cb){
         // 건수 컬럼
         if(colCnt<0&&(hn.includes('건수')||hn.includes('배달건')||hn.includes('완료건')
           ||hn.includes('count')||hn.includes('cnt')||hn.includes('qty')))colCnt=ci;
+        // 날짜 컬럼
+        if(typeof colDate==='undefined')var colDate=-1;
+        if(colDate<0&&(hn.includes('날짜')||hn.includes('배달일')||hn.includes('완료일')
+          ||hn.includes('date')||hn.includes('일자')||hn.includes('작업일')))colDate=ci;
         // 시간 컬럼
         if(colTime<0&&(hn.includes('완료시간')||hn.includes('배달완료')||hn.includes('완료일시')
           ||hn.includes('completed')||hn.includes('done_at')||hn.includes('배달시간')
@@ -10436,13 +10440,24 @@ function _dwParseExcel(file, cb){
         if(price<=0)return;
 
         var hour=0;
+        var rowDate='';
         if(colTime>=0&&row[colTime]){
           var ts=String(row[colTime]);
           var hm=ts.match(/(\d{1,2}):(\d{2})/);
           if(hm)hour=parseInt(hm[1]);
+          // 날짜+시간 합친 컬럼(완료일시)에서 날짜 추출
+          var dtm=ts.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+          if(dtm)rowDate=dtm[1]+'-'+('0'+dtm[2]).slice(-2)+'-'+('0'+dtm[3]).slice(-2);
+        }
+        if(!rowDate&&typeof colDate!=='undefined'&&colDate>=0&&row[colDate]){
+          var ds=String(row[colDate]);
+          var dm=ds.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+          if(dm)rowDate=dm[1]+'-'+('0'+dm[2]).slice(-2)+'-'+('0'+dm[3]).slice(-2);
+          else{var dm2=ds.match(/(\d{1,2})[-./](\d{1,2})/);
+            if(dm2)rowDate=new Date().getFullYear()+'-'+('0'+dm2[1]).slice(-2)+'-'+('0'+dm2[2]).slice(-2);}
         }
         if(!riderMap[rid])riderMap[rid]=[];
-        riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour});
+        riderMap[rid].push({riderId:rid,platformPrice:price,hour:hour,completedAt:rowDate?rowDate+'T'+('0'+hour).slice(-2)+':00:00':''});
       });
 
       if(!Object.keys(riderMap).length){
@@ -10689,6 +10704,12 @@ window._dwPreviewStatement=async function(idx,btn){
       var dateBreakdown=Object.keys(dateMap).sort().map(function(dt){
         return {date:dt,cnt:dateMap[dt].cnt,pfAmt:dateMap[dt].pfAmt};
       });
+      // 날짜 정보 없으면 기간 단일 행으로 대체
+      if(!dateBreakdown.length&&riderRows.length>0){
+        var _totalCnt=riderRows.length;
+        var _totalPf=riderRows.reduce(function(s,row){return s+(row.platformPrice||0);},0);
+        dateBreakdown=[{date:period||new Date().toISOString().slice(0,10),cnt:_totalCnt,pfAmt:_totalPf}];
+      }
       var token=_db.collection('statement_share').doc().id;
       var net=r.net||0;var preTax=r.preTax||0;
       var tax=r.totalTax||Math.floor(preTax*0.033);
