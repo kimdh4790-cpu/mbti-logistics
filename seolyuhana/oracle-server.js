@@ -1090,21 +1090,30 @@ app.post('/api/iros-fetch', async (req, res) => {
       throw new Error(`"${searchAddr}" (키워드: ${addrKey}) 검색 결과 없음 (resultPage=${resultPage.url()}, frames: ${JSON.stringify(frameUrls)})`);
     }
     console.log('[iros] 결과 행 클릭');
-    // WebSquare: dispatchEvent로 이벤트 트리거 안 됨 — 반드시 Playwright 직접 click() 사용
-    await resultRow.click({ force: true, timeout: 8000 }).catch(async (e) => {
-      console.log('[iros] force click 실패:', e.message, '— td 자식 클릭 시도');
-      // 행 내 첫 번째 td를 직접 클릭
-      const tdChild = resultRow.locator('td').first();
-      if (await tdChild.count() > 0) {
+    // WebSquare: 반드시 Playwright 직접 click() — dispatchEvent는 무시됨
+    // 행 클릭 후 IROS는 보통 새 팝업창을 엶 → context.waitForEvent('page')로 감지
+    const [rowPopup] = await Promise.all([
+      context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
+      resultRow.click({ force: true, timeout: 8000 }).catch(async (e) => {
+        console.log('[iros] force click 실패:', e.message, '— td 자식 클릭 시도');
+        const tdChild = resultRow.locator('td').first();
         await tdChild.click({ force: true, timeout: 5000 }).catch(async () => {
-          // 최후 수단: JS .click() (일부 Gauce 버전에서 동작)
           const eh = await resultRow.elementHandle().catch(() => null);
           if (eh) await resultCtx.evaluate(el => el.click(), eh).catch(() => {});
         });
-      }
-    });
-    await resultPage.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-    await resultPage.waitForTimeout(1500);
+      }),
+    ]);
+
+    if (rowPopup) {
+      console.log('[iros] 행 클릭 팝업 감지:', rowPopup.url());
+      await rowPopup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+      resultPage = rowPopup;
+    } else {
+      await resultPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+    }
+    await resultPage.waitForTimeout(2000);
+    await resultPage.screenshot({ path: '/home/opc/iros-debug/step5-after-row-click.png', fullPage: false }).catch(() => {});
+    console.log('[iros] 행 클릭 후 URL:', resultPage.url());
 
     // 5-1단계: 아파트 동·호수 선택 (건물 클릭 후 세부 선택 UI 나타나는 경우)
     if (unitDong || unitHo) {
@@ -1123,8 +1132,10 @@ app.post('/api/iros-fetch', async (req, res) => {
             }
             const dongRow = ctx.locator('tr, li').filter({ hasText: new RegExp(`^${unitDong}동$|\\s${unitDong}동\\s`) }).first();
             if (await dongRow.count() > 0) {
-              const dEh = await dongRow.elementHandle().catch(() => null);
-              if (dEh) await ctx.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), dEh).catch(() => {});
+              await dongRow.click({ force: true }).catch(async () => {
+                const dEh = await dongRow.elementHandle().catch(() => null);
+                if (dEh) await ctx.evaluate(el => el.click(), dEh).catch(() => {});
+              });
               console.log('[iros] 동 행 클릭:', unitDong);
               await resultPage.waitForTimeout(1000);
               break;
@@ -1148,8 +1159,10 @@ app.post('/api/iros-fetch', async (req, res) => {
             }
             const hoRow = ctx.locator('tr, li').filter({ hasText: new RegExp(`^${unitHo}호$|\\s${unitHo}호[\\s)]`) }).first();
             if (await hoRow.count() > 0) {
-              const hEh = await hoRow.elementHandle().catch(() => null);
-              if (hEh) await ctx.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), hEh).catch(() => {});
+              await hoRow.click({ force: true }).catch(async () => {
+                const hEh = await hoRow.elementHandle().catch(() => null);
+                if (hEh) await ctx.evaluate(el => el.click(), hEh).catch(() => {});
+              });
               console.log('[iros] 호수 행 클릭:', unitHo);
               hoHandled = true;
               await resultPage.waitForTimeout(1000);
@@ -1205,14 +1218,23 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
 
     console.log('[iros] 열람/발급 버튼 클릭');
-    const issueEh = await issueBtn.elementHandle().catch(() => null);
-    if (issueEh) {
-      await issuePage.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })), issueEh).catch(() => {});
-    } else {
-      await issueBtn.click({ force: true }).catch(() => {});
+    // 열람 버튼 클릭 후 새 팝업(결제 or 뷰어) 또는 현재 페이지 변환
+    const [issuePopup] = await Promise.all([
+      context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
+      issueBtn.click({ force: true }).catch(async (e) => {
+        console.log('[iros] issueBtn click 실패:', e.message);
+        const eh = await issueBtn.elementHandle().catch(() => null);
+        if (eh) await issuePage.evaluate(el => el.click(), eh).catch(() => {});
+      }),
+    ]);
+    if (issuePopup) {
+      console.log('[iros] 열람 팝업 감지:', issuePopup.url());
+      await issuePopup.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+      resultPage = issuePopup;
     }
-    await resultPage.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
     await resultPage.waitForTimeout(3000);
+    await resultPage.screenshot({ path: '/home/opc/iros-debug/step6-after-issue.png', fullPage: false }).catch(() => {});
+    console.log('[iros] 열람 버튼 클릭 후 URL:', resultPage.url());
     console.log('[iros] 발급버튼클릭후 URL:', resultPage.url());
 
     // 전자화폐 결제
