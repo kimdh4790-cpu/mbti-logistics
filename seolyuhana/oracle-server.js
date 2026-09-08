@@ -506,14 +506,19 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
   }
 
-  // 모든 frame에서 addr 입력 필드 탐색 (Gauce SPA는 iframe 안에 폼 렌더링)
+  // IROS Gauce 주소 입력 필드 탐색
+  // 실제 ID: mf_wfm_potal_main_sch_realCorp___input (2026-09-08 확인)
   async function _findAddrInput(page) {
     const candidates = [
+      // IROS Gauce 고유 셀렉터 (최우선)
+      'input[id*="sch_realCorp___input"]',
+      'input[placeholder*="열람·발급하려면"]',
+      'input[placeholder*="주소를 입력하세요"]',
+      // 일반 addr 셀렉터 (폴백)
       'input[id*="addr" i]', 'input[id*="Addr"]',
-      'input[name*="addr" i]', 'input[name*="Addr"]',
+      'input[name*="addr" i]',
       '#searchAddr', 'input[placeholder*="주소"]',
       'input[placeholder*="지번"]', 'input[placeholder*="도로명"]',
-      'input[placeholder*="번지"]',
     ];
     for (const ctx of [page, ...page.frames()]) {
       try {
@@ -523,13 +528,15 @@ app.post('/api/iros-fetch', async (req, res) => {
         }
       } catch {}
     }
-    // 2순위: 모든 frame에서 첫 번째 visible text input
+    // 마지막 폴백: 헤더 제외 첫 번째 visible text input
     for (const ctx of [page, ...page.frames()]) {
       try {
-        const allInputs = ctx.locator('form input[type="text"], input[type="text"]');
+        const allInputs = ctx.locator('input[type="text"]');
         const cnt = await allInputs.count();
-        for (let i = 0; i < Math.min(cnt, 10); i++) {
+        for (let i = 0; i < Math.min(cnt, 20); i++) {
           const inp = allInputs.nth(i);
+          const id = await inp.getAttribute('id').catch(() => '');
+          if (id && id.includes('wf_header')) continue;
           if (await inp.isVisible().catch(() => false)) return inp;
         }
       } catch {}
@@ -590,31 +597,14 @@ app.post('/api/iros-fetch', async (req, res) => {
           { waitUntil: 'networkidle', timeout: 60000 });
       }
     }
-    // processMsg(로딩) 프레임이 사라지고 콘텐츠 로드될 때까지 대기
-    await page.waitForFunction(
-      () => !document.querySelector('iframe[src*="processMsg"]'),
-      { timeout: 15000 }
-    ).catch(() => {});
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(4000);
+    console.log('[iros] frames after nav:', JSON.stringify(page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank')));
 
-    const framesInfo = page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank');
-    console.log('[iros] frames after nav:', JSON.stringify(framesInfo));
-
-    // DOM 내 모든 input 덤프 — Gauce 컴포넌트 ID 파악용
-    const inputDump = await page.evaluate(() =>
-      [...document.querySelectorAll('input')].map(el => ({
-        id: el.id.slice(0, 60), name: el.name.slice(0, 40), type: el.type,
-        ph: el.placeholder.slice(0, 40), vis: el.offsetParent !== null
-      }))
-    ).catch(() => []);
-    console.log('[iros] input dump (main):', JSON.stringify(inputDump).slice(0, 1500));
-
-    // 4단계: 주소 입력 필드 찾기 (main page + all frames)
+    // 4단계: 주소 입력 필드 찾기 (Gauce ID: mf_wfm_potal_main_sch_realCorp___input)
     const addrInput = await _findAddrInput(page);
     if (!addrInput) {
       const allInputCnt = await page.locator('input').count();
-      const frameInputCnts = await Promise.all(page.frames().map(f => f.locator('input').count().catch(() => 0)));
-      throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, main inputs=${allInputCnt}, frame inputs=${JSON.stringify(frameInputCnts)}, dump=${JSON.stringify(inputDump).slice(0,500)}`);
+      throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, inputs=${allInputCnt}`);
     }
     // 주소 정제: IROS 검색에 쉼표·호수 포함 시 0건 반환 → 도로명 기본 주소만 추출
     const searchAddr = address.split(',')[0].trim()
