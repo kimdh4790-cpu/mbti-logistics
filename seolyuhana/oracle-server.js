@@ -765,42 +765,41 @@ app.post('/api/iros-fetch', async (req, res) => {
     const inputVal = await addrInput.inputValue().catch(() => '');
     console.log('[iros] 입력 설정값:', inputVal);
 
-    // 검색 트리거: 검색 버튼 클릭 → Enter 순으로 시도
-    const popupP = context.waitForEvent('page', { timeout: 20000 }).catch(() => null);
+    // 검색 트리거: Enter 우선 → 특정 search 버튼 (헤더/nav 버튼 제외)
     const urlBefore = page.url();
 
-    // 입력 필드 인근 검색 버튼 찾기 (같은 프레임 내)
-    let searchTriggered = false;
-    const inputCtxs = [page, ...page.frames()];
-    for (const ctx of inputCtxs) {
-      try {
-        // IROS 간편 열람·발급 페이지 검색 버튼 패턴
-        const btnSelectors = [
-          'button[id*="btn_search"], button[id*="btnSearch"], button[id*="btn_srch"]',
-          'a[id*="btn_search"], a[id*="btnSearch"], a[id*="btn_srch"]',
-          'input[type="button"][value*="검색"], input[type="submit"]',
-          'button[class*="search"], button[class*="srch"]',
-          'button:has-text("검색"), a:has-text("검색")',
-        ];
-        for (const sel of btnSelectors) {
-          const btn = ctx.locator(sel).first();
-          if (await btn.count() > 0 && await btn.isVisible().catch(() => false)) {
-            const btnId = await btn.getAttribute('id').catch(() => '');
-            console.log('[iros] 검색 버튼 클릭 sel=', sel, 'id=', btnId);
-            await btn.click({ force: true, timeout: 5000 });
-            searchTriggered = true;
-            break;
+    // Enter 키 직접 입력 (가장 안정적 — 헤더 버튼 오클릭 방지)
+    console.log('[iros] Enter 키로 검색 트리거');
+    await addrInput.press('Enter');
+    await page.waitForTimeout(1500);
+
+    // Enter로 팝업/URL변경 없으면 sch_realCorp 인근 버튼 시도
+    const earlyPopup = context.pages().length > 1;
+    if (!earlyPopup && page.url() === urlBefore) {
+      console.log('[iros] Enter 후 변화 없음 — 검색 버튼 탐색 (header 제외)');
+      for (const ctx of [page, ...page.frames()]) {
+        try {
+          const btnSelectors = [
+            // sch_realCorp 인근 버튼 (가장 정확)
+            'button[id*="sch_realCorp"], a[id*="sch_realCorp"]',
+            'button[id*="btn_sch"], a[id*="btn_sch"]',
+            'button[id*="btn_search"]:not([id*="header"]):not([id*="top_menu"])',
+            'a[id*="btn_search"]:not([id*="header"]):not([id*="top_menu"])',
+          ];
+          for (const sel of btnSelectors) {
+            const btn = ctx.locator(sel).first();
+            if (await btn.count() > 0 && await btn.isVisible().catch(() => false)) {
+              const btnId = await btn.getAttribute('id').catch(() => '');
+              if (btnId && (btnId.includes('header') || btnId.includes('top_menu'))) continue;
+              console.log('[iros] 검색 버튼 클릭 sel=', sel, 'id=', btnId);
+              await btn.click({ force: true, timeout: 5000 });
+              break;
+            }
           }
-        }
-        if (searchTriggered) break;
-      } catch {}
+        } catch {}
+      }
     }
-    if (!searchTriggered) {
-      // 폴백: Enter 키
-      await addrInput.press('Enter');
-      console.log('[iros] Enter 폴백');
-    }
-    console.log('[iros] 검색 트리거 완료 (btn=', searchTriggered, ')');
+    console.log('[iros] 검색 트리거 완료');
 
     // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 중 최초 발생한 것
     let resultPage = page;
@@ -831,6 +830,54 @@ app.post('/api/iros-fetch', async (req, res) => {
         console.log('[iros] processMsg 소멸 → 결과 로드 완료');
         break;
       }
+    }
+
+    // ── Prvw 팝업 처리: 시스템 점검 공지 닫기 + 팝업 내 주소 재검색 ─────────────
+    // Pm10P0IrosPopupPrvw = IROS 간편열람 검색 결과 팝업 (정상 팝업)
+    const isPrvwPopup = resultPage.url().includes('Pm10P0IrosPopupPrvw') || resultPage.url().includes('popup');
+    if (isPrvwPopup) {
+      console.log('[iros] Prvw 팝업 감지 — 공지 닫기 시도');
+      // 팝업 내 공지/알림 닫기 (시스템 점검 안내 등)
+      for (const closeText of ['닫기', '확인', '×', 'X', '오늘 다시 보지 않기']) {
+        try {
+          const ctxs = [resultPage, ...resultPage.frames()];
+          for (const ctx of ctxs) {
+            const btn = ctx.locator('a, button, input[type="button"], span').filter({
+              hasText: new RegExp(`^${closeText}$`)
+            }).first();
+            if (await btn.count() > 0) {
+              console.log('[iros] 팝업 공지 닫기:', closeText);
+              await btn.click({ force: true }).catch(() => {});
+              await resultPage.waitForTimeout(600);
+            }
+          }
+        } catch {}
+      }
+      await resultPage.waitForTimeout(1000);
+      await resultPage.screenshot({ path: '/home/opc/iros-debug/step3-popup.png', fullPage: false }).catch(() => {});
+
+      // 팝업 내 주소 입력창 확인 (있으면 주소 재입력 + 검색)
+      const popupInput = await _findAddrInput(resultPage);
+      if (popupInput) {
+        const popupInputInfo = await popupInput.evaluate(el => ({ id: el.id, placeholder: el.placeholder })).catch(() => ({}));
+        console.log('[iros] 팝업 내 주소 입력창:', JSON.stringify(popupInputInfo));
+        await popupInput.click({ clickCount: 3 }).catch(() => {});
+        await popupInput.fill(searchAddr);
+        await resultPage.waitForTimeout(500);
+        await popupInput.press('Enter');
+        console.log('[iros] 팝업 내 주소 재검색 완료');
+        // 결과 로드 대기
+        for (let w = 0; w < 8; w++) {
+          await resultPage.waitForTimeout(2000);
+          const fUrls = resultPage.frames().map(f => f.url());
+          const hasProc = fUrls.some(u => u.includes('processMsg'));
+          console.log(`[iros] 팝업 검색 대기 tick=${w+1} processMsg=${hasProc}`);
+          if (!hasProc && w >= 1) break;
+        }
+      } else {
+        console.log('[iros] 팝업 내 주소 입력창 없음 — 현재 팝업 DOM 탐색');
+      }
+      await resultPage.screenshot({ path: '/home/opc/iros-debug/step3b-popup-search.png', fullPage: false }).catch(() => {});
     }
 
     // ── 5단계: 검색 후 전체 컨텍스트 스캔 (디버깅 + 결과 탐색) ───────────────────
