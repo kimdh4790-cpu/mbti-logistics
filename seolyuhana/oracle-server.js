@@ -1191,66 +1191,52 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
     console.log('[iros] 결과 행 클릭');
 
-    // Gauce WebSquare API로 행 선택 (dispatchEvent 무시됨 — JS API 필요)
-    // 체크박스 셀(첫 번째 TD) 클릭이 핵심 — row 텍스트 클릭은 선택 안 됨
+    // Gauce WebSquare API로 행 선택 — JS .click()은 Playwright 직접 클릭과 중복돼 체크 해제됨
+    // gauceSelect는 WebSquare API만 호출하고, 실제 체크박스 클릭은 Playwright가 담당
     const gridId = 'mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt';
     const gauceSelect = await resultPage.evaluate((gid) => {
       try {
-        var tbody = document.getElementById(gid + '_body_tbody');
-        var firstRow = tbody && tbody.querySelector('tr');
-        if (!firstRow) return 'no_row';
-
-        // 1순위: 체크박스 input 직접 클릭
-        var chk = firstRow.querySelector('input[type="checkbox"]');
-        if (chk) { chk.click(); return 'checkbox.click'; }
-
-        // 2순위: 첫 번째 TD (체크박스 셀) 클릭
-        var firstTd = firstRow.querySelector('td');
-        if (firstTd) {
-          firstTd.click();
-          firstTd.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-          return 'firstTd.click';
-        }
-
-        // 3순위: WebSquare API
+        // WebSquare API로 행 선택 (JS .click() 금지 — Playwright와 더블클릭되어 체크 해제됨)
         if (window.w2 && typeof window.w2.getById === 'function') {
           var g2 = window.w2.getById(gid);
           if (g2) {
-            if (typeof g2.selectRow === 'function') { g2.selectRow(0); return 'w2.selectRow(0)'; }
             if (typeof g2.setCheckValue === 'function') { g2.setCheckValue(0, 'col_chk', 'Y'); return 'w2.setCheckValue'; }
+            if (typeof g2.selectRow === 'function') { g2.selectRow(0); return 'w2.selectRow(0)'; }
           }
         }
         if (window.scwin && window.scwin[gid]) {
           var g = window.scwin[gid];
-          if (typeof g.selectRow === 'function') { g.selectRow(0); return 'scwin.selectRow(0)'; }
           if (typeof g.setCellValue === 'function') { g.setCellValue(0, 'col_chk', 'Y'); return 'scwin.setCellValue'; }
+          if (typeof g.selectRow === 'function') { g.selectRow(0); return 'scwin.selectRow(0)'; }
         }
-
-        // 4순위: 전체 행 DOM 이벤트
-        firstRow.click();
-        firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-        return 'dom.click(firstRow)';
+        return 'w2_api_unavail';
       } catch(e) { return 'err:' + e.message; }
     }, gridId).catch(() => 'catch');
-    console.log('[iros] Gauce 행 선택:', gauceSelect);
-    await resultPage.waitForTimeout(1500);
+    console.log('[iros] Gauce WebSquare API:', gauceSelect);
 
-    // WebSquare: Playwright 직접 click() 필수 — dispatchEvent는 무시됨
-    // IROS 간편열람: 체크박스 TD(첫 번째 TD) 클릭 → 행 선택 → "열람" 버튼 활성화
-    // 전체 행(텍스트 영역) 클릭은 체크박스 체크 안 됨 → 반드시 첫 번째 TD 클릭
-    const checkboxTd = resultRow.locator('td').first();
+    // Playwright 직접 클릭: checkbox input 직접 클릭이 WebSquare 이벤트 핸들러 가장 확실히 트리거
+    const chkInput = resultRow.locator('input[type="checkbox"]').first();
+    const hasChkInput = await chkInput.count().catch(() => 0) > 0;
+    console.log('[iros] 체크박스 input 존재:', hasChkInput);
     const [rowPopup] = await Promise.all([
       context.waitForEvent('page', { timeout: 6000 }).catch(() => null),
-      checkboxTd.click({ force: true, timeout: 8000 }).catch(async (e) => {
-        console.log('[iros] checkboxTd click 실패:', e.message, '— 전체 행 클릭 폴백');
-        await resultRow.click({ force: true, timeout: 5000 }).catch(async () => {
-          const eh = await resultRow.elementHandle().catch(() => null);
-          if (eh) await resultCtx.evaluate(el => el.click(), eh).catch(() => {});
-        });
-      }),
+      hasChkInput
+        ? chkInput.click({ force: true, timeout: 8000 }).catch(async (e) => {
+            console.log('[iros] chkInput.click 실패:', e.message, '— TD 폴백');
+            await resultRow.locator('td').first().click({ force: true, timeout: 5000 }).catch(async () => {
+              const eh = await resultRow.elementHandle().catch(() => null);
+              if (eh) await resultCtx.evaluate(el => el.click(), eh).catch(() => {});
+            });
+          })
+        : resultRow.locator('td').first().click({ force: true, timeout: 8000 }).catch(async (e) => {
+            console.log('[iros] TD.click 실패:', e.message);
+          }),
     ]);
-    // 체크박스 클릭 후 WebSquare UI 반응 대기 (열람 버튼 활성화)
-    await resultPage.waitForTimeout(2000);
+    // 체크박스 클릭 후 WebSquare가 열람 버튼 활성화하기까지 대기
+    await resultPage.waitForTimeout(1000);
+    // 열람 버튼 활성화 감지 (btn_smpl_rlrg: 간편열람 전용 버튼)
+    await resultPage.waitForSelector('[id*="btn_smpl_rlrg"]', { timeout: 3000 }).catch(() => {});
+    await resultPage.waitForTimeout(1000);
 
     if (rowPopup) {
       console.log('[iros] 행 클릭 팝업 감지:', rowPopup.url());
@@ -1336,11 +1322,30 @@ app.post('/api/iros-fetch', async (req, res) => {
     }
 
     // 6단계: 열람/발급 버튼 탐색
+    // 디버그: 체크박스 클릭 후 wfm_content 버튼 전체 상태 (disabled 포함)
+    {
+      const allContentBtns = await resultPage.evaluate(() => {
+        return Array.from(document.querySelectorAll('[id*="wfm_content"] input[type="button"],[id*="wfm_content"] button,[id*="wfm_content"] a'))
+          .map(el => ({
+            id: el.id.slice(-50),
+            txt: (el.textContent || el.getAttribute('value') || '').trim().slice(0, 20),
+            vis: el.offsetParent !== null,
+            disabled: el.disabled || el.getAttribute('aria-disabled') === 'true',
+          }))
+          .slice(0, 20);
+      }).catch(() => []);
+      console.log('[iros] content 버튼 전체:', JSON.stringify(allContentBtns));
+    }
     // ⚠️ IROS SPA 특성: 상단 nav에 항상 "열람·발급" 텍스트가 있음 (중간점 ·)
     //    content area의 실제 열람 버튼은 "열람" 또는 "발급"만 포함 (중간점 없음)
     //    nav 제외 기준: id에 gnb/menu/lnb 포함, 또는 텍스트에 "·" 포함
     //    "지도위치확인"·"지도보기" 버튼은 열람 버튼이 아님 — 반드시 제외
+    //    간편열람 전용 버튼: btn_smpl_rlrg (체크박스 선택 후 활성화)
     const issueCandidates = [
+      // 0순위: 간편열람(smpl) 전용 버튼 ID — 체크박스 선택 후 활성화되는 열람 버튼
+      '[id*="btn_smpl_rlrg"]',
+      '[id*="btn_smpl_view"]',
+      '[id*="btn_smpl_issue"]',
       // 1순위: input 버튼 (value에 "열람"/"발급" 정확히 포함 — nav에는 input type=button 없음)
       'input[type="button"][value*="열람"]',
       'input[type="button"][value*="발급"]',
@@ -1377,9 +1382,13 @@ app.post('/api/iros-fetch', async (req, res) => {
             // nav 메뉴 제외: "·" 중간점 포함(열람·발급), gnb/menu/lnb ID
             if (info.txt.includes('·')) continue;
             if (/gnb|wf_menu|lnb|_top_|breadcrumb|_nav/i.test(info.id)) continue;
-            if (!info.vis) continue;
             // 지도 관련 버튼 제외 (지도위치확인, 지도보기, map 등)
             if (/지도|map|mp_cfrm/i.test(info.txt) || /mp_cfrm|btn_map|btn_mp/i.test(info.id)) continue;
+            // 초기화 버튼 제외
+            if (/초기화|smpl_init|btn_init/i.test(info.txt) || /smpl_init|btn_init/i.test(info.id)) continue;
+            // 간편열람(smpl) 전용 버튼은 vis 무관하게 포함 (체크박스 선택 직후 disabled 상태일 수 있음)
+            const isSmplBtn = /btn_smpl_rlrg|btn_smpl_view|btn_smpl_issue/.test(info.id);
+            if (!info.vis && !isSmplBtn) continue;
             console.log('[iros] 열람버튼 후보:', JSON.stringify(info), '| selector:', sel);
             issueBtn = loc;
             issuePage = ctx;
