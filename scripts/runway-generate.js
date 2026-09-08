@@ -23,33 +23,33 @@ const PROMPTS = {
   filo: {
     text: 'A sleek modern restaurant POS tablet screen glowing in a busy Korean cafe, smooth cinematic camera pull-back, warm golden lighting, 4K quality, professional product showcase',
     duration: 5,
-    ratio: '9:16',
+    ratio: '720:1280',
   },
   dine: {
     text: 'A smartphone showing a clean employee scheduling app, hands tapping the screen in a bright modern office, close-up cinematic shot, minimal UI animation, professional',
     duration: 5,
-    ratio: '9:16',
+    ratio: '720:1280',
   },
   donway: {
     text: 'The 3D metallic DONWAY logo slowly rotates with lens flare, pink and green chrome letters gleaming, gold DONWAY text shimmering, dramatic spotlight on dark blue background, cinematic product reveal, 4K ultra HD',
     image: 'assets/donway-logo-3d.png',
     duration: 5,
-    ratio: '9:16',
+    ratio: '720:1280',
   },
   yongcha: {
     text: 'A truck driver using a mobile app on a Korean highway at sunset, AI matching animation overlay, cinematic golden hour lighting, professional documentary style',
     duration: 5,
-    ratio: '9:16',
+    ratio: '720:1280',
   },
   inflearn: {
     text: 'A Korean small business owner watching a tutorial on a laptop, n8n workflow automation diagram glowing on screen, cozy office setting, warm lighting, inspirational',
     duration: 5,
-    ratio: '9:16',
+    ratio: '720:1280',
   },
   scan: {
     text: 'A glowing smartphone screen showing an AI document analysis interface with Korean text, clean minimal UI with pink and mint accent colors, cinematic close-up shot, futuristic tech aesthetic, 4K quality',
     duration: 5,
-    ratio: '9:16',
+    ratio: '720:1280',
   },
 };
 
