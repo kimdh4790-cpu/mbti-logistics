@@ -573,7 +573,7 @@ app.post('/api/iros-fetch', async (req, res) => {
       headless: true
     });
     const context = await browser.newContext({
-      viewport: { width: 1280, height: 900 },
+      viewport: { width: 1280, height: 1400 },
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       acceptDownloads: true,
       locale: 'ko-KR'
@@ -1294,6 +1294,12 @@ app.post('/api/iros-fetch', async (req, res) => {
     for (const col of cellCols) {
       const cid = `${gridId}_cell_0_${col}`;
       const cellLoc = resultPage.locator(`#${cid}, [id="${cid}"]`).first();
+      // 셀이 뷰포트 밖이면 먼저 스크롤 (WebSquare는 좌표가 뷰포트 안에 있어야 이벤트 처리됨)
+      await resultPage.evaluate((id) => {
+        const el = document.getElementById(id) || document.querySelector(`[id="${id}"]`);
+        if (el) el.scrollIntoView({ block: 'center', inline: 'nearest' });
+      }, cid).catch(() => {});
+      await resultPage.waitForTimeout(300);
       const cellBbox = await getBbox(cellLoc);
       if (cellBbox) {
         const cx = cellBbox.x + cellBbox.width / 2;
@@ -1711,6 +1717,79 @@ app.post('/api/iros-fetch', async (req, res) => {
       await resultPage.waitForTimeout(2000);
       rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
       console.log('[iros] 방법H 후 btn_smpl_rlrg:', rlrgCount);
+    }
+
+    // ── 방법I: WebSquare datalist 체크박스값 직접 세팅 + retrievePinSrchCont submit 직접 호출 ─────
+    if (rlrgCount === 0 && pinFromRow) {
+      console.log('[iros] 방법I: WebSquare submit binding + datalist 직접 조작');
+      const pinClean = pinFromRow.replace(/-/g, '');
+      try {
+        const wsResult = await resultPage.evaluate(async (pinC, pinDash) => {
+          const log = [];
+          try {
+            // 1) datalist 체크 상태 강제 세팅 (WebSquare는 datalist 값으로 버튼 활성 여부 결정)
+            const chkDlt = Object.keys(window).find(k => /dlt_smpl_srch_rslt_check|smpl_srch.*check/i.test(k));
+            if (chkDlt && window[chkDlt]) {
+              try {
+                const d = window[chkDlt];
+                if (typeof d.setRowData === 'function') { d.setRowData(0, { col_chk: 'Y', rnum: pinC }); log.push('datalist.setRowData'); }
+                else if (typeof d.setValue === 'function') { d.setValue('col_chk', 'Y', 0); log.push('datalist.setValue'); }
+                else if (typeof d.setData === 'function') { d.setData([{ col_chk: 'Y', rnum: pinC }]); log.push('datalist.setData'); }
+              } catch(e2) { log.push('datalist_err:' + e2.message); }
+            }
+            // 2) btn_smpl_rlrg 직접 setEnable + 클릭
+            const btnKeys = Object.keys(window).filter(k => /btn_smpl_rlrg/i.test(k));
+            log.push('btnKeys:' + JSON.stringify(btnKeys.slice(0,5)));
+            for (const bk of btnKeys) {
+              const b = window[bk];
+              if (b && typeof b.setEnable === 'function') { b.setEnable(true); log.push('btn.setEnable'); }
+              if (b && typeof b.click === 'function') { b.click(); log.push('btn.click:' + bk); }
+            }
+            // 3) WebSquare submit binding 직접 호출: retrievePinSrchCont
+            const sbmKey = Object.keys(window).find(k => /retrievePinSrchCont/i.test(k));
+            log.push('sbmKey:' + sbmKey);
+            if (sbmKey && window[sbmKey]) {
+              const sbm = window[sbmKey];
+              if (typeof sbm.submit === 'function') {
+                sbm.submit({ rnum: pinC }); log.push('sbm.submit(rnum)');
+              } else if (typeof sbm === 'function') {
+                sbm({ rnum: pinC }); log.push('sbm(rnum)');
+              }
+            }
+            // 4) scwin 내 retrievePinSrchCont 탐색
+            if (typeof scwin !== 'undefined') {
+              const scKey = Object.keys(scwin).find(k => /retrievePinSrchCont|pinSrchCont|smplRlrg/i.test(k));
+              log.push('scKey:' + scKey);
+              if (scKey) {
+                try { scwin[scKey]({ rnum: pinC }); log.push('scwin.fn(rnum)'); } catch(e3) { log.push('scFn_err:' + e3.message); }
+              }
+            }
+            // 5) XHR direct: retrievePinSrchCont.do
+            try {
+              const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do', {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' },
+                body: `rnum=${pinC}&rlrgGbn=1&selGbn=UNI`
+              });
+              const txt = await r.text();
+              log.push('pinCont_status:' + r.status + ' preview:' + txt.slice(0, 300));
+              if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
+                return { ok: true, log, txt };
+              }
+            } catch(er) { log.push('pinCont_fetch_err:' + er.message); }
+          } catch(e) { log.push('outer_err:' + e.message); }
+          return { ok: false, log };
+        }, pinClean, pinFromRow).catch(e => ({ ok: false, log: ['evaluate_err:' + e.message] }));
+
+        console.log('[iros] 방법I 결과:', JSON.stringify(wsResult).slice(0, 500));
+        if (wsResult && wsResult.ok) {
+          res.json({ ok: true, registryText: wsResult.txt, registryHtml: '', address });
+          return;
+        }
+        await resultPage.waitForTimeout(3000);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법I 후 btn_smpl_rlrg:', rlrgCount);
+      } catch(e) { console.log('[iros] 방법I 오류:', e.message); }
     }
 
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
