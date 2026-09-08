@@ -49,6 +49,7 @@ jobs:
       GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
       INSTAGRAM_USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
       INSTAGRAM_PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
+      RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
 
     steps:
       - name: 코드 체크아웃
