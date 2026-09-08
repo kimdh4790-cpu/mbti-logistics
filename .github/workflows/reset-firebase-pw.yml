@@ -32,9 +32,9 @@ jobs:
           for DOMAIN in filo.ai.kr donway.ai.kr dine.ne.kr; do
             R=$(curl -s -X POST https://$DOMAIN/api/admin-set-pw \
               -H "Content-Type: application/json" \
-              -d "{\"key\":\"${CF_KEY}\",\"email\":\"kimdh4790@gmail.com\",\"password\":\"khw3103!!!\"}")
+              -d "{\"key\":\"${CF_KEY}\",\"email\":\"kimdh4790@gmail.com\",\"password\":\"khw3103!!\"}")
             echo "[$DOMAIN] kimdh4790: $R"
-            echo "$R" | grep -q '"ok":true' && break
+            echo "$R" | grep -q '\"ok\":true' && break
           done
 
           for DOMAIN in filo.ai.kr donway.ai.kr dine.ne.kr; do
@@ -42,7 +42,7 @@ jobs:
               -H "Content-Type: application/json" \
               -d "{\"key\":\"${CF_KEY}\",\"email\":\"soungkyekim@naver.com\",\"password\":\"khw3103!!!\"}")
             echo "[$DOMAIN] soungkyekim: $R"
-            echo "$R" | grep -q '"ok":true' && break
+            echo "$R" | grep -q '\"ok\":true' && break
           done
 
           echo "--- 완료 ---"
