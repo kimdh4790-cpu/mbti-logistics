@@ -15,9 +15,7 @@ var THEMES = [
   { bg: '#001208', mid: '#005a20', accent: '#00E676', accent2: '#69F0AE' },
 ];
 // WEEK_VARIANT는 아래 VARIANTS 정의 후 설정됨
-var T.bg  = '#030f1e'; // 공통 배경 fallback
-var T.mid  = '#0ea5e9'; // 공통 accent fallback
-var T.accent  = '#38bdf8'; // 공통 accent fallback
+var T = { bg: '#030f1e', mid: '#0ea5e9', accent: '#38bdf8', accent2: '#7dd3fc' };
 
 function fadeIn(frame, start, dur) {
   return interpolate(frame, [start, start + dur], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
