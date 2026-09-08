@@ -1327,7 +1327,7 @@ app.post('/api/iros-fetch', async (req, res) => {
           const dTxt = await dPage.evaluate(() => document.body?.innerText || '').catch(() => '');
           const dHtml = await dPage.evaluate(() => document.body?.innerHTML || '').catch(() => '');
           await dPage.screenshot({ path: '/home/opc/iros-debug/step6-direct-url.png', fullPage: true }).catch(() => {});
-          if (REGISTRY_RE.test(dTxt)) {
+          if (/표제부|갑구|을구|소유권|순위번호|접수|등기원인|등기목적|근저당|채권최고액|채무자|저당권|전세권/.test(dTxt)) {
             console.log('[iros] 직접 URL 성공! 등기부 검출:', dUrl);
             directRegistryResult = { text: dTxt, html: dHtml.slice(0, 80000) };
             await dPage.close().catch(() => {});
