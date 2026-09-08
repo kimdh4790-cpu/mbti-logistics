@@ -16,7 +16,7 @@ import express from 'express';
 import multer from 'multer';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { writeFile, readFile, mkdtemp, rm } from 'fs/promises';
+import { writeFile, readFile, mkdtemp, rm, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { chromium } from 'playwright';
@@ -609,27 +609,44 @@ app.post('/api/iros-fetch', async (req, res) => {
       .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
     console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
-    // 실제 타이핑 시뮬레이션 (pressSequentially → IROS 자동완성/이벤트 트리거)
-    await addrInput.click({ clickCount: 3 });
-    await addrInput.pressSequentially(searchAddr, { delay: 40 });
-    await page.waitForTimeout(1000);
+    // fill() 사용 — pressSequentially는 IROS 헤더 팝업 오픈 트리거가 됨
+    // Gauce 자동완성: fill 후 input/change 이벤트 강제 발생
+    await addrInput.click({ force: true });
+    await page.waitForTimeout(300);
+    // 헤더 팝업이 뜨면 닫기
+    const headerPopup = page.locator('#mf_wfm_potal_main_wf_header_grp_popup_search');
+    if (await headerPopup.count() > 0 && await headerPopup.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+    }
+    await addrInput.fill(searchAddr);
+    // Gauce input 이벤트 강제 발생 (자동완성 트리거)
+    const addrEh = await addrInput.elementHandle().catch(() => null);
+    if (addrEh) {
+      await page.evaluate(el => {
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+      }, addrEh).catch(() => {});
+    }
+    await page.waitForTimeout(1500);
 
-    // 검색 버튼 (돋보기 아이콘 포함) 또는 Enter
-    const searchBtnSel = [
-      'button[title*="검색"]', 'button[aria-label*="검색"]',
-      'button[class*="search"]', 'a[class*="search"]',
-      'button:has-text("검색")', 'a:has-text("검색")',
-      'input[type="submit"]', 'input[type="button"][value*="검색"]',
-    ].join(', ');
-    const searchBtns = page.locator(searchBtnSel);
-    const sbCount = await searchBtns.count();
-    console.log('[iros] 검색버튼 후보 수:', sbCount);
-    if (sbCount > 0) {
-      const sbEh = await searchBtns.first().elementHandle().catch(() => null);
-      if (sbEh) await page.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), sbEh).catch(() => {});
-      else await searchBtns.first().click({ force: true }).catch(() => {});
-    } else {
+    // 검색 버튼: 중앙 검색창 주변 버튼 우선, 폴백 Enter
+    // IROS 홈 중앙 검색버튼: sch_realCorp 그룹 내 버튼 또는 근처 button
+    let searchTriggered = false;
+    const centerSearchBtn = page.locator(
+      'button[id*="sch_realCorp"], a[id*="sch_realCorp"], button[id*="btn_search"], a[id*="btn_search"]'
+    ).first();
+    if (await centerSearchBtn.count() > 0) {
+      const sbEh2 = await centerSearchBtn.elementHandle().catch(() => null);
+      if (sbEh2) {
+        await page.evaluate(el => el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window})), sbEh2).catch(() => {});
+        searchTriggered = true;
+        console.log('[iros] 중앙 검색버튼 클릭');
+      }
+    }
+    if (!searchTriggered) {
       await addrInput.press('Enter');
+      console.log('[iros] Enter 검색');
     }
     // IROS 응답 대기 (processMsg 사라질 때까지 + 여유)
     await page.waitForTimeout(8000);
