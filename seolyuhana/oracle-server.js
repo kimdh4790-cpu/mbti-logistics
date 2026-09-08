@@ -2424,6 +2424,80 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch(e) { console.log('[iros] 방법L 오류:', e.message); }
     }
 
+    // ── 방법M: Playwright text locator "보기" 직접 클릭 (checkbox 우회) ──────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법M: "보기" 텍스트 버튼 직접 클릭 시도');
+      try {
+        // 새 팝업/탭 감지
+        const newPagePromise = resultPage.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
+
+        // waitForResponse: IROS POST XHR 감지
+        const mRespPromise = resultPage.waitForResponse(
+          r => r.url().includes('iros.go.kr') && r.request().method() !== 'GET',
+          { timeout: 20000 }
+        ).catch(() => null);
+
+        // "보기" 버튼 목록 먼저 조사
+        const bogiList = await resultPage.evaluate(() => {
+          const all = document.querySelectorAll('button, a, input[type="button"], input[type="submit"], span[role="button"]');
+          return Array.from(all).filter(b => {
+            const t = (b.textContent || b.value || b.innerText || '').trim();
+            return t === '보기' || t.startsWith('보기');
+          }).map(b => ({
+            tag: b.tagName, id: b.id, cls: b.className.slice(0,40),
+            txt: (b.textContent||b.value||'').trim().slice(0,10),
+            vis: b.offsetParent !== null,
+            rect: (() => { const r = b.getBoundingClientRect(); return {x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}; })()
+          }));
+        });
+        console.log('[iros] 방법M "보기" 목록:', JSON.stringify(bogiList).slice(0, 600));
+
+        // Playwright locator로 첫 번째 "보기" 클릭
+        const bogiBtns = resultPage.locator(':text-is("보기")');
+        const bogiCount = await bogiBtns.count().catch(() => 0);
+        console.log('[iros] 방법M locator count:', bogiCount);
+
+        if (bogiCount > 0) {
+          await bogiBtns.first().scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
+          await bogiBtns.first().click({ timeout: 8000, force: true });
+          console.log('[iros] 방법M: 첫 번째 "보기" 클릭 완료');
+          await resultPage.waitForTimeout(2000);
+
+          // XHR 응답 확인
+          const mResp = await mRespPromise;
+          if (mResp) {
+            const mTxt = await mResp.text().catch(() => '');
+            console.log('[iros] 방법M XHR:', mResp.url().split('/').slice(-1)[0], mResp.status(), mTxt.slice(0, 600));
+          } else {
+            console.log('[iros] 방법M XHR: 응답 없음 (팝업/탭 방식일 수 있음)');
+          }
+
+          // 새 탭/팝업 확인
+          const newPage = await newPagePromise;
+          if (newPage) {
+            console.log('[iros] 방법M 새탭 열림:', newPage.url());
+            await newPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+            const newContent = await newPage.evaluate(() => document.body.innerText.slice(0, 3000)).catch(() => '');
+            console.log('[iros] 방법M 새탭 내용:', newContent.slice(0, 800));
+            const newHtml = await newPage.content().catch(() => '');
+            console.log('[iros] 방법M 새탭 HTML:', newHtml.slice(0, 1000));
+            await newPage.close().catch(() => {});
+          }
+
+          // 현재 페이지 DOM 내용 캡처
+          const afterContent = await resultPage.evaluate(() => {
+            const modal = document.querySelector('[id*="layer"],[id*="modal"],[id*="pop"],[class*="layer"],[class*="modal"],[class*="pop"]');
+            const modalTxt = modal ? modal.innerText.slice(0, 2000) : '';
+            const allTxt = document.body.innerText.slice(0, 500);
+            const rlrgBtnsNow = Array.from(document.querySelectorAll('[id*="btn_smpl_rlrg"],[id*="smpl_rlrg"]')).map(el=>({id:el.id,txt:el.textContent.trim().slice(0,20)}));
+            return { modalTxt, allTxtSlice: allTxt, rlrgBtnsNow };
+          });
+          console.log('[iros] 방법M DOM 후:', JSON.stringify(afterContent).slice(0, 800));
+          rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        }
+      } catch(e) { console.log('[iros] 방법M 오류:', e.message); }
+    }
+
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
     {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
