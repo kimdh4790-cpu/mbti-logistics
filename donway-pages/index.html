@@ -10692,11 +10692,26 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
     var tax=r.totalTax||Math.floor(preTax*0.033);
     var sanjae=Math.floor(preTax*0.0088);
     var goyal=Math.floor(preTax*0.008);
+    // 날짜별 건수·플랫폼수령 집계
+    var dateMap={};
+    var riderRows=(window._dwRiderMap&&window._dwRiderMap[riderId])||[];
+    riderRows.forEach(function(row){
+      var dt=(row.completedAt||'').slice(0,10);
+      if(!dt||dt==='Invalid')return;
+      if(!dateMap[dt])dateMap[dt]={cnt:0,pfAmt:0};
+      dateMap[dt].cnt++;
+      dateMap[dt].pfAmt+=row.platformPrice||0;
+    });
+    var dateBreakdown=Object.keys(dateMap).sort().map(function(dt){
+      return {date:dt,cnt:dateMap[dt].cnt,pfAmt:dateMap[dt].pfAmt};
+    });
     await _db.collection('statement_share').doc(token).set({
       dealerId:did,userId:riderId,name:riderId,
       month:period||new Date().toISOString().slice(0,7),
       netPay:net,preTax:preTax,tax:tax,sanjae:sanjae,goyal:goyal,
       totalCount:r.totalCount||0,injected:r.injected||0,extracted:r.extracted||0,
+      pfSum:r.pfSum||0,targetPrice:r.targetPrice||0,
+      dateBreakdown:dateBreakdown,
       type:'delivery',companyName:coName,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
