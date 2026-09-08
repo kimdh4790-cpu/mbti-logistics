@@ -157,9 +157,9 @@
 | `TILKO_RSA_PUBKEY` | Tilko RSA 공개키 | ✅ 설정됨 |
 | `IROS_USER_ID` | 인터넷등기소 로그인 ID | ✅ 설정됨 (Cloudflare 대시보드 확인) |
 | `IROS_USER_PW` | 인터넷등기소 비밀번호 | ✅ 설정됨 |
-| `IROS_EMONEY_NO1` | 전자화폐 번호 앞 8자리 — 전자민원캐시 10,000원권 (2026-09-07 구매) | ✅ 설정됨 |
-| `IROS_EMONEY_NO2` | 전자화폐 번호 뒤 4자리 | ✅ 설정됨 |
-| `IROS_EMONEY_PWD` | 전자화폐 비밀번호 | ✅ 설정됨 |
+| `IROS_EMONEY_NO1` | 전자화폐 번호 앞 8자리 = **03559083** (전자민원캐시 O355-9083-6517, 10,000원권) | ✅ 설정됨 |
+| `IROS_EMONEY_NO2` | 전자화폐 번호 뒤 4자리 = **6517** | ✅ 설정됨 |
+| `IROS_EMONEY_PWD` | 전자화폐 비밀번호 (2026-09-08 화면 안내대로 변경 완료 → wrangler secret put IROS_EMONEY_PWD 재등록) | ✅ 설정됨 |
 | `ORACLE_SERVER_URL` | Oracle 변환서버 HWP→DOCX (포트 3100) | ✅ 설정됨 |
 | `ORACLE_SERVER_URl` | Oracle IROS 자동발급 서버 http://161.33.136.154 (오타 'l' 그대로 유지) | ✅ 설정됨 |
 
