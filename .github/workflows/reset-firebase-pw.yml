@@ -2,87 +2,51 @@ name: Reset Firebase Password (One-Time)
 on:
   workflow_dispatch:
     inputs:
-      email:
-        description: 'Firebase 계정 이메일'
-        required: true
-      password:
-        description: '설정할 비밀번호'
+      new_cf_key:
+        description: 'Cloudflare Global API Key (CF_GLOBAL_KEY 새 값)'
         required: true
 
 jobs:
   reset:
     runs-on: ubuntu-latest
     steps:
-      - name: Reset Firebase Password via Admin API
+      - uses: actions/checkout@v4
+
+      - name: Install wrangler
+        run: npm install -g wrangler@4 --silent
+
+      - name: Update CF_GLOBAL_KEY secret and reset admin passwords
         env:
-          FIREBASE_SA_KEY: ${{ secrets.FIREBASE_SA_KEY }}
-          TARGET_EMAIL: ${{ github.event.inputs.email }}
-          TARGET_PASSWORD: ${{ github.event.inputs.password }}
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CF_EMAIL: kimdh4790@gmail.com
+          NEW_KEY: ${{ github.event.inputs.new_cf_key }}
         run: |
-          node -e "
-          const crypto = require('crypto');
-          const https = require('https');
-          const sa = JSON.parse(process.env.FIREBASE_SA_KEY);
-          const email = process.env.TARGET_EMAIL;
-          const password = process.env.TARGET_PASSWORD;
-          const now = Math.floor(Date.now()/1000);
-          const header = Buffer.from(JSON.stringify({alg:'RS256',typ:'JWT'})).toString('base64url');
-          const payload = Buffer.from(JSON.stringify({
-            iss: sa.client_email,
-            scope: 'https://www.googleapis.com/auth/firebase',
-            aud: 'https://oauth2.googleapis.com/token',
-            exp: now+3600, iat: now
-          })).toString('base64url');
-          const sign = crypto.createSign('RSA-SHA256');
-          sign.update(header+'.'+payload);
-          const sig = sign.sign(sa.private_key).toString('base64url');
-          const jwt = header+'.'+payload+'.'+sig;
+          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          NEW_KEY="$(printf '%s' "$NEW_KEY" | tr -d '\r\n\t ')"
 
-          function post(url, body, headers) {
-            return new Promise((resolve, reject) => {
-              const u = new URL(url);
-              const b = Buffer.from(typeof body === 'string' ? body : JSON.stringify(body));
-              const req = https.request({
-                hostname: u.hostname, path: u.pathname + u.search,
-                method: 'POST',
-                headers: { ...headers, 'Content-Length': b.length }
-              }, res => {
-                let d = '';
-                res.on('data', c => d += c);
-                res.on('end', () => resolve(JSON.parse(d)));
-              });
-              req.on('error', reject);
-              req.write(b); req.end();
-            });
-          }
+          echo "--- Step 1: Worker CF_GLOBAL_KEY 업데이트 ---"
+          if printf '%s' "$NEW_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put CF_GLOBAL_KEY 2>&1; then
+            echo "Updated via API Token"
+          else
+            printf '%s' "$NEW_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put CF_GLOBAL_KEY 2>&1
+            echo "Updated via Global API Key"
+          fi
 
-          async function main() {
-            console.log('Getting SA token...');
-            const tok = await post('https://oauth2.googleapis.com/token',
-              'grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion='+jwt,
-              { 'Content-Type': 'application/x-www-form-urlencoded' });
-            if (!tok.access_token) { console.error('Token error:', JSON.stringify(tok)); process.exit(1); }
-            console.log('SA token OK');
+          echo "--- Worker 반영 대기 (5초) ---"
+          sleep 5
 
-            const auth = { 'Authorization': 'Bearer '+tok.access_token, 'Content-Type': 'application/json' };
-            const lookup = await post('https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:lookup',
-              { email: [email] }, auth);
-            const user = (lookup.users||[])[0];
+          echo "--- Step 2: kimdh4790@gmail.com 비밀번호 설정 ---"
+          R1=$(curl -s -X POST https://filo.ai.kr/api/admin-set-pw \
+            -H "Content-Type: application/json" \
+            -d "{\"key\":\"${NEW_KEY}\",\"email\":\"kimdh4790@gmail.com\",\"password\":\"khw3103!!\"}")
+          echo "Result: $R1"
+          echo "$R1" | grep -q '"ok":true' && echo 'SUCCESS: kimdh4790' || echo 'FAILED: kimdh4790'
 
-            if (!user) {
-              console.log('User not found, creating...');
-              const r = await post('https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts',
-                { email, password, emailVerified: true }, auth);
-              if (r.error) { console.error('Create error:', JSON.stringify(r.error)); process.exit(1); }
-              console.log('Created user uid:', r.localId, 'email:', email);
-            } else {
-              console.log('User found uid:', user.localId, ', updating password...');
-              const r = await post('https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:update',
-                { localId: user.localId, password }, auth);
-              if (r.error) { console.error('Update error:', JSON.stringify(r.error)); process.exit(1); }
-              console.log('Password updated for uid:', user.localId, 'email:', email);
-            }
-            console.log('Done!');
-          }
-          main().catch(e => { console.error(e); process.exit(1); });
-          "
+          echo "--- Step 3: soungkyekim@naver.com 비밀번호 설정 ---"
+          R2=$(curl -s -X POST https://filo.ai.kr/api/admin-set-pw \
+            -H "Content-Type: application/json" \
+            -d "{\"key\":\"${NEW_KEY}\",\"email\":\"soungkyekim@naver.com\",\"password\":\"khw3103!!!\"}")
+          echo "Result: $R2"
+          echo "$R2" | grep -q '"ok":true' && echo 'SUCCESS: soungkyekim' || echo 'FAILED: soungkyekim'
+
+          echo "--- 완료 ---"
