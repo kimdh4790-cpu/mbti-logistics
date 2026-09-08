@@ -639,7 +639,11 @@ app.post('/api/iros-fetch', async (req, res) => {
           .slice(0, 30).join('\n')
       ).catch(() => '');
       console.log('[iros] 검색후 DOM:\n' + allText.slice(0, 1000));
-      await page.screenshot({ path: join(tmpDir, 'step4.png') }).catch(() => {});
+      // 영구 경로에 스크린샷 저장 (tmpDir 삭제 후에도 확인 가능)
+      const debugDir = '/home/opc/iros-debug';
+      await mkdir(debugDir, { recursive: true }).catch(() => {});
+      await page.screenshot({ path: join(debugDir, 'step4-search.png'), fullPage: true }).catch(() => {});
+      console.log('[iros] 스크린샷 저장:', join(debugDir, 'step4-search.png'));
     }
 
     // 주소 키워드로 결과 행 찾기 (뉴스 등 무관 요소 회피)
@@ -908,6 +912,18 @@ function xmlToPlainText(xml) {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+
+// 디버그: 최근 IROS 스크린샷 반환 (개발용)
+app.get('/api/iros-screenshot', async (req, res) => {
+  try {
+    const { readFile: rf } = await import('fs/promises');
+    const imgBuf = await rf('/home/opc/iros-debug/step4-search.png');
+    res.setHeader('Content-Type', 'image/png');
+    res.send(imgBuf);
+  } catch {
+    res.status(404).json({ error: '스크린샷 없음 — IROS 테스트 먼저 실행' });
+  }
+});
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
