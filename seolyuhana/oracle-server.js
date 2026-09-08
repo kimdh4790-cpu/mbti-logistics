@@ -1192,33 +1192,48 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] 결과 행 클릭');
 
     // Gauce WebSquare API로 행 선택 (dispatchEvent 무시됨 — JS API 필요)
+    // 체크박스 셀(첫 번째 TD) 클릭이 핵심 — row 텍스트 클릭은 선택 안 됨
     const gridId = 'mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt';
     const gauceSelect = await resultPage.evaluate((gid) => {
       try {
-        // scwin 네임스페이스 (WebSquare 글로벌 객체)
+        var tbody = document.getElementById(gid + '_body_tbody');
+        var firstRow = tbody && tbody.querySelector('tr');
+        if (!firstRow) return 'no_row';
+
+        // 1순위: 체크박스 input 직접 클릭
+        var chk = firstRow.querySelector('input[type="checkbox"]');
+        if (chk) { chk.click(); return 'checkbox.click'; }
+
+        // 2순위: 첫 번째 TD (체크박스 셀) 클릭
+        var firstTd = firstRow.querySelector('td');
+        if (firstTd) {
+          firstTd.click();
+          firstTd.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+          return 'firstTd.click';
+        }
+
+        // 3순위: WebSquare API
+        if (window.w2 && typeof window.w2.getById === 'function') {
+          var g2 = window.w2.getById(gid);
+          if (g2) {
+            if (typeof g2.selectRow === 'function') { g2.selectRow(0); return 'w2.selectRow(0)'; }
+            if (typeof g2.setCheckValue === 'function') { g2.setCheckValue(0, 'col_chk', 'Y'); return 'w2.setCheckValue'; }
+          }
+        }
         if (window.scwin && window.scwin[gid]) {
           var g = window.scwin[gid];
           if (typeof g.selectRow === 'function') { g.selectRow(0); return 'scwin.selectRow(0)'; }
           if (typeof g.setCellValue === 'function') { g.setCellValue(0, 'col_chk', 'Y'); return 'scwin.setCellValue'; }
-          if (typeof g.setSelectRow === 'function') { g.setSelectRow(0); return 'scwin.setSelectRow(0)'; }
         }
-        // w2 네임스페이스 (WebSquare 다른 버전)
-        if (window.w2 && typeof window.w2.getById === 'function') {
-          var g2 = window.w2.getById(gid);
-          if (g2 && typeof g2.selectRow === 'function') { g2.selectRow(0); return 'w2.selectRow(0)'; }
-        }
-        // 직접 DOM 이벤트 (Gauce 네임스페이스 없는 경우)
-        var tbody = document.getElementById(gid + '_body_tbody');
-        var firstRow = tbody && tbody.querySelector('tr');
-        if (firstRow) {
-          firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-          return 'dom.click(firstRow)';
-        }
-        return 'no_api';
+
+        // 4순위: 전체 행 DOM 이벤트
+        firstRow.click();
+        firstRow.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        return 'dom.click(firstRow)';
       } catch(e) { return 'err:' + e.message; }
     }, gridId).catch(() => 'catch');
     console.log('[iros] Gauce 행 선택:', gauceSelect);
-    await resultPage.waitForTimeout(1000);
+    await resultPage.waitForTimeout(1500);
 
     // WebSquare: 반드시 Playwright 직접 click() — dispatchEvent는 무시됨
     // 행 클릭 후 IROS는 보통 새 팝업창을 엶 → context.waitForEvent('page')로 감지
@@ -1321,22 +1336,24 @@ app.post('/api/iros-fetch', async (req, res) => {
     // ⚠️ IROS SPA 특성: 상단 nav에 항상 "열람·발급" 텍스트가 있음 (중간점 ·)
     //    content area의 실제 열람 버튼은 "열람" 또는 "발급"만 포함 (중간점 없음)
     //    nav 제외 기준: id에 gnb/menu/lnb 포함, 또는 텍스트에 "·" 포함
+    //    "지도위치확인"·"지도보기" 버튼은 열람 버튼이 아님 — 반드시 제외
     const issueCandidates = [
-      // ID 기반: content 영역 버튼 (gnb/메뉴 제외)
-      '[id*="wfm_content"][id*="btn"]',
-      // input 버튼 (value 기준 — nav에는 input type=button 없음)
+      // 1순위: input 버튼 (value에 "열람"/"발급" 정확히 포함 — nav에는 input type=button 없음)
       'input[type="button"][value*="열람"]',
       'input[type="button"][value*="발급"]',
       'input[type="button"][value*="VIEW"]',
-      // onclick 패턴 (IROS 소문자/대문자 혼용)
+      // 2순위: onclick 패턴 (IROS 소문자/대문자 혼용)
       'a[onclick*="열람"], a[onclick*="발급"], a[onclick*="view"], a[onclick*="View"]',
       'button[onclick*="열람"], button[onclick*="발급"]',
-      // td 내부 링크/버튼 (grid row action cell — nav에는 td 없음)
+      // 3순위: td 내부 링크/버튼 (grid row action cell — nav에는 td 없음)
       'td > a:has-text("열람"), td > a:has-text("발급")',
       'td > button:has-text("열람"), td > button:has-text("발급")',
-      // content 영역 내 any — 마지막 폴백
+      // 4순위: content 영역 내 열람/발급 텍스트 포함
       '[id*="wfm_content"] a:has-text("열람"), [id*="wfm_content"] button:has-text("열람")',
       '[id*="wfm_content"] a:has-text("발급"), [id*="wfm_content"] button:has-text("발급")',
+      // 5순위: ID 기반 content 버튼 — 가장 마지막 폴백 (지도/map 관련 제외)
+      '[id*="wfm_content"][id*="btn_view"], [id*="wfm_content"][id*="btn_rlrg"]',
+      '[id*="wfm_content"][id*="btn"]',
     ];
 
     let issueBtn = null;
@@ -1358,6 +1375,8 @@ app.post('/api/iros-fetch', async (req, res) => {
             if (info.txt.includes('·')) continue;
             if (/gnb|wf_menu|lnb|_top_|breadcrumb|_nav/i.test(info.id)) continue;
             if (!info.vis) continue;
+            // 지도 관련 버튼 제외 (지도위치확인, 지도보기, map 등)
+            if (/지도|map|mp_cfrm/i.test(info.txt) || /mp_cfrm|btn_map|btn_mp/i.test(info.id)) continue;
             console.log('[iros] 열람버튼 후보:', JSON.stringify(info), '| selector:', sel);
             issueBtn = loc;
             issuePage = ctx;
