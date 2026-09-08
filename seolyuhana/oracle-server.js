@@ -561,10 +561,10 @@ app.post('/api/iros-fetch', async (req, res) => {
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
 
-    // 1단계: index.jsp SPA shell 진입 (직접 JSF URL → Gauce 미렌더링 → 입력필드 0개)
+    // 1단계: index.jsp SPA shell 진입 (networkidle 대신 load 사용 — 속도 우선)
     console.log('[iros] index.jsp 로드');
-    await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'networkidle', timeout: 60000 });
-    await page.waitForTimeout(3000);
+    await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'load', timeout: 30000 });
+    await page.waitForTimeout(1500);
     console.log('[iros] 진입 URL:', page.url());
 
     // 2단계: 로그인 처리 (리다이렉트 또는 현재 페이지 폼)
@@ -594,10 +594,12 @@ app.post('/api/iros-fetch', async (req, res) => {
         console.log('[iros] nav element 없음, 직접 URL 시도');
         const typeParam = regType === 'land' ? 'L' : 'B';
         await page.goto(`https://www.iros.go.kr/pos9/jsf/renf/selectRenf0100List.xhtml?type=${typeParam}`,
-          { waitUntil: 'networkidle', timeout: 60000 });
+          { waitUntil: 'load', timeout: 30000 });
       }
     }
-    await page.waitForTimeout(4000);
+    // Gauce SPA가 검색폼을 렌더링할 때까지 대기 (확인된 ID 우선, 최대 12초)
+    await page.waitForSelector('input[id*="sch_realCorp___input"]', { state: 'visible', timeout: 12000 })
+      .catch(() => page.waitForTimeout(4000));
     console.log('[iros] frames after nav:', JSON.stringify(page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank')));
 
     // 4단계: 주소 입력 필드 찾기 (Gauce ID: mf_wfm_potal_main_sch_realCorp___input)
