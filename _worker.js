@@ -8571,7 +8571,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // Fallback 1: Oracle 서버 Playwright로 IROS 주소 → PIN 검색 후 Tilko RealtyRegistry 조회
-          const oracleUrl = env.ORACLE_SERVER_URL || 'https://oracle.mbtico.kr';
+          const oracleUrl = 'https://oracle.mbtico.kr';
           const irosId  = env.IROS_USER_ID;
           const irosPw  = env.IROS_USER_PW;
           const emNo1   = env.IROS_EMONEY_NO1;
