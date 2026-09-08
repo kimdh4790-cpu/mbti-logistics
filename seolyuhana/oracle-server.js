@@ -843,7 +843,8 @@ app.post('/api/iros-fetch', async (req, res) => {
     await page.screenshot({ path: '/home/opc/iros-debug/02-after-trigger.png', fullPage: false }).catch(() => {});
     console.log('[iros] 검색 트리거 완료');
 
-    // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 / 로그인 레이어
+    // 결과 대기: processMsg는 Gauce SPA 영구 프레임이라 절대 사라지지 않음.
+    // 대신 그리드 DOM 상태(rowCount>0 또는 "조회결과가 없습니다" 텍스트)로 완료 판단.
     let resultPage = page;
     let loginAttempted = false;
     for (let tick = 0; tick < 20; tick++) {
@@ -865,43 +866,56 @@ app.post('/api/iros-fetch', async (req, res) => {
         break;
       }
 
-      // 3순위: 로그인 레이어 감지 (processMsg 사라지면서 로그인 폼이 나타나는 경우)
-      const frameUrls = page.frames().map(f => f.url());
-      const hasProcess = frameUrls.some(u => u.includes('processMsg'));
-      if (!hasProcess && !loginAttempted) {
-        const loginVisible = await page.locator('#userId, input[name="userId"], input[id*="userId"]').count() > 0;
-        if (loginVisible) {
-          console.log('[iros] 로그인 레이어 감지 — 자동 로그인');
-          loginAttempted = true;
-          await _irosLogin(page);
-          await page.waitForTimeout(3000);
-          // 로그인 후 재검색
-          const addrInput2 = await _findAddrInput(page);
-          if (addrInput2) {
-            await addrInput2.click({ clickCount: 3 }).catch(() => {});
-            await addrInput2.fill(searchAddr);
-            await page.waitForTimeout(500);
-            const btnId2 = await page.evaluate(() => {
-              var b = document.querySelector('#mf_wfm_potal_main_btn_sch,[id*="btn_sch"]:not([id*="header"])');
-              return b ? b.id : null;
-            }).catch(() => null);
-            if (btnId2) await page.locator(cssId(btnId2)).click({ force: true }).catch(() => {});
-            else await addrInput2.press('Enter').catch(() => {});
-            console.log('[iros] 로그인 후 재검색');
-          }
-          continue;
+      // 3순위: 로그인 레이어 감지
+      const loginVisible = await page.locator('#userId, input[name="userId"], input[id*="userId"]').count().catch(() => 0);
+      if (loginVisible > 0 && !loginAttempted) {
+        console.log('[iros] 로그인 레이어 감지 — 자동 로그인');
+        loginAttempted = true;
+        await _irosLogin(page);
+        await page.waitForTimeout(3000);
+        // 로그인 후 재검색
+        const addrInput2 = await _findAddrInput(page);
+        if (addrInput2) {
+          await addrInput2.click({ clickCount: 3 }).catch(() => {});
+          await addrInput2.fill(searchAddr);
+          await page.waitForTimeout(500);
+          const btnId2 = await page.evaluate(() => {
+            var b = document.querySelector('#mf_wfm_potal_main_btn_sch,[id*="btn_sch"]:not([id*="header"])');
+            return b ? b.id : null;
+          }).catch(() => null);
+          if (btnId2) await page.locator(cssId(btnId2)).click({ force: true }).catch(() => {});
+          else await addrInput2.press('Enter').catch(() => {});
+          console.log('[iros] 로그인 후 재검색');
         }
+        continue;
       }
 
-      // 상태 로그
-      console.log(`[iros] tick=${tick+1} frames=${frameUrls.length} processMsg=${hasProcess} pages=${allPages.length}`);
-      if (!hasProcess && tick >= 1) {
-        console.log('[iros] processMsg 소멸 → 결과 로드 완료');
+      // 4순위: 그리드 상태로 검색 완료 판단
+      // processMsg.html은 Gauce SPA 영구 프레임 — 절대 사라지지 않으므로 사용 불가
+      const gridState = await page.evaluate(() => {
+        try {
+          var grid = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt');
+          if (!grid) return { ready: false, reason: 'no_grid' };
+          var txt = grid.innerText || '';
+          var tbody = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt_body_tbody');
+          var rows = tbody ? tbody.querySelectorAll('tr').length : 0;
+          var noResult = txt.includes('조회결과가 없습니다');
+          var hasRows = rows > 0;
+          // 로딩 중 스피너 확인 (processbar 가시성으로 판단)
+          var pb = document.getElementById('___processbar2_i');
+          var isLoading = pb ? (pb.style.visibility !== 'hidden' && pb.style.display !== 'none') : false;
+          return { ready: (noResult || hasRows) && !isLoading, rows, noResult, isLoading, reason: noResult ? 'no_result' : hasRows ? 'has_rows' : 'loading' };
+        } catch(e) { return { ready: false, reason: 'err:' + e.message }; }
+      }).catch(() => ({ ready: false, reason: 'catch' }));
+
+      console.log(`[iros] tick=${tick+1} grid=${JSON.stringify(gridState)}`);
+      if (gridState.ready) {
+        console.log('[iros] 그리드 완료 감지 → 결과 로드 완료 (' + gridState.reason + ')');
         break;
       }
     }
 
-    // ── 메인 페이지 그리드 직접 확인 (검색 성공 여부 진단) ─────────────────────────
+    // ── 메인 페이지 그리드 직접 확인 ─────────────────────────────────────────────
     const mainGridRows = await page.evaluate(() => {
       try {
         var tbody = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt_body_tbody');
