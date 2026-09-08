@@ -2464,6 +2464,103 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch(e) { console.log('[iros] 방법M 오류:', e.message); }
     }
 
+    // ── 방법N: grid 체크박스 탐색 + onclick 분석 + 네이티브 JS click ──────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법N: grid 체크박스·onclick·JS click 종합');
+      try {
+        // N-0: 모든 요청 실시간 추적
+        const nAllReqs = [];
+        const nReqHandler = req => {
+          const u = req.url();
+          if (u.includes('iros.go.kr') && !u.includes('.js') && !u.includes('.css') && !u.includes('.png') && !u.includes('.gif'))
+            nAllReqs.push(req.method() + ':' + u.split('/').pop().slice(0, 60));
+        };
+        resultPage.on('request', nReqHandler);
+
+        // N-1: grid 내부 구조 분석 (cell_0_0 ~ cell_0_5, input 요소)
+        const gridInfo = await resultPage.evaluate(() => {
+          const grid = document.querySelector('[id*="grd_smpl_srch_rslt"]');
+          const inputs = grid ? Array.from(grid.querySelectorAll('input')).slice(0, 6).map(i => ({
+            id: i.id, type: i.type, checked: i.checked, val: i.value.slice(0, 20),
+            rect: (() => { const r = i.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; })()
+          })) : [];
+          const cells = Array.from(document.querySelectorAll('[id*="cell_0_"]')).slice(0, 8).map(c => ({
+            id: c.id, html: c.innerHTML.slice(0, 120)
+          }));
+          // 첫 번째 "보기" 버튼 onclick 분석
+          const bogi = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === '보기');
+          const bogiInfo = bogi ? {
+            outerHTML: bogi.outerHTML.slice(0, 300),
+            onclick: bogi.onclick ? bogi.onclick.toString().slice(0, 200) : null,
+            parentId: bogi.parentElement ? bogi.parentElement.id : null,
+            parentOnclick: bogi.parentElement && bogi.parentElement.onclick ? bogi.parentElement.onclick.toString().slice(0, 200) : null,
+          } : null;
+          return { inputs, cells, bogiInfo };
+        });
+        console.log('[iros] 방법N grid분석:', JSON.stringify(gridInfo).slice(0, 1200));
+
+        // N-2: navigator.webdriver 스푸핑 후 JS 네이티브 click
+        await resultPage.evaluate(() => {
+          try {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+          } catch (e) {}
+          const bogi = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === '보기');
+          if (bogi) {
+            bogi.focus();
+            const ce = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, button: 0, buttons: 1 });
+            bogi.dispatchEvent(ce);
+          }
+        });
+        await resultPage.waitForTimeout(3000);
+        console.log('[iros] 방법N JS click 후 requests:', JSON.stringify(nAllReqs.splice(0)));
+
+        // N-3: grid input[type=checkbox] 직접 클릭
+        const chkSel = '[id*="grd_smpl_srch_rslt"] input[type="checkbox"], [id*="grd_smpl_srch_rslt"] input[type="radio"]';
+        const chkCount = await resultPage.locator(chkSel).count().catch(() => 0);
+        console.log('[iros] 방법N checkbox count:', chkCount);
+        if (chkCount > 0) {
+          const chkEl = resultPage.locator(chkSel).first();
+          await chkEl.scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
+          await chkEl.click({ force: true });
+          await resultPage.waitForTimeout(2000);
+          const chkState = await resultPage.evaluate(() => {
+            const c = document.querySelector('[id*="grd_smpl_srch_rslt"] input[type="checkbox"]');
+            return c ? { checked: c.checked, id: c.id } : 'not found';
+          });
+          console.log('[iros] 방법N checkbox 클릭 후:', JSON.stringify(chkState));
+          console.log('[iros] 방법N checkbox 클릭 requests:', JSON.stringify(nAllReqs.splice(0)));
+
+          // 체크 후 "보기" 클릭
+          await resultPage.locator(':text-is("보기")').first().click({ force: true });
+          await resultPage.waitForTimeout(3000);
+          console.log('[iros] 방법N 체크후보기 requests:', JSON.stringify(nAllReqs.splice(0)));
+        }
+
+        // N-4: cell_0_0 마우스 이벤트 시퀀스 (WebSquare 행선택 시뮬)
+        const cell00 = await resultPage.evaluate(() => {
+          const c = document.querySelector('[id*="grd_smpl_srch_rslt_cell_0_0"]');
+          if (!c) return null;
+          c.scrollIntoView({ block: 'center' });
+          const r = c.getBoundingClientRect();
+          return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+        });
+        if (cell00) {
+          console.log('[iros] 방법N cell_0_0 클릭:', JSON.stringify(cell00));
+          await resultPage.mouse.move(cell00.x, cell00.y);
+          await resultPage.mouse.down();
+          await resultPage.waitForTimeout(50);
+          await resultPage.mouse.up();
+          await resultPage.waitForTimeout(2000);
+          console.log('[iros] 방법N cell_0_0 mouse 클릭 requests:', JSON.stringify(nAllReqs.splice(0)));
+        }
+
+        resultPage.off('request', nReqHandler);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법N 후 rlrgCount:', rlrgCount);
+      } catch (e) { console.log('[iros] 방법N 오류:', e.message); }
+    }
+
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
     {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
