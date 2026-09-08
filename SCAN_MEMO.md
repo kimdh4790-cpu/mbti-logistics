@@ -201,6 +201,41 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 - 가장 큰 리스크: 가격 아닌 인지도. 소셜미디어 파이프라인에 SCAN 콘텐츠 미포함 상태
 - 전략 보고서 Artifact: https://claude.ai/code/artifact/59f84770-202e-4000-be7b-27b130f1d35d
 
+## 🗒️ 2026-09-08 논의·계획 메모
+
+### SCAN 제조 견적 기능 (신규 수익화)
+- **컨셉**: Reznikov Engineering처럼 STL·이미지·텍스트 업로드 → AI 제조 방식 분석 → 견적서 PDF 발급 → 포인트 결제
+- **구현 스택**: 100% 기존 인프라로 가능
+  - 파일 업로드: oracle-server.js (multer 이미 있음)
+  - AI 분석: _worker.js `/api/scan/quote` → Claude API
+  - 견적서 PDF: oracle-server.js (Puppeteer 이미 있음)
+  - 도면 OCR: paddle_server.py 포트 3101 (2026-09-08 설치 완료)
+  - 결제: 계좌이체 기존 방식
+- **제조 카테고리**: 3D프린팅 / 레이저 각인 / CNC가공 / 사출 / 기타
+- **구현 순서**: ① `/api/scan/quote` API 설계 → ② scan.html 견적 UI → ③ 견적서 PDF 템플릿
+
+### scan.html Reznikov 스타일 리디자인
+- **레퍼런스**: Reznikov Engineering (다크 인더스트리얼 + 강한 타이포그래피)
+- **MBTICO 팔레트**: 다크 네이비(#08101f) + 골드(#c9a84c) + 흰색 (기존 3색 유지)
+- **우선순위**: 제조 견적 섹션 추가 + 디자인 리뉴얼 동시 진행
+
+### AIVO 대시보드 (mbtico.kr/aivo)
+- **컨셉**: Reznikov의 APEX처럼 AIVO를 자율 AI 비서로 전면 배치
+- **내용**: 현재 실행 중인 루틴 상태 + 오류 현황 + 소셜미디어 스케줄 + 경쟁사 변동
+- **기존 조각**: social-media.yml + error 루틴(trig_0195..) + competitor_scraper.py + research-digest.yml + AIVO 채팅
+
+### Runway Gen-3 Alpha 연동 계획
+- **용도**: 소셜미디어 영상 품질 향상 + 게임 인트로 시네마틱
+- **가격**: Standard $35/월 (테스트) → Unlimited $195/월 (본격화)
+- **API**: text_to_video / image_to_video, $0.05/초
+- **연동 파일**: `scripts/runway-generate.js` + social-media.yml 파이프라인 추가
+- **상태**: 사용자 API 키 발급 후 연동 예정
+
+### mbtico.kr 랜딩 전체 리디자인
+- **스타일**: Reznikov 다크 인더스트리얼 톤
+- **AIVO 섹션**: 히어로급으로 전면 배치
+- **우선순위**: scan.html 다음
+
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
