@@ -578,10 +578,20 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 - **MCP 자동화 불가**: Higgsfield MCP는 Claude Code 세션에서만 동작 (GitHub Actions 지원 안 됨)
 - **결론**: GitHub Actions 자동화 → Runway Dev 필수. 수동 테스트만 Higgsfield MCP 사용 가능
 
-### 다음 단계 (자동화 파이프라인 활성화)
-**Option A**: dev.runwayml.com → Add credits → $10 충전 → GitHub Actions 즉시 작동
-**Option B**: Higgsfield 다른 카드로 3일 무료체험 → 수동 테스트 가능 (자동화는 여전히 Runway 필요)
-→ **추천: Option A** — Runway Dev $10이면 Gen-4 Turbo로 40개 영상 제작 가능
+### 2026-09-08 완료 현황
+- **Runway Dev 크레딧 충전 완료**: $8 결제 (20% 할인 적용), **1,000 크레딧** 확보
+  - Visa ****2328, Receipt #2102-6313, ₩11,161 결제
+  - 1 크레딧 = $0.01, Gen-4 Turbo 5초 영상 ≈ 25 크레딧 → 약 40개 영상 가능
+- **scripts/runway-generate.js** scan 제품 프롬프트 추가 완료
+- **GitHub Actions filo Runway 테스트 트리거** (2026-09-08, main 브랜치)
+  - workflow: social-media.yml / product: filo / steps: record
+  - Runway 성공 시 → output/filo-runway.mp4 Artifacts 저장
+  - 결과 확인: GitHub → Actions → 소셜미디어 홍보 영상 제작 → 최신 Run
+
+### 다음 세션에서 할 것
+1. GitHub Actions 결과 확인 → filo-runway.mp4 품질 체크
+2. 성공이면 donway/yongcha/scan도 Runway로 생성
+3. SCAN 앱 홍보 영상 제작 (social-media.yml에 scan 제품 옵션 추가 필요)
 
 ---
 
