@@ -581,6 +581,15 @@ app.post('/api/iros-fetch', async (req, res) => {
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
 
+    // 네트워크 요청 인터셉트 — IROS 검색 API 요청 로깅 (주소가 실제로 전달되는지 확인)
+    page.on('request', req => {
+      const url = req.url();
+      if (url.includes('iros.go.kr') && (req.method() === 'POST' || url.includes('srch') || url.includes('search') || url.includes('Renf'))) {
+        const body = req.postData() || '';
+        console.log('[iros-net]', req.method(), url.slice(-80), '|', body.slice(0, 200));
+      }
+    });
+
     // 1단계: index.jsp SPA shell 진입 (networkidle 대신 load 사용 — 속도 우선)
     console.log('[iros] index.jsp 로드');
     await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'load', timeout: 30000 });
@@ -800,7 +809,28 @@ app.post('/api/iros-fetch', async (req, res) => {
 
     await page.waitForTimeout(600);
     const inputVal = await addrInput.inputValue().catch(() => '');
-    console.log('[iros] 입력 설정값:', inputVal);
+    console.log('[iros] 입력 설정값(DOM):', inputVal);
+
+    // WebSquare 내부 값 검증 — 실제로 검색에 사용되는 값
+    const w2GetVal = await page.evaluate(() => {
+      try {
+        const compId = 'mf_wfm_potal_main_sch_realCorp';
+        if (window.w2 && typeof window.w2.getById === 'function') {
+          const inp = window.w2.getById(compId);
+          if (inp) {
+            if (typeof inp.getValue === 'function') return 'w2.getValue:' + inp.getValue();
+            if (typeof inp.get === 'function') return 'w2.get:' + inp.get('value');
+            if (typeof inp.val === 'function') return 'w2.val:' + inp.val();
+          }
+        }
+        if (window.scwin && window.scwin[compId]) {
+          const inp = window.scwin[compId];
+          if (typeof inp.getValue === 'function') return 'scwin.getValue:' + inp.getValue();
+        }
+        return 'no_getValue_api';
+      } catch(e) { return 'err:' + e.message; }
+    }).catch(() => 'catch');
+    console.log('[iros] WebSquare 내부값:', w2GetVal);
 
     // 스크린샷 — 주소 입력 후 상태
     await page.screenshot({ path: '/home/opc/iros-debug/01-after-fill.png', fullPage: false }).catch(() => {});
