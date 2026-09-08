@@ -601,22 +601,45 @@ app.post('/api/iros-fetch', async (req, res) => {
       const frameInputCnts = await Promise.all(page.frames().map(f => f.locator('input').count().catch(() => 0)));
       throw new Error(`주소 입력 필드를 찾을 수 없음. URL=${page.url()}, main inputs=${allInputCnt}, frame inputs=${JSON.stringify(frameInputCnts)}`);
     }
+    // 주소 정제: IROS 검색에 쉼표·호수 포함 시 0건 반환 → 도로명 기본 주소만 추출
+    const searchAddr = address.split(',')[0].trim()
+      .replace(/\s+(\d+동|동)\s+\d+호.*$/i, '').replace(/\s+\d+호.*$/i, '').trim();
+    console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
+
     await addrInput.click({ clickCount: 3 });
-    await addrInput.fill(address);
+    await addrInput.fill(searchAddr);
 
     // 검색 버튼 클릭 또는 Enter
     const searchBtnSel = 'button[onclick*="search"], a[onclick*="search"], #searchBtn, .btn-search, button:has-text("검색"), input[type="button"][value*="검색"], input[type="submit"]';
     const searchBtn = page.locator(searchBtnSel).first();
     if (await searchBtn.count() > 0) await searchBtn.click();
     else await addrInput.press('Enter');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
 
-    // 5단계: 검색 결과 첫 번째 행 선택
-    const resultSel = 'table tbody tr:first-child td a, .result-list li:first-child a, #resultList tr:first-child a, tbody tr:first-child a, .tbl-result tbody tr:first-child td a';
-    const resultRow = page.locator(resultSel).first();
-    if (!(await resultRow.count())) {
-      throw new Error(`"${address}" 검색 결과 없음. 더 상세한 주소(동·호수 포함)로 검색해주세요.`);
+    // 5단계: 검색 결과 첫 번째 행 선택 (main page + all frames)
+    const resultSel = 'table tbody tr:first-child td a, .result-list li:first-child a, #resultList tr:first-child a, tbody tr:first-child a, .tbl-result tbody tr:first-child td a, tr:first-child a, li:first-child a';
+    let resultRow = null;
+    let resultCtx = page;
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const loc = ctx.locator(resultSel).first();
+        if (await loc.count() > 0) { resultRow = loc; resultCtx = ctx; break; }
+      } catch {}
     }
+    if (!resultRow) {
+      // 결과가 Gauce 텍스트로 렌더링된 경우 첫 번째 클릭 가능한 행 탐색
+      for (const ctx of [page, ...page.frames()]) {
+        try {
+          const tbodyRows = ctx.locator('tr[onclick], tr[id*="row"], tr[class*="row"]').first();
+          if (await tbodyRows.count() > 0) { resultRow = tbodyRows; resultCtx = ctx; break; }
+        } catch {}
+      }
+    }
+    if (!resultRow) {
+      const frameUrls = page.frames().map(f => f.url()).filter(u => u && u !== 'about:blank');
+      throw new Error(`"${searchAddr}" 검색 결과 없음 (frames: ${JSON.stringify(frameUrls)})`);
+    }
+    console.log('[iros] 결과 행 클릭');
     await resultRow.click();
     await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(1000);
