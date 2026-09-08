@@ -262,7 +262,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
       <!-- ★ STEP 1: 기업 정보 -->
       <div id="reg-step1">
         <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
-          🎁 <strong>첫달(30일) 무료 체험</strong> — 오픈 이벤트 · 카드 등록 불필요
+          🎁 <strong>7일 무료 체험</strong> — 오픈 이벤트 · 계좌이체 월 갱신
         </div>
         <div class="fg"><label>회사명 *</label><input id="r-company" type="text" placeholder="엠비티아이 유한회사"></div>
         <div class="fg"><label>대표자명 *</label><input id="r-rep" type="text" placeholder="홍길동"></div>
@@ -273,7 +273,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
           </div>
           <div id="r-biznum-msg" style="font-size:11px;margin-top:4px;display:none"></div>
           <div style="margin-top:12px">
-            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">사업자등록증 <span style="color:var(--red)">*</span></label>
+            <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">사업자등록증 <span style="color:var(--text3);font-weight:400">(선택)</span></label>
             <div id="r-bizdoc-area" onclick="document.getElementById('r-bizdoc-input').click()"
               style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:.2s"
               onmouseover="this.style.borderColor='#00c8f8'" onmouseout="this.style.borderColor='var(--border)'">
@@ -6824,7 +6824,7 @@ function _regNext(n){
       if(!document.getElementById('r-company').value.trim()){e1.textContent='회사명을 입력해주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-biznum').value.trim()){e1.textContent='사업자등록번호를 입력해주세요';e1.style.display='block';return;}
       document.getElementById('r-biznum').dataset.verified='ok';
-      if(!_bizDocFile){e1.textContent='사업자등록증을 업로드해 주세요';e1.style.display='block';return;}
+      // 사업자등록증은 선택사항 — 가입 후 제출 가능
       if(!document.getElementById('r-contact-name').value.trim()){e1.textContent='정산 담당자명을 입력해주세요';e1.style.display='block';return;}
       if(!document.getElementById('r-contact-phone').value.trim()){e1.textContent='정산 연락처를 입력해주세요';e1.style.display='block';return;}
     }
