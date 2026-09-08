@@ -667,7 +667,12 @@ app.post('/api/iros-fetch', async (req, res) => {
     const issueSel = 'a[onclick*="issue"], button[onclick*="issue"], #issueBtn, .btn-issue, button:has-text("열람"), button:has-text("발급"), a:has-text("열람"), a:has-text("발급")';
     const issueBtn = page.locator(issueSel).first();
     if (await issueBtn.count() > 0) {
-      await issueBtn.click();
+      const issueEh = await issueBtn.elementHandle().catch(() => null);
+      if (issueEh) {
+        await page.evaluate(el => el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })), issueEh).catch(() => {});
+      } else {
+        await issueBtn.click({ force: true }).catch(() => {});
+      }
       await page.waitForTimeout(2000);
     }
 
