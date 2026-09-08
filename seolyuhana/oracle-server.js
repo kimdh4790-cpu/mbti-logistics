@@ -587,9 +587,77 @@ app.post('/api/iros-fetch', async (req, res) => {
         await page.waitForTimeout(500);
       }
     }
-    // 홈페이지 중앙 검색창이 이미 존재 — nav 클릭 불필요
-    // (IROS 홈: "부동산 등기사항증명서를 열람·발급하려면 주소를 입력하세요.")
-    console.log('[iros] 홈 검색창 사용 (nav 클릭 생략)');
+
+    // 3-1단계: 부동산 > 간편 열람·발급 nav 클릭 (홈 검색창은 헤드리스에서 Gauce 미초기화)
+    // 실제 검색 기능은 SPA 내부 간편 열람·발급 페이지에서만 정상 동작
+    console.log('[iros] 간편 열람·발급 메뉴 탐색');
+    await page.screenshot({ path: '/home/opc/iros-debug/step1-home.png', fullPage: false }).catch(() => {});
+
+    // 스크린샷 전 프레임 목록 로그
+    const homeFrames = page.frames().map(f => f.url());
+    console.log('[iros] 홈 로드 후 frames:', JSON.stringify(homeFrames));
+
+    // "간편 열람·발급" 링크 직접 탐색 (모든 프레임 포함)
+    let navClicked = false;
+    for (const ctx of [page, ...page.frames()]) {
+      try {
+        const ganLink = ctx.locator('a').filter({ hasText: '간편 열람·발급' }).first();
+        if (await ganLink.count() > 0) {
+          const href = await ganLink.getAttribute('href').catch(() => '');
+          console.log('[iros] 간편 열람·발급 링크 발견 href=', href);
+          await ganLink.click({ force: true });
+          navClicked = true;
+          break;
+        }
+      } catch {}
+    }
+    if (!navClicked) {
+      // 폴백: 부동산 메뉴 hover → 간편 열람·발급 클릭
+      for (const ctx of [page, ...page.frames()]) {
+        try {
+          const bdsMenu = ctx.locator('li, a, button').filter({ hasText: /^부동산$/ }).first();
+          if (await bdsMenu.count() > 0) {
+            await bdsMenu.hover().catch(() => {});
+            await page.waitForTimeout(500);
+            const ganSub = ctx.locator('a').filter({ hasText: '간편 열람·발급' }).first();
+            if (await ganSub.count() > 0) {
+              await ganSub.click({ force: true });
+              navClicked = true;
+              break;
+            }
+          }
+        } catch {}
+      }
+    }
+    console.log('[iros] nav 클릭:', navClicked ? '성공' : '실패 — 홈 검색창 폴백');
+
+    // 페이지/프레임 전환 대기 (processMsg 소멸 또는 3초 대기)
+    for (let w = 0; w < 5; w++) {
+      await page.waitForTimeout(1500);
+      const fUrls = page.frames().map(f => f.url());
+      const hasProc = fUrls.some(u => u.includes('processMsg'));
+      console.log(`[iros] nav 대기 tick=${w+1} frames=${fUrls.length} processMsg=${hasProc}`);
+      if (!hasProc && w >= 1) break;
+    }
+    await page.screenshot({ path: '/home/opc/iros-debug/step2-after-nav.png', fullPage: false }).catch(() => {});
+
+    // 주소 추출 (동/호수 분리)
+    const dongMatch = address.match(/(\d+)\s*동/);
+    const hoMatch   = address.match(/(\d+)\s*호/);
+    const unitDong  = dongMatch ? dongMatch[1] : '';
+    const unitHo    = hoMatch   ? hoMatch[1]   : '';
+    if (unitDong || unitHo) console.log('[iros] 아파트 동/호:', unitDong||'?', '/', unitHo||'?');
+
+    // 주소 정제: IROS 간편열람은 도로명+번지 짧은 형태가 효과적
+    const searchAddrFull = address.split(',')[0].trim()
+      .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
+    const searchAddrShort = searchAddrFull
+      .replace(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도|서울시|부산시|대구시|인천시|광주시|대전시|울산시)\s*/i, '')
+      .replace(/^[가-힣]+[시군]\s+/, '')
+      .replace(/^[가-힣]+구\s+/, '')
+      .trim();
+    const searchAddr = searchAddrShort || searchAddrFull;
+    console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
 
     // 4단계: 주소 입력 필드 찾기
     const addrInput = await _findAddrInput(page);
@@ -597,61 +665,57 @@ app.post('/api/iros-fetch', async (req, res) => {
       const allInputCnt = await page.locator('input').count();
       throw new Error(`주소 검색창 없음. URL=${page.url()}, inputs=${allInputCnt}`);
     }
-    // 주소에서 동·호수 추출 (아파트 단위 선택용)
-    const dongMatch = address.match(/(\d+)\s*동/);
-    const hoMatch   = address.match(/(\d+)\s*호/);
-    const unitDong  = dongMatch ? dongMatch[1] : '';
-    const unitHo    = hoMatch   ? hoMatch[1]   : '';
-    if (unitDong || unitHo) console.log('[iros] 아파트 동/호:', unitDong||'?', '/', unitHo||'?');
 
-    // 주소 정제: IROS는 도로명+번지 짧은 형태가 가장 효과적 (시/구 포함 시 0건 케이스 있음)
-    const searchAddrFull = address.split(',')[0].trim()
-      .replace(/\s+\d+동\s+\d+호.*/i, '').replace(/\s+\d+호.*/i, '').trim();
-    // 도로명+번지만 추출: 시·광역시·도 + 구·군 제거
-    const searchAddrShort = searchAddrFull
-      .replace(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도|서울시|부산시|대구시|인천시|광주시|대전시|울산시)\s*/i, '')
-      .replace(/^[가-힣]+[시군]\s+/, '') // 잔여 시/군 제거
-      .replace(/^[가-힣]+구\s+/, '')     // 구 제거
-      .trim();
-    const searchAddr = searchAddrShort || searchAddrFull;
-    console.log('[iros] 검색 주소:', searchAddr, '(원본:', address, ')');
+    // 입력 필드 소속 프레임 로그
+    const addrInputFrame = await addrInput.evaluate((el) => ({
+      frameUrl: el.ownerDocument.location?.href || el.baseURI,
+      id: el.id, placeholder: el.placeholder
+    })).catch(() => ({}));
+    console.log('[iros] addrInput 프레임:', JSON.stringify(addrInputFrame));
 
-    // 1단계: 입력값 설정 — addrInput.evaluate()는 element 소속 프레임에서 실행
-    // (page.evaluate()는 최상위 프레임만 접근 → child iframe input에 효과 없음)
-    const inputPlaced = await addrInput.evaluate((el, addr) => {
-      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-      nativeSetter.call(el, addr);
-      // WebSquare(Gauce)는 input + change 이벤트로 내부 모델 동기화
-      el.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, data: addr, inputType: 'insertText' }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      el.focus();
-      return el.value;
-    }, searchAddr).catch(async () => {
-      await addrInput.fill(searchAddr);
-      return null;
-    });
-    console.log('[iros] 입력 설정값:', inputPlaced || '(fill 폴백)');
-    await page.waitForTimeout(400);
+    // 입력값 설정: fill() — 실제 키 입력 시뮬레이션 (WebSquare input event 안정적)
+    await addrInput.click({ clickCount: 3 }).catch(() => {});
+    await addrInput.fill(searchAddr);
+    await page.waitForTimeout(500);
+    const inputVal = await addrInput.inputValue().catch(() => '');
+    console.log('[iros] 입력 설정값:', inputVal);
 
-    // 2단계: 검색 트리거 — WebSquare는 keyCode:13 KeyboardEvent 필요 (Enter string 미인식 케이스 있음)
+    // 검색 트리거: 검색 버튼 클릭 → Enter 순으로 시도
     const popupP = context.waitForEvent('page', { timeout: 20000 }).catch(() => null);
     const urlBefore = page.url();
 
-    await addrInput.evaluate((el) => {
-      // WebSquare SPA: keydown + keypress(charCode:13) + keyup 순서로 발송
-      const kOpts = { bubbles: true, cancelable: true, keyCode: 13, which: 13, key: 'Enter', code: 'Enter' };
-      el.dispatchEvent(new KeyboardEvent('keydown',  { ...kOpts }));
-      el.dispatchEvent(new KeyboardEvent('keypress', { ...kOpts, charCode: 13 }));
-      el.dispatchEvent(new KeyboardEvent('keyup',    { ...kOpts }));
-      // scwin/w2 함수 직접 호출 시도
-      const win = el.ownerDocument.defaultView;
+    // 입력 필드 인근 검색 버튼 찾기 (같은 프레임 내)
+    let searchTriggered = false;
+    const inputCtxs = [page, ...page.frames()];
+    for (const ctx of inputCtxs) {
       try {
-        if (win.scwin?.fn_search)    { win.scwin.fn_search();    return; }
-        if (win.scwin?.fn_btnSearch) { win.scwin.fn_btnSearch(); return; }
-        if (win.fn_search)           { win.fn_search();          return; }
-      } catch (_) {}
-    });
-    console.log('[iros] WebSquare keydown/keypress/keyup 발송 + scwin 함수 시도');
+        // IROS 간편 열람·발급 페이지 검색 버튼 패턴
+        const btnSelectors = [
+          'button[id*="btn_search"], button[id*="btnSearch"], button[id*="btn_srch"]',
+          'a[id*="btn_search"], a[id*="btnSearch"], a[id*="btn_srch"]',
+          'input[type="button"][value*="검색"], input[type="submit"]',
+          'button[class*="search"], button[class*="srch"]',
+          'button:has-text("검색"), a:has-text("검색")',
+        ];
+        for (const sel of btnSelectors) {
+          const btn = ctx.locator(sel).first();
+          if (await btn.count() > 0 && await btn.isVisible().catch(() => false)) {
+            const btnId = await btn.getAttribute('id').catch(() => '');
+            console.log('[iros] 검색 버튼 클릭 sel=', sel, 'id=', btnId);
+            await btn.click({ force: true, timeout: 5000 });
+            searchTriggered = true;
+            break;
+          }
+        }
+        if (searchTriggered) break;
+      } catch {}
+    }
+    if (!searchTriggered) {
+      // 폴백: Enter 키
+      await addrInput.press('Enter');
+      console.log('[iros] Enter 폴백');
+    }
+    console.log('[iros] 검색 트리거 완료 (btn=', searchTriggered, ')');
 
     // 결과 컨텍스트 결정: 팝업 / URL 변경 / processMsg 소멸 중 최초 발생한 것
     let resultPage = page;
@@ -690,15 +754,6 @@ app.post('/api/iros-fetch', async (req, res) => {
       await mkdir(debugDir, { recursive: true }).catch(() => {});
       await resultPage.screenshot({ path: join(debugDir, 'step4-search.png'), fullPage: true }).catch(() => {});
       console.log('[iros] 스크린샷 저장: step4-search.png');
-
-      // window 함수 목록 — scwin/fn_search 유무 확인
-      const winFns = await addrInput.evaluate(() => {
-        const win = document.defaultView;
-        const scKeys = win.scwin ? Object.keys(win.scwin).filter(k => k.includes('search') || k.includes('Search') || k.includes('srch')).slice(0, 20) : [];
-        const gKeys  = Object.keys(win).filter(k => k.includes('search') || k.includes('fn_') || k.includes('Search')).slice(0, 20);
-        return { scwin: scKeys, global: gKeys };
-      }).catch(() => ({}));
-      console.log('[iros] window 함수 목록:', JSON.stringify(winFns));
 
       // 메인 페이지 + 모든 frame body text 덤프 (cross-origin 제외)
       const ctxList = [resultPage, ...resultPage.frames()];
