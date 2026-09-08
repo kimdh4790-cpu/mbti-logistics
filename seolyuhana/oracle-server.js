@@ -2595,6 +2595,124 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch (e) { console.log('[iros] 방법N 오류:', e.message); }
     }
 
+    // ── 방법O: 세션쿠키 직접 추출 + IROS REST API 직접 호출 ──────────────────────────
+    // WebSquare headless 감지 우회: Playwright 브라우저 세션쿠키로 Node.js fetch() 직접 호출
+    let directApiContent = null;
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법O: 세션쿠키 추출 + 직접 HTTP 호출 시도');
+      try {
+        // O-1: 현재 세션의 모든 쿠키 추출
+        const cookies = await resultPage.context().cookies();
+        const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log('[iros] 방법O 쿠키 개수:', cookies.length, '쿠키 키목록:', cookies.map(c=>c.name).join(',').slice(0,200));
+
+        // O-2: 현재 페이지에서 sbm_* 글로벌·scwin 함수·첫 번째 행 PIN 추출
+        const pageState = await resultPage.evaluate(() => {
+          // sbm_* 전역 스캔
+          const sbmKeys = Object.keys(window).filter(k => k.startsWith('sbm_'));
+          const sbmInfo = sbmKeys.slice(0, 20).map(k => {
+            const o = window[k];
+            return { key: k, action: o && o.action, ref: o && o.ref, type: typeof o };
+          });
+          // scwin 함수 스캔
+          const scwinFns = window.scwin ? Object.keys(window.scwin).filter(k => /(view|열람|smpl|rlrg|issue)/i.test(k)).slice(0,20) : [];
+          // 그리드 첫 번째 행 텍스트 (주소·PIN 포함)
+          const gridRows = Array.from(document.querySelectorAll('[id*="grd_smpl_srch_rslt"] tr, [id*="grid"] tr')).slice(0,3).map(r => r.innerText.slice(0,150));
+          // 검색결과 PIN/고유번호 패턴 (xxxx-xxxx-xxxxxx)
+          const pageText = document.body.innerText;
+          const pinMatches = pageText.match(/\d{4}-\d{4}-\d{6}/g) || [];
+          // XForms dma 인스턴스 스캔
+          const dmaKeys = Object.keys(window).filter(k => k.startsWith('dma_')).slice(0,10);
+          const dmaInfo = dmaKeys.map(k => {
+            const o = window[k];
+            const xml = o && o.xmlNode ? new XMLSerializer().serializeToString(o.xmlNode).slice(0,300) : '';
+            return { key: k, xml };
+          });
+          return { sbmInfo, scwinFns, gridRows, pinMatches, dmaInfo };
+        }).catch(e => ({ error: e.message }));
+        console.log('[iros] 방법O 페이지상태:', JSON.stringify(pageState).slice(0, 2000));
+
+        // O-3: 첫 번째 행 PIN으로 직접 API 호출 시도
+        const irosBase = 'https://www.iros.go.kr';
+        const commonHeaders = {
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'Content-Type': 'application/json',
+          'Referer': 'https://www.iros.go.kr/index.jsp',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cookie': cookieStr,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        };
+
+        // PIN 목록 (pageState에서 추출한 것 + 주소 기반 검색에 필요한 파라미터)
+        const pinList = (pageState.pinMatches || []).slice(0, 3);
+        console.log('[iros] 방법O PIN 목록:', JSON.stringify(pinList));
+
+        // O-4: sbm_* 에서 retrieveSmplRlrgCont 계열 action URL 찾기
+        const viewSbm = (pageState.sbmInfo || []).find(s => s.action && /(smpl|rlrg|view|Cont)/i.test(s.action));
+        const candidateUrls = [
+          '/biz/Pr20ViaRlrgSrchCtrl/retrieveSmplRlrgCont.do',
+          '/biz/Pr20SmplRlrgCtrl/retrieveSmplRlrg.do',
+          '/biz/Pr20ViaRlrgSrchCtrl/retrieveFreeCont.do',
+          '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do',
+          '/biz/Pr20SmplRlrgCtrl/selectSmplRlrg.do',
+          '/biz/Pr20SmplRlrgCtrl/retrieveRlrg.do',
+          viewSbm ? viewSbm.action : null,
+        ].filter(Boolean);
+        console.log('[iros] 방법O 후보 URL:', JSON.stringify(candidateUrls));
+
+        // O-5: 각 후보 URL에 직접 POST
+        for (const relUrl of candidateUrls) {
+          try {
+            const fullUrl = relUrl.startsWith('http') ? relUrl : `${irosBase}${relUrl}?IS_NMBR_LOGIN__=null`;
+            // 파라미터: 주소 검색어와 PIN을 body에 포함
+            const bodyVariants = [
+              { websquare_param: { map: { srchGubun: '1', srchAdrs: address, pageNum: '1', pageSize: '10' } } },
+              { websquare_param: { map: { srchGubun: '2', prtAt: pinList[0] || '', pageNum: '1', pageSize: '10' } } },
+              { websquare_param: { list: [{ srchGubun: '1', srchAdrs: address }] } },
+              {},
+            ];
+            for (const body of bodyVariants) {
+              const resp = await fetch(fullUrl, {
+                method: 'POST',
+                headers: commonHeaders,
+                body: JSON.stringify(body),
+              }).catch(e => ({ ok: false, _err: e.message }));
+              if (resp._err) { console.log('[iros] 방법O fetch오류:', relUrl, resp._err); break; }
+              const txt = await resp.text().catch(() => '');
+              console.log('[iros] 방법O', relUrl, 'status:', resp.status, 'body:', txt.slice(0, 500));
+              if (txt.length > 100 && !txt.includes('"dataList":[]') && !txt.includes('"dataList": []')) {
+                directApiContent = txt;
+                console.log('[iros] 방법O 성공! content length:', txt.length);
+                break;
+              }
+            }
+            if (directApiContent) break;
+          } catch (urlErr) { console.log('[iros] 방법O URL오류:', relUrl, urlErr.message); }
+        }
+
+        // O-6: 성공 시 rlrgCount 올려서 이후 단계 스킵 표시
+        if (directApiContent) {
+          rlrgCount = 999; // sentinel: 직접 API 성공
+          console.log('[iros] 방법O: 직접 API 성공, content 반환 준비');
+        } else {
+          // O-7: 실패시 보기 버튼 onclick 체인 분석 (핸들러 함수명 추출)
+          const onclickInfo = await resultPage.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, td')).filter(b => (b.textContent||'').trim() === '보기' || (b.onclick||'').toString().includes('rlrg'));
+            return btns.slice(0, 5).map(b => ({
+              tag: b.tagName,
+              id: b.id,
+              onclick: b.onclick ? b.onclick.toString().slice(0, 200) : '',
+              parentOnclick: b.parentElement ? (b.parentElement.onclick||'').toString().slice(0,200) : '',
+              attrs: Array.from(b.attributes||[]).map(a=>({n:a.name,v:a.value.slice(0,80)})),
+            }));
+          }).catch(() => []);
+          console.log('[iros] 방법O onclick분석:', JSON.stringify(onclickInfo).slice(0, 1500));
+        }
+
+      } catch (e) { console.log('[iros] 방법O 오류:', e.message, e.stack && e.stack.slice(0,300)); }
+    }
+
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
     {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
@@ -2605,6 +2723,13 @@ app.post('/api/iros-fetch', async (req, res) => {
         capturedReqs: typeof _capturedPosts !== 'undefined' ? 'external' : 'none',
       })).catch(() => ({}));
       console.log('[iros] 최종 상태:', JSON.stringify(finalPageInfo));
+    }
+
+    // 방법O 직접 API 성공 시 조기 반환
+    if (directApiContent) {
+      console.log('[iros] 방법O 직접API 결과 반환');
+      await browser.close().catch(() => {});
+      return directApiContent;
     }
 
     // 열람 버튼 활성화 대기
