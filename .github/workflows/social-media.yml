@@ -140,7 +140,7 @@ jobs:
           fi
 
       - name: Runway AI 영상 생성 (Gen-4 Turbo)
-        if: ${{ contains(env.STEPS, 'record') && env.RUNWAY_API_KEY != '' }}
+        if: ${{ contains(env.STEPS, 'record') }}
         env:
           RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
         run: |
