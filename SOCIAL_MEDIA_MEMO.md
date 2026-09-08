@@ -553,9 +553,42 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 
 ---
 
+## AI 영상 생성 API 비교 (2026-09-08 조사 완료)
+
+### 품질 순위
+| 순위 | API | 5초 영상 비용 | 자동화 | 특이사항 |
+|---|---|---|---|---|
+| 1 | Sora 2 (OpenAI) | 미공개 | 미지원 | API 미공개 상태 |
+| 2 | **Runway Gen-4.5** | $0.60 (5초) | **GitHub Actions 완전 지원** | 이미 `RUNWAY_API_KEY` Secret 등록 완료 |
+| 3 | Kling 3.0 (Higgsfield 경유) | $0.50 (5초) | MCP 세션에서만 | Higgsfield Plus 구독 필요 |
+| 4 | Higgsfield 자체 모델 | $0.75+ | MCP 세션에서만 | 15+ 모델 번들 |
+| 5 | Minimax Hailuo | $0.05~0.40 | API 지원 | 품질 낮음 |
+
+### Runway Dev 연동 현황
+- `scripts/runway-generate.js` **생성 완료** — Gen-4 Turbo 텍스트→영상 API
+- `social-media.yml` **연동 완료** — Runway 성공 시 promo.mp4 사용, 실패 시 Remotion 폴백
+- **GitHub Secret `RUNWAY_API_KEY`**: 등록됨 (크레딧 0 — 충전 필요)
+- 충전처: dev.runwayml.com → "Add credits" → $10
+
+### Higgsfield MCP 현황 (2026-09-08)
+- **무료 플랜**: 10 크레딧 (5초 영상 1개 가능)
+- **3일 무료체험 Plus 시도**: Visa ****2328 (kimdh4790@gmail.com) — **카드 거절 실패**
+  - Stripe: "카드를 확인할 수 없어 3일 MCP 체험이 시작되지 않았어요"
+  - 현재 계정: 무료 플랜 10 크레딧 유지
+- **MCP 자동화 불가**: Higgsfield MCP는 Claude Code 세션에서만 동작 (GitHub Actions 지원 안 됨)
+- **결론**: GitHub Actions 자동화 → Runway Dev 필수. 수동 테스트만 Higgsfield MCP 사용 가능
+
+### 다음 단계 (자동화 파이프라인 활성화)
+**Option A**: dev.runwayml.com → Add credits → $10 충전 → GitHub Actions 즉시 작동
+**Option B**: Higgsfield 다른 카드로 3일 무료체험 → 수동 테스트 가능 (자동화는 여전히 Runway 필요)
+→ **추천: Option A** — Runway Dev $10이면 Gen-4 Turbo로 40개 영상 제작 가능
+
+---
+
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-08 | **AI 영상 API 비교 섹션 추가** — Runway vs Higgsfield vs Kling 비교. Higgsfield 3일 무료체험 카드 거절(Visa ****2328). Runway Dev `scripts/runway-generate.js` + `social-media.yml` 연동 완료, 크레딧 0 — $10 충전 필요 |
 | 2026-09-08 | **오픈소스 도구 2종 연동 코드 완성** — PaddleOCR(Apache-2.0, 무료): scripts/ocr/paddle_server.py + setup_ocr.sh + seolyuhana/oracle-server.js `/api/ocr` 엔드포인트 추가. 서류하나 OCR 기능 (Tilko API 대체 가능). Scrapling(BSD-3, 무료): scripts/monitor/competitor_scraper.py + competitor_config.json — 경쟁사 가격/공지 변동 SMS 자동 알림 |
 | 2026-09-05 | **social-media-schedule.yml 스케줄 매칭 방식 개선** — GitHub Actions cron 지연(오늘 Run#7: UTC 00:00 예약→01:40 실행)으로 HOUR 조건 불일치 → 전 단계 skip 됐던 버그 수정. `date +%H` 직접 비교 → `github.event.schedule` 크론 문자열 case 매칭으로 교체. 수동 테스트(Run#8) success 확인 (2m 43s) |
 | 2026-09-04 | **inflearn-narration.json 신규** — 5구간 나레이션(0s 후킹/6s 6종 소개/12s 상품명/21s 인기자료CTA/25s 검색유도). 나레이션 없이 업로드된 영상 재업로드 필요 (GitHub Actions product=inflearn 수동 실행) |
