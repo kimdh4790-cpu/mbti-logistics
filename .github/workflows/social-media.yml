@@ -138,6 +138,26 @@ jobs:
             node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 건너뜀"
           fi
 
+      - name: Runway AI 영상 생성 (Gen-4 Turbo)
+        if: ${{ contains(env.STEPS, 'record') && env.RUNWAY_API_KEY != '' }}
+        env:
+          RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
+        run: |
+          mkdir -p output
+          if [ "$PRODUCT" = "all" ]; then
+            for p in filo donway yongcha inflearn dine; do
+              echo "[$p] Runway 영상 생성..."
+              node --input-type=module scripts/runway-generate.js --product $p --mode text \
+                && cp output/${p}-runway.mp4 output/${p}-promo.mp4 \
+                || echo "[$p] Runway 생성 실패 (Remotion 폴백)"
+            done
+          else
+            echo "[$PRODUCT] Runway 영상 생성..."
+            node --input-type=module scripts/runway-generate.js --product $PRODUCT --mode text \
+              && cp output/${PRODUCT}-runway.mp4 output/${PRODUCT}-promo.mp4 \
+              || echo "[$PRODUCT] Runway 생성 실패 (Remotion 폴백)"
+          fi
+
       - name: Remotion 코드 영상 렌더링 (FILO·DONWAY·용차앱·인프런)
         if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'inflearn' || env.PRODUCT == 'all') }}
         run: |
@@ -154,9 +174,11 @@ jobs:
           }
 
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha inflearn; do render_remotion $p; done
+            for p in filo donway yongcha inflearn; do
+              [ -f "output/${p}-promo.mp4" ] && echo "[$p] Runway 영상 있음 — Remotion 스킵" || render_remotion $p
+            done
           elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
-            render_remotion $PRODUCT
+            [ -f "output/${PRODUCT}-promo.mp4" ] && echo "[$PRODUCT] Runway 영상 있음 — Remotion 스킵" || render_remotion $PRODUCT
           fi
 
       - name: 화면 녹화 (Playwright) — dine·mbtico만
