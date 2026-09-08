@@ -150,9 +150,9 @@ jobs:
             echo "[$p] Runway 영상 생성..."
             # donway는 로고 이미지→영상, 나머지는 텍스트→영상
             if [ "$p" = "donway" ] && [ -f "assets/donway-logo-3d.png" ]; then
-              node --input-type=module scripts/runway-generate.js --product $p --mode image --image assets/donway-logo-3d.png
+              node scripts/runway-generate.js --product $p --mode image --image assets/donway-logo-3d.png
             else
-              node --input-type=module scripts/runway-generate.js --product $p --mode text
+              node scripts/runway-generate.js --product $p --mode text
             fi
           }
           if [ "$PRODUCT" = "all" ]; then
