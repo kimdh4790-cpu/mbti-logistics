@@ -1091,6 +1091,113 @@ export default {
       if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
         return serveKVFile(env, 'settle.html', 'text/html');
       }
+      // /s/{token} → 배달대행 정산명세서 (알림톡 공유 링크)
+      if (path.startsWith('/s/') && path.length > 3) {
+        const _sToken = path.slice(3).split('/')[0];
+        try {
+          const _sFsToken = await getAccessToken(env);
+          const _sDocRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/statement_share/${_sToken}`, { headers: { Authorization: 'Bearer ' + _sFsToken } });
+          if (!_sDocRes.ok) return new Response('<h2>명세서를 찾을 수 없습니다.</h2>', { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+          const _sFs = await _sDocRes.json();
+          const _sf = _sFs.fields || {};
+          const _sg = k => _sf[k]?.stringValue || '';
+          const _sn = k => parseFloat(_sf[k]?.integerValue || _sf[k]?.doubleValue || 0);
+          const _sName     = _sg('name') || _sg('userId');
+          const _sPeriod   = _sg('month');
+          const _sCoName   = _sg('companyName') || 'DONWAY';
+          const _sTotalCnt = _sn('totalCount');
+          const _sPfSum    = _sn('pfSum');
+          const _sInj      = _sn('injected');
+          const _sExt      = _sn('extracted');
+          const _sPreTax   = _sn('preTax');
+          const _sTax      = _sn('tax');
+          const _sSanjae   = _sn('sanjae');
+          const _sGoyal    = _sn('goyal');
+          const _sNet      = _sn('netPay');
+          const _sTP       = _sn('targetPrice');
+          // 날짜별 상세 내역
+          const _sDateArr  = _sf['dateBreakdown']?.arrayValue?.values || [];
+          let _sDateRows = '';
+          let _sDateTotal = {cnt:0, pfAmt:0};
+          _sDateArr.forEach(item => {
+            const fi = item.mapValue?.fields || {};
+            const dt  = fi.date?.stringValue || '';
+            const cnt = parseFloat(fi.cnt?.integerValue || fi.cnt?.doubleValue || 0);
+            const pf  = parseFloat(fi.pfAmt?.integerValue || fi.pfAmt?.doubleValue || 0);
+            _sDateTotal.cnt += cnt; _sDateTotal.pfAmt += pf;
+            _sDateRows += `<tr><td>${dt}</td><td class="r">${cnt}건</td><td class="r">₩${pf.toLocaleString()}</td></tr>`;
+          });
+          const _sHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>정산명세서 — ${_sName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+.wrap{max-width:480px;margin:0 auto;padding:20px 16px 40px}
+.card{background:#fff;border-radius:14px;padding:20px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.header{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border-radius:14px;padding:22px 18px 18px;margin-bottom:14px}
+.header h1{font-size:18px;font-weight:700;margin-bottom:4px}
+.header p{font-size:13px;opacity:.85}
+.badge{display:inline-block;background:rgba(255,255,255,.18);border-radius:20px;padding:2px 10px;font-size:11px;margin-top:8px}
+.section-title{font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 4px;border-bottom:1px solid #f1f5f9}
+td.r{text-align:right}
+.total-row td{font-weight:700;color:#1e3a5f;border-top:2px solid #e2e8f0;border-bottom:none}
+.net-box{background:#1e3a5f;color:#fff;border-radius:10px;padding:16px;text-align:center;margin-top:4px}
+.net-box .label{font-size:12px;opacity:.8;margin-bottom:4px}
+.net-box .amount{font-size:28px;font-weight:800;letter-spacing:-1px}
+.row2{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid #f1f5f9}
+.row2 .v{font-weight:600}
+.row2.minus .v{color:#dc2626}
+.row2.plus .v{color:#16a34a}
+.foot{text-align:center;font-size:11px;color:#94a3b8;margin-top:20px}
+</style></head><body><div class="wrap">
+<div class="header">
+  <h1>${_sCoName}</h1>
+  <p>배달대행 정산명세서</p>
+  <div class="badge">📦 ${_sPeriod} 정산</div>
+</div>
+<div class="card">
+  <div class="section-title">기사 정보</div>
+  <div class="row2"><span>기사명</span><span class="v">${_sName}</span></div>
+  <div class="row2"><span>정산 기간</span><span class="v">${_sPeriod}</span></div>
+  <div class="row2"><span>계약 단가</span><span class="v">${_sTP ? '₩' + _sTP.toLocaleString() + '/건' : '기본단가'}</span></div>
+</div>
+<div class="card">
+  <div class="section-title">정산 내역</div>
+  <div class="row2"><span>배달 건수</span><span class="v">${_sTotalCnt}건</span></div>
+  <div class="row2"><span>플랫폼 수령 합계</span><span class="v">₩${_sPfSum.toLocaleString()}</span></div>
+  ${_sInj > 0 ? `<div class="row2 plus"><span>보전 (대리점 투입)</span><span class="v">+₩${_sInj.toLocaleString()}</span></div>` : ''}
+  ${_sExt > 0 ? `<div class="row2 minus"><span>환수 (대리점 회수)</span><span class="v">-₩${_sExt.toLocaleString()}</span></div>` : ''}
+  <div class="row2" style="border-top:1px solid #e2e8f0;margin-top:4px;padding-top:10px"><span>세전 지급액</span><span class="v">₩${_sPreTax.toLocaleString()}</span></div>
+  <div class="row2 minus"><span>원천세 (3.3%)</span><span class="v">-₩${_sTax.toLocaleString()}</span></div>
+  <div class="row2 minus"><span>산재보험 (0.88%)</span><span class="v">-₩${_sSanjae.toLocaleString()}</span></div>
+  <div class="row2 minus"><span>고용보험 (0.80%)</span><span class="v">-₩${_sGoyal.toLocaleString()}</span></div>
+  <div class="net-box" style="margin-top:14px">
+    <div class="label">실 지급액</div>
+    <div class="amount">₩${_sNet.toLocaleString()}</div>
+  </div>
+</div>
+${_sDateRows ? `<div class="card">
+  <div class="section-title">날짜별 내역</div>
+  <table>
+    <thead><tr><th style="text-align:left;padding:6px 4px;font-size:11px;color:#64748b">날짜</th><th style="text-align:right;padding:6px 4px;font-size:11px;color:#64748b">건수</th><th style="text-align:right;padding:6px 4px;font-size:11px;color:#64748b">플랫폼수령</th></tr></thead>
+    <tbody>${_sDateRows}</tbody>
+    <tfoot><tr class="total-row"><td>합계</td><td class="r">${_sDateTotal.cnt}건</td><td class="r">₩${_sDateTotal.pfAmt.toLocaleString()}</td></tr></tfoot>
+  </table>
+</div>` : ''}
+<div class="card">
+  <div class="section-title">영업점 정보</div>
+  <div class="row2"><span>상호</span><span class="v">${_sCoName}</span></div>
+  <div class="row2"><span>문의</span><span class="v">051-711-3103</span></div>
+  <div class="row2"><span>계좌</span><span class="v">하나은행 270-910019-24204</span></div>
+</div>
+<p class="foot">본 명세서는 DONWAY 배달대행 정산 시스템에서 발행되었습니다.</p>
+</div></body></html>`;
+          return new Response(_sHtml, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+        } catch(_sErr) {
+          return new Response('<h2>명세서 오류: ' + _sErr.message + '</h2>', { status: 500, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        }
+      }
       // /settle/{id} → settle.html 서빙 (공유 명세서 링크)
       if (path.startsWith('/settle/') || path === '/settle') {
         return serveKVFile(env, 'settle.html', 'text/html');
