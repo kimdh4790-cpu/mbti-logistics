@@ -5813,6 +5813,60 @@ ${JSON.stringify(postSummary)}
         }
       }
 
+      // /api/admin-set-pw — 슈퍼어드민 Firebase Auth 비밀번호 강제 재설정 (CF_GLOBAL_KEY 인증)
+      if (path === '/api/admin-set-pw' && method === 'POST') {
+        try {
+          const _apBody = await request.json();
+          if (!env.CF_GLOBAL_KEY || _apBody.key !== env.CF_GLOBAL_KEY) {
+            return Response.json({ok:false,error:'Unauthorized'},{status:401});
+          }
+          const _apEmail = _apBody.email || '';
+          const _apPw    = _apBody.password || '';
+          if (!_SUPERADMIN_EMAILS.includes(_apEmail)) {
+            return Response.json({ok:false,error:'슈퍼어드민 이메일만 가능'},{status:403});
+          }
+          if (_apPw.length < 6) return Response.json({ok:false,error:'비밀번호 6자 이상'},{status:400});
+          // SA 토큰 (firebase scope)
+          const _apSa = JSON.parse(env.FIREBASE_SA_KEY);
+          const _apNow = Math.floor(Date.now()/1000);
+          const _apKey = await crypto.subtle.importKey('pkcs8',
+            Uint8Array.from(atob(_apSa.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'')),c=>c.charCodeAt(0)).buffer,
+            {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+          const _apH = btoa(JSON.stringify({alg:'RS256',typ:'JWT'}));
+          const _apC = btoa(JSON.stringify({iss:_apSa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:_apNow+3600,iat:_apNow}));
+          const _apSig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_apKey,new TextEncoder().encode(_apH+'.'+_apC));
+          const _apJwt = _apH+'.'+_apC+'.'+btoa(String.fromCharCode(...new Uint8Array(_apSig)));
+          const _apTok = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_apJwt}`})).json();
+          const _apAT = _apTok.access_token;
+          if (!_apAT) return Response.json({ok:false,error:'SA 토큰 발급 실패',detail:_apTok},{status:500});
+          // 이메일로 localId 조회
+          const _apLR = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:lookup`,{
+            method:'POST',headers:{'Authorization':'Bearer '+_apAT,'Content-Type':'application/json'},
+            body:JSON.stringify({email:[_apEmail]})
+          });
+          const _apLD = await _apLR.json();
+          const _apUser = (_apLD.users||[])[0];
+          if (!_apUser) {
+            // 계정 없음 → 신규 생성
+            const _apCR = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts`,{
+              method:'POST',headers:{'Authorization':'Bearer '+_apAT,'Content-Type':'application/json'},
+              body:JSON.stringify({email:_apEmail,password:_apPw,emailVerified:true})
+            });
+            const _apCD = await _apCR.json();
+            if (_apCD.error) return Response.json({ok:false,error:_apCD.error.message},{status:500});
+            return Response.json({ok:true,action:'created',email:_apEmail,uid:_apCD.localId});
+          }
+          // 기존 계정 → 비밀번호 업데이트
+          const _apUR = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:update`,{
+            method:'POST',headers:{'Authorization':'Bearer '+_apAT,'Content-Type':'application/json'},
+            body:JSON.stringify({localId:_apUser.localId,password:_apPw})
+          });
+          const _apUD = await _apUR.json();
+          if (_apUD.error) return Response.json({ok:false,error:_apUD.error.message},{status:500});
+          return Response.json({ok:true,action:'updated',email:_apEmail,uid:_apUser.localId});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
       // /api/errors — Worker 런타임 오류 조회 (슈퍼어드민 전용)
       if (path === '/api/errors' && method === 'GET') {
         const _errAdmin = await requireAdmin(request, env);
