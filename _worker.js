@@ -5720,6 +5720,49 @@ ${JSON.stringify(postSummary)}
         } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
       }
 
+      // /api/admin/companies — Claude 전용: 가입 완료된 companies 조회
+      if (path === '/api/admin/companies' && method === 'GET') {
+        const adminKey = request.headers.get('X-Admin-Key') || '';
+        if (!adminKey || adminKey !== (env.CLAUDE_ADMIN_KEY || '')) {
+          return Response.json({ok:false,error:'인증 필요'},{status:401});
+        }
+        try {
+          const token = await getAccessToken(env);
+          const platform = new URL(request.url).searchParams.get('platform'); // donway/filo/yongcha
+          const query = {structuredQuery:{
+            from:[{collectionId:'companies'}],
+            orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],
+            limit:50
+          }};
+          if (platform) {
+            query.structuredQuery.where = {fieldFilter:{
+              field:{fieldPath:'platform'},op:'EQUAL',value:{stringValue:platform}
+            }};
+          }
+          const res = await fetch(`${FS_BASE}:runQuery`,{
+            method:'POST',
+            headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+            body:JSON.stringify(query)
+          });
+          const rows = await res.json();
+          const items = (Array.isArray(rows)?rows:[]).filter(r=>r.document).map(r=>{
+            const f=r.document.fields||{};
+            const id=r.document.name.split('/').pop();
+            return {
+              id,
+              name:f.name?.stringValue||f.company?.stringValue||'',
+              email:f.email?.stringValue||'',
+              phone:f.phone?.stringValue||'',
+              platform:f.platform?.stringValue||'',
+              status:f.status?.stringValue||'',
+              plan:f.plan?.stringValue||'',
+              createdAt:f.createdAt?.stringValue||f.joinedAt?.stringValue||''
+            };
+          });
+          return Response.json({ok:true,items,count:items.length});
+        } catch(e){return Response.json({ok:false,error:e.message},{status:500});}
+      }
+
       // /api/error-resolve — 오류 해결됨 표시 (Routine이 수정 후 호출)
       if (path === '/api/error-resolve' && method === 'POST') {
         const _erAdmin = await requireAdmin(request, env);
