@@ -1294,11 +1294,10 @@ body {
 .sly-app {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 56px);
+  min-height: calc(100vh - 56px);
   max-width: 640px;
   margin: 0 auto;
   background: var(--bg);
-  overflow: hidden;
 }
 /* 유저 바 */
 .sly-user-bar {
@@ -1328,7 +1327,6 @@ body {
 }
 /* 카테고리 그리드 */
 .sly-cat-grid {
-  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -1375,11 +1373,10 @@ body {
 }
 /* 서비스 패널 */
 .sly-svc-panel {
-  flex: 1;
   display: none;
   flex-direction: column;
-  overflow: hidden;
   background: var(--bg);
+  min-height: calc(100vh - 110px);
 }
 .sly-svc-panel.active { display: flex; }
 .sly-panel-header {
