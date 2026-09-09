@@ -650,12 +650,16 @@ app.post('/api/iros-fetch', async (req, res) => {
       try {
         const rUrl = resp.url();
         if (!rUrl.includes('iros.go.kr')) return;
+        // JS/CSS 정적 파일에서 상수값 오캡처 방지
+        if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/.test(rUrl)) return;
         const ct = resp.headers()['content-type'] || '';
-        if (!ct.includes('json') && !ct.includes('javascript') && !rUrl.includes('srch') && !rUrl.includes('Renf') && !rUrl.includes('Smpl') && !rUrl.includes('smpl') && !rUrl.includes('retrieve')) return;
+        if (!ct.includes('json') && !rUrl.includes('srch') && !rUrl.includes('Renf') && !rUrl.includes('Smpl') && !rUrl.includes('smpl') && !rUrl.includes('retrieve') && !rUrl.includes('SrchList')) return;
         const body = await resp.text().catch(() => '');
         const pins = body.match(/\d{4}-\d{4}-\d{6}/g) || [];
-        if (pins.length > 0) {
-          capturedPin = pins[0].replace(/-/g, '');
+        // 40008000xxxxxx 패턴은 JS 상수이므로 제외
+        const validPins = pins.filter(p => !p.startsWith('4000-8000'));
+        if (validPins.length > 0) {
+          capturedPin = validPins[0].replace(/-/g, '');
           console.log('[iros] 방법S: 응답에서 PIN 캡처:', capturedPin, rUrl.slice(-80));
         }
       } catch(_) {}
@@ -2731,6 +2735,38 @@ app.post('/api/iros-fetch', async (req, res) => {
         // PIN 목록 (pageState에서 추출한 것 + 주소 기반 검색에 필요한 파라미터)
         const pinList = (pageState.pinMatches || []).slice(0, 3);
         console.log('[iros] 방법O PIN 목록:', JSON.stringify(pinList));
+
+        // O-0: callMpPrtIframe.do GET 직접 시도 (가장 확실한 방법)
+        if (!directApiContent && pinList.length > 0) {
+          console.log('[iros] 방법O-0: callMpPrtIframe.do 직접 GET 시도');
+          for (const rawPin of pinList) {
+            if (directApiContent) break;
+            const pinClean = rawPin.replace(/-/g, '');
+            for (const gbn of ['1', '2']) {
+              const mpUrl = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${pinClean}&rlrgGbn=${gbn}&payCl=F&smplKindCls=1`;
+              try {
+                const mpResp = await fetch(mpUrl, {
+                  headers: {
+                    ...commonHeaders,
+                    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    Referer: 'https://www.iros.go.kr/index.jsp',
+                  },
+                  redirect: 'follow',
+                }).catch(() => null);
+                if (!mpResp) { console.log('[iros] 방법O-0 fetch 실패:', rawPin, gbn); continue; }
+                const mpHtml = await mpResp.text().catch(() => '');
+                const mpText = mpHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                console.log('[iros] 방법O-0 PIN=', rawPin, 'gbn=', gbn, 'status=', mpResp.status, 'len=', mpHtml.length, 'preview:', mpHtml.slice(0, 300));
+                if (/표제부|갑구|을구|소유권|순위번호|등기원인|근저당|전유부분|대지권|소재지번/.test(mpHtml)) {
+                  console.log('[iros] 방법O-0: callMpPrtIframe 직접 fetch 성공! PIN=', rawPin, 'gbn=', gbn);
+                  directApiContent = JSON.stringify({ type: 'method_o0', pin: rawPin, content: mpText, html: mpHtml.slice(0, 80000) });
+                  rlrgCount = 999;
+                  break;
+                }
+              } catch (e) { console.log('[iros] 방법O-0 오류:', e.message); }
+            }
+          }
+        }
 
         // O-4: sbm_* 에서 retrieveSmplRlrgCont 계열 action URL 찾기
         const viewSbm = (pageState.sbmInfo || []).find(s => s.action && /(smpl|rlrg|view|Cont)/i.test(s.action));
