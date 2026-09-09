@@ -1970,8 +1970,11 @@ function _slySelectService(id) {
   const uploadCard = document.getElementById('slyUploadCard');
 
   if (svc.isIssue) {
+    // biz_cert: 파일 업로드 불필요 (번호 직접 입력), 나머지 isIssue는 파일 분석 가능
     issueCard.style.display = 'block';
-    uploadCard.style.display = 'block';
+    uploadCard.style.display = svc.issueType === 'biz' ? 'none' : 'block';
+    // 언어 선택 숨김 (isIssue 서비스는 번역 없음)
+    const lw = document.getElementById('slyLangWrap2'); if (lw) lw.style.display = 'none';
     // 발급형 서비스 — 지원공고 필드 숨김
     const jdWrap2 = document.getElementById('slyJdWrap2');
     if (jdWrap2) jdWrap2.style.display = 'none';
@@ -2109,21 +2112,7 @@ function _slySelectService(id) {
   }
   subtitleWrap.style.display = svc.id === 'subtitle' ? 'block' : 'none';
 
-  // 사업자 조회: 사업자번호 직접 입력
-  let bizInputWrap = document.getElementById('slyBizInputWrap');
-  if (!bizInputWrap) {
-    bizInputWrap = document.createElement('div');
-    bizInputWrap.id = 'slyBizInputWrap';
-    bizInputWrap.className = 'sly-custom-section';
-    bizInputWrap.innerHTML = `<span class="sly-custom-label">🏢 사업자등록번호 입력</span>
-      <div style="display:flex;gap:8px">
-        <input class="sly-custom-input" id="slyBizNum" placeholder="예: 123-45-67890" style="flex:1" maxlength="12">
-        <button onclick="_slyBizSearch()" style="padding:12px 18px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">조회</button>
-      </div>
-      <div id="slyBizResult" style="margin-top:10px;display:none"></div>`;
-    if (issueCard) issueCard.prepend(bizInputWrap);
-  }
-  bizInputWrap.style.display = svc.id === 'biz_cert' ? 'block' : 'none';
+  // slyBizInputWrap은 slyIssueBiz 안에 이미 포함 — 중복 제거됨
 
   // 서비스별 텍스트 placeholder 및 커스텀 UI 교체
   const directTA = document.getElementById('slyDirectText');
