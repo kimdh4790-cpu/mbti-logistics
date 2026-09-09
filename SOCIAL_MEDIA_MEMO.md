@@ -452,6 +452,13 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 - **원인 4가지**: ① CTA 씬 4초(120프레임)로 너무 짧음 ② 나레이션 CTA 시작점이 영상 끝에 걸림 ③ FiloPromo CTA 자막 startSec=30.0이 마지막 프레임이라 표시 안 됨 ④ FFmpeg `-shortest`+`amix duration=first`로 영상이 나레이션 길이로 잘림
 - **수정**: YongchaPromo/DonwayPromo CTA 120→210프레임, 총 길이 900→990프레임(33초), 자막 to:900→990, 나레이션 CTA startSec 앞당김, FiloPromo startSec 30.0→25.0, FFmpeg duration=longest + -shortest 제거
 
+### 2026-09-09 — 전 제품 영상 1분(60초)으로 확장
+- **index.jsx**: 8개 컴포지션 전체 durationInFrames 900/990 → 1800(60초)
+- **SCENES 재분배**: Hook(300) + Scene2(360) + Scene3(360) + Scene4(360) + CTA(420) = 1800프레임
+- **SUBTITLES_ALL 재매핑**: Yongcha/Donway 4변형×9라인, Inflearn 6변형×8라인 — 1800프레임 기준으로 전체 재매핑
+- **FiloPromo DEFAULT_LINES**: 6슬라이드×300프레임(10초) 기준 startSec 재조정 (0/12/24/36/50)
+- **나레이션 JSON 4종**: yongcha/donway 60초 분배(0/11/22/34/46), filo(0/12/24/36/50), inflearn(0/10/24/38/44)
+
 ---
 
 ## 다음 작업 우선순위 (2026-09-09 기준)
