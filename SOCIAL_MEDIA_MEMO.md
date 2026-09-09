@@ -446,12 +446,21 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ---
 
-## 다음 작업 우선순위 (2026-09-04 기준)
+## 수정 이력
 
-### 영상 미완료 (긴급)
-1. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 GitHub Actions `product=yongcha steps=record,compose,youtube` 재실행
-2. **인프런 YouTube 재업로드** → 무음 업로드됨. `product=inflearn steps=record,compose,youtube` 실행 (나레이션 포함)
-3. **FILO 재렌더링** → GitHub Actions `product=filo steps=record,compose,youtube`
+### 2026-09-09 — 영상 중간 끊김 버그 수정
+- **원인 4가지**: ① CTA 씬 4초(120프레임)로 너무 짧음 ② 나레이션 CTA 시작점이 영상 끝에 걸림 ③ FiloPromo CTA 자막 startSec=30.0이 마지막 프레임이라 표시 안 됨 ④ FFmpeg `-shortest`+`amix duration=first`로 영상이 나레이션 길이로 잘림
+- **수정**: YongchaPromo/DonwayPromo CTA 120→210프레임, 총 길이 900→990프레임(33초), 자막 to:900→990, 나레이션 CTA startSec 앞당김, FiloPromo startSec 30.0→25.0, FFmpeg duration=longest + -shortest 제거
+
+---
+
+## 다음 작업 우선순위 (2026-09-09 기준)
+
+### 영상 미완료 (긴급 — 끊김 버그 수정 후 재업로드 필요)
+1. **전 제품 재렌더링·재업로드** → GitHub Actions `product=all steps=record,compose,youtube,instagram` 재실행 (끊김 버그 수정 반영)
+2. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 재실행
+3. **인프런 YouTube 재업로드** → 무음 업로드됨. `product=inflearn steps=record,compose,youtube` 실행 (나레이션 포함)
+4. **FILO 재렌더링** → GitHub Actions `product=filo steps=record,compose,youtube`
 
 ### 업로드 완료 목록
 - ✅ FILO YouTube 숏츠 (BdG2vAkzZuo, 2026-08-28)
