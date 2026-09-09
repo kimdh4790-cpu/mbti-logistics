@@ -2125,6 +2125,61 @@ function _slySelectService(id) {
   }
   bizInputWrap.style.display = svc.id === 'biz_cert' ? 'block' : 'none';
 
+  // 서비스별 텍스트 placeholder 및 커스텀 UI 교체
+  const directTA = document.getElementById('slyDirectText');
+  const textHint = document.getElementById('slyTextHint');
+  let toneWrap = document.getElementById('slyToneWrap');
+  if (!toneWrap) {
+    toneWrap = document.createElement('div');
+    toneWrap.id = 'slyToneWrap';
+    toneWrap.className = 'sly-custom-section';
+    toneWrap.innerHTML = `<span class="sly-custom-label">변환 방향</span>
+      <div class="sly-platform-chips" id="slyToneChips">
+        <div class="sly-platform-chip sel" data-v="formal">딱딱한 → 친근한</div>
+        <div class="sly-platform-chip" data-v="casual">비공식 → 공식</div>
+        <div class="sly-platform-chip" data-v="short">길게 → 간결하게</div>
+        <div class="sly-platform-chip" data-v="polite">직설적 → 공손하게</div>
+      </div>`;
+    toneWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
+      toneWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
+      this.classList.add('sel');
+    }));
+    const textWrap = document.getElementById('slyTextInputWrap');
+    textWrap?.parentNode?.insertBefore(toneWrap, textWrap);
+  }
+  let summaryWrap = document.getElementById('slySummaryWrap');
+  if (!summaryWrap) {
+    summaryWrap = document.createElement('div');
+    summaryWrap.id = 'slySummaryWrap';
+    summaryWrap.className = 'sly-custom-section';
+    summaryWrap.innerHTML = `<span class="sly-custom-label">요약 길이</span>
+      <div class="sly-platform-chips">
+        <div class="sly-platform-chip sel" data-v="one">한 줄 요약</div>
+        <div class="sly-platform-chip" data-v="three">3줄 핵심</div>
+        <div class="sly-platform-chip" data-v="full">주요사항 전체</div>
+      </div>`;
+    summaryWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
+      summaryWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
+      this.classList.add('sel');
+    }));
+    const textWrap = document.getElementById('slyTextInputWrap');
+    textWrap?.parentNode?.insertBefore(summaryWrap, textWrap);
+  }
+  toneWrap.style.display = svc.id === 'workplace_tone' ? 'block' : 'none';
+  summaryWrap.style.display = svc.id === 'notice_summary' ? 'block' : 'none';
+  if (directTA) {
+    if (svc.id === 'workplace_tone') {
+      directTA.placeholder = '변환할 문장이나 이메일을 붙여넣기 하세요.\n예: "김대리, 저번에 말한거 언제까지 줄거야?"';
+      directTA.style.minHeight = '160px';
+    } else if (svc.id === 'notice_summary') {
+      directTA.placeholder = '가정통신문 전체 내용을 붙여넣기 하세요.\nAI가 핵심 날짜·준비물·제출기한을 요약해드립니다.';
+      directTA.style.minHeight = '160px';
+    } else {
+      directTA.placeholder = '이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요...';
+      directTA.style.minHeight = '180px';
+    }
+  }
+
   // 텍스트 우선 서비스: 자동으로 텍스트 탭 활성화
   if (['workplace_tone', 'notice_summary'].includes(svc.id) && svc.allowText) {
     setTimeout(() => _slySetInputMode('text'), 50);
@@ -2221,8 +2276,18 @@ window._slySetInputMode = _slySetInputMode;
 async function _slyAnalyze() {
   if (!window._slyUser) { _slyToast('먼저 로그인해주세요'); return; }
   if (_slyInputMode === 'text') {
-    const txt = document.getElementById('slyDirectText')?.value?.trim();
-    if (!txt || txt.length < 30) { _slyToast('내용을 30자 이상 입력해주세요'); return; }
+    const svcForCheck = SVC.find(s => s.id === _slyService);
+    let txt = document.getElementById('slyDirectText')?.value?.trim() || '';
+    // 사주: 생년월일 정보를 텍스트로 합성
+    if (_slyService === 'career_saju') {
+      const name = document.getElementById('slySajuName')?.value?.trim() || '';
+      const birth = document.getElementById('slySajuBirth')?.value?.trim() || '';
+      const time = document.getElementById('slySajuTime')?.value?.trim() || '';
+      txt = `이름: ${name}\n생년월일: ${birth}\n생시: ${time || '모름'}\n${txt}`.trim();
+      if (!name && !birth) { _slyToast('이름과 생년월일을 입력해주세요'); return; }
+    } else if (!txt || txt.length < 30) {
+      _slyToast('내용을 30자 이상 입력해주세요'); return;
+    }
     const blob = new Blob([txt], { type: 'text/plain' });
     _slyFile = new File([blob], 'paste_input.txt', { type: 'text/plain' });
   }
@@ -2253,6 +2318,10 @@ async function _slyAnalyze() {
     if (svc.hasLangSelect) fd.append('targetLang', targetLang);
     const jeonseDeposit = document.getElementById('slyJeonseDeposit')?.value || '';
     if (svc.hasDepositInput && jeonseDeposit) fd.append('jeonseDeposit', jeonseDeposit);
+    const toneDir = document.querySelector('#slyToneChips .sly-platform-chip.sel')?.dataset?.v || '';
+    if (svc.serviceId === 'workplace_tone' && toneDir) fd.append('toneDirection', toneDir);
+    const summaryLen = document.querySelector('#slySummaryWrap .sly-platform-chip.sel')?.dataset?.v || '';
+    if (svc.serviceId === 'notice_summary' && summaryLen) fd.append('summaryLength', summaryLen);
 
     const r = await fetch('/api/seolyuhana/analyze', {
       method: 'POST',
