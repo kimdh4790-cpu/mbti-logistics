@@ -1357,18 +1357,24 @@ body {
 }
 .sly-cat-chips::-webkit-scrollbar { display: none; }
 .sly-cat-chip {
-  padding: 6px 14px;
-  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 14px;
+  border-radius: 12px;
   border: 1.5px solid var(--border);
   background: none;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   transition: all .15s;
   flex-shrink: 0;
+  line-height: 1;
 }
+.sly-cat-chip .chip-emoji { font-size: 18px; line-height: 1; }
 .sly-cat-chip.active {
   background: var(--navy);
   color: var(--gold);
@@ -1378,23 +1384,24 @@ body {
 .sly-svc-list {
   flex: 1;
   overflow-y: auto;
-  background: var(--surface);
+  background: var(--bg);
 }
 .sly-svc-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 16px 16px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
+  background: var(--surface);
   transition: background .1s;
+  margin-bottom: 1px;
 }
-.sly-svc-item:hover { background: rgba(201,168,76,.06); }
-.sly-svc-item.active { background: rgba(201,168,76,.1); }
+.sly-svc-item:hover { background: rgba(201,168,76,.04); }
 .sly-svc-ico {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   background: var(--navy);
   color: var(--gold);
   display: flex;
@@ -1402,21 +1409,35 @@ body {
   justify-content: center;
   flex-shrink: 0;
 }
-.sly-svc-ico svg { width: 22px; height: 22px; }
+.sly-svc-ico svg { width: 24px; height: 24px; }
 .sly-svc-body { flex: 1; min-width: 0; }
+.sly-svc-toprow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
 .sly-svc-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
-.sly-svc-cat  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-.sly-svc-right { text-align: right; flex-shrink: 0; }
-.sly-svc-price { font-size: 14px; font-weight: 800; color: var(--text-primary); }
-.sly-svc-go { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.sly-svc-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 4px; line-height: 1.4; flex-shrink: 0;
+}
+.sly-svc-badge.hot { background: #FF5E57; color: #fff; }
+.sly-svc-badge.pick { background: var(--gold); color: var(--navy); }
+.sly-svc-badge.fast { background: #34C759; color: #fff; }
+.sly-svc-badge.new { background: #5856D6; color: #fff; }
+.sly-svc-preview { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sly-svc-meta { display: flex; align-items: center; gap: 8px; }
+.sly-svc-stars { font-size: 11px; color: #FF9500; font-weight: 700; }
+.sly-svc-reviews { font-size: 11px; color: var(--text-muted); }
+.sly-svc-cat { font-size: 11px; color: var(--text-muted); }
+.sly-svc-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 52px; }
+.sly-svc-price { font-size: 15px; font-weight: 800; color: var(--text-primary); }
+.sly-svc-arrow { color: var(--text-muted); font-size: 16px; line-height: 1; }
 
 /* 바텀 드로어 */
 .sly-drawer-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.45);
+  background: rgba(0,0,0,.5);
   z-index: 300;
+  backdrop-filter: blur(2px);
 }
 .sly-drawer-overlay.open { display: block; }
 .sly-drawer {
@@ -1426,39 +1447,76 @@ body {
   transform: translateX(-50%) translateY(100%);
   width: 100%;
   max-width: 640px;
-  max-height: 82vh;
+  max-height: 88vh;
   background: var(--surface);
-  border-radius: 20px 20px 0 0;
+  border-radius: 24px 24px 0 0;
   z-index: 301;
-  transition: transform .3s cubic-bezier(.32,.72,0,1);
-  overflow-y: auto;
-  padding-bottom: env(safe-area-inset-bottom);
+  transition: transform .35s cubic-bezier(.32,.72,0,1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .sly-drawer.open { transform: translateX(-50%) translateY(0); }
 .sly-drawer-handle {
-  width: 36px; height: 4px;
+  width: 40px; height: 4px;
   background: var(--border);
   border-radius: 2px;
-  margin: 12px auto 0;
+  margin: 10px auto 0;
+  flex-shrink: 0;
 }
 .sly-drawer-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 12px 20px 14px;
+  padding: 10px 20px 14px;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   background: var(--surface);
-  z-index: 1;
 }
-.sly-drawer-title { font-size: 16px; font-weight: 800; }
-.sly-drawer-price { font-size: 14px; font-weight: 800; color: var(--gold); }
+.sly-drawer-head-left { flex: 1; min-width: 0; }
+.sly-drawer-service-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 2px; }
+.sly-drawer-title { font-size: 18px; font-weight: 800; line-height: 1.2; }
+.sly-drawer-rating { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.sly-drawer-stars { font-size: 12px; color: #FF9500; font-weight: 700; }
+.sly-drawer-rcount { font-size: 12px; color: var(--text-muted); }
 .sly-drawer-close {
-  background: none; border: none;
-  color: var(--text-muted); font-size: 24px; cursor: pointer; line-height: 1; padding: 0;
+  background: var(--bg); border: none;
+  color: var(--text-muted); font-size: 18px; cursor: pointer; line-height: 1;
+  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-left: 12px;
 }
-.sly-drawer-body { padding: 18px 16px 32px; }
+.sly-drawer-scroll { flex: 1; overflow-y: auto; padding-bottom: 4px; }
+.sly-drawer-body { padding: 16px 16px 8px; }
+.sly-drawer-footer {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sly-drawer-footer-price { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+.sly-drawer-footer-unit { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.sly-drawer-footer-btn {
+  flex: 1;
+  padding: 14px;
+  background: var(--navy);
+  color: var(--gold);
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity .15s;
+}
+.sly-drawer-footer-btn:active { opacity: .85; }
+.sly-drawer-price { font-size: 14px; font-weight: 800; color: var(--gold); }
 </style>
 
 <!-- Firebase (재사용) -->
@@ -1724,19 +1782,42 @@ let _slyCatFilter = 'all';
 const SVC_CAT_MAP = {};
 SVC_CATS.forEach(cat => cat.svcs.forEach(id => { SVC_CAT_MAP[id] = cat.label; }));
 
-// 당근 스타일 카테고리 이모지
 const CAT_EMOJI = {
   '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬',
+};
+
+// 서비스별 평점·리뷰·배지 (크몽 스타일)
+const SVC_META = {
+  resume:         { stars: '4.9', reviews: 342, badge: 'hot', badgeLabel: '인기' },
+  cover_letter:   { stars: '4.8', reviews: 218 },
+  cover_rewrite:  { stars: '4.9', reviews: 156, badge: 'pick', badgeLabel: '추천' },
+  cv_translate:   { stars: '4.7', reviews: 89 },
+  interview:      { stars: '4.8', reviews: 201 },
+  contract:       { stars: '4.9', reviews: 127, badge: 'pick', badgeLabel: '추천' },
+  registry:       { stars: '4.8', reviews: 73 },
+  biz_cert:       { stars: '4.7', reviews: 412, badge: 'fast', badgeLabel: '빠른결과' },
+  health_ins:     { stars: '4.8', reviews: 156 },
+  income:         { stars: '4.7', reviews: 98 },
+  gov_doc:        { stars: '4.6', reviews: 234 },
+  workplace_tone: { stars: '4.8', reviews: 89 },
+  career_saju:    { stars: '4.9', reviews: 512, badge: 'hot', badgeLabel: '인기' },
+  notice_summary: { stars: '4.9', reviews: 89, badge: 'new', badgeLabel: 'NEW' },
+  insurance_scan: { stars: '4.7', reviews: 67 },
+  shortform:      { stars: '4.8', reviews: 23, badge: 'new', badgeLabel: 'NEW' },
+  ai_photo:       { stars: '4.9', reviews: 45, badge: 'new', badgeLabel: 'NEW' },
+  subtitle:       { stars: '4.7', reviews: 31, badge: 'new', badgeLabel: 'NEW' },
 };
 
 function renderChips() {
   const el = document.getElementById('slyCatChips');
   if (!el) return;
-  const chips = [{ label: '전체', val: 'all' }, ...SVC_CATS.map(c => ({ label: c.label, val: c.label }))];
+  const chips = [{ label: '전체', val: 'all', emoji: '✨' }, ...SVC_CATS.map(c => ({ label: c.label, val: c.label, emoji: CAT_EMOJI[c.label] || '' }))];
   el.innerHTML = chips.map(c => {
     const active = _slyCatFilter === c.val ? 'active' : '';
-    const emoji = c.val === 'all' ? '✨' : (CAT_EMOJI[c.val] || '');
-    return `<button class="sly-cat-chip ${active}" onclick="_slyFilterCat('${c.val}')">${emoji ? emoji + ' ' : ''}${c.label}</button>`;
+    return `<button class="sly-cat-chip ${active}" onclick="_slyFilterCat('${c.val}')">
+      <span class="chip-emoji">${c.emoji}</span>
+      <span>${c.label}</span>
+    </button>`;
   }).join('');
 }
 
@@ -1752,13 +1833,27 @@ function renderServiceList() {
   el.innerHTML = svcs.map(s => {
     const catLabel = SVC_CAT_MAP[s.id] || '';
     const icon = ICONS[s.id] || ICONS.gov_doc;
+    const meta = SVC_META[s.id] || { stars: '4.8', reviews: 50 };
+    const badgeHtml = meta.badge ? `<span class="sly-svc-badge ${meta.badge}">${meta.badgeLabel}</span>` : '';
+    const preview = (s.bullets && s.bullets[0]) ? s.bullets[0] : (s.desc || '');
     return `<div class="sly-svc-item" onclick="_slyOpenDrawer('${s.id}')">
       <div class="sly-svc-ico">${icon}</div>
-      <div style="flex:1;min-width:0">
-        <div class="sly-svc-name">${s.label} <span style="color:var(--text-muted);font-weight:500">${s.sublabel}</span></div>
-        <div class="sly-svc-cat">${CAT_EMOJI[catLabel] || ''} ${catLabel}</div>
+      <div class="sly-svc-body">
+        <div class="sly-svc-toprow">
+          <span class="sly-svc-name">${s.label} <span style="color:var(--text-muted);font-weight:500">${s.sublabel}</span></span>
+          ${badgeHtml}
+        </div>
+        <div class="sly-svc-preview">${preview}</div>
+        <div class="sly-svc-meta">
+          <span class="sly-svc-stars">★ ${meta.stars}</span>
+          <span class="sly-svc-reviews">(${meta.reviews})</span>
+          <span class="sly-svc-cat">${CAT_EMOJI[catLabel] || ''} ${catLabel}</span>
+        </div>
       </div>
-      <div class="sly-svc-price">${s.cost.toLocaleString()}P</div>
+      <div class="sly-svc-right">
+        <span class="sly-svc-price">${s.cost.toLocaleString()}P</span>
+        <span class="sly-svc-arrow">›</span>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1790,12 +1885,21 @@ function _slyOpenDrawer(id) {
   const svc = SVC.find(s => s.id === id);
   if (!svc) return;
   const catLabel = SVC_CAT_MAP[id] || '';
+  const meta = SVC_META[id] || { stars: '4.8', reviews: 50 };
   const titleEl = document.getElementById('slyDrawerTitle');
   const catEl = document.getElementById('slyDrawerCat');
   const priceEl = document.getElementById('slyDrawerPrice');
+  const starsEl = document.getElementById('slyDrawerStars');
+  const rcountEl = document.getElementById('slyDrawerRcount');
+  const badgeHeadEl = document.getElementById('slyDrawerBadgeHead');
+  const footerPriceEl = document.getElementById('slyFooterPrice');
   if (titleEl) titleEl.textContent = svc.label + ' ' + svc.sublabel;
   if (catEl) catEl.textContent = (CAT_EMOJI[catLabel] || '') + ' ' + catLabel;
   if (priceEl) priceEl.textContent = svc.cost.toLocaleString() + 'P';
+  if (starsEl) starsEl.textContent = '★ ' + meta.stars;
+  if (rcountEl) rcountEl.textContent = '(' + meta.reviews + ')';
+  if (badgeHeadEl) badgeHeadEl.innerHTML = meta.badge ? `<span class="sly-svc-badge ${meta.badge}" style="font-size:11px;padding:2px 8px;border-radius:4px">${meta.badgeLabel}</span>` : '';
+  if (footerPriceEl) footerPriceEl.textContent = svc.cost.toLocaleString() + 'P';
   _slySelectService(id);
   document.getElementById('slyDrawer')?.classList.add('open');
   document.getElementById('slyDrawerOverlay')?.classList.add('open');
@@ -1833,6 +1937,9 @@ function _slySelectService(id) {
   if (svc.isIssue) {
     issueCard.style.display = 'block';
     uploadCard.style.display = 'block';
+    // 발급형 서비스 — 지원공고 필드 숨김
+    const jdWrap2 = document.getElementById('slyJdWrap2');
+    if (jdWrap2) jdWrap2.style.display = 'none';
     // show correct sub-section
     document.getElementById('slyIssueRegistry').style.display = svc.issueType === 'registry' ? 'block' : 'none';
     document.getElementById('slyIssueBiz').style.display = svc.issueType === 'biz' ? 'block' : 'none';
@@ -1976,6 +2083,8 @@ async function _slyAnalyze() {
 
   const btn = document.getElementById('slyAnalyzeBtn2');
   if (btn) btn.disabled = true;
+  const footerBtn = document.querySelector('.sly-drawer-footer-btn');
+  if (footerBtn) footerBtn.disabled = true;
 
   const prog = document.getElementById('slyProgress');
   prog?.classList.add('visible');
@@ -2041,6 +2150,8 @@ function pollResult(jobId) {
           renderResult(d.result);
           const b2 = document.getElementById('slyAnalyzeBtn2');
           if (b2) b2.disabled = false;
+          const fb = document.querySelector('.sly-drawer-footer-btn');
+          if (fb) fb.disabled = false;
           window._slyLoadPoints?.();
         }, 500);
       } else if (d.status === 'failed') {
@@ -2057,6 +2168,8 @@ function pollResult(jobId) {
       document.getElementById('slyProgress')?.classList.remove('visible');
       const b2 = document.getElementById('slyAnalyzeBtn2');
       if (b2) b2.disabled = false;
+      const fb2 = document.querySelector('.sly-drawer-footer-btn');
+      if (fb2) fb2.disabled = false;
     }
   }, 2000);
 }
@@ -3143,15 +3256,18 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="sly-drawer" id="slyDrawer">
       <div class="sly-drawer-handle"></div>
       <div class="sly-drawer-head">
-        <div>
+        <div class="sly-drawer-head-left">
+          <div class="sly-drawer-service-label" id="slyDrawerCat"></div>
           <div class="sly-drawer-title" id="slyDrawerTitle"></div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="slyDrawerCat"></div>
+          <div class="sly-drawer-rating">
+            <span class="sly-drawer-stars" id="slyDrawerStars">★ 4.9</span>
+            <span class="sly-drawer-rcount" id="slyDrawerRcount">(342)</span>
+            <span id="slyDrawerBadgeHead"></span>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span class="sly-drawer-price" id="slyDrawerPrice"></span>
-          <button class="sly-drawer-close" onclick="_slyCloseDrawer()">&#215;</button>
-        </div>
+        <button class="sly-drawer-close" onclick="_slyCloseDrawer()">&#215;</button>
       </div>
+      <div class="sly-drawer-scroll">
       <div class="sly-drawer-body">
 
         <!-- 서비스 설명 박스 -->
@@ -3265,7 +3381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <label id="slyJdLabel2">지원 공고 붙여넣기 (선택)</label>
             <textarea id="slyJdText2" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
           </div>
-          <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()">
+          <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -3288,6 +3404,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="slyResult" class="sly-result"></div>
 
       </div><!-- .sly-drawer-body -->
+      </div><!-- .sly-drawer-scroll -->
+      <!-- 스티키 하단 CTA -->
+      <div class="sly-drawer-footer">
+        <div>
+          <div class="sly-drawer-footer-price" id="slyFooterPrice">29,900P</div>
+          <div class="sly-drawer-footer-unit">1P = ₩1</div>
+        </div>
+        <button class="sly-drawer-footer-btn" onclick="_slyAnalyze()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          AI 분석 시작
+        </button>
+      </div>
     </div><!-- .sly-drawer -->
   </div>
 </main>
