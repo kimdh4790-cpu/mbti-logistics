@@ -306,21 +306,31 @@ jobs:
           DRY_FLAG=""
           [ "$DRY_RUN" = "true" ] && DRY_FLAG="--dry-run"
 
+          check_video() {
+            local MP4=$1
+            local p=$2
+            [ ! -f "$MP4" ] && echo "[$p] ❌ 파일 없음: $MP4" && return 1
+            local DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$MP4" 2>/dev/null || echo "0")
+            local DUR_INT=${DUR%.*}
+            if [ "${DUR_INT:-0}" -lt 45 ]; then
+              echo "[$p] ❌ 영상 너무 짧음 (${DUR}s < 45s) — 업로드 차단. 깨진 영상 삭제 불필요."
+              return 1
+            fi
+            echo "[$p] ✅ 영상 길이 정상: ${DUR}s"
+            return 0
+          }
+
           upload_yt() {
             local p=$1
             if [ "$p" = "filo" ]; then
               MP4="output/filo-promo.mp4"
-              if [ ! -f "$MP4" ]; then
-                MP4="output/filo-final.mp4"
-              fi
+              [ ! -f "$MP4" ] && MP4="output/filo-final.mp4"
             else
               MP4="output/${p}-reels.mp4"
             fi
-            if [ -f "$MP4" ] || [ "$DRY_RUN" = "true" ]; then
+            if [ "$DRY_RUN" = "true" ] || check_video "$MP4" "$p"; then
               echo "[$p] YouTube 업로드..."
               node scripts/upload/upload-youtube-api.js --product $p --reels $DRY_FLAG || echo "[$p] 업로드 실패"
-            else
-              echo "[$p] MP4 없음: $MP4 (건너뜀)"
             fi
           }
 
@@ -343,12 +353,23 @@ jobs:
           DRY_FLAG=""
           [ "$DRY_RUN" = "true" ] && DRY_FLAG="--dry-run"
 
+          check_video_ig() {
+            local MP4=$1; local p=$2
+            [ ! -f "$MP4" ] && echo "[$p] ❌ 파일 없음" && return 1
+            local DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$MP4" 2>/dev/null || echo "0")
+            local DUR_INT=${DUR%.*}
+            if [ "${DUR_INT:-0}" -lt 45 ]; then
+              echo "[$p] ❌ Instagram 업로드 차단 (${DUR}s < 45s)"
+              return 1
+            fi
+            return 0
+          }
+
           upload_one() {
             local p=$1
             MP4="output/${p}-reels.mp4"
             [ ! -f "$MP4" ] && [ "$p" = "filo" ] && MP4="output/filo-promo.mp4"
-            if [ ! -f "$MP4" ] && [ "$DRY_RUN" != "true" ]; then
-              echo "[$p] Reels MP4 없음 (건너뜀)"
+            if [ "$DRY_RUN" != "true" ] && ! check_video_ig "$MP4" "$p"; then
               return
             fi
             if [ -n "$INSTAGRAM_ACCESS_TOKEN" ] && [ -n "$INSTAGRAM_ACCOUNT_ID" ]; then
