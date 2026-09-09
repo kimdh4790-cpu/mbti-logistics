@@ -598,6 +598,7 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-09 | **DONWAY 목업 기반 Runway image-to-video 파이프라인 구축** — `scripts/capture/generate-donway-mockups.js` 신규: Playwright로 DONWAY UI 목업 PNG 3종(정산대시보드/엑셀업로드/알림톡발송, 720×1280) 생성. `scripts/runway-generate.js` `generateDonwayScenes()` 추가: 목업 PNG → Runway gen4.5 image_to_video (씬당 5초) → FFmpeg concat → donway-runway.mp4 15초. `social-media.yml` 목업 생성 스텝 추가, Runway 스텝 DONWAY 자동 scenes 모드 선택 |
 | 2026-09-08 | **AI 영상 API 비교 섹션 추가** — Runway vs Higgsfield vs Kling 비교. Higgsfield 3일 무료체험 카드 거절(Visa ****2328). Runway Dev `scripts/runway-generate.js` + `social-media.yml` 연동 완료, 크레딧 0 — $10 충전 필요 |
 | 2026-09-08 | **오픈소스 도구 2종 연동 코드 완성** — PaddleOCR(Apache-2.0, 무료): scripts/ocr/paddle_server.py + setup_ocr.sh + seolyuhana/oracle-server.js `/api/ocr` 엔드포인트 추가. 서류하나 OCR 기능 (Tilko API 대체 가능). Scrapling(BSD-3, 무료): scripts/monitor/competitor_scraper.py + competitor_config.json — 경쟁사 가격/공지 변동 SMS 자동 알림 |
 | 2026-09-05 | **social-media-schedule.yml 스케줄 매칭 방식 개선** — GitHub Actions cron 지연(오늘 Run#7: UTC 00:00 예약→01:40 실행)으로 HOUR 조건 불일치 → 전 단계 skip 됐던 버그 수정. `date +%H` 직접 비교 → `github.event.schedule` 크론 문자열 case 매칭으로 교체. 수동 테스트(Run#8) success 확인 (2m 43s) |
