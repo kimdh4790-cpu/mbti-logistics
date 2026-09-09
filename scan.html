@@ -2163,6 +2163,12 @@ function _slySelectService(id) {
     } else if (svc.id === 'notice_summary') {
       directTA.placeholder = '가정통신문 전체 내용을 붙여넣기 하세요.\nAI가 핵심 날짜·준비물·제출기한을 요약해드립니다.';
       directTA.style.minHeight = '160px';
+    } else if (svc.id === 'shortform') {
+      directTA.placeholder = '영상 주제·아이디어를 자유롭게 입력하세요.\n예: "카페 사장님을 위한 FILO POS 앱 소개, 직원 근태관리도 가능"';
+      directTA.style.minHeight = '140px';
+    } else if (svc.id === 'subtitle') {
+      directTA.placeholder = '영상 스크립트나 대사를 붙여넣기 하세요.\nAI가 자막 파일(.srt)을 생성해드립니다.';
+      directTA.style.minHeight = '160px';
     } else {
       directTA.placeholder = '이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요...';
       directTA.style.minHeight = '180px';
@@ -2170,7 +2176,7 @@ function _slySelectService(id) {
   }
 
   // 텍스트 우선 서비스: 자동으로 텍스트 탭 활성화
-  if (['workplace_tone', 'notice_summary'].includes(svc.id) && svc.allowText) {
+  if (['workplace_tone', 'notice_summary', 'shortform', 'subtitle'].includes(svc.id) && svc.allowText) {
     setTimeout(() => _slySetInputMode('text'), 50);
   } else if (svc.allowText !== undefined) {
     setTimeout(() => _slySetInputMode('file'), 50);
@@ -2274,6 +2280,14 @@ async function _slyAnalyze() {
       const time = document.getElementById('slySajuTime')?.value?.trim() || '';
       txt = `이름: ${name}\n생년월일: ${birth}\n생시: ${time || '모름'}\n${txt}`.trim();
       if (!name && !birth) { _slyToast('이름과 생년월일을 입력해주세요'); return; }
+    } else if (_slyService === 'shortform') {
+      const brand = document.getElementById('slyShortBrand')?.value?.trim() || '';
+      const msg = document.getElementById('slyShortMsg')?.value?.trim() || '';
+      const plat = document.querySelector('#slyShortformWrap .sly-platform-chip.sel')?.dataset?.plat || 'instagram';
+      if (!txt && !brand) { _slyToast('영상 주제를 입력해주세요'); return; }
+      txt = `브랜드/제품: ${brand || '(없음)'}\n핵심 메시지: ${msg || '(없음)'}\n타겟 플랫폼: ${plat}\n\n영상 아이디어:\n${txt}`.trim();
+    } else if (_slyService === 'subtitle') {
+      if (!txt || txt.length < 10) { _slyToast('자막으로 변환할 내용을 입력해주세요'); return; }
     } else if (!txt || txt.length < 30) {
       _slyToast('내용을 30자 이상 입력해주세요'); return;
     }
