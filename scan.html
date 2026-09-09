@@ -19,38 +19,38 @@
   --gold: #C9A84C;
   --gold-light: #e0c06e;
   --white: #FFFFFF;
-  --bg: #F0F4FA;
+  --bg: #f8f7f4;
   --surface: #FFFFFF;
-  --border: #D1DCF0;
-  --text-primary: #0f1e38;
-  --text-secondary: #5A6E90;
-  --text-muted: #8FA0BD;
+  --border: rgba(0,0,0,.1);
+  --text-primary: #1a1a1a;
+  --text-secondary: #5A6170;
+  --text-muted: #9ca3af;
   --success: #16A34A;
   --warn: #D97706;
   --danger: #DC2626;
   --radius: 14px;
-  --shadow: 0 4px 24px rgba(8,16,31,.10);
-  --shadow-card: 0 2px 12px rgba(8,16,31,.08);
+  --shadow: 0 4px 24px rgba(0,0,0,.07);
+  --shadow-card: 0 2px 12px rgba(0,0,0,.05);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #060e1c;
-    --surface: #0f1e38;
-    --border: #1e3254;
-    --text-primary: #E8EFF8;
-    --text-secondary: #8FA0BD;
-    --text-muted: #4A6080;
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --border: rgba(255,255,255,.1);
+    --text-primary: #f0f0f0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666666;
     --shadow: 0 4px 24px rgba(0,0,0,.35);
     --shadow-card: 0 2px 12px rgba(0,0,0,.25);
   }
 }
 :root[data-theme="dark"] {
-  --bg: #060e1c;
-  --surface: #0f1e38;
-  --border: #1e3254;
-  --text-primary: #E8EFF8;
-  --text-secondary: #8FA0BD;
-  --text-muted: #4A6080;
+  --bg: #1a1a1a;
+  --surface: #242424;
+  --border: rgba(255,255,255,.1);
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #666666;
   --shadow: 0 4px 24px rgba(0,0,0,.35);
   --shadow-card: 0 2px 12px rgba(0,0,0,.25);
 }
@@ -1344,91 +1344,144 @@ body {
   font-weight: 800;
   cursor: pointer;
 }
-/* 카테고리 칩 */
-.sly-cat-chips {
-  display: flex;
-  gap: 8px;
-  padding: 10px 14px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.sly-cat-chips::-webkit-scrollbar { display: none; }
-.sly-cat-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: none;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all .15s;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.sly-cat-chip .chip-emoji { font-size: 18px; line-height: 1; }
-.sly-cat-chip.active {
-  background: var(--navy);
-  color: var(--gold);
-  border-color: var(--navy);
-}
-/* 서비스 리스트 */
-.sly-svc-list {
+/* 카테고리 그리드 */
+.sly-cat-grid {
   flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px;
   overflow-y: auto;
   background: var(--bg);
+  align-content: start;
 }
-.sly-svc-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 16px 16px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
+.sly-cat-card {
   background: var(--surface);
-  transition: background .1s;
-  margin-bottom: 1px;
-}
-.sly-svc-item:hover { background: rgba(201,168,76,.04); }
-.sly-svc-ico {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: var(--navy);
-  color: var(--gold);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 14px 16px;
+  cursor: pointer;
+  transition: transform .18s, box-shadow .18s;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.sly-cat-card:active { transform: scale(.97); }
+.sly-cat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  opacity: 0;
+  transition: opacity .18s;
+}
+.sly-cat-card:hover::after { opacity: 1; }
+.sly-cat-ico {
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.sly-svc-ico svg { width: 24px; height: 24px; }
-.sly-svc-body { flex: 1; min-width: 0; }
-.sly-svc-toprow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
-.sly-svc-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+.sly-cat-ico svg { width: 22px; height: 22px; }
+.sly-cat-name { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -.3px; }
+.sly-cat-count { font-size: 12px; color: var(--text-muted); }
+/* 서비스 패널 */
+.sly-svc-panel {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+.sly-svc-panel.active { display: flex; }
+.sly-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sly-panel-back {
+  background: none; border: none;
+  color: var(--text-primary); cursor: pointer;
+  display: flex; align-items: center; gap: 2px;
+  font-size: 22px; line-height: 1; padding: 0; flex-shrink: 0;
+}
+.sly-panel-ico {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sly-panel-ico svg { width: 16px; height: 16px; }
+.sly-panel-title { font-size: 16px; font-weight: 800; flex: 1; letter-spacing: -.4px; }
+.sly-svc-cards {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sly-svc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform .18s;
+}
+.sly-svc-card:active { transform: scale(.98); }
+.sly-svc-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.sly-svc-card-ico {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sly-svc-card-ico svg { width: 20px; height: 20px; }
+.sly-svc-card-hd { flex: 1; min-width: 0; }
+.sly-svc-card-name {
+  font-size: 15px; font-weight: 800; letter-spacing: -.3px;
+  color: var(--text-primary); margin-bottom: 3px;
+}
 .sly-svc-badge {
+  display: inline-block;
   font-size: 10px; font-weight: 700; padding: 2px 7px;
-  border-radius: 4px; line-height: 1.4; flex-shrink: 0;
+  border-radius: 4px; line-height: 1.4;
 }
 .sly-svc-badge.hot { background: #FF5E57; color: #fff; }
-.sly-svc-badge.pick { background: var(--gold); color: var(--navy); }
+.sly-svc-badge.pick { background: var(--gold); color: #fff; }
 .sly-svc-badge.fast { background: #34C759; color: #fff; }
 .sly-svc-badge.new { background: #5856D6; color: #fff; }
-.sly-svc-preview { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sly-svc-meta { display: flex; align-items: center; gap: 8px; }
-.sly-svc-stars { font-size: 11px; color: #FF9500; font-weight: 700; }
-.sly-svc-reviews { font-size: 11px; color: var(--text-muted); }
-.sly-svc-cat { font-size: 11px; color: var(--text-muted); }
-.sly-svc-right { text-align: right; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 52px; }
-.sly-svc-price { font-size: 15px; font-weight: 800; color: var(--text-primary); }
-.sly-svc-arrow { color: var(--text-muted); font-size: 16px; line-height: 1; }
+.sly-svc-card-price { font-size: 16px; font-weight: 900; color: var(--text-primary); letter-spacing: -.3px; }
+.sly-svc-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 8px; }
+.sly-svc-card-bullets { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.sly-svc-card-bullet {
+  font-size: 12px; color: var(--text-secondary);
+  display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;
+}
+.sly-svc-card-bullet::before { content: '·'; color: var(--text-muted); flex-shrink: 0; font-size: 14px; line-height: 1.3; }
+.sly-svc-card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
+.sly-svc-card-meta { font-size: 11px; color: var(--text-muted); }
+.sly-svc-card-cta {
+  padding: 8px 18px;
+  border-radius: 9px; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  color: #fff;
+}
 
 /* 바텀 드로어 */
 .sly-drawer-overlay {
@@ -1695,7 +1748,7 @@ let _slyPollTimer = null;
 let _slySelectedCharge = 0;
 
 const SVC = [
-  { id: 'resume', label: '이력서', sublabel: '분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt',
+  { id: 'resume', label: '이력서', sublabel: '분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt', allowText: false,
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'resume_analysis',
     desc: '기업 맞춤 AI가 이력서 전체를 평가하고 개선안을 제시합니다',
     bullets: ['삼성·카카오·네이버 등 기업별 평가기준 자동 적용', 'ATS 통과 전략·핵심 키워드 분석', '항목별 점수 + 구체적 피드백', '지원 공고 입력 시 공고 맞춤 분석'] },
@@ -1843,64 +1896,102 @@ const SVC_META = {
   subtitle:       { stars: '4.7', reviews: 31, badge: 'new', badgeLabel: 'NEW' },
 };
 
-function renderChips() {
-  const el = document.getElementById('slyCatChips');
-  if (!el) return;
-  const chips = [{ label: '전체', val: 'all', emoji: '✨' }, ...SVC_CATS.map(c => ({ label: c.label, val: c.label, emoji: CAT_EMOJI[c.label] || '' }))];
-  el.innerHTML = chips.map(c => {
-    const active = _slyCatFilter === c.val ? 'active' : '';
-    return `<button class="sly-cat-chip ${active}" onclick="_slyFilterCat('${c.val}')">
-      <span class="chip-emoji">${c.emoji}</span>
-      <span>${c.label}</span>
-    </button>`;
-  }).join('');
+// 카테고리별 accent 색상
+const CAT_ACCENT = {
+  '취업서류': { bg: '#EFF6FF', color: '#2563EB', dark_bg: '#1e3a5f', dark_color: '#60a5fa' },
+  '법률·계약': { bg: '#FEF2F2', color: '#DC2626', dark_bg: '#5f1e1e', dark_color: '#f87171' },
+  '부동산':   { bg: '#F0FDF4', color: '#16A34A', dark_bg: '#1e4d2e', dark_color: '#4ade80' },
+  '직장생활': { bg: '#F5F3FF', color: '#7C3AED', dark_bg: '#3b1f5e', dark_color: '#a78bfa' },
+  '공문서':   { bg: '#FFFBEB', color: '#D97706', dark_bg: '#5c3a00', dark_color: '#fbbf24' },
+  '영상·미디어': { bg: '#ECFDF5', color: '#059669', dark_bg: '#0e3d2a', dark_color: '#34d399' },
+};
+
+function _isDarkMode() {
+  const th = document.documentElement.getAttribute('data-theme');
+  if (th === 'dark') return true;
+  if (th === 'light') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-function renderServiceList() {
-  renderChips();
-  const el = document.getElementById('slySvcList');
+function renderCatGrid() {
+  const el = document.getElementById('slyCatGrid');
   if (!el) return;
-  let svcs = SVC;
-  if (_slyCatFilter !== 'all') {
-    const cat = SVC_CATS.find(c => c.label === _slyCatFilter);
-    svcs = cat ? cat.svcs.map(id => SVC.find(s => s.id === id)).filter(Boolean) : [];
-  }
-  el.innerHTML = svcs.map(s => {
-    const catLabel = SVC_CAT_MAP[s.id] || '';
+  el.innerHTML = SVC_CATS.map(cat => {
+    const acc = CAT_ACCENT[cat.label] || { bg: '#f3f4f6', color: '#374151', dark_bg: '#374151', dark_color: '#d1d5db' };
+    const dark = _isDarkMode();
+    const ibg = dark ? acc.dark_bg : acc.bg;
+    const icolor = dark ? acc.dark_color : acc.color;
+    return `<div class="sly-cat-card" onclick="_slyOpenCat('${cat.label.replace(/'/g,"\\'")}')">
+      <div class="sly-cat-ico" style="background:${ibg};color:${icolor}">${cat.icon}</div>
+      <div>
+        <div class="sly-cat-name">${cat.label}</div>
+        <div class="sly-cat-count">${cat.svcs.length}개 서비스</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('slyCatGrid').style.display = '';
+  const panel = document.getElementById('slySvcPanel');
+  if (panel) { panel.classList.remove('active'); }
+}
+
+function _slyOpenCat(catLabel) {
+  const cat = SVC_CATS.find(c => c.label === catLabel);
+  if (!cat) return;
+  const acc = CAT_ACCENT[catLabel] || { bg: '#f3f4f6', color: '#374151', dark_bg: '#374151', dark_color: '#d1d5db' };
+  const dark = _isDarkMode();
+  const ibg = dark ? acc.dark_bg : acc.bg;
+  const icolor = dark ? acc.dark_color : acc.color;
+  // hide grid, show panel
+  document.getElementById('slyCatGrid').style.display = 'none';
+  const panel = document.getElementById('slySvcPanel');
+  panel.classList.add('active');
+  const icoEl = document.getElementById('slyPanelIco');
+  if (icoEl) { icoEl.innerHTML = cat.icon; icoEl.style.background = ibg; icoEl.style.color = icolor; }
+  const titleEl = document.getElementById('slyPanelTitle');
+  if (titleEl) titleEl.textContent = catLabel;
+  // render service cards
+  const cardsEl = document.getElementById('slySvcCards');
+  if (!cardsEl) return;
+  const svcs = cat.svcs.map(id => SVC.find(s => s.id === id)).filter(Boolean);
+  cardsEl.innerHTML = svcs.map(s => {
     const icon = ICONS[s.id] || ICONS.gov_doc;
     const meta = SVC_META[s.id] || { stars: '4.8', reviews: 50 };
     const badgeHtml = meta.badge ? `<span class="sly-svc-badge ${meta.badge}">${meta.badgeLabel}</span>` : '';
-    const preview = (s.bullets && s.bullets[0]) ? s.bullets[0] : (s.desc || '');
-    return `<div class="sly-svc-item" onclick="_slyOpenDrawer('${s.id}')">
-      <div class="sly-svc-ico">${icon}</div>
-      <div class="sly-svc-body">
-        <div class="sly-svc-toprow">
-          <span class="sly-svc-name">${s.label} <span style="color:var(--text-muted);font-weight:500">${s.sublabel}</span></span>
-          ${badgeHtml}
-        </div>
-        <div class="sly-svc-preview">${preview}</div>
-        <div class="sly-svc-meta">
-          <span class="sly-svc-stars">★ ${meta.stars}</span>
-          <span class="sly-svc-reviews">(${meta.reviews})</span>
-          <span class="sly-svc-cat">${CAT_EMOJI[catLabel] || ''} ${catLabel}</span>
+    const bulletsHtml = (s.bullets || []).slice(0,3).map(b =>
+      `<div class="sly-svc-card-bullet">${b}</div>`
+    ).join('');
+    return `<div class="sly-svc-card" onclick="_slyOpenDrawer('${s.id}')">
+      <div class="sly-svc-card-top">
+        <div class="sly-svc-card-ico" style="background:${ibg};color:${icolor}">${icon}</div>
+        <div class="sly-svc-card-hd">
+          <div class="sly-svc-card-name">${s.label} ${s.sublabel} ${badgeHtml}</div>
+          <div class="sly-svc-card-price">${s.cost.toLocaleString()}P</div>
         </div>
       </div>
-      <div class="sly-svc-right">
-        <span class="sly-svc-price">${s.cost.toLocaleString()}P</span>
-        <span class="sly-svc-arrow">›</span>
+      <div class="sly-svc-card-desc">${s.desc || ''}</div>
+      <div class="sly-svc-card-bullets">${bulletsHtml}</div>
+      <div class="sly-svc-card-footer">
+        <span class="sly-svc-card-meta">★ ${meta.stars} (${meta.reviews})</span>
+        <button class="sly-svc-card-cta" style="background:${icolor}" onclick="event.stopPropagation();_slyOpenDrawer('${s.id}')">분석 시작</button>
       </div>
     </div>`;
   }).join('');
 }
+window._slyOpenCat = _slyOpenCat;
 
-function _slyFilterCat(val) {
-  _slyCatFilter = val;
-  renderServiceList();
+function _slyBackToCats() {
+  const panel = document.getElementById('slySvcPanel');
+  if (panel) panel.classList.remove('active');
+  const grid = document.getElementById('slyCatGrid');
+  if (grid) grid.style.display = '';
 }
-window._slyFilterCat = _slyFilterCat;
+window._slyBackToCats = _slyBackToCats;
 
-function renderCatGrid() { renderServiceList(); }
-function renderTabs() { renderServiceList(); }
+function renderServiceList() { renderCatGrid(); }
+function renderChips() {}
+function _slyFilterCat(val) { renderCatGrid(); }
+window._slyFilterCat = _slyFilterCat;
+function renderTabs() { renderCatGrid(); }
 
 const ISSUE_LINKS = {
   health: [
@@ -3472,10 +3563,17 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <button class="sly-charge-btn" onclick="_slyOpenPoints()">충전하기</button>
       </div>
-      <!-- Category chips -->
-      <div class="sly-cat-chips" id="slyCatChips"></div>
-      <!-- Service list -->
-      <div class="sly-svc-list" id="slySvcList"></div>
+      <!-- Category grid -->
+      <div class="sly-cat-grid" id="slyCatGrid"></div>
+      <!-- Service panel (shown when category selected) -->
+      <div class="sly-svc-panel" id="slySvcPanel">
+        <div class="sly-panel-header">
+          <button class="sly-panel-back" onclick="_slyBackToCats()">‹</button>
+          <div class="sly-panel-ico" id="slyPanelIco"></div>
+          <div class="sly-panel-title" id="slyPanelTitle"></div>
+        </div>
+        <div class="sly-svc-cards" id="slySvcCards"></div>
+      </div>
     </div>
 
     <!-- Bottom drawer overlay -->
