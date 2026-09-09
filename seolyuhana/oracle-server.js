@@ -622,6 +622,38 @@ app.post('/api/iros-fetch', async (req, res) => {
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
 
+    // ── 전역 팝업/신규탭 감지 (context 레벨) ───────────────────────────────────────────
+    // 모든 Methods 실행 중 열리는 팝업에 즉시 응답 리스너 부착 → 등기 데이터 URL 파악
+    let _globalRegData = null;
+    const _regLooseRe = /표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당/;
+    context.on('page', (newPage) => {
+      console.log('[iros] CTX 새 페이지 오픈:', newPage.url());
+      newPage.on('request', (req) => {
+        const _u = req.url();
+        if (!_u.includes('iros.go.kr') && !_u.includes('go.kr')) return;
+        if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
+        console.log('[iros] CTX팝업REQ:', req.method(), _u.slice(-120), req.postData() ? ('|body:' + (req.postData()||'').slice(0,200)) : '');
+      });
+      newPage.on('response', async (resp) => {
+        if (_globalRegData) return;
+        try {
+          const _u = resp.url();
+          if (!_u.includes('iros.go.kr') && !_u.includes('go.kr')) return;
+          if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
+          const _ct = resp.headers()['content-type'] || '';
+          const _b = await resp.text().catch(() => '');
+          if (_b.length > 50) {
+            const _hasReg = _regLooseRe.test(_b);
+            console.log('[iros] CTX팝업응답:', resp.status(), _ct.split(';')[0], _u.slice(-80), 'len=', _b.length, 'reg=', _hasReg, 'prev=', _b.slice(0, 200));
+            if (_hasReg) {
+              _globalRegData = JSON.stringify({ source: 'global_popup', url: _u, ct: _ct, body: _b.slice(0, 80000) });
+              console.log('[iros] 전역 팝업 등기 캡처! URL=', _u);
+            }
+          }
+        } catch(_) {}
+      });
+    });
+
     // WebSquare SPA는 navigator.webdriver=true 감지 시 이벤트 핸들러를 비활성화 →
     // 모든 페이지 로드 전에 false로 패치 (addInitScript는 goto 전에 등록해야 적용됨)
     await page.addInitScript(() => {
@@ -630,6 +662,38 @@ app.post('/api/iros-fetch', async (req, res) => {
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+    });
+
+    // XHR 모니터링 — context 전체 적용 (팝업·iframe 포함)
+    // WebSquare4 내부 XHR URL·응답 캡처 → 등기 데이터 URL 파악
+    await context.addInitScript(() => {
+      if (window._irosXhrHooked) return;
+      window._irosXhrHooked = true;
+      window._irosXhrLog = [];
+      window._irosXhrRegData = null;
+      const _origOpen = XMLHttpRequest.prototype.open;
+      const _origSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.open = function(m, u) {
+        this._iu = String(u || '');
+        return _origOpen.apply(this, arguments);
+      };
+      XMLHttpRequest.prototype.send = function(body) {
+        const _self = this;
+        if (_self._iu && (_self._iu.includes('iros') || _self._iu.includes('.go.kr'))) {
+          _self.addEventListener('loadend', function() {
+            try {
+              const _rt = _self.responseText || '';
+              const _hasReg = /표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당/.test(_rt);
+              const entry = { url: _self._iu, st: _self.status, len: _rt.length, prev: _rt.slice(0, 400), reg: _hasReg };
+              (window._irosXhrLog = window._irosXhrLog || []).push(entry);
+              if (_hasReg && !window._irosXhrRegData) {
+                window._irosXhrRegData = { url: _self._iu, body: _rt.slice(0, 80000) };
+              }
+            } catch(e2) {}
+          });
+        }
+        return _origSend.apply(this, arguments);
+      };
     });
 
     // 네트워크 요청 인터셉트 — IROS 검색 API 요청 로깅 (주소가 실제로 전달되는지 확인)
@@ -1553,15 +1617,23 @@ app.post('/api/iros-fetch', async (req, res) => {
             if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
             const _ct = resp.headers()['content-type'] || '';
             const _st = resp.status();
-            // 모든 비정적 IROS URL 로그 (디버그용)
-            console.log('[iros] S3 네트워크:', _st, _ct.split(';')[0], _u.slice(-100));
-            if (_s3AjaxContent) return;
+            if (_s3AjaxContent) {
+              // 이미 캡처됨 — URL만 로그
+              console.log('[iros] S3 네트워크(skip):', _st, _ct.split(';')[0], _u.slice(-100));
+              return;
+            }
             // content-type 제한 없이 모든 응답 수집 (HTML 포함)
             if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain') &&
-                !_ct.includes('text/html') && !_ct.includes('application')) return;
+                !_ct.includes('text/html') && !_ct.includes('application')) {
+              console.log('[iros] S3 네트워크(pass):', _st, _ct.split(';')[0], _u.slice(-100));
+              return;
+            }
             const _b = await resp.text().catch(() => '');
+            const _hasReg = _s3RegLoose.test(_b);
+            // 모든 비정적 IROS URL 로그 (본문 미리보기 포함)
+            console.log('[iros] S3 네트워크:', _st, _ct.split(';')[0], _u.slice(-100), 'len=', _b.length, 'reg=', _hasReg, 'prev=', _b.slice(0, 200));
             if (_b.length < 100) return;
-            if (_s3RegLoose.test(_b)) {
+            if (_hasReg) {
               _s3AjaxContent = _b;
               console.log('[iros] S3 AJAX 캡처! URL=', _u.slice(-80), 'ct=', _ct.split(';')[0], 'len=', _b.length);
             }
@@ -1652,6 +1724,75 @@ app.post('/api/iros-fetch', async (req, res) => {
           directApiContent = JSON.stringify({ type: 'method_s3_ajax', content: _s3AjaxContent.slice(0, 60000) });
           rlrgCount = 999;
           console.log('[iros] 방법S3 AJAX 성공! len=', _s3AjaxContent.length);
+        }
+
+        // 전역 팝업 캡처 확인 (context.on('page') 로 잡은 데이터)
+        if (!directApiContent && _globalRegData) {
+          directApiContent = _globalRegData;
+          rlrgCount = 999;
+          console.log('[iros] 전역 팝업에서 등기 데이터 사용!');
+        }
+
+        // XHR 로그 확인 (팝업 내 WebSquare4 XHR — addInitScript 훅)
+        if (!directApiContent) {
+          const _xhrLog = await resultPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const _xhrRegData = await resultPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] XHR 로그 count=', _xhrLog.length);
+          for (const _xe of _xhrLog.slice(0, 30)) {
+            console.log('[iros] XHR:', (_xe.url||'').slice(-80), 'st=', _xe.st, 'len=', _xe.len, 'reg=', _xe.reg, 'prev=', (_xe.prev||'').slice(0, 200));
+          }
+          if (_xhrRegData) {
+            directApiContent = JSON.stringify({ type: 'method_s3_xhr', url: _xhrRegData.url, content: _xhrRegData.body });
+            rlrgCount = 999;
+            console.log('[iros] XHR 훅에서 등기 데이터 성공!');
+          }
+        }
+
+        // WebSquare4 DataList 덤프 (modal/overlay로 이미 로드된 데이터 확인)
+        if (!directApiContent) {
+          const _wsData = await resultPage.evaluate(() => {
+            try {
+              const out = {};
+              for (const wsKey of ['w2', 'websquare', 'WebSquare', 'scwin', 'wq', 'w2SPA']) {
+                const ws = window[wsKey];
+                if (!ws) continue;
+                const dlMap = ws.DataList || ws.dataList || {};
+                for (const [name, dl] of Object.entries(dlMap)) {
+                  try {
+                    const rc = dl.getRowCount ? dl.getRowCount() : 0;
+                    if (rc > 0) {
+                      out[name] = { rc, rows: [] };
+                      for (let i = 0; i < Math.min(rc, 50); i++) {
+                        out[name].rows.push(dl.getRow ? dl.getRow(i) : {});
+                      }
+                    }
+                  } catch(_e2) {}
+                }
+              }
+              return out;
+            } catch(e) { return { error: e.message }; }
+          }).catch(() => ({}));
+          const _wsStr = JSON.stringify(_wsData);
+          console.log('[iros] WebSquare DataList 덤프 len=', _wsStr.length, '앞800=', _wsStr.slice(0, 800));
+          if (/표제부|갑구|을구|소유권이전|순위번호/.test(_wsStr)) {
+            directApiContent = JSON.stringify({ type: 'method_s3_datalist', data: _wsData });
+            rlrgCount = 999;
+            console.log('[iros] WebSquare DataList 등기 데이터 성공!');
+          }
+        }
+
+        // 전체 DOM 텍스트 스캔 (보기 후 modal overlay로 직접 렌더링됐을 경우)
+        if (!directApiContent) {
+          const _domText = await resultPage.innerText('body').catch(() => '');
+          const _domReg = _s3RegRe.test(_domText);
+          console.log('[iros] 보기 후 DOM len=', _domText.length, 'reg=', _domReg, '앞500=', _domText.slice(0, 500));
+          if (_domReg && _domText.length > 500) {
+            directApiContent = JSON.stringify({ type: 'method_s3_dom', content: _domText.slice(0, 80000) });
+            rlrgCount = 999;
+            console.log('[iros] DOM 렌더링 등기 데이터 성공!');
+          }
+          // 스크린샷 추가 (30초 후 화면 상태)
+          await resultPage.screenshot({ path: '/home/opc/iros-debug/step5-s3-post30s.png', fullPage: false }).catch(() => {});
         }
 
         // 팝업 캡처 시도
