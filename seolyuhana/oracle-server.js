@@ -641,6 +641,26 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
     });
 
+    // ── 방법S: 응답 인터셉트로 PIN 캡처 ─────────────────────────────────────────────
+    // IROS 백엔드 AJAX 응답에 PIN(\d{4}-\d{4}-\d{6})이 포함됨.
+    // WebSquare 프론트엔드는 headless 탐지하지만 백엔드 JSON 응답은 그대로 내려옴.
+    let capturedPin = null;
+    page.on('response', async resp => {
+      if (capturedPin) return;
+      try {
+        const rUrl = resp.url();
+        if (!rUrl.includes('iros.go.kr')) return;
+        const ct = resp.headers()['content-type'] || '';
+        if (!ct.includes('json') && !ct.includes('javascript') && !rUrl.includes('srch') && !rUrl.includes('Renf') && !rUrl.includes('Smpl') && !rUrl.includes('smpl') && !rUrl.includes('retrieve')) return;
+        const body = await resp.text().catch(() => '');
+        const pins = body.match(/\d{4}-\d{4}-\d{6}/g) || [];
+        if (pins.length > 0) {
+          capturedPin = pins[0].replace(/-/g, '');
+          console.log('[iros] 방법S: 응답에서 PIN 캡처:', capturedPin, rUrl.slice(-80));
+        }
+      } catch(_) {}
+    });
+
     // 1단계: index.jsp SPA shell 진입 (networkidle 대신 load 사용 — 속도 우선)
     console.log('[iros] index.jsp 로드');
     await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'load', timeout: 30000 });
@@ -1082,6 +1102,53 @@ app.post('/api/iros-fetch', async (req, res) => {
     }).catch(() => ({ found: false }));
     console.log('[iros] 메인 그리드 행 수:', JSON.stringify(mainGridRows));
 
+    // 하위 블록에서 공유되는 결과 변수 (방법S 포함)
+    let rlrgCount = 0;
+    let directApiContent = null;
+
+    // ── 방법S: DOM에서 PIN 재시도 후 callMpPrtIframe.do 직접 fetch ─────────────────
+    // 응답 인터셉트로 못 잡았으면 DOM 텍스트에서 PIN 추출 시도
+    if (!capturedPin) {
+      const domPin = await page.evaluate(() => {
+        const t = document.body ? document.body.innerText : '';
+        const m = t.match(/\d{4}-\d{4}-\d{6}/);
+        return m ? m[0].replace(/-/g, '') : '';
+      }).catch(() => '');
+      if (domPin) { capturedPin = domPin; console.log('[iros] 방법S: DOM PIN:', domPin); }
+    }
+    // capturedPin 있으면 세션 쿠키로 callMpPrtIframe.do 직접 fetch
+    if (capturedPin) {
+      try {
+        const _sCookies = await context.cookies();
+        const _sCookieStr = _sCookies.map(c => `${c.name}=${c.value}`).join('; ');
+        const _sUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+        const _sRegRe = /표제부|갑구|을구|소유권|순위번호|등기원인|등기목적|근저당/;
+        for (const _sGbn of ['1', '2']) {
+          const _sUrl = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${capturedPin}&rlrgGbn=${_sGbn}&payCl=F&smplKindCls=1`;
+          console.log('[iros] 방법S: callMpPrtIframe.do fetch rlrgGbn=' + _sGbn, _sUrl.slice(-80));
+          const _sResp = await fetch(_sUrl, {
+            headers: { 'Cookie': _sCookieStr, 'User-Agent': _sUa, 'Referer': 'https://www.iros.go.kr/index.jsp', 'Accept': 'text/html,application/xhtml+xml,*/*' },
+            redirect: 'follow'
+          }).catch(() => null);
+          if (!_sResp?.ok) { console.log('[iros] 방법S: HTTP', _sResp?.status); continue; }
+          const _sHtml = await _sResp.text().catch(() => '');
+          console.log('[iros] 방법S: 응답 길이=', _sHtml.length, '등기 키워드=', _sRegRe.test(_sHtml));
+          if (_sRegRe.test(_sHtml)) {
+            const _sText = _sHtml
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            directApiContent = JSON.stringify({ type: 'method_s', pin: capturedPin, content: _sText, html: _sHtml.slice(0, 80000) });
+            rlrgCount = 999;
+            console.log('[iros] 방법S: 성공! 텍스트 길이=', _sText.length);
+            break;
+          }
+        }
+      } catch (_sErr) { console.log('[iros] 방법S 오류:', _sErr.message); }
+    }
+
     // ── Prvw 팝업 처리 ────────────────────────────────────────────────────────────
     // Pm10P0IrosPopupPrvw: IROS 간편열람 결과 팝업 OR 시스템 공지 팝업
     // 공지인 경우: 주소 입력창 없음 → 닫기 후 메인 페이지에서 재검색
@@ -1383,7 +1450,7 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] smpl_rlrg 스크립트 참조:', JSON.stringify(scriptAnalysis));
 
     // ── 1차: 모든 셀 순서대로 클릭해서 btn_smpl_rlrg 활성화 시도 ────────────────────
-    let rlrgCount = 0;
+    // (rlrgCount는 방법S 블록 앞에서 이미 선언됨)
     // Gauce 그리드에서 col 0 = 행번호, col 1 = 체크박스인 경우가 많음 → col 0~4 순서대로 시도
     const cellCols = [0, 1, 2, 3, 4];
     for (const col of cellCols) {
@@ -2614,7 +2681,7 @@ app.post('/api/iros-fetch', async (req, res) => {
 
     // ── 방법O: 세션쿠키 직접 추출 + IROS REST API 직접 호출 ──────────────────────────
     // WebSquare headless 감지 우회: Playwright 브라우저 세션쿠키로 Node.js fetch() 직접 호출
-    let directApiContent = null;
+    // (directApiContent는 방법S 블록 앞에서 이미 선언됨)
     if (rlrgCount === 0) {
       console.log('[iros] 방법O: 세션쿠키 추출 + 직접 HTTP 호출 시도');
       try {
@@ -2899,11 +2966,15 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 최종 상태:', JSON.stringify(finalPageInfo));
     }
 
-    // 방법O 직접 API 성공 시 조기 반환
+    // 방법S/O 직접 API 성공 시 조기 반환
     if (directApiContent) {
-      console.log('[iros] 방법O 직접API 결과 반환');
-      await browser.close().catch(() => {});
-      return directApiContent;
+      console.log('[iros] 직접API 결과 반환 (방법S/O)');
+      let _dac = {};
+      try { _dac = JSON.parse(directApiContent); } catch(_) { _dac = { content: directApiContent, html: '' }; }
+      const _dacText = _dac.content || _dac.text || directApiContent;
+      const _dacHtml = _dac.html || '';
+      res.json({ ok: true, registryText: _dacText, registryHtml: _dacHtml, address });
+      return;
     }
 
     // 열람 버튼 활성화 대기
