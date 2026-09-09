@@ -9018,10 +9018,19 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
                 if (oRes && oRes.ok) {
                   const od = await oRes.json();
                   if (od.ok && od.registryText) {
-                    // 간편열람: HTML 텍스트 추출 성공 → 그대로 반환 (사용자가 원문 확인 가능)
+                    // 간편열람: HTML 텍스트 추출 성공 → script/on*/iframe 제거 후 반환
+                    const _slyRawHtml = od.registryHtml || '';
+                    const _slySafeHtml = _slyRawHtml
+                      .replace(/<script[\s\S]*?<\/script>/gi, '')
+                      .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+                      .replace(/<object[\s\S]*?<\/object>/gi, '')
+                      .replace(/<embed[^>]*>/gi, '')
+                      .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+                      .replace(/\s+on\w+\s*=\s*[^\s>]*/gi, '')
+                      .replace(/javascript\s*:/gi, 'blocked:');
                     return Response.json({ok:true, mode:'auto', stdAddr,
                       registryText: od.registryText,
-                      registryHtml: od.registryHtml || '',
+                      registryHtml: _slySafeHtml,
                       guide:'인터넷등기소 간편열람 완료'
                     }, {status:200,headers});
                   }
@@ -9100,7 +9109,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           return Response.json({ ok: stData.ok, elapsed: stData.elapsed, address: testAddress,
             preview: stData.preview, error: stData.error || null }, {status:200,headers});
         } catch(e) {
-          return Response.json({ok:false,error:e.message},{status:200,headers});
+          console.error('[iros-autotest]', e.message);
+          const _atMsg = e.name === 'AbortError' ? 'Oracle 서버 응답 시간 초과' : 'Oracle 서버 연결 실패';
+          return Response.json({ok:false,error:_atMsg},{status:200,headers});
         }
       }
 
