@@ -1545,21 +1545,25 @@ app.post('/api/iros-fetch', async (req, res) => {
         const _s3RegLoose = /표제부|갑구|을구|소유권|순위번호|등기원인|근저당/;
         let _s3AjaxContent = null;
 
-        // 응답 인터셉터 설치 (AJAX 데이터 캡처)
+        // 응답 인터셉터 설치 (AJAX 데이터 캡처) — HTML 포함 모든 content-type
         const _s3RespHandler = async (resp) => {
-          if (_s3AjaxContent) return;
           try {
             const _u = resp.url();
             if (!_u.includes('iros.go.kr')) return;
             if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
             const _ct = resp.headers()['content-type'] || '';
-            // JSON/XML만 처리
-            if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain')) return;
+            const _st = resp.status();
+            // 모든 비정적 IROS URL 로그 (디버그용)
+            console.log('[iros] S3 네트워크:', _st, _ct.split(';')[0], _u.slice(-100));
+            if (_s3AjaxContent) return;
+            // content-type 제한 없이 모든 응답 수집 (HTML 포함)
+            if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain') &&
+                !_ct.includes('text/html') && !_ct.includes('application')) return;
             const _b = await resp.text().catch(() => '');
             if (_b.length < 100) return;
             if (_s3RegLoose.test(_b)) {
               _s3AjaxContent = _b;
-              console.log('[iros] S3 AJAX 캡처! URL=', _u.slice(-80), 'len=', _b.length);
+              console.log('[iros] S3 AJAX 캡처! URL=', _u.slice(-80), 'ct=', _ct.split(';')[0], 'len=', _b.length);
             }
           } catch(_) {}
         };
@@ -1592,8 +1596,8 @@ app.post('/api/iros-fetch', async (req, res) => {
           }
         }
 
-        // AJAX 응답 또는 팝업 대기 (15초)
-        await resultPage.waitForTimeout(15000);
+        // AJAX 응답 또는 팝업 대기 (25초 — IROS SPA 로딩 여유)
+        await resultPage.waitForTimeout(25000);
         resultPage.off('response', _s3RespHandler);
 
         // AJAX 응답에서 데이터 얻었으면 성공
@@ -1610,15 +1614,18 @@ app.post('/api/iros-fetch', async (req, res) => {
             console.log('[iros] 방법S3 팝업 감지:', _s3Popup.url());
             let _s3PopAjax = null;
             _s3Popup.on('response', async (resp) => {
-              if (_s3PopAjax) return;
               try {
                 const _u = resp.url();
                 if (!_u.includes('iros.go.kr')) return;
                 if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/i.test(_u)) return;
                 const _ct = resp.headers()['content-type'] || '';
-                if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain')) return;
+                console.log('[iros] S3-팝업 네트워크:', resp.status(), _ct.split(';')[0], _u.slice(-100));
+                if (_s3PopAjax) return;
                 const _b = await resp.text().catch(() => '');
-                if (_b.length > 100 && _s3RegLoose.test(_b)) { _s3PopAjax = _b; }
+                if (_b.length > 100 && _s3RegLoose.test(_b)) {
+                  _s3PopAjax = _b;
+                  console.log('[iros] S3-팝업 AJAX 캡처! URL=', _u.slice(-80), 'len=', _b.length);
+                }
               } catch(_) {}
             });
             await _s3Popup.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
@@ -1645,19 +1652,22 @@ app.post('/api/iros-fetch', async (req, res) => {
         // 방법S3 실패 시 현재 페이지 iframe 확인 (callMpPrtIframe이 iframe으로 로드됐을 경우)
         if (!directApiContent) {
           const _s3Frames = resultPage.frames();
+          console.log('[iros] 방법S3 iframe 목록 총', _s3Frames.length, '개');
           for (const _s3F of _s3Frames) {
             if (_s3F === resultPage.mainFrame()) continue;
             try {
-              await _s3F.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
+              await _s3F.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+              const _fUrl = _s3F.url();
               const _fText = await _s3F.innerText('body').catch(() => '');
+              const _fHtml = await _s3F.content().catch(() => '');
+              console.log('[iros] S3-iframe url=', _fUrl.slice(-80), 'textLen=', _fText.length, 'htmlLen=', _fHtml.length, 'preview=', _fText.slice(0, 150));
               if (_fText.length > 200 && _s3RegRe.test(_fText)) {
-                const _fHtml = await _s3F.content().catch(() => '');
-                directApiContent = JSON.stringify({ type: 'method_s3_iframe', url: _s3F.url(), content: _fText.slice(0, 50000), html: _fHtml.slice(0, 80000) });
+                directApiContent = JSON.stringify({ type: 'method_s3_iframe', url: _fUrl, content: _fText.slice(0, 50000), html: _fHtml.slice(0, 80000) });
                 rlrgCount = 999;
-                console.log('[iros] 방법S3 iframe 성공! url=', _s3F.url(), 'len=', _fText.length);
+                console.log('[iros] 방법S3 iframe 성공! url=', _fUrl, 'len=', _fText.length);
                 break;
               }
-            } catch(_) {}
+            } catch(_e) { console.log('[iros] S3-iframe 오류:', _e.message); }
           }
         }
       } catch (_s3Err) { console.log('[iros] 방법S3 오류:', _s3Err.message); }
