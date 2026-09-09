@@ -45,16 +45,18 @@
 
 ## GitHub Actions 워크플로우 (Oracle SSH 없이 실행 가능)
 
-### 필요한 GitHub Secrets (4개)
+### 필요한 GitHub Secrets
 ```
 Settings → Secrets and variables → Actions → New repository secret
 ```
-| Secret 이름 | 값 위치 |
-|---|---|
-| `YOUTUBE_CLIENT_ID` | Oracle VM `~/.env` → YOUTUBE_CLIENT_ID |
-| `YOUTUBE_CLIENT_SECRET` | Oracle VM `~/.env` → YOUTUBE_CLIENT_SECRET |
-| `YOUTUBE_REFRESH_TOKEN` | Oracle VM `~/.env` → YOUTUBE_REFRESH_TOKEN |
-| `GOOGLE_TTS_API_KEY` | Oracle VM `~/.env` → GOOGLE_TTS_API_KEY |
+| Secret 이름 | 값 위치 | 상태 |
+|---|---|---|
+| `YOUTUBE_CLIENT_ID` | Oracle VM `~/.env` → YOUTUBE_CLIENT_ID | ✅ 등록 완료 |
+| `YOUTUBE_CLIENT_SECRET` | Oracle VM `~/.env` → YOUTUBE_CLIENT_SECRET | ✅ 등록 완료 |
+| `YOUTUBE_REFRESH_TOKEN` | Oracle VM `~/.env` → YOUTUBE_REFRESH_TOKEN | ✅ 등록 완료 |
+| `GOOGLE_TTS_API_KEY` | Oracle VM `~/.env` → GOOGLE_TTS_API_KEY | ✅ 등록 완료 |
+| `FISH_AUDIO_VOICE_ID` | `208686d6952741e28f43fdacc4b65c14` | ✅ 등록 완료 (2026-09-09) |
+| `FISH_AUDIO_API_KEY` | fish.audio → Developers → Get API key | ⏳ **발급 후 등록 필요** |
 
 **Oracle VM에서 값 확인 방법 (SSH 불필요):**
 1. Oracle Cloud Console 브라우저 로그인 (kimdh4790@gmail.com)
@@ -402,7 +404,21 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ## 나레이션 TTS 설정
 
-### Google Cloud TTS (현재 사용)
+### Fish Audio (1순위 — 실제 목소리 클론)
+- **사이트**: fish.audio
+- **요금**: 무료 8,000 크레딧/월 (음성 합성 기준 약 20분 분량)
+- **Voice Clone**: "활기찬 젊은 목소리" @김형우 (Public 타입)
+  - **voice_id**: `208686d6952741e28f43fdacc4b65c14`
+  - URL: `https://fish.audio/ko/app/m/208686d6952741e28f43fdacc4b65c14/`
+- **API Endpoint**: `https://api.fish.audio/v1/tts`
+  - `reference_id` 필드에 voice_id 전달
+- **GitHub Secrets 등록 현황**:
+  - `FISH_AUDIO_VOICE_ID`: `208686d6952741e28f43fdacc4b65c14` ✅ 등록 완료
+  - `FISH_AUDIO_API_KEY`: 발급 후 등록 필요 (fish.audio/developers → Get API key)
+- **우선순위**: Fish Audio(1순위) → Google TTS(2순위) → CLOVA → ElevenLabs
+- **scripts/audio/generate-narration.js**: `fishAudioTTS()` 함수 추가 완료
+
+### Google Cloud TTS (2순위 폴백)
 - 발급처: console.cloud.google.com → Text-to-Speech API → API 키
 - 무료: Neural2 월 100만 자
 - 환경변수: `GOOGLE_TTS_API_KEY` (`~/.env`)
@@ -598,6 +614,8 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-09 | **Fish Audio 목소리 클론 통합** — voice_id `208686d6952741e28f43fdacc4b65c14` ("활기찬 젊은 목소리" @김형우, Public). `generate-narration.js` `fishAudioTTS()` 추가: Fish Audio → Google TTS → CLOVA → ElevenLabs 우선순위. `model: s2.1-pro-free` 헤더 추가(무료 플랜 필수). GitHub Secrets `FISH_AUDIO_VOICE_ID` 등록 완료. `FISH_AUDIO_API_KEY` 발급 후 등록 필요 |
+| 2026-09-09 | **영상 파이프라인 2가지 버그 수정** — ①DONWAY Runway AI 한글 hallucination: Runway 생성 대상에서 donway 제거, Remotion 코드 기반으로 전환. ②Runway/Remotion promo.mp4 있을 때 나레이션+자막 미적용: `social-media.yml`에 `mix_audio()` 함수 추가 — 기존 promo.mp4에 나레이션+BGM+자막 사후 합성 |
 | 2026-09-09 | **DONWAY 목업 기반 Runway image-to-video 파이프라인 구축** — `scripts/capture/generate-donway-mockups.js` 신규: Playwright로 DONWAY UI 목업 PNG 3종(정산대시보드/엑셀업로드/알림톡발송, 720×1280) 생성. `scripts/runway-generate.js` `generateDonwayScenes()` 추가: 목업 PNG → Runway gen4.5 image_to_video (씬당 5초) → FFmpeg concat → donway-runway.mp4 15초. `social-media.yml` 목업 생성 스텝 추가, Runway 스텝 DONWAY 자동 scenes 모드 선택 |
 | 2026-09-08 | **AI 영상 API 비교 섹션 추가** — Runway vs Higgsfield vs Kling 비교. Higgsfield 3일 무료체험 카드 거절(Visa ****2328). Runway Dev `scripts/runway-generate.js` + `social-media.yml` 연동 완료, 크레딧 0 — $10 충전 필요 |
 | 2026-09-08 | **오픈소스 도구 2종 연동 코드 완성** — PaddleOCR(Apache-2.0, 무료): scripts/ocr/paddle_server.py + setup_ocr.sh + seolyuhana/oracle-server.js `/api/ocr` 엔드포인트 추가. 서류하나 OCR 기능 (Tilko API 대체 가능). Scrapling(BSD-3, 무료): scripts/monitor/competitor_scraper.py + competitor_config.json — 경쟁사 가격/공지 변동 SMS 자동 알림 |
