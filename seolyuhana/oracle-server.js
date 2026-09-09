@@ -192,6 +192,13 @@ app.post('/api/iros-pin', async (req, res) => {
     const page = await ctx.newPage();
     page.setDefaultTimeout(30000);
 
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+    });
+
     const typeParam = regType === 'land' ? 'L' : 'B';
 
     // ── Step 1: Gauce SPA 메인 페이지 로드 ────────────────────────────────────────
@@ -614,6 +621,16 @@ app.post('/api/iros-fetch', async (req, res) => {
     });
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
+
+    // WebSquare SPA는 navigator.webdriver=true 감지 시 이벤트 핸들러를 비활성화 →
+    // 모든 페이지 로드 전에 false로 패치 (addInitScript는 goto 전에 등록해야 적용됨)
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      // WebSquare 추가 탐지 우회
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+    });
 
     // 네트워크 요청 인터셉트 — IROS 검색 API 요청 로깅 (주소가 실제로 전달되는지 확인)
     page.on('request', req => {
