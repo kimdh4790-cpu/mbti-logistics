@@ -611,6 +611,45 @@ node scripts/compose/srt-to-ass.js scripts/content/yongcha-subtitles.srt output/
 
 ---
 
+## Claude Code 서브에이전트 (2026-09-09 추가)
+
+### 등록된 에이전트 목록 (`.claude/agents/`)
+
+| 파일 | 역할 | 자동 트리거 |
+|---|---|---|
+| `code-reviewer.md` | 코드 보안·품질 리뷰 (읽기 전용) | 코드 수정 후 리뷰 요청 시 |
+| `social-planner.md` | 소셜미디어 콘텐츠 기획 전담 | "자막", "나레이션", "variants" 언급 시 |
+
+### 사용 방법
+
+**자동 호출 (추천):**
+```
+"DONWAY 나레이션 스크립트 새로 써줘"
+→ social-planner가 자동 위임되어 처리
+```
+
+**직접 호출 (확실하게):**
+```
+"social-planner 서브에이전트로 용차앱 variants.json A/B/C/D 4종 다시 만들어줘"
+"code-reviewer로 _worker.js 보안 리뷰해줘"
+```
+
+### social-planner가 만드는 파일들
+```
+scripts/content/{product}-narration.json    ← 나레이션 구간 정의
+scripts/content/{product}-subtitles.srt     ← 자막 (SRT)
+scripts/content/{product}-meta.json         ← YouTube/Instagram 메타
+scripts/content/variants/{product}-variants.json  ← A/B/C/D 변형
+```
+
+### code-reviewer가 보는 것
+- 보안 취약점 (하드코딩 키, 인증 누락, XSS)
+- Firebase/Firestore 쿼리 최적화
+- 리스너 누수, 메모리 누수
+- 절대 파일 수정 안 함 (읽기 전용)
+
+---
+
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
