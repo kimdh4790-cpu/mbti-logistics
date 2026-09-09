@@ -150,23 +150,15 @@ jobs:
           runway_run() {
             local p=$1
             echo "[$p] Runway 영상 생성..."
-            # donway는 로고 이미지→영상, 나머지는 텍스트→영상
-            if [ "$p" = "donway" ] && [ -f "assets/donway-logo-3d.png" ]; then
-              node scripts/runway-generate.js --product $p --mode image --image assets/donway-logo-3d.png
-            else
-              node scripts/runway-generate.js --product $p --mode text
-            fi
+            node scripts/runway-generate.js --product $p --mode text
           }
           if [ "$PRODUCT" = "all" ]; then
-            # donway는 Remotion(코드 렌더링)으로 처리 — Runway AI는 텍스트 왜곡 문제 있음
-            for p in filo yongcha inflearn dine; do
+            for p in filo donway yongcha inflearn dine; do
               runway_run $p \
                 && cp output/${p}-runway.mp4 output/${p}-promo.mp4 \
                 && cp output/${p}-runway.mp4 output/${p}-reels.mp4 \
                 || echo "[$p] Runway 생성 실패 (Remotion 폴백)"
             done
-          elif [ "$PRODUCT" = "donway" ]; then
-            echo "[donway] Remotion 코드 영상으로 처리 (Runway AI 텍스트 왜곡 방지)"
           else
             runway_run $PRODUCT \
               && cp output/${PRODUCT}-runway.mp4 output/${PRODUCT}-promo.mp4 \
@@ -191,17 +183,10 @@ jobs:
 
           if [ "$PRODUCT" = "all" ]; then
             for p in filo donway yongcha inflearn; do
-              # donway는 항상 Remotion으로 렌더링 (Runway AI 텍스트 왜곡 방지)
-              if [ "$p" = "donway" ]; then
-                render_remotion $p
-              else
-                [ -f "output/${p}-promo.mp4" ] && echo "[$p] Runway 영상 있음 — Remotion 스킵" || render_remotion $p
-              fi
+              [ -f "output/${p}-promo.mp4" ] && echo "[$p] Runway 영상 있음 — Remotion 스킵" || render_remotion $p
             done
-          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
+          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
             [ -f "output/${PRODUCT}-promo.mp4" ] && echo "[$PRODUCT] Runway 영상 있음 — Remotion 스킵" || render_remotion $PRODUCT
-          elif [ "$PRODUCT" = "donway" ]; then
-            render_remotion $PRODUCT
           fi
 
       - name: 화면 녹화 (Playwright) — dine·mbtico만

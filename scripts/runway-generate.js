@@ -31,8 +31,7 @@ const PROMPTS = {
     ratio: '720:1280',
   },
   donway: {
-    text: 'The 3D metallic DONWAY logo slowly rotates with lens flare, pink and green chrome letters gleaming, gold DONWAY text shimmering, dramatic spotlight on dark blue background, cinematic product reveal, 4K ultra HD',
-    image: 'assets/donway-logo-3d.png',
+    text: 'Delivery riders checking smartphone earnings notifications in a neon-lit Korean city at night, close-up of phone screen showing payment amounts, motorcycles parked outside convenience stores, cinematic slow motion, dramatic urban lighting, 4K quality, corporate advertisement style',
     duration: 5,
     ratio: '720:1280',
   },
