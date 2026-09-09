@@ -83,6 +83,7 @@ async function fishAudioTTS(text, outFile) {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(bodyStr),
+          model: 's2.1-pro-free',
         },
       },
       (res) => {
