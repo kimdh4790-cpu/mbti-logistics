@@ -8997,7 +8997,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (oracleUrl) {
             let oracleErr = null;
             try {
-              // Oracle 전체 플로우: 로그인+자동발급 (iros-pin 건너뜀 — IROS Gauce SPA는 PIN을 가상DOM에 숨겨 비회원 추출 불가)
               if (irosId && irosPw) {
                 const ac = new AbortController();
                 const timer = setTimeout(() => ac.abort(), 90000);
@@ -9018,7 +9017,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
                 if (oRes && oRes.ok) {
                   const od = await oRes.json();
                   if (od.ok && od.registryText) {
-                    // 간편열람: HTML 텍스트 추출 성공 → script/on*/iframe 제거 후 반환
                     const _slyRawHtml = od.registryHtml || '';
                     const _slySafeHtml = _slyRawHtml
                       .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -9054,7 +9052,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               oracleErr = oe.message || String(oe);
               console.error('[oracle-iros]', oracleErr);
             }
-            // Oracle 실패 상세 반환
             const _oHost = oracleUrl ? oracleUrl.replace(/^https?:\/\//,'').split('/')[0] : 'URL미설정';
             const _tlkErrPart = tilkoErr ? ` | Tilko: ${tilkoErr.slice(0,80)}` : '';
             const _oNote = oracleErr && (oracleErr.includes('403') || oracleErr.includes('ECONNREFUSED') || oracleErr.includes('aborted'))
