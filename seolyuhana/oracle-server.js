@@ -2752,17 +2752,85 @@ app.post('/api/iros-fetch', async (req, res) => {
             }
             await popup.close().catch(() => {});
           } else {
-            console.log('[iros] 방법P 팝업 없음 (같은 탭에서 처리됐을 수 있음)');
-            // 팝업이 없으면 같은 페이지에서 변화 확인
-            await resultPage.waitForTimeout(3000);
-            const afterClick = await resultPage.innerText('body').catch(() => '');
-            if (afterClick.length > 500 && afterClick.includes('등기')) {
-              directApiContent = JSON.stringify({ type: 'same_page', content: afterClick });
-              rlrgCount = 999;
-            }
+            console.log('[iros] 방법P 팝업 없음 — iframe 방식으로 처리됐을 수 있음 (방법Q에서 처리)');
           }
         }
       } catch (e) { console.log('[iros] 방법P 오류:', e.message); }
+    }
+
+    // ── 방법Q: iframe 캡처 ─────────────────────────────────────────────────────────────
+    // "보기" 클릭 시 callMpPrtIframe.do가 같은 페이지 내 iframe을 로드함 → iframe 내용 추출
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법Q: iframe 캡처 시도');
+      try {
+        const REGISTRY_KEYWORDS = /소유자|접수|등기목적|갑구|을구|권리자|의무자|순위번호|등기원인|등기사항|토지|건물|전유부분/;
+        const viewBtns2 = await resultPage.locator('td[data-col_id="mp_prt"], button:has-text("보기"), td:has-text("보기")').all();
+        console.log('[iros] 방법Q 보기 요소 수:', viewBtns2.length);
+
+        // "보기" 클릭 전 현재 frame 목록
+        const framesBefore = resultPage.frames().map(f => f.url());
+        console.log('[iros] 방법Q 클릭 전 frames:', JSON.stringify(framesBefore));
+
+        if (viewBtns2.length > 0) {
+          // frame navigation 이벤트 대기 시작
+          const frameNavPromise = new Promise(resolve => {
+            const handler = frame => {
+              const u = frame.url();
+              if (u && u !== 'about:blank' && !framesBefore.includes(u)) {
+                resultPage.removeListener('framenavigated', handler);
+                resolve(frame);
+              }
+            };
+            resultPage.on('framenavigated', handler);
+            setTimeout(() => { resultPage.removeListener('framenavigated', handler); resolve(null); }, 15000);
+          });
+
+          await viewBtns2[0].click({ timeout: 5000 }).catch(e => console.log('[iros] 방법Q 클릭 오류:', e.message));
+          console.log('[iros] 방법Q 클릭 완료, iframe 로드 대기...');
+
+          const navigatedFrame = await frameNavPromise;
+          if (navigatedFrame) {
+            console.log('[iros] 방법Q framenavigated 이벤트 감지 URL:', navigatedFrame.url());
+          }
+
+          // 추가 대기 후 모든 frame 검사
+          await resultPage.waitForTimeout(6000);
+          const framesAfter = resultPage.frames();
+          console.log('[iros] 방법Q 클릭 후 frame 수:', framesAfter.length);
+
+          for (const frame of framesAfter) {
+            if (frame === resultPage.mainFrame()) continue;
+            const frameUrl = frame.url();
+            console.log('[iros] 방법Q frame URL:', frameUrl);
+            try {
+              await frame.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+              const frameText = await frame.innerText('body').catch(() => '');
+              const frameHtml = await frame.content().catch(() => '');
+              console.log('[iros] 방법Q frame 텍스트 앞 300자:', frameText.slice(0, 300));
+              if (frameText.length > 100 && REGISTRY_KEYWORDS.test(frameText)) {
+                directApiContent = JSON.stringify({ type: 'iframe', url: frameUrl, content: frameText, html: frameHtml.slice(0, 8000) });
+                rlrgCount = 999;
+                console.log('[iros] 방법Q 성공! iframe length:', frameText.length);
+                try { require('fs').writeFileSync('/tmp/iros-method-q-result.json', directApiContent); } catch(e) {}
+                break;
+              }
+            } catch (fe) { console.log('[iros] 방법Q frame 오류:', frameUrl, fe.message); }
+          }
+
+          // iframe 없이 같은 페이지에서 변화가 있는지 마지막으로 확인 (등기 특정 키워드 필요)
+          if (rlrgCount === 0) {
+            const mainText = await resultPage.innerText('body').catch(() => '');
+            // 등기 특화 키워드가 있어야 성공으로 인정 (네비게이션 메뉴의 "등기소" 는 매칭 안 됨)
+            if (mainText.length > 500 && REGISTRY_KEYWORDS.test(mainText)) {
+              directApiContent = JSON.stringify({ type: 'same_page_q', content: mainText });
+              rlrgCount = 999;
+              console.log('[iros] 방법Q 같은페이지 성공! length:', mainText.length);
+            } else {
+              console.log('[iros] 방법Q 실패 — 등기 특화 키워드 없음');
+            }
+          }
+        }
+      } catch (e) { console.log('[iros] 방법Q 오류:', e.message, e.stack && e.stack.slice(0, 300)); }
     }
 
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
