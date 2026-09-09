@@ -135,11 +135,16 @@ body {
 }
 .sly-auth-btn:hover { background: var(--gold-light); }
 
-/* ── Main ── */
+/* ── Main (랜딩 전용) ── */
 .sly-main {
   max-width: 760px;
   margin: 0 auto;
   padding: 40px 20px 80px;
+}
+/* 로그인 후 앱 모드에서 main 여백 제거 */
+.sly-main:has(.sly-app-layout) {
+  max-width: 100%;
+  padding: 0;
 }
 
 /* ── Hero ── */
@@ -1198,14 +1203,65 @@ body {
 .sly-landing-footer a { color: var(--gold); text-decoration: none; }
 .sly-landing-footer strong { color: #fff; }
 
+/* ── App 분할 레이아웃 ── */
+.sly-app-layout {
+  display: flex;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.sly-left-panel {
+  width: 290px;
+  min-width: 240px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  background: var(--surface);
+  padding: 18px 12px 24px;
+}
+.sly-left-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.sly-right-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 28px 60px;
+  background: var(--bg);
+}
+.sly-right-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  color: var(--text-muted);
+  text-align: center;
+  gap: 14px;
+}
+.sly-right-placeholder svg { width: 44px; height: 44px; }
+.sly-right-placeholder p { font-size: 14px; margin: 0; }
+/* 왼쪽 패널 내 카테고리 그리드: 1컬럼 */
+.sly-left-panel .sly-cat-grid-wrap {
+  grid-template-columns: 1fr !important;
+  padding: 0;
+  gap: 8px;
+}
+
 /* ── 카테고리 카드 그리드 ── */
 .sly-cat-grid-wrap {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
   padding: 0 16px 20px;
 }
 .sly-cat-card {
-  background: var(--white); border: 1.5px solid var(--border);
-  border-radius: 14px; overflow: hidden;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 12px; overflow: hidden;
   transition: border-color .2s, box-shadow .2s;
 }
 .sly-cat-card:has(.sly-cat-svc.active) {
@@ -1213,11 +1269,11 @@ body {
 }
 .sly-cat-head {
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px 8px;
+  padding: 9px 12px 7px;
   background: var(--navy); color: var(--gold);
 }
-.sly-cat-icon { width: 20px; height: 20px; flex-shrink: 0; }
-.sly-cat-label { font-size: 12px; font-weight: 700; letter-spacing: .04em; }
+.sly-cat-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.sly-cat-label { font-size: 11px; font-weight: 700; letter-spacing: .04em; }
 .sly-cat-svcs { display: flex; flex-direction: column; }
 .sly-cat-svc {
   display: flex; justify-content: space-between; align-items: center;
@@ -1229,10 +1285,14 @@ body {
 .sly-cat-svc:first-child { border-top: none; }
 .sly-cat-svc:hover { background: rgba(201,168,76,.07); }
 .sly-cat-svc.active { background: rgba(201,168,76,.13); }
-.sly-cat-svc-name { font-size: 11px; font-weight: 600; color: var(--text); line-height: 1.3; }
-.sly-cat-svc-cost { font-size: 10px; font-weight: 700; color: var(--sly-gold-dark); white-space: nowrap; flex-shrink: 0; }
-@media (max-width: 420px) {
-  .sly-cat-grid-wrap { grid-template-columns: 1fr; }
+.sly-cat-svc-name { font-size: 11px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.sly-cat-svc-cost { font-size: 10px; font-weight: 700; color: var(--warn); white-space: nowrap; flex-shrink: 0; }
+
+@media (max-width: 680px) {
+  .sly-app-layout { flex-direction: column; height: auto; overflow: visible; }
+  .sly-left-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); min-width: unset; padding: 14px 12px; }
+  .sly-left-panel .sly-cat-grid-wrap { grid-template-columns: 1fr 1fr !important; }
+  .sly-right-panel { padding: 18px 14px 40px; }
 }
 
 /* ── price table fallback ── */
@@ -1247,6 +1307,158 @@ body {
   .sly-breakdown { flex-direction: row; }
   .sly-download-row { flex-direction: column; }
 }
+
+/* ══ 앱 메인 (로그인 후) — kmong 스타일 ══ */
+.sly-app {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  max-width: 640px;
+  margin: 0 auto;
+  background: var(--bg);
+  overflow: hidden;
+}
+/* 유저 바 */
+.sly-user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sly-user-pts {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--gold);
+}
+.sly-pts-label { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
+.sly-charge-btn {
+  background: var(--gold);
+  color: var(--navy);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+/* 카테고리 칩 */
+.sly-cat-chips {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sly-cat-chips::-webkit-scrollbar { display: none; }
+.sly-cat-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.sly-cat-chip.active {
+  background: var(--navy);
+  color: var(--gold);
+  border-color: var(--navy);
+}
+/* 서비스 리스트 */
+.sly-svc-list {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--surface);
+}
+.sly-svc-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .1s;
+}
+.sly-svc-item:hover { background: rgba(201,168,76,.06); }
+.sly-svc-item.active { background: rgba(201,168,76,.1); }
+.sly-svc-ico {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--navy);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sly-svc-ico svg { width: 22px; height: 22px; }
+.sly-svc-body { flex: 1; min-width: 0; }
+.sly-svc-name { font-size: 14px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+.sly-svc-cat  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.sly-svc-right { text-align: right; flex-shrink: 0; }
+.sly-svc-price { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.sly-svc-go { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* 바텀 드로어 */
+.sly-drawer-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 300;
+}
+.sly-drawer-overlay.open { display: block; }
+.sly-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%;
+  max-width: 640px;
+  max-height: 82vh;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  z-index: 301;
+  transition: transform .3s cubic-bezier(.32,.72,0,1);
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sly-drawer.open { transform: translateX(-50%) translateY(0); }
+.sly-drawer-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+.sly-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.sly-drawer-title { font-size: 16px; font-weight: 800; }
+.sly-drawer-price { font-size: 14px; font-weight: 800; color: var(--gold); }
+.sly-drawer-close {
+  background: none; border: none;
+  color: var(--text-muted); font-size: 24px; cursor: pointer; line-height: 1; padding: 0;
+}
+.sly-drawer-body { padding: 18px 16px 32px; }
 </style>
 
 <!-- Firebase (재사용) -->
@@ -1334,6 +1546,8 @@ async function loadPoints() {
     window._slyPoints = d.balance || 0;
     const bv = document.getElementById('slyBalanceVal');
     if (bv) bv.textContent = (d.balance || 0).toLocaleString() + ' P';
+    const pn = document.getElementById('slyPtsNum');
+    if (pn) pn.textContent = (d.balance || 0).toLocaleString();
     if (d.signupBonus) {
       setTimeout(() => _slyToast('🎉 신규 가입 축하! 2,900P가 무료로 지급되었습니다. 공문서 분석을 바로 체험해보세요!', 6000), 800);
     }
@@ -1450,6 +1664,19 @@ const SVC = [
     hasJd: false, serviceId: 'insurance_scan',
     desc: '보험약관의 보상 안 되는 면책 조항을 찾아 쉬운 말로 알려드립니다',
     bullets: ['면책조항·예외조건 전수 탐지', '보상 가능 vs 불가 케이스 구분', '동일 유형 분쟁 판례 참고 제공', '가입 전 꼭 확인해야 할 핵심 포인트'] },
+  // ── 영상·미디어 ──
+  { id: 'shortform', label: '숏폼 영상', sublabel: '스크립트', cost: 29900, accept: '.txt,.hwp,.docx,.pdf', allowText: true,
+    hasJd: false, serviceId: 'shortform_script',
+    desc: '브랜드·제품 소개 15~60초 숏폼 영상 스크립트를 AI가 기획·작성합니다',
+    bullets: ['Instagram Reels·TikTok·YouTube Shorts 형식별 최적화', '후킹 오프닝 + 핵심 메시지 + CTA 구성 자동화', '자막 텍스트·보이스오버 대본 함께 제공', '경쟁사 분석 기반 차별화 포인트 반영'] },
+  { id: 'ai_photo', label: 'AI 사진', sublabel: '프로필·제품', cost: 19900, accept: '.jpg,.jpeg,.png,.webp',
+    hasJd: false, serviceId: 'ai_photo',
+    desc: '사진 한 장으로 전문 증명사진·링크드인 프로필·제품 이미지를 AI로 업그레이드합니다',
+    bullets: ['배경 제거 + 스튜디오 배경 자동 합성', '증명사진·링크드인·이력서 전문 프로필 최적화', '제품 화이트·라이프스타일 배경 생성', '고해상도 PNG 납품 + 색보정 포함'] },
+  { id: 'subtitle', label: '자막', sublabel: '생성·번역', cost: 14900, accept: '.mp4,.mov,.avi,.srt,.txt', allowText: true,
+    hasJd: false, serviceId: 'subtitle_create',
+    desc: '영상 또는 스크립트 텍스트로 자막을 생성하고 6개 언어로 번역합니다',
+    bullets: ['한국어·영어·일본어·중국어 등 6개 언어 자막 생성', 'SRT·VTT·ASS 파일 형식 지원', '타임코드 자동 생성 (텍스트 입력 시 균등 분배)', 'SNS 플랫폼별 자막 스타일 가이드 제공'] },
 ];
 
 const ICONS = {
@@ -1468,6 +1695,9 @@ const ICONS = {
   career_saju: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg>`,
   notice_summary: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
   insurance_scan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9,12 11,14 15,10"/></svg>`,
+  shortform: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
+  ai_photo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  subtitle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><line x1="6" y1="10" x2="14" y2="10"/><line x1="6" y1="13" x2="12" y2="13"/></svg>`,
 };
 
 function _slyToast(msg, dur = 3000) {
@@ -1486,33 +1716,61 @@ const SVC_CATS = [
   { label: '부동산', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>', svcs: ['registry'] },
   { label: '직장생활', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', svcs: ['workplace_tone','career_saju','notice_summary'] },
   { label: '공문서', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14,2 14,7.5 20,7.5"/><path d="M2 15h10M5 12l-3 3 3 3"/></svg>', svcs: ['biz_cert','health_ins','income','gov_doc'] },
+  { label: '영상·미디어', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', svcs: ['shortform','ai_photo','subtitle'] },
 ];
 
-function renderCatGrid() {
-  const cont = document.getElementById('slyCatWrap');
-  if (!cont) return;
-  cont.innerHTML = SVC_CATS.map(cat => `
-    <div class="sly-cat-card">
-      <div class="sly-cat-head">
-        <span class="sly-cat-icon">${cat.icon}</span>
-        <span class="sly-cat-label">${cat.label}</span>
-      </div>
-      <div class="sly-cat-svcs">
-        ${cat.svcs.map(id => {
-          const s = SVC.find(x => x.id === id);
-          if (!s) return '';
-          const active = id === _slyService ? 'active' : '';
-          return `<button class="sly-cat-svc ${active}" onclick="_slySelectService('${id}')">
-            <span class="sly-cat-svc-name">${s.label} ${s.sublabel}</span>
-            <span class="sly-cat-svc-cost">₩${s.cost.toLocaleString()}</span>
-          </button>`;
-        }).join('')}
-      </div>
-    </div>
-  `).join('');
+let _slyCatFilter = 'all';
+
+const SVC_CAT_MAP = {};
+SVC_CATS.forEach(cat => cat.svcs.forEach(id => { SVC_CAT_MAP[id] = cat.label; }));
+
+// 당근 스타일 카테고리 이모지
+const CAT_EMOJI = {
+  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬',
+};
+
+function renderChips() {
+  const el = document.getElementById('slyCatChips');
+  if (!el) return;
+  const chips = [{ label: '전체', val: 'all' }, ...SVC_CATS.map(c => ({ label: c.label, val: c.label }))];
+  el.innerHTML = chips.map(c => {
+    const active = _slyCatFilter === c.val ? 'active' : '';
+    const emoji = c.val === 'all' ? '✨' : (CAT_EMOJI[c.val] || '');
+    return `<button class="sly-cat-chip ${active}" onclick="_slyFilterCat('${c.val}')">${emoji ? emoji + ' ' : ''}${c.label}</button>`;
+  }).join('');
 }
 
-function renderTabs() { renderCatGrid(); }
+function renderServiceList() {
+  renderChips();
+  const el = document.getElementById('slySvcList');
+  if (!el) return;
+  let svcs = SVC;
+  if (_slyCatFilter !== 'all') {
+    const cat = SVC_CATS.find(c => c.label === _slyCatFilter);
+    svcs = cat ? cat.svcs.map(id => SVC.find(s => s.id === id)).filter(Boolean) : [];
+  }
+  el.innerHTML = svcs.map(s => {
+    const catLabel = SVC_CAT_MAP[s.id] || '';
+    const icon = ICONS[s.id] || ICONS.gov_doc;
+    return `<div class="sly-svc-item" onclick="_slyOpenDrawer('${s.id}')">
+      <div class="sly-svc-ico">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sly-svc-name">${s.label} <span style="color:var(--text-muted);font-weight:500">${s.sublabel}</span></div>
+        <div class="sly-svc-cat">${CAT_EMOJI[catLabel] || ''} ${catLabel}</div>
+      </div>
+      <div class="sly-svc-price">${s.cost.toLocaleString()}P</div>
+    </div>`;
+  }).join('');
+}
+
+function _slyFilterCat(val) {
+  _slyCatFilter = val;
+  renderServiceList();
+}
+window._slyFilterCat = _slyFilterCat;
+
+function renderCatGrid() { renderServiceList(); }
+function renderTabs() { renderServiceList(); }
 
 const ISSUE_LINKS = {
   health: [
@@ -1527,6 +1785,28 @@ const ISSUE_LINKS = {
   ],
 };
 
+function _slyOpenDrawer(id) {
+  _slyService = id;
+  const svc = SVC.find(s => s.id === id);
+  if (!svc) return;
+  const catLabel = SVC_CAT_MAP[id] || '';
+  const titleEl = document.getElementById('slyDrawerTitle');
+  const catEl = document.getElementById('slyDrawerCat');
+  const priceEl = document.getElementById('slyDrawerPrice');
+  if (titleEl) titleEl.textContent = svc.label + ' ' + svc.sublabel;
+  if (catEl) catEl.textContent = (CAT_EMOJI[catLabel] || '') + ' ' + catLabel;
+  if (priceEl) priceEl.textContent = svc.cost.toLocaleString() + 'P';
+  _slySelectService(id);
+  document.getElementById('slyDrawer')?.classList.add('open');
+  document.getElementById('slyDrawerOverlay')?.classList.add('open');
+}
+function _slyCloseDrawer() {
+  document.getElementById('slyDrawer')?.classList.remove('open');
+  document.getElementById('slyDrawerOverlay')?.classList.remove('open');
+}
+window._slyOpenDrawer = _slyOpenDrawer;
+window._slyCloseDrawer = _slyCloseDrawer;
+
 function _slySelectService(id) {
   _slyService = id;
   // 탭 전환 시 파일 상태 초기화
@@ -1534,7 +1814,6 @@ function _slySelectService(id) {
   const fi2 = document.getElementById('slyFileInput2');
   if (fi2) fi2.value = '';
   document.getElementById('slyFilePrev2')?.classList.remove('visible');
-  renderCatGrid();
   const svc = SVC.find(s => s.id === id);
   if (!svc) return;
 
@@ -2427,8 +2706,7 @@ window._slyBizSearch = _slyBizSearch;
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
-  renderCatGrid();
-  _slySelectService('resume');
+  renderServiceList();
 
   const dz2 = document.getElementById('slyDropzone2');
   const fi2 = document.getElementById('slyFileInput2');
@@ -2841,152 +3119,176 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 
-  <!-- Main content -->
+  <!-- Main content (kmong-style) -->
   <div id="slyMainContent" style="display:none">
-    <!-- Hero -->
-    <div class="sly-hero">
-      <img src="data:image/png;base64,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" alt="SCAN" style="width:72px;height:72px;object-fit:contain;border-radius:16px;margin-bottom:16px;box-shadow:0 4px 20px rgba(201,168,76,0.3);">
-      <div class="sly-hero-eyebrow">AI 문서 스캔 & 분석</div>
-      <h1>파일 하나로<br><em>즉시 분석 완성</em></h1>
-      <p>HWP · DOCX · PDF 그대로 올리면 AI가 즉시 분석하고 개선안을 제시합니다</p>
+    <div class="sly-app">
+      <!-- Points bar -->
+      <div class="sly-user-bar">
+        <div>
+          <span class="sly-user-pts" id="slyPtsNum">0</span>
+          <span class="sly-pts-label">P 보유</span>
+        </div>
+        <button class="sly-charge-btn" onclick="_slyOpenPoints()">충전하기</button>
+      </div>
+      <!-- Category chips -->
+      <div class="sly-cat-chips" id="slyCatChips"></div>
+      <!-- Service list -->
+      <div class="sly-svc-list" id="slySvcList"></div>
     </div>
 
-    <!-- Service Category Grid -->
-    <div class="sly-cat-grid-wrap" id="slyCatWrap"></div>
+    <!-- Bottom drawer overlay -->
+    <div class="sly-drawer-overlay" id="slyDrawerOverlay" onclick="_slyCloseDrawer()"></div>
 
-    <!-- 서비스 설명 박스 -->
-    <div class="sly-desc-box" id="slyDescBox" style="display:none"></div>
-
-    <!-- Issue card (공문서 발급 모드) -->
-    <div class="sly-card" id="slyIssueCard" style="display:none">
-      <div class="sly-card-title" id="slyIssueTitleText">공문서 발급 & 분석</div>
-
-      <!-- 등기부등본 -->
-      <div id="slyIssueRegistry" style="display:none">
-        <div style="display:flex;gap:10px;margin-bottom:12px">
-          <input id="slyRegAddr" type="text" placeholder="도로명 또는 지번 주소 입력 (예: 서울시 강남구 테헤란로 123)"
-            style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
-            onkeydown="if(event.key==='Enter') _slyRegSearch()">
-          <select id="slyRegType" style="padding:12px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:13px;min-width:110px">
-            <option value="all">전체현황</option>
-            <option value="ownership">소유현황</option>
-            <option value="mortgage">근저당·담보</option>
-            <option value="lease">전세권·임차</option>
-          </select>
+    <!-- Bottom drawer -->
+    <div class="sly-drawer" id="slyDrawer">
+      <div class="sly-drawer-handle"></div>
+      <div class="sly-drawer-head">
+        <div>
+          <div class="sly-drawer-title" id="slyDrawerTitle"></div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="slyDrawerCat"></div>
         </div>
-        <button onclick="_slyRegSearch()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
-          주소 검색 →
-        </button>
-        <div id="slyRegResult" style="display:none;background:var(--surface);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
-          <!-- _slyShowRegResult()로 동적 렌더링 -->
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="sly-drawer-price" id="slyDrawerPrice"></span>
+          <button class="sly-drawer-close" onclick="_slyCloseDrawer()">&#215;</button>
         </div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 PDF 업로드</div>
       </div>
+      <div class="sly-drawer-body">
 
-      <!-- 사업자등록 조회 -->
-      <div id="slyIssueBiz" style="display:none">
-        <div style="display:flex;gap:10px;margin-bottom:12px">
-          <input id="slyBizNum" type="text" maxlength="12" placeholder="사업자등록번호 10자리 (예: 123-45-67890)"
-            style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
-            oninput="this.value=this.value.replace(/[^\d-]/g,'')"
-            onkeydown="if(event.key==='Enter') _slyBizSearch()">
-          <button onclick="_slyBizSearch()" style="padding:12px 20px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">
-            조회
+        <!-- 서비스 설명 박스 -->
+        <div class="sly-desc-box" id="slyDescBox"></div>
+
+        <!-- Issue card (공문서 발급 모드) -->
+        <div class="sly-card" id="slyIssueCard" style="display:none">
+          <div class="sly-card-title" id="slyIssueTitleText">공문서 발급 & 분석</div>
+
+          <!-- 등기부등본 -->
+          <div id="slyIssueRegistry" style="display:none">
+            <div style="display:flex;gap:10px;margin-bottom:12px">
+              <input id="slyRegAddr" type="text" placeholder="도로명 또는 지번 주소 입력 (예: 서울시 강남구 테헤란로 123)"
+                style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
+                onkeydown="if(event.key==='Enter') _slyRegSearch()">
+              <select id="slyRegType" style="padding:12px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:13px;min-width:110px">
+                <option value="all">전체현황</option>
+                <option value="ownership">소유현황</option>
+                <option value="mortgage">근저당·담보</option>
+                <option value="lease">전세권·임차</option>
+              </select>
+            </div>
+            <button onclick="_slyRegSearch()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
+              주소 검색 →
+            </button>
+            <div id="slyRegResult" style="display:none;background:var(--surface);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
+              <!-- _slyShowRegResult()로 동적 렌더링 -->
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 PDF 업로드</div>
+          </div>
+
+          <!-- 사업자등록 조회 -->
+          <div id="slyIssueBiz" style="display:none">
+            <div style="display:flex;gap:10px;margin-bottom:12px">
+              <input id="slyBizNum" type="text" maxlength="12" placeholder="사업자등록번호 10자리 (예: 123-45-67890)"
+                style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
+                oninput="this.value=this.value.replace(/[^\d-]/g,'')"
+                onkeydown="if(event.key==='Enter') _slyBizSearch()">
+              <button onclick="_slyBizSearch()" style="padding:12px 20px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">
+                조회
+              </button>
+            </div>
+            <div id="slyBizResult" style="display:none"></div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:14px;margin-bottom:8px;font-weight:600">사업자등록증 PDF 업로드 (선택 — AI 상세 분석)</div>
+          </div>
+
+          <!-- 건강보험 / 소득 / 기타 -->
+          <div id="slyIssueLinks" style="display:none">
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px" id="slyIssueLinkGrid"></div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 파일 업로드</div>
+          </div>
+        </div><!-- close slyIssueCard -->
+
+        <!-- Regular upload card -->
+        <div class="sly-card" id="slyUploadCard">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div class="sly-card-title" style="margin-bottom:0" id="slyUploadTitle">파일 업로드</div>
+            <div id="slyServiceBadge" style="background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700"></div>
+          </div>
+          <!-- 입력 모드 탭 -->
+          <div id="slyInputModeTabs" style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg);border-radius:10px;padding:4px">
+            <button id="slyModeFile" onclick="_slySetInputMode('file')"
+              style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:var(--gold);color:var(--navy);transition:all .2s">
+              파일 업로드
+            </button>
+            <button id="slyModeText" onclick="_slySetInputMode('text')"
+              style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all .2s">
+              텍스트 직접 입력
+            </button>
+          </div>
+          <!-- 텍스트 입력 모드 -->
+          <div id="slyTextInputWrap" style="display:none;margin-bottom:14px">
+            <textarea id="slyDirectText" placeholder="이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요..."
+              style="width:100%;min-height:180px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;line-height:1.6;resize:vertical;outline:none;font-family:inherit"></textarea>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Ctrl+A → Ctrl+C로 복사 후 여기에 붙여넣기</div>
+          </div>
+          <div class="sly-dropzone" id="slyDropzone2">
+            <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
+            <div class="sly-dz-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17,8 12,3 7,8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <div class="sly-dz-title">파일을 끌어다 놓거나 클릭하세요</div>
+            <div class="sly-dz-sub">최대 32MB</div>
+            <div class="sly-dz-types" id="slyDzTypes2">
+              <span class="sly-type-chip">HWP</span>
+              <span class="sly-type-chip">DOCX</span>
+              <span class="sly-type-chip">PDF</span>
+              <span class="sly-type-chip">TXT</span>
+            </div>
+          </div>
+          <div class="sly-file-preview" id="slyFilePrev2">
+            <div class="sly-file-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+              </svg>
+            </div>
+            <div class="sly-file-info">
+              <div class="sly-file-name" id="slyFileName2"></div>
+              <div class="sly-file-size" id="slyFileSize2"></div>
+            </div>
+            <button class="sly-file-remove" onclick="_slyRemoveFile2()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="sly-optional" id="slyJdWrap2">
+            <label id="slyJdLabel2">지원 공고 붙여넣기 (선택)</label>
+            <textarea id="slyJdText2" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
+          </div>
+          <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            AI 분석 시작
           </button>
+          <div class="sly-cost-note" id="slyCostNote2">분석 시 10P 차감됩니다</div>
         </div>
-        <div id="slyBizResult" style="display:none"></div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-top:14px;margin-bottom:8px;font-weight:600">사업자등록증 PDF 업로드 (선택 — AI 상세 분석)</div>
-      </div>
 
-      <!-- 건강보험 / 소득 / 기타 -->
-      <div id="slyIssueLinks" style="display:none">
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px" id="slyIssueLinkGrid"></div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 파일 업로드</div>
-      </div>
-
-    </div><!-- close slyIssueCard -->
-
-    <!-- Regular upload card (non-issue services) -->
-    <div class="sly-card" id="slyUploadCard">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div class="sly-card-title" style="margin-bottom:0" id="slyUploadTitle">파일 업로드</div>
-        <div id="slyServiceBadge" style="background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700"></div>
-      </div>
-      <!-- 입력 모드 탭 -->
-      <div id="slyInputModeTabs" style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg);border-radius:10px;padding:4px">
-        <button id="slyModeFile" onclick="_slySetInputMode('file')"
-          style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:var(--gold);color:var(--navy);transition:all .2s">
-          파일 업로드
-        </button>
-        <button id="slyModeText" onclick="_slySetInputMode('text')"
-          style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all .2s">
-          텍스트 직접 입력
-        </button>
-      </div>
-      <!-- 텍스트 입력 모드 -->
-      <div id="slyTextInputWrap" style="display:none;margin-bottom:14px">
-        <textarea id="slyDirectText" placeholder="이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요..."
-          style="width:100%;min-height:180px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;line-height:1.6;resize:vertical;outline:none;font-family:inherit"></textarea>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Ctrl+A → Ctrl+C로 복사 후 여기에 붙여넣기</div>
-      </div>
-      <div class="sly-dropzone" id="slyDropzone2">
-        <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
-        <div class="sly-dz-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17,8 12,3 7,8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
+        <!-- Progress -->
+        <div class="sly-card sly-progress" id="slyProgress">
+          <svg class="sly-progress-ring" viewBox="0 0 64 64">
+            <circle class="track" cx="32" cy="32" r="26"/>
+            <circle class="fill" cx="32" cy="32" r="26" stroke-dasharray="163" stroke-dashoffset="163"/>
           </svg>
+          <div class="sly-progress-label" id="slyProgLabel">AI 분석 요청 중...</div>
+          <div class="sly-progress-sub">약 10~30초 소요됩니다</div>
         </div>
-        <div class="sly-dz-title">파일을 끌어다 놓거나 클릭하세요</div>
-        <div class="sly-dz-sub">최대 32MB</div>
-        <div class="sly-dz-types" id="slyDzTypes2">
-          <span class="sly-type-chip">HWP</span>
-          <span class="sly-type-chip">DOCX</span>
-          <span class="sly-type-chip">PDF</span>
-          <span class="sly-type-chip">TXT</span>
-        </div>
-      </div>
-      <div class="sly-file-preview" id="slyFilePrev2">
-        <div class="sly-file-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-          </svg>
-        </div>
-        <div class="sly-file-info">
-          <div class="sly-file-name" id="slyFileName2"></div>
-          <div class="sly-file-size" id="slyFileSize2"></div>
-        </div>
-        <button class="sly-file-remove" onclick="_slyRemoveFile2()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="sly-optional" id="slyJdWrap2">
-        <label id="slyJdLabel2">지원 공고 붙여넣기 (선택)</label>
-        <textarea id="slyJdText2" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
-      </div>
-      <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        AI 분석 시작
-      </button>
-      <div class="sly-cost-note" id="slyCostNote2">분석 시 10P 차감됩니다</div>
-    </div>
 
-    <!-- Progress -->
-    <div class="sly-card sly-progress" id="slyProgress">
-      <svg class="sly-progress-ring" viewBox="0 0 64 64">
-        <circle class="track" cx="32" cy="32" r="26"/>
-        <circle class="fill" cx="32" cy="32" r="26" stroke-dasharray="163" stroke-dashoffset="163"/>
-      </svg>
-      <div class="sly-progress-label" id="slyProgLabel">AI 분석 요청 중...</div>
-      <div class="sly-progress-sub">약 10~30초 소요됩니다</div>
-    </div>
+        <!-- Results -->
+        <div id="slyResult" class="sly-result"></div>
 
-    <!-- Results -->
-    <div id="slyResult" class="sly-result"></div>
+      </div><!-- .sly-drawer-body -->
+    </div><!-- .sly-drawer -->
   </div>
 </main>
 
