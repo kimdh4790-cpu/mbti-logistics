@@ -271,11 +271,12 @@ jobs:
               MAP="-map 0:v -map [audio]"
             fi
 
-            echo "[$p] 나레이션+자막 합성 중..."
+            VID_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$PROMO" 2>/dev/null || echo "60")
+            echo "[$p] 나레이션+자막 합성 중... (영상길이: ${VID_DUR}s)"
             ffmpeg -y -i "$PROMO" $AUDIO_ARGS \
               -filter_complex "${AUDIO_FILTER}" \
               -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1${SUBTITLE_FILTER}" \
-              $MAP -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k "$MIXED" \
+              $MAP -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -t "$VID_DUR" "$MIXED" \
               && mv "$MIXED" "$PROMO" \
               && cp "$PROMO" "output/${p}-reels.mp4" \
               && echo "[$p] 합성 완료" \
