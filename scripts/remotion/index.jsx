@@ -15,10 +15,10 @@ function Root() {
     <>
       <Composition id="FiloPromo"     component={FiloPromo}     durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultFiloProps} />
       <Composition id="FiloReels"     component={FiloPromo}     durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultFiloProps} />
-      <Composition id="DonwayPromo"   component={DonwayPromo}   durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultDonwayProps} />
-      <Composition id="DonwayReels"   component={DonwayPromo}   durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultDonwayProps} />
-      <Composition id="YongchaPromo"  component={YongchaPromo}  durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
-      <Composition id="YongchaReels"  component={YongchaPromo}  durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="DonwayPromo"   component={DonwayPromo}   durationInFrames={990} fps={30} width={1080} height={1920} defaultProps={defaultDonwayProps} />
+      <Composition id="DonwayReels"   component={DonwayPromo}   durationInFrames={990} fps={30} width={1080} height={1920} defaultProps={defaultDonwayProps} />
+      <Composition id="YongchaPromo"  component={YongchaPromo}  durationInFrames={990} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaReels"  component={YongchaPromo}  durationInFrames={990} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
       <Composition id="InflearnPromo" component={InflearnPromo} durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
       <Composition id="InflearnReels" component={InflearnPromo} durationInFrames={900} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
     </>

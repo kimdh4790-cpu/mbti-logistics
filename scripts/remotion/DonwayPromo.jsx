@@ -462,7 +462,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "기사들이 먼저 확인 문자를 보내요" },
     { from: 570, to: 690, text: "기사 1인당 2,500원이에요" },
     { from: 690, to: 780, text: "이 가격에 이게 된다고?" },
-    { from: 780, to: 900, text: "donway.ai.kr 7일 무료체험" },
+    { from: 780, to: 990, text:"donway.ai.kr 7일 무료체험" },
   ],
   // B: 기사들이 먼저 연락하는 이유
   [
@@ -474,7 +474,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "이의제기가 0건이 됐어요" },
     { from: 570, to: 690, text: "300명 동시 발송이 3초면 끝나요" },
     { from: 690, to: 780, text: "기사 신뢰 = 매출로 직결됩니다" },
-    { from: 780, to: 900, text: "donway.ai.kr 무료체험 가능" },
+    { from: 780, to: 990, text:"donway.ai.kr 무료체험 가능" },
   ],
   // C: 이 실수가 기사 이탈 1위
   [
@@ -486,7 +486,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "기사들이 오래 남는 이유예요" },
     { from: 570, to: 690, text: "기사 1인당 2,500원으로" },
     { from: 690, to: 780, text: "신뢰를 살 수 있어요" },
-    { from: 780, to: 900, text: "donway.ai.kr 7일 무료체험" },
+    { from: 780, to: 990, text:"donway.ai.kr 7일 무료체험" },
   ],
   // D: 왜 갑자기 다들 쓰냐면
   [
@@ -498,7 +498,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "전부 포함이에요" },
     { from: 570, to: 690, text: "50명이면 12만5천원" },
     { from: 690, to: 780, text: "모르면 손해 보는 거잖아요" },
-    { from: 780, to: 900, text: "donway.ai.kr 7일 무료" },
+    { from: 780, to: 990, text:"donway.ai.kr 7일 무료" },
   ],
 ];
 var SUBTITLES_DATA = SUBTITLES_ALL[WEEK_VARIANT];
@@ -538,7 +538,7 @@ function DonwayPromo(props) {
     { component: SceneExcel,    start: 150, duration: 210 },
     { component: SceneAlimtalk, start: 360, duration: 210 },
     { component: ScenePricing,  start: 570, duration: 210 },
-    { component: SceneCTA,      start: 780, duration: 120 },
+    { component: SceneCTA,      start: 780, duration: 210 },
   ];
   return (
     <AbsoluteFill style={{ background: T.bg }}>

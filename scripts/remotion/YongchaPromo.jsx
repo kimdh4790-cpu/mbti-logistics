@@ -401,7 +401,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "주유소 최저가까지 같이 안내해요" },
     { from: 570, to: 690, text: "기사님은 월 15만 원" },
     { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
-    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+    { from: 780, to: 990, text: "서비스 오픈 준비중 · yongcha.app" },
   ],
   // B: 초록 — 수수료 타겟 (주선 수수료 왜 아직 내고 있어요?)
   [
@@ -413,7 +413,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "주유비도 아끼는 스마트한 운행" },
     { from: 570, to: 690, text: "기사님은 월 15만 원" },
     { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
-    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+    { from: 780, to: 990, text: "서비스 오픈 준비중 · yongcha.app" },
   ],
   // C: 주황 — 소장 타겟 (기사 구하는데 하루가 다 가죠?)
   [
@@ -425,7 +425,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "세금계산서도 자동으로 발행돼요" },
     { from: 570, to: 690, text: "기사님은 월 15만 원" },
     { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
-    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+    { from: 780, to: 990, text: "서비스 오픈 준비중 · yongcha.app" },
   ],
   // D: 빨강 — 충격 타겟 (연간 3천만원이 어디서 새는지 알아요?)
   [
@@ -437,7 +437,7 @@ var SUBTITLES_ALL = [
     { from: 480, to: 570, text: "팝빌 연동 세금계산서 자동 발행" },
     { from: 570, to: 690, text: "기사님은 월 15만 원" },
     { from: 690, to: 780, text: "소장님은 월 5만 원이에요" },
-    { from: 780, to: 900, text: "서비스 오픈 준비중 · yongcha.app" },
+    { from: 780, to: 990, text: "서비스 오픈 준비중 · yongcha.app" },
   ],
 ];
 var SUBTITLES_DATA = SUBTITLES_ALL[WEEK_VARIANT];
@@ -477,7 +477,7 @@ function YongchaPromo(props) {
     { component: SceneMatching, start: 150, duration: 210 },
     { component: SceneAI,       start: 360, duration: 210 },
     { component: ScenePricing,  start: 570, duration: 210 },
-    { component: SceneCTA,      start: 780, duration: 120 },
+    { component: SceneCTA,      start: 780, duration: 210 },
   ];
   return (
     <AbsoluteFill style={{ background: DARK }}>
