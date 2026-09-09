@@ -108,7 +108,7 @@ async function generateTextToVideo(product) {
   console.log(`  프롬프트: ${cfg.text.slice(0, 60)}...`);
 
   const task = await runwayPost('/text_to_video', {
-    model:       'gen4_turbo',
+    model:       'gen4.5',
     promptText:  cfg.text,
     ratio:       cfg.ratio,
     duration:    cfg.duration,
@@ -137,7 +137,7 @@ async function generateImageToVideo(product, imagePath) {
   const dataUrl = `data:${mime};base64,${imgBuf.toString('base64')}`;
 
   const task = await runwayPost('/image_to_video', {
-    model:        'gen4_turbo',
+    model:        'gen4.5',
     promptImage:  dataUrl,
     promptText:   cfg.text,
     ratio:        cfg.ratio,
