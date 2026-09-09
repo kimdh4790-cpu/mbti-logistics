@@ -82,6 +82,14 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 ---
 
+## 변경 이력
+
+| 날짜 | 파일 | 내용 |
+|------|------|------|
+| 2026-09-09 | scripts/content/variants/yongcha-variants.json | 용차앱 A/B/C/D variants 전면 재기획: 포맷 표준화(product·variants 래퍼·angle·narration 문자열 배열·slides 문자열 배열·instagram_caption 추가), 각도 재설계(직접거래 투명성/기사 수입 극대화/소장 기사 직접 연결/기존 주선 방식 비교), 부가통신사업자 포지셔닝 전면 적용 |
+
+---
+
 ## 현재 상태 (2026-08-27 기준)
 
 ### 완료된 것
