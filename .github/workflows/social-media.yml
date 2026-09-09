@@ -169,17 +169,20 @@ jobs:
             fi
           }
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha inflearn dine; do
+            # donway는 Remotion 사용 (Runway AI 한글 hallucination 방지)
+            for p in filo yongcha inflearn dine; do
               runway_run $p \
                 && cp output/${p}-runway.mp4 output/${p}-promo.mp4 \
                 && cp output/${p}-runway.mp4 output/${p}-reels.mp4 \
                 || echo "[$p] Runway 생성 실패 (Remotion 폴백)"
             done
-          else
+          elif [ "$PRODUCT" != "donway" ]; then
             runway_run $PRODUCT \
               && cp output/${PRODUCT}-runway.mp4 output/${PRODUCT}-promo.mp4 \
               && cp output/${PRODUCT}-runway.mp4 output/${PRODUCT}-reels.mp4 \
               || echo "[$PRODUCT] Runway 생성 실패 (Remotion 폴백)"
+          else
+            echo "[donway] Runway 스킵 — Remotion 코드 영상 사용"
           fi
 
       - name: DONWAY anime.js 영상 생성 (비교용 — $0)
@@ -232,18 +235,63 @@ jobs:
       - name: FFmpeg 영상 편집
         if: ${{ contains(env.STEPS, 'compose') }}
         run: |
-          # Remotion 렌더 완료 제품(filo/donway/yongcha/inflearn)은 FFmpeg 편집 불필요
-          # Playwright 녹화 제품(dine/mbtico)만 FFmpeg 합성
+          # Runway/Remotion 출력(promo.mp4)에 나레이션+자막 합성
+          mix_audio() {
+            local p=$1
+            local PROMO="output/${p}-promo.mp4"
+            local NAR="output/${p}-narration.mp3"
+            local BGM="assets/bgm/background.mp3"
+            local SRT="scripts/content/${p}-subtitles.srt"
+            local ASS_FILE="output/${p}-subtitles.ass"
+            local MIXED="output/${p}-mixed.mp4"
+
+            if [ ! -f "$NAR" ] && [ ! -f "$BGM" ]; then
+              echo "[$p] 나레이션/BGM 없음 — 믹싱 스킵"
+              return
+            fi
+
+            SUBTITLE_FILTER=""
+            if [ -f "$SRT" ]; then
+              node scripts/compose/srt-to-ass.js "$SRT" "$ASS_FILE" 2>/dev/null \
+                && SUBTITLE_FILTER=",ass='${ASS_FILE}'" \
+                || echo "[$p] ASS 변환 실패 — 자막 없이 진행"
+            fi
+
+            if [ -f "$NAR" ] && [ -f "$BGM" ]; then
+              AUDIO_ARGS="-i $NAR -i $BGM"
+              AUDIO_FILTER="[1:a]volume=1.0[nar];[2:a]volume=0.10[bgm];[nar][bgm]amix=inputs=2:duration=first:normalize=0[audio]"
+              MAP="-map 0:v -map [audio]"
+            elif [ -f "$NAR" ]; then
+              AUDIO_ARGS="-i $NAR"
+              AUDIO_FILTER="[1:a]volume=1.0[audio]"
+              MAP="-map 0:v -map [audio]"
+            else
+              AUDIO_ARGS="-i $BGM"
+              AUDIO_FILTER="[1:a]volume=1.0[audio]"
+              MAP="-map 0:v -map [audio]"
+            fi
+
+            echo "[$p] 나레이션+자막 합성 중..."
+            ffmpeg -y -i "$PROMO" $AUDIO_ARGS \
+              -filter_complex "${AUDIO_FILTER}" \
+              -vf "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1${SUBTITLE_FILTER}" \
+              $MAP -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -shortest "$MIXED" \
+              && mv "$MIXED" "$PROMO" \
+              && cp "$PROMO" "output/${p}-reels.mp4" \
+              && echo "[$p] 합성 완료" \
+              || echo "[$p] 합성 실패 — 원본 사용"
+          }
+
           if [ "$PRODUCT" = "all" ]; then
             for p in filo donway yongcha inflearn; do
-              [ -f "output/${p}-promo.mp4" ] && echo "[$p] Remotion 영상 준비됨" || echo "[$p] Remotion 영상 없음"
+              [ -f "output/${p}-promo.mp4" ] && mix_audio $p || echo "[$p] promo.mp4 없음"
             done
             for p in dine mbtico; do
               RAW="output/${p}-raw.webm"
               [ -f "$RAW" ] && bash scripts/compose/compose-video.sh $p || echo "[$p] 녹화 파일 없음: 건너뜀"
             done
           elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
-            [ -f "output/${PRODUCT}-promo.mp4" ] && echo "[$PRODUCT] Remotion 영상 준비됨 (FFmpeg 건너뜀)" || echo "[$PRODUCT] Remotion 영상 없음 — compose 건너뜀"
+            [ -f "output/${PRODUCT}-promo.mp4" ] && mix_audio $PRODUCT || echo "[$PRODUCT] promo.mp4 없음 — compose 건너뜀"
           else
             bash scripts/compose/compose-video.sh $PRODUCT
           fi
