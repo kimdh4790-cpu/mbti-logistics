@@ -7,8 +7,9 @@
  * API 문서: https://dev.runwayml.com/docs
  */
 
-const fs   = require('fs');
-const path = require('path');
+const fs            = require('fs');
+const path          = require('path');
+const { execSync }  = require('child_process');
 
 const API_BASE = 'https://api.dev.runwayml.com/v1';
 const API_KEY  = process.env.RUNWAY_API_KEY;
@@ -154,6 +155,75 @@ async function generateImageToVideo(product, imagePath) {
   return outPath;
 }
 
+// DONWAY 씬별 이미지-투-비디오 설정 (3씬 × 5초 = 15초)
+const DONWAY_SCENES = [
+  {
+    imagePath: path.join(OUT_DIR, 'donway-mock-settle.png'),
+    text: 'smooth cinematic zoom-in on dark premium fintech dashboard, payment numbers glowing gold, settlement totals animating, professional app interface, dramatic lighting, subtle particle effects',
+    outName: 'donway-scene-1',
+  },
+  {
+    imagePath: path.join(OUT_DIR, 'donway-mock-excel.png'),
+    text: 'data rows processing animation across dark business software UI, numbers flowing into cells, progress bar filling smoothly, professional fintech app, clean modern tech aesthetic',
+    outName: 'donway-scene-2',
+  },
+  {
+    imagePath: path.join(OUT_DIR, 'donway-mock-alimtalk.png'),
+    text: 'mobile notification appearing smoothly on dark screen, Kakao message bubble sliding in with glow, delivery payment confirmation UI, professional app animation, premium dark interface',
+    outName: 'donway-scene-3',
+  },
+];
+
+async function generateDonwayScenes() {
+  console.log('\n[DONWAY] 3씬 이미지→영상 생성 시작...');
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+
+  const clipPaths = [];
+
+  for (let i = 0; i < DONWAY_SCENES.length; i++) {
+    const scene = DONWAY_SCENES[i];
+    const outPath = path.join(OUT_DIR, `${scene.outName}.mp4`);
+
+    if (!fs.existsSync(scene.imagePath)) {
+      throw new Error(`목업 이미지 없음: ${scene.imagePath}\n  → 먼저 node scripts/capture/generate-donway-mockups.js 실행`);
+    }
+
+    console.log(`\n[씬 ${i + 1}/3] ${scene.outName}`);
+    console.log(`  이미지: ${scene.imagePath}`);
+
+    const imgBuf  = fs.readFileSync(scene.imagePath);
+    const dataUrl = `data:image/png;base64,${imgBuf.toString('base64')}`;
+
+    const task = await runwayPost('/image_to_video', {
+      model:       'gen4.5',
+      promptImage: dataUrl,
+      promptText:  scene.text,
+      ratio:       '720:1280',
+      duration:    5,
+      watermark:   false,
+    });
+
+    console.log(`  Task ID: ${task.id}`);
+    const result = await pollTask(task.id);
+    await downloadVideo(result.output[0], outPath);
+    clipPaths.push(outPath);
+  }
+
+  // FFmpeg로 3씬 concat → donway-runway.mp4
+  const finalPath = path.join(OUT_DIR, 'donway-runway.mp4');
+  const listFile  = path.join(OUT_DIR, 'donway-concat.txt');
+  fs.writeFileSync(listFile, clipPaths.map(p => `file '${p}'`).join('\n'));
+
+  console.log('\n[FFmpeg] 3씬 합치기...');
+  execSync(
+    `ffmpeg -y -f concat -safe 0 -i "${listFile}" -c copy "${finalPath}"`,
+    { stdio: 'inherit' },
+  );
+  fs.unlinkSync(listFile);
+  console.log(`  저장: ${finalPath}`);
+  return finalPath;
+}
+
 const args    = process.argv.slice(2);
 const product = args[args.indexOf('--product') + 1] || 'filo';
 const mode    = args[args.indexOf('--mode')    + 1] || 'text';
@@ -161,7 +231,9 @@ const imgArg  = args[args.indexOf('--image')   + 1];
 
 (async () => {
   try {
-    if (mode === 'image' && imgArg) {
+    if (mode === 'scenes' && product === 'donway') {
+      await generateDonwayScenes();
+    } else if (mode === 'image' && imgArg) {
       await generateImageToVideo(product, imgArg);
     } else {
       await generateTextToVideo(product);

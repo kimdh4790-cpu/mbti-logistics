@@ -141,6 +141,15 @@ jobs:
             node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 건너뜀"
           fi
 
+      - name: DONWAY 목업 스크린샷 생성
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'donway' || env.PRODUCT == 'all') }}
+        run: |
+          mkdir -p output
+          echo "[DONWAY] 목업 PNG 생성..."
+          node scripts/capture/generate-donway-mockups.js \
+            && echo "[DONWAY] 목업 3종 생성 완료" \
+            || echo "[DONWAY] 목업 생성 실패 — Runway image 모드 건너뜀"
+
       - name: Runway AI 영상 생성 (Gen-4 Turbo)
         if: ${{ contains(env.STEPS, 'record') }}
         env:
@@ -149,8 +158,13 @@ jobs:
           mkdir -p output
           runway_run() {
             local p=$1
-            echo "[$p] Runway 영상 생성..."
-            node scripts/runway-generate.js --product $p --mode text
+            if [ "$p" = "donway" ] && [ -f "output/donway-mock-settle.png" ]; then
+              echo "[$p] Runway 이미지→영상 (3씬 목업 모드)..."
+              node scripts/runway-generate.js --product $p --mode scenes
+            else
+              echo "[$p] Runway 텍스트→영상..."
+              node scripts/runway-generate.js --product $p --mode text
+            fi
           }
           if [ "$PRODUCT" = "all" ]; then
             for p in filo donway yongcha inflearn dine; do
