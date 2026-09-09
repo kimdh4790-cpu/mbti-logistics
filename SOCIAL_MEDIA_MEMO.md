@@ -56,7 +56,7 @@ Settings → Secrets and variables → Actions → New repository secret
 | `YOUTUBE_REFRESH_TOKEN` | Oracle VM `~/.env` → YOUTUBE_REFRESH_TOKEN | ✅ 등록 완료 |
 | `GOOGLE_TTS_API_KEY` | Oracle VM `~/.env` → GOOGLE_TTS_API_KEY | ✅ 등록 완료 |
 | `FISH_AUDIO_VOICE_ID` | `208686d6952741e28f43fdacc4b65c14` | ✅ 등록 완료 (2026-09-09) |
-| `FISH_AUDIO_API_KEY` | fish.audio → Developers → Get API key | ⏳ **발급 후 등록 필요** |
+| `FISH_AUDIO_API_KEY` | fish.audio → Developers → API 키 생성 | ✅ 등록 완료 (2026-09-09) |
 
 **Oracle VM에서 값 확인 방법 (SSH 불필요):**
 1. Oracle Cloud Console 브라우저 로그인 (kimdh4790@gmail.com)
