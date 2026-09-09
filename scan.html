@@ -2030,7 +2030,7 @@ async function _slyDownload(ext) {
   if (!_slyJobId) { _slyToast('먼저 분석을 완료해주세요'); return; }
   try {
     const token = await window._slyGetToken();
-    const r = await fetch(`/api/seolyuhana/download/${_slyJobId}?ext=${ext}`, {
+    const r = await fetch(`/api/seolyuhana/download/${_slyJobId}?type=${ext}`, {
       headers: { 'Authorization': 'Bearer ' + token }
     });
     if (!r.ok) throw new Error('다운로드 실패');
@@ -2082,6 +2082,8 @@ window._slySelectCharge = _slySelectCharge;
 
 async function _slyRequestCharge() {
   if (!window._slyUser) { _slyToast('로그인이 필요합니다'); return; }
+  const depositorName = (document.getElementById('slyDepositorName')?.value || '').trim();
+  if (!depositorName) { _slyToast('입금자명을 입력해주세요'); document.getElementById('slyDepositorName')?.focus(); return; }
   const plans = [
     { pts: 5000,   price: 5000 },
     { pts: 10000,  price: 10000 },
@@ -2096,7 +2098,7 @@ async function _slyRequestCharge() {
     const r = await fetch('/api/seolyuhana/point-request', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ points: plan.pts, amount: plan.price })
+      body: JSON.stringify({ points: plan.pts, amount: plan.price, depositorName })
     });
     if (!r.ok) throw new Error((await r.json()).error || '신청 실패');
     _slyToast(`${plan.pts}P 충전 신청 완료! 입금 후 관리자 승인 시 즉시 충전됩니다.`, 5000);
@@ -2291,8 +2293,9 @@ async function _slyAutoAnalyzeRegistry(encodedPdf, encodedAddr) {
     if (!d.ok) throw new Error(d.error || '분석 실패');
     _slyToast('분석 시작! 잠시 후 결과가 표시됩니다.');
     window._slyCurrentJobId = d.jobId;
-    document.getElementById('slyProgressSection').style.display = 'block';
-    _slyPollResult(d.jobId);
+    _slyJobId = d.jobId;
+    document.getElementById('slyProgress')?.classList.add('visible');
+    pollResult(d.jobId);
   } catch(e) { _slyToast('분석 실패: ' + e.message); }
 }
 window._slyAutoAnalyzeRegistry = _slyAutoAnalyzeRegistry;
@@ -2322,8 +2325,9 @@ async function _slyAutoAnalyzeRegistryText(encodedText, encodedAddr) {
     if (!d.ok) throw new Error(d.error || '분석 실패');
     _slyToast('분석 시작! 잠시 후 결과가 표시됩니다.');
     window._slyCurrentJobId = d.jobId;
-    document.getElementById('slyProgressSection').style.display = 'block';
-    _slyPollResult(d.jobId);
+    _slyJobId = d.jobId;
+    document.getElementById('slyProgress')?.classList.add('visible');
+    pollResult(d.jobId);
   } catch(e) { _slyToast('분석 실패: ' + e.message); }
 }
 window._slyAutoAnalyzeRegistryText = _slyAutoAnalyzeRegistryText;
@@ -3000,6 +3004,8 @@ document.addEventListener('DOMContentLoaded', () => {
       입금 후 관리자 확인 시 <strong>즉시 포인트 충전</strong>됩니다.<br>
       <span style="color:var(--text-muted)">신청 후 영업일 기준 1일 이내 처리</span>
     </div>
+    <input id="slyDepositorName" type="text" placeholder="입금자명 (예: 홍길동)" maxlength="20"
+      style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:14px;margin-bottom:10px;outline:none">
     <button class="sly-request-btn" onclick="_slyRequestCharge()">충전 신청하기</button>
   </div>
 </div>

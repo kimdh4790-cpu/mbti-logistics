@@ -3061,11 +3061,20 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const uid = _au.localId || _au;
             const token = await getAccessToken(env);
             const doc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
-            const balance = doc?.fields?.balance?.integerValue|0 || 0;
+            let balance = doc?.fields?.balance?.integerValue|0 || 0;
+            let signupBonus = false;
+            if (!doc?.fields) {
+              const SIGNUP_BONUS = 2900;
+              await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:SIGNUP_BONUS},createdAt:{stringValue:new Date().toISOString()}});
+              const bId = crypto.randomUUID();
+              await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:SIGNUP_BONUS},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:SIGNUP_BONUS},createdAt:{stringValue:new Date().toISOString()}});
+              balance = SIGNUP_BONUS;
+              signupBonus = true;
+            }
             const histRes = await fetch(`${FS_BASE}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'sly_point_history'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:uid}}},orderBy:[{field:{fieldPath:'createdAt'},direction:'DESCENDING'}],limit:5}})});
             const histRows = await histRes.json();
             const history = (Array.isArray(histRows)?histRows:[]).filter(r=>r.document).map(r=>{const f=r.document.fields||{};return{type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};});
-            return Response.json({ok:true,balance,history},{headers});
+            return Response.json({ok:true,balance,history,signupBonus},{headers});
           } catch(e) { return Response.json({ok:false,error:e.message},{status:500,headers}); }
         }
 
@@ -3079,7 +3088,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const depositorName = (body.depositorName||'').trim();
             const amount = parseInt(body.amount) || 0;
             if (!depositorName) return Response.json({ok:false,error:'입금자명을 입력하세요.'},{status:400,headers});
-            if (amount < 10000) return Response.json({ok:false,error:'최소 충전 금액은 10,000원입니다.'},{status:400,headers});
+            if (amount < 5000) return Response.json({ok:false,error:'최소 충전 금액은 5,000원입니다.'},{status:400,headers});
             const token = await getAccessToken(env);
             const reqId = crypto.randomUUID();
             await fsPatch(token,`${FS_BASE}/sly_point_requests/${reqId}`,{uid:{stringValue:uid},depositorName:{stringValue:depositorName},amount:{integerValue:amount},points:{integerValue:amount},status:{stringValue:'pending'},createdAt:{stringValue:new Date().toISOString()}});
