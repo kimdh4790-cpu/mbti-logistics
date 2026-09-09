@@ -274,6 +274,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **소액 충전 플랜 신설**: ₩5,000/₩10,000 플랜 추가 (가격 구조 충돌 해결 — 최저 2,900P 서비스 이용 가능). 충전 카드 4→6종 |
 | 2026-09-07 | **biz-status encodeURIComponent 제거**: BIZ_API_KEY가 이미 URL인코딩됨 → 이중인코딩 제거로 NTS API 인증 정상화 |
 | 2026-09-07 | **Cloudflare Secrets 전수확인**: 대시보드 스크린샷으로 13개 키 모두 설정 확인 (SCAN_MEMO.md 등록) |
+| 2026-09-09 | **크몽+당근 스타일 UX 전면 개편**: renderCatGrid→renderServiceList+renderChips. 카테고리 칩(이모지+텍스트 가로스크롤) + 서비스 세로목록 + 바텀 드로어(_slyOpenDrawer/_slyCloseDrawer). 영상·미디어 카테고리 신규(숏폼 스크립트 29,900P / AI사진 19,900P / 자막생성 14,900P). 총 서비스 15→18종 |
 | 2026-09-07 | **시장조사 전수조사 v2**: 경쟁사 23곳 5개 카테고리 분석, 가격·수익화·마케팅 전략 보고서 작성 (Artifact 게시) |
 | 2026-09-07 | **Oracle 서버 Playwright 전환**: puppeteer-core → playwright (자체 Chromium ARM 번들). dnf chromium 미지원 → npx playwright install chromium으로 해결. PM2로 oracle-server 영구실행 (--cwd ~/mbti-logistics). VCN Security List TCP 3100 Ingress 추가. 이제 IROS 자동 발급 실동작 확인 완료 |
 | 2026-09-07 | **랜딩 디자인 v2**: 히어로 배경 다크 네이비 그라데이션(#08101f→#162540)+핑크·민트 방사 글로우. 히어로 텍스트 전체 흰색 오버라이드(h1:#FFF, p:rgba(255,255,255,.72), 눈썹:rgba(244,114,182,.18)). 가격 카드 정확한 금액 표기 (19,900P~49,900P). 신규 가입 2,900P 지급 로직(_worker.js signupBonus) + 토스트 표시. 텍스트 직접 입력 탭 추가 (파일 없이도 분석 가능). sly_points → scan_points 컬렉션 메모 불일치 확인 필요 |
