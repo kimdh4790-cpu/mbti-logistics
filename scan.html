@@ -1447,7 +1447,8 @@ body {
   transform: translateX(-50%) translateY(100%);
   width: 100%;
   max-width: 640px;
-  max-height: 88vh;
+  min-height: 88vh;
+  max-height: 93vh;
   background: var(--surface);
   border-radius: 24px 24px 0 0;
   z-index: 301;
@@ -1486,6 +1487,40 @@ body {
   flex-shrink: 0; margin-left: 12px;
 }
 .sly-drawer-scroll { flex: 1; overflow-y: auto; padding-bottom: 4px; }
+/* 나레이션 진행 단계 */
+.sly-prog-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.sly-prog-step { display: flex; align-items: center; gap: 12px; opacity: .35; transition: opacity .3s; }
+.sly-prog-step.active { opacity: 1; }
+.sly-prog-step.done { opacity: .6; }
+.sly-step-dot {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--border); background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: all .3s;
+}
+.sly-prog-step.active .sly-step-dot { border-color: var(--gold); background: var(--gold); }
+.sly-prog-step.done .sly-step-dot { border-color: #16A34A; background: #16A34A; color: #fff; font-size: 12px; }
+.sly-step-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+.sly-prog-step.active .sly-step-dot::after { background: var(--navy); animation: slyPulse .8s infinite alternate; }
+.sly-prog-step.done .sly-step-dot::after { display: none; }
+.sly-prog-step.done .sly-step-dot::before { content: '✓'; font-size: 13px; font-weight: 700; }
+.sly-step-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.sly-prog-step:not(.active):not(.done) .sly-step-text { color: var(--text-muted); }
+@keyframes slyPulse { to { transform: scale(1.4); } }
+/* 서비스 전용 커스텀 필드 */
+.sly-custom-section { background: var(--bg); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.sly-custom-label { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: block; }
+.sly-custom-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-primary); font-size: 14px; font-family: inherit; box-sizing: border-box; }
+.sly-custom-input:focus { outline: none; border-color: var(--gold); }
+.sly-date-row { display: flex; gap: 8px; }
+.sly-date-row .sly-custom-input { flex: 1; }
+.sly-platform-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.sly-platform-chip { padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--text-secondary); transition: all .2s; }
+.sly-platform-chip.sel { background: var(--navy); color: var(--gold); border-color: var(--gold); }
+/* 샘플 결과 미리보기 칩 */
+.sly-sample-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--gold); background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3); border-radius: 10px; padding: 3px 8px; cursor: pointer; margin-top: 4px; }
+.sly-sample-preview { display: none; margin-top: 8px; padding: 10px 12px; background: var(--bg); border-radius: 10px; border-left: 3px solid var(--gold); font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+.sly-sample-preview.open { display: block; }
 .sly-drawer-body { padding: 16px 16px 8px; }
 .sly-drawer-footer {
   flex-shrink: 0;
@@ -2011,9 +2046,125 @@ function _slySelectService(id) {
 
   const badge = document.getElementById('slyServiceBadge');
   if (badge) badge.textContent = `${svc.cost.toLocaleString()}P`;
+
+  // ── 서비스별 전용 커스텀 UI ──
+  // 사주풀이: 생년월일·생시 입력 먼저
+  let sajuWrap = document.getElementById('slySajuWrap');
+  if (!sajuWrap) {
+    sajuWrap = document.createElement('div');
+    sajuWrap.id = 'slySajuWrap';
+    sajuWrap.className = 'sly-custom-section';
+    sajuWrap.innerHTML = `<span class="sly-custom-label">✨ 생년월일·생시 입력 (선택 — 이력서 없을 때 사용)</span>
+      <div class="sly-date-row" style="margin-bottom:8px">
+        <input class="sly-custom-input" id="slySajuName" placeholder="이름 (예: 홍길동)">
+        <input class="sly-custom-input" id="slySajuBirth" type="text" placeholder="생년월일 (예: 1995-03-22)">
+        <input class="sly-custom-input" id="slySajuTime" type="text" placeholder="생시 (예: 자시, 오전 11시)">
+      </div>`;
+    uploadCard?.parentNode?.insertBefore(sajuWrap, uploadCard);
+  }
+  sajuWrap.style.display = svc.id === 'career_saju' ? 'block' : 'none';
+
+  // 숏폼 스크립트: 브랜드·플랫폼 입력 먼저
+  let shortformWrap = document.getElementById('slyShortformWrap');
+  if (!shortformWrap) {
+    shortformWrap = document.createElement('div');
+    shortformWrap.id = 'slyShortformWrap';
+    shortformWrap.className = 'sly-custom-section';
+    shortformWrap.innerHTML = `<span class="sly-custom-label">🎬 영상 정보</span>
+      <input class="sly-custom-input" id="slyShortBrand" placeholder="브랜드/제품명 (예: 엠비티아이 FILO)" style="margin-bottom:8px">
+      <input class="sly-custom-input" id="slyShortMsg" placeholder="핵심 메시지 (예: 매장 관리 앱, 월 3만원)" style="margin-bottom:8px">
+      <div class="sly-custom-label" style="margin-top:4px">타겟 플랫폼</div>
+      <div class="sly-platform-chips">
+        <div class="sly-platform-chip sel" data-plat="instagram">Instagram Reels</div>
+        <div class="sly-platform-chip" data-plat="tiktok">TikTok</div>
+        <div class="sly-platform-chip" data-plat="youtube">YouTube Shorts</div>
+      </div>`;
+    shortformWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
+      shortformWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
+      this.classList.add('sel');
+    }));
+    uploadCard?.parentNode?.insertBefore(shortformWrap, uploadCard);
+  }
+  shortformWrap.style.display = svc.id === 'shortform' ? 'block' : 'none';
+
+  // 자막 생성: 언어 선택 + 텍스트 안내
+  let subtitleWrap = document.getElementById('slySubtitleWrap');
+  if (!subtitleWrap) {
+    subtitleWrap = document.createElement('div');
+    subtitleWrap.id = 'slySubtitleWrap';
+    subtitleWrap.className = 'sly-custom-section';
+    subtitleWrap.innerHTML = `<span class="sly-custom-label">🌐 자막 언어</span>
+      <div class="sly-platform-chips">
+        <div class="sly-platform-chip sel" data-lang="ko">한국어</div>
+        <div class="sly-platform-chip" data-lang="en">English</div>
+        <div class="sly-platform-chip" data-lang="ja">日本語</div>
+        <div class="sly-platform-chip" data-lang="zh">中文</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px">영상 파일(.mp4) 또는 스크립트 텍스트를 아래에 붙여넣기 하세요</div>`;
+    subtitleWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
+      subtitleWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
+      this.classList.add('sel');
+    }));
+    uploadCard?.parentNode?.insertBefore(subtitleWrap, uploadCard);
+  }
+  subtitleWrap.style.display = svc.id === 'subtitle' ? 'block' : 'none';
+
+  // 사업자 조회: 사업자번호 직접 입력
+  let bizInputWrap = document.getElementById('slyBizInputWrap');
+  if (!bizInputWrap) {
+    bizInputWrap = document.createElement('div');
+    bizInputWrap.id = 'slyBizInputWrap';
+    bizInputWrap.className = 'sly-custom-section';
+    bizInputWrap.innerHTML = `<span class="sly-custom-label">🏢 사업자등록번호 입력</span>
+      <div style="display:flex;gap:8px">
+        <input class="sly-custom-input" id="slyBizNum" placeholder="예: 123-45-67890" style="flex:1" maxlength="12">
+        <button onclick="_slyBizSearch()" style="padding:12px 18px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">조회</button>
+      </div>
+      <div id="slyBizResult" style="margin-top:10px;display:none"></div>`;
+    if (issueCard) issueCard.prepend(bizInputWrap);
+  }
+  bizInputWrap.style.display = svc.id === 'biz_cert' ? 'block' : 'none';
+
+  // 텍스트 우선 서비스: 자동으로 텍스트 탭 활성화
+  if (['workplace_tone', 'notice_summary'].includes(svc.id) && svc.allowText) {
+    setTimeout(() => _slySetInputMode('text'), 50);
+  } else if (svc.allowText !== undefined) {
+    setTimeout(() => _slySetInputMode('file'), 50);
+  }
+
   clearResult();
 }
 window._slySelectService = _slySelectService;
+
+// 사업자 조회 버튼 핸들러
+window._slyBizSearch = async function() {
+  const num = document.getElementById('slyBizNum')?.value?.replace(/\D/g, '');
+  if (!num || num.length < 10) { _slyToast('올바른 사업자번호를 입력해주세요 (10자리)'); return; }
+  const resultEl = document.getElementById('slyBizResult');
+  if (!resultEl) return;
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px">조회 중...</div>';
+  try {
+    const token = await window._slyGetToken?.();
+    const r = await fetch('/api/seolyuhana/biz-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+      body: JSON.stringify({ bizNum: num })
+    });
+    const d = await r.json();
+    const statusMap = { '01': '계속사업자', '02': '휴업자', '03': '폐업자' };
+    const taxMap = { '1': '과세', '2': '면세', '3': '간이', '4': '일반' };
+    const status = statusMap[d.b_stt_cd] || d.b_stt || '확인불가';
+    const isOpen = d.b_stt_cd === '01';
+    resultEl.innerHTML = `<div style="padding:12px;background:${isOpen ? 'rgba(22,163,74,.1)' : 'rgba(220,38,38,.1)'};border-radius:10px;border-left:3px solid ${isOpen ? '#16A34A' : '#DC2626'}">
+      <div style="font-weight:700;color:${isOpen ? '#16A34A' : '#DC2626'};margin-bottom:4px">${isOpen ? '✅ 정상 사업자' : '⚠️ ' + status}</div>
+      <div style="font-size:13px;color:var(--text-secondary)">${d.b_nm || ''} · ${d.tax_type || taxMap[d.tax_type_cd] || ''}</div>
+      ${d.end_dt ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">폐업일: ${d.end_dt}</div>` : ''}
+    </div>`;
+  } catch(e) {
+    resultEl.innerHTML = `<div style="color:var(--danger);font-size:13px">조회 실패: ${e.message}</div>`;
+  }
+};
 
 function clearResult() {
   document.getElementById('slyResult')?.classList.remove('visible');
@@ -2125,13 +2276,18 @@ async function _slyAnalyze() {
 window._slyAnalyze = _slyAnalyze;
 
 function setProgress(pct, label) {
-  const circle = document.querySelector('.sly-progress-ring .fill');
-  if (circle) {
-    const circ = 163;
-    circle.style.strokeDashoffset = circ - (circ * pct / 100);
+  // 나레이션 단계 업데이트
+  const stepIdx = pct <= 20 ? 0 : pct <= 40 ? 1 : pct <= 65 ? 2 : pct <= 90 ? 3 : 4;
+  for (let i = 0; i <= 4; i++) {
+    const el = document.getElementById('slyStep' + i);
+    if (!el) continue;
+    el.classList.remove('active', 'done');
+    if (i < stepIdx) el.classList.add('done');
+    else if (i === stepIdx) el.classList.add('active');
   }
+  // 첫 번째 단계 텍스트에 현재 레이블 표시
   const lbl = document.getElementById('slyProgLabel');
-  if (lbl) lbl.textContent = label;
+  if (lbl && stepIdx === 0) lbl.textContent = label;
 }
 
 function pollResult(jobId) {
@@ -2173,6 +2329,7 @@ function pollResult(jobId) {
     }
   }, 2000);
 }
+window._slyPollResult = pollResult;
 
 function renderResult(data) {
   const cont = document.getElementById('slyResult');
@@ -2742,7 +2899,7 @@ async function _slyAutoAnalyzeRegistry(encodedPdf, encodedAddr) {
     if (!d.ok) throw new Error(d.error || '분석 실패');
     _slyToast('분석 시작! 잠시 후 결과가 표시됩니다.');
     window._slyCurrentJobId = d.jobId;
-    document.getElementById('slyProgressSection').style.display = 'block';
+    document.getElementById('slyProgress')?.classList.add('visible');
     _slyPollResult(d.jobId);
   } catch(e) { _slyToast('분석 실패: ' + e.message); }
 }
@@ -2773,7 +2930,7 @@ async function _slyAutoAnalyzeRegistryText(encodedText, encodedAddr) {
     if (!d.ok) throw new Error(d.error || '분석 실패');
     _slyToast('분석 시작! 잠시 후 결과가 표시됩니다.');
     window._slyCurrentJobId = d.jobId;
-    document.getElementById('slyProgressSection').style.display = 'block';
+    document.getElementById('slyProgress')?.classList.add('visible');
     _slyPollResult(d.jobId);
   } catch(e) { _slyToast('분석 실패: ' + e.message); }
 }
@@ -3392,11 +3549,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- Progress -->
         <div class="sly-card sly-progress" id="slyProgress">
-          <svg class="sly-progress-ring" viewBox="0 0 64 64">
-            <circle class="track" cx="32" cy="32" r="26"/>
-            <circle class="fill" cx="32" cy="32" r="26" stroke-dasharray="163" stroke-dashoffset="163"/>
-          </svg>
-          <div class="sly-progress-label" id="slyProgLabel">AI 분석 요청 중...</div>
+          <div class="sly-prog-steps" id="slyProgSteps">
+            <div class="sly-prog-step active" id="slyStep0"><div class="sly-step-dot"></div><div class="sly-step-text" id="slyProgLabel">파일 업로드 중...</div></div>
+            <div class="sly-prog-step" id="slyStep1"><div class="sly-step-dot"></div><div class="sly-step-text">문서 파싱 & 텍스트 추출</div></div>
+            <div class="sly-prog-step" id="slyStep2"><div class="sly-step-dot"></div><div class="sly-step-text">AI 심층 분석 중...</div></div>
+            <div class="sly-prog-step" id="slyStep3"><div class="sly-step-dot"></div><div class="sly-step-text">보고서 작성 중...</div></div>
+            <div class="sly-prog-step" id="slyStep4"><div class="sly-step-dot"></div><div class="sly-step-text">완료!</div></div>
+          </div>
           <div class="sly-progress-sub">약 10~30초 소요됩니다</div>
         </div>
 
