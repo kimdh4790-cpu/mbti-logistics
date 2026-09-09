@@ -2796,14 +2796,23 @@ app.post('/api/iros-fetch', async (req, res) => {
         const framesBefore = resultPage.frames().map(f => f.url());
         console.log('[iros] 방법Q 클릭 전 frames:', JSON.stringify(framesBefore));
 
-        // Q-2: Playwright force 클릭 시도, 실패시 JS MouseEvent dispatch
+        // Q-2: navigator.webdriver=false 패치 후 버튼이 실제로 visible되길 대기 (최대 10초)
+        await resultPage.waitForTimeout(1500);
         const viewBtns2 = await resultPage.locator('td[data-col_id="mp_prt"]').all();
         console.log('[iros] 방법Q TD[mp_prt] 수:', viewBtns2.length);
         let clickDone = false;
         if (viewBtns2.length > 0) {
-          await viewBtns2[0].click({ timeout: 3000, force: true })
-            .then(() => { clickDone = true; console.log('[iros] 방법Q force 클릭 성공'); })
-            .catch(e => console.log('[iros] 방법Q force 클릭 오류:', e.message));
+          // 일반 클릭 (webdriver=false 패치 후 visible이어야 함)
+          await viewBtns2[0].click({ timeout: 5000 })
+            .then(() => { clickDone = true; console.log('[iros] 방법Q 일반 클릭 성공'); })
+            .catch(e => console.log('[iros] 방법Q 일반 클릭 오류:', e.message));
+        }
+        if (!clickDone) {
+          // 내부 span/button/a 클릭 시도
+          const innerBtn = resultPage.locator('td[data-col_id="mp_prt"] span, td[data-col_id="mp_prt"] button, td[data-col_id="mp_prt"] a').first();
+          await innerBtn.click({ timeout: 3000 }).catch(() => {});
+          clickDone = true;
+          console.log('[iros] 방법Q 내부 span 클릭');
         }
         if (!clickDone) {
           await resultPage.evaluate(() => {
@@ -2818,8 +2827,8 @@ app.post('/api/iros-fetch', async (req, res) => {
           clickDone = true;
         }
 
-        // Q-3: 8초 대기 후 모든 sub-frame 검사
-        await resultPage.waitForTimeout(8000);
+        // Q-3: 15초 대기 (WebSquare iframe 컨텐츠 로드 시간 충분히 확보)
+        await resultPage.waitForTimeout(15000);
         const framesAfter = resultPage.frames();
         console.log('[iros] 방법Q 클릭 후 frame 수:', framesAfter.length);
         for (const frame of framesAfter) {
