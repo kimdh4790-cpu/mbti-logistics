@@ -16,32 +16,7 @@ if [ ! -f "$INPUT" ]; then
   exit 1
 fi
 
-# 메타에서 클립 시작/길이 읽기
-if command -v node &>/dev/null && [ -f "$META_FILE" ]; then
-  CLIP_START=$(node -e "const m=require('$META_FILE'); console.log(m.reels.clipStart||'00:00:15')")
-  CLIP_DUR=$(node -e "const m=require('$META_FILE'); console.log(m.reels.clipDuration||30)")
-else
-  CLIP_START="00:00:15"
-  CLIP_DUR=30
-fi
-
-echo "[Reels] 세로형 클립 생성: ${CLIP_START} ~ +${CLIP_DUR}초"
-
-FFMPEG_STATIC="$(node -e "try{process.stdout.write(require('ffmpeg-static'))}catch(e){}" 2>/dev/null)"
-if [ -n "$FFMPEG_STATIC" ] && [ -f "$FFMPEG_STATIC" ]; then
-  FFMPEG="$FFMPEG_STATIC"
-else
-  FFMPEG="ffmpeg"
-fi
-
-# compose-video.sh 가 이미 1080x1920 세로형 출력이므로 트림만 수행
-# (스케일 변환 불필요 — 다시 변환하면 오히려 화질 손실)
-"$FFMPEG" -y \
-  -i "$INPUT" \
-  -ss "$CLIP_START" -t "$CLIP_DUR" \
-  -c:v libx264 -preset medium -crf 23 \
-  -c:a aac -b:a 128k \
-  -movflags +faststart \
-  "$REELS"
-
-echo "[Reels] 완료: $REELS"
+# compose-video.sh 가 이미 1080x1920 세로형 60초 출력이므로 전체를 그대로 Reels로 사용
+# (클립 자르기 제거 — YouTube Shorts·Instagram Reels 모두 전체 영상 업로드)
+cp "$INPUT" "$REELS"
+echo "[Reels] 완료 (전체 영상 복사): $REELS"
