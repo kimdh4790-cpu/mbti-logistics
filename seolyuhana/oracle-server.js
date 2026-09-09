@@ -1126,7 +1126,7 @@ app.post('/api/iros-fetch', async (req, res) => {
         const _sCookies = await context.cookies();
         const _sCookieStr = _sCookies.map(c => `${c.name}=${c.value}`).join('; ');
         const _sUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-        const _sRegRe = /표제부|갑구|을구|소유권|순위번호|등기원인|등기목적|근저당/;
+        const _sRegRe = /표제부|갑구|을구|소유권이전|순위번호|등기원인|등기목적|근저당권/;
         for (const _sGbn of ['1', '2']) {
           const _sUrl = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${capturedPin}&rlrgGbn=${_sGbn}&payCl=F&smplKindCls=1`;
           console.log('[iros] 방법S: callMpPrtIframe.do fetch rlrgGbn=' + _sGbn, _sUrl.slice(-80));
@@ -1136,14 +1136,15 @@ app.post('/api/iros-fetch', async (req, res) => {
           }).catch(() => null);
           if (!_sResp?.ok) { console.log('[iros] 방법S: HTTP', _sResp?.status); continue; }
           const _sHtml = await _sResp.text().catch(() => '');
-          console.log('[iros] 방법S: 응답 길이=', _sHtml.length, '등기 키워드=', _sRegRe.test(_sHtml));
-          if (_sRegRe.test(_sHtml)) {
-            const _sText = _sHtml
-              .replace(/<script[\s\S]*?<\/script>/gi, '')
-              .replace(/<style[\s\S]*?<\/style>/gi, '')
-              .replace(/<[^>]+>/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
+          // JS/CSS 제거 후 텍스트에서만 키워드 검증 (JS 변수명 false positive 방지)
+          const _sText = _sHtml
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          console.log('[iros] 방법S: 응답 길이=', _sHtml.length, '텍스트 길이=', _sText.length, '등기 키워드=', _sRegRe.test(_sText));
+          if (_sRegRe.test(_sText) && _sText.length > 500) {
             directApiContent = JSON.stringify({ type: 'method_s', pin: capturedPin, content: _sText, html: _sHtml.slice(0, 80000) });
             rlrgCount = 999;
             console.log('[iros] 방법S: 성공! 텍스트 길이=', _sText.length);
@@ -1153,45 +1154,80 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch (_sErr) { console.log('[iros] 방법S 오류:', _sErr.message); }
     }
 
-    // ── 방법S2: DOM PIN → Playwright 새탭으로 callMpPrtIframe.do 렌더링 ─────────────
-    // Node.js fetch는 WebSquare SPA 셸만 반환. Playwright는 실제 렌더링 완료 텍스트 추출 가능.
-    // 방법A~N 전에 실행하여 150s 타임아웃 방지
+    // ── 방법S2: DOM PIN → Playwright 새탭으로 callMpPrtIframe.do 렌더링 + AJAX 인터셉트 ──
+    // callMpPrtIframe.do는 WebSquare SPA 껍데기만 반환. 실제 등기 데이터는 그 후 AJAX 호출로 로드됨.
+    // innerText 대신 AJAX 응답(XML/JSON)을 인터셉트해야 실제 데이터를 얻을 수 있음.
     if (rlrgCount === 0) {
       const _s2Pins = await resultPage.evaluate(() => {
         const t = document.body ? document.body.innerText : '';
         const all = (t.match(/\d{4}-\d{4}-\d{6}/g) || []);
-        return all.filter((p, i, a) => a.indexOf(p) === i).slice(0, 2);
+        return all.filter((p, i, a) => a.indexOf(p) === i).slice(0, 3);
       }).catch(() => []);
       console.log('[iros] 방법S2: DOM PIN 목록:', JSON.stringify(_s2Pins));
       if (_s2Pins.length > 0) {
-        const _s2Re = /표제부|갑구|을구|소유권|순위번호|등기원인|근저당/;
+        const _s2Re = /표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당권/;
+        const _s2ReLoose = /표제부|갑구|을구|소유권|순위번호|등기원인|근저당/;
         for (const _s2Pin of _s2Pins) {
           if (directApiContent) break;
           const _s2PinClean = _s2Pin.replace(/-/g, '');
           for (const _s2Gbn of ['1', '2']) {
             const _s2Url = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${_s2PinClean}&rlrgGbn=${_s2Gbn}&payCl=F&smplKindCls=1`;
-            console.log('[iros] 방법S2: Playwright 렌더링 PIN=', _s2Pin, 'gbn=', _s2Gbn);
+            console.log('[iros] 방법S2: Playwright 렌더링+AJAX인터셉트 PIN=', _s2Pin, 'gbn=', _s2Gbn);
             const _s2Tab = await context.newPage().catch(() => null);
             if (!_s2Tab) continue;
+            let _s2AjaxContent = null;
+            // AJAX 응답 인터셉트 — 등기 데이터는 JS가 아닌 별도 AJAX로 로드됨
+            const _s2RespHandler = async (resp) => {
+              if (_s2AjaxContent) return;
+              try {
+                const _rUrl = resp.url();
+                if (!_rUrl.includes('iros.go.kr')) return;
+                // 정적 파일 제외
+                if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_rUrl)) return;
+                const _ct = resp.headers()['content-type'] || '';
+                // JSON/XML/데이터 응답만 처리
+                if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain') &&
+                    !_rUrl.includes('Cont') && !_rUrl.includes('Xml') && !_rUrl.includes('Data') &&
+                    !_rUrl.includes('Rlrg') && !_rUrl.includes('rlrg') && !_rUrl.includes('smpl')) return;
+                const _body = await resp.text().catch(() => '');
+                if (_body.length < 100) return;
+                if (_s2ReLoose.test(_body)) {
+                  _s2AjaxContent = _body;
+                  console.log('[iros] S2 AJAX 등기 응답 캡처! URL=', _rUrl.slice(-80), 'len=', _body.length, 'preview:', _body.slice(0, 200));
+                }
+              } catch(_) {}
+            };
+            _s2Tab.on('response', _s2RespHandler);
             try {
-              await _s2Tab.goto(_s2Url, { waitUntil: 'networkidle', timeout: 20000 }).catch(() => {});
-              await _s2Tab.waitForTimeout(6000);
-              let _s2AllText = await _s2Tab.innerText('body').catch(() => '');
-              // 중첩 프레임도 확인
-              for (const _s2Frm of _s2Tab.frames()) {
-                try {
-                  const _ft = await _s2Frm.innerText('body').catch(() => '');
-                  if (_ft.length > 50) _s2AllText += '\n' + _ft;
-                } catch(_) {}
-              }
-              const _s2Html = await _s2Tab.content().catch(() => '');
-              console.log('[iros] 방법S2 PIN=', _s2Pin, 'gbn=', _s2Gbn, 'textLen=', _s2AllText.length, 'hasKw=', _s2Re.test(_s2AllText));
-              if (_s2Re.test(_s2AllText)) {
-                directApiContent = JSON.stringify({ type: 'method_s2', pin: _s2Pin, content: _s2AllText.slice(0, 50000), html: _s2Html.slice(0, 80000) });
+              await _s2Tab.goto(_s2Url, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
+              // WebSquare 초기화 및 AJAX 완료까지 대기 (networkidle 대신 고정 대기)
+              await _s2Tab.waitForTimeout(12000);
+              // AJAX 인터셉트로 데이터 얻었으면 우선 사용
+              if (_s2AjaxContent) {
+                directApiContent = JSON.stringify({ type: 'method_s2_ajax', pin: _s2Pin, content: _s2AjaxContent.slice(0, 60000) });
                 rlrgCount = 999;
-                console.log('[iros] 방법S2 성공! PIN=', _s2Pin, 'gbn=', _s2Gbn, 'textLen=', _s2AllText.length);
+                console.log('[iros] 방법S2 AJAX 성공! PIN=', _s2Pin, 'gbn=', _s2Gbn);
+              } else {
+                // AJAX 실패 시 innerText에서도 시도 (JS 코드 제외하고 판정)
+                let _s2AllText = await _s2Tab.innerText('body').catch(() => '');
+                for (const _s2Frm of _s2Tab.frames()) {
+                  try {
+                    const _ft = await _s2Frm.innerText('body').catch(() => '');
+                    if (_ft.length > 50) _s2AllText += '\n' + _ft;
+                  } catch(_) {}
+                }
+                const _s2Html = await _s2Tab.content().catch(() => '');
+                // innerText에서 JS 변수명 false positive 방지: 엄격한 키워드 조합 사용
+                const _s2HasReg = _s2Re.test(_s2AllText) && _s2AllText.length > 1000;
+                console.log('[iros] 방법S2 DOM PIN=', _s2Pin, 'gbn=', _s2Gbn, 'textLen=', _s2AllText.length, 'hasKw=', _s2HasReg);
+                if (_s2HasReg) {
+                  directApiContent = JSON.stringify({ type: 'method_s2', pin: _s2Pin, content: _s2AllText.slice(0, 50000), html: _s2Html.slice(0, 80000) });
+                  rlrgCount = 999;
+                  console.log('[iros] 방법S2 DOM 성공! PIN=', _s2Pin, 'gbn=', _s2Gbn, 'textLen=', _s2AllText.length);
+                }
               }
             } catch (_s2Err) { console.log('[iros] 방법S2 탭오류:', _s2Err.message); }
+            _s2Tab.off('response', _s2RespHandler);
             await _s2Tab.close().catch(() => {});
             if (directApiContent) break;
           }
@@ -1498,6 +1534,134 @@ app.post('/api/iros-fetch', async (req, res) => {
       return found.slice(0,20);
     }).catch(() => []);
     console.log('[iros] smpl_rlrg 스크립트 참조:', JSON.stringify(scriptAnalysis));
+
+    // ── 방법S3: 그리드 "보기" 셀 직접 클릭 + 네트워크 응답 인터셉트 ───────────────────
+    // 체크박스+버튼 우회: "보기" 열(mp_prt) 직접 클릭 → WebSquare가 callMpPrtIframe 팝업 열거나 AJAX 호출
+    // AJAX 응답을 인터셉트하거나 팝업 페이지에서 등기 데이터 추출
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법S3: "보기" 셀 직접 클릭 + 응답 인터셉트');
+      try {
+        const _s3RegRe = /표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당권/;
+        const _s3RegLoose = /표제부|갑구|을구|소유권|순위번호|등기원인|근저당/;
+        let _s3AjaxContent = null;
+
+        // 응답 인터셉터 설치 (AJAX 데이터 캡처)
+        const _s3RespHandler = async (resp) => {
+          if (_s3AjaxContent) return;
+          try {
+            const _u = resp.url();
+            if (!_u.includes('iros.go.kr')) return;
+            if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
+            const _ct = resp.headers()['content-type'] || '';
+            // JSON/XML만 처리
+            if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain')) return;
+            const _b = await resp.text().catch(() => '');
+            if (_b.length < 100) return;
+            if (_s3RegLoose.test(_b)) {
+              _s3AjaxContent = _b;
+              console.log('[iros] S3 AJAX 캡처! URL=', _u.slice(-80), 'len=', _b.length);
+            }
+          } catch(_) {}
+        };
+        resultPage.on('response', _s3RespHandler);
+
+        // 새 팝업/탭 감지
+        const _s3PopupPromise = resultPage.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
+
+        // 방법S3-A: td[data-col_id="mp_prt"] — "보기" 열 TD 직접 클릭
+        const _s3ViewTds = await resultPage.locator('td[data-col_id="mp_prt"]').all().catch(() => []);
+        console.log('[iros] 방법S3: mp_prt TD 개수=', _s3ViewTds.length);
+        if (_s3ViewTds.length > 0) {
+          await _s3ViewTds[0].click({ force: true, timeout: 5000 }).catch(async () => {
+            // click 실패 시 JS dispatchEvent 사용
+            await resultPage.evaluate(() => {
+              const td = document.querySelector('td[data-col_id="mp_prt"]');
+              if (td) ['mousedown','mouseup','click'].forEach(t =>
+                td.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }))
+              );
+            }).catch(() => {});
+          });
+          console.log('[iros] 방법S3-A: mp_prt 클릭 완료');
+        } else {
+          // 방법S3-B: "보기" 텍스트 버튼/셀 클릭
+          const _s3BogiList = await resultPage.locator(':text-is("보기")').all().catch(() => []);
+          console.log('[iros] 방법S3: "보기" 텍스트 개수=', _s3BogiList.length);
+          if (_s3BogiList.length > 0) {
+            await _s3BogiList[0].click({ force: true, timeout: 5000 }).catch(() => {});
+            console.log('[iros] 방법S3-B: "보기" 클릭 완료');
+          }
+        }
+
+        // AJAX 응답 또는 팝업 대기 (15초)
+        await resultPage.waitForTimeout(15000);
+        resultPage.off('response', _s3RespHandler);
+
+        // AJAX 응답에서 데이터 얻었으면 성공
+        if (_s3AjaxContent && _s3RegLoose.test(_s3AjaxContent)) {
+          directApiContent = JSON.stringify({ type: 'method_s3_ajax', content: _s3AjaxContent.slice(0, 60000) });
+          rlrgCount = 999;
+          console.log('[iros] 방법S3 AJAX 성공! len=', _s3AjaxContent.length);
+        }
+
+        // 팝업 캡처 시도
+        if (!directApiContent) {
+          const _s3Popup = await _s3PopupPromise;
+          if (_s3Popup) {
+            console.log('[iros] 방법S3 팝업 감지:', _s3Popup.url());
+            let _s3PopAjax = null;
+            _s3Popup.on('response', async (resp) => {
+              if (_s3PopAjax) return;
+              try {
+                const _u = resp.url();
+                if (!_u.includes('iros.go.kr')) return;
+                if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/i.test(_u)) return;
+                const _ct = resp.headers()['content-type'] || '';
+                if (!_ct.includes('json') && !_ct.includes('xml') && !_ct.includes('text/plain')) return;
+                const _b = await resp.text().catch(() => '');
+                if (_b.length > 100 && _s3RegLoose.test(_b)) { _s3PopAjax = _b; }
+              } catch(_) {}
+            });
+            await _s3Popup.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+            await _s3Popup.waitForTimeout(10000);
+            const _s3PopText = await _s3Popup.innerText('body').catch(() => '');
+            const _s3PopHtml = await _s3Popup.content().catch(() => '');
+            if (_s3PopAjax && _s3RegLoose.test(_s3PopAjax)) {
+              directApiContent = JSON.stringify({ type: 'method_s3_popup_ajax', url: _s3Popup.url(), content: _s3PopAjax.slice(0, 60000) });
+              rlrgCount = 999;
+              console.log('[iros] 방법S3 팝업 AJAX 성공!');
+            } else if (_s3RegRe.test(_s3PopText) && _s3PopText.length > 500) {
+              directApiContent = JSON.stringify({ type: 'method_s3_popup', url: _s3Popup.url(), content: _s3PopText.slice(0, 50000), html: _s3PopHtml.slice(0, 80000) });
+              rlrgCount = 999;
+              console.log('[iros] 방법S3 팝업 DOM 성공! len=', _s3PopText.length);
+            } else {
+              console.log('[iros] 방법S3 팝업 등기 없음. textLen=', _s3PopText.length, '앞300=', _s3PopText.slice(0, 300));
+            }
+            await _s3Popup.close().catch(() => {});
+          } else {
+            console.log('[iros] 방법S3 팝업 없음 — iframe 또는 SPA 내 렌더링 방식일 수 있음');
+          }
+        }
+
+        // 방법S3 실패 시 현재 페이지 iframe 확인 (callMpPrtIframe이 iframe으로 로드됐을 경우)
+        if (!directApiContent) {
+          const _s3Frames = resultPage.frames();
+          for (const _s3F of _s3Frames) {
+            if (_s3F === resultPage.mainFrame()) continue;
+            try {
+              await _s3F.waitForLoadState('domcontentloaded', { timeout: 3000 }).catch(() => {});
+              const _fText = await _s3F.innerText('body').catch(() => '');
+              if (_fText.length > 200 && _s3RegRe.test(_fText)) {
+                const _fHtml = await _s3F.content().catch(() => '');
+                directApiContent = JSON.stringify({ type: 'method_s3_iframe', url: _s3F.url(), content: _fText.slice(0, 50000), html: _fHtml.slice(0, 80000) });
+                rlrgCount = 999;
+                console.log('[iros] 방법S3 iframe 성공! url=', _s3F.url(), 'len=', _fText.length);
+                break;
+              }
+            } catch(_) {}
+          }
+        }
+      } catch (_s3Err) { console.log('[iros] 방법S3 오류:', _s3Err.message); }
+    }
 
     // ── 1차: 모든 셀 순서대로 클릭해서 btn_smpl_rlrg 활성화 시도 ────────────────────
     // (rlrgCount는 방법S 블록 앞에서 이미 선언됨)
@@ -2801,9 +2965,15 @@ app.post('/api/iros-fetch', async (req, res) => {
                 }).catch(() => null);
                 if (!mpResp) { console.log('[iros] 방법O-0 fetch 실패:', rawPin, gbn); continue; }
                 const mpHtml = await mpResp.text().catch(() => '');
-                const mpText = mpHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-                console.log('[iros] 방법O-0 PIN=', rawPin, 'gbn=', gbn, 'status=', mpResp.status, 'len=', mpHtml.length, 'preview:', mpHtml.slice(0, 300));
-                if (/표제부|갑구|을구|소유권|순위번호|등기원인|근저당|전유부분|대지권|소재지번/.test(mpHtml)) {
+                // JS/CSS 제거 후 텍스트에서만 검증 (소재지번 등 지도JS 변수명 false positive 방지)
+                const mpText = mpHtml
+                  .replace(/<script[\s\S]*?<\/script>/gi, '')
+                  .replace(/<style[\s\S]*?<\/style>/gi, '')
+                  .replace(/<[^>]+>/g, ' ')
+                  .replace(/\s+/g, ' ').trim();
+                console.log('[iros] 방법O-0 PIN=', rawPin, 'gbn=', gbn, 'status=', mpResp.status, 'htmlLen=', mpHtml.length, 'textLen=', mpText.length, 'preview:', mpText.slice(0, 200));
+                // 엄격한 키워드 조합: JS 변수명에 나타나지 않는 복합어 사용
+                if (/표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당권/.test(mpText) && mpText.length > 500) {
                   console.log('[iros] 방법O-0: callMpPrtIframe 직접 fetch 성공! PIN=', rawPin, 'gbn=', gbn);
                   directApiContent = JSON.stringify({ type: 'method_o0', pin: rawPin, content: mpText, html: mpHtml.slice(0, 80000) });
                   rlrgCount = 999;
