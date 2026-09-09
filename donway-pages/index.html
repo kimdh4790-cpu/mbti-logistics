@@ -964,7 +964,7 @@ function _updateSidebarBrand(cn){
   if(!cn) return;
   var slText = document.querySelector('.sl-text');
   if(slText){
-    slText.innerHTML = 'DONWAY <span style="font-size:11px;font-weight:600;color:var(--brand);opacity:.85;margin-left:2px">· '+cn+'</span>';
+    slText.innerHTML = 'DONWAY <span style="font-size:11px;font-weight:600;color:var(--brand);opacity:.85;margin-left:2px">· '+esc(cn)+'</span>';
   }
   var slVer = document.querySelector('.sl-ver');
   if(slVer) slVer.textContent = '돈의 방향';

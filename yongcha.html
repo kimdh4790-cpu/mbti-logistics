@@ -2249,7 +2249,9 @@ function _ecLoad(q){
   _yLoadGeo().then(function(g){
     var url='/api/yongcha/entrance-codes?q='+encodeURIComponent(q||'');
     if(g)url+='&lat='+g.lat+'&lng='+g.lng;
-    fetch(url).then(function(r){return r.json();}).then(function(d){
+    _yGetToken().catch(function(){return '';}).then(function(_ecTok){
+    return fetch(url,{headers:{'Authorization':'Bearer '+_ecTok}});
+    }).then(function(r){return r.json();}).then(function(d){
       var el2=document.getElementById('ec-list');if(!el2)return;
       if(!d.ok||!d.items.length){el2.innerHTML=_emptyHtml('','등록된 비밀번호가 없어요','아래 + 등록 버튼으로 첫 등록자가 되어보세요');return;}
       _ecItems=d.items;
@@ -8478,9 +8480,10 @@ function _riqMatch(el){
       if(mb)mb.innerHTML=_emptyHtml('📭','공개 공고 없음','새 공고가 등록되면 AI 추천이 시작됩니다');
       return;
     }
+    var _riqTok=await _yGetToken().catch(function(){return '';});
     return fetch('/api/routeiq-match',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_riqTok},
       body:JSON.stringify({
         driver:{name:_CU.name,region:_CU.region||'',carType:_CU.carType||'',
                 preferredCouriers:preferredCouriers,avgPrice:avgPrice,recentRegions:recentRegions},
@@ -8582,8 +8585,9 @@ function _yAiRecommend(postId){
         _emptyHtml('🚗','등록된 기사가 없어요','기사 회원이 가입하면 추천이 시작돼요');
       return;
     }
+    var _recTok=await _yGetToken().catch(function(){return '';});
     return fetch('/api/yongcha/recommend',{
-      method:'POST',headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_recTok},
       body:JSON.stringify({
         topN:5,
         post:{

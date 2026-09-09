@@ -38,6 +38,7 @@
 
 // ── 날짜 유틸 (filo-common.js 미로드 환경용) ──────────────────────────────────
 function _today(){return new Date().toISOString().slice(0,10);}
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
 function _nowISO(){return new Date().toISOString();}
 function _toDateStr(iso){return iso?iso.slice(0,10):'';}
 function _monthStr(){return new Date().toISOString().slice(0,7);}
@@ -808,8 +809,8 @@ function _dineLoadDashboard(did,today){
       '<div style="width:32px;height:32px;border-radius:50%;background:'+partColor+'22;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">'+
       (m.part==='kitchen'?'👨‍🍳':'🧑‍💼')+'</div>'+
       '<div style="flex:1">'+
-      '<div style="font-size:13px;font-weight:700">'+(m.name||id)+'</div>'+
-      '<div style="font-size:10px;color:var(--t3)">'+(m.role||'')+' · '+inT+(outT?' → '+outT:'')+'</div>'+
+      '<div style="font-size:13px;font-weight:700">'+esc(m.name||id)+'</div>'+
+      '<div style="font-size:10px;color:var(--t3)">'+esc(m.role||'')+' · '+inT+(outT?' → '+outT:'')+'</div>'+
       '</div>'+
       '<span style="font-size:10px;font-weight:700;color:'+(isWorking?'#22c55e':'var(--t3)')+'">'+
       (isWorking?'● 근무중':'퇴근')+'</span></div>';
@@ -1105,10 +1106,10 @@ function _crmRender(list){
    '</div>'+
    '<div style="flex:1;min-width:0">'+
    '<div style="display:flex;align-items:center;gap:7px">'+
-   '<span style="font-size:13px;font-weight:700">'+(m.name||'이름없음')+'</span>'+
+   '<span style="font-size:13px;font-weight:700">'+esc(m.name||'이름없음')+'</span>'+
    '<span class="crm-badge" style="background:'+m._tierColor+'22;color:'+m._tierColor+'">'+m._tier+'</span>'+
    '</div>'+
-   '<div style="font-size:10px;color:var(--t3);margin-top:2px">'+(m.phone||'번호없음')+' · 방문 '+m._cnt+'회 · ₩'+m._spend.toLocaleString()+'</div>'+
+   '<div style="font-size:10px;color:var(--t3);margin-top:2px">'+esc(m.phone||'번호없음')+' · 방문 '+m._cnt+'회 · ₩'+m._spend.toLocaleString()+'</div>'+
    '</div>'+
    '<div style="text-align:right;flex-shrink:0">'+
    '<div style="font-size:12px;font-weight:800;color:'+m._tierColor+'">₩'+m._spend.toLocaleString()+'</div>'+
