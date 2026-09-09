@@ -239,6 +239,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-09 | 글로벌 AI 문서 분석 시장 리서치 브리프 Artifact 게시 (https://claude.ai/code/artifact/b0640ae6-0a0e-4ce5-bd2b-74f929e48725) — Harvey AI/$288K·Luminance·Kira·Ironclad·한국 경쟁사 전수조사, 전환 UX 패턴 6가지, 전세사기 독점 영역 확인, P0~P2 전략 권고 12가지 |
 | 2026-09-06 | filo.ai.kr/seolyuhana → mbtico.kr/scan 이전. scan.html 리네임. PWA 추가 |
 | 2026-09-06 | 랜딩 리디자인 (핑크·민트·골드 3색) |
 | 2026-09-07 | 가격 재조정: 면접 19,900P / 이력서·계약서 29,900P / 자소서·번역 39,900P |
