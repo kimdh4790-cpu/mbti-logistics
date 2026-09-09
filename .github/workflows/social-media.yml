@@ -213,10 +213,10 @@ jobs:
 
           if [ "$PRODUCT" = "all" ]; then
             for p in filo donway yongcha inflearn; do
-              [ -f "output/${p}-promo.mp4" ] && echo "[$p] Runway 영상 있음 — Remotion 스킵" || render_remotion $p
+              render_remotion $p
             done
           elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
-            [ -f "output/${PRODUCT}-promo.mp4" ] && echo "[$PRODUCT] Runway 영상 있음 — Remotion 스킵" || render_remotion $PRODUCT
+            render_remotion $PRODUCT
           fi
 
       - name: 화면 녹화 (Playwright) — dine·mbtico만
