@@ -1153,6 +1153,52 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch (_sErr) { console.log('[iros] 방법S 오류:', _sErr.message); }
     }
 
+    // ── 방법S2: DOM PIN → Playwright 새탭으로 callMpPrtIframe.do 렌더링 ─────────────
+    // Node.js fetch는 WebSquare SPA 셸만 반환. Playwright는 실제 렌더링 완료 텍스트 추출 가능.
+    // 방법A~N 전에 실행하여 150s 타임아웃 방지
+    if (rlrgCount === 0) {
+      const _s2Pins = await resultPage.evaluate(() => {
+        const t = document.body ? document.body.innerText : '';
+        const all = (t.match(/\d{4}-\d{4}-\d{6}/g) || []);
+        return all.filter((p, i, a) => a.indexOf(p) === i).slice(0, 2);
+      }).catch(() => []);
+      console.log('[iros] 방법S2: DOM PIN 목록:', JSON.stringify(_s2Pins));
+      if (_s2Pins.length > 0) {
+        const _s2Re = /표제부|갑구|을구|소유권|순위번호|등기원인|근저당/;
+        for (const _s2Pin of _s2Pins) {
+          if (directApiContent) break;
+          const _s2PinClean = _s2Pin.replace(/-/g, '');
+          for (const _s2Gbn of ['1', '2']) {
+            const _s2Url = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${_s2PinClean}&rlrgGbn=${_s2Gbn}&payCl=F&smplKindCls=1`;
+            console.log('[iros] 방법S2: Playwright 렌더링 PIN=', _s2Pin, 'gbn=', _s2Gbn);
+            const _s2Tab = await context.newPage().catch(() => null);
+            if (!_s2Tab) continue;
+            try {
+              await _s2Tab.goto(_s2Url, { waitUntil: 'networkidle', timeout: 20000 }).catch(() => {});
+              await _s2Tab.waitForTimeout(6000);
+              let _s2AllText = await _s2Tab.innerText('body').catch(() => '');
+              // 중첩 프레임도 확인
+              for (const _s2Frm of _s2Tab.frames()) {
+                try {
+                  const _ft = await _s2Frm.innerText('body').catch(() => '');
+                  if (_ft.length > 50) _s2AllText += '\n' + _ft;
+                } catch(_) {}
+              }
+              const _s2Html = await _s2Tab.content().catch(() => '');
+              console.log('[iros] 방법S2 PIN=', _s2Pin, 'gbn=', _s2Gbn, 'textLen=', _s2AllText.length, 'hasKw=', _s2Re.test(_s2AllText));
+              if (_s2Re.test(_s2AllText)) {
+                directApiContent = JSON.stringify({ type: 'method_s2', pin: _s2Pin, content: _s2AllText.slice(0, 50000), html: _s2Html.slice(0, 80000) });
+                rlrgCount = 999;
+                console.log('[iros] 방법S2 성공! PIN=', _s2Pin, 'gbn=', _s2Gbn, 'textLen=', _s2AllText.length);
+              }
+            } catch (_s2Err) { console.log('[iros] 방법S2 탭오류:', _s2Err.message); }
+            await _s2Tab.close().catch(() => {});
+            if (directApiContent) break;
+          }
+        }
+      }
+    }
+
     // ── Prvw 팝업 처리 ────────────────────────────────────────────────────────────
     // Pm10P0IrosPopupPrvw: IROS 간편열람 결과 팝업 OR 시스템 공지 팝업
     // 공지인 경우: 주소 입력창 없음 → 닫기 후 메인 페이지에서 재검색
@@ -3370,7 +3416,7 @@ app.post('/api/iros-selftest', async (req, res) => {
   try {
     const port = process.env.PORT || 8080;
     const ctrl = new AbortController();
-    const tout = setTimeout(() => ctrl.abort(), 150000);
+    const tout = setTimeout(() => ctrl.abort(), 300000);
     const resp = await fetch(`http://localhost:${port}/api/iros-fetch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
