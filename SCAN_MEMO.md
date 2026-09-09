@@ -134,12 +134,14 @@
 | GET `/api/seolyuhana/registry-link` | 인터넷등기소 딥링크 |
 | POST `/api/seolyuhana/registry-direct` | 등기부 직접조회 (TILKO or IROS) |
 
-### Firestore 컬렉션
+### Firestore 컬렉션 (실제 코드 기준 — sly_ 접두사 사용)
 | 컬렉션 | 용도 |
 |---|---|
-| `scan_jobs/{jobId}` | 분석 작업 결과 저장 |
-| `scan_points/{uid}` | 사용자 포인트 잔액 |
-| `scan_charges/{reqId}` | 충전 신청 내역 |
+| `sly_jobs/{jobId}` | 분석 작업 결과 저장 (KV: sly_result_{jobId}, sly_job_{jobId}_docx/pdf) |
+| `sly_points/{uid}` | 사용자 포인트 잔액 |
+| `sly_point_requests/{reqId}` | 충전 신청 내역 |
+| `sly_point_history/{id}` | 포인트 변동 이력 |
+| `sly_service_config/{serviceId}` | 서비스별 요금 동적 설정 (없으면 하드코딩 폴백) |
 
 ---
 
@@ -200,6 +202,27 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 - B2B 즉시 가능 채널: FILO 고객 → 근로계약서 번들(P0), 공인중개사 패키지(P2)
 - 가장 큰 리스크: 가격 아닌 인지도. 소셜미디어 파이프라인에 SCAN 콘텐츠 미포함 상태
 - 전략 보고서 Artifact: https://claude.ai/code/artifact/59f84770-202e-4000-be7b-27b130f1d35d
+
+## ✅ 2026-09-09 버그 수정 (전체 진단)
+
+### 구현 현황 (진단 결과)
+- **핵심 기능 (15개 서비스 분석·결과·다운로드)**: ~85% 완료 — 버그 수정 후 정상 동작
+- **포인트 시스템**: ~70% → 버그 수정 후 정상 동작
+- **미착수 확장 기능**: 0% (제조 견적·AIVO·리디자인·히스토리·공유)
+- **전체 계획 대비**: ~**75%** 구현 완료 (MVP 완성, 확장 기능 미착수)
+
+### 수정된 버그 5건 (scan.html + _worker.js)
+1. **_slyPollResult undefined** (CRITICAL): `_slyAutoAnalyzeRegistry`·`_slyAutoAnalyzeRegistryText` 내 존재하지 않는 `_slyPollResult()` 호출 → `pollResult()`로 수정. IROS 자동분석 결과 폴링 완전 불가였음
+2. **다운로드 파라미터 불일치** (CRITICAL): `_slyDownload()`가 `?ext=pdf` 전송하나 서버는 `?type=`을 읽음 → `?type=`으로 수정. PDF 다운로드가 항상 docx로 반환되던 버그
+3. **입금자명 미전송** (CRITICAL): 충전 신청 시 서버 필수 파라미터 `depositorName` 미포함 → 모달에 입금자명 입력 필드 추가 + 함수에서 읽어 전송. 충전 신청 100% 실패하던 버그
+4. **가입 보너스 미지급** (HIGH): 활성 `/api/seolyuhana/points` 핸들러(L3057)에 가입 보너스 로직 없음 (dead code 블록에만 있었음) → 신규 가입 2,900P 즉시 지급 복구
+5. **최소 충전 금액 불일치** (MEDIUM): 서버 최소 ₩10,000 vs UI 최저 ₩5,000 플랜 → 서버 최소금액 ₩5,000으로 수정
+
+### 추가 발견 (코드 무결성)
+- VALID_SERVICES 확인: L2981 활성 핸들러에 15개 serviceId 모두 포함 (workplace_tone·career_saju·notice_summary·insurance_scan 포함) → 이상 없음
+- Firestore 컬렉션명: 메모상 `scan_*`로 오기재됐으나 실제 코드는 `sly_*` 접두사 사용 → 메모 수정 완료
+
+---
 
 ## 🗒️ 2026-09-08 논의·계획 메모
 
