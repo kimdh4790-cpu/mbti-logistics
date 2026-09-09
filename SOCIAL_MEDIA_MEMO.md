@@ -467,13 +467,17 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 - **FiloPromo DEFAULT_LINES**: 6슬라이드×300프레임(10초) 기준 startSec 재조정 (0/12/24/36/50)
 - **나레이션 JSON 4종**: yongcha/donway 60초 분배(0/11/22/34/46), filo(0/12/24/36/50), inflearn(0/10/24/38/44)
 
+### 2026-09-09 — 정지 영상(frozen video) 버그 수정
+- **원인**: `social-media.yml` Runway AI 단계가 먼저 실행되어 `yongcha-promo.mp4` 생성 → Remotion 단계에서 "Runway 영상 있음 — Remotion 스킵" 조건에 걸려 애니메이션 영상 렌더링 건너뜀 → Runway 정지영상에 나레이션 오디오만 붙어 업로드됨
+- **수정**: `social-media.yml` Remotion 단계의 `[ -f "output/${p}-promo.mp4" ]` 체크 제거 — filo·donway·yongcha·inflearn 4개 제품은 Runway 출력물 유무에 관계없이 항상 Remotion 실행하여 정지영상 덮어씀
+
 ---
 
 ## 다음 작업 우선순위 (2026-09-09 기준)
 
-### 영상 미완료 (긴급 — 끊김 버그 수정 후 재업로드 필요)
-1. **전 제품 재렌더링·재업로드** → GitHub Actions `product=all steps=record,compose,youtube,instagram` 재실행 (끊김 버그 수정 반영)
-2. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 재실행
+### 영상 미완료 (긴급 — 1분 확장 + 정지영상 버그 수정 후 재업로드 필요)
+1. **전 제품 재렌더링·재업로드** → GitHub Actions `product=all steps=record,compose,youtube,instagram` 재실행 (1분 확장 + 정지영상 버그 수정 반영)
+2. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 재실행 (정지영상이었음)
 3. **인프런 YouTube 재업로드** → 무음 업로드됨. `product=inflearn steps=record,compose,youtube` 실행 (나레이션 포함)
 4. **FILO 재렌더링** → GitHub Actions `product=filo steps=record,compose,youtube`
 
