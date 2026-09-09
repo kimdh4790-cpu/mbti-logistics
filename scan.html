@@ -2961,7 +2961,7 @@ async function _slyAutoAnalyzeRegistry(encodedPdf, encodedAddr) {
     window._slyCurrentJobId = d.jobId;
     _slyJobId = d.jobId;
     document.getElementById('slyProgress')?.classList.add('visible');
-    pollResult(d.jobId);
+    _slyPollResult(d.jobId);
   } catch(e) { _slyToast('분석 실패: ' + e.message); }
 }
 window._slyAutoAnalyzeRegistry = _slyAutoAnalyzeRegistry;
@@ -2993,7 +2993,7 @@ async function _slyAutoAnalyzeRegistryText(encodedText, encodedAddr) {
     window._slyCurrentJobId = d.jobId;
     _slyJobId = d.jobId;
     document.getElementById('slyProgress')?.classList.add('visible');
-    pollResult(d.jobId);
+    _slyPollResult(d.jobId);
   } catch(e) { _slyToast('분석 실패: ' + e.message); }
 }
 window._slyAutoAnalyzeRegistryText = _slyAutoAnalyzeRegistryText;
