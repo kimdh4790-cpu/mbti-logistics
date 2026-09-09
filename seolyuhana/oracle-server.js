@@ -2736,7 +2736,7 @@ app.post('/api/iros-fetch', async (req, res) => {
             const el = document.getElementById(id);
             if (el) { el.style.display = 'none'; el.style.pointerEvents = 'none'; el.style.zIndex = '-1'; }
           });
-          document.querySelectorAll('.w2modal_popup, .w2modal_bg, [class*="modal"]').forEach(el => {
+          document.querySelectorAll('.w2modal_popup, .w2modal_bg').forEach(el => {
             el.style.display = 'none'; el.style.pointerEvents = 'none'; el.style.zIndex = '-1';
           });
         }).catch(() => {});
@@ -2797,7 +2797,10 @@ app.post('/api/iros-fetch', async (req, res) => {
       try {
         const IFRAME_KW_R = /소유자|갑구|을구|순위번호|등기원인|등기목적|권리자|의무자/;
         const iframeFrame = resultPage.frames().find(f => f.url().includes('callMpPrtIframe'));
-        const firstPinR = (pageState.pinMatches || [])[0] || '';
+        const firstPinR = await resultPage.evaluate(() => {
+          const m = document.body.innerText.match(/\d{4}-\d{4}-\d{6}/);
+          return m ? m[0].replace(/-/g, '') : '';
+        }).catch(() => '');
         const firstPinDashR = firstPinR.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
         console.log('[iros] 방법R iframe frame:', iframeFrame ? iframeFrame.url() : 'none', '| PIN:', firstPinR);
         if (iframeFrame && firstPinR) {
