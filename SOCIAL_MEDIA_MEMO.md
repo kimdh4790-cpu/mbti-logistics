@@ -471,6 +471,12 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 - **원인**: `social-media.yml` Runway AI 단계가 먼저 실행되어 `yongcha-promo.mp4` 생성 → Remotion 단계에서 "Runway 영상 있음 — Remotion 스킵" 조건에 걸려 애니메이션 영상 렌더링 건너뜀 → Runway 정지영상에 나레이션 오디오만 붙어 업로드됨
 - **수정**: `social-media.yml` Remotion 단계의 `[ -f "output/${p}-promo.mp4" ]` 체크 제거 — filo·donway·yongcha·inflearn 4개 제품은 Runway 출력물 유무에 관계없이 항상 Remotion 실행하여 정지영상 덮어씀
 
+### 2026-09-09 — make-reels.sh 전체 영상 복사로 수정 (릴스 전체 60초)
+- **원인**: `make-reels.sh`가 DINE·MBTICO 제품에 대해 15초 오프셋에서 30초만 잘라내 `reels.mp4`를 생성 → 업로드된 릴스가 60초가 아닌 30초 중간 클립
+- **수정**: FFmpeg 클립 명령 제거 → `cp "$INPUT" "$REELS"` 로 전체 영상 복사
+- `compose-video.sh`가 이미 1080×1920 세로형 60초 출력이므로 별도 클립 불필요
+- 적용 대상: 모든 제품 (`$PRODUCT` 인자 값에 무관하게 전체 영상 사용)
+
 ### 2026-09-09 — 나레이션 6라인으로 확장 (60초 전체 커버)
 - **문제**: 기존 5라인 구성 — 마지막 CTA가 ~46s에 시작해 50s쯤 끝 → 60초 영상 후반 10초 나레이션 없는 무음 구간 발생
 - **수정**: 4개 제품 narration.json 모두 6라인으로 확장, CTA를 53s로 이동하여 60초 말미까지 목소리가 나오도록 조정
