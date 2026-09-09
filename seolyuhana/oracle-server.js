@@ -1569,8 +1569,35 @@ app.post('/api/iros-fetch', async (req, res) => {
         };
         resultPage.on('response', _s3RespHandler);
 
-        // 새 팝업/탭 감지
-        const _s3PopupPromise = resultPage.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
+        // 새 팝업 감지 — 즉시 인터셉터 설치 (팝업이 열리는 순간 AJAX 캡처)
+        let _s3PopupPage = null;
+        let _s3PopAjax = null;
+        const _s3PopPageHandler = (newPage) => {
+          _s3PopupPage = newPage;
+          console.log('[iros] 방법S3 팝업 열림 즉시 인터셉터 설치:', newPage.url());
+          newPage.on('response', async (resp) => {
+            try {
+              const _u = resp.url();
+              if (!_u.includes('iros.go.kr') && !_u.includes('go.kr')) return;
+              if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
+              const _ct = resp.headers()['content-type'] || '';
+              console.log('[iros] S3-팝업 네트워크:', resp.status(), _ct.split(';')[0], _u.slice(-100));
+              if (_s3PopAjax) return;
+              const _b = await resp.text().catch(() => '');
+              if (_b.length > 100 && _s3RegLoose.test(_b)) {
+                _s3PopAjax = _b;
+                console.log('[iros] S3-팝업 AJAX 캡처! URL=', _u.slice(-80), 'len=', _b.length);
+              }
+            } catch(_) {}
+          });
+          newPage.on('request', (req) => {
+            const _u = req.url();
+            if (!_u.includes('iros.go.kr') && !_u.includes('go.kr')) return;
+            if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
+            console.log('[iros] S3-팝업-REQ:', req.method(), _u.slice(-120));
+          });
+        };
+        resultPage.context().on('page', _s3PopPageHandler);
 
         // 방법S3-A: td[data-col_id="mp_prt"] — "보기" 열 TD 직접 클릭
         const _s3ViewTds = await resultPage.locator('td[data-col_id="mp_prt"]').all().catch(() => []);
@@ -1605,10 +1632,17 @@ app.post('/api/iros-fetch', async (req, res) => {
         };
         resultPage.on('request', _s3ReqLogger);
 
-        // AJAX 응답 또는 팝업 대기 (25초 — IROS SPA 로딩 여유)
-        await resultPage.waitForTimeout(25000);
+        // AJAX 응답 또는 팝업 대기 (30초 — IROS SPA + iframe 로딩)
+        await resultPage.waitForTimeout(30000);
         resultPage.off('request', _s3ReqLogger);
         resultPage.off('response', _s3RespHandler);
+        resultPage.context().off('page', _s3PopPageHandler);
+
+        // 팝업이 열렸으면 추가 대기 후 내용 확인
+        if (_s3PopupPage && !_s3PopAjax) {
+          console.log('[iros] 방법S3 팝업 추가 대기 10초...');
+          await _s3PopupPage.waitForTimeout(10000).catch(() => {});
+        }
 
         // AJAX 응답에서 데이터 얻었으면 성공
         if (_s3AjaxContent && _s3RegLoose.test(_s3AjaxContent)) {
@@ -1619,27 +1653,9 @@ app.post('/api/iros-fetch', async (req, res) => {
 
         // 팝업 캡처 시도
         if (!directApiContent) {
-          const _s3Popup = await _s3PopupPromise;
+          const _s3Popup = _s3PopupPage;
           if (_s3Popup) {
-            console.log('[iros] 방법S3 팝업 감지:', _s3Popup.url());
-            let _s3PopAjax = null;
-            _s3Popup.on('response', async (resp) => {
-              try {
-                const _u = resp.url();
-                if (!_u.includes('iros.go.kr')) return;
-                if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/i.test(_u)) return;
-                const _ct = resp.headers()['content-type'] || '';
-                console.log('[iros] S3-팝업 네트워크:', resp.status(), _ct.split(';')[0], _u.slice(-100));
-                if (_s3PopAjax) return;
-                const _b = await resp.text().catch(() => '');
-                if (_b.length > 100 && _s3RegLoose.test(_b)) {
-                  _s3PopAjax = _b;
-                  console.log('[iros] S3-팝업 AJAX 캡처! URL=', _u.slice(-80), 'len=', _b.length);
-                }
-              } catch(_) {}
-            });
-            await _s3Popup.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-            await _s3Popup.waitForTimeout(10000);
+            console.log('[iros] 방법S3 팝업 내용 확인:', _s3Popup.url());
             const _s3PopText = await _s3Popup.innerText('body').catch(() => '');
             const _s3PopHtml = await _s3Popup.content().catch(() => '');
             if (_s3PopAjax && _s3RegLoose.test(_s3PopAjax)) {
