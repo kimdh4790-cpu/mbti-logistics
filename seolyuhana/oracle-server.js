@@ -1671,6 +1671,67 @@ app.post('/api/iros-fetch', async (req, res) => {
         };
         resultPage.context().on('page', _s3PopPageHandler);
 
+        // ── S3-0: WebSquare4 scwin 직접 함수 호출 (DOM 클릭 전에 먼저 시도) ──────────
+        // scwin = WebSquare4 이벤트 핸들러 모음. mp_prt 관련 함수가 있으면 직접 호출
+        const _s3ScwinFns = await resultPage.evaluate(() => {
+          try {
+            const fns = [];
+            for (const ns of ['scwin', 'scui', 'w2', 'fn_']) {
+              const obj = window[ns] || {};
+              const keys = Object.keys(obj).filter(k =>
+                /mp_prt|smpl_rlrg|열람|grdSmpl|view|Prt|View|Rlrg/i.test(k)
+              );
+              keys.forEach(k => fns.push(`${ns}.${k}`));
+            }
+            // 전역 함수도 탐색
+            const globalFns = Object.keys(window).filter(k =>
+              typeof window[k] === 'function' && /mp_prt|smpl_rlrg|fn_prt|fnPrt|fnView/i.test(k)
+            );
+            globalFns.forEach(k => fns.push(`window.${k}`));
+            return fns.slice(0, 30);
+          } catch(e) { return []; }
+        }).catch(() => []);
+        console.log('[iros] scwin 뷰어 함수 목록:', JSON.stringify(_s3ScwinFns));
+
+        // 행 선택 먼저 (WebSquare 그리드는 행 선택 후 버튼이 활성화됨)
+        await resultPage.evaluate(() => {
+          try {
+            // WebSquare4 그리드: 첫 번째 행 선택
+            for (const wsKey of ['w2', 'scwin', 'wq']) {
+              const ws = window[wsKey];
+              if (!ws) continue;
+              const grids = ws.GridControl ? Object.values(ws.GridControl) : [];
+              for (const grid of grids) {
+                if (grid && grid.selectRow) { grid.selectRow(0); break; }
+                if (grid && grid.setFocusedRow) { grid.setFocusedRow(0); break; }
+              }
+            }
+            // Gauce 그리드 직접 행 선택
+            const rows = document.querySelectorAll('tr[data-row_idx]');
+            if (rows[0]) rows[0].click();
+          } catch(e) {}
+        }).catch(() => {});
+        await resultPage.waitForTimeout(500);
+
+        // mp_prt 관련 scwin 함수 직접 호출
+        if (_s3ScwinFns.length > 0) {
+          await resultPage.evaluate((fns) => {
+            try {
+              for (const fn of fns) {
+                const parts = fn.split('.');
+                let obj = window;
+                for (const p of parts) obj = obj && obj[p];
+                if (typeof obj === 'function') {
+                  console.log('[ws] 호출:', fn);
+                  obj(0, 'mp_prt');
+                  break;
+                }
+              }
+            } catch(e) { console.log('[ws] 함수 호출 오류:', e.message); }
+          }, _s3ScwinFns).catch(() => {});
+          await resultPage.waitForTimeout(2000);
+        }
+
         // 방법S3-A: td[data-col_id="mp_prt"] — "보기" 열 TD 직접 클릭
         const _s3ViewTds = await resultPage.locator('td[data-col_id="mp_prt"]').all().catch(() => []);
         console.log('[iros] 방법S3: mp_prt TD 개수=', _s3ViewTds.length);
@@ -1692,6 +1753,15 @@ app.post('/api/iros-fetch', async (req, res) => {
           if (_s3BogiList.length > 0) {
             await _s3BogiList[0].click({ force: true, timeout: 5000 }).catch(() => {});
             console.log('[iros] 방법S3-B: "보기" 클릭 완료');
+          }
+          // 방법S3-C: 링크 텍스트 "열람" 클릭
+          if (_s3BogiList.length === 0) {
+            const _s3YeolList = await resultPage.locator('a:text("열람"), button:text("열람"), span:text("열람")').all().catch(() => []);
+            console.log('[iros] 방법S3: "열람" 텍스트 개수=', _s3YeolList.length);
+            if (_s3YeolList.length > 0) {
+              await _s3YeolList[0].click({ force: true, timeout: 5000 }).catch(() => {});
+              console.log('[iros] 방법S3-C: "열람" 클릭 완료');
+            }
           }
         }
         // 클릭 직후 스크린샷 (클릭 효과 확인)
@@ -1811,12 +1881,50 @@ app.post('/api/iros-fetch', async (req, res) => {
               rlrgCount = 999;
               console.log('[iros] 방법S3 팝업 DOM 성공! len=', _s3PopText.length);
             } else {
+              // 팝업 스크린샷 저장 (OCR 폴백용)
               console.log('[iros] 방법S3 팝업 등기 없음. textLen=', _s3PopText.length, '앞300=', _s3PopText.slice(0, 300));
+              await _s3Popup.screenshot({ path: '/home/opc/iros-debug/step6-popup.png', fullPage: true }).catch(() => {});
             }
             await _s3Popup.close().catch(() => {});
           } else {
             console.log('[iros] 방법S3 팝업 없음 — iframe 또는 SPA 내 렌더링 방식일 수 있음');
           }
+        }
+
+        // ── PaddleOCR 폴백: 팝업/화면 스크린샷 → OCR 텍스트 추출 ──────────────────────
+        // callMpPrtIframe.do 결과가 이미지/PDF 렌더링일 경우 OCR로 텍스트 추출
+        if (!directApiContent) {
+          try {
+            const _ocrPort = 3101; // Oracle VM PaddleOCR 서버 포트
+            const _ocrPages = [resultPage, _s3PopupPage].filter(Boolean);
+            for (const _ocrPage of _ocrPages) {
+              if (directApiContent) break;
+              // 각 페이지 전체 스크린샷 (이미지 캡처)
+              const _ocrImgPath = `/home/opc/iros-debug/step6-ocr-${Date.now()}.png`;
+              await _ocrPage.screenshot({ path: _ocrImgPath, fullPage: true }).catch(() => {});
+              console.log('[iros] OCR 스크린샷:', _ocrImgPath);
+              // PaddleOCR 서버 호출
+              const _ocrFormData = new FormData();
+              const { readFileSync } = await import('fs');
+              const _imgBuf = readFileSync(_ocrImgPath);
+              const _imgBlob = new Blob([_imgBuf], { type: 'image/png' });
+              _ocrFormData.append('file', _imgBlob, 'screen.png');
+              const _ocrResp = await fetch(`http://localhost:${_ocrPort}/ocr`, {
+                method: 'POST', body: _ocrFormData, signal: AbortSignal.timeout(30000)
+              }).catch(() => null);
+              if (!_ocrResp?.ok) { console.log('[iros] OCR 서버 오류:', _ocrResp?.status); continue; }
+              const _ocrJson = await _ocrResp.json().catch(() => null);
+              const _ocrText = Array.isArray(_ocrJson?.results)
+                ? _ocrJson.results.map(r => Array.isArray(r) ? r.map(x => x[1]?.[0] || '').join(' ') : '').join('\n')
+                : (typeof _ocrJson?.text === 'string' ? _ocrJson.text : '');
+              console.log('[iros] OCR 결과 len=', _ocrText.length, 'reg=', _s3RegRe.test(_ocrText), '앞300=', _ocrText.slice(0, 300));
+              if (_s3RegLoose.test(_ocrText) && _ocrText.length > 100) {
+                directApiContent = JSON.stringify({ type: 'method_s3_ocr', content: _ocrText.slice(0, 80000) });
+                rlrgCount = 999;
+                console.log('[iros] PaddleOCR 폴백 성공!');
+              }
+            }
+          } catch (_ocrErr) { console.log('[iros] OCR 폴백 오류:', _ocrErr.message); }
         }
 
         // 방법S3 실패 시 현재 페이지 iframe 확인 (callMpPrtIframe이 iframe으로 로드됐을 경우)
