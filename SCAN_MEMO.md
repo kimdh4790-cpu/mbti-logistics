@@ -278,6 +278,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **소액 충전 플랜 신설**: ₩5,000/₩10,000 플랜 추가 (가격 구조 충돌 해결 — 최저 2,900P 서비스 이용 가능). 충전 카드 4→6종 |
 | 2026-09-07 | **biz-status encodeURIComponent 제거**: BIZ_API_KEY가 이미 URL인코딩됨 → 이중인코딩 제거로 NTS API 인증 정상화 |
 | 2026-09-07 | **Cloudflare Secrets 전수확인**: 대시보드 스크린샷으로 13개 키 모두 설정 확인 (SCAN_MEMO.md 등록) |
+| 2026-09-09 | **SCAN 전면 재설계 v3**: 드로어 min-height:88vh(빈공간 제거), SVG링→5단계 나레이션 진행카드, 서비스별 전용 UI(사주/숏폼/자막/사업자), _slyPollResult 별칭·slyProgressSection ID·VALID_SERVICES 3종 버그 3개 수정 |
 | 2026-09-09 | **크몽+당근 스타일 UX 전면 개편**: renderCatGrid→renderServiceList+renderChips. 카테고리 칩(이모지+텍스트 가로스크롤) + 서비스 세로목록 + 바텀 드로어(_slyOpenDrawer/_slyCloseDrawer). 영상·미디어 카테고리 신규(숏폼 스크립트 29,900P / AI사진 19,900P / 자막생성 14,900P). 총 서비스 15→18종 |
 | 2026-09-07 | **시장조사 전수조사 v2**: 경쟁사 23곳 5개 카테고리 분석, 가격·수익화·마케팅 전략 보고서 작성 (Artifact 게시) |
 | 2026-09-07 | **Oracle 서버 Playwright 전환**: puppeteer-core → playwright (자체 Chromium ARM 번들). dnf chromium 미지원 → npx playwright install chromium으로 해결. PM2로 oracle-server 영구실행 (--cwd ~/mbti-logistics). VCN Security List TCP 3100 Ingress 추가. 이제 IROS 자동 발급 실동작 확인 완료 |
