@@ -1622,6 +1622,9 @@ app.post('/api/iros-fetch', async (req, res) => {
             console.log('[iros] 방법S3-B: "보기" 클릭 완료');
           }
         }
+        // 클릭 직후 스크린샷 (클릭 효과 확인)
+        await resultPage.waitForTimeout(3000);
+        await resultPage.screenshot({ path: '/home/opc/iros-debug/step4-s3-after-click.png', fullPage: false }).catch(() => {});
 
         // 클릭 후 전체 네트워크 요청 로그 (디버그 — 등기 데이터 URL 파악)
         const _s3ReqLogger = (req) => {
