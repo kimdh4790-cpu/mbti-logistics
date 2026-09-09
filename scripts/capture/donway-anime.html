@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --navy: #08101f;
+  --gold: #c9a84c;
+  --gold-lt: #e8c97a;
+  --white: #ffffff;
+  --dim: rgba(255,255,255,0.55);
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(201,168,76,0.25);
+}
+body {
+  width: 720px; height: 1280px;
+  background: var(--navy);
+  font-family: 'Noto Sans KR', sans-serif;
+  overflow: hidden; color: var(--white);
+}
+.scene {
+  position: absolute; width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  opacity: 0; padding: 60px 48px;
+}
+
+/* ── Scene 1 ── */
+#s1 .logo { font-size: 30px; font-weight: 900; color: var(--gold); letter-spacing: 5px; margin-bottom: 12px; }
+#s1 .month { font-size: 18px; color: var(--dim); margin-bottom: 52px; }
+#s1 .amount-wrap {
+  width: 100%; background: var(--card);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 36px 40px; text-align: center; margin-bottom: 28px;
+}
+#s1 .amt-lbl { font-size: 15px; color: var(--dim); margin-bottom: 10px; }
+#s1 .amt { font-size: 58px; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; letter-spacing: -2px; }
+#s1 .stats-row { display: flex; gap: 20px; width: 100%; margin-bottom: 36px; }
+#s1 .stat {
+  flex: 1; background: var(--card); border-radius: 14px; padding: 22px 14px; text-align: center;
+}
+#s1 .sv { font-size: 34px; font-weight: 700; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+#s1 .sl { font-size: 13px; color: var(--dim); }
+.drow {
+  display: flex; align-items: center; width: 100%;
+  padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.07);
+  opacity: 0; transform: translateX(-16px);
+}
+.dn { flex: 1; font-size: 16px; }
+.dc { font-size: 13px; color: var(--dim); margin-right: 18px; }
+.da { font-size: 16px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* ── Scene 2 ── */
+#s2 .ttl { font-size: 30px; font-weight: 700; text-align: center; line-height: 1.5; margin-bottom: 10px; }
+#s2 .sub { font-size: 17px; color: var(--dim); margin-bottom: 48px; text-align: center; }
+.steps-row { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 40px; width: 100%; }
+.stp { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.sc {
+  width: 50px; height: 50px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 700; color: var(--dim);
+}
+.sc.act { border-color: var(--gold); background: var(--gold); color: var(--navy); }
+.sc.done { border-color: #4ade80; background: #4ade80; color: var(--navy); }
+.sl2 { font-size: 12px; color: var(--dim); text-align: center; white-space: nowrap; }
+.sline { width: 56px; height: 2px; background: rgba(255,255,255,0.12); margin-bottom: 28px; }
+.pw { width: 100%; background: rgba(255,255,255,0.08); border-radius: 6px; height: 7px; margin-bottom: 44px; overflow: hidden; }
+.pb { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-lt)); border-radius: 6px; width: 0%; }
+.rgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; }
+.rc {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px 18px; text-align: center;
+  opacity: 0; transform: translateY(16px);
+}
+.rv { font-size: 26px; font-weight: 700; color: var(--gold); margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.rl { font-size: 12px; color: var(--dim); }
+.green { color: #4ade80; }
+
+/* ── Scene 3 ── */
+#s3 .ttl { font-size: 30px; font-weight: 700; text-align: center; line-height: 1.5; margin-bottom: 8px; }
+#s3 .sub { font-size: 17px; color: var(--dim); margin-bottom: 36px; text-align: center; }
+.kk-wrap { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 28px; opacity: 0; transform: translateY(20px); }
+.kk-hd {
+  background: #FEE500; padding: 14px 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.kk-icon {
+  width: 34px; height: 34px; background: #3C1E1E;
+  border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 16px;
+}
+.kk-name { font-size: 15px; font-weight: 700; color: #3C1E1E; }
+.kk-bd { background: #F0F0F0; padding: 20px 22px; }
+.kk-msg { font-size: 14px; color: #1a1a1a; line-height: 1.85; min-height: 100px; }
+.cur {
+  display: inline-block; width: 2px; height: 16px;
+  background: #1a1a1a; vertical-align: text-bottom;
+  animation: blink 0.65s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+.snd-row { display: flex; gap: 14px; width: 100%; opacity: 0; transform: translateY(16px); }
+.snd-card { flex: 1; background: var(--card); border-radius: 12px; padding: 18px 14px; text-align: center; }
+.snd-v { font-size: 30px; font-weight: 700; margin-bottom: 5px; }
+.snd-l { font-size: 12px; color: var(--dim); }
+.red { color: #f87171; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+</head>
+<body>
+
+<!-- Scene 1: Settlement Dashboard -->
+<div class="scene" id="s1">
+  <div class="logo">DONWAY</div>
+  <div class="month">2026년 8월 정산 현황</div>
+  <div class="amount-wrap">
+    <div class="amt-lbl">총 지급액</div>
+    <div class="amt">₩<span id="cnt-amt">0</span></div>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="sv" id="cnt-drv">0명</div><div class="sl">기사 수</div></div>
+    <div class="stat"><div class="sv" id="cnt-del">0건</div><div class="sl">배달 건수</div></div>
+  </div>
+  <div id="dlist" style="width:100%">
+    <div class="drow"><span class="dn">김○○</span><span class="dc">198건</span><span class="da">₩198,000</span></div>
+    <div class="drow"><span class="dn">이○○</span><span class="dc">185건</span><span class="da">₩185,000</span></div>
+    <div class="drow"><span class="dn">박○○</span><span class="dc">172건</span><span class="da">₩172,000</span></div>
+    <div class="drow"><span class="dn">최○○</span><span class="dc">165건</span><span class="da">₩165,000</span></div>
+    <div class="drow"><span class="dn">정○○</span><span class="dc">127건</span><span class="da">₩127,000</span></div>
+  </div>
+</div>
+
+<!-- Scene 2: Excel Upload -->
+<div class="scene" id="s2">
+  <div class="ttl">엑셀 한 장으로<br>847건 정산 완료</div>
+  <div class="sub">파일 업로드 → 자동 계산 → 알림톡 발송</div>
+  <div class="steps-row">
+    <div class="stp"><div class="sc" id="st1">1</div><div class="sl2">엑셀 업로드</div></div>
+    <div class="sline"></div>
+    <div class="stp"><div class="sc" id="st2">2</div><div class="sl2">자동 계산</div></div>
+    <div class="sline"></div>
+    <div class="stp"><div class="sc" id="st3">3</div><div class="sl2">알림톡 발송</div></div>
+  </div>
+  <div class="pw"><div class="pb" id="pb"></div></div>
+  <div class="rgrid">
+    <div class="rc" id="rc1"><div class="rv">847건</div><div class="rl">처리 완료</div></div>
+    <div class="rc" id="rc2"><div class="rv">47명</div><div class="rl">기사 수</div></div>
+    <div class="rc" id="rc3"><div class="rv">₩8.3M</div><div class="rl">총 지급액</div></div>
+    <div class="rc" id="rc4"><div class="rv green">오류 0건</div><div class="rl">정산 정확도 100%</div></div>
+  </div>
+</div>
+
+<!-- Scene 3: Alimtalk -->
+<div class="scene" id="s3">
+  <div class="ttl">정산 완료 즉시<br>기사 전원 자동 발송</div>
+  <div class="sub">카카오 알림톡 · 국내 유일 서비스</div>
+  <div class="kk-wrap" id="kk-wrap">
+    <div class="kk-hd">
+      <div class="kk-icon">🐾</div>
+      <div class="kk-name">DONWAY 정산알림</div>
+    </div>
+    <div class="kk-bd"><div class="kk-msg" id="kk-msg"></div></div>
+  </div>
+  <div class="snd-row" id="snd-row">
+    <div class="snd-card"><div class="snd-v green">47</div><div class="snd-l">발송 완료</div></div>
+    <div class="snd-card"><div class="snd-v red">0</div><div class="snd-l">실패</div></div>
+    <div class="snd-card"><div class="snd-v">2.1s</div><div class="snd-l">발송 시간</div></div>
+  </div>
+</div>
+
+<script>
+const MSG = "홍길동 기사님,\n\n8월 정산이 완료되었습니다.\n\n배달 건수: 198건\n지급액: ₩198,000\n지급일: 9월 10일\n\n감사합니다.";
+
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function scene1() {
+  const el = document.getElementById('s1');
+  el.style.opacity = 1;
+  const tl = anime.timeline({ easing: 'easeOutQuart' });
+
+  tl.add({ targets: '#s1 .logo',       opacity: [0,1], translateY: [-20,0], duration: 450 });
+  tl.add({ targets: '#s1 .month',      opacity: [0,1], translateY: [-10,0], duration: 350 }, '-=150');
+  tl.add({ targets: '#s1 .amount-wrap',opacity: [0,1], translateY: [24,0],  duration: 450 }, '-=100');
+  tl.add({
+    targets: { v: 0 }, v: 8347200, duration: 2000, easing: 'easeOutQuart',
+    update(a) { document.getElementById('cnt-amt').textContent = fmt(a.animatables[0].target.v); }
+  }, '+=50');
+  tl.add({ targets: '#s1 .stats-row', opacity: [0,1], duration: 350 }, '-=1600');
+  tl.add({
+    targets: { v: 0 }, v: 47, duration: 700, easing: 'easeOutQuart',
+    update(a) { document.getElementById('cnt-drv').textContent = Math.round(a.animatables[0].target.v) + '명'; }
+  }, '-=350');
+  tl.add({
+    targets: { v: 0 }, v: 847, duration: 700, easing: 'easeOutQuart',
+    update(a) { document.getElementById('cnt-del').textContent = Math.round(a.animatables[0].target.v) + '건'; }
+  }, '-=700');
+  tl.add({
+    targets: '#dlist .drow', opacity: [0,1], translateX: [-16,0],
+    duration: 280, delay: anime.stagger(70), easing: 'easeOutQuart',
+  }, '-=300');
+  tl.add({ targets: '#s1', opacity: [1,0], duration: 550, easing: 'linear' }, '+=600');
+
+  return tl.finished;
+}
+
+async function scene2() {
+  const el = document.getElementById('s2');
+  el.style.opacity = 1;
+  const tl = anime.timeline({ easing: 'easeOutQuart' });
+
+  tl.add({ targets: ['#s2 .ttl','#s2 .sub'], opacity: [0,1], translateY: [-18,0], duration: 450, delay: anime.stagger(80) });
+  tl.add({ targets: '.steps-row', opacity: [0,1], duration: 350 }, '-=150');
+
+  const setStep = (id, cls, txt) => () => {
+    const el = document.getElementById(id);
+    el.className = 'sc ' + cls;
+    el.textContent = txt;
+  };
+
+  tl.add({ begin: setStep('st1','act','1'), duration: 50 });
+  tl.add({ targets: '#pb', width: '33%', duration: 550 });
+  tl.add({ begin: setStep('st1','done','✓'), duration: 50 });
+  tl.add({ begin: setStep('st2','act','2'), duration: 50 });
+  tl.add({ targets: '#pb', width: '66%', duration: 550 });
+  tl.add({ begin: setStep('st2','done','✓'), duration: 50 });
+  tl.add({ begin: setStep('st3','act','3'), duration: 50 });
+  tl.add({ targets: '#pb', width: '100%', duration: 550 });
+  tl.add({ begin: setStep('st3','done','✓'), duration: 50 });
+
+  tl.add({
+    targets: ['#rc1','#rc2','#rc3','#rc4'],
+    opacity: [0,1], translateY: [16,0], duration: 280, delay: anime.stagger(70),
+  }, '-=100');
+  tl.add({ targets: '#s2', opacity: [1,0], duration: 550, easing: 'linear' }, '+=650');
+
+  return tl.finished;
+}
+
+async function typeText(el, text, ms) {
+  el.innerHTML = '';
+  const cur = document.createElement('span');
+  cur.className = 'cur';
+  el.appendChild(cur);
+  for (const ch of text) {
+    cur.insertAdjacentHTML('beforebegin', ch === '\n' ? '<br>' : ch);
+    await wait(ms);
+  }
+  cur.remove();
+}
+
+async function scene3() {
+  const el = document.getElementById('s3');
+  el.style.opacity = 1;
+
+  await anime({ targets: ['#s3 .ttl','#s3 .sub'], opacity: [0,1], translateY: [-18,0], duration: 450, delay: anime.stagger(90), easing: 'easeOutQuart' }).finished;
+  await anime({ targets: '#kk-wrap', opacity: [0,1], translateY: [20,0], duration: 420, easing: 'easeOutQuart' }).finished;
+  await typeText(document.getElementById('kk-msg'), MSG, 32);
+  await wait(200);
+  await anime({ targets: '#snd-row', opacity: [0,1], translateY: [16,0], duration: 480, easing: 'easeOutQuart' }).finished;
+  await wait(800);
+  await anime({ targets: '#s3', opacity: [1,0], duration: 550, easing: 'linear' }).finished;
+}
+
+async function run() {
+  await document.fonts.ready;
+  await scene1();
+  await scene2();
+  await scene3();
+  window.__done = true;
+}
+run();
+</script>
+</body>
+</html>

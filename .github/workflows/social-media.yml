@@ -180,6 +180,17 @@ jobs:
               || echo "[$PRODUCT] Runway 생성 실패 (Remotion 폴백)"
           fi
 
+      - name: DONWAY anime.js 영상 생성 (비교용 — $0)
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'donway' || env.PRODUCT == 'all') }}
+        run: |
+          mkdir -p output
+          CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
+          [ -n "$CHROMIUM" ] && export CHROMIUM_PATH="$CHROMIUM"
+          echo "[anime.js] DONWAY 애니메이션 영상 생성..."
+          node scripts/capture/record-donway-anime.js \
+            && echo "[anime.js] donway-anime.mp4 생성 완료" \
+            || echo "[anime.js] 생성 실패 (건너뜀)"
+
       - name: Remotion 코드 영상 렌더링 (FILO·DONWAY·용차앱·인프런)
         if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'inflearn' || env.PRODUCT == 'all') }}
         run: |
