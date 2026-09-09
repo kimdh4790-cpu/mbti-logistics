@@ -2647,7 +2647,8 @@ app.post('/api/iros-fetch', async (req, res) => {
               if (resp._err) { console.log('[iros] 방법O fetch오류:', relUrl, resp._err); break; }
               const txt = await resp.text().catch(() => '');
               console.log('[iros] 방법O', relUrl, 'status:', resp.status, 'body:', txt.slice(0, 500));
-              if (txt.length > 100 && !txt.includes('"dataList":[]') && !txt.includes('"dataList": []')) {
+              const isHtml = txt.includes('<!DOCTYPE') || txt.includes('<html') || txt.includes('document.location.href') || txt.includes('<script>');
+              if (resp.status === 200 && txt.length > 100 && !isHtml && !txt.includes('"dataList":[]') && !txt.includes('"dataList": []')) {
                 directApiContent = txt;
                 console.log('[iros] 방법O 성공! content length:', txt.length);
                 break;
