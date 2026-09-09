@@ -8852,7 +8852,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           EmoneyPwd:    hasEmoney ? await encB64(emoneyPwd)    : await enc(''),
           CmortFlag:    '',
           TradeSeqFlag: '',
-          AbsCls:       '',
+          AbsCls:       await enc('12'),
           RgsMttrSmry:  ''
         };
 
