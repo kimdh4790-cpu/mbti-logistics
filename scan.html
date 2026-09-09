@@ -1,6 +1,6 @@
 <title>SCAN - 문서 AI 분석</title>
 <link rel="manifest" href="/scan-manifest.json?v=3">
-<meta name="theme-color" content="#08101f">
+<meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,44 +15,25 @@
 :root {
   --navy: #08101f;
   --navy-mid: #0f1e38;
-  --navy-card: #1a2844;
   --gold: #C9A84C;
   --gold-light: #e0c06e;
+  --pink: #FF6B9D;
+  --lime: #52C41A;
   --white: #FFFFFF;
-  --bg: #f8f7f4;
+  /* 회사 브랜드: 흰색+하늘색 배경, 핑크·연두·골드 액센트 */
+  --bg: #E8F4FD;
   --surface: #FFFFFF;
-  --border: rgba(0,0,0,.1);
-  --text-primary: #1a1a1a;
-  --text-secondary: #5A6170;
-  --text-muted: #9ca3af;
+  --border: rgba(0,0,0,.09);
+  --text-primary: #1a253a;
+  --text-secondary: #4a6080;
+  --text-muted: #9cb0c8;
   --success: #16A34A;
   --warn: #D97706;
   --danger: #DC2626;
   --radius: 14px;
-  --shadow: 0 4px 24px rgba(0,0,0,.07);
-  --shadow-card: 0 2px 12px rgba(0,0,0,.05);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #1a1a1a;
-    --surface: #242424;
-    --border: rgba(255,255,255,.1);
-    --text-primary: #f0f0f0;
-    --text-secondary: #a0a0a0;
-    --text-muted: #666666;
-    --shadow: 0 4px 24px rgba(0,0,0,.35);
-    --shadow-card: 0 2px 12px rgba(0,0,0,.25);
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #1a1a1a;
-  --surface: #242424;
-  --border: rgba(255,255,255,.1);
-  --text-primary: #f0f0f0;
-  --text-secondary: #a0a0a0;
-  --text-muted: #666666;
-  --shadow: 0 4px 24px rgba(0,0,0,.35);
-  --shadow-card: 0 2px 12px rgba(0,0,0,.25);
+  --shadow: 0 4px 20px rgba(8,100,200,.08);
+  --shadow-card: 0 2px 10px rgba(8,100,200,.06);
+  color-scheme: light; /* 다크모드 무조건 차단 */
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -69,7 +50,8 @@ body {
 
 /* ── Header ── */
 .sly-header {
-  background: var(--navy);
+  background: #FFFFFF;
+  border-bottom: 1px solid rgba(0,0,0,.08);
   padding: 0 20px;
   display: flex;
   align-items: center;
@@ -101,10 +83,10 @@ body {
   font-family: 'Nanum Myeongjo', Georgia, serif;
   font-size: 18px;
   font-weight: 800;
-  color: var(--white);
+  color: var(--text-primary);
   letter-spacing: -0.3px;
 }
-.sly-logo-text span { color: var(--gold); }
+.sly-logo-text span { color: var(--pink); }
 .sly-header-right {
   display: flex;
   align-items: center;
@@ -1331,12 +1313,12 @@ body {
 .sly-user-pts {
   font-size: 15px;
   font-weight: 800;
-  color: var(--gold);
+  color: var(--pink);
 }
 .sly-pts-label { font-size: 12px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
 .sly-charge-btn {
-  background: var(--gold);
-  color: var(--navy);
+  background: var(--pink);
+  color: #fff;
   border: none;
   border-radius: 8px;
   padding: 7px 16px;
@@ -1349,11 +1331,11 @@ body {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
   gap: 10px;
   padding: 14px;
   overflow-y: auto;
   background: var(--bg);
-  align-content: start;
 }
 .sly-cat-card {
   background: var(--surface);
@@ -1366,18 +1348,8 @@ body {
   flex-direction: column;
   gap: 10px;
   position: relative;
-  overflow: hidden;
 }
 .sly-cat-card:active { transform: scale(.97); }
-.sly-cat-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 18px;
-  opacity: 0;
-  transition: opacity .18s;
-}
-.sly-cat-card:hover::after { opacity: 1; }
 .sly-cat-ico {
   width: 46px; height: 46px;
   border-radius: 14px;
@@ -1896,51 +1868,40 @@ const SVC_META = {
   subtitle:       { stars: '4.7', reviews: 31, badge: 'new', badgeLabel: 'NEW' },
 };
 
-// 카테고리별 accent 색상
+// 카테고리별 accent 색상 (회사 브랜드: 핑크·연두·골드 + 하늘색 계열)
 const CAT_ACCENT = {
-  '취업서류': { bg: '#EFF6FF', color: '#2563EB', dark_bg: '#1e3a5f', dark_color: '#60a5fa' },
-  '법률·계약': { bg: '#FEF2F2', color: '#DC2626', dark_bg: '#5f1e1e', dark_color: '#f87171' },
-  '부동산':   { bg: '#F0FDF4', color: '#16A34A', dark_bg: '#1e4d2e', dark_color: '#4ade80' },
-  '직장생활': { bg: '#F5F3FF', color: '#7C3AED', dark_bg: '#3b1f5e', dark_color: '#a78bfa' },
-  '공문서':   { bg: '#FFFBEB', color: '#D97706', dark_bg: '#5c3a00', dark_color: '#fbbf24' },
-  '영상·미디어': { bg: '#ECFDF5', color: '#059669', dark_bg: '#0e3d2a', dark_color: '#34d399' },
+  '취업서류': { bg: '#FFF0F6', color: '#FF6B9D' },
+  '법률·계약': { bg: '#FFF8E6', color: '#C9A84C' },
+  '부동산':   { bg: '#F0FBF0', color: '#52C41A' },
+  '직장생활': { bg: '#FFF0F6', color: '#FF8FAB' },
+  '공문서':   { bg: '#E8F4FD', color: '#0EA5E9' },
+  '영상·미디어': { bg: '#F0FBF0', color: '#34C759' },
 };
-
-function _isDarkMode() {
-  const th = document.documentElement.getAttribute('data-theme');
-  if (th === 'dark') return true;
-  if (th === 'light') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
 
 function renderCatGrid() {
   const el = document.getElementById('slyCatGrid');
   if (!el) return;
   el.innerHTML = SVC_CATS.map(cat => {
-    const acc = CAT_ACCENT[cat.label] || { bg: '#f3f4f6', color: '#374151', dark_bg: '#374151', dark_color: '#d1d5db' };
-    const dark = _isDarkMode();
-    const ibg = dark ? acc.dark_bg : acc.bg;
-    const icolor = dark ? acc.dark_color : acc.color;
+    const acc = CAT_ACCENT[cat.label] || { bg: '#f3f4f6', color: '#374151' };
     return `<div class="sly-cat-card" onclick="_slyOpenCat('${cat.label.replace(/'/g,"\\'")}')">
-      <div class="sly-cat-ico" style="background:${ibg};color:${icolor}">${cat.icon}</div>
+      <div class="sly-cat-ico" style="background:${acc.bg};color:${acc.color}">${cat.icon}</div>
       <div>
         <div class="sly-cat-name">${cat.label}</div>
         <div class="sly-cat-count">${cat.svcs.length}개 서비스</div>
       </div>
     </div>`;
   }).join('');
-  document.getElementById('slyCatGrid').style.display = '';
+  el.style.display = '';
   const panel = document.getElementById('slySvcPanel');
-  if (panel) { panel.classList.remove('active'); }
+  if (panel) panel.classList.remove('active');
 }
 
 function _slyOpenCat(catLabel) {
   const cat = SVC_CATS.find(c => c.label === catLabel);
   if (!cat) return;
-  const acc = CAT_ACCENT[catLabel] || { bg: '#f3f4f6', color: '#374151', dark_bg: '#374151', dark_color: '#d1d5db' };
-  const dark = _isDarkMode();
-  const ibg = dark ? acc.dark_bg : acc.bg;
-  const icolor = dark ? acc.dark_color : acc.color;
+  const acc = CAT_ACCENT[catLabel] || { bg: '#f3f4f6', color: '#374151' };
+  const ibg = acc.bg;
+  const icolor = acc.color;
   // hide grid, show panel
   document.getElementById('slyCatGrid').style.display = 'none';
   const panel = document.getElementById('slySvcPanel');
