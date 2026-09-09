@@ -2694,6 +2694,9 @@ app.post('/api/iros-fetch', async (req, res) => {
         // O-6: 성공 시 rlrgCount 올려서 이후 단계 스킵 표시
         if (directApiContent) {
           rlrgCount = 999; // sentinel: 직접 API 성공
+          // 디버그: 성공 내용을 파일로 저장 (확인용)
+          try { require('fs').writeFileSync('/tmp/iros-method-o-result.json', directApiContent); } catch(e) {}
+          console.log('[iros] 방법O: 직접 API 성공 내용 전체:', directApiContent.slice(0, 1000));
           console.log('[iros] 방법O: 직접 API 성공, content 반환 준비');
         } else {
           // O-7: 실패시 보기 버튼 onclick 체인 분석 (핸들러 함수명 추출)
