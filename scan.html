@@ -123,7 +123,8 @@ body {
   padding: 40px 20px 80px;
 }
 /* 로그인 후 앱 모드에서 main 여백 제거 */
-.sly-main:has(.sly-app-layout) {
+.sly-main:has(.sly-app-layout),
+.sly-main:has(.sly-app) {
   max-width: 100%;
   padding: 0;
 }
@@ -1202,17 +1203,15 @@ body {
 .sly-app {
   display: flex;
   flex-direction: column;
-  max-width: 640px;
-  margin: 0 auto;
+  width: 100%;
   background: var(--bg);
-  padding-bottom: 20px;
 }
 /* 유저 바 */
 .sly-user-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 11px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1233,48 +1232,53 @@ body {
   font-weight: 800;
   cursor: pointer;
 }
-/* 카테고리 그리드 */
+/* 카테고리 그리드 — 화면 꽉 채우기 */
 .sly-cat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 12px 14px 16px;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 8px;
+  padding: 8px;
   background: var(--bg);
-  align-content: start;
+  height: calc(100vh - 50px);
+  height: calc(100svh - 50px);
 }
 .sly-cat-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 16px 14px 14px;
+  padding: 18px 14px 14px;
   cursor: pointer;
   transition: transform .18s, box-shadow .18s;
   display: flex;
   flex-direction: column;
   gap: 10px;
   position: relative;
+  min-height: 0;
+  overflow: hidden;
 }
 .sly-cat-card:hover { box-shadow: var(--shadow-card); border-color: rgba(0,0,0,.15); }
 .sly-cat-card:active { transform: scale(.97); }
 .sly-cat-ico {
-  width: 44px; height: 44px;
-  border-radius: 12px;
+  width: 48px; height: 48px;
+  border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.sly-cat-ico svg { width: 22px; height: 22px; }
+.sly-cat-ico svg { width: 24px; height: 24px; }
 .sly-cat-meta { display: flex; align-items: center; gap: 6px; }
-.sly-cat-name { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -.3px; }
+.sly-cat-name { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -.3px; }
 .sly-cat-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
 .sly-cat-svcs {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  overflow: hidden;
 }
 .sly-cat-svc-chip {
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 20px;
   white-space: nowrap;
 }
@@ -1285,8 +1289,9 @@ body {
   background: var(--bg);
 }
 .sly-svc-panel.active { display: flex; }
-/* 인기 서비스 섹션 */
+/* 인기 서비스 섹션 — 그리드가 화면을 채우므로 기본 숨김 */
 .sly-popular {
+  display: none;
   padding: 0 14px 8px;
 }
 .sly-pop-hd {
