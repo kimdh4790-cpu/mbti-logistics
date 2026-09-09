@@ -3,9 +3,17 @@
  * 실행: node scripts/audio/generate-narration.js --product filo
  *
  * 지원 TTS (우선순위 순):
- *   Google TTS (권장): GOOGLE_TTS_API_KEY 환경변수 — 무료 월 100만자
- *   CLOVA:             NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET
- *   ElevenLabs:        ELEVENLABS_API_KEY
+ *   Fish Audio (최우선): FISH_AUDIO_API_KEY + FISH_AUDIO_VOICE_ID — 본인 목소리 클론, 무료 월 8,000크레딧
+ *   Google TTS:         GOOGLE_TTS_API_KEY 환경변수 — 무료 월 100만자
+ *   CLOVA:              NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET
+ *   ElevenLabs:         ELEVENLABS_API_KEY
+ *
+ * Fish Audio 설정:
+ *   1. https://fish.audio 가입 (무료, 카드 불필요)
+ *   2. 본인 목소리 10~30초 업로드 → Voice Clone 생성
+ *   3. 생성된 voice_id 복사
+ *   4. 계정 설정 → API Key 발급
+ *   5. GitHub Secrets에 FISH_AUDIO_API_KEY, FISH_AUDIO_VOICE_ID 등록
  *
  * 출력: output/<product>-narration.mp3 (전체 나레이션)
  *       output/<product>-narration-<n>.mp3 (구간별)
@@ -49,6 +57,52 @@ if (!fs.existsSync(scriptFile)) {
 const script = require(scriptFile);
 const OUTPUT_DIR = path.join(ROOT, 'output');
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+
+// ─── Fish Audio TTS (본인 목소리 클론) ────────────────────────────
+async function fishAudioTTS(text, outFile) {
+  const apiKey = process.env.FISH_AUDIO_API_KEY;
+  const voiceId = process.env.FISH_AUDIO_VOICE_ID;
+  if (!apiKey || !voiceId) throw new Error('FISH_AUDIO_API_KEY + FISH_AUDIO_VOICE_ID 환경변수 필요');
+
+  const bodyStr = JSON.stringify({
+    text,
+    reference_id: voiceId,
+    format: 'mp3',
+    mp3_bitrate: 128,
+    normalize: true,
+    latency: 'normal',
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: 'api.fish.audio',
+        path: '/v1/tts',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(bodyStr),
+        },
+      },
+      (res) => {
+        if (res.statusCode !== 200) {
+          let err = '';
+          res.on('data', d => (err += d));
+          res.on('end', () => reject(new Error(`Fish Audio 오류 ${res.statusCode}: ${err}`)));
+          return;
+        }
+        const out = fs.createWriteStream(outFile);
+        res.pipe(out);
+        out.on('finish', resolve);
+        out.on('error', reject);
+      }
+    );
+    req.on('error', reject);
+    req.write(bodyStr);
+    req.end();
+  });
+}
 
 // ─── Google Cloud TTS ──────────────────────────────────────────────
 async function googleTTS(text, outFile) {
@@ -252,19 +306,21 @@ async function main() {
   const lines = script.lines;
   const voice = script.voice || 'nara';
   const speed = script.speedRate ?? 0;
+  const useFishAudio = !!(process.env.FISH_AUDIO_API_KEY && process.env.FISH_AUDIO_VOICE_ID);
   const useGoogle = !!process.env.GOOGLE_TTS_API_KEY;
   const useClova = !!(process.env.NAVER_TTS_CLIENT_ID && process.env.NAVER_TTS_CLIENT_SECRET);
   const useElevenLabs = !!process.env.ELEVENLABS_API_KEY;
 
-  if (!useGoogle && !useClova && !useElevenLabs) {
+  if (!useFishAudio && !useGoogle && !useClova && !useElevenLabs) {
     console.error('[TTS] API 키 없음. 다음 중 하나 설정:');
-    console.error('  GOOGLE_TTS_API_KEY       (Google Cloud TTS, 권장 — 무료 월 100만자)');
+    console.error('  FISH_AUDIO_API_KEY + FISH_AUDIO_VOICE_ID (Fish Audio — 본인 목소리 클론, 무료)');
+    console.error('  GOOGLE_TTS_API_KEY                       (Google TTS — 무료 월 100만자)');
     console.error('  NAVER_TTS_CLIENT_ID + NAVER_TTS_CLIENT_SECRET');
     console.error('  ELEVENLABS_API_KEY');
     process.exit(1);
   }
 
-  const engine = useGoogle ? 'Google TTS' : useClova ? 'CLOVA' : 'ElevenLabs';
+  const engine = useFishAudio ? 'Fish Audio (내 목소리)' : useGoogle ? 'Google TTS' : useClova ? 'CLOVA' : 'ElevenLabs';
   console.log(`[TTS] ${PRODUCT} 나레이션 생성 중... (${engine})`);
 
   const segments = [];
@@ -273,7 +329,9 @@ async function main() {
     const segFile = path.join(OUTPUT_DIR, `${PRODUCT}-nar-${i}.mp3`);
     console.log(`  [${i + 1}/${lines.length}] "${line.text.slice(0, 30)}..."`);
 
-    if (useGoogle) {
+    if (useFishAudio) {
+      await fishAudioTTS(line.text, segFile);
+    } else if (useGoogle) {
       await googleTTS(line.text, segFile);
     } else if (useClova) {
       await clovaVoice(line.text, voice, speed, segFile);
