@@ -656,24 +656,9 @@ async function runOCR(){
   try{
     document.getElementById('loading-msg').textContent='AI 번역 중...';
 
-    // Worker에서 API 키 가져오기 (주입 우선, 없으면 폴백)
-    var ANTHROPIC_KEY=(window.__AK||'').trim();
-    if(!ANTHROPIC_KEY){
-      try{
-        var _kr=await fetch('/get-label-key');
-        var _kd=await _kr.json();
-        ANTHROPIC_KEY=(_kd.k||'').trim();
-      }catch(e){}
-    }
-    if(!ANTHROPIC_KEY){throw new Error('API 키 없음 - 관리자에게 문의');}
-    var res=await fetch('https://api.anthropic.com/v1/messages',{
+    var res=await fetch('/label-ocr',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key':ANTHROPIC_KEY,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:300,
@@ -688,7 +673,7 @@ async function runOCR(){
     });
     if(!res.ok){
       var errText=await res.text();
-      var errMsg='API 오류 '+res.status;
+      var errMsg='서버 오류 '+res.status;
       try{ var errJson=JSON.parse(errText); errMsg=errJson.error&&errJson.error.message?errJson.error.message:errMsg; }catch(e){}
       throw new Error(errMsg);
     }
@@ -696,7 +681,7 @@ async function runOCR(){
     var data;
     try{ data=JSON.parse(rawText); }
     catch(pe){ throw new Error('응답 파싱 실패'); }
-    if(data.error) throw new Error('API 오류: '+JSON.stringify(data.error));
+    if(data.error) throw new Error('AI 오류: '+JSON.stringify(data.error));
     var text=(data.content&&data.content[0]&&data.content[0].text)||'';
     if(!text) throw new Error('AI 응답 없음');
     var m=text.match(/\{[\s\S]*\}/);

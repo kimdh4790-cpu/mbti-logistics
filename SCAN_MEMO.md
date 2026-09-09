@@ -256,6 +256,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **_worker.js SERVICE_COSTS 하드코딩**: Firestore 미설정 시 0P 취약점 해소 |
 | 2026-09-07 | **v3 판례 DB 추가**: 계약서(포괄임금제·수습해고·IP귀속·체불임금 실제 판례 15건), 등기부(깡통전세·신탁사기·이중계약·갭투자·법인명의사기·명의신탁 6유형+통계) |
 | 2026-09-07 | **번역 시스템 전면 개편**: LANG_EXPERTISE 6개 언어 자격증변환·GPA스케일·군복무·인간적 표현 패턴 DB 추가 |
+| 2026-09-09 | **IROS 무료열람 방법S 구현**: oracle-server.js에 `page.on('response')` 응답 인터셉트로 IROS 백엔드 AJAX 응답에서 PIN 캡처 → 세션쿠키 + `callMpPrtIframe.do` 직접 fetch → 등기부 HTML 텍스트 추출. WebSquare headless 탐지 우회. rlrgCount=999 설정으로 Methods A-R 건너뜀. `directApiContent` 반환 버그(`return` → `res.json()`) 수정. _worker.js Oracle Playwright fallback 복원. |
 | 2026-09-09 | scan.html 전면 리디자인: 크몽 스타일 서비스 목록(배지+평점+미리보기) + 당근 스타일 칩(이모지+텍스트) + 드로어 스티키 CTA 푸터 |
 | 2026-09-09 | 사업자조회 isIssue 서비스에서 slyJdWrap2(지원공고) 숨김 버그 수정 |
 | 2026-09-09 | _slyOpenDrawer() 평점·배지·스티키 푸터 가격 채우기 추가 (SVC_META 연동) |

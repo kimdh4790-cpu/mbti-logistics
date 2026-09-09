@@ -930,8 +930,7 @@ export default {
         const kvHtml = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
         const html = kvHtml || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
         if (html) {
-          const akKey = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
-          const slugScript = '<script>window.__AK='+JSON.stringify(akKey)+';window._COMPANY_SLUG='+JSON.stringify(slug)+';window._SLUG_MODE=true;</script>';
+          const slugScript = '<script>window._COMPANY_SLUG='+JSON.stringify(slug)+';window._SLUG_MODE=true;</script>';
           const modified = html.replace(
             '</head>',
             '<link rel="manifest" href="/c/'+slug+'/manifest.json"><meta name="apple-mobile-web-app-title" content="'+compName+'"><link rel="apple-touch-icon" href="/c/'+slug+'/icon.svg">\n'+slugScript+'\n</head>'
@@ -953,8 +952,7 @@ export default {
             const kvHtml2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','text') : null;
             const html2 = kvHtml2 || await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/settle.html?bust='+Date.now(),{cf:{cacheEverything:false,cacheTtl:0,bypassCache:true},headers:{'Cache-Control':'no-cache,no-store'}}).then(r=>r.text());
             if (html2) {
-              const akKey2 = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim().replace(/[\r\n\s]+/g,'');
-              const slugScript2 = '<script>window.__AK='+JSON.stringify(akKey2)+';window._COMPANY_SLUG='+JSON.stringify(slug2)+';window._SLUG_MODE=true;</script>';
+              const slugScript2 = '<script>window._COMPANY_SLUG='+JSON.stringify(slug2)+';window._SLUG_MODE=true;</script>';
               const modified2 = html2.replace('</head>', slugScript2+'\n</head>');
               return new Response(modified2, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store' } });
             }
@@ -2968,10 +2966,38 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')_ctrlCloseDe
     // ── 스캔 세션 저장 ──
     // ── 간선차 GPS 저장 ──
     if (path === '/get-label-key') {
-      const k = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      return new Response(JSON.stringify({ k }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' }
+      // 인증 없이 API 키를 반환하면 키 노출 위험 — 인증 필수
+      const _glkAuth = request.headers.get('Authorization')||'';
+      const _glkToken = _glkAuth.replace('Bearer ','').trim();
+      if (!_glkToken || _glkToken.length < 100) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
       });
+    }
+
+    // ── 라벨 번역 서버사이드 프록시 (/api/label-translate) ──
+    if (path === '/api/label-translate' && method === 'POST') {
+      const _ltAuth = request.headers.get('Authorization')||'';
+      const _ltToken = _ltAuth.replace('Bearer ','').trim();
+      if (!_ltToken || _ltToken.length < 100) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
+      try {
+        const body = await request.json();
+        const apiKey = (env.ANTHROPIC_API_KEY||env.CLAUDE_API_KEY||'').trim();
+        if (!apiKey) return new Response(JSON.stringify({error:'AI 서비스 설정 오류'}),{status:503,headers:{'Content-Type':'application/json'}});
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages',{
+          method:'POST',
+          headers:{'x-api-key':apiKey,'anthropic-version':'2023-06-01','Content-Type':'application/json'},
+          body:JSON.stringify({
+            model:'claude-haiku-4-5-20251001',
+            max_tokens:body.max_tokens||300,
+            messages:body.messages
+          })
+        });
+        const aiData = await aiRes.json();
+        return new Response(JSON.stringify(aiData),{status:aiRes.status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
+      } catch(e) {
+        return new Response(JSON.stringify({error:'번역 서버 오류'}),{status:500,headers:{'Content-Type':'application/json'}});
+      }
     }
 
     // ── /api/join-member — 직원 가입 시 members 자동 저장 (서버 백업)
@@ -3134,8 +3160,7 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')_ctrlCloseDe
       const req  = new Request(new URL('/scan.html', url).toString(), { method: 'GET', headers: request.headers });
       const resp = await fetchAsset(new URL(req.url).pathname, request, env);
       const html = await resp.text();
-      const key  = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
-      const injected = html.replace('<head>', '<head><script>window.__AK=' + JSON.stringify(key) + ';</script>');
+      const injected = html;
       return new Response(injected, { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
@@ -3550,11 +3575,10 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const resp = await fetchAsset('/settle.html', request, env);
         let html = await resp.text();
         // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
-        const akKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim().replace(/[\r\n\s]+/g, '');
         const storageSDK = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
         // manifest 링크를 슬러그 기반으로 교체
         html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
-        const slugScript = '<script>window.__AK=' + JSON.stringify(akKey) + ';window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
+        const slugScript = '<script>window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
         html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n</head>');
         const slugHeaders = new Headers();
         slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
@@ -5392,11 +5416,33 @@ service cloud.firestore {
 
     // ★ 슈퍼어드민 Firestore 수정
     if (path === '/sa/firestore' && method === 'POST') {
+      const _saAuth = request.headers.get('Authorization')||'';
+      const _saToken = _saAuth.replace('Bearer ','').trim();
+      if (!_saToken || _saToken.length < 100) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
+      const _saApiKey = (env.FIREBASE_API_KEY||'').trim();
+      if (_saApiKey) {
+        const _saRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${_saApiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:_saToken})});
+        if (!_saRes.ok) return new Response(JSON.stringify({error:'인증 실패'}),{status:401,headers:{'Content-Type':'application/json'}});
+        const _saData = await _saRes.json();
+        const _saEmail = _saData.users?.[0]?.email||'';
+        if (!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(_saEmail)) return new Response(JSON.stringify({error:'슈퍼어드민 전용'}),{status:403,headers:{'Content-Type':'application/json'}});
+      }
       return handleSAFirestore(request, env);
     }
 
     // ★ 기사 배치 업데이트 (이름 기준)
     if (path === '/sa/drivers-batch' && method === 'POST') {
+      const _sbAuth = request.headers.get('Authorization')||'';
+      const _sbToken = _sbAuth.replace('Bearer ','').trim();
+      if (!_sbToken || _sbToken.length < 100) return new Response(JSON.stringify({error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
+      const _sbApiKey = (env.FIREBASE_API_KEY||'').trim();
+      if (_sbApiKey) {
+        const _sbRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${_sbApiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:_sbToken})});
+        if (!_sbRes.ok) return new Response(JSON.stringify({error:'인증 실패'}),{status:401,headers:{'Content-Type':'application/json'}});
+        const _sbData = await _sbRes.json();
+        const _sbEmail = _sbData.users?.[0]?.email||'';
+        if (!['kimdh4790@gmail.com','soungkyekim@naver.com'].includes(_sbEmail)) return new Response(JSON.stringify({error:'슈퍼어드민 전용'}),{status:403,headers:{'Content-Type':'application/json'}});
+      }
       return handleDriversBatch(request, env);
     }
 

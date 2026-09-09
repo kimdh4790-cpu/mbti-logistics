@@ -1050,7 +1050,7 @@ export default {
           {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
         const _b64u = v => (typeof v==='string'?btoa(v):btoa(String.fromCharCode(...new Uint8Array(v)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
         const _apH = _b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
-        const _apC = _b64u(JSON.stringify({iss:_apSa.client_email,scope:'https://www.googleapis.com/auth/cloud-platform',aud:'https://oauth2.googleapis.com/token',exp:_apNow+3600,iat:_apNow}));
+        const _apC = _b64u(JSON.stringify({iss:_apSa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:_apNow+3600,iat:_apNow}));
         const _apSig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_apKey,new TextEncoder().encode(_apH+'.'+_apC));
         const _apJwt = _apH+'.'+_apC+'.'+_b64u(new Uint8Array(_apSig));
         const _apTok = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_apJwt}`})).json();
@@ -8852,7 +8852,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           EmoneyPwd:    hasEmoney ? await encB64(emoneyPwd)    : await enc(''),
           CmortFlag:    '',
           TradeSeqFlag: '',
-          AbsCls:       '',
+          AbsCls:       await enc('12'),
           RgsMttrSmry:  ''
         };
 
@@ -8997,7 +8997,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (oracleUrl) {
             let oracleErr = null;
             try {
-              // Oracle 전체 플로우: 로그인+자동발급 (iros-pin 건너뜀 — IROS Gauce SPA는 PIN을 가상DOM에 숨겨 비회원 추출 불가)
               if (irosId && irosPw) {
                 const ac = new AbortController();
                 const timer = setTimeout(() => ac.abort(), 90000);
@@ -9018,10 +9017,18 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
                 if (oRes && oRes.ok) {
                   const od = await oRes.json();
                   if (od.ok && od.registryText) {
-                    // 간편열람: HTML 텍스트 추출 성공 → 그대로 반환 (사용자가 원문 확인 가능)
+                    const _slyRawHtml = od.registryHtml || '';
+                    const _slySafeHtml = _slyRawHtml
+                      .replace(/<script[\s\S]*?<\/script>/gi, '')
+                      .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
+                      .replace(/<object[\s\S]*?<\/object>/gi, '')
+                      .replace(/<embed[^>]*>/gi, '')
+                      .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+                      .replace(/\s+on\w+\s*=\s*[^\s>]*/gi, '')
+                      .replace(/javascript\s*:/gi, 'blocked:');
                     return Response.json({ok:true, mode:'auto', stdAddr,
                       registryText: od.registryText,
-                      registryHtml: od.registryHtml || '',
+                      registryHtml: _slySafeHtml,
                       guide:'인터넷등기소 간편열람 완료'
                     }, {status:200,headers});
                   }
@@ -9045,7 +9052,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               oracleErr = oe.message || String(oe);
               console.error('[oracle-iros]', oracleErr);
             }
-            // Oracle 실패 상세 반환
             const _oHost = oracleUrl ? oracleUrl.replace(/^https?:\/\//,'').split('/')[0] : 'URL미설정';
             const _tlkErrPart = tilkoErr ? ` | Tilko: ${tilkoErr.slice(0,80)}` : '';
             const _oNote = oracleErr && (oracleErr.includes('403') || oracleErr.includes('ECONNREFUSED') || oracleErr.includes('aborted'))
@@ -9100,7 +9106,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           return Response.json({ ok: stData.ok, elapsed: stData.elapsed, address: testAddress,
             preview: stData.preview, error: stData.error || null }, {status:200,headers});
         } catch(e) {
-          return Response.json({ok:false,error:e.message},{status:200,headers});
+          console.error('[iros-autotest]', e.message);
+          const _atMsg = e.name === 'AbortError' ? 'Oracle 서버 응답 시간 초과' : 'Oracle 서버 연결 실패';
+          return Response.json({ok:false,error:_atMsg},{status:200,headers});
         }
       }
 

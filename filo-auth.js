@@ -1079,8 +1079,8 @@ function _filoPageHome(el){
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">'+
      '<div style="font-size:13px;font-weight:900;color:#f43f5e;min-width:44px;font-variant-numeric:tabular-nums">'+(b.time||'—')+'</div>'+
      '<div style="flex:1;min-width:0">'+
-     '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.guestName||b.name||'이름 없음')+'</div>'+
-     '<div style="font-size:11px;color:var(--t3)">'+(b.partySize||1)+'명'+(b.phone?' · '+b.phone:'')+'</div>'+
+     '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(b.guestName||b.name||'이름 없음')+'</div>'+
+     '<div style="font-size:11px;color:var(--t3)">'+(b.partySize||1)+'명'+(b.phone?' · '+esc(b.phone):'')+'</div>'+
      '</div>'+
      '<span style="font-size:11px;font-weight:700;color:'+sc+';padding:3px 9px;border-radius:99px;background:'+sc+'1a;border:1px solid '+sc+'33;white-space:nowrap">'+sl+'</span>'+
      '</div>';

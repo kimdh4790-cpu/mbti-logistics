@@ -192,6 +192,13 @@ app.post('/api/iros-pin', async (req, res) => {
     const page = await ctx.newPage();
     page.setDefaultTimeout(30000);
 
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+    });
+
     const typeParam = regType === 'land' ? 'L' : 'B';
 
     // ── Step 1: Gauce SPA 메인 페이지 로드 ────────────────────────────────────────
@@ -615,6 +622,16 @@ app.post('/api/iros-fetch', async (req, res) => {
     const page = await context.newPage();
     page.setDefaultTimeout(30000);
 
+    // WebSquare SPA는 navigator.webdriver=true 감지 시 이벤트 핸들러를 비활성화 →
+    // 모든 페이지 로드 전에 false로 패치 (addInitScript는 goto 전에 등록해야 적용됨)
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      // WebSquare 추가 탐지 우회
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+    });
+
     // 네트워크 요청 인터셉트 — IROS 검색 API 요청 로깅 (주소가 실제로 전달되는지 확인)
     page.on('request', req => {
       const url = req.url();
@@ -622,6 +639,26 @@ app.post('/api/iros-fetch', async (req, res) => {
         const body = req.postData() || '';
         console.log('[iros-net]', req.method(), url.slice(-80), '|', body.slice(0, 200));
       }
+    });
+
+    // ── 방법S: 응답 인터셉트로 PIN 캡처 ─────────────────────────────────────────────
+    // IROS 백엔드 AJAX 응답에 PIN(\d{4}-\d{4}-\d{6})이 포함됨.
+    // WebSquare 프론트엔드는 headless 탐지하지만 백엔드 JSON 응답은 그대로 내려옴.
+    let capturedPin = null;
+    page.on('response', async resp => {
+      if (capturedPin) return;
+      try {
+        const rUrl = resp.url();
+        if (!rUrl.includes('iros.go.kr')) return;
+        const ct = resp.headers()['content-type'] || '';
+        if (!ct.includes('json') && !ct.includes('javascript') && !rUrl.includes('srch') && !rUrl.includes('Renf') && !rUrl.includes('Smpl') && !rUrl.includes('smpl') && !rUrl.includes('retrieve')) return;
+        const body = await resp.text().catch(() => '');
+        const pins = body.match(/\d{4}-\d{4}-\d{6}/g) || [];
+        if (pins.length > 0) {
+          capturedPin = pins[0].replace(/-/g, '');
+          console.log('[iros] 방법S: 응답에서 PIN 캡처:', capturedPin, rUrl.slice(-80));
+        }
+      } catch(_) {}
     });
 
     // 1단계: index.jsp SPA shell 진입 (networkidle 대신 load 사용 — 속도 우선)
@@ -1065,6 +1102,53 @@ app.post('/api/iros-fetch', async (req, res) => {
     }).catch(() => ({ found: false }));
     console.log('[iros] 메인 그리드 행 수:', JSON.stringify(mainGridRows));
 
+    // 하위 블록에서 공유되는 결과 변수 (방법S 포함)
+    let rlrgCount = 0;
+    let directApiContent = null;
+
+    // ── 방법S: DOM에서 PIN 재시도 후 callMpPrtIframe.do 직접 fetch ─────────────────
+    // 응답 인터셉트로 못 잡았으면 DOM 텍스트에서 PIN 추출 시도
+    if (!capturedPin) {
+      const domPin = await page.evaluate(() => {
+        const t = document.body ? document.body.innerText : '';
+        const m = t.match(/\d{4}-\d{4}-\d{6}/);
+        return m ? m[0].replace(/-/g, '') : '';
+      }).catch(() => '');
+      if (domPin) { capturedPin = domPin; console.log('[iros] 방법S: DOM PIN:', domPin); }
+    }
+    // capturedPin 있으면 세션 쿠키로 callMpPrtIframe.do 직접 fetch
+    if (capturedPin) {
+      try {
+        const _sCookies = await context.cookies();
+        const _sCookieStr = _sCookies.map(c => `${c.name}=${c.value}`).join('; ');
+        const _sUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+        const _sRegRe = /표제부|갑구|을구|소유권|순위번호|등기원인|등기목적|근저당/;
+        for (const _sGbn of ['1', '2']) {
+          const _sUrl = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${capturedPin}&rlrgGbn=${_sGbn}&payCl=F&smplKindCls=1`;
+          console.log('[iros] 방법S: callMpPrtIframe.do fetch rlrgGbn=' + _sGbn, _sUrl.slice(-80));
+          const _sResp = await fetch(_sUrl, {
+            headers: { 'Cookie': _sCookieStr, 'User-Agent': _sUa, 'Referer': 'https://www.iros.go.kr/index.jsp', 'Accept': 'text/html,application/xhtml+xml,*/*' },
+            redirect: 'follow'
+          }).catch(() => null);
+          if (!_sResp?.ok) { console.log('[iros] 방법S: HTTP', _sResp?.status); continue; }
+          const _sHtml = await _sResp.text().catch(() => '');
+          console.log('[iros] 방법S: 응답 길이=', _sHtml.length, '등기 키워드=', _sRegRe.test(_sHtml));
+          if (_sRegRe.test(_sHtml)) {
+            const _sText = _sHtml
+              .replace(/<script[\s\S]*?<\/script>/gi, '')
+              .replace(/<style[\s\S]*?<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            directApiContent = JSON.stringify({ type: 'method_s', pin: capturedPin, content: _sText, html: _sHtml.slice(0, 80000) });
+            rlrgCount = 999;
+            console.log('[iros] 방법S: 성공! 텍스트 길이=', _sText.length);
+            break;
+          }
+        }
+      } catch (_sErr) { console.log('[iros] 방법S 오류:', _sErr.message); }
+    }
+
     // ── Prvw 팝업 처리 ────────────────────────────────────────────────────────────
     // Pm10P0IrosPopupPrvw: IROS 간편열람 결과 팝업 OR 시스템 공지 팝업
     // 공지인 경우: 주소 입력창 없음 → 닫기 후 메인 페이지에서 재검색
@@ -1366,7 +1450,7 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] smpl_rlrg 스크립트 참조:', JSON.stringify(scriptAnalysis));
 
     // ── 1차: 모든 셀 순서대로 클릭해서 btn_smpl_rlrg 활성화 시도 ────────────────────
-    let rlrgCount = 0;
+    // (rlrgCount는 방법S 블록 앞에서 이미 선언됨)
     // Gauce 그리드에서 col 0 = 행번호, col 1 = 체크박스인 경우가 많음 → col 0~4 순서대로 시도
     const cellCols = [0, 1, 2, 3, 4];
     for (const col of cellCols) {
@@ -1828,33 +1912,72 @@ app.post('/api/iros-fetch', async (req, res) => {
             log.push('sbmKey:' + sbmKey);
             if (sbmKey && window[sbmKey]) {
               const sbm = window[sbmKey];
-              const sbmKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(sbm) || {}).concat(Object.keys(sbm || {}));
-              log.push('sbm_keys:' + JSON.stringify(sbmKeys.slice(0, 20)));
-              log.push('sbm_action:' + (sbm.action || 'none'));
-              log.push('sbm_customHandler_type:' + typeof sbm.customHandler);
-              if (typeof sbm.submit === 'function') { sbm.submit({ rnum: pinC }); log.push('sbm.submit(rnum)'); }
-              else if (typeof sbm === 'function') { sbm({ rnum: pinC }); log.push('sbm(rnum)'); }
+              // sbm 전체 속성 검사
+              const sbmInspect = {
+                action: sbm.action, bind: sbm.bind, ref: sbm.ref,
+                instance: sbm.instance, mode: sbm.mode, method: sbm.method,
+                customHandler: sbm.customHandler, errorHandler: sbm.errorHandler,
+              };
+              try { if (sbm.xmlNode) sbmInspect.xmlNode = (sbm.xmlNode.outerHTML||sbm.xmlNode.textContent||'').slice(0,300); } catch(xe) {}
+              log.push('sbm_full:' + JSON.stringify(sbmInspect).slice(0, 600));
+
+              // customHandler가 string이면 window path로 해석해서 호출
+              if (typeof sbm.customHandler === 'string' && sbm.customHandler.trim()) {
+                const hName = sbm.customHandler.trim();
+                try {
+                  const parts = hName.split('.');
+                  let fn = window;
+                  for (const p of parts) fn = fn && fn[p];
+                  if (typeof fn === 'function') { fn(); log.push('customHandler_fn_called:' + hName); }
+                  else { log.push('customHandler_not_fn:' + typeof fn + ':' + hName); }
+                } catch(ce) { log.push('customHandler_call_err:' + ce.message); }
+              }
+
+              if (typeof sbm.submit === 'function') { sbm.submit(); log.push('sbm.submit()'); }
+              else if (typeof sbm === 'function') { sbm(); log.push('sbm()'); }
               else if (typeof sbm.run === 'function') { sbm.run(); log.push('sbm.run()'); }
-              else if (typeof sbm.execute === 'function') { sbm.execute({ rnum: pinC }); log.push('sbm.execute(rnum)'); }
+              else if (typeof sbm.execute === 'function') { sbm.execute(); log.push('sbm.execute()'); }
               else if (typeof sbm.send === 'function') { sbm.send(); log.push('sbm.send()'); }
-              else if (typeof sbm.call === 'function') { sbm.call(); log.push('sbm.call()'); }
-              else if (typeof sbm.customHandler === 'function') { sbm.customHandler({ rnum: pinC }); log.push('sbm.customHandler(rnum)'); }
               else { log.push('sbm_no_callable:' + typeof sbm); }
             }
-            // 4) scwin 내 retrievePinSrchCont 탐색
-            if (typeof scwin !== 'undefined') {
-              const scKey = Object.keys(scwin).find(k => /retrievePinSrchCont|pinSrchCont|smplRlrg/i.test(k));
-              log.push('scKey:' + scKey);
-              if (scKey) {
-                try { scwin[scKey]({ rnum: pinC }); log.push('scwin.fn(rnum)'); } catch(e3) { log.push('scFn_err:' + e3.message); }
+            // 4) dlt_smpl_srch_rslt_check datalist 전체 데이터 읽기 + 그대로 body로 제출
+            const chkKey2 = Object.keys(window).find(k => /dlt_smpl_srch_rslt_check/i.test(k));
+            if (chkKey2 && window[chkKey2]) {
+              const dc = window[chkKey2];
+              let chkData = null;
+              try {
+                if (typeof dc.getAllRowData === 'function') chkData = dc.getAllRowData();
+                else if (typeof dc.getData === 'function') chkData = dc.getData();
+                else if (typeof dc.getRowData === 'function') chkData = [dc.getRowData(0)];
+              } catch(de) {}
+              log.push('chkDlt_data:' + JSON.stringify(chkData).slice(0,300));
+              if (chkData) {
+                try {
+                  const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', {
+                    method: 'POST', credentials: 'include',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json', 'Referer': location.href },
+                    body: JSON.stringify({"websquare_param": chkData})
+                  });
+                  const txt = await r.text();
+                  log.push('chkDlt_submit:' + r.status + ':' + txt.slice(0,400));
+                  if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) return { ok: true, log, txt };
+                } catch(fe) { log.push('chkDlt_fetch_err:' + fe.message); }
               }
             }
-            // 5) XHR direct: WebSquare 포맷 (IS_NMBR_LOGIN__=null + websquare_param JSON)
+            // 5) scwin 내 retrievePinSrchCont / smplRlrg 관련 함수 탐색
+            if (typeof scwin !== 'undefined') {
+              const scKeys = Object.keys(scwin).filter(k => /retrievePinSrchCont|pinSrchCont|smplRlrg|fn_smpl/i.test(k));
+              log.push('scKeys:' + JSON.stringify(scKeys));
+              for (const scKey of scKeys) {
+                try { scwin[scKey](); log.push('scwin.' + scKey + '()'); } catch(e3) { log.push('scwin.' + scKey + '_err:' + e3.message); }
+              }
+            }
+            // 6) XHR direct: WebSquare 포맷 (IS_NMBR_LOGIN__=null + websquare_param JSON) — 다양한 body 조합
             const wsParamBodies = [
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1"}}) },
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinDash,"selGbn":"UNI","rlrgGbn":"1"}}) },
-              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrieveSmplSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1","payCl":"F"}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":[{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","col_chk":"Y"}]}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"smplSrchList":[{"rnum":pinC,"selGbn":"UNI","rlrgGbn":"1","smplKindCls":"1"}]}}) },
+              { url: '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', body: JSON.stringify({"websquare_param":{"conn_menu_cls_cd":"01","rnum":pinC,"selGbn":"UNI","rlrgGbn":"1"}}) },
             ];
             for (const wb of wsParamBodies) {
               try {
@@ -1869,7 +1992,7 @@ app.post('/api/iros-fetch', async (req, res) => {
                   body: wb.body,
                 });
                 const txt = await r.text();
-                log.push('ws_status:' + r.status + ' url:' + wb.url.split('/').pop() + ' preview:' + txt.slice(0, 500));
+                log.push('ws_status:' + r.status + ' body:' + wb.body.slice(0,80) + ' preview:' + txt.slice(0, 300));
                 if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
                   return { ok: true, log, txt };
                 }
@@ -2014,6 +2137,823 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch(e) { console.log('[iros] 방법J 오류:', e.message); }
     }
 
+    // ── 방법K: dma_srch_param 데이터 인스턴스 직접 탐색·세팅 후 sbm.submit() ────────
+    // sbm.ref = "data:json,{\"id\":\"dma_srch_param\",\"key\":\"websquare_param\"}"
+    // WebSquare 제출 시 dma_srch_param 데이터 모델을 읽어 body로 직렬화함.
+    // 체크박스 클릭 성공 시 자동으로 채워지는 이 모델을 직접 채워야 함.
+    if (pinFromRow) {
+      console.log('[iros] 방법K: dma_srch_param 인스턴스 탐색·세팅 후 sbm.submit()');
+      const pinClean = pinFromRow.replace(/-/g, '');
+      try {
+        const kResult = await resultPage.evaluate(async (pinC) => {
+          const log = [];
+          try {
+            // 1) dlt_smpl_srch_rslt에서 첫 번째 행 데이터 실제 추출
+            const resKey = Object.keys(window).find(k => /^dlt_smpl_srch_rslt$/.test(k));
+            let row0 = null;
+            let row0Obj = {};
+            if (resKey && window[resKey]) {
+              const dl = window[resKey];
+              try {
+                if (typeof dl.getRowData === 'function') row0 = dl.getRowData(0);
+                else if (typeof dl.getAllRowData === 'function') { const a = dl.getAllRowData(); row0 = a && a[0]; }
+              } catch(re) {}
+              log.push('row0_raw:' + JSON.stringify(row0).slice(0, 200));
+              // 배열이면 컬럼명 매핑 시도
+              if (Array.isArray(row0)) {
+                const cols = ['rnum','rlrgGbn','address','selGbn','smplKindCls','payCl'];
+                for (let i = 0; i < cols.length && i < row0.length; i++) row0Obj[cols[i]] = row0[i];
+              } else if (row0 && typeof row0 === 'object') {
+                row0Obj = row0;
+              }
+            }
+            log.push('row0Obj:' + JSON.stringify(row0Obj).slice(0, 200));
+
+            // 2) dma_srch_param 탐색: window 직접, scwin, w2, WebSquare 내부 레지스트리
+            let dma = null;
+            const candidates = [];
+            // 2a) window direct
+            const wDmaKey = Object.keys(window).find(k => k === 'dma_srch_param' || k.endsWith('_dma_srch_param') || k.includes('dma_srch_param'));
+            if (wDmaKey) { dma = window[wDmaKey]; candidates.push('window:' + wDmaKey); }
+            // 2b) scwin namespace
+            if (!dma && typeof scwin !== 'undefined') {
+              const scDmaKey = Object.keys(scwin).find(k => k.includes('dma_srch_param'));
+              if (scDmaKey) { dma = scwin[scDmaKey]; candidates.push('scwin:' + scDmaKey); }
+            }
+            // 2c) DOM element (XForms instance)
+            if (!dma) {
+              const domEl = document.getElementById('dma_srch_param') || document.querySelector('[id*="dma_srch_param"]');
+              if (domEl) { dma = domEl; candidates.push('dom:' + domEl.id); }
+            }
+            // 2d) w2 widget registry
+            if (!dma) {
+              for (const gk of ['w2','w2ui','WebSquare','websquare','$w2']) {
+                if (window[gk] && typeof window[gk] === 'object') {
+                  const sub = window[gk];
+                  if (sub.dma_srch_param) { dma = sub.dma_srch_param; candidates.push(gk + '.dma_srch_param'); break; }
+                  if (sub.widget && sub.widget.dma_srch_param) { dma = sub.widget.dma_srch_param; candidates.push(gk + '.widget.dma_srch_param'); break; }
+                  if (typeof sub.getObject === 'function') {
+                    try { const o = sub.getObject('dma_srch_param'); if (o) { dma = o; candidates.push(gk + '.getObject'); break; } } catch(e2) {}
+                  }
+                }
+              }
+            }
+            // 2e) sbm.xmlNode에서 XForms 인스턴스 탐색
+            if (!dma) {
+              const sbmKey = Object.keys(window).find(k => /sbm.*retrievePinSrchCont/i.test(k) || k === 'sbm_Pr20ViaRlrgSrchCtrl_retrievePinSrchCont');
+              if (sbmKey && window[sbmKey]) {
+                const sbm = window[sbmKey];
+                if (sbm.xmlNode && sbm.xmlNode.ownerDocument) {
+                  const doc = sbm.xmlNode.ownerDocument;
+                  const instanceEls = doc.querySelectorAll('[id*="dma_srch_param"],[name*="dma_srch_param"]');
+                  log.push('xmlNode_instances:' + instanceEls.length + ' ' + Array.from(instanceEls).map(e => e.id||e.name).join(','));
+                  if (instanceEls.length > 0) { dma = instanceEls[0]; candidates.push('sbm.xmlNode.ownerDocument'); }
+                }
+                // sbm 자체에 data 속성이 있을 수도
+                if (!dma && sbm.data) { log.push('sbm.data:' + JSON.stringify(sbm.data).slice(0,100)); }
+                if (!dma && sbm.instance) { log.push('sbm.instance:' + String(sbm.instance).slice(0,100)); }
+              }
+            }
+            // 2f) window 전체에서 dma 접두사 키 목록 로깅
+            const dmaKeys = Object.keys(window).filter(k => k.startsWith('dma_') || k.includes('srch_param'));
+            log.push('dmaKeys:' + JSON.stringify(dmaKeys.slice(0,20)));
+            log.push('dma_found:' + candidates.join('|') + ' type:' + (dma ? typeof dma : 'null'));
+
+            // 3) dma 발견 시 데이터 세팅
+            if (dma) {
+              const setData = row0Obj.rnum ? row0Obj : { rnum: pinC, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F' };
+              const setDataArr = [setData];
+              log.push('setting_dma:' + JSON.stringify(setData));
+              // DOM element인 경우 textContent로 JSON 주입
+              if (dma.nodeType) {
+                try { dma.textContent = JSON.stringify(setDataArr); log.push('dma.textContent_set'); } catch(te) { log.push('dma.textContent_err:' + te.message); }
+              } else {
+                // WebSquare widget의 경우
+                if (typeof dma.setData === 'function') { try { dma.setData(setDataArr); log.push('dma.setData'); } catch(e3) { log.push('dma.setData_err:' + e3.message); } }
+                if (typeof dma.setRowData === 'function') { try { dma.setRowData(0, setData); log.push('dma.setRowData'); } catch(e3) { log.push('dma.setRowData_err:' + e3.message); } }
+                if (typeof dma.setValue === 'function') { try { for (const [k,v] of Object.entries(setData)) dma.setValue(k, v, 0); log.push('dma.setValue'); } catch(e3) { log.push('dma.setValue_err:' + e3.message); } }
+                if (typeof dma.update === 'function') { try { dma.update(setDataArr); log.push('dma.update'); } catch(e3) { log.push('dma.update_err:' + e3.message); } }
+              }
+
+              // 4) sbm.submit() 호출
+              const sbmKey2 = Object.keys(window).find(k => /sbm.*retrievePinSrchCont/i.test(k) || k === 'sbm_Pr20ViaRlrgSrchCtrl_retrievePinSrchCont');
+              if (sbmKey2 && window[sbmKey2]) {
+                const sbm = window[sbmKey2];
+                if (typeof sbm.submit === 'function') {
+                  try {
+                    const submitResult = await new Promise((resolve) => {
+                      const origCustom = sbm.customHandler;
+                      sbm.customHandler = (data) => { resolve({ from: 'customHandler', data: JSON.stringify(data).slice(0, 500) }); };
+                      const origError = sbm.errorHandler;
+                      sbm.errorHandler = (err) => { resolve({ from: 'errorHandler', err: String(err).slice(0, 200) }); };
+                      setTimeout(() => resolve({ from: 'timeout' }), 5000);
+                      sbm.submit();
+                      log.push('sbm.submit_called');
+                    });
+                    sbm.customHandler = origCustom || '';
+                    sbm.errorHandler = origError || '';
+                    log.push('submit_result:' + JSON.stringify(submitResult));
+                    if (submitResult.data && /표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(submitResult.data)) {
+                      return { ok: true, log, txt: submitResult.data };
+                    }
+                  } catch(se) { log.push('sbm.submit_err:' + se.message); }
+                }
+              }
+            }
+
+            // 5) dma 없거나 submit 실패 시: row0 실제 데이터로 retrievePinSrchCont 직접 XHR
+            // dlt_smpl_srch_rslt 행 데이터 컬럼명 확인을 위해 datalist 스키마 탐색
+            let schemaStr = '';
+            if (resKey && window[resKey]) {
+              const dl = window[resKey];
+              try {
+                if (typeof dl.getColumnId === 'function') {
+                  const cols = []; for (let i = 0; i < 20; i++) { const c = dl.getColumnId(i); if (!c) break; cols.push(c); }
+                  schemaStr = cols.join(',');
+                } else if (dl.info && dl.info.cols) schemaStr = JSON.stringify(dl.info.cols).slice(0, 300);
+                else if (dl._cols) schemaStr = JSON.stringify(dl._cols).slice(0, 300);
+                else if (dl.schema) schemaStr = JSON.stringify(dl.schema).slice(0, 300);
+              } catch(ce) {}
+            }
+            log.push('schema:' + schemaStr);
+
+            // 6) 최대한 많은 field 조합으로 XHR 시도
+            const attempts = [
+              { rnum: row0Obj.rnum || pinC, selGbn: row0Obj.selGbn || 'UNI', rlrgGbn: row0Obj.rlrgGbn || '1', smplKindCls: row0Obj.smplKindCls || '1', payCl: row0Obj.payCl || 'F', col_chk: 'Y' },
+              { rnum: pinC, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y' },
+              { rnum: pinC, selGbn: 'UNI', rlrgGbn: '1', col_chk: 'Y' },
+              row0Obj.rnum ? row0Obj : null,
+            ].filter(Boolean);
+            for (const body of attempts) {
+              try {
+                const r = await fetch('/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null', {
+                  method: 'POST', credentials: 'include',
+                  headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json, text/plain, */*', 'Referer': location.href },
+                  body: JSON.stringify({ websquare_param: [body] }),
+                });
+                const txt = await r.text();
+                log.push('xhrK_arr:' + r.status + ':' + JSON.stringify(body).slice(0,80) + ' preview:' + txt.slice(0, 300));
+                if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) return { ok: true, log, txt };
+              } catch(fe) { log.push('xhrK_err:' + fe.message); }
+            }
+          } catch(e) { log.push('K_outer_err:' + e.message); }
+          return { ok: false, log };
+        }, pinClean).catch(e => ({ ok: false, log: ['K_evaluate_err:' + e.message] }));
+
+        console.log('[iros] 방법K 결과:', JSON.stringify(kResult).slice(0, 800));
+        if (kResult && kResult.ok) {
+          res.json({ ok: true, registryText: kResult.txt, registryHtml: '', address });
+          return;
+        }
+        await resultPage.waitForTimeout(2000);
+      } catch(e) { console.log('[iros] 방법K 오류:', e.message); }
+    }
+
+    // ── 방법L: 그리드 메서드·sbm 플러그인·대안 endpoint·정확한 체크박스 클릭 ──────────
+    if (pinFromRow) {
+      const pinClean = pinFromRow.replace(/-/g, '');
+      const pinDash  = pinFromRow;
+      console.log('[iros] 방법L: grid메서드+sbm플러그인+대안endpoint+정확click');
+      try {
+        // L-1) cell_0_1 INPUT 정확 bounding rect → 마우스 클릭
+        const cellRect = await resultPage.evaluate(() => {
+          const cell = document.getElementById('mf_wfm_potal_main_wfm_content_grd_smpl_srch_rslt_cell_0_1');
+          if (!cell) return null;
+          const input = cell.querySelector('input') || cell;
+          cell.scrollIntoView({block:'center'});
+          const r = input.getBoundingClientRect();
+          return { cx: r.x + r.width / 2, cy: r.y + r.height / 2, type: input.tagName + (input.type || ''), id: input.id, html: input.outerHTML.slice(0,200) };
+        }).catch(() => null);
+        console.log('[iros] 방법L cellRect:', JSON.stringify(cellRect));
+
+        if (cellRect && cellRect.cx && cellRect.cy) {
+          await resultPage.mouse.move(cellRect.cx, cellRect.cy);
+          await resultPage.waitForTimeout(100);
+          await resultPage.mouse.click(cellRect.cx, cellRect.cy, {button:'left'});
+          await resultPage.waitForTimeout(1500);
+          rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+          console.log('[iros] 방법L 정확click 후 btn_smpl_rlrg:', rlrgCount);
+        }
+
+        // L-2) grid/datalist 위젯 메서드 + sbm 플러그인 탐색
+        const lScanResult = await resultPage.evaluate((pinC) => {
+          const log = [];
+          // grid widget
+          const grdKey = Object.keys(window).find(k => /grd_smpl_srch_rslt$/.test(k) && !k.includes('check'));
+          if (grdKey && window[grdKey]) {
+            const grd = window[grdKey];
+            const ownFns = Object.keys(grd).filter(k => typeof grd[k] === 'function');
+            const protoFns = [];
+            let p = Object.getPrototypeOf(grd);
+            while (p && p !== Object.prototype) { Object.getOwnPropertyNames(p).forEach(k => { if (typeof grd[k] === 'function' && !protoFns.includes(k)) protoFns.push(k); }); p = Object.getPrototypeOf(p); }
+            log.push('grd_own:' + JSON.stringify(ownFns.slice(0,30)));
+            log.push('grd_proto:' + JSON.stringify(protoFns.slice(0,40)));
+            // 체크 관련 메서드 시도
+            for (const fn of ['checkRow','setCheckValue','fireEvent','triggerEvent','oncheckclick','selectRow','setSelectedIndex','checkAll','rowCheck']) {
+              if (typeof grd[fn] === 'function') {
+                try { grd[fn](0, 'Y'); log.push('grd.' + fn + '(0,"Y")'); } catch(e) {
+                  try { grd[fn](0); log.push('grd.' + fn + '(0)'); } catch(e2) { log.push('grd.' + fn + '_err:' + e2.message); }
+                }
+              }
+            }
+            if (typeof grd.fireEvent === 'function') {
+              for (const ev of ['oncheckclick','oncheckChange','oncheckboxclick','onclick','onSelectChange','onrowclick']) {
+                try { grd.fireEvent(ev, {rowIndex:0,colIndex:0,value:'Y',checkFlag:true}); log.push('grd.fireEvent(' + ev + ')'); }
+                catch(e) { log.push('grd.fireEvent(' + ev + ')_err:' + e.message.slice(0,40)); }
+              }
+            }
+            // datalist 컬럼 이름
+            const dltKey = Object.keys(window).find(k => /^mf.*dlt_smpl_srch_rslt$/.test(k));
+            if (dltKey && window[dltKey]) {
+              const dl = window[dltKey];
+              // getColumnId 방식
+              if (typeof dl.getColumnId === 'function') {
+                const cols = []; for (let i=0;i<20;i++) { const c=dl.getColumnId(i); if(!c) break; cols.push(c); }
+                log.push('cols_getColumnId:' + cols.join(','));
+              }
+              // schema/info 직접
+              for (const p of ['_colInfo','_schema','info','schema','columns','_cols']) {
+                if (dl[p]) { log.push('dlt.' + p + ':' + JSON.stringify(dl[p]).slice(0,200)); break; }
+              }
+            }
+          }
+          // sbm 플러그인 탐색
+          const sbmKey = Object.keys(window).find(k => /sbm.*retrievePinSrchCont/i.test(k));
+          if (sbmKey && window[sbmKey]) {
+            const sbm = window[sbmKey];
+            log.push('sbm._pluginName:' + sbm._pluginName);
+            if (sbm.parentElement) {
+              const pe = sbm.parentElement;
+              log.push('sbm.parentElement_id:' + pe.id + ' type:' + typeof pe + ' fns:' + Object.keys(pe).filter(k=>typeof pe[k]==='function').join(',').slice(0,100));
+              // parentElement 클릭/활성화 시도
+              for (const fn of ['click','activate','submit','trigger','fireEvent']) {
+                if (typeof pe[fn] === 'function') { try { pe[fn](); log.push('pe.' + fn + '()'); } catch(e) { log.push('pe.' + fn + '_err:' + e.message.slice(0,40)); } }
+              }
+            }
+            // xmlNode ownerDocument에서 dma_srch_param 탐색
+            if (sbm.xmlNode && sbm.xmlNode.ownerDocument) {
+              const doc = sbm.xmlNode.ownerDocument;
+              const allIds = Array.from(doc.querySelectorAll('[id]')).map(e=>e.id);
+              log.push('xf_doc_ids:' + allIds.slice(0,20).join(','));
+              const dmaEl = doc.getElementById('dma_srch_param') || doc.querySelector('[id*="dma"]');
+              if (dmaEl) {
+                log.push('dmaEl:' + dmaEl.outerHTML.slice(0,300));
+                try { dmaEl.textContent = JSON.stringify([{rnum:pinC,selGbn:'UNI',rlrgGbn:'1',smplKindCls:'1',payCl:'F',col_chk:'Y'}]); log.push('dmaEl_set'); } catch(e) { log.push('dmaEl_set_err:'+e.message); }
+              } else {
+                // xmlNode 형제 탐색
+                const par = sbm.xmlNode.parentNode;
+                if (par) log.push('xf_parent:' + par.tagName + ' children:' + Array.from(par.childNodes).map(c=>c.nodeName+(c.id?'#'+c.id:'')).slice(0,15).join(','));
+              }
+            }
+          }
+          return log;
+        }, pinClean).catch(e => ['L2_err:' + e.message]);
+        console.log('[iros] 방법L scan:', JSON.stringify(lScanResult).slice(0, 1200));
+
+        // L-3) 대안 endpoint: retrieveLocSrchCont / retrieveRdAddrSrchCont (주소 검색 후 내용 조회)
+        const lXhrResult = await resultPage.evaluate(async ({pinC, pinD}) => {
+          const log = [];
+          // row0에서 실제 데이터 읽기
+          const dltKey = Object.keys(window).find(k => /^mf.*dlt_smpl_srch_rslt$/.test(k));
+          let row0Obj = {};
+          if (dltKey && window[dltKey]) {
+            const dl = window[dltKey];
+            try {
+              let r0 = null;
+              if (typeof dl.getRowData === 'function') r0 = dl.getRowData(0);
+              else if (typeof dl.getAllRowData === 'function') { const a = dl.getAllRowData(); r0 = a&&a[0]; }
+              if (Array.isArray(r0)) {
+                // 컬럼 이름 얻기 가능하면 매핑, 아니면 인덱스로
+                row0Obj = { rnum: r0[0], rlrgGbn: r0[1]==='건물'?'1':(r0[1]==='집합건물'?'2':(r0[1]==='토지'?'3':r0[1])), selGbn:'UNI', smplKindCls:'1', payCl:'F', col_chk:'Y' };
+              } else if (r0 && typeof r0 === 'object') { row0Obj = { ...r0, col_chk: 'Y', payCl: 'F' }; }
+            } catch(e) {}
+          }
+          if (!row0Obj.rnum) row0Obj = { rnum: pinC, selGbn:'UNI', rlrgGbn:'1', smplKindCls:'1', payCl:'F', col_chk:'Y' };
+          log.push('row0Obj:' + JSON.stringify(row0Obj));
+
+          const endpoints = [
+            '/biz/Pr20ViaRlrgSrchCtrl/retrieveLocSrchCont.do?IS_NMBR_LOGIN__=null',
+            '/biz/Pr20ViaRlrgSrchCtrl/retrieveRdAddrSrchCont.do?IS_NMBR_LOGIN__=null',
+            '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do?IS_NMBR_LOGIN__=null',
+          ];
+          const bodies = [
+            JSON.stringify({websquare_param: [row0Obj]}),
+            JSON.stringify({websquare_param: row0Obj}),
+            JSON.stringify({websquare_param: [{rnum:pinC, selGbn:'UNI', rlrgGbn:'1', payCl:'F', smplKindCls:'1', col_chk:'Y', smplSmplCls:'1'}]}),
+            JSON.stringify({websquare_param: [{rnum:pinC, selGbn:'LOC', rlrgGbn:'1', payCl:'F', smplKindCls:'1', col_chk:'Y'}]}),
+          ];
+          for (const url of endpoints) {
+            for (const body of bodies.slice(0, 2)) {
+              try {
+                const r = await fetch(url, {
+                  method:'POST', credentials:'include',
+                  headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','Accept':'application/json, text/plain, */*','Referer':location.href},
+                  body,
+                });
+                const txt = await r.text();
+                const endp = url.split('/').pop().split('?')[0];
+                log.push(endp + ':' + r.status + ':' + body.slice(0,60) + ' → ' + txt.slice(0,200));
+                if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) return {ok:true, txt, log};
+              } catch(e) { log.push('fetch_err:' + e.message); }
+            }
+          }
+          return {ok:false, log};
+        }, {pinC: pinClean, pinD: pinDash}).catch(e => ({ok:false, log:['L3_err:'+e.message]}));
+        console.log('[iros] 방법L XHR:', JSON.stringify(lXhrResult).slice(0, 1200));
+        if (lXhrResult && lXhrResult.ok) {
+          res.json({ok:true, registryText:lXhrResult.txt, registryHtml:'', address});
+          return;
+        }
+
+        // L-4) 고유번호 탭 입력 후 검색 (tab 내 INPUT 탐색 후 PIN 입력)
+        console.log('[iros] 방법L-4: 고유번호탭 PIN 직접 입력');
+        const pinRespPromise = resultPage.waitForResponse(
+          r => r.url().includes('PinSrchCont') || r.url().includes('LocSrchCont'), {timeout:10000}
+        ).catch(() => null);
+
+        await resultPage.locator('[id*="pin_srch_tab"]').first().click({force:true}).catch(() => {});
+        await resultPage.waitForTimeout(1500);
+
+        const pinTabInputs = await resultPage.evaluate(() =>
+          Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
+            .map(el => ({id:el.id, ph:el.placeholder, val:el.value, cls:el.className.slice(0,30)}))
+        ).catch(() => []);
+        console.log('[iros] 방법L-4 PIN탭 입력필드:', JSON.stringify(pinTabInputs).slice(0,400));
+
+        const parts = pinDash.split('-'); // ['1843','1996','070590']
+        let filled = 0;
+        for (const inp of pinTabInputs) {
+          if (!inp.id || filled > 2) break;
+          await resultPage.fill('#' + inp.id.replace(/:/g,'\\:'), parts[filled] || pinClean).catch(() => {});
+          filled++;
+        }
+        if (filled === 0) {
+          // 모든 input에 전체 핀 입력 시도
+          await resultPage.locator('input[type="text"]').first().fill(pinDash).catch(() => {});
+        }
+        await resultPage.waitForTimeout(300);
+        await resultPage.keyboard.press('Enter');
+
+        const pinResp = await pinRespPromise;
+        if (pinResp) {
+          const txt = await pinResp.text().catch(() => '');
+          console.log('[iros] 방법L-4 응답 status=' + pinResp.status() + ' preview:' + txt.slice(0,400));
+          if (/표제부|갑구|을구|소유권|순위번호|등기원인|등기목적/.test(txt)) {
+            res.json({ok:true, registryText:txt, registryHtml:'', address}); return;
+          }
+        }
+        await resultPage.waitForTimeout(1500);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법L 후 btn_smpl_rlrg:', rlrgCount);
+      } catch(e) { console.log('[iros] 방법L 오류:', e.message); }
+    }
+
+    // ── 방법M: Playwright text locator "보기" 직접 클릭 (checkbox 우회) ──────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법M: "보기" 텍스트 버튼 직접 클릭 시도');
+      try {
+        // 새 팝업/탭 감지
+        const newPagePromise = resultPage.context().waitForEvent('page', { timeout: 15000 }).catch(() => null);
+
+        // waitForResponse: IROS POST XHR 감지
+        const mRespPromise = resultPage.waitForResponse(
+          r => r.url().includes('iros.go.kr') && r.request().method() !== 'GET',
+          { timeout: 20000 }
+        ).catch(() => null);
+
+        // "보기" 버튼 목록 먼저 조사
+        const bogiList = await resultPage.evaluate(() => {
+          const all = document.querySelectorAll('button, a, input[type="button"], input[type="submit"], span[role="button"]');
+          return Array.from(all).filter(b => {
+            const t = (b.textContent || b.value || b.innerText || '').trim();
+            return t === '보기' || t.startsWith('보기');
+          }).map(b => ({
+            tag: b.tagName, id: b.id, cls: b.className.slice(0,40),
+            txt: (b.textContent||b.value||'').trim().slice(0,10),
+            vis: b.offsetParent !== null,
+            rect: (() => { const r = b.getBoundingClientRect(); return {x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}; })()
+          }));
+        });
+        console.log('[iros] 방법M "보기" 목록:', JSON.stringify(bogiList).slice(0, 600));
+
+        // Playwright locator로 첫 번째 "보기" 클릭
+        const bogiBtns = resultPage.locator(':text-is("보기")');
+        const bogiCount = await bogiBtns.count().catch(() => 0);
+        console.log('[iros] 방법M locator count:', bogiCount);
+
+        if (bogiCount > 0) {
+          await bogiBtns.first().scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
+          await bogiBtns.first().click({ timeout: 8000, force: true });
+          console.log('[iros] 방법M: 첫 번째 "보기" 클릭 완료');
+          await resultPage.waitForTimeout(2000);
+
+          // XHR 응답 확인
+          const mResp = await mRespPromise;
+          if (mResp) {
+            const mTxt = await mResp.text().catch(() => '');
+            console.log('[iros] 방법M XHR:', mResp.url().split('/').slice(-1)[0], mResp.status(), mTxt.slice(0, 600));
+          } else {
+            console.log('[iros] 방법M XHR: 응답 없음 (팝업/탭 방식일 수 있음)');
+          }
+
+          // 새 탭/팝업 확인
+          const newPage = await newPagePromise;
+          if (newPage) {
+            console.log('[iros] 방법M 새탭 열림:', newPage.url());
+            await newPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+            const newContent = await newPage.evaluate(() => document.body.innerText.slice(0, 3000)).catch(() => '');
+            console.log('[iros] 방법M 새탭 내용:', newContent.slice(0, 800));
+            const newHtml = await newPage.content().catch(() => '');
+            console.log('[iros] 방법M 새탭 HTML:', newHtml.slice(0, 1000));
+            await newPage.close().catch(() => {});
+          }
+
+          // 현재 페이지 DOM 내용 캡처
+          const afterContent = await resultPage.evaluate(() => {
+            const modal = document.querySelector('[id*="layer"],[id*="modal"],[id*="pop"],[class*="layer"],[class*="modal"],[class*="pop"]');
+            const modalTxt = modal ? modal.innerText.slice(0, 2000) : '';
+            const allTxt = document.body.innerText.slice(0, 500);
+            const rlrgBtnsNow = Array.from(document.querySelectorAll('[id*="btn_smpl_rlrg"],[id*="smpl_rlrg"]')).map(el=>({id:el.id,txt:el.textContent.trim().slice(0,20)}));
+            return { modalTxt, allTxtSlice: allTxt, rlrgBtnsNow };
+          });
+          console.log('[iros] 방법M DOM 후:', JSON.stringify(afterContent).slice(0, 800));
+          rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        }
+      } catch(e) { console.log('[iros] 방법M 오류:', e.message); }
+    }
+
+    // ── 방법N: grid 체크박스 탐색 + onclick 분석 + 네이티브 JS click ──────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법N: grid 체크박스·onclick·JS click 종합');
+      try {
+        // N-0: 모든 요청 실시간 추적
+        const nAllReqs = [];
+        const nReqHandler = req => {
+          const u = req.url();
+          if (u.includes('iros.go.kr') && !u.includes('.js') && !u.includes('.css') && !u.includes('.png') && !u.includes('.gif'))
+            nAllReqs.push(req.method() + ':' + u.split('/').pop().slice(0, 60));
+        };
+        resultPage.on('request', nReqHandler);
+
+        // N-1: grid 내부 구조 분석 (cell_0_0 ~ cell_0_5, input 요소)
+        const gridInfo = await resultPage.evaluate(() => {
+          const grid = document.querySelector('[id*="grd_smpl_srch_rslt"]');
+          const inputs = grid ? Array.from(grid.querySelectorAll('input')).slice(0, 6).map(i => ({
+            id: i.id, type: i.type, checked: i.checked, val: i.value.slice(0, 20),
+            rect: (() => { const r = i.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; })()
+          })) : [];
+          const cells = Array.from(document.querySelectorAll('[id*="cell_0_"]')).slice(0, 8).map(c => ({
+            id: c.id, html: c.innerHTML.slice(0, 120)
+          }));
+          // 첫 번째 "보기" 버튼 onclick 분석
+          const bogi = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === '보기');
+          const bogiInfo = bogi ? {
+            outerHTML: bogi.outerHTML.slice(0, 300),
+            onclick: bogi.onclick ? bogi.onclick.toString().slice(0, 200) : null,
+            parentId: bogi.parentElement ? bogi.parentElement.id : null,
+            parentOnclick: bogi.parentElement && bogi.parentElement.onclick ? bogi.parentElement.onclick.toString().slice(0, 200) : null,
+          } : null;
+          return { inputs, cells, bogiInfo };
+        });
+        console.log('[iros] 방법N grid분석:', JSON.stringify(gridInfo).slice(0, 1200));
+
+        // N-2: navigator.webdriver 스푸핑 후 JS 네이티브 click
+        await resultPage.evaluate(() => {
+          try {
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined, configurable: true });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+          } catch (e) {}
+          const bogi = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === '보기');
+          if (bogi) {
+            bogi.focus();
+            const ce = new MouseEvent('click', { bubbles: true, cancelable: true, view: window, button: 0, buttons: 1 });
+            bogi.dispatchEvent(ce);
+          }
+        });
+        await resultPage.waitForTimeout(3000);
+        console.log('[iros] 방법N JS click 후 requests:', JSON.stringify(nAllReqs.splice(0)));
+
+        // N-3: grid input[type=checkbox] 직접 클릭
+        const chkSel = '[id*="grd_smpl_srch_rslt"] input[type="checkbox"], [id*="grd_smpl_srch_rslt"] input[type="radio"]';
+        const chkCount = await resultPage.locator(chkSel).count().catch(() => 0);
+        console.log('[iros] 방법N checkbox count:', chkCount);
+        if (chkCount > 0) {
+          const chkEl = resultPage.locator(chkSel).first();
+          await chkEl.scrollIntoViewIfNeeded({ timeout: 3000 }).catch(() => {});
+          await chkEl.click({ force: true });
+          await resultPage.waitForTimeout(2000);
+          const chkState = await resultPage.evaluate(() => {
+            const c = document.querySelector('[id*="grd_smpl_srch_rslt"] input[type="checkbox"]');
+            return c ? { checked: c.checked, id: c.id } : 'not found';
+          });
+          console.log('[iros] 방법N checkbox 클릭 후:', JSON.stringify(chkState));
+          console.log('[iros] 방법N checkbox 클릭 requests:', JSON.stringify(nAllReqs.splice(0)));
+
+          // 체크 후 "보기" 클릭
+          await resultPage.locator(':text-is("보기")').first().click({ force: true });
+          await resultPage.waitForTimeout(3000);
+          console.log('[iros] 방법N 체크후보기 requests:', JSON.stringify(nAllReqs.splice(0)));
+        }
+
+        // N-4: cell_0_0 마우스 이벤트 시퀀스 (WebSquare 행선택 시뮬)
+        const cell00 = await resultPage.evaluate(() => {
+          const c = document.querySelector('[id*="grd_smpl_srch_rslt_cell_0_0"]');
+          if (!c) return null;
+          c.scrollIntoView({ block: 'center' });
+          const r = c.getBoundingClientRect();
+          return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+        });
+        if (cell00) {
+          console.log('[iros] 방법N cell_0_0 클릭:', JSON.stringify(cell00));
+          await resultPage.mouse.move(cell00.x, cell00.y);
+          await resultPage.mouse.down();
+          await resultPage.waitForTimeout(50);
+          await resultPage.mouse.up();
+          await resultPage.waitForTimeout(2000);
+          console.log('[iros] 방법N cell_0_0 mouse 클릭 requests:', JSON.stringify(nAllReqs.splice(0)));
+        }
+
+        resultPage.off('request', nReqHandler);
+        rlrgCount = await resultPage.locator('[id*="btn_smpl_rlrg"]').count().catch(() => 0);
+        console.log('[iros] 방법N 후 rlrgCount:', rlrgCount);
+      } catch (e) { console.log('[iros] 방법N 오류:', e.message); }
+    }
+
+    // ── 방법O: 세션쿠키 직접 추출 + IROS REST API 직접 호출 ──────────────────────────
+    // WebSquare headless 감지 우회: Playwright 브라우저 세션쿠키로 Node.js fetch() 직접 호출
+    // (directApiContent는 방법S 블록 앞에서 이미 선언됨)
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법O: 세션쿠키 추출 + 직접 HTTP 호출 시도');
+      try {
+        // O-1: 현재 세션의 모든 쿠키 추출
+        const cookies = await resultPage.context().cookies();
+        const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        console.log('[iros] 방법O 쿠키 개수:', cookies.length, '쿠키 키목록:', cookies.map(c=>c.name).join(',').slice(0,200));
+
+        // O-2: 현재 페이지에서 sbm_* 글로벌·scwin 함수·첫 번째 행 PIN 추출
+        const pageState = await resultPage.evaluate(() => {
+          // sbm_* 전역 스캔
+          const sbmKeys = Object.keys(window).filter(k => k.startsWith('sbm_'));
+          const sbmInfo = sbmKeys.slice(0, 20).map(k => {
+            const o = window[k];
+            return { key: k, action: o && o.action, ref: o && o.ref, type: typeof o };
+          });
+          // scwin 함수 스캔
+          const scwinFns = window.scwin ? Object.keys(window.scwin).filter(k => /(view|열람|smpl|rlrg|issue)/i.test(k)).slice(0,20) : [];
+          // 그리드 첫 번째 행 텍스트 (주소·PIN 포함)
+          const gridRows = Array.from(document.querySelectorAll('[id*="grd_smpl_srch_rslt"] tr, [id*="grid"] tr')).slice(0,3).map(r => r.innerText.slice(0,150));
+          // 검색결과 PIN/고유번호 패턴 (xxxx-xxxx-xxxxxx)
+          const pageText = document.body.innerText;
+          const pinMatches = pageText.match(/\d{4}-\d{4}-\d{6}/g) || [];
+          // XForms dma 인스턴스 스캔
+          const dmaKeys = Object.keys(window).filter(k => k.startsWith('dma_')).slice(0,10);
+          const dmaInfo = dmaKeys.map(k => {
+            const o = window[k];
+            const xml = o && o.xmlNode ? new XMLSerializer().serializeToString(o.xmlNode).slice(0,300) : '';
+            return { key: k, xml };
+          });
+          return { sbmInfo, scwinFns, gridRows, pinMatches, dmaInfo };
+        }).catch(e => ({ error: e.message }));
+        console.log('[iros] 방법O 페이지상태:', JSON.stringify(pageState).slice(0, 2000));
+
+        // O-3: 첫 번째 행 PIN으로 직접 API 호출 시도
+        const irosBase = 'https://www.iros.go.kr';
+        const commonHeaders = {
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'Accept-Language': 'ko-KR,ko;q=0.9',
+          'Content-Type': 'application/json',
+          'Referer': 'https://www.iros.go.kr/index.jsp',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Cookie': cookieStr,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        };
+
+        // PIN 목록 (pageState에서 추출한 것 + 주소 기반 검색에 필요한 파라미터)
+        const pinList = (pageState.pinMatches || []).slice(0, 3);
+        console.log('[iros] 방법O PIN 목록:', JSON.stringify(pinList));
+
+        // O-4: sbm_* 에서 retrieveSmplRlrgCont 계열 action URL 찾기
+        const viewSbm = (pageState.sbmInfo || []).find(s => s.action && /(smpl|rlrg|view|Cont)/i.test(s.action));
+        const candidateUrls = [
+          '/biz/Pr20ViaRlrgSrchCtrl/retrieveSmplRlrgCont.do',
+          '/biz/Pr20SmplRlrgCtrl/retrieveSmplRlrg.do',
+          '/biz/Pr20ViaRlrgSrchCtrl/retrieveFreeCont.do',
+          '/biz/Pr20ViaRlrgSrchCtrl/retrievePinSrchCont.do',
+          '/biz/Pr20SmplRlrgCtrl/selectSmplRlrg.do',
+          '/biz/Pr20SmplRlrgCtrl/retrieveRlrg.do',
+          viewSbm ? viewSbm.action : null,
+        ].filter(Boolean);
+        console.log('[iros] 방법O 후보 URL:', JSON.stringify(candidateUrls));
+
+        // O-5: 각 후보 URL에 직접 POST
+        const firstPin = pinList[0] || '';
+        const firstPinDash = firstPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        for (const relUrl of candidateUrls) {
+          try {
+            const fullUrl = relUrl.startsWith('http') ? relUrl : `${irosBase}${relUrl}?IS_NMBR_LOGIN__=null`;
+            // 실제 IROS WebSquare dma_srch_param 파라미터 형식
+            const bodyVariants = [
+              // 배열 형식 (방법L에서 row0Obj와 동일)
+              { websquare_param: [{ rnum: firstPin, rlrgGbn: '1', selGbn: 'UNI', smplKindCls: '1', payCl: 'F', col_chk: 'Y' }] },
+              // 단일 객체 형식
+              { websquare_param: { rnum: firstPin, rlrgGbn: '1', selGbn: 'UNI', smplKindCls: '1', payCl: 'F', col_chk: 'Y' } },
+              // 대시 포함 PIN
+              { websquare_param: [{ rnum: firstPinDash, rlrgGbn: '1', selGbn: 'UNI', smplKindCls: '1', payCl: 'F', col_chk: 'Y' }] },
+              // prtAt 파라미터 명칭
+              { websquare_param: { prtAt: firstPin, rlrgGbn: '1', smplKindCls: '1', payCl: 'F' } },
+              // 기존 주소 기반 검색
+              { websquare_param: { map: { srchGubun: '1', srchAdrs: address, pageNum: '1', pageSize: '10' } } },
+              {},
+            ];
+            for (const body of bodyVariants) {
+              const resp = await fetch(fullUrl, {
+                method: 'POST',
+                headers: commonHeaders,
+                body: JSON.stringify(body),
+              }).catch(e => ({ ok: false, _err: e.message }));
+              if (resp._err) { console.log('[iros] 방법O fetch오류:', relUrl, resp._err); break; }
+              const txt = await resp.text().catch(() => '');
+              console.log('[iros] 방법O', relUrl, 'status:', resp.status, 'body:', txt.slice(0, 500));
+              const isHtml = txt.includes('<!DOCTYPE') || txt.includes('<html') || txt.includes('document.location.href') || txt.includes('<script>');
+              if (resp.status === 200 && txt.length > 100 && !isHtml && !txt.includes('"dataList":[]') && !txt.includes('"dataList": []')) {
+                directApiContent = txt;
+                console.log('[iros] 방법O 성공! content length:', txt.length);
+                break;
+              }
+            }
+            if (directApiContent) break;
+          } catch (urlErr) { console.log('[iros] 방법O URL오류:', relUrl, urlErr.message); }
+        }
+
+        // O-6: 성공 시 rlrgCount 올려서 이후 단계 스킵 표시
+        if (directApiContent) {
+          rlrgCount = 999; // sentinel: 직접 API 성공
+          // 디버그: 성공 내용을 파일로 저장 (확인용)
+          try { require('fs').writeFileSync('/tmp/iros-method-o-result.json', directApiContent); } catch(e) {}
+          console.log('[iros] 방법O: 직접 API 성공 내용 전체:', directApiContent.slice(0, 1000));
+          console.log('[iros] 방법O: 직접 API 성공, content 반환 준비');
+        } else {
+          // O-7: 실패시 보기 버튼 onclick 체인 분석 (핸들러 함수명 추출)
+          const onclickInfo = await resultPage.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button, td')).filter(b => (b.textContent||'').trim() === '보기' || (b.onclick||'').toString().includes('rlrg'));
+            return btns.slice(0, 5).map(b => ({
+              tag: b.tagName,
+              id: b.id,
+              onclick: b.onclick ? b.onclick.toString().slice(0, 200) : '',
+              parentOnclick: b.parentElement ? (b.parentElement.onclick||'').toString().slice(0,200) : '',
+              attrs: Array.from(b.attributes||[]).map(a=>({n:a.name,v:a.value.slice(0,80)})),
+            }));
+          }).catch(() => []);
+          console.log('[iros] 방법O onclick분석:', JSON.stringify(onclickInfo).slice(0, 1500));
+        }
+
+      } catch (e) { console.log('[iros] 방법O 오류:', e.message, e.stack && e.stack.slice(0,300)); }
+    }
+
+    // ── 방법P: 팝업/새 탭 캡처 ─────────────────────────────────────────────────────────
+    // "보기" 클릭 시 callMpPrtIframe.do로 팝업이 열림 → 팝업 내용 추출
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법P: 팝업 캡처 시도');
+      try {
+        const popupPromise = resultPage.context().waitForEvent('page', { timeout: 20000 }).catch(() => null);
+        const viewBtns = await resultPage.locator('button:has-text("보기")').all();
+        console.log('[iros] 방법P 보기 버튼 수:', viewBtns.length);
+        if (viewBtns.length > 0) {
+          await viewBtns[0].click({ timeout: 5000 }).catch(() => {});
+          const popup = await popupPromise;
+          if (popup) {
+            console.log('[iros] 방법P 팝업 열림 URL:', popup.url());
+            await popup.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+            await resultPage.waitForTimeout(3000);
+            const popupText = await popup.innerText('body').catch(() => '');
+            const popupHtml = await popup.content().catch(() => '');
+            console.log('[iros] 방법P 팝업 텍스트:', popupText.slice(0, 1000));
+            console.log('[iros] 방법P 팝업 URL 최종:', popup.url());
+            if (popupText.length > 200) {
+              directApiContent = JSON.stringify({ type: 'popup_text', url: popup.url(), content: popupText, html: popupHtml.slice(0, 5000) });
+              rlrgCount = 999;
+              console.log('[iros] 방법P 성공! 팝업 텍스트 length:', popupText.length);
+            }
+            await popup.close().catch(() => {});
+          } else {
+            console.log('[iros] 방법P 팝업 없음 — iframe 방식으로 처리됐을 수 있음 (방법Q에서 처리)');
+          }
+        }
+      } catch (e) { console.log('[iros] 방법P 오류:', e.message); }
+    }
+
+    // ── 방법Q: _modal 제거 후 강제 클릭 → iframe 캡처 ────────────────────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법Q: _modal 제거 + 강제 클릭 시도');
+      try {
+        const IFRAME_KW = /소유자|갑구|을구|순위번호|등기원인|등기목적|권리자|의무자|접수번호/;
+
+        // Q-1: _modal / 프로세스바 / w2modal 전부 숨기기
+        await resultPage.evaluate(() => {
+          ['_modal', '___processbar2', '___processbar2_i'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.display = 'none'; el.style.pointerEvents = 'none'; el.style.zIndex = '-1'; }
+          });
+          document.querySelectorAll('.w2modal_popup, .w2modal_bg').forEach(el => {
+            el.style.display = 'none'; el.style.pointerEvents = 'none'; el.style.zIndex = '-1';
+          });
+        }).catch(() => {});
+        console.log('[iros] 방법Q _modal 제거 완료');
+
+        const framesBefore = resultPage.frames().map(f => f.url());
+        console.log('[iros] 방법Q 클릭 전 frames:', JSON.stringify(framesBefore));
+
+        // Q-2: navigator.webdriver=false 패치 후 버튼이 실제로 visible되길 대기 (최대 10초)
+        await resultPage.waitForTimeout(1500);
+        const viewBtns2 = await resultPage.locator('td[data-col_id="mp_prt"]').all();
+        console.log('[iros] 방법Q TD[mp_prt] 수:', viewBtns2.length);
+        let clickDone = false;
+        if (viewBtns2.length > 0) {
+          // 일반 클릭 (webdriver=false 패치 후 visible이어야 함)
+          await viewBtns2[0].click({ timeout: 5000 })
+            .then(() => { clickDone = true; console.log('[iros] 방법Q 일반 클릭 성공'); })
+            .catch(e => console.log('[iros] 방법Q 일반 클릭 오류:', e.message));
+        }
+        if (!clickDone) {
+          // 내부 span/button/a 클릭 시도
+          const innerBtn = resultPage.locator('td[data-col_id="mp_prt"] span, td[data-col_id="mp_prt"] button, td[data-col_id="mp_prt"] a').first();
+          await innerBtn.click({ timeout: 3000 }).catch(() => {});
+          clickDone = true;
+          console.log('[iros] 방법Q 내부 span 클릭');
+        }
+        if (!clickDone) {
+          await resultPage.evaluate(() => {
+            const td = document.querySelector('td[data-col_id="mp_prt"]');
+            if (td) {
+              ['mousedown', 'mouseup', 'click'].forEach(t =>
+                td.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }))
+              );
+            }
+          }).catch(() => {});
+          console.log('[iros] 방법Q JS MouseEvent dispatch');
+          clickDone = true;
+        }
+
+        // Q-3: 15초 대기 (WebSquare iframe 컨텐츠 로드 시간 충분히 확보)
+        await resultPage.waitForTimeout(15000);
+        const framesAfter = resultPage.frames();
+        console.log('[iros] 방법Q 클릭 후 frame 수:', framesAfter.length);
+        for (const frame of framesAfter) {
+          if (frame === resultPage.mainFrame()) continue;
+          const frameUrl = frame.url();
+          try {
+            await frame.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => {});
+            const frameText = await frame.innerText('body').catch(() => '');
+            const frameHtml = await frame.content().catch(() => '');
+            console.log('[iros] 방법Q frame:', frameUrl, '| 앞300:', frameText.slice(0, 300));
+            if (frameText.length > 100 && IFRAME_KW.test(frameText)) {
+              directApiContent = JSON.stringify({ type: 'iframe', url: frameUrl, content: frameText, html: frameHtml.slice(0, 8000) });
+              rlrgCount = 999;
+              try { require('fs').writeFileSync('/tmp/iros-method-q-result.json', directApiContent); } catch(e) {}
+              console.log('[iros] 방법Q iframe 성공! length:', frameText.length);
+              break;
+            }
+          } catch (fe) { console.log('[iros] 방법Q frame 오류:', frameUrl, fe.message); }
+        }
+      } catch (e) { console.log('[iros] 방법Q 오류:', e.message, e.stack && e.stack.slice(0, 300)); }
+    }
+
+    // ── 방법R: callMpPrtIframe.do frame에 PIN으로 직접 navigate ─────────────────────
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법R: iframe 직접 navigate 시도');
+      try {
+        const IFRAME_KW_R = /소유자|갑구|을구|순위번호|등기원인|등기목적|권리자|의무자/;
+        const iframeFrame = resultPage.frames().find(f => f.url().includes('callMpPrtIframe'));
+        const firstPinR = await resultPage.evaluate(() => {
+          const m = document.body.innerText.match(/\d{4}-\d{4}-\d{6}/);
+          return m ? m[0].replace(/-/g, '') : '';
+        }).catch(() => '');
+        const firstPinDashR = firstPinR.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        console.log('[iros] 방법R iframe frame:', iframeFrame ? iframeFrame.url() : 'none', '| PIN:', firstPinR);
+        if (iframeFrame && firstPinR) {
+          const navUrls = [
+            `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${firstPinR}&rlrgGbn=1&payCl=F&smplKindCls=1`,
+            `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${firstPinDashR}&rlrgGbn=1&payCl=F&smplKindCls=1`,
+          ];
+          for (const navUrl of navUrls) {
+            console.log('[iros] 방법R goto:', navUrl);
+            await iframeFrame.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(e => console.log('[iros] 방법R goto 오류:', e.message));
+            await resultPage.waitForTimeout(5000);
+            const iframeText = await iframeFrame.innerText('body').catch(() => '');
+            const iframeHtml = await iframeFrame.content().catch(() => '');
+            console.log('[iros] 방법R frame URL:', iframeFrame.url(), '| 앞500:', iframeText.slice(0, 500));
+            if (iframeText.length > 200 && IFRAME_KW_R.test(iframeText)) {
+              directApiContent = JSON.stringify({ type: 'iframe_direct', url: iframeFrame.url(), content: iframeText, html: iframeHtml.slice(0, 8000) });
+              rlrgCount = 999;
+              try { require('fs').writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
+              console.log('[iros] 방법R 성공! length:', iframeText.length);
+              break;
+            }
+          }
+        }
+      } catch (e) { console.log('[iros] 방법R 오류:', e.message); }
+    }
+
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
     {
       await resultPage.screenshot({ path: '/home/opc/iros-debug/step5b-all-methods.png', fullPage: true }).catch(() => {});
@@ -2024,6 +2964,17 @@ app.post('/api/iros-fetch', async (req, res) => {
         capturedReqs: typeof _capturedPosts !== 'undefined' ? 'external' : 'none',
       })).catch(() => ({}));
       console.log('[iros] 최종 상태:', JSON.stringify(finalPageInfo));
+    }
+
+    // 방법S/O 직접 API 성공 시 조기 반환
+    if (directApiContent) {
+      console.log('[iros] 직접API 결과 반환 (방법S/O)');
+      let _dac = {};
+      try { _dac = JSON.parse(directApiContent); } catch(_) { _dac = { content: directApiContent, html: '' }; }
+      const _dacText = _dac.content || _dac.text || directApiContent;
+      const _dacHtml = _dac.html || '';
+      res.json({ ok: true, registryText: _dacText, registryHtml: _dacHtml, address });
+      return;
     }
 
     // 열람 버튼 활성화 대기
