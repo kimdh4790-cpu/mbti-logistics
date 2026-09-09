@@ -1596,8 +1596,18 @@ app.post('/api/iros-fetch', async (req, res) => {
           }
         }
 
+        // 클릭 후 전체 네트워크 요청 로그 (디버그 — 등기 데이터 URL 파악)
+        const _s3ReqLogger = (req) => {
+          const _u = req.url();
+          if (!_u.includes('iros.go.kr') && !_u.includes('go.kr')) return;
+          if (/\.(js|css|png|jpg|gif|ico|woff|ttf|map)(\?|$)/i.test(_u)) return;
+          console.log('[iros] S3-REQ:', req.method(), _u.slice(-120));
+        };
+        resultPage.on('request', _s3ReqLogger);
+
         // AJAX 응답 또는 팝업 대기 (25초 — IROS SPA 로딩 여유)
         await resultPage.waitForTimeout(25000);
+        resultPage.off('request', _s3ReqLogger);
         resultPage.off('response', _s3RespHandler);
 
         // AJAX 응답에서 데이터 얻었으면 성공
