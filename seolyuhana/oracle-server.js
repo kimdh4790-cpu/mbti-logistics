@@ -2662,14 +2662,23 @@ app.post('/api/iros-fetch', async (req, res) => {
         console.log('[iros] 방법O 후보 URL:', JSON.stringify(candidateUrls));
 
         // O-5: 각 후보 URL에 직접 POST
+        const firstPin = pinList[0] || '';
+        const firstPinDash = firstPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
         for (const relUrl of candidateUrls) {
           try {
             const fullUrl = relUrl.startsWith('http') ? relUrl : `${irosBase}${relUrl}?IS_NMBR_LOGIN__=null`;
-            // 파라미터: 주소 검색어와 PIN을 body에 포함
+            // 실제 IROS WebSquare dma_srch_param 파라미터 형식
             const bodyVariants = [
+              // 배열 형식 (방법L에서 row0Obj와 동일)
+              { websquare_param: [{ rnum: firstPin, rlrgGbn: '1', selGbn: 'UNI', smplKindCls: '1', payCl: 'F', col_chk: 'Y' }] },
+              // 단일 객체 형식
+              { websquare_param: { rnum: firstPin, rlrgGbn: '1', selGbn: 'UNI', smplKindCls: '1', payCl: 'F', col_chk: 'Y' } },
+              // 대시 포함 PIN
+              { websquare_param: [{ rnum: firstPinDash, rlrgGbn: '1', selGbn: 'UNI', smplKindCls: '1', payCl: 'F', col_chk: 'Y' }] },
+              // prtAt 파라미터 명칭
+              { websquare_param: { prtAt: firstPin, rlrgGbn: '1', smplKindCls: '1', payCl: 'F' } },
+              // 기존 주소 기반 검색
               { websquare_param: { map: { srchGubun: '1', srchAdrs: address, pageNum: '1', pageSize: '10' } } },
-              { websquare_param: { map: { srchGubun: '2', prtAt: pinList[0] || '', pageNum: '1', pageSize: '10' } } },
-              { websquare_param: { list: [{ srchGubun: '1', srchAdrs: address }] } },
               {},
             ];
             for (const body of bodyVariants) {
@@ -2715,6 +2724,45 @@ app.post('/api/iros-fetch', async (req, res) => {
         }
 
       } catch (e) { console.log('[iros] 방법O 오류:', e.message, e.stack && e.stack.slice(0,300)); }
+    }
+
+    // ── 방법P: 팝업/새 탭 캡처 ─────────────────────────────────────────────────────────
+    // "보기" 클릭 시 callMpPrtIframe.do로 팝업이 열림 → 팝업 내용 추출
+    if (rlrgCount === 0) {
+      console.log('[iros] 방법P: 팝업 캡처 시도');
+      try {
+        const popupPromise = resultPage.context().waitForEvent('page', { timeout: 20000 }).catch(() => null);
+        const viewBtns = await resultPage.locator('button:has-text("보기")').all();
+        console.log('[iros] 방법P 보기 버튼 수:', viewBtns.length);
+        if (viewBtns.length > 0) {
+          await viewBtns[0].click({ timeout: 5000 }).catch(() => {});
+          const popup = await popupPromise;
+          if (popup) {
+            console.log('[iros] 방법P 팝업 열림 URL:', popup.url());
+            await popup.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+            await resultPage.waitForTimeout(3000);
+            const popupText = await popup.innerText('body').catch(() => '');
+            const popupHtml = await popup.content().catch(() => '');
+            console.log('[iros] 방법P 팝업 텍스트:', popupText.slice(0, 1000));
+            console.log('[iros] 방법P 팝업 URL 최종:', popup.url());
+            if (popupText.length > 200) {
+              directApiContent = JSON.stringify({ type: 'popup_text', url: popup.url(), content: popupText, html: popupHtml.slice(0, 5000) });
+              rlrgCount = 999;
+              console.log('[iros] 방법P 성공! 팝업 텍스트 length:', popupText.length);
+            }
+            await popup.close().catch(() => {});
+          } else {
+            console.log('[iros] 방법P 팝업 없음 (같은 탭에서 처리됐을 수 있음)');
+            // 팝업이 없으면 같은 페이지에서 변화 확인
+            await resultPage.waitForTimeout(3000);
+            const afterClick = await resultPage.innerText('body').catch(() => '');
+            if (afterClick.length > 500 && afterClick.includes('등기')) {
+              directApiContent = JSON.stringify({ type: 'same_page', content: afterClick });
+              rlrgCount = 999;
+            }
+          }
+        }
+      } catch (e) { console.log('[iros] 방법P 오류:', e.message); }
     }
 
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
