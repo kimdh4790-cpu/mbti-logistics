@@ -434,6 +434,17 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: `_filoPageHqNotice()` 전가맹점 공지 일괄 발송 신규 구현 (hq_notices 컬렉션)
 - filo-auth.js: `_filoPageQSC()` QSC 체크리스트 신규 구현 (hq_qsc 컬렉션, 9항목 5점 채점)
 
+### ✅ 완료 (2026-09-09 소셜미디어 영상 파이프라인)
+- **전 제품 영상 1분(60초)으로 확장** (scripts/remotion/):
+  - index.jsx: 8개 컴포지션 durationInFrames → 1800프레임(60초)
+  - YongchaPromo.jsx / DonwayPromo.jsx: SCENES Hook(300)+Scene2(360)+Scene3(360)+Scene4(360)+CTA(420), SUBTITLES_ALL 4변형×9라인 재매핑
+  - InflearnPromo.jsx: SUBTITLES_ALL_INFLEARN 6변형×8라인 재매핑
+  - FiloPromo.jsx: DEFAULT_LINES startSec 재조정 (0/12/24/36/50)
+  - 나레이션 JSON 4종: yongcha/donway(0/11/22/34/46), filo(0/12/24/36/50), inflearn(0/10/24/38/44)
+- **정지영상(frozen video) 버그 수정** (.github/workflows/social-media.yml):
+  - 원인: Runway AI 먼저 실행 → promo.mp4 생성 → Remotion 단계에서 "Runway 영상 있음 — 스킵" 조건에 걸려 애니메이션 렌더링 건너뜀 → 정지영상 업로드
+  - 수정: filo·donway·yongcha·inflearn 4개 제품의 `[ -f promo.mp4 ]` 체크 제거 → Runway 결과 유무와 무관하게 항상 Remotion 실행
+
 ### ✅ 완료 (2026-09-08)
 - **배달대행 통계 페이지 ₩0 버그 수정** (donway-pages/index.html):
   - `delivery_sessions` 저장 필드명(`rawTotal`, `pfSum`, `preTax`) vs 통계 집계 읽기 필드명 불일치
