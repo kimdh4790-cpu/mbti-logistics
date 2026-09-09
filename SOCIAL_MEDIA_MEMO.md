@@ -454,12 +454,48 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ---
 
-## 다음 작업 우선순위 (2026-09-04 기준)
+## 수정 이력
 
-### 영상 미완료 (긴급)
-1. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 GitHub Actions `product=yongcha steps=record,compose,youtube` 재실행
-2. **인프런 YouTube 재업로드** → 무음 업로드됨. `product=inflearn steps=record,compose,youtube` 실행 (나레이션 포함)
-3. **FILO 재렌더링** → GitHub Actions `product=filo steps=record,compose,youtube`
+### 2026-09-09 — 영상 중간 끊김 버그 수정
+- **원인 4가지**: ① CTA 씬 4초(120프레임)로 너무 짧음 ② 나레이션 CTA 시작점이 영상 끝에 걸림 ③ FiloPromo CTA 자막 startSec=30.0이 마지막 프레임이라 표시 안 됨 ④ FFmpeg `-shortest`+`amix duration=first`로 영상이 나레이션 길이로 잘림
+- **수정**: YongchaPromo/DonwayPromo CTA 120→210프레임, 총 길이 900→990프레임(33초), 자막 to:900→990, 나레이션 CTA startSec 앞당김, FiloPromo startSec 30.0→25.0, FFmpeg duration=longest + -shortest 제거
+
+### 2026-09-09 — 전 제품 영상 1분(60초)으로 확장
+- **index.jsx**: 8개 컴포지션 전체 durationInFrames 900/990 → 1800(60초)
+- **SCENES 재분배**: Hook(300) + Scene2(360) + Scene3(360) + Scene4(360) + CTA(420) = 1800프레임
+- **SUBTITLES_ALL 재매핑**: Yongcha/Donway 4변형×9라인, Inflearn 6변형×8라인 — 1800프레임 기준으로 전체 재매핑
+- **FiloPromo DEFAULT_LINES**: 6슬라이드×300프레임(10초) 기준 startSec 재조정 (0/12/24/36/50)
+- **나레이션 JSON 4종**: yongcha/donway 60초 분배(0/11/22/34/46), filo(0/12/24/36/50), inflearn(0/10/24/38/44)
+
+### 2026-09-09 — 정지 영상(frozen video) 버그 수정
+- **원인**: `social-media.yml` Runway AI 단계가 먼저 실행되어 `yongcha-promo.mp4` 생성 → Remotion 단계에서 "Runway 영상 있음 — Remotion 스킵" 조건에 걸려 애니메이션 영상 렌더링 건너뜀 → Runway 정지영상에 나레이션 오디오만 붙어 업로드됨
+- **수정**: `social-media.yml` Remotion 단계의 `[ -f "output/${p}-promo.mp4" ]` 체크 제거 — filo·donway·yongcha·inflearn 4개 제품은 Runway 출력물 유무에 관계없이 항상 Remotion 실행하여 정지영상 덮어씀
+
+### 2026-09-09 — make-reels.sh 전체 영상 복사로 수정 (릴스 전체 60초)
+- **원인**: `make-reels.sh`가 DINE·MBTICO 제품에 대해 15초 오프셋에서 30초만 잘라내 `reels.mp4`를 생성 → 업로드된 릴스가 60초가 아닌 30초 중간 클립
+- **수정**: FFmpeg 클립 명령 제거 → `cp "$INPUT" "$REELS"` 로 전체 영상 복사
+- `compose-video.sh`가 이미 1080×1920 세로형 60초 출력이므로 별도 클립 불필요
+- 적용 대상: 모든 제품 (`$PRODUCT` 인자 값에 무관하게 전체 영상 사용)
+
+### 2026-09-09 — 나레이션 6라인으로 확장 (60초 전체 커버)
+- **문제**: 기존 5라인 구성 — 마지막 CTA가 ~46s에 시작해 50s쯤 끝 → 60초 영상 후반 10초 나레이션 없는 무음 구간 발생
+- **수정**: 4개 제품 narration.json 모두 6라인으로 확장, CTA를 53s로 이동하여 60초 말미까지 목소리가 나오도록 조정
+  - yongcha: 0/11/22/34/44/53 — 44s "지금 바로 앱 다운받고 첫 공고 올려보세요." 신규 추가
+  - donway: 0/11/22/34/43/52 — 43s "기사 오십 명 정산이 오 분 만에 끝나요." 신규 추가
+  - filo: 0/12/24/36/46/53 — 기존 내용 재구성, 46s "직원 근태, 급여명세서까지 한 앱에서 끝이에요." 신규
+  - inflearn: 0/12/24/38/46/53 — 38s "모두 엑셀 파일로 바로 사용할 수 있어요." 신규 추가
+- **FFmpeg 보호**: `VID_DUR=$(ffprobe ...)` + `-t "$VID_DUR"` — BGM(300s)에 의한 5분 연장 방지
+- **업로드 차단**: `check_video()` / `check_video_ig()` — 45초 미만 영상 업로드 자동 차단
+
+---
+
+## 다음 작업 우선순위 (2026-09-09 기준)
+
+### 영상 미완료 (긴급 — 1분 확장 + 정지영상 버그 수정 후 재업로드 필요)
+1. **전 제품 재렌더링·재업로드** → GitHub Actions `product=all steps=record,compose,youtube,instagram` 재실행 (1분 확장 + 정지영상 버그 수정 반영)
+2. **YONGCHA YouTube 재업로드** → eDpowbKedgs 삭제 후 재실행 (정지영상이었음)
+3. **인프런 YouTube 재업로드** → 무음 업로드됨. `product=inflearn steps=record,compose,youtube` 실행 (나레이션 포함)
+4. **FILO 재렌더링** → GitHub Actions `product=filo steps=record,compose,youtube`
 
 ### 업로드 완료 목록
 - ✅ FILO YouTube 숏츠 (BdG2vAkzZuo, 2026-08-28)

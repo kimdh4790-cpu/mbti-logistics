@@ -262,6 +262,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-09 | 글로벌 AI 문서 분석 시장 리서치 브리프 Artifact 게시 (https://claude.ai/code/artifact/b0640ae6-0a0e-4ce5-bd2b-74f929e48725) — Harvey AI/$288K·Luminance·Kira·Ironclad·한국 경쟁사 전수조사, 전환 UX 패턴 6가지, 전세사기 독점 영역 확인, P0~P2 전략 권고 12가지 |
 | 2026-09-06 | filo.ai.kr/seolyuhana → mbtico.kr/scan 이전. scan.html 리네임. PWA 추가 |
 | 2026-09-06 | 랜딩 리디자인 (핑크·민트·골드 3색) |
 | 2026-09-07 | 가격 재조정: 면접 19,900P / 이력서·계약서 29,900P / 자소서·번역 39,900P |
@@ -279,6 +280,11 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **_worker.js SERVICE_COSTS 하드코딩**: Firestore 미설정 시 0P 취약점 해소 |
 | 2026-09-07 | **v3 판례 DB 추가**: 계약서(포괄임금제·수습해고·IP귀속·체불임금 실제 판례 15건), 등기부(깡통전세·신탁사기·이중계약·갭투자·법인명의사기·명의신탁 6유형+통계) |
 | 2026-09-07 | **번역 시스템 전면 개편**: LANG_EXPERTISE 6개 언어 자격증변환·GPA스케일·군복무·인간적 표현 패턴 DB 추가 |
+| 2026-09-09 | **IROS 무료열람 방법S 구현**: oracle-server.js에 `page.on('response')` 응답 인터셉트로 IROS 백엔드 AJAX 응답에서 PIN 캡처 → 세션쿠키 + `callMpPrtIframe.do` 직접 fetch → 등기부 HTML 텍스트 추출. WebSquare headless 탐지 우회. rlrgCount=999 설정으로 Methods A-R 건너뜀. `directApiContent` 반환 버그(`return` → `res.json()`) 수정. _worker.js Oracle Playwright fallback 복원. |
+| 2026-09-09 | scan.html 전면 리디자인: 크몽 스타일 서비스 목록(배지+평점+미리보기) + 당근 스타일 칩(이모지+텍스트) + 드로어 스티키 CTA 푸터 |
+| 2026-09-09 | 사업자조회 isIssue 서비스에서 slyJdWrap2(지원공고) 숨김 버그 수정 |
+| 2026-09-09 | _slyOpenDrawer() 평점·배지·스티키 푸터 가격 채우기 추가 (SVC_META 연동) |
+| 2026-09-09 | **scan.html 전면 리디자인** — 핑크·민트 컬러 전체 제거 → 네이비+골드 단일 톤으로 통일. 15-탭 가로 스크롤 제거 → 5개 카테고리 카드 그리드(취업서류/법률계약/부동산/직장생활/공문서) 교체. CTA 그라데이션·푸터 링크·섹션 라벨 컬러 동기화 |
 | 2026-09-07 | **면접 시스템 2026 데이터 주입**: 삼성합격자 평균TOEIC·인턴경험비율·카카오합격률·압박질문10유형·싫어하는답변20가지 추가 |
 | 2026-09-07 | **등기부 모델 업그레이드**: haiku → sonnet-4-6 (34,900P 가격 정당화) |
 | 2026-09-07 | **IROS 딥링크 404 수정**: selectRenf0100List.xhtml → iros.go.kr 메인으로 변경 |
@@ -295,6 +301,8 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **소액 충전 플랜 신설**: ₩5,000/₩10,000 플랜 추가 (가격 구조 충돌 해결 — 최저 2,900P 서비스 이용 가능). 충전 카드 4→6종 |
 | 2026-09-07 | **biz-status encodeURIComponent 제거**: BIZ_API_KEY가 이미 URL인코딩됨 → 이중인코딩 제거로 NTS API 인증 정상화 |
 | 2026-09-07 | **Cloudflare Secrets 전수확인**: 대시보드 스크린샷으로 13개 키 모두 설정 확인 (SCAN_MEMO.md 등록) |
+| 2026-09-09 | **SCAN 전면 재설계 v3**: 드로어 min-height:88vh(빈공간 제거), SVG링→5단계 나레이션 진행카드, 서비스별 전용 UI(사주/숏폼/자막/사업자), _slyPollResult 별칭·slyProgressSection ID·VALID_SERVICES 3종 버그 3개 수정 |
+| 2026-09-09 | **크몽+당근 스타일 UX 전면 개편**: renderCatGrid→renderServiceList+renderChips. 카테고리 칩(이모지+텍스트 가로스크롤) + 서비스 세로목록 + 바텀 드로어(_slyOpenDrawer/_slyCloseDrawer). 영상·미디어 카테고리 신규(숏폼 스크립트 29,900P / AI사진 19,900P / 자막생성 14,900P). 총 서비스 15→18종 |
 | 2026-09-07 | **시장조사 전수조사 v2**: 경쟁사 23곳 5개 카테고리 분석, 가격·수익화·마케팅 전략 보고서 작성 (Artifact 게시) |
 | 2026-09-07 | **Oracle 서버 Playwright 전환**: puppeteer-core → playwright (자체 Chromium ARM 번들). dnf chromium 미지원 → npx playwright install chromium으로 해결. PM2로 oracle-server 영구실행 (--cwd ~/mbti-logistics). VCN Security List TCP 3100 Ingress 추가. 이제 IROS 자동 발급 실동작 확인 완료 |
 | 2026-09-07 | **랜딩 디자인 v2**: 히어로 배경 다크 네이비 그라데이션(#08101f→#162540)+핑크·민트 방사 글로우. 히어로 텍스트 전체 흰색 오버라이드(h1:#FFF, p:rgba(255,255,255,.72), 눈썹:rgba(244,114,182,.18)). 가격 카드 정확한 금액 표기 (19,900P~49,900P). 신규 가입 2,900P 지급 로직(_worker.js signupBonus) + 토스트 표시. 텍스트 직접 입력 탭 추가 (파일 없이도 분석 가능). sly_points → scan_points 컬렉션 메모 불일치 확인 필요 |
