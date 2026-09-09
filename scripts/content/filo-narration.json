@@ -8,19 +8,19 @@
       "text": "오늘 장사 잘 될지, 어떤 메뉴 준비해야 할지 모르겠죠?"
     },
     {
-      "startSec": 7,
+      "startSec": 12,
       "text": "FILO AI가 날씨, 시간대, 재고를 분석해서 알려줘요."
     },
     {
-      "startSec": 14,
+      "startSec": 24,
       "text": "7일 매출 예측과 추천 메뉴를 매일 아침 확인하세요."
     },
     {
-      "startSec": 21,
+      "startSec": 36,
       "text": "마진 분석으로 진짜 남는 메뉴가 뭔지도 보여요."
     },
     {
-      "startSec": 25,
+      "startSec": 50,
       "text": "데이터로 운영하세요. FILO. 파일로 닷 에이아이."
     }
   ]
