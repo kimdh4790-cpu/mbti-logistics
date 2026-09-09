@@ -247,11 +247,11 @@ var DEFAULT_SLIDES = [
 ];
 
 var DEFAULT_LINES = [
-  { startSec: 0.0, text: '매장 운영하다 보면 기기가 너무 많죠?' },
-  { startSec: 8.0, text: '이거 다 따로 살 필요 없어요. FILO 하나면 됩니다' },
-  { startSec: 15.0, text: '고객이 QR 찍어서 주문하면 주방으로 바로' },
-  { startSec: 22.0, text: '매출이랑 재고까지 실시간으로 다 보여요' },
-  { startSec: 30.0, text: '매장 운영 진짜 간단해져요 · filo.ai.kr' },
+  { startSec: 0,  text: '매장 운영하다 보면 기기가 너무 많죠?' },
+  { startSec: 12, text: '이거 다 따로 살 필요 없어요. FILO 하나면 됩니다' },
+  { startSec: 24, text: '고객이 QR 찍어서 주문하면 주방으로 바로' },
+  { startSec: 36, text: '매출이랑 재고까지 실시간으로 다 보여요' },
+  { startSec: 50, text: '매장 운영 진짜 간단해져요 · filo.ai.kr' },
 ];
 
 // ── 메인 컴포넌트 ──────────────────────────────────────────────

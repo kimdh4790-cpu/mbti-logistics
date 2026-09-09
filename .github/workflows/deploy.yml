@@ -50,6 +50,7 @@ jobs:
             printf '%s' "$KOTSA_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KOTSA_API_KEY 2>&1 || echo "⚠️ KOTSA_API_KEY 시크릿 설정 실패 (무시)"
           fi
       - name: Deploy Yongcha Worker
+        continue-on-error: true
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CF_EMAIL: kimdh4790@gmail.com
