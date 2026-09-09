@@ -2978,7 +2978,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const resumeJobId = form.get('resumeJobId') || '';
             const targetLang = form.get('targetLang') || 'en';
             const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
-            const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','workplace_tone','career_saju','notice_summary','insurance_scan'];
+            const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','workplace_tone','career_saju','notice_summary','insurance_scan','shortform_script','ai_photo','subtitle_create'];
             const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:39900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,workplace_tone:2900,career_saju:9900,notice_summary:2900,insurance_scan:14900};
             if (!VALID_SERVICES.includes(serviceId)) return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400,headers});
             if (!file) return Response.json({ok:false,error:'파일이 없습니다.'},{status:400,headers});
