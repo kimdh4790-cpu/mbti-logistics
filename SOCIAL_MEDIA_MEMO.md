@@ -471,6 +471,16 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 - **원인**: `social-media.yml` Runway AI 단계가 먼저 실행되어 `yongcha-promo.mp4` 생성 → Remotion 단계에서 "Runway 영상 있음 — Remotion 스킵" 조건에 걸려 애니메이션 영상 렌더링 건너뜀 → Runway 정지영상에 나레이션 오디오만 붙어 업로드됨
 - **수정**: `social-media.yml` Remotion 단계의 `[ -f "output/${p}-promo.mp4" ]` 체크 제거 — filo·donway·yongcha·inflearn 4개 제품은 Runway 출력물 유무에 관계없이 항상 Remotion 실행하여 정지영상 덮어씀
 
+### 2026-09-09 — 나레이션 6라인으로 확장 (60초 전체 커버)
+- **문제**: 기존 5라인 구성 — 마지막 CTA가 ~46s에 시작해 50s쯤 끝 → 60초 영상 후반 10초 나레이션 없는 무음 구간 발생
+- **수정**: 4개 제품 narration.json 모두 6라인으로 확장, CTA를 53s로 이동하여 60초 말미까지 목소리가 나오도록 조정
+  - yongcha: 0/11/22/34/44/53 — 44s "지금 바로 앱 다운받고 첫 공고 올려보세요." 신규 추가
+  - donway: 0/11/22/34/43/52 — 43s "기사 오십 명 정산이 오 분 만에 끝나요." 신규 추가
+  - filo: 0/12/24/36/46/53 — 기존 내용 재구성, 46s "직원 근태, 급여명세서까지 한 앱에서 끝이에요." 신규
+  - inflearn: 0/12/24/38/46/53 — 38s "모두 엑셀 파일로 바로 사용할 수 있어요." 신규 추가
+- **FFmpeg 보호**: `VID_DUR=$(ffprobe ...)` + `-t "$VID_DUR"` — BGM(300s)에 의한 5분 연장 방지
+- **업로드 차단**: `check_video()` / `check_video_ig()` — 45초 미만 영상 업로드 자동 차단
+
 ---
 
 ## 다음 작업 우선순위 (2026-09-09 기준)
