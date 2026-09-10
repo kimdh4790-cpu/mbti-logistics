@@ -3459,6 +3459,54 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 방법T: WebSquare DataList PIN 주입 완료 PIN=', capturedPin, 'pinDash=', pinDash);
     }
 
+    // ── 방법T2: DataList 주입 후 JS로 iframe 직접 생성 → WebSquare4 parent DataList 읽기 ──
+    // 핵심: callMpPrtIframe.do 는 rnum을 URL파라미터가 아닌 window.parent.dlt_smpl_srch_rslt에서 읽음
+    // → Playwright resultPage에 DataList를 세팅한 채로 iframe을 DOM에 직접 삽입하면 부모 참조 가능
+    if (rlrgCount === 0 && capturedPin) {
+      console.log('[iros] 방법T2: JS iframe 직접 삽입 PIN=', capturedPin);
+      try {
+        const pinDashT2 = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        const t2PopupPromise = resultPage.waitForEvent('popup', { timeout: 8000 }).catch(() => null);
+        // iframe 삽입 (body에 직접 append)
+        await resultPage.evaluate((pinD) => {
+          const ifrSrc = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null`;
+          const ifr = document.createElement('iframe');
+          ifr.id = '_iros_t2_iframe';
+          ifr.src = ifrSrc;
+          ifr.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;border:none;';
+          document.body.appendChild(ifr);
+          // iframe이 load되면 contentWindow.parent === window(resultPage) 이므로 DataList 접근 가능
+        }, pinDashT2).catch(() => {});
+        // 10초 대기 (WebSquare4 초기화 + AJAX)
+        await resultPage.waitForTimeout(10000);
+        // iframe frame 찾기
+        const t2Frame = resultPage.frames().find(f => f.url().includes('callMpPrtIframe'));
+        if (t2Frame) {
+          const t2Text = await t2Frame.innerText('body').catch(() => '');
+          const t2Log = await t2Frame.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const t2RegData = await t2Frame.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] 방법T2 iframe:', t2Frame.url(), 'XHR건수:', t2Log.length, '앞500:', t2Text.slice(0, 500));
+          if (t2RegData) {
+            directApiContent = JSON.stringify({ type: 'method_t2_xhr', url: t2RegData.url, content: t2RegData.body });
+            rlrgCount = 999;
+          } else if (_vrRe.test(t2Text)) {
+            directApiContent = JSON.stringify({ type: 'method_t2_iframe', content: t2Text });
+            rlrgCount = 999;
+          } else if (t2Log.length > 0) {
+            console.log('[iros] 방법T2 XHR로그(상위):', t2Log.slice(0, 3).map(x => x.url + '|' + x.len).join(', '));
+          }
+          if (rlrgCount === 999) {
+            try { writeFileSync('/tmp/iros-method-t2-result.json', directApiContent); } catch(e) {}
+            console.log('[iros] 방법T2 성공!');
+          }
+        } else {
+          console.log('[iros] 방법T2 iframe 미생성');
+        }
+        // 삽입한 iframe 제거
+        await resultPage.evaluate(() => { const el = document.getElementById('_iros_t2_iframe'); if (el) el.remove(); }).catch(() => {});
+      } catch (e) { console.log('[iros] 방법T2 오류:', e.message); }
+    }
+
     // ── 방법Q: _modal 제거 후 강제 클릭 → iframe 캡처 ────────────────────────────────
     if (rlrgCount === 0) {
       console.log('[iros] 방법Q: _modal 제거 + 강제 클릭 시도');
