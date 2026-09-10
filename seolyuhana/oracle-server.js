@@ -3636,16 +3636,36 @@ app.post('/api/iros-fetch', async (req, res) => {
           ];
           for (const navUrl of navUrls) {
             console.log('[iros] 방법R goto:', navUrl);
-            await iframeFrame.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(e => console.log('[iros] 방법R goto 오류:', e.message));
-            await resultPage.waitForTimeout(5000);
+            // 프레임이 이미 올바른 URL에 있으면 goto 스킵 (중복 로드 방지)
+            const alreadyAtUrl = iframeFrame.url().includes('callMpPrtIframe') && iframeFrame.url().includes('rnum=');
+            if (!alreadyAtUrl) {
+              await iframeFrame.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(e => console.log('[iros] 방법R goto 오류:', e.message));
+            } else {
+              console.log('[iros] 방법R: 이미 올바른 URL — goto 스킵, 현재:', iframeFrame.url());
+            }
+            // WebSquare4 AJAX 완료 대기 (25초 — 정부 서버 느림)
+            await resultPage.waitForTimeout(25000);
             const iframeText = await iframeFrame.innerText('body').catch(() => '');
             const iframeHtml = await iframeFrame.content().catch(() => '');
+            const iframeXhrLog = await iframeFrame.evaluate(() => window._irosXhrLog || []).catch(() => []);
+            const iframeXhrRegData = await iframeFrame.evaluate(() => window._irosXhrRegData || null).catch(() => null);
             console.log('[iros] 방법R frame URL:', iframeFrame.url(), '| 앞500:', iframeText.slice(0, 500));
+            console.log('[iros] 방법R XHR건수:', iframeXhrLog.length, '| RegData:', iframeXhrRegData ? 'YES' : 'NO');
+            if (iframeXhrLog.length > 0) {
+              console.log('[iros] 방법R XHR로그(상위3):', iframeXhrLog.slice(0, 3).map(x => x.url + '|st=' + x.st + '|len=' + x.len + '|reg=' + x.reg).join(' / '));
+            }
+            if (iframeXhrRegData) {
+              directApiContent = JSON.stringify({ type: 'iframe_r_xhr', url: iframeXhrRegData.url, content: iframeXhrRegData.body });
+              rlrgCount = 999;
+              try { writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
+              console.log('[iros] 방법R XHR 성공! length:', iframeXhrRegData.body.length);
+              break;
+            }
             if (iframeText.length > 200 && IFRAME_KW_R.test(iframeText)) {
               directApiContent = JSON.stringify({ type: 'iframe_direct', url: iframeFrame.url(), content: iframeText, html: iframeHtml.slice(0, 8000) });
               rlrgCount = 999;
               try { writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
-              console.log('[iros] 방법R 성공! length:', iframeText.length);
+              console.log('[iros] 방법R 텍스트 성공! length:', iframeText.length);
               break;
             }
           }
