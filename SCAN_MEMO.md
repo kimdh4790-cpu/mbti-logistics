@@ -284,6 +284,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-10 | **Tilko v1.0 주소검색 HTTP500 수정**: RealtyAddrSrch v1.0은 암호화 미지원 → SearchAddr 평문 우선 시도, 실패 시 암호화 폴백으로 변경. _worker.js 두 곳(mbtico compact + `_tilkoFetchRegistry`) 모두 수정. |
 | 2026-09-10 | **Oracle 서버 502 수정**: express/multer/jszip package.json 누락으로 npm install 후 패키지 제거됨 → 의존성 추가. 사용자가 `npm install express multer jszip && pm2 restart oracle-server`로 즉시 복구. |
 | 2026-09-10 | **Oracle VM 자동배포 workflow 추가**: seolyuhana/oracle-server.js 변경 시 SSH로 Oracle VM 자동 업데이트 + pm2 재시작. ORACLE_SSH_KEY secret 등록 필요. |
+| 2026-09-10 | **IROS Playwright 로그인 완전 비활성화**: IROS가 2024년부터 공동인증서/금융인증서 전용으로 전환. ID/PW 로그인 엔드포인트 전부 제거됨. oracle-server.js `/api/iros-fetch` 엔드포인트가 즉시 에러를 반환하도록 변경 (throw new Error). 대안: (1) Tilko API + 고유번호 직접 입력, (2) 인터넷등기소 직접 접속(www.iros.go.kr). IROS_USER_ID/IROS_USER_PW/IROS_EMONEY_* 크리덴셜은 설정돼 있으나 현재 사용 불가. Oracle VM: `git pull && pm2 restart oracle-server` 필요 (자동 배포 안 됨). |
 | 2026-09-09 | scan.html 전면 리디자인: 크몽 스타일 서비스 목록(배지+평점+미리보기) + 당근 스타일 칩(이모지+텍스트) + 드로어 스티키 CTA 푸터 |
 | 2026-09-09 | 사업자조회 isIssue 서비스에서 slyJdWrap2(지원공고) 숨김 버그 수정 |
 | 2026-09-09 | _slyOpenDrawer() 평점·배지·스티키 푸터 가격 채우기 추가 (SVC_META 연동) |
