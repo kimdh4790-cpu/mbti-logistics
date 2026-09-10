@@ -694,6 +694,27 @@ app.post('/api/iros-fetch', async (req, res) => {
         }
         return _origSend.apply(this, arguments);
       };
+      // fetch() 후킹 (WebSquare4가 XHR 대신 fetch 사용할 경우 캡처)
+      if (typeof window.fetch === 'function' && !window._irosFetchHooked) {
+        window._irosFetchHooked = true;
+        const _origFetch = window.fetch;
+        window.fetch = async function(resource, init) {
+          const _fUrl = String(typeof resource === 'string' ? resource : (resource && resource.url) || '');
+          const _resp = await _origFetch.apply(this, arguments);
+          if (_fUrl.includes('iros') || _fUrl.includes('.go.kr')) {
+            try {
+              const _clone = _resp.clone();
+              const _text = await _clone.text().catch(() => '');
+              const _hasReg = /표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당/.test(_text);
+              (window._irosXhrLog = window._irosXhrLog || []).push({ url: _fUrl, type: 'fetch', st: _resp.status, len: _text.length, prev: _text.slice(0, 400), reg: _hasReg });
+              if (_hasReg && !window._irosXhrRegData) {
+                window._irosXhrRegData = { url: _fUrl, body: _text.slice(0, 80000) };
+              }
+            } catch(_fe) {}
+          }
+          return _resp;
+        };
+      }
     });
 
     // 네트워크 요청 인터셉트 — IROS 검색 API 요청 로깅 (주소가 실제로 전달되는지 확인)
@@ -3643,6 +3664,68 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 방법S4-뷰어AJAX: 이미 캡처된 뷰어 응답 사용');
       directApiContent = JSON.stringify({ type: 'viewer_ajax_late', content: _viewerAjaxContent });
       rlrgCount = 999;
+    }
+
+    // ── 방법U: 뷰어를 독립 신규 탭에서 열기 (parent iframe 의존 제거) ─────────────────
+    if (rlrgCount === 0 && capturedPin) {
+      console.log('[iros] 방법U: 독립 신규 탭에서 뷰어 열기 PIN=', capturedPin);
+      let uPage;
+      try {
+        const pinDashU = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        uPage = await context.newPage();
+        // 뷰어 URL — IS_NMBR_LOGIN__ 을 실제 로그인 여부와 무관하게 'Y'로 지정해보기
+        const viewerUrlY = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=Y&rnum=${pinDashU}&rlrgGbn=1&payCl=F&smplKindCls=1&smplPrntOrdrNo=`;
+        const viewerUrlN = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${pinDashU}&rlrgGbn=1&payCl=F&smplKindCls=1&smplPrntOrdrNo=`;
+        console.log('[iros] 방법U 이동:', viewerUrlY);
+        await uPage.goto(viewerUrlY, { waitUntil: 'networkidle', timeout: 30000 }).catch(e => console.log('[iros] 방법U goto 오류(Y):', e.message));
+        await uPage.waitForTimeout(3000);
+        // 5초 시점 XHR/fetch 로그
+        const uLog5 = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+        console.log('[iros] 방법U 5초 XHR/fetch 로그 건수:', uLog5.length, uLog5.map(x => x.url + '|' + x.len).join(', ').slice(0, 500));
+        await uPage.waitForTimeout(20000);
+        const uLog25 = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+        const uRegData = await uPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+        console.log('[iros] 방법U 25초 XHR/fetch 로그 건수:', uLog25.length, uLog25.map(x => x.url + '|' + x.len).join(', ').slice(0, 500));
+        const uBodyText = await uPage.innerText('body').catch(() => '');
+        const uBodyHtml = await uPage.content().catch(() => '');
+        await uPage.screenshot({ path: '/home/opc/iros-debug/step7-method-u.png', fullPage: true }).catch(() => {});
+        console.log('[iros] 방법U 본문 앞800:', uBodyText.slice(0, 800));
+        if (uRegData) {
+          console.log('[iros] 방법U 등기 데이터 XHR/fetch에서 확보!', uRegData.url, 'len=', uRegData.body.length);
+          directApiContent = JSON.stringify({ type: 'method_u_xhr', url: uRegData.url, content: uRegData.body });
+          rlrgCount = 999;
+          try { require('fs').writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+        } else if (_vrRe.test(uBodyText)) {
+          console.log('[iros] 방법U 본문에서 등기 키워드 발견!');
+          directApiContent = JSON.stringify({ type: 'method_u_body', content: uBodyText, html: uBodyHtml.slice(0, 8000) });
+          rlrgCount = 999;
+          try { require('fs').writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+        } else if (uLog25.length === 0) {
+          // XHR/fetch 0건이면 IS_NMBR_LOGIN__=null 로도 시도
+          console.log('[iros] 방법U Y 실패, null로 재시도');
+          await uPage.goto(viewerUrlN, { waitUntil: 'networkidle', timeout: 30000 }).catch(e => console.log('[iros] 방법U goto 오류(N):', e.message));
+          await uPage.waitForTimeout(20000);
+          const uLog25n = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const uRegDataN = await uPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] 방법U null 25초 XHR/fetch 건수:', uLog25n.length);
+          const uBodyTextN = await uPage.innerText('body').catch(() => '');
+          await uPage.screenshot({ path: '/home/opc/iros-debug/step7-method-u-null.png', fullPage: true }).catch(() => {});
+          if (uRegDataN) {
+            directApiContent = JSON.stringify({ type: 'method_u_null_xhr', url: uRegDataN.url, content: uRegDataN.body });
+            rlrgCount = 999;
+          } else if (_vrRe.test(uBodyTextN)) {
+            directApiContent = JSON.stringify({ type: 'method_u_null_body', content: uBodyTextN });
+            rlrgCount = 999;
+          }
+          if (rlrgCount === 999) {
+            try { require('fs').writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+            console.log('[iros] 방법U null 성공!');
+          } else {
+            console.log('[iros] 방법U 완전 실패 — XHR/fetch 0건, 등기 키워드 없음');
+          }
+        }
+      } catch (e) { console.log('[iros] 방법U 오류:', e.message); }
+      finally { if (uPage) await uPage.close().catch(() => {}); }
     }
 
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
