@@ -1297,8 +1297,9 @@ body {
   gap: 8px;
   padding: 8px;
   background: var(--bg);
-  height: calc(100vh - 50px);
-  height: calc(100svh - 50px);
+  /* 헤더(56px) + 포인트바(46px) = 102px */
+  height: calc(100vh - 102px);
+  height: calc(100svh - 102px);
 }
 .sly-cat-card {
   background: var(--surface);
