@@ -3064,9 +3064,10 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const doc = await fsGet(token, 'sly_points', uid);
             let balance = doc?.fields?.balance?.integerValue|0 || 0;
             let signupBonus = false;
-            if (!doc?.fields || !(doc?.fields?.balance?.integerValue|0)) {
+            const alreadyBonused = doc?.fields?.bonusGranted?.booleanValue === true;
+            if (!alreadyBonused && !doc?.fields?.balance) {
               const SIGNUP_BONUS = 2900;
-              await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
+              await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},bonusGranted:{booleanValue:true},createdAt:{stringValue:new Date().toISOString()}});
               const bId = crypto.randomUUID();
               await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:String(SIGNUP_BONUS)},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
               balance = SIGNUP_BONUS;
@@ -8647,10 +8648,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const doc = await fsGet(token, 'sly_points', uid);
           let balance = doc?.fields?.balance?.integerValue|0 || 0;
           let signupBonus = false;
-          if (!doc?.fields || !(doc?.fields?.balance?.integerValue|0)) {
-            // 신규 가입 or 기존 0P: 2,900P 무료 지급
+          const alreadyBonused = doc?.fields?.bonusGranted?.booleanValue === true;
+          if (!alreadyBonused && !doc?.fields?.balance) {
+            // 신규 가입 (balance 필드 없음 + 보너스 미수령): 2,900P 무료 지급
             const SIGNUP_BONUS = 2900;
-            await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
+            await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},bonusGranted:{booleanValue:true},createdAt:{stringValue:new Date().toISOString()}});
             const bId = crypto.randomUUID();
             await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:String(SIGNUP_BONUS)},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
             balance = SIGNUP_BONUS;
