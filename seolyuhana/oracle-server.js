@@ -775,51 +775,15 @@ app.post('/api/iros-fetch', async (req, res) => {
     await page.waitForTimeout(1500);
     console.log('[iros] 진입 URL:', page.url());
 
-    // 2단계: 로그인 처리
-    const _checkIrosLogin = async () => {
-      try {
-        // 방법1: isLogin.do API
-        const loginCheckRes = await page.evaluate(async () => {
-          try {
-            const r = await fetch('https://www.iros.go.kr/pos9/isLogin.do', { credentials: 'include' });
-            if (r.ok) { const j = await r.json().catch(() => null); return j; }
-            return null;
-          } catch { return null; }
-        });
-        if (loginCheckRes && loginCheckRes.isLogin === true) return true;
-        // 방법2: 마이페이지 URL 접근 후 리다이렉트 여부로 판단
-        const mpUrl = await page.evaluate(async () => {
-          try {
-            const r = await fetch('https://www.iros.go.kr/pos9/jsf/myPage/myPageMain.xhtml', { credentials: 'include', redirect: 'follow' });
-            return r.url;
-          } catch { return ''; }
-        });
-        if (mpUrl && !mpUrl.includes('Login') && !mpUrl.includes('login') && mpUrl.includes('iros.go.kr')) {
-          console.log('[iros] 마이페이지 접근 성공 → 로그인 상태');
-          return true;
-        }
-        return false;
-      } catch { return false; }
-    };
+    // 2단계: 로그인 처리 — IROS는 2024년부터 공동인증서/금융인증서 전용으로 전환.
+    // ID/PW 로그인 엔드포인트 전부 제거됨. Playwright 자동화 불가.
+    throw new Error(
+      'IROS 자동 조회 불가 — 인터넷등기소가 공동인증서·금융인증서 전용으로 전환하여 ' +
+      'ID/PW 로그인이 제거됐습니다. 대안: (1) Tilko API + 고유번호 직접 입력, ' +
+      '(2) 인터넷등기소 직접 접속(www.iros.go.kr).'
+    );
 
-    // 이미 로그인돼 있으면 건너뜀
-    let _loggedIn = await _checkIrosLogin();
-    console.log('[iros] 초기 로그인 상태:', _loggedIn);
-
-    if (!_loggedIn) {
-      console.log('[iros] 로그인 시도 — 홈페이지 네트워크 인터셉트 방식');
-      await page.screenshot({ path: '/home/opc/iros-debug/login-before.png', fullPage: false }).catch(() => {});
-
-      // 모든 POST 요청 캡처 (실제 로그인 엔드포인트 발견용)
-      const _capturedPosts = [];
-      const _loginReqHandler = req => {
-        if (req.method() === 'POST' && req.url().includes('iros.go.kr')) {
-          _capturedPosts.push({ url: req.url(), body: (req.postData() || '').slice(0, 400) });
-          console.log('[iros-login-post]', req.url().slice(-80), '|', (req.postData() || '').slice(0, 200));
-        }
-      };
-      page.on('request', _loginReqHandler);
-
+    // ── (로그인 코드 제거됨: IROS 공인인증서 전용 전환으로 자동화 불가) ──
       // ── 방법 1: IROS 홈 → 로그인 버튼 찾아 클릭 ──
       try {
         await page.goto('https://www.iros.go.kr', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
@@ -933,13 +897,6 @@ app.post('/api/iros-fetch', async (req, res) => {
       }
 
       // 로그인 성공 후 index.jsp로 돌아가 Gauce SPA 컨텍스트 유지
-      const _afterUrl = page.url();
-      if (!_afterUrl.includes('index.jsp') && !_afterUrl.includes('iros.go.kr/pos9/jsf/')) {
-        await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'load', timeout: 30000 });
-        await page.waitForTimeout(2000);
-      }
-    }
-
     // 3단계: 팝업/공지 닫기 (홈 진입 시 뜨는 오버레이)
     for (const closeText of ['오늘 다시 보지 않기', '닫기', '×']) {
       const closeBtn = page.locator('a, button, span').filter({ hasText: new RegExp(`^${closeText}$`) }).first();
