@@ -793,157 +793,104 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] 초기 로그인 상태:', _loggedIn);
 
     if (!_loggedIn) {
-      console.log('[iros] 로그인 시도');
+      console.log('[iros] 로그인 시도 — 직접 POST 우선');
+      await page.screenshot({ path: '/home/opc/iros-debug/login-before.png', fullPage: false }).catch(() => {});
 
-      // 이미 페이지에 로그인 폼이 있는지 확인 (리다이렉트된 경우)
-      const _hasFormNow = await page.locator('#userId, input[name="userId"], input[id*="userId"]').count() > 0;
-      if (!_hasFormNow) {
-        // 헤더의 로그인 링크 클릭 — IROS 홈 우상단 "로그인" 버튼
-        const _loginLinks = [
-          'a[href*="login"], a[href*="Login"]',
-          'a, button, span, li',
-        ];
-        let _loginLinkClicked = false;
-        // 1순위: href 기반
-        for (const ctx of [page, ...page.frames()]) {
+      // ── 방법 1: page.evaluate 내 fetch로 IROS 로그인 엔드포인트 직접 POST ──
+      // WebSquare DOM 조작 불필요. 브라우저 쿠키 공유 → isLogin.do가 true 반환됨
+      const _tryPost = async (url, params) => {
+        const r = await page.evaluate(async ({ url, params }) => {
           try {
-            const _ll = ctx.locator('a[href*="login"], a[href*="Login"]').first();
-            if (await _ll.count() > 0 && await _ll.isVisible().catch(() => false)) {
-              await _ll.click({ force: true });
-              _loginLinkClicked = true;
-              console.log('[iros] href 기반 로그인 링크 클릭');
-              break;
-            }
-          } catch {}
-        }
-        // 2순위: 텍스트 "로그인" 링크
-        if (!_loginLinkClicked) {
-          for (const ctx of [page, ...page.frames()]) {
-            try {
-              const _ll = ctx.locator('a, button, span, li').filter({ hasText: /^로그인$/ }).first();
-              if (await _ll.count() > 0 && await _ll.isVisible().catch(() => false)) {
-                const _el = await _ll.elementHandle().catch(() => null);
-                if (_el) await ctx.evaluate(e => e.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:window})), _el).catch(() => {});
-                else await _ll.click({ force: true });
-                _loginLinkClicked = true;
-                console.log('[iros] 텍스트 기반 로그인 링크 클릭');
-                break;
-              }
-            } catch {}
-          }
-        }
-        // 3순위: JS 함수 직접 호출
-        if (!_loginLinkClicked) {
-          await page.evaluate(() => {
-            const fns = ['fn_login', 'goLogin', 'fn_goLogin', 'fnLogin'];
-            for (const fn of fns) { if (typeof window[fn] === 'function') { window[fn](); return; } }
-            const el = document.querySelector('a[onclick*="login" i], a[onclick*="Login"]');
-            if (el) el.click();
-          }).catch(() => {});
-          console.log('[iros] JS 폴백 로그인 클릭 시도');
-        }
-
-        // 로그인 폼 등장 대기 (최대 10초)
-        await page.waitForSelector('#userId, input[name="userId"], input[id*="userId"]', { timeout: 10000 }).catch(() => {});
-      }
-
-      // 로그인 폼 입력 — WebSquare 호환 (fill() 대신 evaluate+keyboard.type 사용)
-      // IROS는 WebSquare 프레임워크: fill()로 value 설정 시 change/input 이벤트 미발생 → 로그인 실패
-      const _fillWS = async (sel, val) => {
-        // 1) evaluate로 value 직접 설정 + 이벤트 dispatch (WebSquare가 value 감지)
-        const _set = await page.evaluate(({ s, v }) => {
-          const inputs = [...document.querySelectorAll('input, textarea')];
-          const matchSels = s.split(',').map(x => x.trim());
-          let el = null;
-          for (const ms of matchSels) {
-            try { el = document.querySelector(ms); if (el) break; } catch {}
-          }
-          if (!el) return false;
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-          if (nativeInputValueSetter) nativeInputValueSetter.call(el, v);
-          else el.value = v;
-          el.dispatchEvent(new Event('input',  { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          return true;
-        }, { s: sel, v: val }).catch(() => false);
-        // 2) 폴백: click 후 keyboard.type
-        if (!_set) {
-          const loc = page.locator(sel).first();
-          if (await loc.count() > 0) {
-            await loc.click().catch(() => {});
-            await loc.evaluate(el => { el.value = ''; }).catch(() => {});
-            await page.keyboard.type(val, { delay: 30 });
-          }
-        }
+            const body = Object.entries(params)
+              .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body,
+              credentials: 'include',
+              redirect: 'follow'
+            });
+            const text = await res.text().catch(() => '');
+            return { ok: res.ok, status: res.status, finalUrl: res.url, body: text.slice(0, 300) };
+          } catch (e) { return { error: e.message }; }
+        }, { url, params }).catch(e => ({ error: e.message }));
+        console.log('[iros] POST', url.slice(-40), JSON.stringify(r).slice(0, 250));
+        return r;
       };
 
-      const _submitIrosForm = async () => {
-        // 1) JS 함수 직접 호출 (IROS WebSquare 로그인 함수)
-        const jsDone = await page.evaluate(() => {
-          const fns = ['fn_login','fnLogin','goLogin','fn_goLogin','login','doLogin'];
-          for (const fn of fns) { if (typeof window[fn] === 'function') { try { window[fn](); return fn; } catch {} } }
-          // 2) onclick 속성 실행
-          const btn = document.querySelector('#loginBtn, a[onclick*="login" i], button[onclick*="login" i]');
-          if (btn) { const oc = btn.getAttribute('onclick'); if (oc) { try { eval(oc); return 'onclick'; } catch {} } btn.click(); return 'click'; }
-          // 3) form submit
-          const form = document.querySelector('form[id*="login" i], form[name*="login" i], form');
-          if (form) { form.submit(); return 'form.submit'; }
-          return null;
-        }).catch(() => null);
-        console.log('[iros] submit 방식:', jsDone);
-        if (!jsDone) {
-          // 4) 버튼 클릭 폴백
-          const _btnSel = '#loginBtn, button[id*="login" i], input[type="submit"], button[type="submit"]';
-          const _btn = page.locator(_btnSel).first();
-          if (await _btn.count() > 0) await _btn.click().catch(() => {});
-          else await page.keyboard.press('Enter');
-        }
-      };
-
-      const _userSel = '#userId, input[name="userId"], input[id*="userId"], input[name="usrId"], input[name="id"], input[autocomplete="username"]';
-      const _pwSel   = '#userPwd, input[name="userPwd"], input[id*="Pwd"], input[name="usrPwd"], input[type="password"], input[autocomplete="current-password"]';
-
-      // 로그인 폼이 없으면 commonLoginPage.do로 직접 이동
-      let _hasForm = await page.locator(_userSel).count() > 0;
-      if (!_hasForm) {
-        await page.goto('https://www.iros.go.kr/pos9/commonLoginPage.do', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
-        await page.waitForTimeout(2000);
-        _hasForm = await page.locator(_userSel).count() > 0;
+      // IROS 로그인 엔드포인트 후보 (순서대로 시도)
+      const _loginCandidates = [
+        ['https://www.iros.go.kr/pos9/commonLoginProc.do', { usrId: irosId, userPwd: irosPw, loginType: 'I' }],
+        ['https://www.iros.go.kr/pos9/commonLoginProc.do', { userId: irosId, userPwd: irosPw, loginType: 'I' }],
+        ['https://www.iros.go.kr/pos9/idpwLoginProc.do',   { usrId: irosId, userPwd: irosPw, loginType: 'I' }],
+        ['https://www.iros.go.kr/pos9/loginProc.do',       { usrId: irosId, userPwd: irosPw }],
+      ];
+      for (const [url, params] of _loginCandidates) {
+        await _tryPost(url, params);
+        _loggedIn = await _checkIrosLogin();
+        if (_loggedIn) { console.log('[iros] 직접 POST 로그인 성공 →', url.slice(-40)); break; }
       }
 
-      // 폼 HTML 덤프 (디버깅)
-      const _formHtml = await page.evaluate(() => {
-        const f = document.querySelector('form');
-        return f ? f.outerHTML.slice(0, 800) : document.body.innerHTML.slice(0, 500);
-      }).catch(() => '');
-      console.log('[iros] 로그인 폼 HTML:', _formHtml.slice(0, 400));
-      await page.screenshot({ path: '/home/opc/iros-debug/login-form.png', fullPage: false }).catch(() => {});
-
-      if (_hasForm) {
-        await _fillWS(_userSel, irosId);
-        await page.waitForTimeout(300);
-        await _fillWS(_pwSel, irosPw);
-        await page.waitForTimeout(300);
-        await _submitIrosForm();
-        await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
-        await page.waitForTimeout(3000);
-        await page.screenshot({ path: '/home/opc/iros-debug/login-after.png', fullPage: false }).catch(() => {});
-        console.log('[iros] 로그인 후 URL:', page.url());
-      } else {
-        console.log('[iros] 로그인 폼 미발견 — HTML:', _formHtml.slice(0, 200));
-      }
-
-      // 로그인 검증
-      _loggedIn = await _checkIrosLogin();
-      console.log('[iros] 로그인 후 isLogin.do 결과:', _loggedIn);
+      // ── 방법 2: 폼 직접 탐색 + 제출 (직접 POST 실패 시 폴백) ──
       if (!_loggedIn) {
-        // 오류 메시지 캡처
-        const _errMsg = await page.evaluate(() => {
-          const el = document.querySelector('.error, .err-msg, #errMsg, [class*="error"], [class*="err"]');
-          return el ? el.textContent.trim().slice(0, 200) : '';
-        }).catch(() => '');
-        if (_errMsg) console.log('[iros] 로그인 오류 메시지:', _errMsg);
-        throw new Error(`IROS 로그인 실패. ID=${irosId} URL=${page.url()}${_errMsg ? ' | ' + _errMsg : ''}`);
+        console.log('[iros] 직접 POST 실패 → 폼 폴백');
+        await page.goto('https://www.iros.go.kr/pos9/commonLoginPage.do', { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
+        await page.waitForTimeout(2500);
+
+        // 폼 HTML + 전체 input 목록 로그 (디버깅 핵심)
+        const _dbg = await page.evaluate(() => {
+          const inputs = [...document.querySelectorAll('input')].map(el => ({
+            id: el.id, name: el.name, type: el.type, placeholder: el.placeholder
+          }));
+          const forms = [...document.querySelectorAll('form')].map(f => ({
+            id: f.id, name: f.name, action: f.action, method: f.method,
+            html: f.outerHTML.slice(0, 600)
+          }));
+          const links = [...document.querySelectorAll('a, button')].filter(e => /로그인|login/i.test(e.textContent + (e.getAttribute('onclick') || ''))).map(e => ({
+            tag: e.tagName, id: e.id, text: e.textContent.trim().slice(0,30), onclick: (e.getAttribute('onclick')||'').slice(0,60)
+          }));
+          return { inputs, forms, links, bodySnip: document.body.innerHTML.slice(0, 800) };
+        }).catch(() => ({}));
+        console.log('[iros] 폼 디버그:', JSON.stringify(_dbg).slice(0, 1200));
+        await page.screenshot({ path: '/home/opc/iros-debug/login-form.png', fullPage: false }).catch(() => {});
+
+        // 폼에서 action URL + field 이름 자동 감지 후 POST
+        const _autoPost = await page.evaluate(async ({ id, pw }) => {
+          const form = document.querySelector('form');
+          if (!form) return 'no-form';
+          const action = form.action || '/pos9/commonLoginProc.do';
+          const idField = form.querySelector('input[type="text"], input:not([type="password"]):not([type="hidden"])');
+          const pwField = form.querySelector('input[type="password"]');
+          if (!idField || !pwField) return `no-fields id=${!!idField} pw=${!!pwField}`;
+          // 감지된 실제 field name 사용
+          const params = new URLSearchParams();
+          params.set(idField.name || idField.id || 'usrId', id);
+          params.set(pwField.name || pwField.id || 'userPwd', pw);
+          params.set('loginType', 'I');
+          try {
+            const r = await fetch(action, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: params.toString(),
+              credentials: 'include',
+              redirect: 'follow'
+            });
+            return `status=${r.status} url=${r.url.slice(-50)}`;
+          } catch(e) { return `fetch-err:${e.message}`; }
+        }, { id: irosId, pw: irosPw }).catch(e => e.message);
+        console.log('[iros] 자동 폼 POST 결과:', _autoPost);
+        await page.waitForTimeout(2000);
+        _loggedIn = await _checkIrosLogin();
+        console.log('[iros] 자동 폼 POST 후 isLogin.do:', _loggedIn);
+
+        if (!_loggedIn) {
+          await page.screenshot({ path: '/home/opc/iros-debug/login-after.png', fullPage: false }).catch(() => {});
+        }
+      }
+
+      if (!_loggedIn) {
+        const _finalUrl = page.url();
+        throw new Error(`IROS 로그인 실패. ID=${irosId} URL=${_finalUrl}`);
       }
 
       // 로그인 성공 후 index.jsp로 돌아가 Gauce SPA 컨텍스트 유지
