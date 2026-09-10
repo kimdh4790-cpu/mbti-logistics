@@ -654,19 +654,14 @@ app.post('/api/iros-fetch', async (req, res) => {
       });
     });
 
-    // WebSquare SPA는 navigator.webdriver=true 감지 시 이벤트 핸들러를 비활성화 →
-    // 모든 페이지 로드 전에 false로 패치 (addInitScript는 goto 전에 등록해야 적용됨)
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      // WebSquare 추가 탐지 우회
+    // XHR 모니터링 + 헤드리스 탐지 우회 — context 전체 적용 (팝업·iframe·Method U 신규 탭 포함)
+    await context.addInitScript(() => {
+      // 헤드리스 탐지 우회 (신규 탭에도 적용)
+      try { Object.defineProperty(navigator, 'webdriver', { get: () => false }); } catch(_) {}
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-    });
 
-    // XHR 모니터링 — context 전체 적용 (팝업·iframe 포함)
-    // WebSquare4 내부 XHR URL·응답 캡처 → 등기 데이터 URL 파악
-    await context.addInitScript(() => {
       if (window._irosXhrHooked) return;
       window._irosXhrHooked = true;
       window._irosXhrLog = [];
@@ -3679,6 +3674,14 @@ app.post('/api/iros-fetch', async (req, res) => {
         console.log('[iros] 방법U 이동:', viewerUrlY);
         await uPage.goto(viewerUrlY, { waitUntil: 'networkidle', timeout: 30000 }).catch(e => console.log('[iros] 방법U goto 오류(Y):', e.message));
         await uPage.waitForTimeout(3000);
+        // WebSquare4 초기화 상태 진단
+        const uWs = await uPage.evaluate(() => {
+          const urlP = Object.fromEntries(new URLSearchParams(location.search));
+          const scwinKeys = window.scwin ? Object.keys(window.scwin).slice(0, 20) : [];
+          const w2Keys = window.w2 ? Object.keys(window.w2).slice(0, 10) : [];
+          return { url: location.href, urlParams: urlP, scwinKeys, w2Keys, hasScwin: !!window.scwin, hasW2: !!window.w2 };
+        }).catch(() => ({}));
+        console.log('[iros] 방법U WebSquare4 상태:', JSON.stringify(uWs));
         // 5초 시점 XHR/fetch 로그
         const uLog5 = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
         console.log('[iros] 방법U 5초 XHR/fetch 로그 건수:', uLog5.length, uLog5.map(x => x.url + '|' + x.len).join(', ').slice(0, 500));
