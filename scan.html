@@ -1872,10 +1872,8 @@ function _slyOpenCat(catLabel) {
   const acc = CAT_ACCENT[catLabel] || { bg: '#f3f4f6', color: '#374151' };
   const ibg = acc.bg;
   const icolor = acc.color;
-  // hide grid + popular, show panel
+  // hide grid, show panel
   document.getElementById('slyCatGrid').style.display = 'none';
-  const pop = document.getElementById('slyPopular');
-  if (pop) pop.style.display = 'none';
   const panel = document.getElementById('slySvcPanel');
   panel.classList.add('active');
   const icoEl = document.getElementById('slyPanelIco');
@@ -1916,9 +1914,8 @@ function _slyBackToCats() {
   const panel = document.getElementById('slySvcPanel');
   if (panel) panel.classList.remove('active');
   const grid = document.getElementById('slyCatGrid');
-  if (grid) grid.style.display = '';
-  const pop = document.getElementById('slyPopular');
-  if (pop) pop.style.display = '';
+  if (grid) grid.style.display = 'grid';
+  // popular은 CSS로 숨겨져 있으므로 건드리지 않음
 }
 window._slyBackToCats = _slyBackToCats;
 
