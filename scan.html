@@ -2177,12 +2177,19 @@ function updateAuthUI(user) {
   }
 }
 
-async function loadPoints() {
-  if (!auth.currentUser) return;
+async function loadPoints(retry) {
+  retry = retry || 0;
+  if (!auth.currentUser) {
+    if (retry < 4) setTimeout(() => loadPoints(retry + 1), 1500);
+    return;
+  }
   try {
-    const token = await auth.currentUser.getIdToken();
+    const token = await auth.currentUser.getIdToken(retry > 0);
     const r = await fetch('/api/seolyuhana/points', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (!r.ok) return;
+    if (!r.ok) {
+      if (retry < 3) setTimeout(() => loadPoints(retry + 1), 2000);
+      return;
+    }
     const d = await r.json();
     const el = document.getElementById('slyPtsBadge');
     if (el) el.textContent = `${(d.balance || 0).toLocaleString()} P`;
@@ -2194,7 +2201,9 @@ async function loadPoints() {
     if (d.signupBonus) {
       setTimeout(() => _slyToast('🎉 신규 가입 축하! 2,900P가 무료로 지급되었습니다. 공문서 분석을 바로 체험해보세요!', 6000), 800);
     }
-  } catch(e) {}
+  } catch(e) {
+    if (retry < 3) setTimeout(() => loadPoints(retry + 1), 2000);
+  }
 }
 window._slyLoadPoints = loadPoints;
 
