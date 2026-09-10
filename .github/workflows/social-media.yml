@@ -17,6 +17,7 @@ on:
           - dine
           - mbtico
           - inflearn
+          - scan
       steps:
         description: '실행 단계 (콤마 구분)'
         required: true
@@ -197,7 +198,7 @@ jobs:
             || echo "[anime.js] 생성 실패 (건너뜀)"
 
       - name: Remotion 코드 영상 렌더링 (FILO·DONWAY·용차앱·인프런)
-        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'inflearn' || env.PRODUCT == 'all') }}
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'filo' || env.PRODUCT == 'donway' || env.PRODUCT == 'yongcha' || env.PRODUCT == 'inflearn' || env.PRODUCT == 'scan' || env.PRODUCT == 'all') }}
         run: |
           mkdir -p output
           CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
@@ -212,10 +213,10 @@ jobs:
           }
 
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha inflearn; do
+            for p in filo donway yongcha inflearn scan; do
               render_remotion $p
             done
-          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ]; then
+          elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ] || [ "$PRODUCT" = "scan" ]; then
             render_remotion $PRODUCT
           fi
 

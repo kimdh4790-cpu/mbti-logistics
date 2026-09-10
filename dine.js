@@ -1134,12 +1134,12 @@ function _crmFilter(){
 // ── 실시간 급여 계산 ──
 
 
-function _dineToast(msg){
+function _dineToast(msg,duration){
  var t=document.createElement('div');
  t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--bd2);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:700;z-index:9999;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.4)';
  t.textContent=msg;
  document.body.appendChild(t);
- setTimeout(function(){t.remove();},2500);
+ setTimeout(function(){t.remove();},duration||2500);
 }
 
 function _dineCountUp(id,target,prefix,suffix){

@@ -134,12 +134,14 @@
 | GET `/api/seolyuhana/registry-link` | 인터넷등기소 딥링크 |
 | POST `/api/seolyuhana/registry-direct` | 등기부 직접조회 (TILKO or IROS) |
 
-### Firestore 컬렉션
+### Firestore 컬렉션 (실제 코드 기준 — sly_ 접두사 사용)
 | 컬렉션 | 용도 |
 |---|---|
-| `scan_jobs/{jobId}` | 분석 작업 결과 저장 |
-| `scan_points/{uid}` | 사용자 포인트 잔액 |
-| `scan_charges/{reqId}` | 충전 신청 내역 |
+| `sly_jobs/{jobId}` | 분석 작업 결과 저장 (KV: sly_result_{jobId}, sly_job_{jobId}_docx/pdf) |
+| `sly_points/{uid}` | 사용자 포인트 잔액 |
+| `sly_point_requests/{reqId}` | 충전 신청 내역 |
+| `sly_point_history/{id}` | 포인트 변동 이력 |
+| `sly_service_config/{serviceId}` | 서비스별 요금 동적 설정 (없으면 하드코딩 폴백) |
 
 ---
 
@@ -201,6 +203,27 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 - 가장 큰 리스크: 가격 아닌 인지도. 소셜미디어 파이프라인에 SCAN 콘텐츠 미포함 상태
 - 전략 보고서 Artifact: https://claude.ai/code/artifact/59f84770-202e-4000-be7b-27b130f1d35d
 
+## ✅ 2026-09-09 버그 수정 (전체 진단)
+
+### 구현 현황 (진단 결과)
+- **핵심 기능 (15개 서비스 분석·결과·다운로드)**: ~85% 완료 — 버그 수정 후 정상 동작
+- **포인트 시스템**: ~70% → 버그 수정 후 정상 동작
+- **미착수 확장 기능**: 0% (제조 견적·AIVO·리디자인·히스토리·공유)
+- **전체 계획 대비**: ~**75%** 구현 완료 (MVP 완성, 확장 기능 미착수)
+
+### 수정된 버그 5건 (scan.html + _worker.js)
+1. **_slyPollResult undefined** (CRITICAL): `_slyAutoAnalyzeRegistry`·`_slyAutoAnalyzeRegistryText` 내 존재하지 않는 `_slyPollResult()` 호출 → `pollResult()`로 수정. IROS 자동분석 결과 폴링 완전 불가였음
+2. **다운로드 파라미터 불일치** (CRITICAL): `_slyDownload()`가 `?ext=pdf` 전송하나 서버는 `?type=`을 읽음 → `?type=`으로 수정. PDF 다운로드가 항상 docx로 반환되던 버그
+3. **입금자명 미전송** (CRITICAL): 충전 신청 시 서버 필수 파라미터 `depositorName` 미포함 → 모달에 입금자명 입력 필드 추가 + 함수에서 읽어 전송. 충전 신청 100% 실패하던 버그
+4. **가입 보너스 미지급** (HIGH): 활성 `/api/seolyuhana/points` 핸들러(L3057)에 가입 보너스 로직 없음 (dead code 블록에만 있었음) → 신규 가입 2,900P 즉시 지급 복구
+5. **최소 충전 금액 불일치** (MEDIUM): 서버 최소 ₩10,000 vs UI 최저 ₩5,000 플랜 → 서버 최소금액 ₩5,000으로 수정
+
+### 추가 발견 (코드 무결성)
+- VALID_SERVICES 확인: L2981 활성 핸들러에 15개 serviceId 모두 포함 (workplace_tone·career_saju·notice_summary·insurance_scan 포함) → 이상 없음
+- Firestore 컬렉션명: 메모상 `scan_*`로 오기재됐으나 실제 코드는 `sly_*` 접두사 사용 → 메모 수정 완료
+
+---
+
 ## 🗒️ 2026-09-08 논의·계획 메모
 
 ### SCAN 제조 견적 기능 (신규 수익화)
@@ -258,6 +281,9 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 2026-09-07 | **v3 판례 DB 추가**: 계약서(포괄임금제·수습해고·IP귀속·체불임금 실제 판례 15건), 등기부(깡통전세·신탁사기·이중계약·갭투자·법인명의사기·명의신탁 6유형+통계) |
 | 2026-09-07 | **번역 시스템 전면 개편**: LANG_EXPERTISE 6개 언어 자격증변환·GPA스케일·군복무·인간적 표현 패턴 DB 추가 |
 | 2026-09-09 | **IROS 무료열람 방법S 구현**: oracle-server.js에 `page.on('response')` 응답 인터셉트로 IROS 백엔드 AJAX 응답에서 PIN 캡처 → 세션쿠키 + `callMpPrtIframe.do` 직접 fetch → 등기부 HTML 텍스트 추출. WebSquare headless 탐지 우회. rlrgCount=999 설정으로 Methods A-R 건너뜀. `directApiContent` 반환 버그(`return` → `res.json()`) 수정. _worker.js Oracle Playwright fallback 복원. |
+| 2026-09-10 | **Tilko v1.0 주소검색 HTTP500 수정**: RealtyAddrSrch v1.0은 암호화 미지원 → SearchAddr 평문 우선 시도, 실패 시 암호화 폴백으로 변경. _worker.js 두 곳(mbtico compact + `_tilkoFetchRegistry`) 모두 수정. |
+| 2026-09-10 | **Oracle 서버 502 수정**: express/multer/jszip package.json 누락으로 npm install 후 패키지 제거됨 → 의존성 추가. 사용자가 `npm install express multer jszip && pm2 restart oracle-server`로 즉시 복구. |
+| 2026-09-10 | **Oracle VM 자동배포 workflow 추가**: seolyuhana/oracle-server.js 변경 시 SSH로 Oracle VM 자동 업데이트 + pm2 재시작. ORACLE_SSH_KEY secret 등록 필요. |
 | 2026-09-09 | scan.html 전면 리디자인: 크몽 스타일 서비스 목록(배지+평점+미리보기) + 당근 스타일 칩(이모지+텍스트) + 드로어 스티키 CTA 푸터 |
 | 2026-09-09 | 사업자조회 isIssue 서비스에서 slyJdWrap2(지원공고) 숨김 버그 수정 |
 | 2026-09-09 | _slyOpenDrawer() 평점·배지·스티키 푸터 가격 채우기 추가 (SVC_META 연동) |

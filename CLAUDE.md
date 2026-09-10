@@ -864,6 +864,82 @@ Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 ---
 
+## 🔁 AI 작업 패턴 템플릿 (2026-09-10 추가)
+
+### 자가 검증 루프 — 품질 기준 통과할 때까지 반복
+```
+아래 모든 기준을 통과할 때까지 루프로 작업해라. 중간에 멈추지 마라.
+
+목표: [무엇을 만들어야 하는지]
+
+기준:
+- [잴 수 있는 조건 1]
+- [잴 수 있는 조건 2]
+- [잴 수 있는 조건 3]
+
+매 회차:
+1. 초안 — 결과물을 만들거나 개선한다
+2. 채점 — 기준마다 1~10점으로 매긴다. 후하게 주지 마라.
+3. 미흡 — 아직 약한 지점을 정확히 나열한다
+4. 판정 — 모든 점수가 8점 이상이면 "완료"라고 쓰고 멈춘다.
+   아니면 "다음 회차"라고 쓰고 가장 약한 곳부터 고친다.
+
+규칙: 모든 기준이 8점을 넘기 전에는 절대 완료라고 하지 마라.
+8회 시도 후에도 안 되면 멈추고 무슨 일이 있었는지 보고해라.
+```
+
+### 체크포인트 — 작업 중간에 맥락 저장
+```
+계속하기 전에 체크포인트를 작성해라:
+1. 지금까지 완료한 것은 무엇인가?
+2. 어떤 결정을 왜 내렸는가?
+3. 아직 남은 일은 무엇인가?
+4. 새 세션에서 이어받으려면 무엇이 필요한가?
+150단어 이내로. 구체적으로.
+```
+
+### 세션 복원 — 새 대화 첫 줄
+```
+이전 세션에서 이어서 진행한다. 맥락:
+[체크포인트 붙여넣기]
+어디까지 왔는지 확인하고, 이미 한 일을 반복하지 말고 이어서 진행해라.
+```
+
+### 리서치 에이전트 시스템 프롬프트
+```
+너는 리서치 에이전트다. 정보를 나열하는 게 아니라 진짜 중요한 것을 찾아내는 것이 네 일이다.
+과제를 받으면: 하위 질문 3~4개로 쪼개 → 각각 따로 검색 → 질문에 직접 답하는 것만 남기고 나머지 버림 → 구조화된 요약(핵심 발견·출처·못 찾은 것) 전달.
+규칙: 모든 주장에 출처 필수. 두 출처가 모순되면 표시. 못 찾았으면 빈칸 메우지 말고 못 찾았다고 명시.
+```
+
+### Agent Reach — 설치 방법
+> 원격 컨테이너: YouTube·웹페이지 프록시 차단으로 2/15채널만 작동. Oracle Cloud 또는 로컬 PC 권장.
+
+```bash
+# 설치 공통 (pip install GitHub zip은 프록시 차단 → git clone으로 우회)
+git clone --depth=1 https://github.com/Panniantong/agent-reach.git ~/agent-reach
+python3 -m venv ~/ar-venv
+~/ar-venv/bin/pip install -e ~/agent-reach
+ln -sf ~/ar-venv/bin/agent-reach /usr/local/bin/agent-reach
+mkdir -p ~/.config/yt-dlp && echo '--js-runtimes node' >> ~/.config/yt-dlp/config
+agent-reach doctor
+
+# 로컬 PC (macOS/Linux)
+python3 -m venv ~/.agent-reach-venv
+source ~/.agent-reach-venv/bin/activate
+pip install https://github.com/Panniantong/agent-reach/archive/main.zip
+
+# 상태 확인
+agent-reach doctor
+
+# 사용 예시 (클로드 코드에서)
+# "[유튜브 URL]의 자막을 받아서 핵심 5개로 정리해줘"
+# "[깃허브 저장소 URL]이 뭘 하는 도구인지 읽고 비슷한 도구 3개와 비교표 만들어줘"
+```
+별 79k, MIT 라이선스, yt-dlp·gh·Jina Reader 래핑. 유튜브·깃허브·웹·RSS는 로그인 불필요.
+
+---
+
 ## ☁️ Oracle Cloud 로그인
 이메일: kimdh4790@gmail.com
 비밀번호: khw3103!!

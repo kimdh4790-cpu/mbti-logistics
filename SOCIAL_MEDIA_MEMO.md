@@ -697,6 +697,7 @@ scripts/content/variants/{product}-variants.json  ← A/B/C/D 변형
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-10 | **SCAN AI 영상 파이프라인 구축** — Oracle Cloud VM에서 `render-scan.js`로 scan-promo.mp4·scan-reels.mp4(각 10.6MB, 60초) 렌더 완료. `scripts/content/scan-meta.json` 신규: YouTube/Instagram 메타데이터 3개 변형(기본·전세사기예방·취업서류첨삭·계약서분석). `social-media.yml`에 scan 제품 옵션 추가(workflow_dispatch, Remotion 렌더 포함). Oracle Cloud Agent Reach 5/15채널 활성(YouTube·Jina·RSS·V2EX·B站) — yt-dlp `--js-runtimes node` 설정 완료 |
 | 2026-09-09 | **Fish Audio 목소리 클론 통합** — voice_id `208686d6952741e28f43fdacc4b65c14` ("활기찬 젊은 목소리" @김형우, Public). `generate-narration.js` `fishAudioTTS()` 추가: Fish Audio → Google TTS → CLOVA → ElevenLabs 우선순위. `model: s2.1-pro-free` 헤더 추가(무료 플랜 필수). GitHub Secrets `FISH_AUDIO_VOICE_ID` 등록 완료. `FISH_AUDIO_API_KEY` 발급 후 등록 필요 |
 | 2026-09-09 | **영상 파이프라인 2가지 버그 수정** — ①DONWAY Runway AI 한글 hallucination: Runway 생성 대상에서 donway 제거, Remotion 코드 기반으로 전환. ②Runway/Remotion promo.mp4 있을 때 나레이션+자막 미적용: `social-media.yml`에 `mix_audio()` 함수 추가 — 기존 promo.mp4에 나레이션+BGM+자막 사후 합성 |
 | 2026-09-09 | **DONWAY 목업 기반 Runway image-to-video 파이프라인 구축** — `scripts/capture/generate-donway-mockups.js` 신규: Playwright로 DONWAY UI 목업 PNG 3종(정산대시보드/엑셀업로드/알림톡발송, 720×1280) 생성. `scripts/runway-generate.js` `generateDonwayScenes()` 추가: 목업 PNG → Runway gen4.5 image_to_video (씬당 5초) → FFmpeg concat → donway-runway.mp4 15초. `social-media.yml` 목업 생성 스텝 추가, Runway 스텝 DONWAY 자동 scenes 모드 선택 |

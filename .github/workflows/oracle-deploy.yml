@@ -1,0 +1,42 @@
+name: Oracle VM oracle-server.js 배포
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'seolyuhana/oracle-server.js'
+      - 'seolyuhana/package.json'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: oracle-server.js 배포 (SSH force-checkout + pm2 restart)
+        env:
+          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          if [ -z "$ORACLE_SSH_KEY" ]; then
+            echo "⚠️  ORACLE_SSH_KEY secret 미등록 — 배포 건너뜀"
+            echo "GitHub Settings → Secrets에 ORACLE_SSH_KEY(ssh-key-2026-08-02 내용)를 등록하세요"
+            exit 0
+          fi
+          echo "$ORACLE_SSH_KEY" > /tmp/oracle_key
+          chmod 600 /tmp/oracle_key
+          ssh -i /tmp/oracle_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=15 \
+              opc@161.33.136.154 << 'EOF'
+            cd ~/mbti-logistics
+            git fetch origin main
+            git checkout origin/main -- seolyuhana/oracle-server.js seolyuhana/package.json
+            echo "oracle-server.js 업데이트 완료:"
+            git log --oneline -1 -- seolyuhana/oracle-server.js
+            cd ~/mbti-logistics && npm install --omit=dev --no-audit --no-fund 2>/dev/null || true
+            pm2 restart oracle-server 2>/dev/null || pm2 start seolyuhana/oracle-server.js --name oracle-server
+            sleep 3
+            pm2 status oracle-server
+          EOF
+          rm -f /tmp/oracle_key
