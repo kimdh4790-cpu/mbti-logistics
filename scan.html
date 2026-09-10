@@ -1378,7 +1378,7 @@ body {
   height: calc(100svh - 155px);
 }
 /* PC: 카드 자동 높이, 3열, max-width 중앙정렬 */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .sly-cat-grid {
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: auto;
@@ -1428,19 +1428,19 @@ body {
 }
 .sly-cat-ico svg { width: 22px; height: 22px; }
 .sly-cat-meta { display: flex; align-items: center; gap: 6px; }
-.sly-cat-name { font-size: 21px; font-weight: 800; color: var(--text-primary); letter-spacing: -.5px; }
-.sly-cat-count { font-size: 14px; color: var(--text-muted); margin-left: auto; }
+.sly-cat-name { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -.5px; }
+.sly-cat-count { font-size: 15px; color: var(--text-muted); margin-left: auto; }
 .sly-cat-svcs {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   overflow: hidden;
-  max-height: 70px;
+  max-height: 80px;
 }
 .sly-cat-svc-chip {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  padding: 6px 11px;
+  padding: 6px 12px;
   border-radius: 20px;
   white-space: nowrap;
 }
