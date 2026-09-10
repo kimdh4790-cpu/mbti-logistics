@@ -912,9 +912,19 @@ Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 규칙: 모든 주장에 출처 필수. 두 출처가 모순되면 표시. 못 찾았으면 빈칸 메우지 말고 못 찾았다고 명시.
 ```
 
-### Agent Reach — 로컬 PC 설치 (원격 컨테이너 불가, 로컬에서 실행)
+### Agent Reach — 설치 방법
+> 원격 컨테이너: YouTube·웹페이지 프록시 차단으로 2/15채널만 작동. Oracle Cloud 또는 로컬 PC 권장.
+
 ```bash
-# 설치 (Python 3.10+ 필요)
+# 설치 공통 (pip install GitHub zip은 프록시 차단 → git clone으로 우회)
+git clone --depth=1 https://github.com/Panniantong/agent-reach.git ~/agent-reach
+python3 -m venv ~/ar-venv
+~/ar-venv/bin/pip install -e ~/agent-reach
+ln -sf ~/ar-venv/bin/agent-reach /usr/local/bin/agent-reach
+mkdir -p ~/.config/yt-dlp && echo '--js-runtimes node' >> ~/.config/yt-dlp/config
+agent-reach doctor
+
+# 로컬 PC (macOS/Linux)
 python3 -m venv ~/.agent-reach-venv
 source ~/.agent-reach-venv/bin/activate
 pip install https://github.com/Panniantong/agent-reach/archive/main.zip
