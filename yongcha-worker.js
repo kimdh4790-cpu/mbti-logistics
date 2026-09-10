@@ -910,7 +910,7 @@ select.inp option{background:#24243d;color:#f0f1f8}
 </style>
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 </head>
-<body style="visibility:hidden"><script>setTimeout(function(){document.body.style.visibility="visible"},50)</script>
+<body style="visibility:hidden"><script>setTimeout(function(){document.body.style.visibility="visible"},50);window._ldEmergency=setTimeout(function(){var ld=document.getElementById('ld'),ls=document.getElementById('login-screen');if(ld&&ld.style.display!=='none'){ld.style.display='none';document.body.style.visibility='visible';if(ls)ls.style.display='flex';}},9000);</script>
 
 <!-- 로딩 -->
 <div id="ld">
@@ -8485,7 +8485,7 @@ function _riqMatch(el){
       if(mb)mb.innerHTML=_emptyHtml('📭','공개 공고 없음','새 공고가 등록되면 AI 추천이 시작됩니다');
       return;
     }
-    var _riqTok=await _yGetToken().catch(function(){return '';});
+    return _yGetToken().catch(function(){return '';}).then(function(_riqTok){
     return fetch('/api/routeiq-match',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_riqTok},
@@ -8541,6 +8541,7 @@ function _riqMatch(el){
     var mb=document.getElementById('riq-match-body');
     if(mb)mb.innerHTML='<div class="card" style="color:var(--rd);text-align:center;padding:24px">AI 추천 오류: '+_esc(e.message)+'</div>';
   });
+  });
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -8590,7 +8591,7 @@ function _yAiRecommend(postId){
         _emptyHtml('🚗','등록된 기사가 없어요','기사 회원이 가입하면 추천이 시작돼요');
       return;
     }
-    var _aiTok=await _yGetToken().catch(function(){return '';});
+    return _yGetToken().catch(function(){return '';}).then(function(_aiTok){
     return fetch('/api/yongcha/recommend',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_aiTok},
       body:JSON.stringify({
@@ -8609,6 +8610,7 @@ function _yAiRecommend(postId){
       })
     }).then(function(r){return r.json();}).then(function(data){
       _yAiRenderPicks(data,p,postId);
+    });
     });
   }).catch(function(e){
     var body=document.getElementById('modal-body');
