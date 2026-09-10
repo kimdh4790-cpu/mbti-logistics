@@ -2187,10 +2187,13 @@ async function loadPoints(retry) {
     const token = await auth.currentUser.getIdToken(retry > 0);
     const r = await fetch('/api/seolyuhana/points', { headers: { 'Authorization': 'Bearer ' + token } });
     if (!r.ok) {
+      const errText = await r.text().catch(() => '');
+      console.error('[SCAN] loadPoints 실패 retry=' + retry + ' status=' + r.status, errText);
       if (retry < 3) setTimeout(() => loadPoints(retry + 1), 2000);
       return;
     }
     const d = await r.json();
+    console.log('[SCAN] loadPoints 성공 retry=' + retry + ' balance=' + d.balance, 'signupBonus=' + d.signupBonus);
     const el = document.getElementById('slyPtsBadge');
     if (el) el.textContent = `${(d.balance || 0).toLocaleString()} P`;
     window._slyPoints = d.balance || 0;
