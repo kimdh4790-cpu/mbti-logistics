@@ -3064,7 +3064,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const doc = await fsGet(token, 'sly_points', uid);
             let balance = doc?.fields?.balance?.integerValue|0 || 0;
             let signupBonus = false;
-            if (!doc?.fields) {
+            if (!doc?.fields || !(doc?.fields?.balance?.integerValue|0)) {
               const SIGNUP_BONUS = 2900;
               await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
               const bId = crypto.randomUUID();
@@ -8647,8 +8647,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const doc = await fsGet(token, 'sly_points', uid);
           let balance = doc?.fields?.balance?.integerValue|0 || 0;
           let signupBonus = false;
-          if (!doc?.fields) {
-            // 신규 가입: 2,900P 무료 지급
+          if (!doc?.fields || !(doc?.fields?.balance?.integerValue|0)) {
+            // 신규 가입 or 기존 0P: 2,900P 무료 지급
             const SIGNUP_BONUS = 2900;
             await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
             const bId = crypto.randomUUID();
