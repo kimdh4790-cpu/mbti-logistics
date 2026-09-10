@@ -2491,6 +2491,39 @@ function _slySelectService(id) {
   }
   toneWrap.style.display = svc.id === 'workplace_tone' ? 'block' : 'none';
   summaryWrap.style.display = svc.id === 'notice_summary' ? 'block' : 'none';
+
+  // ── 입력 탭 표시/숨김 ──
+  // tabs는 파일과 텍스트 둘 다 의미 있는 서비스(subtitle·career_saju)만 표시
+  const inputModeTabs = document.getElementById('slyInputModeTabs');
+  const showTabs = ['subtitle', 'career_saju'].includes(svc.id);
+  if (inputModeTabs) inputModeTabs.style.display = showTabs ? 'flex' : 'none';
+
+  // ── 업로드 카드 제목 서비스별 지정 ──
+  const uploadTitle = document.getElementById('slyUploadTitle');
+  if (uploadTitle) {
+    if (svc.isIssue) {
+      uploadTitle.textContent = '서류 PDF 업로드 (선택)';
+    } else {
+      const titleMap = {
+        resume:         '이력서 파일 업로드',
+        cover_letter:   '자소서 파일 업로드',
+        cover_rewrite:  '자소서 파일 업로드',
+        cv_translate:   '자소서 파일 업로드',
+        interview:      '이력서·자소서 업로드',
+        contract:       '계약서 파일 업로드',
+        insurance_scan: '보험약관 파일 업로드',
+        gov_doc:        '공문서 파일 업로드',
+        ai_photo:       '이미지 업로드',
+        subtitle:       '영상 또는 스크립트 파일',
+        career_saju:    '이력서 업로드 (선택)',
+        workplace_tone: '문서 업로드 (선택)',
+        notice_summary: '가정통신문 업로드 (선택)',
+        shortform:      '참고 문서 업로드 (선택)',
+      };
+      uploadTitle.textContent = titleMap[svc.id] || '파일 업로드';
+    }
+  }
+
   if (directTA) {
     if (svc.id === 'workplace_tone') {
       directTA.placeholder = '변환할 문장이나 이메일을 붙여넣기 하세요.\n예: "김대리, 저번에 말한거 언제까지 줄거야?"';
@@ -2510,10 +2543,10 @@ function _slySelectService(id) {
     }
   }
 
-  // 텍스트 우선 서비스: 자동으로 텍스트 탭 활성화
-  if (['workplace_tone', 'notice_summary', 'shortform', 'subtitle'].includes(svc.id) && svc.allowText) {
+  // 텍스트 우선 서비스: 자동으로 텍스트 모드 활성화 (tabs 숨겨도 내부 view는 text로 설정)
+  if (['workplace_tone', 'notice_summary', 'shortform', 'career_saju'].includes(svc.id)) {
     setTimeout(() => _slySetInputMode('text'), 50);
-  } else if (svc.allowText !== undefined) {
+  } else {
     setTimeout(() => _slySetInputMode('file'), 50);
   }
 
