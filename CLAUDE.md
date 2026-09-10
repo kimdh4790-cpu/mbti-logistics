@@ -434,6 +434,17 @@ cd mbtico-pages && npx wrangler deploy
 - filo-auth.js: `_filoPageHqNotice()` 전가맹점 공지 일괄 발송 신규 구현 (hq_notices 컬렉션)
 - filo-auth.js: `_filoPageQSC()` QSC 체크리스트 신규 구현 (hq_qsc 컬렉션, 9항목 5점 채점)
 
+### ✅ 완료 (2026-09-10 ThreeUI constellation 파티클 효과 전체 랜딩 적용)
+- **ThreeUI constellation-field (MIT) Canvas 2D 파티클 애니메이션 5개 랜딩 페이지 적용**
+  - scan.html: 다크 히어로, 골드 `#C9A84C` + 핑크 `#FF6B9D`, 55노드(모바일 28)
+  - filo-landing.html: 흰 배경, 핑크 `#f43f5e`/`#ec4899`, 초저투명도(halo 10%, core 38%)
+  - donway_landing.html: 다크 첫 슬라이드, 블루 `#0066ff` + 퍼플 `#7b2fff`, 55노드
+  - dine-landing.html: 흰 배경, 시안 `#0891b2`/`#0e7490`, 48노드, 초저투명도
+  - mbti_landing.html: 다크, 블루 `#0066ff` + 시안 `#00d4ff`, 65노드(모바일 32), vivid
+  - yongcha-landing.html: YONGCHA_MEMO 기록대로 삭제됨 — 미적용
+- 공통: DPR-aware, 히어로 컨테이너 기준 리사이즈, 포인터 중력 200-220px, prefers-reduced-motion 대응
+- yongcha-worker.js 파싱 오류 긴급 복구(커밋 665dbee): 이전 커밋(37182c7)이 YONGCHA_ICON_192 base64 상수 자리에 전체 yongcha.html 파일 삽입 → SyntaxError. 0887e0d 복원 후 보안 패치 6건 재적용
+
 ### ✅ 완료 (2026-09-09 소셜미디어 영상 파이프라인)
 - **전 제품 영상 1분(60초)으로 확장** (scripts/remotion/):
   - index.jsx: 8개 컴포지션 durationInFrames → 1800프레임(60초)
