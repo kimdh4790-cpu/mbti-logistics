@@ -3743,6 +3743,24 @@ app.post('/api/iros-fetch', async (req, res) => {
       try {
         const pinDashU = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
         uPage = await context.newPage();
+        // window.opener / window.parent mock 주입 — WebSquare4 뷰어가 부모창 DataList에서 PIN 읽을 때 대비
+        await uPage.addInitScript(({ pin, pinD }) => {
+          const fakeRow = { rnum: pinD, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y', smplPrntOrdrNo: '' };
+          const fakeDl = {
+            getRowData: () => fakeRow, getData: () => [fakeRow], getRowCount: () => 1,
+            getValue: (col) => fakeRow[col] || '',
+          };
+          const fakeCtx = {};
+          ['dlt_smpl_srch_rslt', 'mf_wfm_potal_main_wfm_content_dlt_smpl_srch_rslt', 'mf_wfm_content_dlt_smpl_srch_rslt'].forEach(k => { fakeCtx[k] = fakeDl; });
+          fakeCtx.scwin = fakeCtx;
+          fakeCtx.__iros_selected_rnum = pin;
+          fakeCtx.__iros_selected_rnum_dash = pinD;
+          // opener mock (팝업으로 열렸을 때 WebSquare4가 window.opener에서 데이터 읽는 경우)
+          try { Object.defineProperty(window, 'opener', { get: () => fakeCtx, configurable: true }); } catch(_) {}
+          // parent mock도 주입 (standalone 탭에서 window.parent === window 이지만 혹시 재정의 필요한 경우)
+          window.__irosParentMock = fakeCtx;
+        }, { pin: capturedPin, pinD: pinDashU });
+
         // 뷰어 URL — IS_NMBR_LOGIN__ 을 실제 로그인 여부와 무관하게 'Y'로 지정해보기
         const viewerUrlY = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=Y&rnum=${pinDashU}&rlrgGbn=1&payCl=F&smplKindCls=1&smplPrntOrdrNo=`;
         const viewerUrlN = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${pinDashU}&rlrgGbn=1&payCl=F&smplKindCls=1&smplPrntOrdrNo=`;
