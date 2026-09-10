@@ -4,11 +4,13 @@ const { FiloPromo }     = require('./FiloPromo');
 const { DonwayPromo }   = require('./DonwayPromo');
 const { YongchaPromo }  = require('./YongchaPromo');
 const { InflearnPromo } = require('./InflearnPromo');
+const { ScanPromo }     = require('./ScanPromo');
 
 var defaultFiloProps     = { hasNarration: false, hasBgm: false, slides: null, lines: null };
 var defaultDonwayProps   = { hasNarration: false, hasBgm: false };
 var defaultYongchaProps  = { hasNarration: false, hasBgm: false };
 var defaultInflearnProps = { hasNarration: false, hasBgm: false };
+var defaultScanProps     = { hasNarration: false, hasBgm: false };
 
 function Root() {
   return (
@@ -21,6 +23,8 @@ function Root() {
       <Composition id="YongchaReels"  component={YongchaPromo}  durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
       <Composition id="InflearnPromo" component={InflearnPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
       <Composition id="InflearnReels" component={InflearnPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
+      <Composition id="ScanPromo"     component={ScanPromo}     durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
+      <Composition id="ScanReels"     component={ScanPromo}     durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
     </>
   );
 }
