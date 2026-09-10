@@ -246,6 +246,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 .fitem:active{transform:scale(.97)}
 .card{cursor:pointer;transition:.2s}
 .card:active{transform:scale(.97)}
+#dwConst{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+#s0>*:not(canvas){position:relative;z-index:1}
 </style>
 </head>
 <body>
@@ -265,6 +267,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
 <!-- ══ S0 히어로 ══════════════════════════════════════════ -->
 <div class="slide" id="s0">
+  <canvas id="dwConst" aria-hidden="true"></canvas>
   <div class="g" style="width:320px;height:320px;background:radial-gradient(var(--blue),transparent);top:-80px;left:-60px;opacity:.4"></div>
   <div class="g" style="width:260px;height:260px;background:radial-gradient(var(--purple),transparent);bottom:-60px;right:-40px;opacity:.35"></div>
   <div class="inner chip">🚀 전 업종 정산 자동화 플랫폼</div>
@@ -727,5 +730,71 @@ async function submitInquiry(){
     <div class="dw-modal-body" id="dw-modal-body"></div>
   </div>
 </div>
+<script>
+(function(){
+  var canvas=document.getElementById('dwConst');
+  if(!canvas)return;
+  var ctx=canvas.getContext('2d');
+  var hero=canvas.parentElement;
+  var cw,ch,nodes=[];
+  var LINK=140,pointer={x:-9999,y:-9999};
+  function resize(){
+    var dpr=Math.min(window.devicePixelRatio||1,2);
+    var r=hero.getBoundingClientRect();
+    cw=r.width;ch=r.height;
+    canvas.width=Math.max(1,Math.floor(cw*dpr));
+    canvas.height=Math.max(1,Math.floor(ch*dpr));
+    canvas.style.width=cw+'px';canvas.style.height=ch+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function init(){
+    nodes=[];var n=cw<480?28:55;
+    for(var i=0;i<n;i++){
+      nodes.push({x:Math.random()*cw,y:Math.random()*ch,
+        vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,
+        r:Math.random()*2+1.5,phase:Math.random()*Math.PI*2,
+        isBlue:Math.random()>.3});
+    }
+  }
+  window.addEventListener('resize',function(){resize();init();});
+  resize();init();
+  hero.addEventListener('mousemove',function(e){
+    var r=hero.getBoundingClientRect();pointer.x=e.clientX-r.left;pointer.y=e.clientY-r.top;
+  });
+  hero.addEventListener('mouseleave',function(){pointer.x=-9999;pointer.y=-9999;});
+  function frame(){
+    ctx.clearRect(0,0,cw,ch);ctx.lineCap='butt';
+    for(var i=0;i<nodes.length;i++){
+      for(var j=i+1;j<nodes.length;j++){
+        var dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;
+        var d=Math.sqrt(dx*dx+dy*dy);
+        if(d<LINK){
+          ctx.globalAlpha=.12+(1-d/LINK)*.28;
+          ctx.strokeStyle='#0066ff';ctx.lineWidth=.8;
+          ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();
+        }
+      }
+    }
+    var t=Date.now()*.001;
+    for(var k=0;k<nodes.length;k++){
+      var n=nodes[k];
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<0||n.x>cw)n.vx*=-1;if(n.y<0||n.y>ch)n.vy*=-1;
+      var pdx=n.x-pointer.x,pdy=n.y-pointer.y;
+      var pd=Math.sqrt(pdx*pdx+pdy*pdy);
+      if(pd<200){n.x-=pdx*.005;n.y-=pdy*.005;}
+      var pulse=.78+Math.sin(t+n.phase)*.22;
+      var c=n.isBlue?'#0066ff':'#7b2fff';
+      ctx.fillStyle=c;
+      ctx.globalAlpha=pulse*.18;
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r*2.5,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=pulse*.6;
+      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;requestAnimationFrame(frame);
+  }
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)frame();
+})();
+</script>
 </body>
 </html>
