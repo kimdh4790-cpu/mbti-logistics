@@ -3661,6 +3661,81 @@ app.post('/api/iros-fetch', async (req, res) => {
       rlrgCount = 999;
     }
 
+    // ── 방법W: WebSquare4 scwin 함수 직접 호출 (클릭 시뮬레이션 없이) ───────────────────
+    if (rlrgCount === 0 && capturedPin) {
+      console.log('[iros] 방법W: scwin 함수 직접 호출 PIN=', capturedPin);
+      try {
+        const pinDashW = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        // 현재 scwin 함수 중 열람/조회 관련 함수 찾기
+        const wFnInfo = await resultPage.evaluate(({ pin, pinD }) => {
+          const cands = window.scwin ? Object.keys(window.scwin).filter(k => /(view|열람|smpl|rlrg|prt|issue|조회)/i.test(k)) : [];
+          // DataList에 올바른 row 세팅
+          const dlKeys = ['dlt_smpl_srch_rslt', 'mf_wfm_potal_main_wfm_content_dlt_smpl_srch_rslt', 'mf_wfm_content_dlt_smpl_srch_rslt'];
+          const rowData = { rnum: pinD, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y', smplPrntOrdrNo: '' };
+          dlKeys.forEach(k => {
+            const dl = window[k] || (window.scwin && window.scwin[k]);
+            if (dl && dl.setData) try { dl.setData([rowData]); } catch(_) {}
+            if (dl && dl.setRowData) try { dl.setRowData(0, rowData); } catch(_) {}
+          });
+          // fn_view_smpl_rlrg, fn_smpl_view, fn_rlrg_view 등 시도
+          const tryFns = ['fn_view_smpl_rlrg', 'fn_smpl_rlrg_view', 'fn_smpl_view', 'fn_rlrg', 'fn_prt_view', 'fn_smplRlrgView'];
+          const called = [];
+          for (const fn of tryFns) {
+            if (window.scwin && typeof window.scwin[fn] === 'function') {
+              try { window.scwin[fn](0); called.push(fn + '(0)'); } catch(e) { called.push(fn + ':err:' + e.message); }
+            }
+          }
+          // 발견한 후보 함수들도 첫 번째 것 호출
+          if (called.length === 0 && cands.length > 0) {
+            const fn = cands[0];
+            try { window.scwin[fn](0); called.push(fn + '(0)-cand'); } catch(e) { called.push(fn + ':err:' + e.message); }
+          }
+          return { cands, called };
+        }, { pin: capturedPin, pinD: pinDashW }).catch(e => ({ err: e.message }));
+        console.log('[iros] 방법W scwin 후보:', JSON.stringify(wFnInfo));
+        // 새 팝업 또는 응답 대기 (10초)
+        const wPopupPromise = resultPage.waitForEvent('popup', { timeout: 10000 }).catch(() => null);
+        const wNewPage = await wPopupPromise;
+        if (wNewPage) {
+          await wNewPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+          await wNewPage.waitForTimeout(8000);
+          const wText = await wNewPage.innerText('body').catch(() => '');
+          const wLog = await wNewPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const wRegData = await wNewPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] 방법W 팝업 URL:', wNewPage.url(), 'XHR건수:', wLog.length, '본문앞300:', wText.slice(0, 300));
+          await wNewPage.screenshot({ path: '/home/opc/iros-debug/step7-method-w.png', fullPage: true }).catch(() => {});
+          if (wRegData) {
+            directApiContent = JSON.stringify({ type: 'method_w_xhr', url: wRegData.url, content: wRegData.body });
+            rlrgCount = 999;
+          } else if (_vrRe.test(wText)) {
+            directApiContent = JSON.stringify({ type: 'method_w_popup', content: wText });
+            rlrgCount = 999;
+          }
+          if (rlrgCount === 999) {
+            try { require('fs').writeFileSync('/tmp/iros-method-w-result.json', directApiContent); } catch(e) {}
+            console.log('[iros] 방법W 성공!');
+          }
+          await wNewPage.close().catch(() => {});
+        } else {
+          // 팝업 없으면 resultPage 내 iframe 확인
+          await resultPage.waitForTimeout(3000);
+          const wFrame = resultPage.frames().find(f => f.url().includes('callMpPrtIframe') || f.url().includes('smplRlrg'));
+          if (wFrame) {
+            const wFrameText = await wFrame.innerText('body').catch(() => '');
+            const wFrameLog = await wFrame.evaluate(() => window._irosXhrLog || []).catch(() => []);
+            console.log('[iros] 방법W iframe:', wFrame.url(), 'XHR건수:', wFrameLog.length, '앞300:', wFrameText.slice(0, 300));
+            if (_vrRe.test(wFrameText)) {
+              directApiContent = JSON.stringify({ type: 'method_w_iframe', content: wFrameText });
+              rlrgCount = 999;
+              console.log('[iros] 방법W iframe 성공!');
+            }
+          } else {
+            console.log('[iros] 방법W 팝업/iframe 없음');
+          }
+        }
+      } catch (e) { console.log('[iros] 방법W 오류:', e.message); }
+    }
+
     // ── 방법U: 뷰어를 독립 신규 탭에서 열기 (parent iframe 의존 제거) ─────────────────
     if (rlrgCount === 0 && capturedPin) {
       console.log('[iros] 방법U: 독립 신규 탭에서 뷰어 열기 PIN=', capturedPin);
