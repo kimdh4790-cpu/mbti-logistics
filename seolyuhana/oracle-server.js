@@ -775,16 +775,30 @@ app.post('/api/iros-fetch', async (req, res) => {
     await page.waitForTimeout(1500);
     console.log('[iros] 진입 URL:', page.url());
 
-    // 2단계: 로그인 처리 — 항상 isLogin.do 로 상태 확인 후 미로그인이면 헤더 로그인 버튼 클릭
+    // 2단계: 로그인 처리
     const _checkIrosLogin = async () => {
       try {
+        // 방법1: isLogin.do API
         const loginCheckRes = await page.evaluate(async () => {
           try {
             const r = await fetch('https://www.iros.go.kr/pos9/isLogin.do', { credentials: 'include' });
-            return r.ok ? await r.json() : null;
+            if (r.ok) { const j = await r.json().catch(() => null); return j; }
+            return null;
           } catch { return null; }
         });
-        return loginCheckRes && loginCheckRes.isLogin === true;
+        if (loginCheckRes && loginCheckRes.isLogin === true) return true;
+        // 방법2: 마이페이지 URL 접근 후 리다이렉트 여부로 판단
+        const mpUrl = await page.evaluate(async () => {
+          try {
+            const r = await fetch('https://www.iros.go.kr/pos9/jsf/myPage/myPageMain.xhtml', { credentials: 'include', redirect: 'follow' });
+            return r.url;
+          } catch { return ''; }
+        });
+        if (mpUrl && !mpUrl.includes('Login') && !mpUrl.includes('login') && mpUrl.includes('iros.go.kr')) {
+          console.log('[iros] 마이페이지 접근 성공 → 로그인 상태');
+          return true;
+        }
+        return false;
       } catch { return false; }
     };
 
@@ -793,103 +807,128 @@ app.post('/api/iros-fetch', async (req, res) => {
     console.log('[iros] 초기 로그인 상태:', _loggedIn);
 
     if (!_loggedIn) {
-      console.log('[iros] 로그인 시도 — 직접 POST 우선');
+      console.log('[iros] 로그인 시도 — 홈페이지 네트워크 인터셉트 방식');
       await page.screenshot({ path: '/home/opc/iros-debug/login-before.png', fullPage: false }).catch(() => {});
 
-      // ── 방법 1: page.evaluate 내 fetch로 IROS 로그인 엔드포인트 직접 POST ──
-      // WebSquare DOM 조작 불필요. 브라우저 쿠키 공유 → isLogin.do가 true 반환됨
-      const _tryPost = async (url, params) => {
-        const r = await page.evaluate(async ({ url, params }) => {
-          try {
-            const body = Object.entries(params)
-              .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
-            const res = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body,
-              credentials: 'include',
-              redirect: 'follow'
-            });
-            const text = await res.text().catch(() => '');
-            return { ok: res.ok, status: res.status, finalUrl: res.url, body: text.slice(0, 300) };
-          } catch (e) { return { error: e.message }; }
-        }, { url, params }).catch(e => ({ error: e.message }));
-        console.log('[iros] POST', url.slice(-40), JSON.stringify(r).slice(0, 250));
-        return r;
+      // 모든 POST 요청 캡처 (실제 로그인 엔드포인트 발견용)
+      const _capturedPosts = [];
+      const _loginReqHandler = req => {
+        if (req.method() === 'POST' && req.url().includes('iros.go.kr')) {
+          _capturedPosts.push({ url: req.url(), body: (req.postData() || '').slice(0, 400) });
+          console.log('[iros-login-post]', req.url().slice(-80), '|', (req.postData() || '').slice(0, 200));
+        }
       };
+      page.on('request', _loginReqHandler);
 
-      // IROS 로그인 엔드포인트 후보 (순서대로 시도)
-      const _loginCandidates = [
-        ['https://www.iros.go.kr/pos9/commonLoginProc.do', { usrId: irosId, userPwd: irosPw, loginType: 'I' }],
-        ['https://www.iros.go.kr/pos9/commonLoginProc.do', { userId: irosId, userPwd: irosPw, loginType: 'I' }],
-        ['https://www.iros.go.kr/pos9/idpwLoginProc.do',   { usrId: irosId, userPwd: irosPw, loginType: 'I' }],
-        ['https://www.iros.go.kr/pos9/loginProc.do',       { usrId: irosId, userPwd: irosPw }],
-      ];
-      for (const [url, params] of _loginCandidates) {
-        await _tryPost(url, params);
+      // ── 방법 1: IROS 홈 → 로그인 버튼 찾아 클릭 ──
+      try {
+        await page.goto('https://www.iros.go.kr', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(2000);
+        await page.screenshot({ path: '/home/opc/iros-debug/iros-home.png', fullPage: false }).catch(() => {});
+
+        // 홈 페이지 구조 덤프
+        const _homeDump = await page.evaluate(() => {
+          const links = [...document.querySelectorAll('a, button, span, li')]
+            .filter(el => /로그인|login|mypage|마이페이지/i.test(el.textContent + (el.getAttribute('href') || '') + (el.getAttribute('onclick') || '')))
+            .slice(0, 20)
+            .map(el => ({ tag: el.tagName, id: el.id, text: el.textContent.trim().slice(0,30), href: (el.getAttribute('href')||'').slice(0,80), onclick: (el.getAttribute('onclick')||'').slice(0,80) }));
+          return { url: location.href, title: document.title, loginLinks: links, bodyLen: document.body.innerHTML.length };
+        }).catch(() => ({}));
+        console.log('[iros] 홈 덤프:', JSON.stringify(_homeDump).slice(0, 1500));
+
+        // 로그인 링크 클릭 시도
+        const _loginLink = page.locator('a, button, span').filter({ hasText: /^로그인$|^Login$/ }).first();
+        if (await _loginLink.count() > 0) {
+          console.log('[iros] 로그인 버튼 발견 → 클릭');
+          await _loginLink.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(3000);
+          console.log('[iros] 클릭 후 URL:', page.url());
+          await page.screenshot({ path: '/home/opc/iros-debug/after-login-click.png', fullPage: false }).catch(() => {});
+        }
+      } catch (e) { console.log('[iros] 홈 접근 오류:', e.message); }
+
+      // 로그인 페이지에서 입력 필드 탐색
+      const _loginPageDump = await page.evaluate(() => {
+        const inputs = [...document.querySelectorAll('input')].map(el => ({
+          id: el.id, name: el.name, type: el.type, placeholder: el.placeholder, value: el.value.slice(0,10)
+        }));
+        const forms = [...document.querySelectorAll('form')].map(f => ({
+          id: f.id, name: f.name, action: f.action, method: f.method
+        }));
+        const allLinks = [...document.querySelectorAll('a, button')].filter(el => /로그인|login/i.test(el.textContent + (el.getAttribute('href')||''))).slice(0, 10).map(el => ({
+          tag: el.tagName, text: el.textContent.trim().slice(0,30), href: (el.getAttribute('href')||'').slice(0,80), onclick: (el.getAttribute('onclick')||'').slice(0,80)
+        }));
+        return { url: location.href, title: document.title, inputs, forms, loginLinks: allLinks, bodySnip: document.body.innerHTML.slice(0, 1000) };
+      }).catch(() => ({}));
+      console.log('[iros] 로그인 페이지 덤프:', JSON.stringify(_loginPageDump).slice(0, 2000));
+
+      // ── 방법 2: 발견된 폼에 자격증명 주입 ──
+      const _currentUrl = page.url();
+      const _hasForm = _loginPageDump.forms && _loginPageDump.forms.length > 0;
+      const _hasInputs = _loginPageDump.inputs && _loginPageDump.inputs.length >= 2;
+
+      if (_hasForm || _hasInputs) {
+        console.log('[iros] 폼/입력 발견 → 자격증명 주입');
+        const _fillResult = await page.evaluate(async ({ id, pw }) => {
+          const idEl = document.querySelector('input[type="text"][name*="id" i], input[type="text"][id*="id" i], input[type="text"]:not([type="hidden"])');
+          const pwEl = document.querySelector('input[type="password"]');
+          if (!idEl || !pwEl) return `no-fields id=${!!idEl} pw=${!!pwEl}`;
+          // native setter로 React/Vue 상태 우회
+          const nv = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+          if (nv && nv.set) { nv.set.call(idEl, id); nv.set.call(pwEl, pw); }
+          idEl.value = id; pwEl.value = pw;
+          ['input','change'].forEach(ev => { idEl.dispatchEvent(new Event(ev, {bubbles:true})); pwEl.dispatchEvent(new Event(ev, {bubbles:true})); });
+          // 제출 버튼 클릭 또는 폼 제출
+          const submitBtn = document.querySelector('button[type="submit"], input[type="submit"], button.login, button.btn-login');
+          if (submitBtn) { submitBtn.click(); return 'submit-click'; }
+          const form = document.querySelector('form');
+          if (form) { form.submit(); return 'form-submit'; }
+          return 'no-submit';
+        }, { id: irosId, pw: irosPw }).catch(e => e.message);
+        console.log('[iros] 주입 결과:', _fillResult);
+        await page.waitForTimeout(3000);
+        await page.screenshot({ path: '/home/opc/iros-debug/after-fill.png', fullPage: false }).catch(() => {});
         _loggedIn = await _checkIrosLogin();
-        if (_loggedIn) { console.log('[iros] 직접 POST 로그인 성공 →', url.slice(-40)); break; }
+        console.log('[iros] 폼 주입 후 로그인:', _loggedIn, 'URL:', page.url());
       }
 
-      // ── 방법 2: 폼 직접 탐색 + 제출 (직접 POST 실패 시 폴백) ──
+      // ── 방법 3: 알려진 신규 엔드포인트 직접 POST ──
       if (!_loggedIn) {
-        console.log('[iros] 직접 POST 실패 → 폼 폴백');
-        await page.goto('https://www.iros.go.kr/pos9/commonLoginPage.do', { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(() => {});
-        await page.waitForTimeout(2500);
-
-        // 폼 HTML + 전체 input 목록 로그 (디버깅 핵심)
-        const _dbg = await page.evaluate(() => {
-          const inputs = [...document.querySelectorAll('input')].map(el => ({
-            id: el.id, name: el.name, type: el.type, placeholder: el.placeholder
-          }));
-          const forms = [...document.querySelectorAll('form')].map(f => ({
-            id: f.id, name: f.name, action: f.action, method: f.method,
-            html: f.outerHTML.slice(0, 600)
-          }));
-          const links = [...document.querySelectorAll('a, button')].filter(e => /로그인|login/i.test(e.textContent + (e.getAttribute('onclick') || ''))).map(e => ({
-            tag: e.tagName, id: e.id, text: e.textContent.trim().slice(0,30), onclick: (e.getAttribute('onclick')||'').slice(0,60)
-          }));
-          return { inputs, forms, links, bodySnip: document.body.innerHTML.slice(0, 800) };
-        }).catch(() => ({}));
-        console.log('[iros] 폼 디버그:', JSON.stringify(_dbg).slice(0, 1200));
-        await page.screenshot({ path: '/home/opc/iros-debug/login-form.png', fullPage: false }).catch(() => {});
-
-        // 폼에서 action URL + field 이름 자동 감지 후 POST
-        const _autoPost = await page.evaluate(async ({ id, pw }) => {
-          const form = document.querySelector('form');
-          if (!form) return 'no-form';
-          const action = form.action || '/pos9/commonLoginProc.do';
-          const idField = form.querySelector('input[type="text"], input:not([type="password"]):not([type="hidden"])');
-          const pwField = form.querySelector('input[type="password"]');
-          if (!idField || !pwField) return `no-fields id=${!!idField} pw=${!!pwField}`;
-          // 감지된 실제 field name 사용
-          const params = new URLSearchParams();
-          params.set(idField.name || idField.id || 'usrId', id);
-          params.set(pwField.name || pwField.id || 'userPwd', pw);
-          params.set('loginType', 'I');
-          try {
-            const r = await fetch(action, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: params.toString(),
-              credentials: 'include',
-              redirect: 'follow'
-            });
-            return `status=${r.status} url=${r.url.slice(-50)}`;
-          } catch(e) { return `fetch-err:${e.message}`; }
-        }, { id: irosId, pw: irosPw }).catch(e => e.message);
-        console.log('[iros] 자동 폼 POST 결과:', _autoPost);
-        await page.waitForTimeout(2000);
-        _loggedIn = await _checkIrosLogin();
-        console.log('[iros] 자동 폼 POST 후 isLogin.do:', _loggedIn);
-
-        if (!_loggedIn) {
-          await page.screenshot({ path: '/home/opc/iros-debug/login-after.png', fullPage: false }).catch(() => {});
+        console.log('[iros] 직접 POST 시도 (신규 엔드포인트 후보)');
+        const _newCandidates = [
+          // 2024년 이후 IROS 개편 추정 엔드포인트
+          ['https://www.iros.go.kr/pos9/jsf/cmn/login/loginProc.xhtml', { usrId: irosId, userPwd: irosPw, loginType: 'I' }],
+          ['https://www.iros.go.kr/pos9/login/loginProc.do',             { usrId: irosId, userPwd: irosPw }],
+          ['https://www.iros.go.kr/login/loginProc.do',                  { usrId: irosId, userPwd: irosPw }],
+          ['https://www.iros.go.kr/pos9/commonLoginProc.do',             { usrId: irosId, userPwd: irosPw, loginType: 'I' }],
+        ];
+        for (const [url, params] of _newCandidates) {
+          const r = await page.evaluate(async ({ url, params }) => {
+            try {
+              const body = Object.entries(params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+              const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, credentials: 'include', redirect: 'follow' });
+              const text = await res.text().catch(() => '');
+              return { ok: res.ok, status: res.status, url: res.url, body: text.slice(0, 200) };
+            } catch (e) { return { error: e.message }; }
+          }, { url, params }).catch(e => ({ error: e.message }));
+          console.log('[iros] POST', url.slice(-50), JSON.stringify(r).slice(0, 200));
+          _loggedIn = await _checkIrosLogin();
+          if (_loggedIn) { console.log('[iros] POST 로그인 성공:', url); break; }
         }
+      }
+
+      page.off('request', _loginReqHandler);
+
+      // 캡처된 POST 요청 최종 덤프
+      if (_capturedPosts.length > 0) {
+        console.log('[iros] 캡처된 POST 요청:', JSON.stringify(_capturedPosts).slice(0, 2000));
+      } else {
+        console.log('[iros] 캡처된 POST 요청 없음');
       }
 
       if (!_loggedIn) {
         const _finalUrl = page.url();
+        console.error('[iros] 모든 로그인 방법 실패. 진단 정보:', JSON.stringify({ finalUrl: _finalUrl, capturedPosts: _capturedPosts.slice(0,3), loginPageUrl: _loginPageDump.url }));
         throw new Error(`IROS 로그인 실패. ID=${irosId} URL=${_finalUrl}`);
       }
 
