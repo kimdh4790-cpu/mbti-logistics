@@ -1426,270 +1426,343 @@ body {
   border-radius: 20px;
   white-space: nowrap;
 }
-/* ── 카테고리 카드 데모 애니메이션 ── */
+/* ── 카테고리 카드 데모 애니메이션 (무한 루프) ── */
 .sly-cat-demo {
-  margin-top: 6px;
+  margin-top: 8px;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  height: 120px;
   flex: 1;
-  min-height: 90px;
+  min-height: 100px;
 }
-/* 취업서류 데모 */
-@keyframes slyDemoScan { 0%{top:8px;opacity:1} 80%{top:90px;opacity:1} 100%{top:90px;opacity:0} }
-@keyframes slyDemoScore { 0%{content:'0점'} 30%{content:'28점'} 60%{content:'65점'} 80%{content:'85점'} 100%{content:'92점'} }
-@keyframes slyDemoFadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
-@keyframes slyDemoPulse { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.05)} }
-@keyframes slyDemoSlide { from{width:0} to{width:var(--w,70%)} }
-@keyframes slyDemoBlink { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes slyDemoType { from{width:0} to{width:100%} }
-@keyframes slyDemoStamp { 0%{transform:scale(2) rotate(-15deg);opacity:0} 60%{transform:scale(.9) rotate(3deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
-@keyframes slyDemoSub { 0%,30%{opacity:0;transform:translateY(4px)} 40%,90%{opacity:1;transform:none} 100%{opacity:0} }
-@keyframes slyDemoRisk { from{opacity:0;transform:scaleX(0)} to{opacity:1;transform:scaleX(1)} }
-@keyframes slyDemoShield { 0%,100%{box-shadow:0 0 0 0 var(--demo-color,#D97706)33} 50%{box-shadow:0 0 0 8px transparent} }
-@keyframes slyDemoWave { 0%{transform:scaleX(1)} 50%{transform:scaleX(1.03)} 100%{transform:scaleX(1)} }
+
+/* 공통 무한 루프 키프레임 */
+@keyframes slyInfinScan {
+  0%   { top: 6px;  opacity: 0; }
+  5%   { opacity: 1; }
+  44%  { top: 90px; opacity: 1; }
+  50%  { top: 90px; opacity: 0; }
+  51%  { top: 6px;  opacity: 0; }
+  100% { top: 6px;  opacity: 0; }
+}
+@keyframes slyInfinGlow {
+  0%,100% { opacity: .25; }
+  50%     { opacity: 1; }
+}
+@keyframes slyInfinPop {
+  0%,100% { transform: scale(1);   opacity: .8; }
+  50%     { transform: scale(1.12); opacity: 1; }
+}
+@keyframes slyInfinBarFill {
+  0%,5%  { width: 0; }
+  55%    { width: var(--w, 70%); }
+  80%    { width: var(--w, 70%); }
+  95%,100%{ width: 0; }
+}
+@keyframes slyInfinBubble1 {
+  0%,5%    { opacity: 0; transform: translateY(8px); }
+  18%,52%  { opacity: 1; transform: translateY(0); }
+  62%,100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes slyInfinArrow {
+  0%,22%   { opacity: 0; transform: translateY(4px); }
+  35%,50%  { opacity: 1; transform: translateY(0); }
+  62%,100% { opacity: 0; }
+}
+@keyframes slyInfinBubble2 {
+  0%,38%   { opacity: 0; transform: translateY(8px); }
+  52%,80%  { opacity: 1; transform: translateY(0); }
+  92%,100% { opacity: 0; transform: translateY(-4px); }
+}
+@keyframes slyInfinStamp {
+  0%,15%  { transform: scale(2.5) rotate(-20deg); opacity: 0; }
+  35%     { transform: scale(.85) rotate(5deg);  opacity: 1; }
+  50%,80% { transform: scale(1)   rotate(0deg);  opacity: 1; }
+  95%,100%{ transform: scale(0);  opacity: 0; }
+}
+@keyframes slyInfinTag {
+  0%,var(--ts,5%)   { opacity: 0; transform: translateX(-6px); }
+  calc(var(--ts,5%) + 12%), calc(var(--te,60%) - 5%) { opacity: 1; transform: translateX(0); }
+  var(--te,60%),100% { opacity: 0; transform: translateX(4px); }
+}
+@keyframes slyInfinVideoBar {
+  0%   { width: 0%; }
+  85%  { width: 100%; }
+  90%  { width: 100%; }
+  95%  { width: 0%; }
+  100% { width: 0%; }
+}
+@keyframes slyInfinSub1 {
+  0%,5%    { opacity: 0; transform: translateY(5px); }
+  18%,44%  { opacity: 1; transform: translateY(0); }
+  54%,100% { opacity: 0; transform: translateY(-3px); }
+}
+@keyframes slyInfinSub2 {
+  0%,50%   { opacity: 0; transform: translateY(5px); }
+  62%,88%  { opacity: 1; transform: translateY(0); }
+  98%,100% { opacity: 0; transform: translateY(-3px); }
+}
+@keyframes slyInfinRiskPulse {
+  0%,100% { background: #DC262633; box-shadow: none; }
+  50%     { background: #DC262699; box-shadow: 0 0 6px #DC262655; }
+}
+@keyframes slyInfinWarnPulse {
+  0%,100% { background: #F59E0B33; }
+  50%     { background: #F59E0B88; box-shadow: 0 0 6px #F59E0B44; }
+}
+@keyframes slyInfinShieldPing {
+  0%,100% { box-shadow: 0 0 0 0   #D9770699; }
+  60%     { box-shadow: 0 0 0 10px transparent; }
+}
+@keyframes slyInfinScore {
+  0%,5%  { opacity: 0; transform: scale(.5) rotate(-10deg); }
+  18%    { opacity: 1; transform: scale(1.1) rotate(3deg); }
+  28%,85%{ opacity: 1; transform: scale(1) rotate(0deg); }
+  95%,100%{ opacity: 0; transform: scale(.7); }
+}
+
+/* ── 취업서류 ── */
 .sly-demo-resume {
   background: rgba(244,63,139,.07);
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
 }
 .sly-demo-resume-doc {
-  width: 80px;
-  height: 96px;
+  width: 86px; height: 104px;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(244,63,139,.18);
-  padding: 10px 9px 8px;
+  border-radius: 9px;
+  box-shadow: 0 3px 14px rgba(244,63,139,.22);
+  padding: 12px 10px 10px;
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: flex; flex-direction: column; gap: 7px;
 }
 .sly-demo-resume-line {
-  height: 5px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #F43F8B44, #F43F8B22);
-  animation: slyDemoFadeUp .5s ease both;
+  height: 6px; border-radius: 3px;
+  animation: slyInfinGlow 2.4s ease-in-out infinite;
 }
-.sly-demo-resume-line:nth-child(1) { width: 70%; animation-delay: .1s; background: linear-gradient(90deg,#F43F8B88,#F43F8B33); }
-.sly-demo-resume-line:nth-child(2) { width: 90%; animation-delay: .25s; }
-.sly-demo-resume-line:nth-child(3) { width: 55%; animation-delay: .4s; }
-.sly-demo-resume-line:nth-child(4) { width: 80%; animation-delay: .55s; }
-.sly-demo-resume-line:nth-child(5) { width: 65%; animation-delay: .7s; }
+.sly-demo-resume-line:nth-child(1){ width:68%; background:#F43F8B; opacity:.7; animation-delay:0s; }
+.sly-demo-resume-line:nth-child(2){ width:88%; background:#F43F8B55; animation-delay:.3s; }
+.sly-demo-resume-line:nth-child(3){ width:53%; background:#F43F8B44; animation-delay:.6s; }
+.sly-demo-resume-line:nth-child(4){ width:80%; background:#F43F8B55; animation-delay:.9s; }
+.sly-demo-resume-line:nth-child(5){ width:62%; background:#F43F8B44; animation-delay:1.2s; }
 .sly-demo-resume-scan {
-  position: absolute;
-  left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #F43F8B, transparent);
-  animation: slyDemoScan 2.4s ease-in-out infinite;
-  top: 8px;
+  position: absolute; left: 0; right: 0; height: 3px; top: 6px;
+  background: linear-gradient(90deg,transparent 0%,#F43F8B 40%,#FF6EB4 60%,transparent 100%);
+  animation: slyInfinScan 2.4s ease-in-out infinite;
+  filter: blur(.5px);
 }
 .sly-demo-resume-score {
-  position: absolute;
-  right: -8px;
-  top: 6px;
-  background: #F43F8B;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 3px 7px;
-  border-radius: 8px;
-  animation: slyDemoFadeUp .5s 1s ease both;
+  position: absolute; right: -10px; top: 10px;
+  background: #F43F8B; color: #fff;
+  font-size: 12px; font-weight: 900;
+  padding: 4px 8px 4px 6px; border-radius: 8px 0 0 8px;
   white-space: nowrap;
+  animation: slyInfinScore 4s 1s ease-in-out infinite;
+  box-shadow: -2px 2px 8px #F43F8B55;
 }
-/* 법률·계약 데모 */
+
+/* ── 법률·계약 ── */
 .sly-demo-contract {
   background: rgba(217,119,6,.07);
   width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 0 14px;
 }
 .sly-demo-contract-lines {
-  display: flex; flex-direction: column; gap: 5px; flex: 1; max-width: 100px;
+  display: flex; flex-direction: column; gap: 6px; flex: 1;
 }
 .sly-demo-contract-line {
-  height: 5px; border-radius: 3px;
-  animation: slyDemoFadeUp .4s ease both;
+  height: 6px; border-radius: 3px; width: 90%;
 }
-.sly-demo-contract-line.normal { background: #D9770622; }
-.sly-demo-contract-line:nth-child(1) { width: 90%; animation-delay: .1s; }
-.sly-demo-contract-line:nth-child(2) { width: 70%; animation-delay: .2s; background:#DC262666 !important; animation: slyDemoFadeUp .4s .2s ease both, slyDemoWave 2s 1s infinite; }
-.sly-demo-contract-line:nth-child(3) { width: 85%; animation-delay: .3s; }
-.sly-demo-contract-line:nth-child(4) { width: 60%; animation-delay: .4s; background:#F59E0B66 !important; }
-.sly-demo-contract-line:nth-child(5) { width: 80%; animation-delay: .5s; }
-.sly-demo-risk-tag {
-  font-size: 10px; font-weight: 700; color: #DC2626;
-  background: #FEF2F2; border: 1px solid #DC262644;
-  padding: 2px 6px; border-radius: 6px;
-  animation: slyDemoFadeUp .4s .7s ease both;
-  white-space: nowrap;
+.sly-demo-contract-line:nth-child(1){ background:#D9770622; width:88%; }
+.sly-demo-contract-line:nth-child(2){
+  width:72%;
+  animation: slyInfinRiskPulse 1.6s ease-in-out infinite;
+}
+.sly-demo-contract-line:nth-child(3){ background:#D9770622; width:84%; }
+.sly-demo-contract-line:nth-child(4){
+  width:60%;
+  animation: slyInfinWarnPulse 2s .6s ease-in-out infinite;
+}
+.sly-demo-contract-line:nth-child(5){ background:#D9770622; width:78%; }
+.sly-demo-contract-right {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
 .sly-demo-shield-ico {
-  width: 38px; height: 38px;
-  border-radius: 50%;
+  width: 42px; height: 42px; border-radius: 50%;
   background: #D97706;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  animation: slyDemoShield 2s 1s infinite;
+  animation: slyInfinShieldPing 2s ease-out infinite;
 }
-.sly-demo-shield-ico svg { width: 20px; height: 20px; }
-/* 부동산 데모 */
+.sly-demo-shield-ico svg { width: 22px; height: 22px; }
+.sly-demo-risk-tag {
+  font-size: 10px; font-weight: 700; color: #DC2626;
+  background: #FEF2F2; border: 1.5px solid #DC262655;
+  padding: 3px 7px; border-radius: 7px;
+  white-space: nowrap;
+  animation: slyInfinPop 1.6s ease-in-out infinite;
+}
+
+/* ── 부동산 ── */
 .sly-demo-estate {
   background: rgba(22,163,74,.07);
   width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
   padding: 10px 14px;
 }
-.sly-demo-estate-bar-wrap {
-  width: 100%;
-  display: flex; flex-direction: column; gap: 4px;
-}
-.sly-demo-estate-bar-row {
-  display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 600;
-}
-.sly-demo-estate-label { color: #16A34A; min-width: 46px; }
-.sly-demo-estate-track {
-  flex: 1; height: 7px; background: #16A34A1A; border-radius: 4px; overflow: hidden;
-}
+.sly-demo-estate-bar-wrap { width: 100%; display: flex; flex-direction: column; gap: 5px; }
+.sly-demo-estate-bar-row { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; }
+.sly-demo-estate-label { min-width: 28px; }
+.sly-demo-estate-track { flex: 1; height: 8px; background: #0002; border-radius: 4px; overflow: hidden; }
 .sly-demo-estate-fill {
   height: 100%; border-radius: 4px;
-  animation: slyDemoSlide 1.2s ease-out both;
+  animation: slyInfinBarFill 3.6s ease-in-out infinite;
 }
-.sly-demo-estate-fill.safe { background: #16A34A; --w:55%; animation-delay:.2s; }
-.sly-demo-estate-fill.warn { background: #F59E0B; --w:78%; animation-delay:.5s; }
-.sly-demo-estate-fill.danger { background: #DC2626; --w:91%; animation-delay:.8s; }
+.sly-demo-estate-fill.safe   { background: linear-gradient(90deg,#16A34A,#4ADE80); --w:55%; animation-delay:.1s; }
+.sly-demo-estate-fill.warn   { background: linear-gradient(90deg,#D97706,#FBBF24); --w:78%; animation-delay:.5s; }
+.sly-demo-estate-fill.danger { background: linear-gradient(90deg,#DC2626,#F87171); --w:92%; animation-delay:.9s; }
 .sly-demo-estate-verdict {
   background: #16A34A; color: #fff;
   font-size: 11px; font-weight: 700;
-  padding: 3px 10px; border-radius: 20px;
-  animation: slyDemoFadeUp .5s 1.5s ease both; opacity: 0;
-  animation-fill-mode: both;
+  padding: 3px 12px; border-radius: 20px;
+  animation: slyInfinBubble2 3.6s 1s ease-in-out infinite;
+  white-space: nowrap;
 }
-/* 직장생활 데모 */
+
+/* ── 직장생활 ── */
 .sly-demo-tone {
   background: rgba(124,58,237,.07);
   width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  padding: 8px 12px;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px;
+  padding: 10px 12px;
 }
 .sly-demo-tone-bubble {
-  width: 100%; padding: 6px 10px;
+  width: 100%; padding: 7px 10px;
   border-radius: 10px; font-size: 11px; font-weight: 600;
-  animation: slyDemoFadeUp .4s ease both;
+  line-height: 1.35;
 }
 .sly-demo-tone-bubble.before {
-  background: #EF444422; color: #DC2626;
+  background: #FEE2E2; color: #B91C1C;
   border-left: 3px solid #EF4444;
-  animation-delay: .1s;
-}
-.sly-demo-tone-bubble.after {
-  background: #7C3AED18; color: #7C3AED;
-  border-left: 3px solid #7C3AED;
-  animation-delay: .8s;
+  animation: slyInfinBubble1 5s ease-in-out infinite;
 }
 .sly-demo-tone-arrow {
-  font-size: 16px; color: #7C3AED; opacity: .7;
-  animation: slyDemoFadeUp .3s .5s ease both;
+  font-size: 14px; font-weight: 800; color: #7C3AED;
+  align-self: center;
+  animation: slyInfinArrow 5s ease-in-out infinite;
 }
-/* 공문서 데모 */
+.sly-demo-tone-bubble.after {
+  background: #EDE9FE; color: #5B21B6;
+  border-left: 3px solid #7C3AED;
+  animation: slyInfinBubble2 5s ease-in-out infinite;
+}
+
+/* ── 공문서 ── */
 .sly-demo-gov {
   background: rgba(37,99,235,.07);
   width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
 }
 .sly-demo-gov-doc {
-  width: 64px; height: 80px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(37,99,235,.15);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  padding: 6px;
-  position: relative;
+  width: 68px; height: 84px;
+  background: #fff; border-radius: 9px;
+  box-shadow: 0 2px 10px rgba(37,99,235,.18);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  padding: 8px; position: relative; flex-shrink: 0;
 }
 .sly-demo-gov-line {
-  width: 80%; height: 4px; border-radius: 2px;
-  background: #2563EB22;
-  animation: slyDemoFadeUp .3s ease both;
+  width: 82%; height: 5px; border-radius: 3px;
+  animation: slyInfinGlow 2s ease-in-out infinite;
 }
-.sly-demo-gov-line:nth-child(1){animation-delay:.1s;width:60%;background:#2563EB55}
-.sly-demo-gov-line:nth-child(2){animation-delay:.2s;}
-.sly-demo-gov-line:nth-child(3){animation-delay:.3s;width:70%}
-.sly-demo-gov-line:nth-child(4){animation-delay:.4s;}
+.sly-demo-gov-line:nth-child(1){ width:58%; background:#2563EB; animation-delay:0s; }
+.sly-demo-gov-line:nth-child(2){ background:#2563EB33; animation-delay:.4s; }
+.sly-demo-gov-line:nth-child(3){ width:72%; background:#2563EB33; animation-delay:.8s; }
+.sly-demo-gov-line:nth-child(4){ background:#2563EB33; animation-delay:1.2s; }
 .sly-demo-gov-stamp {
-  position: absolute; right: -8px; bottom: -6px;
-  width: 30px; height: 30px;
+  position: absolute; right: -12px; bottom: -8px;
+  width: 34px; height: 34px;
   background: #2563EB; color: #fff;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-  animation: slyDemoStamp .5s .8s ease both;
-  opacity: 0; animation-fill-mode: both;
-  box-shadow: 0 2px 8px #2563EB55;
+  font-size: 18px; font-weight: 700;
+  animation: slyInfinStamp 4s ease-in-out infinite;
+  box-shadow: 0 3px 10px #2563EB66;
 }
-.sly-demo-gov-list {
-  display: flex; flex-direction: column; gap: 5px;
-}
+.sly-demo-gov-list { display: flex; flex-direction: column; gap: 6px; }
 .sly-demo-gov-tag {
-  font-size: 10px; font-weight: 600;
-  padding: 3px 8px; border-radius: 6px;
-  animation: slyDemoFadeUp .4s ease both;
+  font-size: 10px; font-weight: 700;
+  padding: 4px 9px; border-radius: 7px; white-space: nowrap;
 }
-.sly-demo-gov-tag:nth-child(1){background:#EFF6FF;color:#2563EB;animation-delay:.2s}
-.sly-demo-gov-tag:nth-child(2){background:#F0FDF4;color:#16A34A;animation-delay:.5s}
-.sly-demo-gov-tag:nth-child(3){background:#FFF7ED;color:#EA580C;animation-delay:.8s}
-/* 영상·미디어 데모 */
+.sly-demo-gov-tag:nth-child(1){
+  background:#EFF6FF; color:#2563EB;
+  animation: slyInfinTag 4s ease-in-out infinite;
+  --ts:5%; --te:65%;
+}
+.sly-demo-gov-tag:nth-child(2){
+  background:#F0FDF4; color:#16A34A;
+  animation: slyInfinTag 4s .6s ease-in-out infinite;
+  --ts:5%; --te:65%;
+}
+.sly-demo-gov-tag:nth-child(3){
+  background:#FFF7ED; color:#EA580C;
+  animation: slyInfinTag 4s 1.2s ease-in-out infinite;
+  --ts:5%; --te:65%;
+}
+
+/* ── 영상·미디어 ── */
 .sly-demo-media {
   background: rgba(234,88,12,.07);
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
 }
 .sly-demo-video-frame {
-  width: 110px; height: 84px;
-  background: #1a1a2e;
-  border-radius: 8px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(234,88,12,.25);
+  width: 130px; height: 90px;
+  background: #0f0f1a;
+  border-radius: 10px;
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(234,88,12,.3);
+}
+.sly-demo-video-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg,#1a1a3e 0%,#0f0f1a 50%,#1a0f0a 100%);
 }
 .sly-demo-video-bar {
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg,#EA580C,#F97316);
-  animation: slyDemoSlide 2s ease-in-out infinite alternate;
-  --w: 100%;
+  position: absolute; bottom: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg,#EA580C,#F97316,#FBBF24);
+  animation: slyInfinVideoBar 4s linear infinite;
 }
 .sly-demo-video-play {
   position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%,-60%);
-  width: 24px; height: 24px;
-  background: rgba(255,255,255,.15);
+  transform: translate(-50%,-55%);
+  width: 28px; height: 28px;
+  background: rgba(255,255,255,.12);
+  border: 1.5px solid rgba(255,255,255,.3);
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
+  animation: slyInfinPop 3s ease-in-out infinite;
 }
 .sly-demo-video-play::after {
   content: '';
-  border-left: 9px solid #fff;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  margin-left: 2px;
+  border-left: 11px solid #fff;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  margin-left: 3px;
 }
 .sly-demo-video-sub {
-  position: absolute; bottom: 8px; left: 6px; right: 6px;
-  background: rgba(0,0,0,.7);
-  color: #fff; font-size: 9px; font-weight: 600;
-  text-align: center; padding: 3px 4px; border-radius: 4px;
-  animation: slyDemoSub 3s 0.5s ease infinite;
+  position: absolute; bottom: 10px; left: 6px; right: 6px;
+  background: rgba(0,0,0,.8);
+  color: #fff; font-size: 9px; font-weight: 700;
+  text-align: center; padding: 4px 5px; border-radius: 5px;
+  animation: slyInfinSub1 6s ease-in-out infinite;
 }
 .sly-demo-video-sub2 {
-  position: absolute; bottom: 8px; left: 6px; right: 6px;
-  background: rgba(0,0,0,.7);
-  color: #fff; font-size: 9px; font-weight: 600;
-  text-align: center; padding: 3px 4px; border-radius: 4px;
-  animation: slyDemoSub 3s 3.5s ease infinite;
+  position: absolute; bottom: 10px; left: 6px; right: 6px;
+  background: rgba(0,0,0,.8);
+  color: #FBBF24; font-size: 9px; font-weight: 700;
+  text-align: center; padding: 4px 5px; border-radius: 5px;
+  animation: slyInfinSub2 6s ease-in-out infinite;
 }
 /* 서비스 패널 */
 .sly-svc-panel {
