@@ -1302,20 +1302,30 @@ body {
   height: calc(100svh - 102px);
 }
 .sly-cat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid transparent;
   border-radius: 16px;
-  padding: 18px 14px 14px;
+  padding: 0;
   cursor: pointer;
   transition: transform .18s, box-shadow .18s;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   position: relative;
   min-height: 0;
   overflow: hidden;
 }
-.sly-cat-card:hover { box-shadow: var(--shadow-card); border-color: rgba(0,0,0,.15); }
+.sly-cat-card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 14px 14px;
+  flex: 1;
+}
+.sly-cat-card-bar {
+  height: 5px;
+  width: 100%;
+  flex-shrink: 0;
+}
+.sly-cat-card:hover { box-shadow: var(--shadow-card); }
 .sly-cat-card:active { transform: scale(.97); }
 .sly-cat-ico {
   width: 48px; height: 48px;
@@ -1936,12 +1946,12 @@ const SVC_META = {
 
 // 카테고리별 accent 색상 (회사 브랜드: 핑크·연두·골드 + 하늘색 계열)
 const CAT_ACCENT = {
-  '취업서류': { bg: '#FFF0F6', color: '#FF6B9D' },
-  '법률·계약': { bg: '#FFF8E6', color: '#C9A84C' },
-  '부동산':   { bg: '#F0FBF0', color: '#52C41A' },
-  '직장생활': { bg: '#FFF0F6', color: '#FF8FAB' },
-  '공문서':   { bg: '#E8F4FD', color: '#0EA5E9' },
-  '영상·미디어': { bg: '#F0FBF0', color: '#34C759' },
+  '취업서류':   { bg: '#FFF0F6', color: '#F43F8B' },   // 핑크
+  '법률·계약':  { bg: '#FFFBEB', color: '#D97706' },   // 골드
+  '부동산':     { bg: '#F0FDF4', color: '#16A34A' },   // 그린
+  '직장생활':   { bg: '#F5F0FF', color: '#7C3AED' },   // 퍼플
+  '공문서':     { bg: '#EFF6FF', color: '#2563EB' },   // 블루
+  '영상·미디어':{ bg: '#FFF7F0', color: '#EA580C' },   // 오렌지
 };
 
 const SVC_LABEL_MAP = {};
@@ -1954,15 +1964,18 @@ function renderCatGrid() {
     const acc = CAT_ACCENT[cat.label] || { bg: '#f3f4f6', color: '#374151' };
     const chips = cat.svcs.map(id => {
       const name = SVC_LABEL_MAP[id] || id;
-      return `<span class="sly-cat-svc-chip" style="background:${acc.bg};color:${acc.color}">${name}</span>`;
+      return `<span class="sly-cat-svc-chip" style="background:#fff;color:${acc.color};border:1px solid ${acc.color}44">${name}</span>`;
     }).join('');
-    return `<div class="sly-cat-card" onclick="_slyOpenCat('${cat.label.replace(/'/g,"\\'")}')">
-      <div class="sly-cat-ico" style="background:${acc.bg};color:${acc.color}">${cat.icon}</div>
-      <div class="sly-cat-meta">
-        <div class="sly-cat-name">${cat.label}</div>
-        <div class="sly-cat-count">${cat.svcs.length}개</div>
+    return `<div class="sly-cat-card" style="background:${acc.bg};border-color:${acc.color}44" onclick="_slyOpenCat('${cat.label.replace(/'/g,"\\'")}')">
+      <div class="sly-cat-card-bar" style="background:${acc.color}"></div>
+      <div class="sly-cat-card-inner">
+        <div class="sly-cat-ico" style="background:#fff;color:${acc.color};box-shadow:0 2px 8px ${acc.color}33">${cat.icon}</div>
+        <div class="sly-cat-meta">
+          <div class="sly-cat-name">${cat.label}</div>
+          <div class="sly-cat-count">${cat.svcs.length}개</div>
+        </div>
+        <div class="sly-cat-svcs">${chips}</div>
       </div>
-      <div class="sly-cat-svcs">${chips}</div>
     </div>`;
   }).join('');
   el.style.display = '';
