@@ -1507,13 +1507,27 @@ body {
 }
 .sly-svc-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 18px;
-  padding: 16px;
+  padding: 0;
   cursor: pointer;
-  transition: transform .18s;
+  transition: transform .18s, box-shadow .18s;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .sly-svc-card:active { transform: scale(.98); }
+.sly-svc-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.sly-svc-card-accent {
+  height: 4px;
+  width: 100%;
+  flex-shrink: 0;
+}
 .sly-svc-card-top {
   display: flex;
   align-items: flex-start;
@@ -2084,19 +2098,22 @@ function _slyOpenCat(catLabel) {
     const bulletsHtml = (s.bullets || []).slice(0,3).map(b =>
       `<div class="sly-svc-card-bullet">${b}</div>`
     ).join('');
-    return `<div class="sly-svc-card" onclick="_slyOpenDrawer('${s.id}')">
-      <div class="sly-svc-card-top">
-        <div class="sly-svc-card-ico" style="background:${ibg};color:${icolor}">${icon}</div>
-        <div class="sly-svc-card-hd">
-          <div class="sly-svc-card-name">${s.label} ${s.sublabel} ${badgeHtml}</div>
-          <div class="sly-svc-card-price">${s.cost.toLocaleString()}P</div>
+    return `<div class="sly-svc-card" style="border-color:${icolor}33" onclick="_slyOpenDrawer('${s.id}')">
+      <div class="sly-svc-card-accent" style="background:${icolor}"></div>
+      <div class="sly-svc-card-body">
+        <div class="sly-svc-card-top">
+          <div class="sly-svc-card-ico" style="background:${ibg};color:${icolor}">${icon}</div>
+          <div class="sly-svc-card-hd">
+            <div class="sly-svc-card-name">${s.label} ${s.sublabel} ${badgeHtml}</div>
+            <div class="sly-svc-card-price">${s.cost.toLocaleString()}P</div>
+          </div>
         </div>
-      </div>
-      <div class="sly-svc-card-desc">${s.desc || ''}</div>
-      <div class="sly-svc-card-bullets">${bulletsHtml}</div>
-      <div class="sly-svc-card-footer">
-        <span class="sly-svc-card-meta">★ ${meta.stars} (${meta.reviews})</span>
-        <button class="sly-svc-card-cta" style="background:${icolor}" onclick="event.stopPropagation();_slyOpenDrawer('${s.id}')">분석 시작</button>
+        <div class="sly-svc-card-desc">${s.desc || ''}</div>
+        <div class="sly-svc-card-bullets">${bulletsHtml}</div>
+        <div class="sly-svc-card-footer">
+          <span class="sly-svc-card-meta">★ ${meta.stars} (${meta.reviews})</span>
+          <button class="sly-svc-card-cta" style="background:${icolor}" onclick="event.stopPropagation();_slyOpenDrawer('${s.id}')">분석 시작</button>
+        </div>
       </div>
     </div>`;
   }).join('');
