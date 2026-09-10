@@ -17,6 +17,7 @@ import multer from 'multer';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { writeFile, readFile, mkdtemp, rm, mkdir } from 'fs/promises';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { chromium } from 'playwright';
@@ -654,19 +655,14 @@ app.post('/api/iros-fetch', async (req, res) => {
       });
     });
 
-    // WebSquare SPA는 navigator.webdriver=true 감지 시 이벤트 핸들러를 비활성화 →
-    // 모든 페이지 로드 전에 false로 패치 (addInitScript는 goto 전에 등록해야 적용됨)
-    await page.addInitScript(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      // WebSquare 추가 탐지 우회
+    // XHR 모니터링 + 헤드리스 탐지 우회 — context 전체 적용 (팝업·iframe·Method U 신규 탭 포함)
+    await context.addInitScript(() => {
+      // 헤드리스 탐지 우회 (신규 탭에도 적용)
+      try { Object.defineProperty(navigator, 'webdriver', { get: () => false }); } catch(_) {}
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
       delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
-    });
 
-    // XHR 모니터링 — context 전체 적용 (팝업·iframe 포함)
-    // WebSquare4 내부 XHR URL·응답 캡처 → 등기 데이터 URL 파악
-    await context.addInitScript(() => {
       if (window._irosXhrHooked) return;
       window._irosXhrHooked = true;
       window._irosXhrLog = [];
@@ -694,6 +690,27 @@ app.post('/api/iros-fetch', async (req, res) => {
         }
         return _origSend.apply(this, arguments);
       };
+      // fetch() 후킹 (WebSquare4가 XHR 대신 fetch 사용할 경우 캡처)
+      if (typeof window.fetch === 'function' && !window._irosFetchHooked) {
+        window._irosFetchHooked = true;
+        const _origFetch = window.fetch;
+        window.fetch = async function(resource, init) {
+          const _fUrl = String(typeof resource === 'string' ? resource : (resource && resource.url) || '');
+          const _resp = await _origFetch.apply(this, arguments);
+          if (_fUrl.includes('iros') || _fUrl.includes('.go.kr')) {
+            try {
+              const _clone = _resp.clone();
+              const _text = await _clone.text().catch(() => '');
+              const _hasReg = /표제부|갑구|을구|소유권이전|순위번호|등기원인|근저당/.test(_text);
+              (window._irosXhrLog = window._irosXhrLog || []).push({ url: _fUrl, type: 'fetch', st: _resp.status, len: _text.length, prev: _text.slice(0, 400), reg: _hasReg });
+              if (_hasReg && !window._irosXhrRegData) {
+                window._irosXhrRegData = { url: _fUrl, body: _text.slice(0, 80000) };
+              }
+            } catch(_fe) {}
+          }
+          return _resp;
+        };
+      }
     });
 
     // 네트워크 요청 인터셉트 — IROS 검색 API 요청 로깅 (주소가 실제로 전달되는지 확인)
@@ -714,8 +731,8 @@ app.post('/api/iros-fetch', async (req, res) => {
       try {
         const rUrl = resp.url();
         if (!rUrl.includes('iros.go.kr')) return;
-        // JS/CSS 정적 파일에서 상수값 오캡처 방지
-        if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/.test(rUrl)) return;
+        // JS/CSS/XML 정적 파일에서 오캡처 방지 (Pm10P0SmplhlpMain.xml 등 도움말 XML 제외)
+        if (/\.(xml|xsd|js|css|png|jpg|gif|ico|woff|ttf|eot|svg)(\?|$)/i.test(rUrl)) return;
         const ct = resp.headers()['content-type'] || '';
         if (!ct.includes('json') && !rUrl.includes('srch') && !rUrl.includes('Renf') && !rUrl.includes('Smpl') && !rUrl.includes('smpl') && !rUrl.includes('retrieve') && !rUrl.includes('SrchList')) return;
         const body = await resp.text().catch(() => '');
@@ -1546,6 +1563,12 @@ app.post('/api/iros-fetch', async (req, res) => {
         } catch { return null; }
       }).catch(() => null);
       if (pinFromRow) console.log('[iros] datalist에서 PIN 추출:', pinFromRow);
+    }
+
+    // 그리드에서 확인된 실제 PIN으로 capturedPin 덮어쓰기 (도움말 XML 오캡처 수정)
+    if (pinFromRow) {
+      capturedPin = pinFromRow.replace(/-/g, '');
+      console.log('[iros] capturedPin → 그리드 PIN 으로 교정:', capturedPin);
     }
 
     // Gauce WebSquare API로 행 선택 + UI 이벤트 발생
@@ -3352,7 +3375,7 @@ app.post('/api/iros-fetch', async (req, res) => {
         if (directApiContent) {
           rlrgCount = 999; // sentinel: 직접 API 성공
           // 디버그: 성공 내용을 파일로 저장 (확인용)
-          try { require('fs').writeFileSync('/tmp/iros-method-o-result.json', directApiContent); } catch(e) {}
+          try { writeFileSync('/tmp/iros-method-o-result.json', directApiContent); } catch(e) {}
           console.log('[iros] 방법O: 직접 API 성공 내용 전체:', directApiContent.slice(0, 1000));
           console.log('[iros] 방법O: 직접 API 성공, content 반환 준비');
         } else {
@@ -3434,6 +3457,54 @@ app.post('/api/iros-fetch', async (req, res) => {
         } catch (e) { console.log('T-inject error', e.message); }
       }, { pin: capturedPin, pinD: pinDash }).catch(() => {});
       console.log('[iros] 방법T: WebSquare DataList PIN 주입 완료 PIN=', capturedPin, 'pinDash=', pinDash);
+    }
+
+    // ── 방법T2: DataList 주입 후 JS로 iframe 직접 생성 → WebSquare4 parent DataList 읽기 ──
+    // 핵심: callMpPrtIframe.do 는 rnum을 URL파라미터가 아닌 window.parent.dlt_smpl_srch_rslt에서 읽음
+    // → Playwright resultPage에 DataList를 세팅한 채로 iframe을 DOM에 직접 삽입하면 부모 참조 가능
+    if (rlrgCount === 0 && capturedPin) {
+      console.log('[iros] 방법T2: JS iframe 직접 삽입 PIN=', capturedPin);
+      try {
+        const pinDashT2 = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        const t2PopupPromise = resultPage.waitForEvent('popup', { timeout: 8000 }).catch(() => null);
+        // iframe 삽입 (body에 직접 append)
+        await resultPage.evaluate((pinD) => {
+          const ifrSrc = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null`;
+          const ifr = document.createElement('iframe');
+          ifr.id = '_iros_t2_iframe';
+          ifr.src = ifrSrc;
+          ifr.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;border:none;';
+          document.body.appendChild(ifr);
+          // iframe이 load되면 contentWindow.parent === window(resultPage) 이므로 DataList 접근 가능
+        }, pinDashT2).catch(() => {});
+        // 10초 대기 (WebSquare4 초기화 + AJAX)
+        await resultPage.waitForTimeout(10000);
+        // iframe frame 찾기
+        const t2Frame = resultPage.frames().find(f => f.url().includes('callMpPrtIframe'));
+        if (t2Frame) {
+          const t2Text = await t2Frame.innerText('body').catch(() => '');
+          const t2Log = await t2Frame.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const t2RegData = await t2Frame.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] 방법T2 iframe:', t2Frame.url(), 'XHR건수:', t2Log.length, '앞500:', t2Text.slice(0, 500));
+          if (t2RegData) {
+            directApiContent = JSON.stringify({ type: 'method_t2_xhr', url: t2RegData.url, content: t2RegData.body });
+            rlrgCount = 999;
+          } else if (_vrRe.test(t2Text)) {
+            directApiContent = JSON.stringify({ type: 'method_t2_iframe', content: t2Text });
+            rlrgCount = 999;
+          } else if (t2Log.length > 0) {
+            console.log('[iros] 방법T2 XHR로그(상위):', t2Log.slice(0, 3).map(x => x.url + '|' + x.len).join(', '));
+          }
+          if (rlrgCount === 999) {
+            try { writeFileSync('/tmp/iros-method-t2-result.json', directApiContent); } catch(e) {}
+            console.log('[iros] 방법T2 성공!');
+          }
+        } else {
+          console.log('[iros] 방법T2 iframe 미생성');
+        }
+        // 삽입한 iframe 제거
+        await resultPage.evaluate(() => { const el = document.getElementById('_iros_t2_iframe'); if (el) el.remove(); }).catch(() => {});
+      } catch (e) { console.log('[iros] 방법T2 오류:', e.message); }
     }
 
     // ── 방법Q: _modal 제거 후 강제 클릭 → iframe 캡처 ────────────────────────────────
@@ -3536,7 +3607,7 @@ app.post('/api/iros-fetch', async (req, res) => {
                 const combined = frameText || wsData;
                 directApiContent = JSON.stringify({ type: 'iframe', url: frameUrl, content: combined, html: frameHtml.slice(0, 8000), wsData });
                 rlrgCount = 999;
-                try { require('fs').writeFileSync('/tmp/iros-method-q-result.json', directApiContent); } catch (e) {}
+                try { writeFileSync('/tmp/iros-method-q-result.json', directApiContent); } catch (e) {}
                 console.log('[iros] 방법Q iframe 성공! length:', combined.length);
                 break;
               }
@@ -3565,16 +3636,36 @@ app.post('/api/iros-fetch', async (req, res) => {
           ];
           for (const navUrl of navUrls) {
             console.log('[iros] 방법R goto:', navUrl);
-            await iframeFrame.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(e => console.log('[iros] 방법R goto 오류:', e.message));
-            await resultPage.waitForTimeout(5000);
+            // 프레임이 이미 올바른 URL에 있으면 goto 스킵 (중복 로드 방지)
+            const alreadyAtUrl = iframeFrame.url().includes('callMpPrtIframe') && iframeFrame.url().includes('rnum=');
+            if (!alreadyAtUrl) {
+              await iframeFrame.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(e => console.log('[iros] 방법R goto 오류:', e.message));
+            } else {
+              console.log('[iros] 방법R: 이미 올바른 URL — goto 스킵, 현재:', iframeFrame.url());
+            }
+            // WebSquare4 AJAX 완료 대기 (25초 — 정부 서버 느림)
+            await resultPage.waitForTimeout(25000);
             const iframeText = await iframeFrame.innerText('body').catch(() => '');
             const iframeHtml = await iframeFrame.content().catch(() => '');
+            const iframeXhrLog = await iframeFrame.evaluate(() => window._irosXhrLog || []).catch(() => []);
+            const iframeXhrRegData = await iframeFrame.evaluate(() => window._irosXhrRegData || null).catch(() => null);
             console.log('[iros] 방법R frame URL:', iframeFrame.url(), '| 앞500:', iframeText.slice(0, 500));
+            console.log('[iros] 방법R XHR건수:', iframeXhrLog.length, '| RegData:', iframeXhrRegData ? 'YES' : 'NO');
+            if (iframeXhrLog.length > 0) {
+              console.log('[iros] 방법R XHR로그(상위3):', iframeXhrLog.slice(0, 3).map(x => x.url + '|st=' + x.st + '|len=' + x.len + '|reg=' + x.reg).join(' / '));
+            }
+            if (iframeXhrRegData) {
+              directApiContent = JSON.stringify({ type: 'iframe_r_xhr', url: iframeXhrRegData.url, content: iframeXhrRegData.body });
+              rlrgCount = 999;
+              try { writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
+              console.log('[iros] 방법R XHR 성공! length:', iframeXhrRegData.body.length);
+              break;
+            }
             if (iframeText.length > 200 && IFRAME_KW_R.test(iframeText)) {
               directApiContent = JSON.stringify({ type: 'iframe_direct', url: iframeFrame.url(), content: iframeText, html: iframeHtml.slice(0, 8000) });
               rlrgCount = 999;
-              try { require('fs').writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
-              console.log('[iros] 방법R 성공! length:', iframeText.length);
+              try { writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
+              console.log('[iros] 방법R 텍스트 성공! length:', iframeText.length);
               break;
             }
           }
@@ -3604,7 +3695,7 @@ app.post('/api/iros-fetch', async (req, res) => {
         if (s4.body && _vrRe.test(s4.body)) {
           directApiContent = JSON.stringify({ type: 'post_viewer', content: s4.body });
           rlrgCount = 999;
-          try { require('fs').writeFileSync('/tmp/iros-method-s4-result.json', directApiContent); } catch (e) {}
+          try { writeFileSync('/tmp/iros-method-s4-result.json', directApiContent); } catch (e) {}
           console.log('[iros] 방법S4 등기 데이터 확보!');
         }
         // 원본 PIN(대시 없이)으로도 시도
@@ -3637,6 +3728,169 @@ app.post('/api/iros-fetch', async (req, res) => {
       console.log('[iros] 방법S4-뷰어AJAX: 이미 캡처된 뷰어 응답 사용');
       directApiContent = JSON.stringify({ type: 'viewer_ajax_late', content: _viewerAjaxContent });
       rlrgCount = 999;
+    }
+
+    // ── 방법W: WebSquare4 scwin 함수 직접 호출 (클릭 시뮬레이션 없이) ───────────────────
+    if (rlrgCount === 0 && capturedPin) {
+      console.log('[iros] 방법W: scwin 함수 직접 호출 PIN=', capturedPin);
+      try {
+        const pinDashW = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        // 현재 scwin 함수 중 열람/조회 관련 함수 찾기
+        const wFnInfo = await resultPage.evaluate(({ pin, pinD }) => {
+          const cands = window.scwin ? Object.keys(window.scwin).filter(k => /(view|열람|smpl|rlrg|prt|issue|조회)/i.test(k)) : [];
+          // DataList에 올바른 row 세팅
+          const dlKeys = ['dlt_smpl_srch_rslt', 'mf_wfm_potal_main_wfm_content_dlt_smpl_srch_rslt', 'mf_wfm_content_dlt_smpl_srch_rslt'];
+          const rowData = { rnum: pinD, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y', smplPrntOrdrNo: '' };
+          dlKeys.forEach(k => {
+            const dl = window[k] || (window.scwin && window.scwin[k]);
+            if (dl && dl.setData) try { dl.setData([rowData]); } catch(_) {}
+            if (dl && dl.setRowData) try { dl.setRowData(0, rowData); } catch(_) {}
+          });
+          // fn_view_smpl_rlrg, fn_smpl_view, fn_rlrg_view 등 시도
+          const tryFns = ['fn_view_smpl_rlrg', 'fn_smpl_rlrg_view', 'fn_smpl_view', 'fn_rlrg', 'fn_prt_view', 'fn_smplRlrgView'];
+          const called = [];
+          for (const fn of tryFns) {
+            if (window.scwin && typeof window.scwin[fn] === 'function') {
+              try { window.scwin[fn](0); called.push(fn + '(0)'); } catch(e) { called.push(fn + ':err:' + e.message); }
+            }
+          }
+          // 발견한 후보 함수들도 첫 번째 것 호출
+          if (called.length === 0 && cands.length > 0) {
+            const fn = cands[0];
+            try { window.scwin[fn](0); called.push(fn + '(0)-cand'); } catch(e) { called.push(fn + ':err:' + e.message); }
+          }
+          return { cands, called };
+        }, { pin: capturedPin, pinD: pinDashW }).catch(e => ({ err: e.message }));
+        console.log('[iros] 방법W scwin 후보:', JSON.stringify(wFnInfo));
+        // 새 팝업 또는 응답 대기 (10초)
+        const wPopupPromise = resultPage.waitForEvent('popup', { timeout: 10000 }).catch(() => null);
+        const wNewPage = await wPopupPromise;
+        if (wNewPage) {
+          await wNewPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
+          await wNewPage.waitForTimeout(8000);
+          const wText = await wNewPage.innerText('body').catch(() => '');
+          const wLog = await wNewPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const wRegData = await wNewPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] 방법W 팝업 URL:', wNewPage.url(), 'XHR건수:', wLog.length, '본문앞300:', wText.slice(0, 300));
+          await wNewPage.screenshot({ path: '/home/opc/iros-debug/step7-method-w.png', fullPage: true }).catch(() => {});
+          if (wRegData) {
+            directApiContent = JSON.stringify({ type: 'method_w_xhr', url: wRegData.url, content: wRegData.body });
+            rlrgCount = 999;
+          } else if (_vrRe.test(wText)) {
+            directApiContent = JSON.stringify({ type: 'method_w_popup', content: wText });
+            rlrgCount = 999;
+          }
+          if (rlrgCount === 999) {
+            try { writeFileSync('/tmp/iros-method-w-result.json', directApiContent); } catch(e) {}
+            console.log('[iros] 방법W 성공!');
+          }
+          await wNewPage.close().catch(() => {});
+        } else {
+          // 팝업 없으면 resultPage 내 iframe 확인
+          await resultPage.waitForTimeout(3000);
+          const wFrame = resultPage.frames().find(f => f.url().includes('callMpPrtIframe') || f.url().includes('smplRlrg'));
+          if (wFrame) {
+            const wFrameText = await wFrame.innerText('body').catch(() => '');
+            const wFrameLog = await wFrame.evaluate(() => window._irosXhrLog || []).catch(() => []);
+            console.log('[iros] 방법W iframe:', wFrame.url(), 'XHR건수:', wFrameLog.length, '앞300:', wFrameText.slice(0, 300));
+            if (_vrRe.test(wFrameText)) {
+              directApiContent = JSON.stringify({ type: 'method_w_iframe', content: wFrameText });
+              rlrgCount = 999;
+              console.log('[iros] 방법W iframe 성공!');
+            }
+          } else {
+            console.log('[iros] 방법W 팝업/iframe 없음');
+          }
+        }
+      } catch (e) { console.log('[iros] 방법W 오류:', e.message); }
+    }
+
+    // ── 방법U: 뷰어를 독립 신규 탭에서 열기 (parent iframe 의존 제거) ─────────────────
+    if (rlrgCount === 0 && capturedPin) {
+      console.log('[iros] 방법U: 독립 신규 탭에서 뷰어 열기 PIN=', capturedPin);
+      let uPage;
+      try {
+        const pinDashU = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+        uPage = await context.newPage();
+        // window.opener / window.parent mock 주입 — WebSquare4 뷰어가 부모창 DataList에서 PIN 읽을 때 대비
+        await uPage.addInitScript(({ pin, pinD }) => {
+          const fakeRow = { rnum: pinD, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y', smplPrntOrdrNo: '' };
+          const fakeDl = {
+            getRowData: () => fakeRow, getData: () => [fakeRow], getRowCount: () => 1,
+            getValue: (col) => fakeRow[col] || '',
+          };
+          const fakeCtx = {};
+          ['dlt_smpl_srch_rslt', 'mf_wfm_potal_main_wfm_content_dlt_smpl_srch_rslt', 'mf_wfm_content_dlt_smpl_srch_rslt'].forEach(k => { fakeCtx[k] = fakeDl; });
+          fakeCtx.scwin = fakeCtx;
+          fakeCtx.__iros_selected_rnum = pin;
+          fakeCtx.__iros_selected_rnum_dash = pinD;
+          // opener mock (팝업으로 열렸을 때 WebSquare4가 window.opener에서 데이터 읽는 경우)
+          try { Object.defineProperty(window, 'opener', { get: () => fakeCtx, configurable: true }); } catch(_) {}
+          // parent mock도 주입 (standalone 탭에서 window.parent === window 이지만 혹시 재정의 필요한 경우)
+          window.__irosParentMock = fakeCtx;
+        }, { pin: capturedPin, pinD: pinDashU });
+
+        // 뷰어 URL — IS_NMBR_LOGIN__ 을 실제 로그인 여부와 무관하게 'Y'로 지정해보기
+        const viewerUrlY = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=Y&rnum=${pinDashU}&rlrgGbn=1&payCl=F&smplKindCls=1&smplPrntOrdrNo=`;
+        const viewerUrlN = `https://www.iros.go.kr/biz/Pr20ViaMpPrtCtrl/callMpPrtIframe.do?IS_NMBR_LOGIN__=null&rnum=${pinDashU}&rlrgGbn=1&payCl=F&smplKindCls=1&smplPrntOrdrNo=`;
+        console.log('[iros] 방법U 이동:', viewerUrlY);
+        await uPage.goto(viewerUrlY, { waitUntil: 'networkidle', timeout: 30000 }).catch(e => console.log('[iros] 방법U goto 오류(Y):', e.message));
+        await uPage.waitForTimeout(3000);
+        // WebSquare4 초기화 상태 진단
+        const uWs = await uPage.evaluate(() => {
+          const urlP = Object.fromEntries(new URLSearchParams(location.search));
+          const scwinKeys = window.scwin ? Object.keys(window.scwin).slice(0, 20) : [];
+          const w2Keys = window.w2 ? Object.keys(window.w2).slice(0, 10) : [];
+          return { url: location.href, urlParams: urlP, scwinKeys, w2Keys, hasScwin: !!window.scwin, hasW2: !!window.w2 };
+        }).catch(() => ({}));
+        console.log('[iros] 방법U WebSquare4 상태:', JSON.stringify(uWs));
+        // 5초 시점 XHR/fetch 로그
+        const uLog5 = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+        console.log('[iros] 방법U 5초 XHR/fetch 로그 건수:', uLog5.length, uLog5.map(x => x.url + '|' + x.len).join(', ').slice(0, 500));
+        await uPage.waitForTimeout(20000);
+        const uLog25 = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+        const uRegData = await uPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+        console.log('[iros] 방법U 25초 XHR/fetch 로그 건수:', uLog25.length, uLog25.map(x => x.url + '|' + x.len).join(', ').slice(0, 500));
+        const uBodyText = await uPage.innerText('body').catch(() => '');
+        const uBodyHtml = await uPage.content().catch(() => '');
+        await uPage.screenshot({ path: '/home/opc/iros-debug/step7-method-u.png', fullPage: true }).catch(() => {});
+        console.log('[iros] 방법U 본문 앞800:', uBodyText.slice(0, 800));
+        if (uRegData) {
+          console.log('[iros] 방법U 등기 데이터 XHR/fetch에서 확보!', uRegData.url, 'len=', uRegData.body.length);
+          directApiContent = JSON.stringify({ type: 'method_u_xhr', url: uRegData.url, content: uRegData.body });
+          rlrgCount = 999;
+          try { writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+        } else if (_vrRe.test(uBodyText)) {
+          console.log('[iros] 방법U 본문에서 등기 키워드 발견!');
+          directApiContent = JSON.stringify({ type: 'method_u_body', content: uBodyText, html: uBodyHtml.slice(0, 8000) });
+          rlrgCount = 999;
+          try { writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+        } else if (uLog25.length === 0) {
+          // XHR/fetch 0건이면 IS_NMBR_LOGIN__=null 로도 시도
+          console.log('[iros] 방법U Y 실패, null로 재시도');
+          await uPage.goto(viewerUrlN, { waitUntil: 'networkidle', timeout: 30000 }).catch(e => console.log('[iros] 방법U goto 오류(N):', e.message));
+          await uPage.waitForTimeout(20000);
+          const uLog25n = await uPage.evaluate(() => window._irosXhrLog || []).catch(() => []);
+          const uRegDataN = await uPage.evaluate(() => window._irosXhrRegData || null).catch(() => null);
+          console.log('[iros] 방법U null 25초 XHR/fetch 건수:', uLog25n.length);
+          const uBodyTextN = await uPage.innerText('body').catch(() => '');
+          await uPage.screenshot({ path: '/home/opc/iros-debug/step7-method-u-null.png', fullPage: true }).catch(() => {});
+          if (uRegDataN) {
+            directApiContent = JSON.stringify({ type: 'method_u_null_xhr', url: uRegDataN.url, content: uRegDataN.body });
+            rlrgCount = 999;
+          } else if (_vrRe.test(uBodyTextN)) {
+            directApiContent = JSON.stringify({ type: 'method_u_null_body', content: uBodyTextN });
+            rlrgCount = 999;
+          }
+          if (rlrgCount === 999) {
+            try { writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+            console.log('[iros] 방법U null 성공!');
+          } else {
+            console.log('[iros] 방법U 완전 실패 — XHR/fetch 0건, 등기 키워드 없음');
+          }
+        }
+      } catch (e) { console.log('[iros] 방법U 오류:', e.message); }
+      finally { if (uPage) await uPage.close().catch(() => {}); }
     }
 
     // ── 최종 상태 스냅샷 (모든 방법 후) ──────────────────────────────────────────────
