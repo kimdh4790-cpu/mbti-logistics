@@ -8641,7 +8641,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       // GET /api/seolyuhana/points — 포인트 잔액 조회
       if (path.startsWith('/api/seolyuhana/points') && method === 'GET') {
         try {
-          const _au = await verifyFirebaseToken(request, env, 'https://mbtico.kr');
+          const _au = await verifyFirebaseToken(request, env);
           if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
           const uid = _au.localId || _au;
           const token = await getAccessToken(env);
