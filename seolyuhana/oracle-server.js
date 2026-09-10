@@ -714,8 +714,8 @@ app.post('/api/iros-fetch', async (req, res) => {
       try {
         const rUrl = resp.url();
         if (!rUrl.includes('iros.go.kr')) return;
-        // JS/CSS 정적 파일에서 상수값 오캡처 방지
-        if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/.test(rUrl)) return;
+        // JS/CSS/XML 정적 파일에서 오캡처 방지 (Pm10P0SmplhlpMain.xml 등 도움말 XML 제외)
+        if (/\.(xml|xsd|js|css|png|jpg|gif|ico|woff|ttf|eot|svg)(\?|$)/i.test(rUrl)) return;
         const ct = resp.headers()['content-type'] || '';
         if (!ct.includes('json') && !rUrl.includes('srch') && !rUrl.includes('Renf') && !rUrl.includes('Smpl') && !rUrl.includes('smpl') && !rUrl.includes('retrieve') && !rUrl.includes('SrchList')) return;
         const body = await resp.text().catch(() => '');
@@ -1546,6 +1546,12 @@ app.post('/api/iros-fetch', async (req, res) => {
         } catch { return null; }
       }).catch(() => null);
       if (pinFromRow) console.log('[iros] datalist에서 PIN 추출:', pinFromRow);
+    }
+
+    // 그리드에서 확인된 실제 PIN으로 capturedPin 덮어쓰기 (도움말 XML 오캡처 수정)
+    if (pinFromRow) {
+      capturedPin = pinFromRow.replace(/-/g, '');
+      console.log('[iros] capturedPin → 그리드 PIN 으로 교정:', capturedPin);
     }
 
     // Gauce WebSquare API로 행 선택 + UI 이벤트 발생
