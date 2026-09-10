@@ -22,7 +22,7 @@ jobs:
             echo "GitHub Settings → Secrets에 ORACLE_SSH_KEY(ssh-key-2026-08-02 내용)를 등록하세요"
             exit 0
           fi
-          printf '%s\n' "$ORACLE_SSH_KEY" > /tmp/oracle_key
+          echo "$ORACLE_SSH_KEY" > /tmp/oracle_key
           chmod 600 /tmp/oracle_key
           ssh -i /tmp/oracle_key \
               -o StrictHostKeyChecking=no \
