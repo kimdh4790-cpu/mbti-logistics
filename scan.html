@@ -1289,6 +1289,82 @@ body {
   font-weight: 800;
   cursor: pointer;
 }
+/* 검색바 */
+.sly-search-wrap {
+  padding: 10px 16px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sly-search-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F3F6FB;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 0 14px;
+  transition: border-color .2s;
+}
+.sly-search-inner:focus-within {
+  border-color: #F43F8B;
+  background: #fff;
+}
+.sly-search-inner svg { color: #9ca3af; flex-shrink: 0; }
+.sly-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text-primary);
+  padding: 11px 0;
+  outline: none;
+  font-family: 'Pretendard', sans-serif;
+}
+.sly-search-input::placeholder { color: #aab0bb; }
+.sly-search-clear {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #9ca3af;
+  display: none;
+  align-items: center;
+}
+.sly-search-clear.show { display: flex; }
+/* 검색 결과 */
+.sly-search-results {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-y: auto;
+}
+.sly-search-results.show { display: flex; }
+.sly-search-result-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+.sly-search-result-item:active { transform: scale(.98); }
+.sly-search-result-ico {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sly-search-result-ico svg { width: 20px; height: 20px; }
+.sly-search-result-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.sly-search-result-cat { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.sly-search-result-pts { font-size: 13px; font-weight: 700; color: var(--pink); margin-left: auto; white-space: nowrap; }
+.sly-search-empty { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 14px; }
+
 /* 카테고리 그리드 — 화면 꽉 채우기 */
 .sly-cat-grid {
   display: grid;
@@ -1297,9 +1373,9 @@ body {
   gap: 8px;
   padding: 8px;
   background: var(--bg);
-  /* 헤더(56px) + 포인트바(46px) = 102px */
-  height: calc(100vh - 102px);
-  height: calc(100svh - 102px);
+  /* 헤더(56px) + 포인트바(46px) + 검색바(53px) = 155px */
+  height: calc(100vh - 155px);
+  height: calc(100svh - 155px);
 }
 .sly-cat-card {
   border: 1.5px solid transparent;
@@ -2035,6 +2111,73 @@ function _slyBackToCats() {
   // popular은 CSS로 숨겨져 있으므로 건드리지 않음
 }
 window._slyBackToCats = _slyBackToCats;
+
+// ── 검색 ──────────────────────────────────────────────
+function _slySearch(q) {
+  const grid = document.getElementById('slyCatGrid');
+  const results = document.getElementById('slySearchResults');
+  const clearBtn = document.getElementById('slySearchClear');
+  const popular = document.getElementById('slyPopular');
+  q = q.trim();
+  if (!q) {
+    _slyClearSearch();
+    return;
+  }
+  if (clearBtn) clearBtn.classList.add('show');
+  const ql = q.toLowerCase();
+  // 검색 대상: 서비스 라벨 + 서브라벨 + 카테고리명
+  const matched = [];
+  SVC_CATS.forEach(cat => {
+    cat.svcs.forEach(id => {
+      const svc = SVC.find(s => s.id === id);
+      if (!svc) return;
+      const text = ((svc.label || '') + ' ' + (svc.sublabel || '') + ' ' + cat.label).toLowerCase();
+      if (text.includes(ql)) matched.push({ svc, cat });
+    });
+  });
+  // 렌더
+  if (grid) grid.style.display = 'none';
+  if (popular) popular.style.display = 'none';
+  results.classList.add('show');
+  if (!matched.length) {
+    results.innerHTML = `<div class="sly-search-empty">"${q}" 검색 결과가 없습니다</div>`;
+    return;
+  }
+  results.innerHTML = matched.map(({ svc, cat }) => {
+    const acc = CAT_ACCENT[cat.label] || { bg: '#f3f4f6', color: '#374151' };
+    const name = svc.label + (svc.sublabel ? ' <span style="font-weight:400;font-size:13px;color:var(--text-muted)">' + svc.sublabel + '</span>' : '');
+    const pts = svc.pts ? `${svc.pts.toLocaleString()}P` : '무료';
+    return `<div class="sly-search-result-item" onclick="_slySelectSvc('${svc.id}')">
+      <div class="sly-search-result-ico" style="background:${acc.bg};color:${acc.color}">${cat.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sly-search-result-name">${name}</div>
+        <div class="sly-search-result-cat">${cat.label}</div>
+      </div>
+      <div class="sly-search-result-pts">${pts}</div>
+    </div>`;
+  }).join('');
+}
+function _slyClearSearch() {
+  const grid = document.getElementById('slyCatGrid');
+  const results = document.getElementById('slySearchResults');
+  const clearBtn = document.getElementById('slySearchClear');
+  const input = document.getElementById('slySearchInput');
+  const popular = document.getElementById('slyPopular');
+  if (input) input.value = '';
+  if (clearBtn) clearBtn.classList.remove('show');
+  results.classList.remove('show');
+  results.innerHTML = '';
+  if (grid) grid.style.display = 'grid';
+  if (popular) popular.style.display = '';
+}
+function _slySelectSvc(id) {
+  _slyClearSearch();
+  // 약간의 딜레이 후 드로어 오픈 (그리드 복원 후)
+  setTimeout(() => _slyOpenDrawer(id), 50);
+}
+window._slySearch = _slySearch;
+window._slyClearSearch = _slyClearSearch;
+window._slySelectSvc = _slySelectSvc;
 
 function renderServiceList() { renderCatGrid(); }
 function renderChips() {}
@@ -3635,6 +3778,18 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <button class="sly-charge-btn" onclick="_slyOpenPoints()">충전하기</button>
       </div>
+      <!-- Search bar -->
+      <div class="sly-search-wrap">
+        <div class="sly-search-inner">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="sly-search-input" id="slySearchInput" type="text" placeholder="서비스 검색 (이력서, 계약서, 등기부...)" oninput="_slySearch(this.value)" autocomplete="off">
+          <button class="sly-search-clear" id="slySearchClear" onclick="_slyClearSearch()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Search results -->
+      <div class="sly-search-results" id="slySearchResults"></div>
       <!-- Category grid -->
       <div class="sly-cat-grid" id="slyCatGrid"></div>
       <!-- Popular services (shown with grid, hidden when category open) -->
