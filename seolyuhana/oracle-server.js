@@ -737,8 +737,9 @@ app.post('/api/iros-fetch', async (req, res) => {
       try {
         const _u = resp.url();
         if (!_u.includes('iros.go.kr')) return;
-        if (/\.(js|css|png|jpg|gif|ico|woff|ttf)(\?|$)/.test(_u)) return;
-        if (_u.includes('callMpPrtIframe') || _u.includes('retrieveXmlDataList') || _u.includes('Pr20Via') || _u.includes('MpPrt')) {
+        if (/\.(xml|xsd|js|css|png|jpg|gif|ico|woff|woff2|ttf|eot|svg|txt)(\?|$)/i.test(_u)) return;
+        if (!_u.includes('.do')) return; // 레이아웃 XML·정적 파일 제외, API 엔드포인트만
+        if (_u.includes('callMpPrtIframe') || _u.includes('retrieveXmlDataList') || _u.includes('MpPrt') || _u.includes('SmplRlrg')) {
           const _b = await resp.text().catch(() => '');
           if (_b.length > 100) {
             console.log('[iros] 뷰어응답:', resp.status(), _u.slice(-80), 'len=', _b.length, '앞300=', _b.slice(0, 300));
@@ -3404,6 +3405,37 @@ app.post('/api/iros-fetch', async (req, res) => {
       } catch (e) { console.log('[iros] 방법P 오류:', e.message); }
     }
 
+    // ── 방법T: WebSquare 내부 DataList에 PIN 직접 주입 → iframe이 parent DataList 읽도록 ──
+    // callMpPrtIframe.do iframe은 window.parent의 dlt_smpl_srch_rslt DataList에서 rnum(PIN)을 읽음.
+    // Playwright DOM 클릭으로는 WebSquare 내부 DataList가 갱신되지 않아 iframe AJAX 미발생.
+    // 해결: 클릭 전에 DataList 직접 주입 + window.__iros_selected_rnum 폴백 설정.
+    if (rlrgCount === 0 && capturedPin) {
+      const pinDash = capturedPin.replace(/(\d{4})(\d{4})(\d{6})/, '$1-$2-$3');
+      await resultPage.evaluate(({ pin, pinD }) => {
+        try {
+          const rowData = { rnum: pinD, selGbn: 'UNI', rlrgGbn: '1', smplKindCls: '1', payCl: 'F', col_chk: 'Y' };
+          // WebSquare DataList 후보 키 탐색 (scwin 네임스페이스 포함)
+          const dlCandidates = [
+            'dlt_smpl_srch_rslt', 'mf_wfm_potal_main_wfm_content_dlt_smpl_srch_rslt',
+            'mf_wfm_content_dlt_smpl_srch_rslt'
+          ];
+          dlCandidates.forEach(k => {
+            const dl = window[k] || (window.scwin && window.scwin[k]);
+            if (!dl) return;
+            try { if (dl.setData) dl.setData([rowData]); } catch (_) {}
+            try { if (dl.setRowData) dl.setRowData(0, rowData); } catch (_) {}
+            try { if (dl.setCellData) { dl.setCellData(0, 'rnum', pinD); dl.setCellData(0, 'payCl', 'F'); } } catch (_) {}
+          });
+          // 폴백: window 전역에 직접 저장 (iframe이 window.parent.__iros_* 로 읽을 수 있도록)
+          window.__iros_selected_rnum = pin;
+          window.__iros_selected_rnum_dash = pinD;
+          window.__iros_selected_rlrgGbn = '1';
+          window.__iros_selected_payCl = 'F';
+        } catch (e) { console.log('T-inject error', e.message); }
+      }, { pin: capturedPin, pinD: pinDash }).catch(() => {});
+      console.log('[iros] 방법T: WebSquare DataList PIN 주입 완료 PIN=', capturedPin, 'pinDash=', pinDash);
+    }
+
     // ── 방법Q: _modal 제거 후 강제 클릭 → iframe 캡처 ────────────────────────────────
     if (rlrgCount === 0) {
       console.log('[iros] 방법Q: _modal 제거 + 강제 클릭 시도');
@@ -3456,9 +3488,9 @@ app.post('/api/iros-fetch', async (req, res) => {
           clickDone = true;
         }
 
-        // Q-3: 뷰어 AJAX 캡처 우선 확인, 최대 20초 폴링
+        // Q-3: 뷰어 AJAX 캡처 우선 확인, 최대 40초 폴링 (false positive 수정 후 실제 iframe AJAX 대기 시간 확보)
         let _qWaited = 0;
-        while (_qWaited < 20000 && rlrgCount === 0) {
+        while (_qWaited < 40000 && rlrgCount === 0) {
           await resultPage.waitForTimeout(2000);
           _qWaited += 2000;
           if (_viewerAjaxContent) {
