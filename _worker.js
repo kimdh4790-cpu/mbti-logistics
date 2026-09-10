@@ -2879,7 +2879,8 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
           let pin=(tilkoPinHint||'').replace(/-/g,'');
           if (!pin||pin.length<13) {
             try {
-              const addrRes=await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch',{method:'POST',headers:{'API-KEY':apiKey,'ENC-KEY':encKey,'Content-Type':'application/json'},body:JSON.stringify({SearchAddr:await enc(address)}),signal:AbortSignal.timeout(15000)});
+              let addrRes=await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch',{method:'POST',headers:{'API-KEY':apiKey,'Content-Type':'application/json'},body:JSON.stringify({SearchAddr:address}),signal:AbortSignal.timeout(15000)});
+              if (!addrRes.ok) addrRes=await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch',{method:'POST',headers:{'API-KEY':apiKey,'ENC-KEY':encKey,'Content-Type':'application/json'},body:JSON.stringify({SearchAddr:await enc(address)}),signal:AbortSignal.timeout(15000)});
               if (addrRes.ok){const ad=await addrRes.json().catch(()=>({}));const first=(ad.realty_list||ad.RealtyList||ad.Result||[])[0];pin=(first?.pin||first?.Pin||first?.고유번호||'').replace(/-/g,'');}
             } catch(_){}
           }
@@ -8825,16 +8826,26 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         // Emoney 필드: Base64 인코딩 후 AES 암호화 (Tilko 사양)
         const encB64 = async (val) => enc(btoa(String(val)));
 
-        // 5) 주소 → 고유번호(Pin) 검색
+        // 5) 주소 → 고유번호(Pin) 검색 (v1.0 = 평문, 실패 시 암호화 재시도)
         let pin = (tilkoPinHint || '').replace(/-/g,'');
         if (!pin || pin.length < 13) {
           try {
-            const addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
+            // v1.0 endpoint: 평문 우선 시도 (암호화 미지원 가능성)
+            let addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
               method: 'POST',
-              headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
-              body: JSON.stringify({ SearchAddr: await enc(address) }),
+              headers: {'API-KEY': apiKey, 'Content-Type': 'application/json'},
+              body: JSON.stringify({ SearchAddr: address }),
               signal: AbortSignal.timeout(15000)
             });
+            // 평문 실패 시 암호화 재시도
+            if (!addrRes.ok) {
+              addrRes = await fetch('https://api.tilko.net/api/v1.0/Iros/RealtyAddrSrch', {
+                method: 'POST',
+                headers: {'API-KEY': apiKey, 'ENC-KEY': encKey, 'Content-Type': 'application/json'},
+                body: JSON.stringify({ SearchAddr: await enc(address) }),
+                signal: AbortSignal.timeout(15000)
+              });
+            }
             if (addrRes.ok) {
               const ad = await addrRes.json().catch(() => ({}));
               const first = (ad.realty_list || ad.RealtyList || ad.Result || [])[0];
