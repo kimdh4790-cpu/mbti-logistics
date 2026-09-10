@@ -1199,6 +1199,63 @@ body {
   .sly-download-row { flex-direction: column; }
 }
 
+/* ══ 인트로 영상 화면 ══ */
+#slyIntroScreen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.sly-intro-header {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(to bottom, rgba(0,0,0,.7) 0%, transparent 100%);
+  z-index: 1;
+}
+.sly-intro-logo { display: flex; align-items: center; gap: 8px; }
+.sly-intro-logo-text { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -.5px; }
+.sly-intro-logo-ai { color: #FF6B9D; }
+.sly-intro-skip {
+  background: rgba(255,255,255,.18);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff; font-size: 13px; font-weight: 700;
+  padding: 7px 16px; border-radius: 20px; cursor: pointer;
+  transition: background .2s;
+}
+.sly-intro-skip:hover { background: rgba(255,255,255,.3); }
+.sly-intro-video-wrap {
+  width: 100%; max-width: 480px;
+  aspect-ratio: 9/16;
+  position: relative;
+  background: #000;
+}
+.sly-intro-video-wrap iframe,
+.sly-intro-video-wrap video {
+  width: 100%; height: 100%;
+  border: none; display: block;
+}
+.sly-intro-footer {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 20px 20px 32px;
+  background: linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 100%);
+  text-align: center;
+}
+.sly-intro-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.sly-intro-sub { font-size: 13px; color: rgba(255,255,255,.7); margin-bottom: 18px; }
+.sly-intro-start-btn {
+  background: var(--pink, #FF6B9D); color: #fff;
+  border: none; border-radius: 12px;
+  padding: 14px 40px; font-size: 16px; font-weight: 800;
+  cursor: pointer; width: 100%; max-width: 320px;
+  transition: opacity .2s;
+}
+.sly-intro-start-btn:hover { opacity: .88; }
+
 /* ══ 앱 메인 (로그인 후) ══ */
 .sly-app {
   display: flex;
@@ -1576,6 +1633,41 @@ const CHARGE_PLANS = [
   { pts: 240000, price: 200000, bonus: '+40,000P', label: '200,000P', desc: '최대 절약' },
 ];
 
+// ── 소개 영상 설정 (YouTube 영상 ID 입력, 없으면 인트로 건너뜀)
+// 예: const SCAN_INTRO_VIDEO_ID = 'dQw4w9WgXcQ';
+const SCAN_INTRO_VIDEO_ID = '';
+
+function _slyShowIntro() {
+  const intro = document.getElementById('slyIntroScreen');
+  if (!intro) return;
+  // 영상 삽입
+  const wrap = document.getElementById('slyIntroVideoWrap');
+  if (wrap && SCAN_INTRO_VIDEO_ID) {
+    wrap.innerHTML = `<iframe
+      src="https://www.youtube.com/embed/${SCAN_INTRO_VIDEO_ID}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1&loop=1&playlist=${SCAN_INTRO_VIDEO_ID}"
+      allow="autoplay; fullscreen"
+      allowfullscreen>
+    </iframe>`;
+  } else if (wrap) {
+    // 영상 없으면 로고 + 태그라인만 표시
+    wrap.style.display = 'none';
+  }
+  intro.style.display = 'flex';
+}
+
+function _slySkipIntro() {
+  const intro = document.getElementById('slyIntroScreen');
+  if (intro) {
+    // iframe 제거 (재생 중지)
+    const wrap = document.getElementById('slyIntroVideoWrap');
+    if (wrap) wrap.innerHTML = '';
+    intro.style.display = 'none';
+  }
+  const mc = document.getElementById('slyMainContent');
+  if (mc) mc.style.display = 'block';
+}
+window._slySkipIntro = _slySkipIntro;
+
 // ── Render header auth state
 const _SUPER_ADMINS = ['kimdh4790@gmail.com', 'soungkyekim@naver.com'];
 
@@ -1606,10 +1698,20 @@ function updateAuthUI(user) {
   const mc = document.getElementById('slyMainContent');
   if (landing && mc) {
     landing.classList.toggle('visible', !user);
-    mc.style.display = user ? 'block' : 'none';
-    // 뒤로가기 앱 유지: 로그인 시 history state 추가
-    if (user && window.history.state?.slyApp !== true) {
-      history.pushState({ slyApp: true }, '');
+    if (user) {
+      mc.style.display = 'none'; // 인트로가 먼저 뜸
+      // 처음 로그인 시에만 인트로 표시 (탭 세션 기준)
+      if (!sessionStorage.getItem('slyIntroDone')) {
+        sessionStorage.setItem('slyIntroDone', '1');
+        _slyShowIntro();
+      } else {
+        mc.style.display = 'block';
+      }
+      if (window.history.state?.slyApp !== true) {
+        history.pushState({ slyApp: true }, '');
+      }
+    } else {
+      mc.style.display = 'none';
     }
   }
 }
@@ -3485,6 +3587,25 @@ document.addEventListener('DOMContentLoaded', () => {
       유한회사 엠비티아이 · 사업자번호 373-86-02536<br>
       문의: <a href="mailto:filo-dine@donway.ai.kr">filo-dine@donway.ai.kr</a><br>
       <a href="/scan">서비스 이용</a> · <a href="/hub">MBTICO 홈</a>
+    </div>
+  </div>
+
+  <!-- 인트로 영상 화면 -->
+  <div id="slyIntroScreen">
+    <div class="sly-intro-header">
+      <div class="sly-intro-logo">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#FF6B9D"/><path d="M7 14l4 4 10-10" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="sly-intro-logo-text">SCAN<span class="sly-intro-logo-ai"> AI</span></span>
+      </div>
+      <button class="sly-intro-skip" onclick="_slySkipIntro()">건너뛰기 ›</button>
+    </div>
+    <div class="sly-intro-video-wrap" id="slyIntroVideoWrap">
+      <!-- JS로 YouTube iframe 또는 video 태그 삽입 -->
+    </div>
+    <div class="sly-intro-footer">
+      <div class="sly-intro-title">AI 문서 분석 서비스</div>
+      <div class="sly-intro-sub">계약서·이력서·등기부 — 몇 초 만에 핵심 파악</div>
+      <button class="sly-intro-start-btn" onclick="_slySkipIntro()">시작하기</button>
     </div>
   </div>
 
