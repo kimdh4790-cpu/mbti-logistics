@@ -2228,6 +2228,41 @@ function _slyOpenDrawer(id) {
   const rcountEl = document.getElementById('slyDrawerRcount');
   const badgeHeadEl = document.getElementById('slyDrawerBadgeHead');
   const footerPriceEl = document.getElementById('slyFooterPrice');
+  // 카테고리 액센트 색상 드로어 전체에 적용
+  const acc = CAT_ACCENT[catLabel] || { bg: '#FFF0F6', color: '#F43F8B' };
+  const drawer = document.getElementById('slyDrawer');
+  if (drawer) {
+    // 상단 헤더 컬러 바
+    let accentBar = drawer.querySelector('.sly-drawer-cat-bar');
+    if (!accentBar) {
+      accentBar = document.createElement('div');
+      accentBar.className = 'sly-drawer-cat-bar';
+      accentBar.style.cssText = 'height:4px;width:100%;flex-shrink:0;';
+      drawer.insertBefore(accentBar, drawer.firstChild);
+    }
+    accentBar.style.background = acc.color;
+    // 헤더 배경 파스텔
+    const head = drawer.querySelector('.sly-drawer-head');
+    if (head) head.style.background = acc.bg;
+    // 카테고리 라벨 컬러
+    if (catEl) catEl.style.color = acc.color;
+    // 별점 컬러
+    if (starsEl) starsEl.style.color = acc.color;
+    // 하단 버튼 컬러
+    const footerBtn = drawer.querySelector('.sly-drawer-footer-btn');
+    if (footerBtn) { footerBtn.style.background = acc.color; footerBtn.style.color = '#fff'; }
+    // 서비스 가격 뱃지 컬러 (업로드 카드)
+    const badge = document.getElementById('slyServiceBadge');
+    if (badge) {
+      badge.textContent = svc.cost.toLocaleString() + 'P';
+      badge.style.background = acc.bg;
+      badge.style.color = acc.color;
+      badge.style.borderColor = acc.color + '55';
+    }
+    // 입력 모드 탭 활성 버튼 컬러
+    const modeFile = document.getElementById('slyModeFile');
+    if (modeFile) { modeFile.style.background = acc.color; modeFile.style.color = '#fff'; }
+  }
   if (titleEl) titleEl.textContent = svc.label + ' ' + svc.sublabel;
   if (catEl) catEl.textContent = (CAT_EMOJI[catLabel] || '') + ' ' + catLabel;
   if (priceEl) priceEl.textContent = svc.cost.toLocaleString() + 'P';
