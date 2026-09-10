@@ -1404,15 +1404,15 @@ body {
 .sly-cat-card:hover { box-shadow: var(--shadow-card); }
 .sly-cat-card:active { transform: scale(.97); }
 .sly-cat-ico {
-  width: 48px; height: 48px;
+  width: 52px; height: 52px;
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.sly-cat-ico svg { width: 24px; height: 24px; }
+.sly-cat-ico svg { width: 28px; height: 28px; }
 .sly-cat-meta { display: flex; align-items: center; gap: 6px; }
-.sly-cat-name { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -.3px; }
-.sly-cat-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.sly-cat-name { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: -.3px; }
+.sly-cat-count { font-size: 13px; color: var(--text-muted); margin-left: auto; }
 .sly-cat-svcs {
   display: flex;
   flex-wrap: wrap;
@@ -1420,9 +1420,9 @@ body {
   overflow: hidden;
 }
 .sly-cat-svc-chip {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 4px 9px;
+  padding: 5px 10px;
   border-radius: 20px;
   white-space: nowrap;
 }
@@ -2182,9 +2182,19 @@ onAuthStateChanged(auth, user => {
   updateAuthUI(user);
 });
 
-// 뒤로가기 눌러도 앱 안 닫히게
+// 뒤로가기: 드로어 열림 → 드로어 닫기 / 카테고리 패널 열림 → 그리드로 / 그 외 → 앱 유지
 window.addEventListener('popstate', e => {
-  if (window._slyUser) {
+  const drawer = document.getElementById('slyDrawer');
+  const drawerOpen = drawer && drawer.classList.contains('open');
+  const panel = document.getElementById('slySvcPanel');
+  const panelOpen = panel && panel.classList.contains('active');
+  if (drawerOpen) {
+    _slyCloseDrawer();
+    history.pushState({ slyApp: true }, '');
+  } else if (panelOpen) {
+    _slyBackToCats();
+    history.pushState({ slyApp: true }, '');
+  } else {
     history.pushState({ slyApp: true }, '');
   }
 });
@@ -2499,6 +2509,7 @@ function _slyOpenCat(catLabel) {
   document.getElementById('slyCatGrid').style.display = 'none';
   const panel = document.getElementById('slySvcPanel');
   panel.classList.add('active');
+  history.pushState({ slyCat: catLabel }, '');
   const icoEl = document.getElementById('slyPanelIco');
   if (icoEl) { icoEl.innerHTML = cat.icon; icoEl.style.background = ibg; icoEl.style.color = icolor; }
   const titleEl = document.getElementById('slyPanelTitle');
@@ -2689,6 +2700,7 @@ function _slyOpenDrawer(id) {
   _slySelectService(id);
   document.getElementById('slyDrawer')?.classList.add('open');
   document.getElementById('slyDrawerOverlay')?.classList.add('open');
+  history.pushState({ slyDrawer: true }, '');
 }
 function _slyCloseDrawer() {
   document.getElementById('slyDrawer')?.classList.remove('open');
