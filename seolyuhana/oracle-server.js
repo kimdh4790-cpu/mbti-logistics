@@ -17,6 +17,7 @@ import multer from 'multer';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { writeFile, readFile, mkdtemp, rm, mkdir } from 'fs/promises';
+import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { chromium } from 'playwright';
@@ -3374,7 +3375,7 @@ app.post('/api/iros-fetch', async (req, res) => {
         if (directApiContent) {
           rlrgCount = 999; // sentinel: 직접 API 성공
           // 디버그: 성공 내용을 파일로 저장 (확인용)
-          try { require('fs').writeFileSync('/tmp/iros-method-o-result.json', directApiContent); } catch(e) {}
+          try { writeFileSync('/tmp/iros-method-o-result.json', directApiContent); } catch(e) {}
           console.log('[iros] 방법O: 직접 API 성공 내용 전체:', directApiContent.slice(0, 1000));
           console.log('[iros] 방법O: 직접 API 성공, content 반환 준비');
         } else {
@@ -3558,7 +3559,7 @@ app.post('/api/iros-fetch', async (req, res) => {
                 const combined = frameText || wsData;
                 directApiContent = JSON.stringify({ type: 'iframe', url: frameUrl, content: combined, html: frameHtml.slice(0, 8000), wsData });
                 rlrgCount = 999;
-                try { require('fs').writeFileSync('/tmp/iros-method-q-result.json', directApiContent); } catch (e) {}
+                try { writeFileSync('/tmp/iros-method-q-result.json', directApiContent); } catch (e) {}
                 console.log('[iros] 방법Q iframe 성공! length:', combined.length);
                 break;
               }
@@ -3595,7 +3596,7 @@ app.post('/api/iros-fetch', async (req, res) => {
             if (iframeText.length > 200 && IFRAME_KW_R.test(iframeText)) {
               directApiContent = JSON.stringify({ type: 'iframe_direct', url: iframeFrame.url(), content: iframeText, html: iframeHtml.slice(0, 8000) });
               rlrgCount = 999;
-              try { require('fs').writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
+              try { writeFileSync('/tmp/iros-method-r-result.json', directApiContent); } catch(e) {}
               console.log('[iros] 방법R 성공! length:', iframeText.length);
               break;
             }
@@ -3626,7 +3627,7 @@ app.post('/api/iros-fetch', async (req, res) => {
         if (s4.body && _vrRe.test(s4.body)) {
           directApiContent = JSON.stringify({ type: 'post_viewer', content: s4.body });
           rlrgCount = 999;
-          try { require('fs').writeFileSync('/tmp/iros-method-s4-result.json', directApiContent); } catch (e) {}
+          try { writeFileSync('/tmp/iros-method-s4-result.json', directApiContent); } catch (e) {}
           console.log('[iros] 방법S4 등기 데이터 확보!');
         }
         // 원본 PIN(대시 없이)으로도 시도
@@ -3712,7 +3713,7 @@ app.post('/api/iros-fetch', async (req, res) => {
             rlrgCount = 999;
           }
           if (rlrgCount === 999) {
-            try { require('fs').writeFileSync('/tmp/iros-method-w-result.json', directApiContent); } catch(e) {}
+            try { writeFileSync('/tmp/iros-method-w-result.json', directApiContent); } catch(e) {}
             console.log('[iros] 방법W 성공!');
           }
           await wNewPage.close().catch(() => {});
@@ -3790,12 +3791,12 @@ app.post('/api/iros-fetch', async (req, res) => {
           console.log('[iros] 방법U 등기 데이터 XHR/fetch에서 확보!', uRegData.url, 'len=', uRegData.body.length);
           directApiContent = JSON.stringify({ type: 'method_u_xhr', url: uRegData.url, content: uRegData.body });
           rlrgCount = 999;
-          try { require('fs').writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+          try { writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
         } else if (_vrRe.test(uBodyText)) {
           console.log('[iros] 방법U 본문에서 등기 키워드 발견!');
           directApiContent = JSON.stringify({ type: 'method_u_body', content: uBodyText, html: uBodyHtml.slice(0, 8000) });
           rlrgCount = 999;
-          try { require('fs').writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+          try { writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
         } else if (uLog25.length === 0) {
           // XHR/fetch 0건이면 IS_NMBR_LOGIN__=null 로도 시도
           console.log('[iros] 방법U Y 실패, null로 재시도');
@@ -3814,7 +3815,7 @@ app.post('/api/iros-fetch', async (req, res) => {
             rlrgCount = 999;
           }
           if (rlrgCount === 999) {
-            try { require('fs').writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
+            try { writeFileSync('/tmp/iros-method-u-result.json', directApiContent); } catch(e) {}
             console.log('[iros] 방법U null 성공!');
           } else {
             console.log('[iros] 방법U 완전 실패 — XHR/fetch 0건, 등기 키워드 없음');
