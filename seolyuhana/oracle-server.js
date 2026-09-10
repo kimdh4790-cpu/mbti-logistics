@@ -775,15 +775,128 @@ app.post('/api/iros-fetch', async (req, res) => {
     await page.waitForTimeout(1500);
     console.log('[iros] 진입 URL:', page.url());
 
-    // 2단계: 로그인 처리 (리다이렉트 또는 현재 페이지 폼)
-    const isLoginPage = page.url().includes('login') || page.url().includes('Login') ||
-      await page.locator('#userId, input[name="userId"]').count() > 0;
-    if (isLoginPage) {
-      console.log('[iros] 로그인 필요');
-      await _irosLogin(page);
-      await page.waitForTimeout(2000);
-      if (page.url().includes('login') || page.url().includes('Login')) {
-        throw new Error(`로그인 실패: ${page.url()}`);
+    // 2단계: 로그인 처리 — 항상 isLogin.do 로 상태 확인 후 미로그인이면 헤더 로그인 버튼 클릭
+    const _checkIrosLogin = async () => {
+      try {
+        const loginCheckRes = await page.evaluate(async () => {
+          try {
+            const r = await fetch('https://www.iros.go.kr/pos9/isLogin.do', { credentials: 'include' });
+            return r.ok ? await r.json() : null;
+          } catch { return null; }
+        });
+        return loginCheckRes && loginCheckRes.isLogin === true;
+      } catch { return false; }
+    };
+
+    // 이미 로그인돼 있으면 건너뜀
+    let _loggedIn = await _checkIrosLogin();
+    console.log('[iros] 초기 로그인 상태:', _loggedIn);
+
+    if (!_loggedIn) {
+      console.log('[iros] 로그인 시도');
+
+      // 이미 페이지에 로그인 폼이 있는지 확인 (리다이렉트된 경우)
+      const _hasFormNow = await page.locator('#userId, input[name="userId"], input[id*="userId"]').count() > 0;
+      if (!_hasFormNow) {
+        // 헤더의 로그인 링크 클릭 — IROS 홈 우상단 "로그인" 버튼
+        const _loginLinks = [
+          'a[href*="login"], a[href*="Login"]',
+          'a, button, span, li',
+        ];
+        let _loginLinkClicked = false;
+        // 1순위: href 기반
+        for (const ctx of [page, ...page.frames()]) {
+          try {
+            const _ll = ctx.locator('a[href*="login"], a[href*="Login"]').first();
+            if (await _ll.count() > 0 && await _ll.isVisible().catch(() => false)) {
+              await _ll.click({ force: true });
+              _loginLinkClicked = true;
+              console.log('[iros] href 기반 로그인 링크 클릭');
+              break;
+            }
+          } catch {}
+        }
+        // 2순위: 텍스트 "로그인" 링크
+        if (!_loginLinkClicked) {
+          for (const ctx of [page, ...page.frames()]) {
+            try {
+              const _ll = ctx.locator('a, button, span, li').filter({ hasText: /^로그인$/ }).first();
+              if (await _ll.count() > 0 && await _ll.isVisible().catch(() => false)) {
+                const _el = await _ll.elementHandle().catch(() => null);
+                if (_el) await ctx.evaluate(e => e.dispatchEvent(new MouseEvent('click', {bubbles:true,cancelable:true,view:window})), _el).catch(() => {});
+                else await _ll.click({ force: true });
+                _loginLinkClicked = true;
+                console.log('[iros] 텍스트 기반 로그인 링크 클릭');
+                break;
+              }
+            } catch {}
+          }
+        }
+        // 3순위: JS 함수 직접 호출
+        if (!_loginLinkClicked) {
+          await page.evaluate(() => {
+            const fns = ['fn_login', 'goLogin', 'fn_goLogin', 'fnLogin'];
+            for (const fn of fns) { if (typeof window[fn] === 'function') { window[fn](); return; } }
+            const el = document.querySelector('a[onclick*="login" i], a[onclick*="Login"]');
+            if (el) el.click();
+          }).catch(() => {});
+          console.log('[iros] JS 폴백 로그인 클릭 시도');
+        }
+
+        // 로그인 폼 등장 대기 (최대 10초)
+        await page.waitForSelector('#userId, input[name="userId"], input[id*="userId"]', { timeout: 10000 }).catch(() => {});
+      }
+
+      // 로그인 폼 입력
+      const _userSel = '#userId, input[name="userId"], input[id*="userId"], input[name="id"], input[autocomplete="username"]';
+      const _pwSel   = '#userPwd, input[name="userPwd"], input[id*="Pwd"], input[type="password"], input[name="pw"], input[autocomplete="current-password"]';
+      const _btnSel  = '#loginBtn, button[id*="login" i], button[onclick*="login" i], input[type="submit"][value*="로그인"], button[type="submit"]';
+      const _hasForm = await page.locator(_userSel).count() > 0;
+      if (_hasForm) {
+        await page.locator(_userSel).first().fill(irosId);
+        await page.locator(_pwSel).first().fill(irosPw);
+        const _btn = page.locator(_btnSel).first();
+        if (await _btn.count() > 0) await _btn.click();
+        else await page.keyboard.press('Enter');
+        await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(2000);
+        console.log('[iros] 로그인 후 URL:', page.url());
+      } else {
+        console.log('[iros] 로그인 폼 미발견 — 계속 진행');
+      }
+
+      // 로그인 검증
+      _loggedIn = await _checkIrosLogin();
+      console.log('[iros] 로그인 후 isLogin.do 결과:', _loggedIn);
+      if (!_loggedIn) {
+        // 실패 시 URL 기반 로그인 페이지로 직접 이동 후 재시도
+        const _curUrl = page.url();
+        if (!_curUrl.includes('login') && !_curUrl.includes('Login')) {
+          await page.goto('https://www.iros.go.kr/pos9/commonLoginPage.do', { waitUntil: 'domcontentloaded', timeout: 20000 }).catch(() => {});
+          await page.waitForTimeout(1500);
+          const _hasForm2 = await page.locator(_userSel).count() > 0;
+          if (_hasForm2) {
+            await page.locator(_userSel).first().fill(irosId);
+            await page.locator(_pwSel).first().fill(irosPw);
+            const _btn2 = page.locator(_btnSel).first();
+            if (await _btn2.count() > 0) await _btn2.click();
+            else await page.keyboard.press('Enter');
+            await page.waitForLoadState('domcontentloaded', { timeout: 20000 }).catch(() => {});
+            await page.waitForTimeout(2000);
+            _loggedIn = await _checkIrosLogin();
+            console.log('[iros] 직접 이동 후 isLogin.do:', _loggedIn);
+          }
+        }
+      }
+      if (!_loggedIn) {
+        throw new Error(`IROS 로그인 실패. ID=${irosId} URL=${page.url()}`);
+      }
+
+      // 로그인 성공 후 index.jsp로 돌아가 Gauce SPA 컨텍스트 유지
+      const _afterUrl = page.url();
+      if (!_afterUrl.includes('index.jsp') && !_afterUrl.includes('iros.go.kr/pos9/jsf/')) {
+        await page.goto('https://www.iros.go.kr/index.jsp', { waitUntil: 'load', timeout: 30000 });
+        await page.waitForTimeout(2000);
       }
     }
 
