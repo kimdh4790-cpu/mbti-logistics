@@ -1291,37 +1291,40 @@ body {
 }
 /* 검색바 */
 .sly-search-wrap {
-  padding: 10px 16px 8px;
+  padding: 10px 16px 10px;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid #F43F8B33;
   flex-shrink: 0;
 }
 .sly-search-inner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #F3F6FB;
-  border: 1.5px solid transparent;
-  border-radius: 12px;
-  padding: 0 14px;
-  transition: border-color .2s;
+  gap: 10px;
+  background: #fff0f6;
+  border: 2px solid #F43F8B66;
+  border-radius: 14px;
+  padding: 0 16px;
+  transition: border-color .2s, box-shadow .2s;
+  box-shadow: 0 2px 8px #F43F8B18;
 }
 .sly-search-inner:focus-within {
   border-color: #F43F8B;
   background: #fff;
+  box-shadow: 0 3px 12px #F43F8B33;
 }
-.sly-search-inner svg { color: #9ca3af; flex-shrink: 0; }
+.sly-search-inner svg { color: #F43F8B; flex-shrink: 0; width: 20px; height: 20px; }
 .sly-search-input {
   flex: 1;
   border: none;
   background: transparent;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 600;
   color: var(--text-primary);
-  padding: 11px 0;
+  padding: 13px 0;
   outline: none;
   font-family: 'Pretendard', sans-serif;
 }
-.sly-search-input::placeholder { color: #aab0bb; }
+.sly-search-input::placeholder { color: #F43F8B99; font-weight: 500; }
 .sly-search-clear {
   background: none;
   border: none;
@@ -1428,7 +1431,7 @@ body {
 }
 .sly-cat-ico svg { width: 22px; height: 22px; }
 .sly-cat-meta { display: flex; align-items: center; gap: 6px; }
-.sly-cat-name { font-size: 22px; font-weight: 800; color: var(--text-primary); letter-spacing: -.5px; }
+.sly-cat-name { font-size: 26px; font-weight: 900; color: var(--text-primary); letter-spacing: -.7px; }
 .sly-cat-count { font-size: 15px; color: var(--text-muted); margin-left: auto; }
 .sly-cat-svcs {
   display: flex;
