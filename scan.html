@@ -1700,9 +1700,10 @@ function updateAuthUI(user) {
     landing.classList.toggle('visible', !user);
     if (user) {
       mc.style.display = 'none'; // 인트로가 먼저 뜸
-      // 처음 로그인 시에만 인트로 표시 (탭 세션 기준)
-      if (!sessionStorage.getItem('slyIntroDone')) {
-        sessionStorage.setItem('slyIntroDone', '1');
+      // 하루에 한 번 인트로 표시 (localStorage 날짜 기준)
+      var _today = new Date().toISOString().slice(0, 10);
+      if (localStorage.getItem('slyIntroDate') !== _today) {
+        localStorage.setItem('slyIntroDate', _today);
         _slyShowIntro();
       } else {
         mc.style.display = 'block';
