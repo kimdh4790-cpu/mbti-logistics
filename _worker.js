@@ -2934,19 +2934,20 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             if(resumeJobId){const rDoc=await fsGet(token,`${FS_BASE}/sly_jobs/${resumeJobId}`);resumeText=rDoc?.fields?.originalText?.stringValue||'';}
             const {analyzeResume,analyzeCoverLetter,rewriteCoverLetter,translateCoverLetter,generateInterviewQuestions,analyzeContract,analyzeScannedPdf,analyzeRegistry,analyzePublicDoc}=await import('./seolyuhana/services/analyze.js');
             await setProgress(40);
-            let analysisData;
-            if(parsed.scanned){const result=await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer,serviceId,extraContext:{resumeText,jdText},env});analysisData=result.data;}
-            else {
+            const _slyAnalysisTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('분석 시간 초과 (90초). 잠시 후 다시 시도해주세요.')),90000));
+            const _runAnalysis=async()=>{
+              if(parsed.scanned){const result=await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer,serviceId,extraContext:{resumeText,jdText},env});return result.data;}
               const text=parsed.text;
-              if(serviceId==='resume_analysis'){const r=await analyzeResume({text,jdText,env});analysisData=r.data;}
-              else if(serviceId==='cover_letter_analysis'){const r=await analyzeCoverLetter({coverLetterText:text,resumeText,jdText,env});analysisData=r.data;}
-              else if(serviceId==='cover_letter_rewrite'){const r=await rewriteCoverLetter({coverLetterText:text,resumeText,jdText,env});analysisData=r.data;}
-              else if(serviceId==='cover_letter_translation'){const r=await translateCoverLetter({text,resumeText,targetLang,env});analysisData=r.data;}
-              else if(serviceId==='interview_questions'){const r=await generateInterviewQuestions({resumeText:text,coverLetterText:'',jdText,env});analysisData=r.data;}
-              else if(serviceId==='registry_analysis'){const r=await analyzeRegistry({text,jeonseDeposit,env});analysisData=r.data;}
-              else if(serviceId==='public_doc_analysis'||serviceId==='workplace_tone'||serviceId==='career_saju'||serviceId==='notice_summary'){const r=await analyzePublicDoc({text,serviceId,env});analysisData=r.data;}
-              else{const r=await analyzeContract({text,contractType:serviceId,env});analysisData=r.data;}
-            }
+              if(serviceId==='resume_analysis'){const r=await analyzeResume({text,jdText,env});return r.data;}
+              else if(serviceId==='cover_letter_analysis'){const r=await analyzeCoverLetter({coverLetterText:text,resumeText,jdText,env});return r.data;}
+              else if(serviceId==='cover_letter_rewrite'){const r=await rewriteCoverLetter({coverLetterText:text,resumeText,jdText,env});return r.data;}
+              else if(serviceId==='cover_letter_translation'){const r=await translateCoverLetter({text,resumeText,targetLang,env});return r.data;}
+              else if(serviceId==='interview_questions'){const r=await generateInterviewQuestions({resumeText:text,coverLetterText:'',jdText,env});return r.data;}
+              else if(serviceId==='registry_analysis'){const r=await analyzeRegistry({text,jeonseDeposit,env});return r.data;}
+              else if(serviceId==='public_doc_analysis'||serviceId==='workplace_tone'||serviceId==='career_saju'||serviceId==='notice_summary'){const r=await analyzePublicDoc({text,serviceId,env});return r.data;}
+              else{const r=await analyzeContract({text,contractType:serviceId,env});return r.data;}
+            };
+            let analysisData=await Promise.race([_runAnalysis(),_slyAnalysisTimeout]);
             await setProgress(70);
             const {buildDocx,buildPdf}=await import('./seolyuhana/output/builder.js');
             const docxBuffer=await buildDocx(analysisData,serviceId,filename,parsed.text||'');
@@ -9206,40 +9207,47 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
+          // 90초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
+          const _slyAnalysisTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('분석 시간 초과 (90초). 잠시 후 다시 시도해주세요.')), 90000)
+          );
+
           let analysisData;
-          if (parsed.scanned) {
-            const result = await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer, serviceId, extraContext:{resumeText, jdText}, env});
-            analysisData = result.data;
-          } else {
+          const _runAnalysis = async () => {
+            if (parsed.scanned) {
+              const result = await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer, serviceId, extraContext:{resumeText, jdText}, env});
+              return result.data;
+            }
             const text = parsed.text;
             if (serviceId === 'resume_analysis') {
-              const r = await analyzeResume({text, jdText, env}); analysisData = r.data;
+              const r = await analyzeResume({text, jdText, env}); return r.data;
             } else if (serviceId === 'cover_letter_analysis') {
-              const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
+              const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); return r.data;
             } else if (serviceId === 'cover_letter_rewrite') {
-              const r = await rewriteCoverLetter({coverLetterText:text, resumeText, jdText, env}); analysisData = r.data;
+              const r = await rewriteCoverLetter({coverLetterText:text, resumeText, jdText, env}); return r.data;
             } else if (serviceId === 'cover_letter_translation') {
-              const r = await translateCoverLetter({text, resumeText, targetLang, env}); analysisData = r.data;
+              const r = await translateCoverLetter({text, resumeText, targetLang, env}); return r.data;
             } else if (serviceId === 'interview_questions') {
-              const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); analysisData = r.data;
+              const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); return r.data;
             } else if (serviceId === 'registry_analysis') {
-              const r = await analyzeRegistry({text, jeonseDeposit, env}); analysisData = r.data;
+              const r = await analyzeRegistry({text, jeonseDeposit, env}); return r.data;
             } else if (serviceId === 'public_doc_analysis' || serviceId === 'workplace_tone' || serviceId === 'career_saju' || serviceId === 'notice_summary' || serviceId === 'shortform_script' || serviceId === 'ai_photo' || serviceId === 'subtitle_create') {
-              const r = await analyzePublicDoc({text, serviceId, env}); analysisData = r.data;
+              const r = await analyzePublicDoc({text, serviceId, env}); return r.data;
             } else if (serviceId === 'webtoon_analysis') {
-              const r = await analyzeWebtoon({text, env}); analysisData = r.data;
+              const r = await analyzeWebtoon({text, env}); return r.data;
             } else if (serviceId === 'shortfilm_analysis') {
-              const r = await analyzeShortFilm({text, env}); analysisData = r.data;
+              const r = await analyzeShortFilm({text, env}); return r.data;
             } else if (serviceId === 'drama_series_analysis') {
-              const r = await analyzeDramaSeries({text, env}); analysisData = r.data;
+              const r = await analyzeDramaSeries({text, env}); return r.data;
             } else if (serviceId === 'insurance_scan') {
-              const r = await analyzeInsurance({text, env}); analysisData = r.data;
+              const r = await analyzeInsurance({text, env}); return r.data;
             } else if (serviceId === 'bizplan_analysis') {
-              const r = await analyzeBizPlan({text, env}); analysisData = r.data;
+              const r = await analyzeBizPlan({text, env}); return r.data;
             } else {
-              const r = await analyzeContract({text, contractType:serviceId, env}); analysisData = r.data;
+              const r = await analyzeContract({text, contractType:serviceId, env}); return r.data;
             }
-          }
+          };
+          analysisData = await Promise.race([_runAnalysis(), _slyAnalysisTimeout]);
           await setProgress(70);
 
           // 4. 출력 파일 생성

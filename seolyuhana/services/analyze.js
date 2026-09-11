@@ -591,7 +591,7 @@ export async function generateInterviewQuestions({ resumeText, coverLetterText =
     system: INTERVIEW_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 6000
+    maxTokens: 3500
   });
 }
 
