@@ -759,10 +759,15 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     throw new Error('스캔 PDF 변환 실패: Oracle 서버에서 이미지를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
 
-  // Oracle pdftoppm → JPEG 이미지 배열: 표준 image 블록 (beta 헤더 불필요)
-  const imageBlocks = images.slice(0, 8).map(b64 => ({
+  // 이미지 블록 생성 — PDF 변환 이미지(JPEG) 또는 직접 업로드 이미지(다양한 형식)
+  const imgMediaType = images.mediaType || 'image/jpeg'; // 직접 업로드 시 mediaType 전달
+  const imageBlocks = images.slice(0, 8).map((b64, i) => ({
     type: 'image',
-    source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+    source: {
+      type: 'base64',
+      media_type: Array.isArray(images.mediaTypes) ? (images.mediaTypes[i] || imgMediaType) : imgMediaType,
+      data: b64
+    }
   }));
 
   const res = await fetch(ANTHROPIC_API, {
