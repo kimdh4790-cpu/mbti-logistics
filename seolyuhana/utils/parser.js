@@ -39,7 +39,7 @@ export async function parseFile(buffer, filename, mimeType, env) {
  * Oracle Cloud 161.33.136.154의 /api/hwp-convert 엔드포인트 호출
  */
 async function parseHwp(buffer, filename, env) {
-  const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:3100';
+  const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:8080';
 
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: 'application/x-hwp' }), filename);
@@ -184,7 +184,7 @@ async function parsePdf(buffer, env) {
  */
 async function tryOraclePdfText(buffer, env) {
   try {
-    const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:3100';
+    const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:8080';
     const form = new FormData();
     form.append('file', new Blob([buffer], { type: 'application/pdf' }), 'input.pdf');
     const res = await fetch(`${oracleBase}/api/pdf-text`, {
