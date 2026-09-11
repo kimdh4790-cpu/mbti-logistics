@@ -99,14 +99,28 @@ app.post('/api/pdf-render', async (req, res) => {
 });
 
 // ── /api/pdf-text  PDF → 텍스트 (pdftotext, 한글 CIDFont CMap 대응) ────────────
-app.post('/api/pdf-text', upload.single('file'), async (req, res) => {
+// raw binary (application/pdf) 또는 multipart/form-data 모두 지원
+app.post('/api/pdf-text', async (req, res) => {
   let tmpDir = null;
   try {
-    if (!req.file) return res.status(400).json({ error: '파일 없음' });
+    let pdfBuffer;
+    const ct = req.headers['content-type'] || '';
+    if (ct.startsWith('multipart/')) {
+      await new Promise((resolve, reject) => {
+        upload.single('file')(req, res, (err) => err ? reject(err) : resolve());
+      });
+      if (!req.file) return res.status(400).json({ error: '파일 없음' });
+      pdfBuffer = req.file.buffer;
+    } else {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      pdfBuffer = Buffer.concat(chunks);
+      if (!pdfBuffer || pdfBuffer.length === 0) return res.status(400).json({ error: '파일 없음' });
+    }
     tmpDir = await mkdtemp(join(tmpdir(), 'pdf-txt-'));
     const pdfPath = join(tmpDir, 'input.pdf');
     const txtPath = join(tmpDir, 'output.txt');
-    await writeFile(pdfPath, req.file.buffer);
+    await writeFile(pdfPath, pdfBuffer);
     await execFileAsync('pdftotext', ['-enc', 'UTF-8', '-layout', pdfPath, txtPath], { timeout: 60000 });
     const text = await readFile(txtPath, 'utf-8').catch(() => '');
     res.json({ text: text.trim() });
@@ -120,15 +134,31 @@ app.post('/api/pdf-text', upload.single('file'), async (req, res) => {
 
 // ── /api/pdf-to-images  PDF → JPEG 이미지 배열 (pdftoppm, Vision용) ─────────────
 // PDF beta 없이 Claude Vision에 이미지로 전송하기 위한 엔드포인트
-app.post('/api/pdf-to-images', upload.single('file'), async (req, res) => {
+// raw binary (application/pdf) 또는 multipart/form-data 모두 지원
+app.post('/api/pdf-to-images', async (req, res) => {
   let tmpDir = null;
   try {
-    if (!req.file) return res.status(400).json({ error: '파일 없음' });
+    let pdfBuffer;
+    const ct = req.headers['content-type'] || '';
+    if (ct.startsWith('multipart/')) {
+      // multer로 처리
+      await new Promise((resolve, reject) => {
+        upload.single('file')(req, res, (err) => err ? reject(err) : resolve());
+      });
+      if (!req.file) return res.status(400).json({ error: '파일 없음' });
+      pdfBuffer = req.file.buffer;
+    } else {
+      // raw binary body
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      pdfBuffer = Buffer.concat(chunks);
+      if (!pdfBuffer || pdfBuffer.length === 0) return res.status(400).json({ error: '파일 없음' });
+    }
     const maxPages = Math.min(parseInt(req.query.maxPages || '8', 10), 20);
 
     tmpDir = await mkdtemp(join(tmpdir(), 'pdf-img-'));
     const pdfPath = join(tmpDir, 'input.pdf');
-    await writeFile(pdfPath, req.file.buffer);
+    await writeFile(pdfPath, pdfBuffer);
 
     // 페이지 수 확인
     let totalPages = 1;

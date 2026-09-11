@@ -187,42 +187,50 @@ async function parsePdf(buffer, env) {
 
 /**
  * Oracle Cloud pdftoppm으로 PDF → JPEG 이미지 배열 반환
+ * raw binary body로 전송 (FormData/Blob Cloudflare Worker 호환성 문제 우회)
  */
 async function tryOraclePdfImages(buffer, env) {
   try {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:8080';
-    const form = new FormData();
-    form.append('file', new Blob([buffer], { type: 'application/pdf' }), 'input.pdf');
     const res = await fetch(`${oracleBase}/api/pdf-to-images?maxPages=8`, {
       method: 'POST',
-      body: form,
+      headers: { 'Content-Type': 'application/pdf' },
+      body: buffer,
       signal: AbortSignal.timeout(90000)
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[tryOraclePdfImages] HTTP 오류:', res.status, await res.text().catch(() => ''));
+      return null;
+    }
     const data = await res.json();
     return data.images && data.images.length > 0 ? data.images : null;
-  } catch {
+  } catch (e) {
+    console.error('[tryOraclePdfImages] 네트워크 오류:', e.message);
     return null;
   }
 }
 
 /**
  * Oracle Cloud LibreOffice로 PDF 텍스트 추출 (CIDFont 한글 PDF 대응)
+ * raw binary body로 전송 (FormData/Blob Cloudflare Worker 호환성 문제 우회)
  */
 async function tryOraclePdfText(buffer, env) {
   try {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:8080';
-    const form = new FormData();
-    form.append('file', new Blob([buffer], { type: 'application/pdf' }), 'input.pdf');
     const res = await fetch(`${oracleBase}/api/pdf-text`, {
       method: 'POST',
-      body: form,
+      headers: { 'Content-Type': 'application/pdf' },
+      body: buffer,
       signal: AbortSignal.timeout(60000)
     });
-    if (!res.ok) return '';
+    if (!res.ok) {
+      console.error('[tryOraclePdfText] HTTP 오류:', res.status);
+      return '';
+    }
     const data = await res.json();
     return data.text || '';
-  } catch {
+  } catch (e) {
+    console.error('[tryOraclePdfText] 네트워크 오류:', e.message);
     return '';
   }
 }
