@@ -1291,6 +1291,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       <div class="acc-body" id="acc-apps"></div>
     </div>
 
+    <!-- 🔍 SCAN 사용자 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('scan')">
+        <span class="acc-icon" id="ico-scan">▶</span>
+        <span class="acc-title">🔍 SCAN 사용자</span>
+      </div>
+      <div class="acc-body" id="acc-scan"></div>
+    </div>
+
   </div><!-- /main-scroll -->
 </div><!-- /main-screen -->
 
@@ -1506,7 +1515,8 @@ function _ctrlLoad(id) {
     chat:      _ctrlLoadChat,
     notice:    _ctrlLoadNotice,
     billing:   _ctrlLoadBilling,
-    apps:      _ctrlLoadApps
+    apps:      _ctrlLoadApps,
+    scan:      _ctrlLoadScanUsers
   }[id];
   if (fn) fn();
 }
@@ -2376,6 +2386,49 @@ function _ctrlLoadApps() {
     '<div id="apps-content"><div class="ctrl-loading">로딩 중...</div></div>';
   _ctrlAppsLoadSummary();
   _ctrlAppsTab('all');
+}
+
+function _ctrlLoadScanUsers() {
+  var c = document.getElementById('acc-scan');
+  c.innerHTML = '<div class="ctrl-loading">SCAN 사용자 로딩 중...</div>';
+  _db.collection('sly_points').orderBy('createdAt', 'desc').limit(200).get().then(function(snap) {
+    if (snap.empty) { c.innerHTML = '<div class="ctrl-empty">등록된 사용자 없음</div>'; return; }
+    var totalBalance = 0, rows = [];
+    snap.forEach(function(doc) {
+      var d = doc.data(), uid = doc.id;
+      var bal = d.balance || 0;
+      totalBalance += bal;
+      var email = d.email || uid;
+      var date = d.createdAt ? d.createdAt.slice(0, 10) : '-';
+      rows.push(
+        '<tr>' +
+        '<td style="font-size:12px;color:var(--tx2);word-break:break-all">' + _esc(email) + '</td>' +
+        '<td style="font-weight:700;color:var(--tx1);font-variant-numeric:tabular-nums">' + bal.toLocaleString() + ' P</td>' +
+        '<td style="font-size:12px;color:var(--tx3)">' + _esc(date) + '</td>' +
+        '<td><button class="ctrl-btn" style="font-size:11px;padding:3px 8px" onclick="_ctrlScanAdjust(\'' + _esc(uid) + '\',\'' + _esc(email) + '\')">포인트 조정</button></td>' +
+        '</tr>'
+      );
+    });
+    c.innerHTML =
+      '<div style="margin-bottom:12px;font-size:13px;color:var(--tx2)">총 <b style="color:var(--tx1)">' + snap.size + '명</b> · 총 보유 포인트 <b style="color:var(--acc)">' + totalBalance.toLocaleString() + ' P</b></div>' +
+      '<div class="ctrl-table-wrap"><table class="ctrl-table">' +
+      '<thead><tr><th>이메일 / UID</th><th>포인트</th><th>가입일</th><th>관리</th></tr></thead>' +
+      '<tbody>' + rows.join('') + '</tbody></table></div>';
+  }).catch(function(e) { c.innerHTML = '<div class="ctrl-empty">오류: ' + _esc(e.message) + '</div>'; });
+}
+
+function _ctrlScanAdjust(uid, email) {
+  var amt = prompt(email + '\n조정할 포인트를 입력하세요 (양수: 충전, 음수: 차감)');
+  if (amt === null) return;
+  var n = parseInt(amt, 10);
+  if (isNaN(n) || n === 0) { alert('올바른 숫자를 입력하세요'); return; }
+  _db.collection('sly_points').doc(uid).update({
+    balance: firebase.firestore.FieldValue.increment(n)
+  }).then(function() {
+    _ctrlToast((n > 0 ? '충전: +' : '차감: ') + n.toLocaleString() + 'P');
+    delete _loaded['scan'];
+    _ctrlLoadScanUsers();
+  }).catch(function(e) { _ctrlToast('오류: ' + e.message); });
 }
 
 function _ctrlAppsTab(tab) {

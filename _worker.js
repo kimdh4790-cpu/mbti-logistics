@@ -3061,14 +3061,18 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const _au = await verifyFirebaseToken(request, env);
             if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
             const uid = _au.localId || _au;
+            const userEmail3 = _au.email || '';
             const token = await getAccessToken(env);
             const doc = await fsGet(token, 'sly_points', uid);
             let balance = doc?.fields?.balance?.integerValue|0 || 0;
             let signupBonus = false;
             const alreadyBonused = doc?.fields?.bonusGranted?.booleanValue === true;
+            if (userEmail3 && !doc?.fields?.email) {
+              fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {email:{stringValue:userEmail3}}).catch(()=>{});
+            }
             if (!alreadyBonused && !doc?.fields?.balance) {
               const SIGNUP_BONUS = 2900;
-              const patchRes = await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},bonusGranted:{booleanValue:true},createdAt:{stringValue:new Date().toISOString()}});
+              const patchRes = await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},bonusGranted:{booleanValue:true},createdAt:{stringValue:new Date().toISOString()},email:{stringValue:userEmail3}});
               if (!patchRes?.error) {
                 const bId = crypto.randomUUID();
                 await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:String(SIGNUP_BONUS)},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
