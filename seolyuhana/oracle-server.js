@@ -98,19 +98,16 @@ app.post('/api/pdf-render', async (req, res) => {
   }
 });
 
-// ── /api/pdf-text  PDF → 텍스트 (LibreOffice, 한글 CIDFont 대응) ─────────────────
+// ── /api/pdf-text  PDF → 텍스트 (pdftotext, 한글 CIDFont CMap 대응) ────────────
 app.post('/api/pdf-text', upload.single('file'), async (req, res) => {
   let tmpDir = null;
   try {
     if (!req.file) return res.status(400).json({ error: '파일 없음' });
     tmpDir = await mkdtemp(join(tmpdir(), 'pdf-txt-'));
     const pdfPath = join(tmpDir, 'input.pdf');
-    const txtPath = join(tmpDir, 'input.txt');
+    const txtPath = join(tmpDir, 'output.txt');
     await writeFile(pdfPath, req.file.buffer);
-    await execFileAsync('libreoffice', [
-      '--headless', '--convert-to', 'txt:Text',
-      '--outdir', tmpDir, pdfPath
-    ], { timeout: 60000 });
+    await execFileAsync('pdftotext', ['-enc', 'UTF-8', '-layout', pdfPath, txtPath], { timeout: 60000 });
     const text = await readFile(txtPath, 'utf-8').catch(() => '');
     res.json({ text: text.trim() });
   } catch (e) {
