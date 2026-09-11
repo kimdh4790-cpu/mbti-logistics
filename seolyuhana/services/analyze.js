@@ -121,7 +121,7 @@ const RESUME_SYSTEM = `당신은 한국 대기업 인사팀 출신 이력서 분
   "industryKeywords": ["해당 직무 필수 키워드"],
   "overallComment": "전체 총평 (250자 이내, 합격 가능성 포함)"
 }
-개선 제안 최소 8개, 최대 15개. 원본 문장은 이력서에서 그대로 인용.``;
+개선 제안 최소 8개, 최대 15개. 원본 문장은 이력서에서 그대로 인용.`;
 
 export async function analyzeResume({ text, jdText = '', env }) {
   const userBlocks = [
