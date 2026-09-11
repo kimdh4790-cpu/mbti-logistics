@@ -26,8 +26,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31'
+      'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(120000)
