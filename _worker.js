@@ -9194,7 +9194,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // 3. Claude 분석
-          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc } = await import('./seolyuhana/services/analyze.js');
+          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
           let analysisData;
@@ -9217,6 +9217,16 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               const r = await analyzeRegistry({text, jeonseDeposit, env}); analysisData = r.data;
             } else if (serviceId === 'public_doc_analysis' || serviceId === 'workplace_tone' || serviceId === 'career_saju' || serviceId === 'notice_summary') {
               const r = await analyzePublicDoc({text, serviceId, env}); analysisData = r.data;
+            } else if (serviceId === 'webtoon_analysis') {
+              const r = await analyzeWebtoon({text, env}); analysisData = r.data;
+            } else if (serviceId === 'shortfilm_analysis') {
+              const r = await analyzeShortFilm({text, env}); analysisData = r.data;
+            } else if (serviceId === 'drama_series_analysis') {
+              const r = await analyzeDramaSeries({text, env}); analysisData = r.data;
+            } else if (serviceId === 'insurance_scan') {
+              const r = await analyzeInsurance({text, env}); analysisData = r.data;
+            } else if (serviceId === 'bizplan_analysis') {
+              const r = await analyzeBizPlan({text, env}); analysisData = r.data;
             } else {
               const r = await analyzeContract({text, contractType:serviceId, env}); analysisData = r.data;
             }
