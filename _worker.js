@@ -2928,7 +2928,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const {parseFile,makeOutputFilename}=await import('./seolyuhana/utils/parser.js');
             await setProgress(10);
             const parsed=await parseFile(fileBuffer,filename,'',env);
-            if(parsed.pageCount>20) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 20)`);
+            if(parsed.pageCount>50) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 50)`);
             await setProgress(25);
             let resumeText='';
             if(resumeJobId){const rDoc=await fsGet(token,`${FS_BASE}/sly_jobs/${resumeJobId}`);resumeText=rDoc?.fields?.originalText?.stringValue||'';}
@@ -9193,7 +9193,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const { parseFile, makeOutputFilename } = await import('./seolyuhana/utils/parser.js');
           await setProgress(10);
           const parsed = await parseFile(fileBuffer, filename, '', env);
-          if (parsed.pageCount > 20) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 20)`);
+          if (parsed.pageCount > 50) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 50)`);
           await setProgress(25);
 
           // 2. 이력서 컨텍스트 로드 (재사용)

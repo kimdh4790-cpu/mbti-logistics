@@ -191,10 +191,13 @@ function extractPdfText(buffer) {
   let m;
   while ((m = btRe.exec(raw)) !== null) {
     const block = m[1];
-    // (text) Tj
+    // (text) Tj — 일반 ASCII/Latin
     const tjRe = /\(([^)]*)\)\s*Tj/g;
     let t;
     while ((t = tjRe.exec(block)) !== null) chunks.push(decodePdfString(t[1]));
+    // <HEX> Tj — 인터넷등기소/한국 CIDFont UTF-16BE 인코딩
+    const hexTjRe = /<([0-9A-Fa-f]{4,})>\s*Tj/g;
+    while ((t = hexTjRe.exec(block)) !== null) chunks.push(hexToUnicode(t[1]));
     // [(arr) ...] TJ
     const TJRe = /\[([\s\S]*?)\]\s*TJ/g;
     while ((t = TJRe.exec(block)) !== null) {
@@ -202,10 +205,30 @@ function extractPdfText(buffer) {
       const arrRe = /\(([^)]*)\)/g;
       let a;
       while ((a = arrRe.exec(inner)) !== null) chunks.push(decodePdfString(a[1]));
+      // HEX 배열: [<XXXX><YYYY>] TJ
+      const hexArrRe = /<([0-9A-Fa-f]{4,})>/g;
+      while ((a = hexArrRe.exec(inner)) !== null) chunks.push(hexToUnicode(a[1]));
     }
     chunks.push('\n');
   }
   return chunks.join('').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// CIDFont HEX → 유니코드 문자열 변환 (UTF-16BE 기준, 인터넷등기소 RIS PDF 대응)
+function hexToUnicode(hex) {
+  try {
+    // 2바이트씩 UTF-16BE 디코딩
+    const bytes = [];
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes.push(parseInt(hex.slice(i, i + 2), 16));
+    }
+    if (bytes.length % 2 === 0) {
+      return new TextDecoder('utf-16be').decode(new Uint8Array(bytes));
+    }
+    return '';
+  } catch {
+    return '';
+  }
 }
 
 function decodePdfString(s) {
