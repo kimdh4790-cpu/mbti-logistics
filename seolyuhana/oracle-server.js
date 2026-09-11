@@ -136,10 +136,14 @@ app.post('/api/pdf-to-images', upload.single('file'), async (req, res) => {
       const info = await execFileAsync('pdfinfo', [pdfPath], { timeout: 10000 });
       const m = info.stdout.match(/Pages:\s*(\d+)/);
       if (m) totalPages = parseInt(m[1], 10);
-    } catch {}
+    } catch (e) {
+      console.error('[pdf-to-images] pdfinfo 실패:', e.message);
+    }
 
     const pagesToConvert = Math.min(totalPages, maxPages);
     const imgPrefix = join(tmpDir, 'page');
+
+    console.log(`[pdf-to-images] PDF ${totalPages}p → ${pagesToConvert}p 변환 시작`);
 
     // pdftoppm: PDF 페이지 → JPEG (150dpi, 첫 pagesToConvert 페이지)
     await execFileAsync('pdftoppm', [
@@ -148,22 +152,25 @@ app.post('/api/pdf-to-images', upload.single('file'), async (req, res) => {
       pdfPath, imgPrefix
     ], { timeout: 90000 });
 
-    // 생성된 이미지 수집
+    // readdir로 실제 생성된 파일 목록 확인 (파일명 포맷 의존 제거)
+    const { readdir } = await import('node:fs/promises');
+    const allFiles = await readdir(tmpDir);
+    const imgFiles = allFiles
+      .filter(f => f.startsWith('page') && f.endsWith('.jpg'))
+      .sort();
+
+    console.log(`[pdf-to-images] 생성된 이미지: ${imgFiles.join(', ')}`);
+
     const images = [];
-    for (let i = 1; i <= pagesToConvert; i++) {
-      const pad = String(i).padStart(totalPages >= 10 ? 2 : 1, '0');
-      for (const suffix of [`-${pad}`, `-${String(i).padStart(2, '0')}`, `-${i}`]) {
-        try {
-          const imgData = await readFile(`${imgPrefix}${suffix}.jpg`);
-          images.push(imgData.toString('base64'));
-          break;
-        } catch {}
-      }
+    for (const imgFile of imgFiles.slice(0, pagesToConvert)) {
+      const imgData = await readFile(join(tmpDir, imgFile));
+      images.push(imgData.toString('base64'));
     }
 
+    console.log(`[pdf-to-images] 완료: ${images.length}장`);
     res.json({ images, pageCount: totalPages });
   } catch (e) {
-    console.error('[pdf-to-images]', e.message);
+    console.error('[pdf-to-images] 오류:', e.message, e.stack?.split('\n')[1]);
     res.status(500).json({ error: e.message });
   } finally {
     if (tmpDir) await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
