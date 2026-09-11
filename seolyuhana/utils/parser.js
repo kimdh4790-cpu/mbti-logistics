@@ -158,7 +158,7 @@ function xmlToPlainText(xml) {
 }
 
 /**
- * PDF 파싱 — 텍스트 레이어 추출 시도, 실패 시 Oracle LibreOffice 폴백, 마지막에 Vision
+ * PDF 파싱 — 텍스트 레이어 추출 시도, 실패 시 Oracle pdftotext 폴백, 마지막에 Vision
  */
 async function parsePdf(buffer, env) {
   const pageCount = countPdfPages(buffer);
@@ -169,14 +169,41 @@ async function parsePdf(buffer, env) {
     return { text: text.trim(), pageCount, method: 'pdf_text', scanned: false };
   }
 
-  // 2차: Oracle LibreOffice PDF→txt (한글 CIDFont CMap 대응)
+  // 2차: Oracle pdftotext (한글 CIDFont CMap 대응)
   const oracleText = await tryOraclePdfText(buffer, env);
   if (oracleText && oracleText.replace(/\s/g, '').length > 50) {
     return { text: oracleText.trim(), pageCount, method: 'oracle_pdf', scanned: false };
   }
 
-  // 3차: 스캔 PDF → Claude Vision
+  // 3차: Oracle pdftoppm → JPEG 이미지 (PDF beta 없이 Vision 가능)
+  const oracleImages = await tryOraclePdfImages(buffer, env);
+  if (oracleImages && oracleImages.length > 0) {
+    return { text: '', pageCount, method: 'pdf_vision_images', scanned: true, images: oracleImages, rawBuffer: buffer };
+  }
+
+  // 4차: PDF 직접 전송 (anthropic-beta pdfs-2024-09-25 필요)
   return { text: '', pageCount, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
+}
+
+/**
+ * Oracle Cloud pdftoppm으로 PDF → JPEG 이미지 배열 반환
+ */
+async function tryOraclePdfImages(buffer, env) {
+  try {
+    const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:8080';
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: 'application/pdf' }), 'input.pdf');
+    const res = await fetch(`${oracleBase}/api/pdf-to-images?maxPages=8`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(90000)
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.images && data.images.length > 0 ? data.images : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

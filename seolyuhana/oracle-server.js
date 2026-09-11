@@ -118,6 +118,58 @@ app.post('/api/pdf-text', upload.single('file'), async (req, res) => {
   }
 });
 
+// ── /api/pdf-to-images  PDF → JPEG 이미지 배열 (pdftoppm, Vision용) ─────────────
+// PDF beta 없이 Claude Vision에 이미지로 전송하기 위한 엔드포인트
+app.post('/api/pdf-to-images', upload.single('file'), async (req, res) => {
+  let tmpDir = null;
+  try {
+    if (!req.file) return res.status(400).json({ error: '파일 없음' });
+    const maxPages = Math.min(parseInt(req.query.maxPages || '8', 10), 20);
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'pdf-img-'));
+    const pdfPath = join(tmpDir, 'input.pdf');
+    await writeFile(pdfPath, req.file.buffer);
+
+    // 페이지 수 확인
+    let totalPages = 1;
+    try {
+      const info = await execFileAsync('pdfinfo', [pdfPath], { timeout: 10000 });
+      const m = info.stdout.match(/Pages:\s*(\d+)/);
+      if (m) totalPages = parseInt(m[1], 10);
+    } catch {}
+
+    const pagesToConvert = Math.min(totalPages, maxPages);
+    const imgPrefix = join(tmpDir, 'page');
+
+    // pdftoppm: PDF 페이지 → JPEG (150dpi, 첫 pagesToConvert 페이지)
+    await execFileAsync('pdftoppm', [
+      '-jpeg', '-r', '150',
+      '-l', String(pagesToConvert),
+      pdfPath, imgPrefix
+    ], { timeout: 90000 });
+
+    // 생성된 이미지 수집
+    const images = [];
+    for (let i = 1; i <= pagesToConvert; i++) {
+      const pad = String(i).padStart(totalPages >= 10 ? 2 : 1, '0');
+      for (const suffix of [`-${pad}`, `-${String(i).padStart(2, '0')}`, `-${i}`]) {
+        try {
+          const imgData = await readFile(`${imgPrefix}${suffix}.jpg`);
+          images.push(imgData.toString('base64'));
+          break;
+        } catch {}
+      }
+    }
+
+    res.json({ images, pageCount: totalPages });
+  } catch (e) {
+    console.error('[pdf-to-images]', e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    if (tmpDir) await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 // ── /api/ocr  이미지·PDF → 텍스트 (PaddleOCR, 포트 3101) ──────────────────────
 app.post('/api/ocr', upload.single('file'), async (req, res) => {
   try {

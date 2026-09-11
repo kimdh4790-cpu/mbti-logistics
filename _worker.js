@@ -2936,7 +2936,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             await setProgress(40);
             const _slyAnalysisTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')),150000));
             const _runAnalysis=async()=>{
-              if(parsed.scanned){const result=await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer,serviceId,extraContext:{resumeText,jdText},env});return result.data;}
+              if(parsed.scanned){const result=await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer,images:parsed.images,serviceId,extraContext:{resumeText,jdText},env});return result.data;}
               const text=parsed.text;
               if(serviceId==='resume_analysis'){const r=await analyzeResume({text,jdText,env});return r.data;}
               else if(serviceId==='cover_letter_analysis'){const r=await analyzeCoverLetter({coverLetterText:text,resumeText,jdText,env});return r.data;}
@@ -9215,7 +9215,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           let analysisData;
           const _runAnalysis = async () => {
             if (parsed.scanned) {
-              const result = await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer, serviceId, extraContext:{resumeText, jdText}, env});
+              const result = await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer, images:parsed.images, serviceId, extraContext:{resumeText, jdText}, env});
               return result.data;
             }
             const text = parsed.text;
