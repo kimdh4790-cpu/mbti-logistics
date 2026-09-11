@@ -158,24 +158,46 @@ function xmlToPlainText(xml) {
 }
 
 /**
- * PDF 파싱 — 텍스트 레이어 추출 시도, 실패 시 스캔 PDF 처리
+ * PDF 파싱 — 텍스트 레이어 추출 시도, 실패 시 Oracle LibreOffice 폴백, 마지막에 Vision
  */
 async function parsePdf(buffer, env) {
-  const text = extractPdfText(buffer);
+  const pageCount = countPdfPages(buffer);
 
+  // 1차: 인워커 추출 (ASCII + CIDFont HEX)
+  const text = extractPdfText(buffer);
   if (text && text.replace(/\s/g, '').length > 50) {
-    return { text: text.trim(), pageCount: countPdfPages(buffer), method: 'pdf_text', scanned: false };
+    return { text: text.trim(), pageCount, method: 'pdf_text', scanned: false };
   }
 
-  // 텍스트 레이어 없음 → 스캔 PDF
-  // Claude Vision으로 처리 (caller에게 scanned:true 전달 → analyzeScannedPdf 호출)
-  return {
-    text: '',
-    pageCount: countPdfPages(buffer),
-    method: 'pdf_vision',
-    scanned: true,
-    rawBuffer: buffer
-  };
+  // 2차: Oracle LibreOffice PDF→txt (한글 CIDFont CMap 대응)
+  const oracleText = await tryOraclePdfText(buffer, env);
+  if (oracleText && oracleText.replace(/\s/g, '').length > 50) {
+    return { text: oracleText.trim(), pageCount, method: 'oracle_pdf', scanned: false };
+  }
+
+  // 3차: 스캔 PDF → Claude Vision
+  return { text: '', pageCount, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
+}
+
+/**
+ * Oracle Cloud LibreOffice로 PDF 텍스트 추출 (CIDFont 한글 PDF 대응)
+ */
+async function tryOraclePdfText(buffer, env) {
+  try {
+    const oracleBase = env.ORACLE_CONVERTER_URL || 'http://161.33.136.154:3100';
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: 'application/pdf' }), 'input.pdf');
+    const res = await fetch(`${oracleBase}/api/pdf-text`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(60000)
+    });
+    if (!res.ok) return '';
+    const data = await res.json();
+    return data.text || '';
+  } catch {
+    return '';
+  }
 }
 
 /**
