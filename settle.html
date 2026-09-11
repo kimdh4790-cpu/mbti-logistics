@@ -3742,7 +3742,7 @@ function _showLockPopup(featureName){
 // ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 var PLAN_DEF = {
   free: {
-    name:'FREE', label:'무�?체험', color:'#666',
+    name:'FREE', label:'무료체험', color:'#666',
     pricePerPerson:0, maxPerson:5,
     features:{
       settleLimit:3,
@@ -3761,15 +3761,15 @@ var PLAN_DEF = {
     }
   },
   starter: {
-    name:'STARTER', label:'개??(4,000?�/??', color:'#00c8f8',
-    pricePerPerson:4000, maxPerson:1000,
+    name:'STARTER', label:'스타터 (17,000원/명)', color:'#00c8f8',
+    pricePerPerson:17000, maxPerson:1000,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
       allIndustries:false,
       qrBooking:true,
       qrPos:false,
-      alimtalk:-1,      // -1 = ?�원?3�?기본, 초�?건�?15?�
+      alimtalk:-1,
       taxShare:true,
       beautyKiosk:false,
       customerDb:false,
@@ -3780,12 +3780,12 @@ var PLAN_DEF = {
     }
   },
   pro: {
-    name:'PRO', label:'?�체 (3,300?�/??', color:'#f59e0b',
-    pricePerPerson:3300, maxPerson:1000,
+    name:'PRO', label:'프로 (25,000원/명)', color:'#f59e0b',
+    pricePerPerson:25000, maxPerson:1000,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
-      allIndustries:false,
+      allIndustries:true,
       qrBooking:true,
       qrPos:false,
       alimtalk:999,
@@ -3799,12 +3799,12 @@ var PLAN_DEF = {
     }
   },
   business: {
-    name:'BUSINESS', label:'비즈?�??, color:'#ff9500',
-    pricePerPerson:3300, maxPerson:9999,
+    name:'BUSINESS', label:'비즈니스 (25,000원/명)', color:'#ff9500',
+    pricePerPerson:25000, maxPerson:9999,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
-      allIndustries:false,
+      allIndustries:true,
       qrBooking:true,
       qrPos:true,
       alimtalk:999,
@@ -3818,12 +3818,12 @@ var PLAN_DEF = {
     }
   },
   enterprise: {
-    name:'ENTERPRISE', label:'?�?�프?�이�?', color:'#ff5555',
+    name:'ENTERPRISE', label:'엔터프라이즈', color:'#ff5555',
     pricePerPerson:0, maxPerson:9999,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
-      allIndustries:false,
+      allIndustries:true,
       qrBooking:true,
       qrPos:true,
       alimtalk:999,
@@ -3837,6 +3837,7 @@ var PLAN_DEF = {
     }
   }
 };
+
 
 // ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
 // ?�???�?� 가?�오기
