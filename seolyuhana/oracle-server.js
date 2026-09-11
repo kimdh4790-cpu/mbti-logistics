@@ -98,6 +98,29 @@ app.post('/api/pdf-render', async (req, res) => {
   }
 });
 
+// ── /api/pdf-text  PDF → 텍스트 (LibreOffice, 한글 CIDFont 대응) ─────────────────
+app.post('/api/pdf-text', upload.single('file'), async (req, res) => {
+  let tmpDir = null;
+  try {
+    if (!req.file) return res.status(400).json({ error: '파일 없음' });
+    tmpDir = await mkdtemp(join(tmpdir(), 'pdf-txt-'));
+    const pdfPath = join(tmpDir, 'input.pdf');
+    const txtPath = join(tmpDir, 'input.txt');
+    await writeFile(pdfPath, req.file.buffer);
+    await execFileAsync('libreoffice', [
+      '--headless', '--convert-to', 'txt:Text',
+      '--outdir', tmpDir, pdfPath
+    ], { timeout: 60000 });
+    const text = await readFile(txtPath, 'utf-8').catch(() => '');
+    res.json({ text: text.trim() });
+  } catch (e) {
+    console.error('[pdf-text]', e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    if (tmpDir) await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 // ── /api/ocr  이미지·PDF → 텍스트 (PaddleOCR, 포트 3101) ──────────────────────
 app.post('/api/ocr', upload.single('file'), async (req, res) => {
   try {

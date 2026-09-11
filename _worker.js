@@ -2934,7 +2934,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             if(resumeJobId){const rDoc=await fsGet(token,`${FS_BASE}/sly_jobs/${resumeJobId}`);resumeText=rDoc?.fields?.originalText?.stringValue||'';}
             const {analyzeResume,analyzeCoverLetter,rewriteCoverLetter,translateCoverLetter,generateInterviewQuestions,analyzeContract,analyzeScannedPdf,analyzeRegistry,analyzePublicDoc}=await import('./seolyuhana/services/analyze.js');
             await setProgress(40);
-            const _slyAnalysisTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('분석 시간 초과 (90초). 잠시 후 다시 시도해주세요.')),90000));
+            const _slyAnalysisTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')),150000));
             const _runAnalysis=async()=>{
               if(parsed.scanned){const result=await analyzeScannedPdf({pdfBuffer:parsed.rawBuffer,serviceId,extraContext:{resumeText,jdText},env});return result.data;}
               const text=parsed.text;
@@ -9209,7 +9209,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
           // 90초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
           const _slyAnalysisTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('분석 시간 초과 (90초). 잠시 후 다시 시도해주세요.')), 90000)
+            setTimeout(() => reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')), 150000)
           );
 
           let analysisData;
