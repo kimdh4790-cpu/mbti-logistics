@@ -750,37 +750,61 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
 // ────────────────────────────────────────────────────────────
 // 6. 스캔 PDF 분석 (Claude Vision)
 // ────────────────────────────────────────────────────────────
-export async function analyzeScannedPdf({ pdfBuffer, serviceId, extraContext = {}, env }) {
+export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraContext = {}, env }) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
 
-  const base64Pdf = arrayBufferToBase64(pdfBuffer);
-
-  // 서비스별 프롬프트 선택
   const analysisPrompt = getScannedPrompt(serviceId, extraContext);
 
-  const res = await fetch(ANTHROPIC_API, {
-    method: 'POST',
-    headers: {
+  let requestHeaders, requestBody, method;
+
+  if (images && images.length > 0) {
+    // Oracle pdftoppm → JPEG 이미지 배열: 표준 image 블록 사용 (beta 헤더 불필요)
+    const imageBlocks = images.slice(0, 8).map(b64 => ({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+    }));
+    requestHeaders = {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    };
+    requestBody = {
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 6000,
+      messages: [{
+        role: 'user',
+        content: [...imageBlocks, { type: 'text', text: analysisPrompt }]
+      }]
+    };
+    method = 'vision_images';
+  } else {
+    // PDF 직접 전송 (anthropic-beta pdfs-2024-09-25 필요)
+    const base64Pdf = arrayBufferToBase64(pdfBuffer);
+    requestHeaders = {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'anthropic-beta': 'pdfs-2024-09-25'
-    },
-    body: JSON.stringify({
+    };
+    requestBody = {
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 6000,
       messages: [{
         role: 'user',
         content: [
-          {
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: base64Pdf }
-          },
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Pdf } },
           { type: 'text', text: analysisPrompt }
         ]
       }]
-    }),
+    };
+    method = 'vision_pdf';
+  }
+
+  const res = await fetch(ANTHROPIC_API, {
+    method: 'POST',
+    headers: requestHeaders,
+    body: JSON.stringify(requestBody),
     signal: AbortSignal.timeout(120000)
   });
 
@@ -794,7 +818,7 @@ export async function analyzeScannedPdf({ pdfBuffer, serviceId, extraContext = {
   const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/);
   if (!jsonMatch) throw new Error('스캔 PDF 분석 JSON을 찾을 수 없습니다');
 
-  return { ok: true, data: JSON.parse(jsonMatch[1]), usage: data.usage, method: 'vision' };
+  return { ok: true, data: JSON.parse(jsonMatch[1]), usage: data.usage, method };
 }
 
 function getScannedPrompt(serviceId, ctx) {
