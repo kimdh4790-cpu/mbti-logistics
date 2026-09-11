@@ -694,9 +694,10 @@ async function fsAdd(token, collectionId, fields) {
 }
 
 async function fsGet(token, collectionId, docId) {
-  const res = await fetch(`${FS_BASE}/${collectionId}/${docId}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
+  const url = docId !== undefined
+    ? `${FS_BASE}/${collectionId}/${docId}`
+    : collectionId.startsWith('http') ? collectionId : `${FS_BASE}/${collectionId}`;
+  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
   return res.json();
 }
 
