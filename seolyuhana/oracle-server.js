@@ -16,7 +16,7 @@ import express from 'express';
 import multer from 'multer';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { writeFile, readFile, mkdtemp, rm, mkdir } from 'fs/promises';
+import { writeFile, readFile, readdir, mkdtemp, rm, mkdir } from 'fs/promises';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -153,7 +153,6 @@ app.post('/api/pdf-to-images', upload.single('file'), async (req, res) => {
     ], { timeout: 90000 });
 
     // readdir로 실제 생성된 파일 목록 확인 (파일명 포맷 의존 제거)
-    const { readdir } = await import('node:fs/promises');
     const allFiles = await readdir(tmpDir);
     const imgFiles = allFiles
       .filter(f => f.startsWith('page') && f.endsWith('.jpg'))
