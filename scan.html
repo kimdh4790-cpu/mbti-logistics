@@ -1078,13 +1078,26 @@ body {
   setInterval(nextSub, 4000);
 })();
 
-// 영상 토글
+// 영상 섹션 — 페이지 로드 시 유튜브 iframe 바로 삽입
+(function() {
+  const VIDEO_ID = typeof SCAN_INTRO_VIDEO_ID !== 'undefined' ? SCAN_INTRO_VIDEO_ID : '';
+  if (!VIDEO_ID) return;
+  const wrap = document.getElementById('slyVideoWrap');
+  if (!wrap) return;
+  // 플레이 버튼 클릭 시 iframe으로 교체
+  wrap.addEventListener('click', function() {
+    if (wrap.querySelector('iframe')) return;
+    wrap.innerHTML = `<iframe
+      style="width:100%;height:100%;border:none;border-radius:20px;"
+      src="https://www.youtube.com/embed/${VIDEO_ID}?autoplay=1&mute=0&playsinline=1&rel=0&modestbranding=1"
+      allow="autoplay; fullscreen; picture-in-picture"
+      allowfullscreen></iframe>`;
+  }, { once: true });
+})();
+
 function _slyToggleVideo() {
-  const v = document.getElementById('slyDemoVideo');
-  const o = document.getElementById('slyVideoOverlay');
-  if (!v.src && !v.currentSrc) return; // 영상 없으면 무시
-  if (v.paused) { v.play(); o.style.opacity = 0; }
-  else          { v.pause(); o.style.opacity = 1; }
+  const wrap = document.getElementById('slyVideoWrap');
+  if (wrap) wrap.click();
 }
 </script>
 
@@ -1177,23 +1190,46 @@ function _isSuperAdmin(user) {
 }
 
 function updateAuthUI(user) {
+  // 헤더 우측 — slyHeaderRight(구버전) 또는 개별 버튼(신버전) 모두 지원
   const hRight = document.getElementById('slyHeaderRight');
-  if (!hRight) return;
+  const loginBtn  = document.getElementById('slyLoginBtn');
+  const logoutBtn = document.getElementById('slyLogoutBtn');
+  const ptsBadge  = document.getElementById('slyPointsBadge');
+  const ptsVal    = document.getElementById('slyPointsVal');
+  const userInfo  = document.getElementById('slyUserInfo');
+
   if (user) {
     const isAdmin = _isSuperAdmin(user);
-    hRight.innerHTML = `
-      <button class="sly-points-badge" onclick="_slyOpenPoints()">
-        <span id="slyPtsBadge">${isAdmin ? '∞ P' : '... P'}</span>
-      </button>
-      <button class="sly-auth-btn" onclick="_slySignOut()">${user.displayName?.split(' ')[0] || '로그아웃'}</button>
-    `;
+    if (hRight) {
+      hRight.innerHTML = `
+        <button class="sly-points-badge" onclick="_slyOpenPoints()">
+          <span id="slyPtsBadge">${isAdmin ? '∞ P' : '... P'}</span>
+        </button>
+        <button class="sly-auth-btn" onclick="_slySignOut()">${user.displayName?.split(' ')[0] || '로그아웃'}</button>
+      `;
+    } else {
+      // 신버전 헤더 개별 버튼
+      if (loginBtn)  loginBtn.style.display  = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+      if (ptsBadge)  ptsBadge.style.display  = 'flex';
+      if (userInfo)  { userInfo.style.display = 'block'; userInfo.textContent = user.displayName?.split(' ')[0] || ''; }
+      if (ptsVal)    ptsVal.textContent = isAdmin ? '∞' : '...';
+    }
     if (isAdmin) {
       window._slyPoints = 999999;
+      const b = document.getElementById('slyPtsBadge'); if (b) b.textContent = '∞ P';
     } else {
       loadPoints();
     }
   } else {
-    hRight.innerHTML = `<button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>`;
+    if (hRight) {
+      hRight.innerHTML = `<button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>`;
+    } else {
+      if (loginBtn)  loginBtn.style.display  = 'inline-flex';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      if (ptsBadge)  ptsBadge.style.display  = 'none';
+      if (userInfo)  userInfo.style.display  = 'none';
+    }
   }
   // 하루에 한 번 인트로 표시
   if (user) {
@@ -1233,13 +1269,12 @@ async function loadPoints(retry) {
     }
     const d = await r.json();
     console.log('[SCAN] loadPoints 성공 retry=' + retry + ' balance=' + d.balance, 'signupBonus=' + d.signupBonus);
-    const el = document.getElementById('slyPtsBadge');
-    if (el) el.textContent = `${(d.balance || 0).toLocaleString()} P`;
-    window._slyPoints = d.balance || 0;
-    const bv = document.getElementById('slyBalanceVal');
-    if (bv) bv.textContent = (d.balance || 0).toLocaleString() + ' P';
-    const pn = document.getElementById('slyPtsNum');
-    if (pn) pn.textContent = (d.balance || 0).toLocaleString();
+    const bal = d.balance || 0;
+    window._slyPoints = bal;
+    const el = document.getElementById('slyPtsBadge'); if (el) el.textContent = `${bal.toLocaleString()} P`;
+    const pv = document.getElementById('slyPointsVal'); if (pv) pv.textContent = bal.toLocaleString();
+    const bv = document.getElementById('slyBalanceVal'); if (bv) bv.textContent = bal.toLocaleString() + ' P';
+    const pn = document.getElementById('slyPtsNum'); if (pn) pn.textContent = bal.toLocaleString();
     if (d.signupBonus) {
       setTimeout(() => _slyToast('🎉 신규 가입 축하! 2,900P가 무료로 지급되었습니다. 공문서 분석을 바로 체험해보세요!', 6000), 800);
     }
@@ -1283,10 +1318,20 @@ getRedirectResult(auth).then(result => {
 
 window._slySignIn = async () => {
   const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
   try {
-    await signInWithRedirect(auth, provider);
+    // 팝업 먼저 시도, 실패하면 redirect
+    await signInWithPopup(auth, provider);
   } catch(e) {
-    _slyToast('로그인 실패: ' + (e.code || e.message));
+    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch(e2) {
+        _slyToast('로그인 실패: ' + (e2.code || e2.message));
+      }
+    } else if (e.code !== 'auth/cancelled-popup-request') {
+      _slyToast('로그인 오류: ' + (e.code || e.message));
+    }
   }
 };
 window._slySignOut = async () => {
