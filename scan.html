@@ -1152,139 +1152,23 @@ body {
   .rpt-score-wrap { flex-direction: column; align-items: flex-start; }
 }
 
-/* ══ AI 라이브 데모 애니메이션 ══ */
-.sly-ai-demo-wrap {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: 0 12px 48px rgba(99,102,241,.2);
+/* 드로어 헤더 */
+.sly-drawer-head {
+  padding: 16px 0 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
 }
-.sly-ai-demo-header {
-  display: flex; align-items: center; gap: 6px;
-  padding: 12px 16px;
-  background: rgba(255,255,255,.04);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-}
-.sly-ai-demo-dot {
-  width: 10px; height: 10px; border-radius: 50%;
-}
-.sly-ai-demo-dot.red   { background: #ef4444; }
-.sly-ai-demo-dot.amber { background: #f59e0b; }
-.sly-ai-demo-dot.green { background: #10b981; }
-.sly-ai-demo-title {
-  font-size: 12px; color: rgba(255,255,255,.5);
-  font-weight: 600; margin-left: 6px;
-}
-.sly-ai-demo-body {
-  display: flex; gap: 0;
-  padding: 20px 16px;
-  min-height: 180px;
-}
-/* 문서 패널 */
-.sly-ai-doc-panel {
-  flex: 1; position: relative;
-  background: rgba(255,255,255,.04);
-  border-radius: 10px; padding: 16px;
-  margin-right: 12px; overflow: hidden;
-}
-.sly-ai-doc-icon { font-size: 24px; margin-bottom: 12px; }
-.sly-ai-doc-lines { display: flex; flex-direction: column; gap: 7px; }
-.sly-ai-line {
-  height: 8px; border-radius: 4px;
-  background: rgba(255,255,255,.15);
-  animation: shimmer 2s ease-in-out infinite;
-}
-.sly-ai-line.w80 { width: 80%; }
-.sly-ai-line.w60 { width: 60%; }
-.sly-ai-line.w90 { width: 90%; }
-.sly-ai-line.w50 { width: 50%; }
-.sly-ai-line.w70 { width: 70%; }
-.sly-ai-line.w85 { width: 85%; }
-.anim1 { animation-delay: 0s; }
-.anim2 { animation-delay: .3s; }
-.anim3 { animation-delay: .6s; }
-@keyframes shimmer {
-  0%,100% { background: rgba(255,255,255,.1); }
-  50%      { background: rgba(255,107,157,.4); }
-}
-/* 스캔 빔 */
-.sly-ai-scan-beam {
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, #FF6B9D, transparent);
-  animation: scan-beam 2s ease-in-out infinite;
-  top: 20px;
-}
-@keyframes scan-beam {
-  0%   { top: 20px; opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { top: calc(100% - 10px); opacity: 0; }
-}
-/* 결과 패널 */
-.sly-ai-result-panel {
-  flex: 1; display: flex; flex-direction: column; gap: 10px; align-items: center;
-}
-.sly-ai-score-demo {
-  position: relative; width: 80px; height: 80px;
-}
-.sly-demo-gauge {
-  animation: gauge-fill 2s ease-out forwards;
-}
-@keyframes gauge-fill {
-  from { stroke-dashoffset: 201; }
-  to   { stroke-dashoffset: 40; }
-}
-.sly-ai-score-num {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 900; color: #FF6B9D;
-  animation: count-up 2s ease-out;
-}
-@keyframes count-up {
-  from { opacity: 0; transform: scale(.5); }
-  to   { opacity: 1; transform: scale(1); }
-}
-.sly-ai-result-lines { width: 100%; display: flex; flex-direction: column; gap: 5px; }
-.sly-ai-tag {
+/* 서비스 설명 bullet */
+.sly-desc-bullet {
+  display: inline-flex; align-items: center;
+  background: var(--pink-light);
+  border: 1px solid rgba(255,107,157,.2);
+  color: #be185d;
   font-size: 11px; font-weight: 600;
-  padding: 5px 10px; border-radius: 20px;
-  animation: tag-appear .5s ease both;
-  white-space: nowrap;
+  padding: 3px 9px; border-radius: 12px;
 }
-.sly-ai-tag.green { background: rgba(16,185,129,.2); color: #6ee7b7; animation-delay: .8s; }
-.sly-ai-tag.red   { background: rgba(239,68,68,.2);  color: #fca5a5; animation-delay: 1.1s; }
-.sly-ai-tag.gold  { background: rgba(245,158,11,.2); color: #fcd34d; animation-delay: 1.4s; }
-@keyframes tag-appear {
-  from { opacity: 0; transform: translateX(10px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-/* ══ 서비스 패널 ══ */
-.sly-svc-panel { display: none; }
-.sly-svc-panel.active { display: block; }
-.sly-panel-header {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 16px; padding-top: 4px;
-}
-.sly-panel-back {
-  background: none; border: 1.5px solid var(--border);
-  border-radius: 20px; padding: 6px 14px;
-  font-size: 13px; font-weight: 600; color: var(--text-secondary);
-  cursor: pointer; transition: all .18s;
-}
-.sly-panel-back:hover { border-color: var(--pink); color: var(--pink); }
-.sly-panel-title-wrap { display: flex; align-items: center; gap: 8px; }
-.sly-panel-ico {
-  width: 32px; height: 32px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-}
-.sly-panel-title { font-size: 16px; font-weight: 800; }
-.sly-svc-cards-wrap {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-  gap: 12px;
-}
+/* 파일 이름 표시 */
+.sly-file-chip { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 </style>
 
 <!-- SVG 그라디언트 -->
@@ -1347,52 +1231,21 @@ body {
   </div>
 </section>
 
-<!-- AI 분석 라이브 데모 애니메이션 -->
+<!-- AI 소개 영상 섹션 -->
 <div class="sly-video-section">
-  <div class="sly-ai-demo-wrap" id="slyVideoWrap">
-    <div class="sly-ai-demo-header">
-      <span class="sly-ai-demo-dot red"></span>
-      <span class="sly-ai-demo-dot amber"></span>
-      <span class="sly-ai-demo-dot green"></span>
-      <span class="sly-ai-demo-title">🤖 Claude AI · 실시간 분석 중</span>
-    </div>
-    <div class="sly-ai-demo-body">
-      <!-- 왼쪽: 문서 업로드 시뮬 -->
-      <div class="sly-ai-doc-panel">
-        <div class="sly-ai-doc-icon">📄</div>
-        <div class="sly-ai-doc-lines">
-          <div class="sly-ai-line w80 anim1"></div>
-          <div class="sly-ai-line w60 anim2"></div>
-          <div class="sly-ai-line w90 anim1"></div>
-          <div class="sly-ai-line w50 anim3"></div>
-          <div class="sly-ai-line w70 anim2"></div>
-          <div class="sly-ai-line w85 anim1"></div>
-        </div>
-        <div class="sly-ai-scan-beam"></div>
-      </div>
-      <!-- 오른쪽: 결과 시뮬 -->
-      <div class="sly-ai-result-panel">
-        <div class="sly-ai-score-demo">
-          <svg width="80" height="80" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,107,157,.2)" stroke-width="8"/>
-            <circle cx="40" cy="40" r="32" fill="none" stroke="#FF6B9D" stroke-width="8"
-              stroke-dasharray="201" stroke-dashoffset="40"
-              stroke-linecap="round" transform="rotate(-90 40 40)"
-              class="sly-demo-gauge"/>
-          </svg>
-          <div class="sly-ai-score-num">87</div>
-        </div>
-        <div class="sly-ai-result-lines">
-          <div class="sly-ai-tag green anim2">✅ 경력 기술 우수</div>
-          <div class="sly-ai-tag red anim3">❌ 수치화 부족</div>
-          <div class="sly-ai-tag gold anim1">💡 ATS 키워드 추가</div>
-          <div class="sly-ai-tag green anim2">✅ STAR 구조 적합</div>
-        </div>
+  <div class="sly-video-wrap" id="slyVideoWrap" onclick="_slyToggleVideo()">
+    <video id="slyDemoVideo" loop muted playsinline preload="none"
+      poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='860' height='484' viewBox='0 0 860 484'%3E%3Crect fill='%230f172a' width='860' height='484'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff30' font-size='18' font-family='sans-serif'%3EAI 분석 데모 영상%3C/text%3E%3C/svg%3E">
+    </video>
+    <div class="sly-video-overlay" id="slyVideoOverlay">
+      <div class="sly-video-play">
+        <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
       </div>
     </div>
-    <!-- 자막 바 -->
-    <div class="sly-subtitle-bar">
-      <span id="slySubtitleText">📄 이력서를 업로드하면 AI가 점수와 개선점을 바로 알려드립니다</span>
+    <div class="sly-video-caption">
+      <div class="sly-subtitle-bar" id="slySubtitleBar">
+        <span id="slySubtitleText">▶ 클릭하면 AI 분석 과정을 확인할 수 있어요</span>
+      </div>
     </div>
   </div>
 </div>
@@ -1433,7 +1286,10 @@ body {
   </div>
 </div>
 
-<!-- 메인 콘텐츠 -->
+<!-- 카테고리 탭 -->
+<div class="sly-cat-tabs" id="slyCatTabs"></div>
+
+<!-- 메인 그리드 -->
 <main class="sly-main" id="slyMain">
   <!-- 카테고리 그리드 (JS가 채움) -->
   <div id="slyCatGrid"></div>
@@ -1454,7 +1310,150 @@ body {
 <div class="sly-drawer-overlay" id="slyDrawerOverlay" onclick="_slyCloseDrawer()"></div>
 <div class="sly-drawer" id="slyDrawer">
   <div class="sly-drawer-handle"></div>
-  <div id="slyDrawerContent"></div>
+  <!-- 드로어 헤더 -->
+  <div class="sly-drawer-head" id="slyDrawerHead">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span id="slyDrawerCat" style="font-size:12px;font-weight:700"></span>
+      <span id="slyDrawerBadgeHead"></span>
+    </div>
+    <div id="slyDrawerTitle" style="font-size:20px;font-weight:900;margin-bottom:6px"></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span id="slyDrawerStars" style="font-size:13px;font-weight:700;color:var(--gold)"></span>
+      <span id="slyDrawerRcount" style="font-size:12px;color:var(--text-muted)"></span>
+      <span id="slyDrawerPrice" style="font-size:14px;font-weight:800;color:var(--pink);margin-left:auto"></span>
+    </div>
+  </div>
+
+  <!-- 서비스 설명 박스 -->
+  <div id="slyDescBox" style="margin:14px 0;padding:14px;background:var(--bg);border-radius:10px;border-left:3px solid var(--pink);display:none">
+    <div class="sly-desc-main" style="font-size:13px;line-height:1.6;color:var(--text-secondary);margin-bottom:8px"></div>
+    <div class="sly-desc-bullets" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  </div>
+
+  <!-- 공문서 발급 카드 (사업자등록증, 건강보험, 소득 등) -->
+  <div id="slyIssueCard" style="display:none">
+    <div id="slyIssueTitleText" style="font-size:15px;font-weight:800;margin-bottom:14px"></div>
+    <!-- 등기부 섹션 -->
+    <div id="slyIssueRegistry" style="display:none">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">🏠 등기부등본 발급 & 분석</div>
+      <div style="display:grid;gap:8px">
+        <a href="https://www.iros.go.kr" target="_blank" style="padding:12px;background:#EEF2FF;color:#4F46E5;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;text-align:center;display:block">🏛️ 인터넷등기소 (iros.go.kr)</a>
+        <a href="https://www.gov.kr/portal/main" target="_blank" style="padding:12px;background:#F0FDF4;color:#16A34A;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;text-align:center;display:block">🏛️ 정부24 발급</a>
+      </div>
+      <div style="margin-top:14px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:6px">💰 예정 전세 보증금 (선택)</div>
+        <input id="slyJeonseDeposit" type="number" placeholder="예: 200000000 (2억원)"
+          style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text-primary);outline:none">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">입력 시 전세가율·깡통전세 정밀 분석</div>
+      </div>
+    </div>
+    <!-- 사업자 섹션 -->
+    <div id="slyIssueBiz" style="display:none">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">🏢 사업자등록증 조회</div>
+      <div style="display:flex;gap:8px">
+        <input id="slyBizNum" type="tel" placeholder="사업자번호 10자리 (숫자만)"
+          style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;background:var(--surface);color:var(--text-primary);outline:none">
+        <button onclick="_slyBizSearch()" style="padding:10px 16px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">조회</button>
+      </div>
+      <div id="slyBizResult" style="margin-top:10px;display:none"></div>
+    </div>
+    <!-- 건강보험·소득 섹션 -->
+    <div id="slyIssueLinks" style="display:none">
+      <div id="slyIssueLinkGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- 파일 업로드 카드 -->
+  <div id="slyUploadCard">
+    <!-- 입력 모드 탭 -->
+    <div id="slyInputModeTabs" class="sly-input-toggle" style="display:none">
+      <button id="slyModeFile" class="active" onclick="_slySetInputMode('file')">📎 파일 업로드</button>
+      <button id="slyModeText" onclick="_slySetInputMode('text')">✏️ 텍스트 입력</button>
+    </div>
+
+    <!-- 파일 업로드 영역 -->
+    <div id="slyFileView">
+      <div id="slyUploadTitle" style="font-size:14px;font-weight:700;margin-bottom:8px">파일 업로드</div>
+      <div class="sly-dropzone" id="slyDropzone2" style="position:relative">
+        <input type="file" id="slyFileInput2" style="position:absolute;inset:0;opacity:0;cursor:pointer">
+        <div class="sly-dropzone-icon">📎</div>
+        <div class="sly-dropzone-text">파일을 클릭하거나 끌어다 놓으세요</div>
+        <div class="sly-dropzone-sub">HWP · DOCX · PDF · TXT · JPG · PNG · WEBP</div>
+      </div>
+      <div id="slyFilePrev2" class="sly-file-chip" style="display:none">
+        <span id="slyFileName2"></span>
+        <button onclick="_slyRemoveFile()">×</button>
+      </div>
+      <div id="slyServiceBadge" style="display:none"></div>
+    </div>
+
+    <!-- 텍스트 입력 영역 -->
+    <div id="slyTextView" style="display:none">
+      <textarea id="slyDirectText" rows="6"
+        style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:13px;font-family:inherit;resize:vertical;outline:none;background:var(--bg);color:var(--text-primary)"
+        placeholder="내용을 직접 붙여넣기 하세요..."></textarea>
+      <div id="slyTextHint" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
+    </div>
+
+    <!-- JD 입력 (이력서/자소서) -->
+    <div id="slyJdWrap2" style="display:none;margin-top:12px">
+      <div id="slyJdLabel2" style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:5px">지원 공고 붙여넣기 (선택)</div>
+      <textarea id="slyJdText2" rows="3"
+        style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:inherit;resize:vertical;outline:none;background:var(--bg);color:var(--text-primary)"
+        placeholder="채용공고 URL 또는 내용을 붙여넣으면 더 정확하게 분석합니다"></textarea>
+    </div>
+
+    <!-- 비용 안내 -->
+    <div id="slyCostNote2" style="font-size:12px;color:var(--text-muted);margin-top:8px;text-align:right"></div>
+  </div>
+
+  <!-- AI 분석 진행 -->
+  <div class="sly-progress" id="slyProgress">
+    <div class="sly-progress-steps">
+      <div class="sly-prog-step" id="slyStep0">
+        <div class="sly-prog-step-dot">📎</div>
+        <div class="sly-prog-step-label">업로드</div>
+      </div>
+      <div class="sly-prog-step-line"></div>
+      <div class="sly-prog-step" id="slyStep1">
+        <div class="sly-prog-step-dot">🔍</div>
+        <div class="sly-prog-step-label">파싱</div>
+      </div>
+      <div class="sly-prog-step-line"></div>
+      <div class="sly-prog-step" id="slyStep2">
+        <div class="sly-prog-step-dot">🧠</div>
+        <div class="sly-prog-step-label">AI 분석</div>
+      </div>
+      <div class="sly-prog-step-line"></div>
+      <div class="sly-prog-step" id="slyStep3">
+        <div class="sly-prog-step-dot">📊</div>
+        <div class="sly-prog-step-label">리포트</div>
+      </div>
+      <div class="sly-prog-step-line"></div>
+      <div class="sly-prog-step" id="slyStep4">
+        <div class="sly-prog-step-dot">✅</div>
+        <div class="sly-prog-step-label">완료</div>
+      </div>
+    </div>
+    <div class="sly-progress-bar-wrap">
+      <div class="sly-progress-bar" id="slyProgressBar"></div>
+    </div>
+    <div id="slyProgLabel" style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px"></div>
+  </div>
+
+  <!-- 분석 결과 -->
+  <div class="sly-result" id="slyResult"></div>
+
+  <!-- 드로어 하단 -->
+  <div class="sly-drawer-footer">
+    <div>
+      <div style="font-size:11px;color:var(--text-muted)">분석 비용</div>
+      <div id="slyFooterPrice" class="sly-drawer-price"></div>
+    </div>
+    <button class="sly-drawer-footer-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()">
+      🤖 AI 분석 시작
+    </button>
+  </div>
 </div>
 
 <!-- 포인트 모달 -->
@@ -1762,8 +1761,6 @@ window._slyLoadPoints = loadPoints;
 onAuthStateChanged(auth, user => {
   window._slyUser = user;
   updateAuthUI(user);
-  // 로그인 여부 상관없이 서비스 그리드는 항상 렌더링
-  if (typeof renderCatGrid === 'function') renderCatGrid();
 });
 
 // 뒤로가기: 드로어 열림 → 드로어 닫기 / 카테고리 패널 열림 → 그리드로 / 그 외 → 앱 유지
@@ -1783,10 +1780,15 @@ window.addEventListener('popstate', e => {
   }
 });
 
-// getRedirectResult — 오류 무시 (팝업 방식으로 전환)
+// 페이지 로드 시 redirect 결과 처리
 getRedirectResult(auth).then(result => {
   if (result?.user) updateAuthUI(result.user);
-}).catch(() => {}); // 세션 오류 무시
+}).catch(e => {
+  if (e && e.code && e.code !== 'auth/no-auth-event') {
+    console.error('getRedirectResult error:', e.code, e.message);
+    _slyToast('로그인 오류: ' + e.code);
+  }
+});
 
 window._slySignIn = async () => {
   const provider = new GoogleAuthProvider();
@@ -2047,34 +2049,72 @@ const CAT_DEMO = {
 
 // 서비스별 평점·리뷰·배지 (크몽 스타일)
 const SVC_META = {
-  resume:         { stars: '4.9', reviews: 342, badge: 'hot', badgeLabel: '인기' },
-  cover_letter:   { stars: '4.8', reviews: 218 },
-  cover_rewrite:  { stars: '4.9', reviews: 156, badge: 'pick', badgeLabel: '추천' },
-  cv_translate:   { stars: '4.7', reviews: 89 },
-  interview:      { stars: '4.8', reviews: 201 },
-  contract:       { stars: '4.9', reviews: 127, badge: 'pick', badgeLabel: '추천' },
-  registry:       { stars: '4.8', reviews: 73 },
-  biz_cert:       { stars: '4.7', reviews: 412, badge: 'fast', badgeLabel: '빠른결과' },
-  health_ins:     { stars: '4.8', reviews: 156 },
-  income:         { stars: '4.7', reviews: 98 },
-  gov_doc:        { stars: '4.6', reviews: 234 },
-  workplace_tone: { stars: '4.8', reviews: 89 },
-  career_saju:    { stars: '4.9', reviews: 512, badge: 'hot', badgeLabel: '인기' },
-  notice_summary: { stars: '4.9', reviews: 89, badge: 'new', badgeLabel: 'NEW' },
-  insurance_scan: { stars: '4.7', reviews: 67 },
-  shortform:      { stars: '4.8', reviews: 23, badge: 'new', badgeLabel: 'NEW' },
-  ai_photo:       { stars: '4.9', reviews: 45, badge: 'new', badgeLabel: 'NEW' },
-  subtitle:       { stars: '4.7', reviews: 31, badge: 'new', badgeLabel: 'NEW' },
-};
-
-// 카테고리별 accent 색상 (회사 브랜드: 핑크·연두·골드 + 하늘색 계열)
-const CAT_ACCENT = {
-  '취업서류':   { bg: '#FFF0F6', color: '#F43F8B' },   // 핑크
-  '법률·계약':  { bg: '#FFFBEB', color: '#D97706' },   // 골드
-  '부동산':     { bg: '#F0FDF4', color: '#16A34A' },   // 그린
-  '직장생활':   { bg: '#F5F0FF', color: '#7C3AED' },   // 퍼플
-  '공문서':     { bg: '#EFF6FF', color: '#2563EB' },   // 블루
-  '영상·미디어':{ bg: '#FFF7F0', color: '#EA580C' },   // 오렌지
+  resume:         { stars: '4.9', reviews: 342, badge: 'hot',  badgeLabel: '🔥 인기',
+    desc: '삼성·SK·현대차·네이버 등 대기업 합격 기준으로 분석합니다.',
+    bullets: ['ATS(AI채용시스템) 통과 전략','수치화·STAR구조 점검','JD 키워드 매칭','기업별 맞춤 피드백'] },
+  cover_letter:   { stars: '4.8', reviews: 218,
+    desc: '지원 공고 기준으로 자소서 완성도를 진단하고 구체적인 수정안을 제시합니다.',
+    bullets: ['경험 구체화·차별화','기업 가치관 연계','표현력·설득력 강화','분량·형식 최적화'] },
+  cover_rewrite:  { stars: '4.9', reviews: 156, badge: 'pick', badgeLabel: '⭐ 추천',
+    desc: '기존 자소서를 AI가 전면 재작성합니다. 지원 공고와 이력서를 함께 업로드하면 더 정확합니다.',
+    bullets: ['지원공고 맞춤 재작성','STAR구조 적용','핵심 경험 강조','기업별 톤앤매너 반영'] },
+  cv_translate:   { stars: '4.7', reviews: 89,
+    desc: '자소서·이력서를 영어·일본어·중국어 등으로 전문가 수준으로 번역합니다.',
+    bullets: ['영어·일본어·중국어·독일어·프랑스어·스페인어','직역 아닌 현지화 번역','HR 용어 최적화'] },
+  interview:      { stars: '4.8', reviews: 203, badge: 'new', badgeLabel: '✨ 신규',
+    desc: '지원서 기반으로 실제 면접에서 나올 가능성 높은 질문과 답변 가이드를 제공합니다.',
+    bullets: ['직무별 핵심 질문','압박면접 대비','STAR 답변 구조 가이드','기업문화 맞춤 질문'] },
+  contract:       { stars: '4.9', reviews: 178,
+    desc: '2026년 최신 근로기준법·대법원 판례 기준으로 계약서 불공정 조항을 검출합니다.',
+    bullets: ['포괄임금제 위법성 체크 (대법원 2024 기준)','가짜 3.3% 리스크 진단','최저임금·주휴수당 계산','경업금지·비밀유지 적정성'] },
+  registry:       { stars: '4.9', reviews: 127,
+    desc: '전세사기 피해 35,246명(2025.11 기준). 등기부등본으로 깡통전세·신탁사기 위험을 진단합니다.',
+    bullets: ['깡통전세 자동 계산 (전세가율)','5대 전세사기 패턴 체크','HUG 보증보험 가입 가능 여부','선순위 채권 위험도 분석'] },
+  insurance_scan: { stars: '4.8', reviews: 94,
+    desc: '보험금 지급거부 85.8%(2025 한국소비자원). 약관 속 면책조항을 쉽게 풀어드립니다.',
+    bullets: ['숨겨진 면책조항 발굴','고지의무 위반 리스크','보험금 청구 실전 팁','분쟁 가능성 진단'] },
+  workplace_tone: { stars: '4.7', reviews: 312,
+    desc: '직장 이메일·메시지를 상황에 맞는 전문적인 표현으로 바꿔드립니다.',
+    bullets: ['딱딱한↔친근한 변환','비공식↔공식 변환','간결하게 줄이기','공손한 거절·요청문'] },
+  career_saju:    { stars: '4.6', reviews: 89,
+    desc: '이력서 기반으로 커리어 성향과 직업운을 유머있게 분석합니다.',
+    bullets: ['캐릭터 유형 분석','최적 직종 추천','업무 스타일 파악','행운의 업종'] },
+  notice_summary: { stars: '4.9', reviews: 445,
+    desc: '가정통신문·공지문의 핵심만 3줄로 요약합니다. 날짜·준비물·제출기한 자동 추출.',
+    bullets: ['핵심 날짜·기한 추출','준비물 목록 정리','서명 필요 항목 확인','한 눈에 보는 요약'] },
+  biz_cert:       { stars: '4.8', reviews: 156,
+    desc: '사업자등록증으로 사업 현황·업종·대표자 정보를 자동 정리합니다.',
+    bullets: ['기업 기본정보 추출','업종코드 해석','개업일·소재지 정리','계약 전 거래처 검증'] },
+  health_ins:     { stars: '4.7', reviews: 78,
+    desc: '건강보험료 납부확인서로 보험료 적정성을 분석합니다.',
+    bullets: ['납부 이력 확인','보험료 산정 기준 설명','감면·환급 가능 여부','직장·지역 보험 비교'] },
+  income:         { stars: '4.8', reviews: 134,
+    desc: '소득확인서로 연소득·세금 현황을 한눈에 정리합니다.',
+    bullets: ['연간 소득 정리','세금 납부 현황','대출 심사 활용 팁','소득증명 포인트 안내'] },
+  gov_doc:        { stars: '4.7', reviews: 67,
+    desc: '어렵고 복잡한 공문서를 쉬운 말로 풀어드립니다.',
+    bullets: ['핵심 내용 요약','법적 효력 설명','기한·조치사항 추출','후속 처리 안내'] },
+  bizplan:        { stars: '4.8', reviews: 45,
+    desc: '투자사·정부지원 심사 기준으로 사업계획서를 분석합니다. TIPS·창진원 기준 적용.',
+    bullets: ['투자 준비도 평가','팀·시장·제품·수익모델 채점','TIPS·창진원 적합성','개선 우선순위 제시'] },
+  shortform:      { stars: '4.7', reviews: 234,
+    desc: '15~60초 숏폼 영상 스크립트를 AI가 기획합니다. 인스타그램·틱톡·유튜브쇼츠 최적화.',
+    bullets: ['첫 3초 훅 문구','씬별 나레이션','CTA·해시태그 생성','플랫폼별 최적화'] },
+  ai_photo:       { stars: '4.6', reviews: 189,
+    desc: '사진·이미지를 설명하면 AI 이미지 생성 프롬프트를 만들어드립니다.',
+    bullets: ['Midjourney·DALL-E 프롬프트','스타일·조명·구도 지정','부정 프롬프트 제안','다국어 프롬프트 제공'] },
+  subtitle:       { stars: '4.8', reviews: 123,
+    desc: '영상 스크립트·대사를 자막 형식(.srt)으로 변환하고 다국어 번역도 해드립니다.',
+    bullets: ['SRT 포맷 자막 생성','한→영·일·중 번역 자막','타임코드 자동 분할','유튜브·인스타 최적화'] },
+  webtoon:        { stars: '4.9', reviews: 67,
+    desc: '네이버웹툰·카카오웹툰 연재 기준으로 시나리오를 분석합니다. 글로벌 웹툰 시장 144억달러(2026) 기준.',
+    bullets: ['장르별 흥행공식 분석','클리프행어 강도 체크','플랫폼별 최적화 전략','IP 확장 가능성 평가'] },
+  shortfilm:      { stars: '4.8', reviews: 34,
+    desc: '단편영화 시나리오를 영화제·OTT 기준으로 분석합니다.',
+    bullets: ['3막 구조 분석','캐릭터 아크 평가','대화 자연스러움','영화제 출품 전략'] },
+  drama_series:   { stars: '4.9', reviews: 28,
+    desc: '드라마 시나리오를 Netflix·tvN·웨이브 기준으로 분석합니다.',
+    bullets: ['파일럿 경쟁력 평가','시즌 확장성','OTT 트렌드 부합도','마케팅 포인트 제안'] }
 };
 
 const SVC_LABEL_MAP = {};
@@ -2753,7 +2793,6 @@ async function _slyAnalyze() {
 window._slyAnalyze = _slyAnalyze;
 
 function setProgress(pct, label) {
-  // 나레이션 단계 업데이트
   const stepIdx = pct <= 20 ? 0 : pct <= 40 ? 1 : pct <= 65 ? 2 : pct <= 90 ? 3 : 4;
   for (let i = 0; i <= 4; i++) {
     const el = document.getElementById('slyStep' + i);
@@ -2762,9 +2801,11 @@ function setProgress(pct, label) {
     if (i < stepIdx) el.classList.add('done');
     else if (i === stepIdx) el.classList.add('active');
   }
-  // 첫 번째 단계 텍스트에 현재 레이블 표시
   const lbl = document.getElementById('slyProgLabel');
-  if (lbl && stepIdx === 0) lbl.textContent = label;
+  if (lbl) lbl.textContent = label || '';
+  // 프로그레스 바
+  const bar = document.getElementById('slyProgressBar');
+  if (bar) bar.style.width = pct + '%';
 }
 
 function pollResult(jobId, _cnt) {
