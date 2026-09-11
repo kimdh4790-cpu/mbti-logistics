@@ -1847,9 +1847,18 @@ body {
         <div class="sly-dropzone-text">파일을 클릭하거나 끌어다 놓으세요</div>
         <div class="sly-dropzone-sub">HWP · DOCX · PDF · TXT · JPG · PNG · WEBP</div>
       </div>
-      <div id="slyFilePrev2" class="sly-file-chip" style="display:none">
-        <span id="slyFileName2"></span>
-        <button onclick="_slyRemoveFile()">×</button>
+      <div id="slyFilePrev2" style="display:none;margin-top:12px">
+        <div style="background:var(--lime-light);border:1.5px solid rgba(0,200,83,.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <div style="width:36px;height:36px;background:rgba(0,200,83,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px">📎</div>
+          <div style="flex:1;min-width:0">
+            <div id="slyFileName2" style="font-size:13px;font-weight:700;color:#065f46;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+            <div id="slyFileSize2" style="font-size:11px;color:#6EE7B7;margin-top:2px"></div>
+          </div>
+          <button onclick="_slyRemoveFile()" style="background:none;border:none;cursor:pointer;color:#6EE7B7;font-size:20px;padding:0;line-height:1;flex-shrink:0">×</button>
+        </div>
+        <div style="margin-top:8px;padding:8px 12px;background:rgba(0,200,83,.06);border-radius:8px;font-size:12px;color:#065f46;font-weight:600;display:flex;align-items:center;gap:6px">
+          <span style="color:var(--lime)">✅</span> 파일이 준비됐어요. AI 분석 시작 버튼을 눌러주세요!
+        </div>
       </div>
       <div id="slyServiceBadge" style="display:none"></div>
     </div>
@@ -2892,7 +2901,17 @@ function _slySelectService(id) {
   _slyFile = null;
   const fi2 = document.getElementById('slyFileInput2');
   if (fi2) fi2.value = '';
-  document.getElementById('slyFilePrev2')?.classList.remove('visible');
+  const prev2 = document.getElementById('slyFilePrev2');
+  if (prev2) prev2.style.display = 'none';
+  // 드롭존 원복
+  const dz2 = document.getElementById('slyDropzone2');
+  if (dz2) { dz2.style.padding = '28px 16px'; dz2.style.border = '2px dashed rgba(255,60,130,.3)'; dz2.style.background = 'rgba(255,60,130,.04)'; }
+  const dzIcon2 = dz2?.querySelector('.sly-dropzone-icon');
+  const dzText2 = dz2?.querySelector('.sly-dropzone-text');
+  const dzSub2 = dz2?.querySelector('.sly-dropzone-sub');
+  if (dzIcon2) { dzIcon2.style.fontSize = '28px'; }
+  if (dzText2) dzText2.textContent = '파일을 클릭하거나 끌어다 놓으세요';
+  if (dzSub2) dzSub2.style.display = '';
   const svc = SVC.find(s => s.id === id);
   if (!svc) return;
 
@@ -3204,7 +3223,16 @@ function handleFile(file) {
   document.getElementById('slyFileSize2').textContent = (file.size / 1024 < 1000
     ? (file.size / 1024).toFixed(0) + ' KB'
     : (file.size / 1024 / 1024).toFixed(1) + ' MB');
-  prev?.classList.add('visible');
+  if (prev) prev.style.display = 'block';
+  // 드롭존 축소 (파일 선택 후)
+  const dz = document.getElementById('slyDropzone2');
+  if (dz) { dz.style.padding = '14px 16px'; dz.style.border = '1.5px solid rgba(0,200,83,.3)'; dz.style.background = 'rgba(0,200,83,.03)'; }
+  const dzIcon = dz?.querySelector('.sly-dropzone-icon');
+  const dzText = dz?.querySelector('.sly-dropzone-text');
+  const dzSub = dz?.querySelector('.sly-dropzone-sub');
+  if (dzIcon) dzIcon.style.fontSize = '20px';
+  if (dzText) dzText.textContent = '다른 파일로 교체하려면 클릭';
+  if (dzSub) dzSub.style.display = 'none';
   clearResult();
 }
 
@@ -3274,9 +3302,9 @@ async function _slyAnalyze() {
   if (!_isSuperAdmin(window._slyUser) && pts < svc.cost) { _slyToast(`포인트가 부족합니다 (필요: ${svc.cost}P, 보유: ${pts}P)`); _slyOpenPoints(); return; }
 
   const btn = document.getElementById('slyAnalyzeBtn2');
-  if (btn) btn.disabled = true;
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ 분석 중...'; }
   const footerBtn = document.querySelector('.sly-drawer-footer-btn');
-  if (footerBtn) footerBtn.disabled = true;
+  if (footerBtn) { footerBtn.disabled = true; footerBtn.innerHTML = '⏳ 분석 중...'; }
 
   const prog = document.getElementById('slyProgress');
   clearResult();
@@ -3329,11 +3357,12 @@ function setProgress(pct, label) {
     if (i < stepIdx) el.classList.add('done');
     else if (i === stepIdx) el.classList.add('active');
   }
+  // 단계 설명 라벨
+  const labels = ['📎 파일 업로드 중...','🔍 텍스트 추출 중...','🧠 Claude AI 분석 중...','📊 리포트 생성 중...','✅ 분석 완료!'];
   const lbl = document.getElementById('slyProgLabel');
-  if (lbl) lbl.textContent = label || '';
-  // 프로그레스 바
+  if (lbl) lbl.textContent = label || labels[stepIdx] || '';
   const bar = document.getElementById('slyProgressBar');
-  if (bar) bar.style.width = pct + '%';
+  if (bar) { bar.style.width = pct + '%'; bar.style.transition = 'width .5s ease'; }
 }
 
 function pollResult(jobId, _cnt) {
@@ -3356,18 +3385,22 @@ function pollResult(jobId, _cnt) {
       });
       const d = await r.json();
       if (d.status === 'completed' || d.status === 'done') {
-        setProgress(100, '완료!');
+        setProgress(100, '분석 완료! 결과를 불러옵니다...');
         setTimeout(() => {
           document.getElementById('slyProgress')?.classList.remove('visible');
           if (!d.result) {
             _slyToast('분석 결과를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
           } else {
             renderResult(d.result);
+            // 결과로 스크롤
+            setTimeout(() => {
+              document.getElementById('slyResult')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 200);
           }
           const b2 = document.getElementById('slyAnalyzeBtn2');
-          if (b2) b2.disabled = false;
+          if (b2) { b2.disabled = false; b2.innerHTML = '🤖 AI 분석 시작'; }
           const fb = document.querySelector('.sly-drawer-footer-btn');
-          if (fb) fb.disabled = false;
+          if (fb) { fb.disabled = false; fb.innerHTML = '🤖 AI 분석 시작'; }
           window._slyLoadPoints?.();
         }, 500);
       } else if (d.status === 'failed') {
@@ -4211,17 +4244,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const dz2 = document.getElementById('slyDropzone2');
   const fi2 = document.getElementById('slyFileInput2');
   if (dz2) {
-    dz2.addEventListener('click', () => fi2?.click());
-    dz2.addEventListener('dragover', e => { e.preventDefault(); dz2.classList.add('drag-over'); });
-    dz2.addEventListener('dragleave', () => dz2.classList.remove('drag-over'));
+    // 클릭 이벤트 (input 위에 이미 있지만 명시적으로도)
+    dz2.addEventListener('dragover', e => { e.preventDefault(); dz2.style.borderColor='var(--pink)'; dz2.style.background='rgba(255,60,130,.08)'; });
+    dz2.addEventListener('dragleave', () => { dz2.style.borderColor=''; dz2.style.background=''; });
     dz2.addEventListener('drop', e => {
       e.preventDefault();
-      dz2.classList.remove('drag-over');
+      dz2.style.borderColor=''; dz2.style.background='';
       const f = e.dataTransfer.files[0];
       if (f) handleFile(f);
     });
   }
-  if (fi2) fi2.addEventListener('change', () => handleFile(fi2.files[0]));
+  if (fi2) {
+    fi2.addEventListener('change', () => {
+      if (fi2.files && fi2.files[0]) handleFile(fi2.files[0]);
+    });
+  }
 
   // close overlay on backdrop click
   document.getElementById('slyPointsOverlay')?.addEventListener('click', e => {
