@@ -2304,7 +2304,7 @@ const SVC = [
   { id: 'contract', label: '계약서', sublabel: '검토', cost: 39900, accept: '.hwp,.docx,.pdf,.txt',
     hasJd: false, serviceId: 'employment_contract',
     desc: '근로·프리랜서·임대차 계약서의 위험 조항을 찾아냅니다',
-    bullets: ['2026 최저임금(10,030원)·주52시간 법 기준 적용', '고위험 조항 위치·이유·대응방법 명시', '계약 유형 자동 감지 (근로/프리랜서/임대)', '불리한 특약·을에게 일방적 조항 자동 탐지'] },
+    bullets: ['2026 최저임금(10,030원)·주52시간 법 기준 적용', '고위험 조항 위치·이유·대응방법 명시', '계약 유형 자동 감지 (근로/프리랜서/임대)', '불리한 특약·을에게 일방적 조항 자동 탐지', '※ 정보 제공 목적이며 법률 자문이 아닙니다'] },
   // ── 공문서 발급 & 분석 ──
   { id: 'registry', label: '등기부', sublabel: '전세사기', cost: 34900, accept: '.pdf',
     hasJd: false, serviceId: 'registry_analysis', isIssue: true, issueType: 'registry', hasDepositInput: true,
@@ -2356,6 +2356,23 @@ const SVC = [
     hasJd: false, serviceId: 'subtitle_create',
     desc: '영상 또는 스크립트 텍스트로 자막을 생성하고 6개 언어로 번역합니다',
     bullets: ['한국어·영어·일본어·중국어 등 6개 언어 자막 생성', 'SRT·VTT·ASS 파일 형식 지원', '타임코드 자동 생성 (텍스트 입력 시 균등 분배)', 'SNS 플랫폼별 자막 스타일 가이드 제공'] },
+  // ── 창작·콘텐츠 ──
+  { id: 'webtoon', label: '웹툰', sublabel: '시나리오 분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'webtoon_analysis',
+    desc: '웹툰 시나리오·기획안을 분석해 흥행 가능성과 에피소드 전략을 제시합니다',
+    bullets: ['네이버·카카오·레진·타파스 플랫폼별 최적화 전략', '장르별 흥행 공식(로맨스·판타지·액션·스릴러) 적용', '클리프행어·캐릭터·플롯 구조 정밀 진단', 'IP 확장(드라마·애니·영화) 가능성 평가'] },
+  { id: 'shortfilm', label: '단편영화·숏폼', sublabel: '시나리오 분석', cost: 34900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'shortfilm_analysis',
+    desc: '단편영화·마이크로드라마 시나리오를 분석하고 영화제·플랫폼 전략을 제안합니다',
+    bullets: ['부산·전주·선댄스 영화제 출품 기준 적용', 'ReelShort·DramaBox 숏폼 드라마 수익화 전략', '3막 구조·감정 곡선·클리프행어 정밀 진단', '시리즈 확장 가능성 및 플랫폼별 배포 전략'] },
+  { id: 'drama_series', label: '드라마 시리즈', sublabel: '기획서 분석', cost: 39900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'drama_series_analysis',
+    desc: 'OTT·방송 드라마 시리즈 기획서를 넷플릭스 피칭 기준으로 정밀 분석합니다',
+    bullets: ['넷플릭스·웨이브·티빙 피칭 기준 적용', 'K드라마 글로벌 흥행 공식(캐릭터·갈등·세계관) 진단', '에피소드 구성·시즌 전략·IP 수익화 방향 제안', '로그라인·시놉시스·타겟 오디언스 최적화'] },
+  { id: 'bizplan', label: '사업계획서', sublabel: '분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
+    hasJd: false, serviceId: 'bizplan_analysis',
+    desc: '정부지원사업·투자IR·크몽 제안서를 심사 기준으로 분석하고 개선안을 제시합니다',
+    bullets: ['창업패키지·TIPS 정부지원사업 심사 기준 적용', '크몽·숨고 프리랜서 플랫폼 제안서 최적화', 'TAM/SAM/SOM 시장 규모 논리 검증', '수익 모델·팀 역량·실행 계획 종합 평가'] },
 ];
 
 const ICONS = {
@@ -2377,6 +2394,10 @@ const ICONS = {
   shortform: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
   ai_photo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
   subtitle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><line x1="6" y1="10" x2="14" y2="10"/><line x1="6" y1="13" x2="12" y2="13"/></svg>`,
+  webtoon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="9" y2="9"/><line x1="3" y1="15" x2="9" y2="15"/></svg>`,
+  shortfilm: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16 10,8"/></svg>`,
+  drama_series: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 7h.01M10 7h.01"/><rect x="14" y="6" width="4" height="5" rx="1"/></svg>`,
+  bizplan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>`,
 };
 
 function _slyToast(msg, dur = 3000) {
@@ -2396,6 +2417,7 @@ const SVC_CATS = [
   { label: '직장생활', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', svcs: ['workplace_tone','career_saju','notice_summary'] },
   { label: '공문서', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14,2 14,7.5 20,7.5"/><path d="M2 15h10M5 12l-3 3 3 3"/></svg>', svcs: ['biz_cert','health_ins','income','gov_doc'] },
   { label: '영상·미디어', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', svcs: ['shortform','ai_photo','subtitle'] },
+  { label: '창작·콘텐츠', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>', svcs: ['webtoon','shortfilm','drama_series','bizplan'] },
 ];
 
 let _slyCatFilter = 'all';
@@ -2404,7 +2426,7 @@ const SVC_CAT_MAP = {};
 SVC_CATS.forEach(cat => cat.svcs.forEach(id => { SVC_CAT_MAP[id] = cat.label; }));
 
 const CAT_EMOJI = {
-  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬',
+  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬', '창작·콘텐츠': '✍️',
 };
 
 const CAT_DEMO = {
@@ -2513,6 +2535,7 @@ const CAT_ACCENT = {
   '직장생활':   { bg: '#F5F0FF', color: '#7C3AED' },   // 퍼플
   '공문서':     { bg: '#EFF6FF', color: '#2563EB' },   // 블루
   '영상·미디어':{ bg: '#FFF7F0', color: '#EA580C' },   // 오렌지
+  '창작·콘텐츠':  { bg: '#F0FDF4', color: '#16A34A' },   // 그린
 };
 
 const SVC_LABEL_MAP = {};
@@ -4065,7 +4088,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="sly-pain-text">
             <strong>계약서 내용이 불리한지 모르겠어요</strong>
-            <span>변호사 비용 없이 AI가 불리한 조항·위약금·해지 조건을 30초 안에 요약합니다</span>
+            <span>AI가 불리한 조항·위약금·해지 조건을 30초 안에 요약합니다 (본 서비스는 정보 제공 목적이며 법률 자문이 아닙니다)</span>
           </div>
         </div>
         <div class="sly-pain-item">
