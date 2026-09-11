@@ -2179,6 +2179,7 @@ function updateAuthUI(user) {
 
 async function loadPoints() {
   if (!auth.currentUser) return;
+  if (_isSuperAdmin(auth.currentUser)) return;
   try {
     const token = await auth.currentUser.getIdToken();
     const r = await fetch('/api/seolyuhana/points', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -3561,7 +3562,14 @@ window._slyFeatDetail = _slyFeatDetail;
 
 function _slyOpenPoints() {
   document.getElementById('slyPointsOverlay')?.classList.add('open');
-  window._slyLoadPoints?.();
+  if (_isSuperAdmin(window._slyUser)) {
+    const bv = document.getElementById('slyBalanceVal');
+    const pn = document.getElementById('slyPtsNum');
+    if (bv) bv.textContent = '∞ P';
+    if (pn) pn.textContent = '∞';
+  } else {
+    window._slyLoadPoints?.();
+  }
 }
 function _slyClosePoints() {
   document.getElementById('slyPointsOverlay')?.classList.remove('open');
