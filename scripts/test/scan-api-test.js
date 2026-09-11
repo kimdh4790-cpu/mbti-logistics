@@ -174,7 +174,11 @@ async function getFirebaseToken() {
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Referer': 'https://mbtico.kr',
+        'Origin': 'https://mbtico.kr',
+      },
       body: JSON.stringify({ email, password, returnSecureToken: true }),
     }
   );
