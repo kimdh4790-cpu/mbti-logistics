@@ -5,7 +5,6 @@
  */
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const CACHE_CONTROL = { type: 'ephemeral' }; // prompt caching
 
 // ────────────────────────────────────────────────────────────
 // 공통 Claude 호출 헬퍼
@@ -17,7 +16,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
   const body = {
     model,
     max_tokens: maxTokens,
-    system: [{ type: 'text', text: system, cache_control: CACHE_CONTROL }],
+    system,
     messages: [{ role: 'user', content: userBlocks }]
   };
 
