@@ -1,2076 +1,1092 @@
-<title>SCAN - 문서 AI 분석</title>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SCAN — AI 문서분석</title>
 <link rel="manifest" href="/scan-manifest.json?v=3">
 <meta name="theme-color" content="#ffffff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SCAN">
-<link rel="apple-touch-icon" href="data:image/png;base64,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">
-<link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,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">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
 
 <style>
+/* ══════════════════════════════════════════════
+   SCAN AI — 흰/하늘 + 핑크·연두·골드 신식 디자인
+   ══════════════════════════════════════════════ */
 :root {
-  --navy: #08101f;
-  --navy-mid: #0f1e38;
-  --gold: #C9A84C;
-  --gold-light: #e0c06e;
-  --pink: #FF6B9D;
-  --lime: #52C41A;
-  --white: #FFFFFF;
-  /* 회사 브랜드: 흰색+하늘색 배경, 핑크·연두·골드 액센트 */
-  --bg: #E8F4FD;
-  --surface: #FFFFFF;
-  --border: rgba(0,0,0,.09);
-  --text-primary: #1a253a;
+  --bg:         #EEF6FF;
+  --bg2:        #F5FAFE;
+  --surface:    #FFFFFF;
+  --border:     rgba(0,0,0,.08);
+
+  --pink:       #FF6B9D;
+  --pink-light: rgba(255,107,157,.12);
+  --lime:       #52C41A;
+  --lime-light: rgba(82,196,26,.12);
+  --gold:       #F59E0B;
+  --gold-light: rgba(245,158,11,.12);
+
+  --text-primary:   #0f1b2d;
   --text-secondary: #4a6080;
-  --text-muted: #9cb0c8;
+  --text-muted:     #8fa4be;
+
   --success: #16A34A;
-  --warn: #D97706;
-  --danger: #DC2626;
-  --radius: 14px;
-  --shadow: 0 4px 20px rgba(8,100,200,.08);
-  --shadow-card: 0 2px 10px rgba(8,100,200,.06);
-  color-scheme: light; /* 다크모드 무조건 차단 */
+  --warn:    #D97706;
+  --danger:  #DC2626;
+
+  --radius:      14px;
+  --radius-lg:   20px;
+  --shadow:      0 4px 24px rgba(30,80,180,.09);
+  --shadow-card: 0 2px 12px rgba(30,80,180,.07);
+  color-scheme: light;
 }
 
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
-  margin: 0;
   background: var(--bg);
   color: var(--text-primary);
-  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   line-height: 1.6;
+  min-height: 100vh;
 }
 
-/* ── Header ── */
+/* ── 헤더 ── */
 .sly-header {
-  background: #FFFFFF;
-  border-bottom: 1px solid rgba(0,0,0,.08);
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
   padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.sly-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
+.sly-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .sly-logo-mark {
-  width: 40px;
-  height: 40px;
-  background: #F59E0B;
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, var(--gold), var(--pink));
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(245,158,11,.35);
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(245,158,11,0.4);
 }
-.sly-logo-mark svg { width: 22px; height: 22px; }
+.sly-logo-mark svg { width: 20px; height: 20px; fill: #fff; }
 .sly-logo-text {
   font-family: 'Nanum Myeongjo', Georgia, serif;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
+  font-size: 19px; font-weight: 800;
+  color: var(--text-primary); letter-spacing: -.3px;
 }
 .sly-logo-text span { color: var(--pink); }
-.sly-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+.sly-header-right { display: flex; align-items: center; gap: 10px; }
 .sly-points-badge {
-  background: rgba(201,168,76,.15);
-  border: 1px solid rgba(201,168,76,.35);
-  color: var(--gold);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: background .2s;
-}
-.sly-points-badge:hover { background: rgba(201,168,76,.25); }
-.sly-auth-btn {
-  background: var(--gold);
-  color: var(--navy);
-  font-weight: 700;
-  font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: background .2s;
-}
-.sly-auth-btn:hover { background: var(--gold-light); }
-
-/* ── Main (랜딩 전용) ── */
-.sly-main {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 40px 20px 80px;
-}
-/* 로그인 후 앱 모드에서 main 여백 제거 */
-.sly-main:has(.sly-app-layout),
-.sly-main:has(.sly-app) {
-  max-width: 100%;
-  padding: 0;
-}
-
-/* ── Constellation canvas ── */
-#scanConst {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-.sly-landing-hero > *:not(canvas) {
-  position: relative;
-  z-index: 1;
-}
-
-/* ── Hero ── */
-.sly-hero {
-  text-align: center;
-  margin-bottom: 36px;
-}
-.sly-hero-eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--gold);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-}
-.sly-hero h1 {
-  font-family: 'Nanum Myeongjo', Georgia, serif;
-  font-size: clamp(26px, 5vw, 36px);
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 12px;
-  line-height: 1.3;
-  text-wrap: balance;
-}
-.sly-hero h1 em {
-  font-style: normal;
-  color: var(--gold);
-}
-.sly-hero p {
-  font-size: 15px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-/* ── Service Tabs ── */
-.sly-tabs {
-  display: flex;
-  gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px;
-  margin-bottom: 20px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.sly-tabs::-webkit-scrollbar { display: none; }
-.sly-tab {
-  flex: 1;
-  min-width: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 9px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all .2s;
-  white-space: nowrap;
-}
-.sly-tab svg { width: 20px; height: 20px; opacity: .6; transition: opacity .2s; }
-.sly-tab:hover { background: rgba(201,168,76,.08); color: var(--gold); }
-.sly-tab:hover svg { opacity: 1; }
-.sly-tab.active {
-  background: var(--navy);
-  color: var(--gold);
-  font-weight: 700;
-}
-.sly-tab.active svg { opacity: 1; }
-.sly-tab .tab-cost {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--gold);
-  opacity: 1;
-}
-.sly-tab.active .tab-cost {
-  color: #fff;
-}
-
-/* ── Service Desc Box ── */
-.sly-desc-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-}
-.sly-desc-main {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
-.sly-desc-bullets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.sly-desc-bullet {
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: var(--bg);
-  border-radius: 20px;
-  padding: 4px 10px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.sly-desc-bullet::before {
-  content: '✓';
-  color: var(--gold);
-  font-weight: 700;
-  font-size: 11px;
-}
-
-/* ── Upload Card ── */
-.sly-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  padding: 28px;
-  margin-bottom: 16px;
-}
-.sly-card-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: .8px;
-  margin: 0 0 16px;
-}
-
-.sly-dropzone {
-  border: 2px dashed var(--border);
-  border-radius: 10px;
-  padding: 36px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .2s;
-  position: relative;
-}
-.sly-dropzone:hover, .sly-dropzone.drag-over {
-  border-color: var(--gold);
-  background: rgba(201,168,76,.05);
-}
-.sly-dropzone input[type=file] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-  height: 100%;
-}
-.sly-dz-icon {
-  width: 48px;
-  height: 48px;
-  background: rgba(201,168,76,.12);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 14px;
-}
-.sly-dz-icon svg { width: 24px; height: 24px; color: var(--gold); }
-.sly-dz-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 6px;
-}
-.sly-dz-sub {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-.sly-dz-types {
-  margin-top: 12px;
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.sly-type-chip {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 20px;
-  background: rgba(201,168,76,.12);
-  color: var(--gold);
-  letter-spacing: .3px;
-}
-
-/* ── File Preview ── */
-.sly-file-preview {
-  display: none;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgba(201,168,76,.06);
-  border: 1px solid rgba(201,168,76,.2);
-  border-radius: 10px;
-  margin-top: 12px;
-}
-.sly-file-preview.visible { display: flex; }
-.sly-file-icon {
-  width: 40px;
-  height: 40px;
-  background: var(--navy);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.sly-file-icon svg { width: 20px; height: 20px; color: var(--gold); }
-.sly-file-info { flex: 1; min-width: 0; }
-.sly-file-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sly-file-size { font-size: 12px; color: var(--text-muted); }
-.sly-file-remove {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
-  transition: color .2s;
-}
-.sly-file-remove:hover { color: var(--danger); }
-.sly-file-remove svg { width: 18px; height: 18px; display: block; }
-
-/* ── Optional JD input ── */
-.sly-optional {
-  margin-top: 16px;
-}
-.sly-optional label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  display: block;
-  margin-bottom: 8px;
-}
-.sly-optional textarea {
-  width: 100%;
-  min-height: 90px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg);
-  resize: vertical;
-  transition: border-color .2s;
-  outline: none;
-}
-.sly-optional textarea:focus { border-color: var(--gold); }
-.sly-optional textarea::placeholder { color: var(--text-muted); }
-
-/* ── Analyze Button ── */
-.sly-analyze-btn {
-  width: 100%;
-  padding: 15px;
-  background: var(--navy);
-  color: var(--gold);
-  font-family: 'Nanum Myeongjo', Georgia, serif;
-  font-size: 17px;
-  font-weight: 700;
-  border: 2px solid var(--gold);
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all .2s;
-  margin-top: 20px;
-}
-.sly-analyze-btn:hover:not(:disabled) {
-  background: var(--gold);
-  color: var(--navy);
-}
-.sly-analyze-btn:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
-.sly-analyze-btn svg { width: 20px; height: 20px; }
-.sly-cost-note {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
-}
-
-/* ── Progress ── */
-.sly-progress {
-  display: none;
-  padding: 28px;
-  text-align: center;
-}
-.sly-progress.visible { display: block; }
-.sly-progress-ring {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 16px;
-}
-.sly-progress-ring circle {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-.sly-progress-ring .track { stroke: var(--border); }
-.sly-progress-ring .fill {
-  stroke: var(--gold);
-  stroke-dasharray: 163;
-  stroke-dashoffset: 163;
-  transform-origin: 50% 50%;
-  transform: rotate(-90deg);
-  transition: stroke-dashoffset .4s ease;
-}
-.sly-progress-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-.sly-progress-sub { font-size: 13px; color: var(--text-muted); }
-
-/* ── Results ── */
-.sly-result { display: none; }
-.sly-result.visible { display: block; }
-
-.sly-score-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 24px;
-  background: var(--navy);
-  border-radius: var(--radius);
-  margin-bottom: 16px;
-}
-.sly-score-circle {
-  width: 72px;
-  height: 72px;
-  flex-shrink: 0;
-  position: relative;
-}
-.sly-score-circle svg { width: 72px; height: 72px; }
-.sly-score-circle .score-track { fill: none; stroke: rgba(255,255,255,.12); stroke-width: 6; }
-.sly-score-circle .score-fill {
-  fill: none;
-  stroke: var(--gold);
-  stroke-width: 6;
-  stroke-linecap: round;
-  transform-origin: 50% 50%;
-  transform: rotate(-90deg);
-  transition: stroke-dashoffset .8s cubic-bezier(.4,0,.2,1);
-}
-.sly-score-num {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 19px;
-  font-weight: 800;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
-}
-.sly-score-info { flex: 1; }
-.sly-score-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(201,168,76,.7);
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-.sly-score-grade {
-  font-family: 'Nanum Myeongjo', Georgia, serif;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--white);
-  margin-bottom: 4px;
-}
-.sly-score-comment { font-size: 13px; color: rgba(255,255,255,.6); }
-
-.sly-breakdown {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 12px;
-}
-.sly-breakdown-item {
-  flex: 1;
-  min-width: 100px;
-  background: rgba(255,255,255,.07);
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-.sly-bk-label { font-size: 11px; color: rgba(255,255,255,.5); margin-bottom: 4px; }
-.sly-bk-val { font-size: 16px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
-
-/* Improvements */
-.sly-improve-list { display: flex; flex-direction: column; gap: 12px; }
-.sly-improve-item {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.sly-improve-head {
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  user-select: none;
-}
-.sly-improve-head:hover { background: rgba(201,168,76,.05); }
-.sly-risk-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.risk-high { background: var(--danger); }
-.risk-medium { background: var(--warn); }
-.risk-low { background: var(--success); }
-.sly-improve-section {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  flex: 1;
-}
-.sly-improve-chevron {
-  width: 16px;
-  height: 16px;
-  color: var(--text-muted);
-  transition: transform .2s;
-}
-.sly-improve-item.open .sly-improve-chevron { transform: rotate(180deg); }
-.sly-improve-body {
-  display: none;
-  padding: 0 16px 16px;
-}
-.sly-improve-item.open .sly-improve-body { display: block; }
-.sly-orig-text {
-  font-size: 13px;
-  color: var(--text-secondary);
-  background: var(--bg);
-  border-radius: 6px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  border-left: 3px solid var(--border);
-}
-.sly-suggestion-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .8px;
-  color: var(--gold);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.sly-suggestion-text {
-  font-size: 13px;
-  color: var(--text-primary);
-  line-height: 1.7;
-  background: rgba(201,168,76,.07);
-  border-radius: 6px;
-  padding: 10px 12px;
-  border-left: 3px solid var(--gold);
-  white-space: pre-wrap;
-}
-.sly-reason {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 8px;
-  font-style: italic;
-}
-
-/* Missing items, strengths */
-.sly-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.sly-tag {
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-.tag-miss { background: rgba(220,38,38,.1); color: #DC2626; }
-.tag-strength { background: rgba(22,163,74,.1); color: #16A34A; }
-.tag-keyword { background: rgba(201,168,76,.12); color: var(--gold); }
-
-/* Download */
-.sly-download-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-.sly-dl-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all .2s;
-}
-.sly-dl-btn svg { width: 18px; height: 18px; }
-.btn-docx { background: #2563EB; color: #fff; }
-.btn-docx:hover { background: #1d4ed8; }
-.btn-pdf { background: var(--danger); color: #fff; }
-.btn-pdf:hover { background: #b91c1c; }
-
-/* ── Points modal ── */
-.sly-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.55);
-  z-index: 200;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .2s;
-}
-.sly-overlay.open { opacity: 1; pointer-events: auto; }
-.sly-modal {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 28px;
-  width: 100%;
-  max-width: 420px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: var(--shadow);
-  transform: translateY(16px);
-  transition: transform .25s;
-}
-.sly-overlay.open .sly-modal { transform: translateY(0); }
-.sly-modal-title {
-  font-family: 'Nanum Myeongjo', Georgia, serif;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 20px;
-}
-.sly-balance-display {
-  background: var(--navy);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.sly-balance-label { font-size: 13px; color: rgba(255,255,255,.6); }
-.sly-balance-val {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
-}
-.sly-charge-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
-.sly-charge-options { display: flex; flex-direction: column; gap: 8px; }
-.sly-charge-opt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all .2s;
-}
-.sly-charge-opt:hover { border-color: var(--gold); background: rgba(201,168,76,.05); }
-.sly-charge-opt.selected { border-color: var(--gold); background: rgba(201,168,76,.1); }
-.sly-charge-pts { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-.sly-charge-price { font-size: 13px; color: var(--text-secondary); }
-.sly-charge-bonus { font-size: 11px; color: var(--gold); font-weight: 600; }
-.sly-account-info {
-  margin-top: 16px;
-  background: var(--bg);
-  border-radius: 8px;
-  padding: 14px 16px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.8;
-}
-.sly-account-info strong { color: var(--text-primary); }
-.sly-request-btn {
-  width: 100%;
-  margin-top: 16px;
-  padding: 13px;
-  background: var(--gold);
-  color: var(--navy);
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 700;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background .2s;
-}
-.sly-request-btn:hover { background: var(--gold-light); }
-.sly-modal-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: var(--border);
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-}
-.sly-modal-close svg { width: 16px; height: 16px; }
-
-/* toast */
-.sly-toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: var(--navy);
-  color: var(--white);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 12px 20px;
-  border-radius: 10px;
-  border-left: 3px solid var(--gold);
-  box-shadow: var(--shadow);
-  z-index: 300;
-  opacity: 0;
-  transition: all .3s;
-  white-space: nowrap;
-  max-width: 90vw;
-}
-.sly-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* Login wall */
-/* ── 랜딩 페이지 ── */
-/* ── Landing color tokens ── */
-:root {
-  --pink: #F472B6;
-  --pink-dark: #DB2777;
-  --pink-tint: #FDF2F8;
-  --mint: #34D399;
-  --mint-dark: #059669;
-  --mint-tint: #ECFDF5;
-  --sly-gold: #F59E0B;
-  --sly-gold-dark: #D97706;
-  --sly-gold-tint: #FFFBEB;
-  --landing-bg: #ffffff;
-  --landing-text: #0f172a;
-  --landing-muted: #64748b;
-  --landing-border: #e2e8f0;
-}
-
-/* ── Phone mockup animation ── */
-@keyframes slyFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-@keyframes slyFadeSlide {
-  0% { opacity: 0; transform: translateY(12px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-@keyframes slyPulseRing {
-  0% { box-shadow: 0 0 0 0 rgba(201,168,76,.4); }
-  70% { box-shadow: 0 0 0 14px rgba(201,168,76,0); }
-  100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
-}
-@keyframes slyTyping {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-@keyframes slyScanLine {
-  0% { top: 10%; }
-  100% { top: 85%; }
-}
-@keyframes slyCheck {
-  0% { stroke-dashoffset: 40; }
-  100% { stroke-dashoffset: 0; }
-}
-
-.sly-landing {
-  display: none;
-  background: var(--landing-bg);
-  min-height: 100vh;
-  color: var(--landing-text);
-  font-family: 'Pretendard', sans-serif;
-}
-.sly-landing.visible { display: block; }
-
-/* ── Hero ── */
-.sly-landing-hero {
-  background: linear-gradient(160deg, #08101f 0%, #0f1e38 40%, #162540 100%);
-  padding: 48px 24px 0;
-  text-align: center;
-  overflow: hidden;
-  position: relative;
-}
-.sly-landing-hero::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -60px;
-  width: 300px; height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(201,168,76,.18) 0%, transparent 70%);
-  pointer-events: none;
-}
-.sly-landing-hero::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: -40px;
-  width: 240px; height: 240px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(201,168,76,.08) 0%, transparent 70%);
-  pointer-events: none;
-}
-.sly-hero-eyebrow-landing {
-  display: inline-block;
-  background: rgba(201,168,76,.18);
-  color: #C9A84C;
+  background: var(--gold-light);
+  border: 1px solid rgba(245,158,11,.3);
+  color: #b45309;
   font-size: 12px; font-weight: 700;
-  letter-spacing: .08em; text-transform: uppercase;
+  padding: 5px 11px; border-radius: 20px;
+  cursor: pointer; transition: all .2s;
+}
+.sly-points-badge:hover { background: rgba(245,158,11,.22); }
+.sly-auth-btn {
+  background: linear-gradient(135deg, var(--pink), #f472b6);
+  color: #fff; border: none;
+  font-size: 13px; font-weight: 700;
+  padding: 7px 16px; border-radius: 20px;
+  cursor: pointer; transition: opacity .2s;
+}
+.sly-auth-btn:hover { opacity: .88; }
+.sly-auth-out {
+  background: none; border: 1.5px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px; font-weight: 600;
+  padding: 6px 14px; border-radius: 20px;
+  cursor: pointer; transition: all .2s;
+}
+#slyUserInfo { font-size: 13px; color: var(--text-secondary); }
+
+/* ── 히어로 섹션 ── */
+.sly-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 56px 20px 48px;
+  text-align: center;
+  background: linear-gradient(180deg, #DBEEFE 0%, var(--bg) 100%);
+}
+.sly-hero-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+.sly-hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--pink-light);
+  border: 1px solid rgba(255,107,157,.3);
+  color: var(--pink);
+  font-size: 12px; font-weight: 700;
   padding: 5px 14px; border-radius: 20px;
   margin-bottom: 18px;
-  border: 1px solid rgba(201,168,76,.28);
+  animation: fadeUp .5s ease both;
 }
-.sly-landing-hero h1 {
-  font-size: clamp(26px, 7vw, 36px);
-  font-weight: 900; line-height: 1.25;
-  margin: 0 0 14px; text-wrap: balance;
-  color: #FFFFFF;
+.sly-hero-badge::before {
+  content: ''; width: 6px; height: 6px;
+  background: var(--pink); border-radius: 50%;
+  animation: pulse-dot 1.4s infinite;
 }
-.sly-landing-hero h1 .sly-h1-pink { color: var(--gold); }
-.sly-landing-hero h1 .sly-h1-mint { color: #F59E0B; }
-.sly-landing-hero h1 .sly-h1-gold { color: #FCD34D; }
-.sly-landing-hero > p {
-  font-size: 15px; color: rgba(255,255,255,0.72);
-  margin: 0 0 28px; line-height: 1.7; max-width: 320px;
-  margin-left: auto; margin-right: auto;
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .4; transform: scale(1.4); }
 }
-.sly-landing-hero-btn {
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 15px 34px;
-  background: var(--gold); color: var(--navy);
-  font-weight: 700; font-size: 16px;
-  border-radius: 50px; border: none; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(201,168,76,.35);
-  animation: slyPulseRing 2s infinite;
-  transition: transform .15s, box-shadow .15s;
+.sly-hero h1 {
+  font-size: clamp(26px, 6vw, 40px);
+  font-weight: 900; letter-spacing: -.8px;
+  line-height: 1.2; color: var(--text-primary);
+  animation: fadeUp .5s .1s ease both;
 }
-.sly-landing-hero-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(201,168,76,.5); }
-.sly-landing-hero-btn svg { width:20px;height:20px;flex-shrink:0; }
-.sly-cta-sub {
-  font-size: 12px; color: rgba(255,255,255,0.55);
-  margin-top: 12px; margin-bottom: 0;
+.sly-hero h1 em { font-style: normal; color: var(--pink); }
+.sly-hero-sub {
+  font-size: 15px; color: var(--text-secondary);
+  margin-top: 14px; line-height: 1.7;
+  animation: fadeUp .5s .2s ease both;
+}
+.sly-hero-chips {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 8px; margin-top: 22px;
+  animation: fadeUp .5s .3s ease both;
+}
+.sly-hero-chip {
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 5px;
+}
+.sly-hero-chip.pink { background: var(--pink-light); color: #be185d; border: 1px solid rgba(255,107,157,.25); }
+.sly-hero-chip.lime { background: var(--lime-light); color: #166534; border: 1px solid rgba(82,196,26,.25); }
+.sly-hero-chip.gold { background: var(--gold-light); color: #92400e; border: 1px solid rgba(245,158,11,.25); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Phone mockup demo ── */
-.sly-phone-wrap {
-  display: flex; justify-content: center;
-  margin-top: 40px; padding-bottom: 0;
+/* ── AI 분석 영상 섹션 ── */
+.sly-video-section {
+  padding: 0 20px 40px;
+  max-width: 860px; margin: 0 auto;
 }
-.sly-phone {
-  width: 220px; height: 420px;
-  background: #0f172a;
-  border-radius: 36px;
-  border: 6px solid #1e293b;
-  box-shadow: 0 24px 60px rgba(15,23,42,.25), 0 0 0 1px #334155;
-  position: relative; overflow: hidden;
-  animation: slyFloat 4s ease-in-out infinite;
-}
-.sly-phone-notch {
-  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-  width: 70px; height: 10px;
-  background: #1e293b; border-radius: 10px; z-index: 10;
-}
-.sly-phone-screen {
-  position: absolute; inset: 0;
-  background: #fff; border-radius: 30px;
-  padding: 28px 12px 12px;
-  overflow: hidden; display: flex; flex-direction: column; gap: 8px;
-}
-/* scan line animation */
-.sly-phone-scanline {
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  animation: slyScanLine 2s ease-in-out infinite alternate;
-  z-index: 5;
-  box-shadow: 0 0 8px var(--gold);
-}
-.sly-phone-doc {
-  background: #f8fafc; border-radius: 8px;
-  padding: 10px; border: 1px solid #e2e8f0;
-  flex-shrink: 0;
-}
-.sly-phone-doc-line {
-  height: 7px; border-radius: 4px;
-  background: linear-gradient(90deg, #e2e8f0, #f1f5f9);
-  margin-bottom: 6px;
-}
-.sly-phone-doc-line:last-child { width: 60%; margin-bottom: 0; }
-.sly-phone-result {
-  background: var(--mint-tint); border-radius: 8px;
-  padding: 8px 10px; border: 1px solid rgba(52,211,153,.3);
-  animation: slyFadeSlide .6s ease .5s both;
-}
-.sly-phone-result-score {
-  font-size: 22px; font-weight: 900; color: var(--mint-dark);
-  text-align: center; line-height: 1.1;
-}
-.sly-phone-result-label {
-  font-size: 9px; color: var(--landing-muted); text-align: center; margin-top: 2px;
-}
-.sly-phone-tags {
-  display: flex; gap: 4px; flex-wrap: wrap;
-  animation: slyFadeSlide .6s ease .9s both;
-}
-.sly-phone-tag {
-  font-size: 8px; font-weight: 700; padding: 3px 7px;
-  border-radius: 20px;
-}
-.sly-phone-tag.pink { background: var(--pink-tint); color: var(--pink-dark); }
-.sly-phone-tag.mint { background: var(--mint-tint); color: var(--mint-dark); }
-.sly-phone-tag.gold { background: var(--sly-gold-tint); color: var(--sly-gold-dark); }
-.sly-phone-advice {
-  background: var(--sly-gold-tint); border-radius: 8px;
-  padding: 8px 10px; border: 1px solid rgba(245,158,11,.25);
-  font-size: 9px; color: var(--sly-gold-dark); line-height: 1.5;
-  animation: slyFadeSlide .6s ease 1.2s both;
-}
-
-/* ── Stats bar ── */
-.sly-stats-bar {
-  display: flex; justify-content: center; gap: 0;
-  background: #fff;
-  border-top: 1px solid var(--landing-border);
-  border-bottom: 1px solid var(--landing-border);
-  margin: 0;
-}
-.sly-stat {
-  flex: 1; text-align: center;
-  padding: 20px 8px;
-  border-right: 1px solid var(--landing-border);
-}
-.sly-stat:last-child { border-right: none; }
-.sly-stat-num { font-size: 22px; font-weight: 900; }
-.sly-stat-num.pink { color: var(--gold); }
-.sly-stat-num.mint { color: var(--sly-gold-dark); }
-.sly-stat-num.gold { color: var(--sly-gold-dark); }
-.sly-stat-label { font-size: 11px; color: var(--landing-muted); margin-top: 2px; }
-
-/* ── Pain points ── */
-.sly-pain-section {
-  padding: 44px 24px 36px;
-  background: #fafafa;
-}
-.sly-pain-section h2 {
-  font-size: 20px; font-weight: 800; margin: 0 0 6px; text-wrap: balance;
-}
-.sly-pain-section > p { font-size: 14px; color: var(--landing-muted); margin: 0 0 24px; }
-.sly-pain-list { display: flex; flex-direction: column; gap: 12px; }
-.sly-pain-item {
-  display: flex; gap: 12px; align-items: flex-start;
-  background: #fff; border-radius: 14px;
-  padding: 16px; border: 1px solid var(--landing-border);
-  box-shadow: 0 2px 8px rgba(0,0,0,.04);
-}
-.sly-pain-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.sly-pain-icon.pink { background: var(--sly-gold-tint); }
-.sly-pain-icon.mint { background: var(--sly-gold-tint); }
-.sly-pain-icon.gold { background: var(--sly-gold-tint); }
-.sly-pain-icon svg { width:18px;height:18px; }
-.sly-pain-icon.pink svg { color: var(--sly-gold-dark); }
-.sly-pain-icon.mint svg { color: var(--sly-gold-dark); }
-.sly-pain-icon.gold svg { color: var(--sly-gold-dark); }
-.sly-pain-text strong { font-size: 14px; font-weight: 700; display: block; margin-bottom: 2px; }
-.sly-pain-text span { font-size: 13px; color: var(--landing-muted); }
-
-/* ── 기능 슬라이드 ── */
-.sly-feat-section { padding: 44px 0 0; }
-.sly-feat-section-head { padding: 0 24px 20px; }
-.sly-feat-section-head .sly-label {
-  font-size: 12px; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--sly-gold-dark);
-  margin-bottom: 8px;
-}
-.sly-feat-section-head h2 { font-size: 21px; font-weight: 800; margin: 0 0 4px; }
-.sly-feat-section-head p { font-size: 13px; color: var(--landing-muted); margin: 0; }
-
-.sly-feat-track {
-  display: flex; gap: 14px;
-  overflow-x: auto; scroll-snap-type: x mandatory;
-  padding: 4px 24px 24px; margin: 0;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.sly-feat-track::-webkit-scrollbar { display: none; }
-.sly-feat-card {
-  flex: 0 0 260px; scroll-snap-align: start;
-  background: #fff; border-radius: 18px;
-  border: 1.5px solid var(--landing-border);
-  padding: 22px 20px; cursor: pointer;
-  transition: border-color .2s, box-shadow .2s, transform .15s;
-}
-.sly-feat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
-.sly-feat-card.active.pink-card { border-color: var(--gold); background: var(--sly-gold-tint); }
-.sly-feat-card.active.mint-card { border-color: var(--gold); background: var(--sly-gold-tint); }
-.sly-feat-card.active.gold-card { border-color: var(--sly-gold); background: var(--sly-gold-tint); }
-.sly-feat-icon {
-  width: 44px; height: 44px; border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 14px;
-}
-.sly-feat-icon.pink { background: var(--sly-gold-tint); }
-.sly-feat-icon.mint { background: var(--sly-gold-tint); }
-.sly-feat-icon.gold { background: var(--sly-gold-tint); }
-.sly-feat-icon.pink svg { color: var(--sly-gold-dark); }
-.sly-feat-icon.mint svg { color: var(--sly-gold-dark); }
-.sly-feat-icon.gold svg { color: var(--sly-gold-dark); }
-.sly-feat-icon svg { width: 22px; height: 22px; }
-.sly-feat-card h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
-.sly-feat-card p { font-size: 13px; color: var(--landing-muted); margin: 0; line-height: 1.5; }
-.sly-feat-cost {
-  display: inline-block; margin-top: 12px;
-  padding: 4px 10px; border-radius: 20px;
-  font-size: 12px; font-weight: 700;
-}
-.pink-card .sly-feat-cost { background: var(--sly-gold-tint); color: var(--sly-gold-dark); border: 1px solid rgba(245,158,11,.3); }
-.mint-card .sly-feat-cost { background: var(--sly-gold-tint); color: var(--sly-gold-dark); border: 1px solid rgba(245,158,11,.3); }
-.gold-card .sly-feat-cost { background: var(--sly-gold-tint); color: var(--sly-gold-dark); border: 1px solid rgba(245,158,11,.3); }
-
-/* ── 상세 패널 ── */
-.sly-feat-detail {
-  border-radius: 16px;
-  margin: 0 24px 32px; padding: 22px 20px;
-  border-left: 4px solid;
-  display: none;
-}
-.sly-feat-detail.visible { display: block; }
-.sly-feat-detail.pink-detail { background: var(--sly-gold-tint); border-color: var(--sly-gold-dark); }
-.sly-feat-detail.mint-detail { background: var(--sly-gold-tint); border-color: var(--sly-gold-dark); }
-.sly-feat-detail.gold-detail { background: var(--sly-gold-tint); border-color: var(--sly-gold-dark); }
-.sly-feat-detail h4 { font-size: 16px; font-weight: 800; margin: 0 0 10px; }
-.sly-feat-detail ul { margin: 0; padding: 0; list-style: none; }
-.sly-feat-detail ul li {
-  font-size: 13px; color: var(--landing-text); line-height: 1.8;
-  padding: 3px 0; display: flex; align-items: flex-start; gap: 8px;
-}
-.sly-feat-detail ul li::before {
-  content: "✓"; font-weight: 900; flex-shrink: 0; margin-top: 1px;
-}
-.pink-detail ul li::before { color: var(--sly-gold-dark); }
-.mint-detail ul li::before { color: var(--sly-gold-dark); }
-.gold-detail ul li::before { color: var(--sly-gold-dark); }
-.sly-feat-detail .sly-try-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  margin-top: 16px; padding: 10px 20px;
-  border-radius: 50px; border: none; cursor: pointer;
-  font-size: 14px; font-weight: 700; transition: transform .15s;
-}
-.sly-feat-detail .sly-try-btn:hover { transform: scale(1.03); }
-.pink-detail .sly-try-btn { background: var(--sly-gold-dark); color: #fff; }
-.mint-detail .sly-try-btn { background: var(--sly-gold-dark); color: #fff; }
-.gold-detail .sly-try-btn { background: var(--sly-gold-dark); color: #fff; }
-
-/* ── 요금 섹션 ── */
-.sly-price-section {
-  padding: 44px 24px 36px;
-  background: #fafafa;
-}
-.sly-price-section h2 { font-size: 21px; font-weight: 800; margin: 0 0 6px; }
-.sly-price-section > p { font-size: 14px; color: var(--landing-muted); margin: 0 0 24px; }
-.sly-charge-cards {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
-}
-.sly-charge-card {
-  background: #fff; border: 1.5px solid var(--landing-border);
-  border-radius: 16px; padding: 16px; text-align: center;
-  position: relative; overflow: hidden;
-}
-.sly-charge-card.featured {
-  border-color: var(--gold); box-shadow: 0 4px 16px rgba(201,168,76,.2);
-}
-.sly-charge-card .bonus-badge {
-  position: absolute; top: 8px; right: -12px;
-  background: var(--sly-gold-dark); color: #fff;
-  font-size: 10px; font-weight: 700;
-  padding: 3px 18px 3px 8px; transform: rotate(0deg);
-  border-radius: 4px 0 0 4px;
-}
-.sly-charge-price { font-size: 22px; font-weight: 900; color: var(--landing-text); }
-.sly-charge-pts { font-size: 13px; font-weight: 700; color: var(--sly-gold-dark); margin-top: 2px; }
-.sly-charge-sub { font-size: 11px; color: var(--landing-muted); margin-top: 4px; }
-.sly-svc-price-list { display: flex; flex-direction: column; gap: 8px; }
-.sly-svc-row {
-  display: flex; align-items: center; gap: 10px;
-  background: #fff; border-radius: 12px; padding: 12px 14px;
-  border: 1px solid var(--landing-border);
-}
-.sly-svc-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.sly-svc-dot.pink { background: var(--gold); }
-.sly-svc-dot.mint { background: var(--sly-gold); }
-.sly-svc-dot.gold { background: var(--sly-gold); }
-.sly-svc-name { font-size: 14px; font-weight: 600; flex: 1; }
-.sly-svc-cost { font-size: 13px; font-weight: 700; color: var(--landing-muted); }
-
-/* ── CTA ── */
-.sly-cta-section {
-  padding: 48px 24px 40px; text-align: center;
-  background: linear-gradient(160deg, #fffbeb 0%, #fef3c7 100%);
-}
-.sly-cta-section h2 { font-size: 22px; font-weight: 900; margin: 0 0 8px; text-wrap: balance; }
-.sly-cta-section p { font-size: 14px; color: var(--landing-muted); margin: 0 0 24px; }
-
-/* ── 푸터 ── */
-.sly-landing-footer {
-  background: #0f172a; color: rgba(255,255,255,.6);
-  padding: 32px 24px; text-align: center; font-size: 13px; line-height: 1.9;
-}
-.sly-landing-footer a { color: var(--gold); text-decoration: none; }
-.sly-landing-footer strong { color: #fff; }
-
-
-/* ── price table fallback ── */
-.sly-price-table { width:100%; border-collapse:collapse; margin: 16px 0; font-size:14px; }
-.sly-price-table th { background: #0f172a; color: #fff; padding: 10px 14px; text-align:left; font-size:13px; }
-.sly-price-table td { padding: 10px 14px; border-bottom: 1px solid var(--landing-border); }
-.sly-price-table tr:last-child td { border-bottom: none; }
-.sly-price-table td:last-child { font-weight: 700; color: #0f172a; text-align:right; }
-
-@media (max-width: 520px) {
-  .sly-score-bar { flex-direction: column; text-align: center; }
-  .sly-breakdown { flex-direction: row; }
-  .sly-download-row { flex-direction: column; }
-}
-
-/* ══ 인트로 영상 화면 ══ */
-#slyIntroScreen {
-  position: fixed; inset: 0; z-index: 9999;
-  background: #000;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.sly-intro-header {
-  position: absolute; top: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
-  background: linear-gradient(to bottom, rgba(0,0,0,.7) 0%, transparent 100%);
-  z-index: 1;
-}
-.sly-intro-logo { display: flex; align-items: center; gap: 8px; }
-.sly-intro-logo-text { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -.5px; }
-.sly-intro-logo-ai { color: #FF6B9D; }
-.sly-intro-skip {
-  background: rgba(255,255,255,.18);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255,255,255,.3);
-  color: #fff; font-size: 13px; font-weight: 700;
-  padding: 7px 16px; border-radius: 20px; cursor: pointer;
-  transition: background .2s;
-}
-.sly-intro-skip:hover { background: rgba(255,255,255,.3); }
-.sly-intro-video-wrap {
-  width: 100%; max-width: 480px;
-  aspect-ratio: 9/16;
+.sly-video-wrap {
   position: relative;
-  background: #000;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  box-shadow: 0 12px 48px rgba(99,102,241,.2);
+  aspect-ratio: 16/9;
+  cursor: pointer;
 }
-.sly-intro-video-wrap iframe,
-.sly-intro-video-wrap video {
-  width: 100%; height: 100%;
-  border: none; display: block;
+.sly-video-wrap video { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
+.sly-video-overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,.55) 100%);
 }
-.sly-intro-footer {
+.sly-video-play {
+  width: 60px; height: 60px;
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(10px);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid rgba(255,255,255,.4);
+  transition: all .25s;
+}
+.sly-video-play:hover { transform: scale(1.1); background: rgba(255,255,255,.25); }
+.sly-video-play svg { width: 24px; height: 24px; fill: #fff; margin-left: 3px; }
+.sly-video-caption {
   position: absolute; bottom: 0; left: 0; right: 0;
-  padding: 20px 20px 32px;
-  background: linear-gradient(to top, rgba(0,0,0,.75) 0%, transparent 100%);
-  text-align: center;
+  padding: 14px 20px;
 }
-.sly-intro-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
-.sly-intro-sub { font-size: 13px; color: rgba(255,255,255,.7); margin-bottom: 18px; }
-.sly-intro-start-btn {
-  background: var(--pink, #FF6B9D); color: #fff;
-  border: none; border-radius: 12px;
-  padding: 14px 40px; font-size: 16px; font-weight: 800;
-  cursor: pointer; width: 100%; max-width: 320px;
-  transition: opacity .2s;
+.sly-subtitle-bar {
+  background: rgba(0,0,0,.65);
+  backdrop-filter: blur(8px);
+  border-radius: 8px; padding: 8px 16px;
+  color: #fff; font-size: 14px; text-align: center;
+  min-height: 36px; display: flex; align-items: center; justify-content: center;
+  transition: opacity .4s;
 }
-.sly-intro-start-btn:hover { opacity: .88; }
+.sly-subtitle-bar span { display: inline-block; }
 
-/* ══ 앱 메인 (로그인 후) ══ */
-.sly-app {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background: var(--bg);
+/* 나레이션 자막 타이핑 효과 */
+.sly-typing { border-right: 2px solid var(--gold); animation: blink-cursor .7s steps(1) infinite; }
+@keyframes blink-cursor { 50% { border-color: transparent; } }
+
+/* ── AI 단계 시각화 ── */
+.sly-steps-section {
+  padding: 0 20px 44px; max-width: 860px; margin: 0 auto;
 }
-/* 유저 바 */
-.sly-user-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 11px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+.sly-steps-title {
+  text-align: center; font-size: 18px; font-weight: 800;
+  color: var(--text-primary); margin-bottom: 22px;
 }
-.sly-user-pts {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--pink);
-}
-.sly-pts-label { font-size: 13px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }
-.sly-charge-btn {
-  background: var(--pink);
-  color: #fff;
-  border: none;
-  border-radius: 9px;
-  padding: 9px 20px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-}
-/* 검색바 */
-.sly-search-wrap {
-  padding: 10px 16px 10px;
-  background: var(--surface);
-  border-bottom: 2px solid #F43F8B33;
-  flex-shrink: 0;
-}
-.sly-search-inner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff0f6;
-  border: 2px solid #F43F8B66;
-  border-radius: 14px;
-  padding: 0 16px;
-  transition: border-color .2s, box-shadow .2s;
-  box-shadow: 0 2px 8px #F43F8B18;
-}
-.sly-search-inner:focus-within {
-  border-color: #F43F8B;
-  background: #fff;
-  box-shadow: 0 3px 12px #F43F8B33;
-}
-.sly-search-inner svg { color: #F43F8B; flex-shrink: 0; width: 20px; height: 20px; }
-.sly-search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  padding: 13px 0;
-  outline: none;
-  font-family: 'Pretendard', sans-serif;
-}
-.sly-search-input::placeholder { color: #F43F8B99; font-weight: 500; }
-.sly-search-clear {
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  color: #9ca3af;
-  display: none;
-  align-items: center;
-}
-.sly-search-clear.show { display: flex; }
-/* 검색 결과 */
-.sly-search-results {
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
-  overflow-y: auto;
-}
-.sly-search-results.show { display: flex; }
-.sly-search-result-item {
-  display: flex;
-  align-items: center;
+.sly-steps-title span { color: var(--pink); }
+.sly-steps-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
+}
+.sly-step-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 14px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
-}
-.sly-search-result-item:active { transform: scale(.98); }
-.sly-search-result-ico {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.sly-search-result-ico svg { width: 20px; height: 20px; }
-.sly-search-result-name { font-size: 15px; font-weight: 700; color: var(--text-primary); }
-.sly-search-result-cat { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.sly-search-result-pts { font-size: 13px; font-weight: 700; color: var(--pink); margin-left: auto; white-space: nowrap; }
-.sly-search-empty { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 14px; }
-
-/* 카테고리 그리드 — 화면 꽉 채우기 */
-.sly-cat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(3, 1fr);
-  gap: 8px;
-  padding: 8px;
-  background: var(--bg);
-  /* 헤더(56px) + 포인트바(46px) + 검색바(53px) = 155px */
-  height: calc(100vh - 155px);
-  height: calc(100svh - 155px);
-}
-/* PC: 카드 자동 높이, 3열, max-width 중앙정렬 */
-@media (min-width: 1024px) {
-  .sly-cat-grid {
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: auto;
-    height: auto;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px 16px;
-    gap: 16px;
-  }
-  .sly-cat-card { min-height: 220px; }
-  .sly-cat-name { font-size: 22px; }
-  .sly-cat-svc-chip { font-size: 15px; padding: 6px 12px; }
-  .sly-cat-count { font-size: 15px; }
-  .sly-cat-demo { min-height: 120px; }
-}
-.sly-cat-card {
-  border: 1.5px solid transparent;
-  border-radius: 16px;
-  padding: 0;
-  cursor: pointer;
-  transition: transform .18s, box-shadow .18s;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  min-height: 0;
-  overflow: hidden;
-}
-.sly-cat-card-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px 12px 12px;
-  flex: 1;
-}
-.sly-cat-card-bar {
-  height: 5px;
-  width: 100%;
-  flex-shrink: 0;
-}
-.sly-cat-card:hover { box-shadow: var(--shadow-card); }
-.sly-cat-card:active { transform: scale(.97); }
-.sly-cat-ico {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.sly-cat-ico svg { width: 22px; height: 22px; }
-.sly-cat-meta { display: flex; align-items: center; gap: 6px; }
-.sly-cat-name { font-size: 26px; font-weight: 900; color: var(--text-primary); letter-spacing: -.7px; }
-.sly-cat-count { font-size: 15px; color: var(--text-muted); margin-left: auto; }
-.sly-cat-svcs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  overflow: hidden;
-  max-height: 80px;
-}
-.sly-cat-svc-chip {
-  font-size: 16px;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
-/* ── 카테고리 카드 데모 애니메이션 (무한 루프) ── */
-.sly-cat-demo {
-  margin-top: 8px;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  flex: 1;
-  min-height: 100px;
-}
-
-/* 공통 무한 루프 키프레임 */
-@keyframes slyInfinScan {
-  0%   { top: 6px;  opacity: 0; }
-  5%   { opacity: 1; }
-  44%  { top: 90px; opacity: 1; }
-  50%  { top: 90px; opacity: 0; }
-  51%  { top: 6px;  opacity: 0; }
-  100% { top: 6px;  opacity: 0; }
-}
-@keyframes slyInfinGlow {
-  0%,100% { opacity: .25; }
-  50%     { opacity: 1; }
-}
-@keyframes slyInfinPop {
-  0%,100% { transform: scale(1);   opacity: .8; }
-  50%     { transform: scale(1.12); opacity: 1; }
-}
-@keyframes slyInfinBarFill {
-  0%,5%  { width: 0; }
-  55%    { width: var(--w, 70%); }
-  80%    { width: var(--w, 70%); }
-  95%,100%{ width: 0; }
-}
-@keyframes slyInfinBubble1 {
-  0%,5%    { opacity: 0; transform: translateY(8px); }
-  18%,52%  { opacity: 1; transform: translateY(0); }
-  62%,100% { opacity: 0; transform: translateY(-4px); }
-}
-@keyframes slyInfinArrow {
-  0%,22%   { opacity: 0; transform: translateY(4px); }
-  35%,50%  { opacity: 1; transform: translateY(0); }
-  62%,100% { opacity: 0; }
-}
-@keyframes slyInfinBubble2 {
-  0%,38%   { opacity: 0; transform: translateY(8px); }
-  52%,80%  { opacity: 1; transform: translateY(0); }
-  92%,100% { opacity: 0; transform: translateY(-4px); }
-}
-@keyframes slyInfinStamp {
-  0%,15%  { transform: scale(2.5) rotate(-20deg); opacity: 0; }
-  35%     { transform: scale(.85) rotate(5deg);  opacity: 1; }
-  50%,80% { transform: scale(1)   rotate(0deg);  opacity: 1; }
-  95%,100%{ transform: scale(0);  opacity: 0; }
-}
-@keyframes slyInfinTag {
-  0%,var(--ts,5%)   { opacity: 0; transform: translateX(-6px); }
-  calc(var(--ts,5%) + 12%), calc(var(--te,60%) - 5%) { opacity: 1; transform: translateX(0); }
-  var(--te,60%),100% { opacity: 0; transform: translateX(4px); }
-}
-@keyframes slyInfinVideoBar {
-  0%   { width: 0%; }
-  85%  { width: 100%; }
-  90%  { width: 100%; }
-  95%  { width: 0%; }
-  100% { width: 0%; }
-}
-@keyframes slyInfinSub1 {
-  0%,5%    { opacity: 0; transform: translateY(5px); }
-  18%,44%  { opacity: 1; transform: translateY(0); }
-  54%,100% { opacity: 0; transform: translateY(-3px); }
-}
-@keyframes slyInfinSub2 {
-  0%,50%   { opacity: 0; transform: translateY(5px); }
-  62%,88%  { opacity: 1; transform: translateY(0); }
-  98%,100% { opacity: 0; transform: translateY(-3px); }
-}
-@keyframes slyInfinRiskPulse {
-  0%,100% { background: #DC262633; box-shadow: none; }
-  50%     { background: #DC262699; box-shadow: 0 0 6px #DC262655; }
-}
-@keyframes slyInfinWarnPulse {
-  0%,100% { background: #F59E0B33; }
-  50%     { background: #F59E0B88; box-shadow: 0 0 6px #F59E0B44; }
-}
-@keyframes slyInfinShieldPing {
-  0%,100% { box-shadow: 0 0 0 0   #D9770699; }
-  60%     { box-shadow: 0 0 0 10px transparent; }
-}
-@keyframes slyInfinScore {
-  0%,5%  { opacity: 0; transform: scale(.5) rotate(-10deg); }
-  18%    { opacity: 1; transform: scale(1.1) rotate(3deg); }
-  28%,85%{ opacity: 1; transform: scale(1) rotate(0deg); }
-  95%,100%{ opacity: 0; transform: scale(.7); }
-}
-
-/* ── 취업서류 ── */
-.sly-demo-resume {
-  background: rgba(244,63,139,.07);
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-}
-.sly-demo-resume-doc {
-  width: 86px; height: 104px;
-  background: #fff;
-  border-radius: 9px;
-  box-shadow: 0 3px 14px rgba(244,63,139,.22);
-  padding: 12px 10px 10px;
+  border-radius: var(--radius);
+  padding: 20px 14px;
+  text-align: center;
   position: relative;
   overflow: hidden;
-  display: flex; flex-direction: column; gap: 7px;
+  transition: all .25s;
 }
-.sly-demo-resume-line {
-  height: 6px; border-radius: 3px;
-  animation: slyInfinGlow 2.4s ease-in-out infinite;
-}
-.sly-demo-resume-line:nth-child(1){ width:68%; background:#F43F8B; opacity:.7; animation-delay:0s; }
-.sly-demo-resume-line:nth-child(2){ width:88%; background:#F43F8B55; animation-delay:.3s; }
-.sly-demo-resume-line:nth-child(3){ width:53%; background:#F43F8B44; animation-delay:.6s; }
-.sly-demo-resume-line:nth-child(4){ width:80%; background:#F43F8B55; animation-delay:.9s; }
-.sly-demo-resume-line:nth-child(5){ width:62%; background:#F43F8B44; animation-delay:1.2s; }
-.sly-demo-resume-scan {
-  position: absolute; left: 0; right: 0; height: 3px; top: 6px;
-  background: linear-gradient(90deg,transparent 0%,#F43F8B 40%,#FF6EB4 60%,transparent 100%);
-  animation: slyInfinScan 2.4s ease-in-out infinite;
-  filter: blur(.5px);
-}
-.sly-demo-resume-score {
-  position: absolute; right: -10px; top: 10px;
-  background: #F43F8B; color: #fff;
-  font-size: 12px; font-weight: 900;
-  padding: 4px 8px 4px 6px; border-radius: 8px 0 0 8px;
-  white-space: nowrap;
-  animation: slyInfinScore 4s 1s ease-in-out infinite;
-  box-shadow: -2px 2px 8px #F43F8B55;
-}
-
-/* ── 법률·계약 ── */
-.sly-demo-contract {
-  background: rgba(217,119,6,.07);
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  padding: 0 14px;
-}
-.sly-demo-contract-lines {
-  display: flex; flex-direction: column; gap: 6px; flex: 1;
-}
-.sly-demo-contract-line {
-  height: 6px; border-radius: 3px; width: 90%;
-}
-.sly-demo-contract-line:nth-child(1){ background:#D9770622; width:88%; }
-.sly-demo-contract-line:nth-child(2){
-  width:72%;
-  animation: slyInfinRiskPulse 1.6s ease-in-out infinite;
-}
-.sly-demo-contract-line:nth-child(3){ background:#D9770622; width:84%; }
-.sly-demo-contract-line:nth-child(4){
-  width:60%;
-  animation: slyInfinWarnPulse 2s .6s ease-in-out infinite;
-}
-.sly-demo-contract-line:nth-child(5){ background:#D9770622; width:78%; }
-.sly-demo-contract-right {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-}
-.sly-demo-shield-ico {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: #D97706;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  animation: slyInfinShieldPing 2s ease-out infinite;
-}
-.sly-demo-shield-ico svg { width: 22px; height: 22px; }
-.sly-demo-risk-tag {
-  font-size: 10px; font-weight: 700; color: #DC2626;
-  background: #FEF2F2; border: 1.5px solid #DC262655;
-  padding: 3px 7px; border-radius: 7px;
-  white-space: nowrap;
-  animation: slyInfinPop 1.6s ease-in-out infinite;
-}
-
-/* ── 부동산 ── */
-.sly-demo-estate {
-  background: rgba(22,163,74,.07);
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
-  padding: 10px 14px;
-}
-.sly-demo-estate-bar-wrap { width: 100%; display: flex; flex-direction: column; gap: 5px; }
-.sly-demo-estate-bar-row { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; }
-.sly-demo-estate-label { min-width: 28px; }
-.sly-demo-estate-track { flex: 1; height: 8px; background: #0002; border-radius: 4px; overflow: hidden; }
-.sly-demo-estate-fill {
-  height: 100%; border-radius: 4px;
-  animation: slyInfinBarFill 3.6s ease-in-out infinite;
-}
-.sly-demo-estate-fill.safe   { background: linear-gradient(90deg,#16A34A,#4ADE80); --w:55%; animation-delay:.1s; }
-.sly-demo-estate-fill.warn   { background: linear-gradient(90deg,#D97706,#FBBF24); --w:78%; animation-delay:.5s; }
-.sly-demo-estate-fill.danger { background: linear-gradient(90deg,#DC2626,#F87171); --w:92%; animation-delay:.9s; }
-.sly-demo-estate-verdict {
-  background: #16A34A; color: #fff;
-  font-size: 11px; font-weight: 700;
-  padding: 3px 12px; border-radius: 20px;
-  animation: slyInfinBubble2 3.6s 1s ease-in-out infinite;
-  white-space: nowrap;
-}
-
-/* ── 직장생활 ── */
-.sly-demo-tone {
-  background: rgba(124,58,237,.07);
-  width: 100%; height: 100%;
-  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px;
-  padding: 10px 12px;
-}
-.sly-demo-tone-bubble {
-  width: 100%; padding: 7px 10px;
-  border-radius: 10px; font-size: 11px; font-weight: 600;
-  line-height: 1.35;
-}
-.sly-demo-tone-bubble.before {
-  background: #FEE2E2; color: #B91C1C;
-  border-left: 3px solid #EF4444;
-  animation: slyInfinBubble1 5s ease-in-out infinite;
-}
-.sly-demo-tone-arrow {
-  font-size: 14px; font-weight: 800; color: #7C3AED;
-  align-self: center;
-  animation: slyInfinArrow 5s ease-in-out infinite;
-}
-.sly-demo-tone-bubble.after {
-  background: #EDE9FE; color: #5B21B6;
-  border-left: 3px solid #7C3AED;
-  animation: slyInfinBubble2 5s ease-in-out infinite;
-}
-
-/* ── 공문서 ── */
-.sly-demo-gov {
-  background: rgba(37,99,235,.07);
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-}
-.sly-demo-gov-doc {
-  width: 68px; height: 84px;
-  background: #fff; border-radius: 9px;
-  box-shadow: 0 2px 10px rgba(37,99,235,.18);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-  padding: 8px; position: relative; flex-shrink: 0;
-}
-.sly-demo-gov-line {
-  width: 82%; height: 5px; border-radius: 3px;
-  animation: slyInfinGlow 2s ease-in-out infinite;
-}
-.sly-demo-gov-line:nth-child(1){ width:58%; background:#2563EB; animation-delay:0s; }
-.sly-demo-gov-line:nth-child(2){ background:#2563EB33; animation-delay:.4s; }
-.sly-demo-gov-line:nth-child(3){ width:72%; background:#2563EB33; animation-delay:.8s; }
-.sly-demo-gov-line:nth-child(4){ background:#2563EB33; animation-delay:1.2s; }
-.sly-demo-gov-stamp {
-  position: absolute; right: -12px; bottom: -8px;
-  width: 34px; height: 34px;
-  background: #2563EB; color: #fff;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 700;
-  animation: slyInfinStamp 4s ease-in-out infinite;
-  box-shadow: 0 3px 10px #2563EB66;
-}
-.sly-demo-gov-list { display: flex; flex-direction: column; gap: 6px; }
-.sly-demo-gov-tag {
-  font-size: 10px; font-weight: 700;
-  padding: 4px 9px; border-radius: 7px; white-space: nowrap;
-}
-.sly-demo-gov-tag:nth-child(1){
-  background:#EFF6FF; color:#2563EB;
-  animation: slyInfinTag 4s ease-in-out infinite;
-  --ts:5%; --te:65%;
-}
-.sly-demo-gov-tag:nth-child(2){
-  background:#F0FDF4; color:#16A34A;
-  animation: slyInfinTag 4s .6s ease-in-out infinite;
-  --ts:5%; --te:65%;
-}
-.sly-demo-gov-tag:nth-child(3){
-  background:#FFF7ED; color:#EA580C;
-  animation: slyInfinTag 4s 1.2s ease-in-out infinite;
-  --ts:5%; --te:65%;
-}
-
-/* ── 영상·미디어 ── */
-.sly-demo-media {
-  background: rgba(234,88,12,.07);
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-}
-.sly-demo-video-frame {
-  width: 130px; height: 90px;
-  background: #0f0f1a;
-  border-radius: 10px;
-  position: relative; overflow: hidden;
-  box-shadow: 0 4px 16px rgba(234,88,12,.3);
-}
-.sly-demo-video-bg {
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg,#1a1a3e 0%,#0f0f1a 50%,#1a0f0a 100%);
-}
-.sly-demo-video-bar {
-  position: absolute; bottom: 0; left: 0; height: 3px;
-  background: linear-gradient(90deg,#EA580C,#F97316,#FBBF24);
-  animation: slyInfinVideoBar 4s linear infinite;
-}
-.sly-demo-video-play {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%,-55%);
-  width: 28px; height: 28px;
-  background: rgba(255,255,255,.12);
-  border: 1.5px solid rgba(255,255,255,.3);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  animation: slyInfinPop 3s ease-in-out infinite;
-}
-.sly-demo-video-play::after {
+.sly-step-card::before {
   content: '';
-  border-left: 11px solid #fff;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
-  margin-left: 3px;
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
 }
-.sly-demo-video-sub {
-  position: absolute; bottom: 10px; left: 6px; right: 6px;
-  background: rgba(0,0,0,.8);
-  color: #fff; font-size: 9px; font-weight: 700;
-  text-align: center; padding: 4px 5px; border-radius: 5px;
-  animation: slyInfinSub1 6s ease-in-out infinite;
+.sly-step-card.c-pink::before { background: var(--pink); }
+.sly-step-card.c-lime::before { background: var(--lime); }
+.sly-step-card.c-gold::before { background: var(--gold); }
+.sly-step-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.sly-step-icon {
+  font-size: 28px; margin-bottom: 10px;
+  animation: float-icon 3s ease-in-out infinite;
 }
-.sly-demo-video-sub2 {
-  position: absolute; bottom: 10px; left: 6px; right: 6px;
-  background: rgba(0,0,0,.8);
-  color: #FBBF24; font-size: 9px; font-weight: 700;
-  text-align: center; padding: 4px 5px; border-radius: 5px;
-  animation: slyInfinSub2 6s ease-in-out infinite;
+.sly-step-card:nth-child(2) .sly-step-icon { animation-delay: .4s; }
+.sly-step-card:nth-child(3) .sly-step-icon { animation-delay: .8s; }
+.sly-step-card:nth-child(4) .sly-step-icon { animation-delay: 1.2s; }
+@keyframes float-icon {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
 }
-/* 서비스 패널 */
-.sly-svc-panel {
-  display: none;
-  flex-direction: column;
-  background: var(--bg);
+.sly-step-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.sly-step-desc  { font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.4; }
+
+/* ── 검색 ── */
+.sly-search-wrap {
+  padding: 0 20px 20px; max-width: 860px; margin: 0 auto;
 }
-.sly-svc-panel.active { display: flex; }
-/* 인기 서비스 섹션 — 그리드가 화면을 채우므로 기본 숨김 */
-.sly-popular {
-  display: none;
-  padding: 0 14px 8px;
+.sly-search-box {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 50px;
+  padding: 10px 18px;
+  box-shadow: var(--shadow-card);
+  transition: border-color .2s, box-shadow .2s;
 }
-.sly-pop-hd {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  padding: 6px 2px 10px;
+.sly-search-box:focus-within {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px rgba(255,107,157,.12), var(--shadow-card);
 }
-.sly-pop-row {
-  display: flex;
-  align-items: center;
+.sly-search-box svg { width: 18px; height: 18px; color: var(--text-muted); flex-shrink: 0; }
+.sly-search-box input {
+  border: none; outline: none; background: none;
+  font-size: 14px; color: var(--text-primary);
+  flex: 1; min-width: 0;
+}
+.sly-search-box input::placeholder { color: var(--text-muted); }
+.sly-search-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 18px; line-height: 1;
+  padding: 0; transition: color .15s;
+}
+.sly-search-clear:hover { color: var(--pink); }
+
+/* ── 카테고리 탭 ── */
+.sly-cat-tabs {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 0 20px 16px; max-width: 860px; margin: 0 auto;
+  scrollbar-width: none;
+}
+.sly-cat-tabs::-webkit-scrollbar { display: none; }
+.sly-cat-tab {
+  flex-shrink: 0;
+  padding: 7px 16px; border-radius: 20px;
+  font-size: 13px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer; transition: all .18s;
+  white-space: nowrap;
+}
+.sly-cat-tab.active {
+  background: var(--pink);
+  border-color: var(--pink);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(255,107,157,.3);
+}
+.sly-cat-tab:hover:not(.active) { border-color: var(--pink); color: var(--pink); }
+
+/* ── 서비스 그리드 ── */
+.sly-main { padding: 0 20px 100px; max-width: 860px; margin: 0 auto; }
+.sly-svc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
   gap: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 13px 14px;
-  margin-bottom: 8px;
-  cursor: pointer;
-  transition: box-shadow .18s;
-  text-decoration: none;
-}
-.sly-pop-row:hover { box-shadow: var(--shadow-card); border-color: rgba(0,0,0,.13); }
-.sly-pop-row:active { transform: scale(.98); }
-.sly-pop-ico {
-  width: 40px; height: 40px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.sly-pop-ico svg { width: 20px; height: 20px; }
-.sly-pop-info { flex: 1; min-width: 0; }
-.sly-pop-name { font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.sly-pop-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-.sly-pop-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
-.sly-pop-price { font-size: 14px; font-weight: 800; color: var(--pink); }
-.sly-pop-stars { font-size: 11px; color: var(--warn); white-space: nowrap; }
-.sly-panel-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.sly-panel-back {
-  background: none; border: none;
-  color: var(--text-primary); cursor: pointer;
-  display: flex; align-items: center; gap: 2px;
-  font-size: 22px; line-height: 1; padding: 0; flex-shrink: 0;
-}
-.sly-panel-ico {
-  width: 32px; height: 32px;
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.sly-panel-ico svg { width: 16px; height: 16px; }
-.sly-panel-title { font-size: 16px; font-weight: 800; flex: 1; letter-spacing: -.4px; }
-.sly-svc-cards {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 .sly-svc-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 18px;
-  padding: 0;
+  border-radius: var(--radius);
+  padding: 18px 14px 16px;
   cursor: pointer;
-  transition: transform .18s, box-shadow .18s;
+  transition: all .22s;
+  position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column; gap: 8px;
 }
-.sly-svc-card:active { transform: scale(.98); }
-.sly-svc-card-body {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+.sly-svc-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--pink), var(--gold));
+  opacity: 0; transition: opacity .22s;
 }
-.sly-svc-card-accent {
-  height: 4px;
-  width: 100%;
-  flex-shrink: 0;
+.sly-svc-card:hover {
+  border-color: var(--pink);
+  box-shadow: 0 6px 24px rgba(255,107,157,.15);
+  transform: translateY(-3px);
 }
-.sly-svc-card-top {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 10px;
+.sly-svc-card:hover::after { opacity: 1; }
+.sly-svc-card.c-lime:hover { border-color: var(--lime); box-shadow: 0 6px 24px rgba(82,196,26,.15); }
+.sly-svc-card.c-lime::after { background: linear-gradient(90deg, var(--lime), #84cc16); }
+.sly-svc-card.c-gold:hover { border-color: var(--gold); box-shadow: 0 6px 24px rgba(245,158,11,.15); }
+.sly-svc-card.c-gold::after { background: linear-gradient(90deg, var(--gold), #fbbf24); }
+.sly-svc-icon {
+  font-size: 26px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.1));
 }
-.sly-svc-card-ico {
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+.sly-svc-name { font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1.3; }
+.sly-svc-sub  { font-size: 11px; color: var(--text-muted); }
+.sly-svc-cost {
+  font-size: 12px; font-weight: 700;
+  margin-top: auto;
 }
-.sly-svc-card-ico svg { width: 20px; height: 20px; }
-.sly-svc-card-hd { flex: 1; min-width: 0; }
-.sly-svc-card-name {
-  font-size: 15px; font-weight: 800; letter-spacing: -.3px;
-  color: var(--text-primary); margin-bottom: 3px;
-}
-.sly-svc-badge {
-  display: inline-block;
-  font-size: 10px; font-weight: 700; padding: 2px 7px;
-  border-radius: 4px; line-height: 1.4;
-}
-.sly-svc-badge.hot { background: #FF5E57; color: #fff; }
-.sly-svc-badge.pick { background: var(--gold); color: #fff; }
-.sly-svc-badge.fast { background: #34C759; color: #fff; }
-.sly-svc-badge.new { background: #5856D6; color: #fff; }
-.sly-svc-card-price { font-size: 16px; font-weight: 900; color: var(--text-primary); letter-spacing: -.3px; }
-.sly-svc-card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 8px; }
-.sly-svc-card-bullets { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.sly-svc-card-bullet {
-  font-size: 12px; color: var(--text-secondary);
-  display: flex; align-items: flex-start; gap: 6px; line-height: 1.4;
-}
-.sly-svc-card-bullet::before { content: '·'; color: var(--text-muted); flex-shrink: 0; font-size: 14px; line-height: 1.3; }
-.sly-svc-card-footer {
+.sly-svc-cost.pink { color: var(--pink); }
+.sly-svc-cost.lime { color: #16a34a; }
+.sly-svc-cost.gold { color: #b45309; }
+
+/* ── 섹션 헤더 ── */
+.sly-section-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding-top: 10px; border-top: 1px solid var(--border);
+  margin-bottom: 14px; margin-top: 28px;
 }
-.sly-svc-card-meta { font-size: 11px; color: var(--text-muted); }
-.sly-svc-card-cta {
-  padding: 8px 18px;
-  border-radius: 9px; border: none;
-  font-size: 13px; font-weight: 700; cursor: pointer;
-  color: #fff;
+.sly-section-title {
+  font-size: 15px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+.sly-section-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.sly-section-dot.pink { background: var(--pink); }
+.sly-section-dot.lime { background: var(--lime); }
+.sly-section-dot.gold { background: var(--gold); }
+.sly-section-back {
+  font-size: 13px; color: var(--pink); font-weight: 600;
+  cursor: pointer; background: none; border: none; padding: 0;
 }
 
-/* 바텀 드로어 */
+/* ── 드로어 ── */
 .sly-drawer-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.5);
-  z-index: 300;
-  backdrop-filter: blur(2px);
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
+  opacity: 0; pointer-events: none; transition: opacity .3s;
 }
-.sly-drawer-overlay.open { display: block; }
+.sly-drawer-overlay.open { opacity: 1; pointer-events: all; }
 .sly-drawer {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%) translateY(100%);
-  width: 100%;
-  max-width: 640px;
-  min-height: 88vh;
-  max-height: 93vh;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 301;
   background: var(--surface);
-  border-radius: 24px 24px 0 0;
-  z-index: 301;
-  transition: transform .35s cubic-bezier(.32,.72,0,1);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -8px 48px rgba(0,0,0,.18);
+  max-height: 92vh; overflow-y: auto;
+  transform: translateY(100%); transition: transform .35s cubic-bezier(.32,1,.6,1);
+  padding: 0 20px 36px;
 }
-.sly-drawer.open { transform: translateX(-50%) translateY(0); }
+.sly-drawer.open { transform: translateY(0); }
 .sly-drawer-handle {
   width: 40px; height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  margin: 10px auto 0;
-  flex-shrink: 0;
+  background: rgba(0,0,0,.12); border-radius: 2px;
+  margin: 14px auto 20px;
 }
-.sly-drawer-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 10px 20px 14px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--surface);
+.sly-drawer-title { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+.sly-drawer-sub   { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+
+/* 파일 업로드 존 */
+.sly-dropzone {
+  border: 2px dashed rgba(255,107,157,.35);
+  background: var(--pink-light);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center; cursor: pointer;
+  transition: all .22s; position: relative;
 }
-.sly-drawer-head-left { flex: 1; min-width: 0; }
-.sly-drawer-service-label { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 2px; }
-.sly-drawer-title { font-size: 18px; font-weight: 800; line-height: 1.2; }
-.sly-drawer-rating { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-.sly-drawer-stars { font-size: 12px; color: #FF9500; font-weight: 700; }
-.sly-drawer-rcount { font-size: 12px; color: var(--text-muted); }
-.sly-drawer-close {
-  background: var(--bg); border: none;
-  color: var(--text-muted); font-size: 18px; cursor: pointer; line-height: 1;
-  width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; margin-left: 12px;
+.sly-dropzone:hover, .sly-dropzone.drag { border-color: var(--pink); background: rgba(255,107,157,.18); }
+.sly-dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.sly-dropzone-icon { font-size: 32px; margin-bottom: 10px; animation: bounce-up 2s ease-in-out infinite; }
+@keyframes bounce-up {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 }
-.sly-drawer-scroll { flex: 1; overflow-y: auto; padding-bottom: 4px; }
-/* 나레이션 진행 단계 */
-.sly-prog-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-.sly-prog-step { display: flex; align-items: center; gap: 12px; opacity: .35; transition: opacity .3s; }
-.sly-prog-step.active { opacity: 1; }
-.sly-prog-step.done { opacity: .6; }
-.sly-step-dot {
-  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-  border: 2px solid var(--border); background: var(--bg);
+.sly-dropzone-text { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.sly-dropzone-sub  { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.sly-file-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--lime-light);
+  border: 1px solid rgba(82,196,26,.3);
+  border-radius: 20px; padding: 6px 12px;
+  font-size: 13px; color: #166534; font-weight: 600;
+  margin-top: 10px;
+}
+.sly-file-chip button {
+  background: none; border: none; cursor: pointer;
+  color: #166534; font-size: 16px; line-height: 1; padding: 0;
+}
+
+/* 텍스트 입력 토글 */
+.sly-input-toggle {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.sly-input-toggle button {
+  flex: 1; padding: 8px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text-secondary);
+  cursor: pointer; transition: all .18s;
+}
+.sly-input-toggle button.active {
+  background: var(--pink-light);
+  border-color: var(--pink);
+  color: var(--pink);
+}
+
+/* 옵션 */
+.sly-optional { margin-top: 14px; }
+.sly-optional-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--text-muted); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.sly-optional-label span {
+  background: var(--gold-light);
+  border: 1px solid rgba(245,158,11,.3);
+  color: #92400e; font-size: 10px;
+  padding: 2px 7px; border-radius: 10px;
+}
+.sly-optional textarea, .sly-optional input[type=text], .sly-optional input[type=date], .sly-optional input[type=time], .sly-optional select {
+  width: 100%; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+  font-size: 13px; background: var(--bg);
+  color: var(--text-primary); resize: vertical;
+  font-family: inherit; outline: none;
+  transition: border-color .2s;
+}
+.sly-optional textarea:focus, .sly-optional input:focus, .sly-optional select:focus { border-color: var(--pink); }
+.sly-optional textarea { min-height: 90px; }
+
+/* 칩 선택 */
+.sly-platform-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.sly-platform-chip {
+  padding: 6px 13px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text-secondary);
+  cursor: pointer; transition: all .18s;
+}
+.sly-platform-chip.sel {
+  background: var(--pink-light); border-color: var(--pink); color: var(--pink);
+}
+
+/* 진행 표시 */
+.sly-progress { display: none; padding: 20px 0; }
+.sly-progress.visible { display: block; }
+.sly-progress-steps {
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px; transition: all .3s;
+  gap: 0; margin-bottom: 18px;
 }
-.sly-prog-step.active .sly-step-dot { border-color: var(--gold); background: var(--gold); }
-.sly-prog-step.done .sly-step-dot { border-color: #16A34A; background: #16A34A; color: #fff; font-size: 12px; }
-.sly-step-dot::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
-.sly-prog-step.active .sly-step-dot::after { background: var(--navy); animation: slyPulse .8s infinite alternate; }
-.sly-prog-step.done .sly-step-dot::after { display: none; }
-.sly-prog-step.done .sly-step-dot::before { content: '✓'; font-size: 13px; font-weight: 700; }
-.sly-step-text { font-size: 14px; font-weight: 600; color: var(--text-primary); }
-.sly-prog-step:not(.active):not(.done) .sly-step-text { color: var(--text-muted); }
-@keyframes slyPulse { to { transform: scale(1.4); } }
-/* 서비스 전용 커스텀 필드 */
-.sly-custom-section { background: var(--bg); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
-.sly-custom-label { font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; display: block; }
-.sly-custom-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text-primary); font-size: 14px; font-family: inherit; box-sizing: border-box; }
-.sly-custom-input:focus { outline: none; border-color: var(--gold); }
-.sly-date-row { display: flex; gap: 8px; }
-.sly-date-row .sly-custom-input { flex: 1; }
-.sly-platform-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-.sly-platform-chip { padding: 7px 14px; border: 1.5px solid var(--border); border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--text-secondary); transition: all .2s; }
-.sly-platform-chip.sel { background: var(--navy); color: var(--gold); border-color: var(--gold); }
-/* 샘플 결과 미리보기 칩 */
-.sly-sample-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--gold); background: rgba(201,168,76,.12); border: 1px solid rgba(201,168,76,.3); border-radius: 10px; padding: 3px 8px; cursor: pointer; margin-top: 4px; }
-.sly-sample-preview { display: none; margin-top: 8px; padding: 10px 12px; background: var(--bg); border-radius: 10px; border-left: 3px solid var(--gold); font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
-.sly-sample-preview.open { display: block; }
-.sly-drawer-body { padding: 16px 16px 8px; }
-.sly-drawer-footer {
-  flex-shrink: 0;
-  padding: 12px 16px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.sly-drawer-footer-price { font-size: 20px; font-weight: 800; color: var(--text-primary); }
-.sly-drawer-footer-unit { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-.sly-drawer-footer-btn {
+.sly-prog-step {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
   flex: 1;
-  padding: 14px;
-  background: var(--navy);
-  color: var(--gold);
-  border: none;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: opacity .15s;
 }
-.sly-drawer-footer-btn:active { opacity: .85; }
+.sly-prog-step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: all .3s;
+  position: relative; z-index: 1;
+}
+.sly-prog-step.active .sly-prog-step-dot {
+  background: var(--pink); border-color: var(--pink); color: #fff;
+  box-shadow: 0 0 0 4px rgba(255,107,157,.2);
+  animation: pulse-step 1s ease infinite;
+}
+.sly-prog-step.done .sly-prog-step-dot {
+  background: var(--lime); border-color: var(--lime); color: #fff;
+}
+@keyframes pulse-step {
+  0%,100% { box-shadow: 0 0 0 4px rgba(255,107,157,.2); }
+  50%      { box-shadow: 0 0 0 8px rgba(255,107,157,.08); }
+}
+.sly-prog-step-line {
+  flex: 1; height: 2px;
+  background: var(--border); margin-top: -16px; z-index: 0;
+}
+.sly-prog-step-label { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+.sly-prog-step.active .sly-prog-step-label { color: var(--pink); }
+.sly-prog-step.done  .sly-prog-step-label { color: var(--lime); }
+
+.sly-progress-bar-wrap {
+  background: rgba(0,0,0,.07); border-radius: 10px;
+  height: 8px; overflow: hidden; margin-bottom: 10px;
+}
+.sly-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pink), var(--gold));
+  border-radius: 10px;
+  transition: width .4s ease;
+  width: 0%;
+}
+#slyProgLabel { font-size: 12px; color: var(--text-muted); text-align: center; }
+
+/* AI 분석 나레이션 */
+.sly-narration {
+  background: linear-gradient(135deg, #0f172a, #1e1b4b);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  min-height: 60px;
+  display: flex; align-items: center; gap: 12px;
+  display: none;
+}
+.sly-narration.visible { display: flex; }
+.sly-narration-icon { font-size: 22px; flex-shrink: 0; }
+.sly-narration-text {
+  font-size: 13px; color: rgba(255,255,255,.85);
+  line-height: 1.55; flex: 1;
+}
+.sly-narration-cursor {
+  display: inline-block; width: 2px; height: 14px;
+  background: var(--gold); vertical-align: middle; margin-left: 1px;
+  animation: blink-cursor .7s steps(1) infinite;
+}
+
+/* 결과 */
+.sly-result { display: none; padding-top: 10px; }
+.sly-result.visible { display: block; }
+.sly-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px; margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+.sly-card-title {
+  font-size: 13px; font-weight: 800;
+  color: var(--text-secondary); margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* 점수 바 */
+.sly-score-bar {
+  display: flex; gap: 18px; align-items: center;
+  background: linear-gradient(135deg, #0f172a, #1e1b4b);
+  border-radius: var(--radius); padding: 20px;
+  margin-bottom: 12px;
+}
+.sly-score-circle { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+.sly-score-circle svg { width: 72px; height: 72px; }
+.score-track { fill: none; stroke: rgba(255,255,255,.12); stroke-width: 6; }
+.score-fill  {
+  fill: none; stroke-width: 6;
+  stroke: url(#scoreGrad);
+  stroke-linecap: round;
+  transform: rotate(-90deg); transform-origin: 50% 50%;
+  transition: stroke-dashoffset 1s ease;
+}
+.sly-score-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 900; color: #fff;
+}
+.sly-score-info { flex: 1; }
+.sly-score-label { font-size: 12px; color: rgba(255,255,255,.5); margin-bottom: 2px; }
+.sly-score-grade { font-size: 18px; font-weight: 800; color: var(--gold); }
+.sly-score-comment { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 4px; }
+.sly-breakdown { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.sly-breakdown-item {
+  flex: 1; min-width: 70px;
+  background: rgba(255,255,255,.06);
+  border-radius: 8px; padding: 8px 10px; text-align: center;
+}
+.sly-bk-label { font-size: 10px; color: rgba(255,255,255,.45); }
+.sly-bk-val   { font-size: 16px; font-weight: 800; color: #fff; margin-top: 2px; }
+
+/* 태그 */
+.sly-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.sly-tag {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.tag-strength { background: var(--lime-light); color: #166534; border: 1px solid rgba(82,196,26,.3); }
+.tag-miss     { background: rgba(239,68,68,.1); color: #b91c1c; border: 1px solid rgba(239,68,68,.25); }
+.tag-keyword  { background: var(--gold-light); color: #92400e; border: 1px solid rgba(245,158,11,.3); }
+
+/* 개선 아이템 */
+.sly-improve-list { display: flex; flex-direction: column; gap: 8px; }
+.sly-improve-item { border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+.sly-improve-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; cursor: pointer;
+  background: var(--bg); transition: background .15s;
+}
+.sly-improve-head:hover { background: var(--pink-light); }
+.sly-risk-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.risk-high   { background: #ef4444; }
+.risk-medium { background: var(--gold); }
+.risk-low    { background: var(--lime); }
+.sly-improve-section { flex: 1; font-size: 13px; font-weight: 700; }
+.sly-improve-chevron {
+  width: 18px; height: 18px; color: var(--text-muted);
+  transition: transform .2s; flex-shrink: 0;
+}
+.sly-improve-item.open .sly-improve-chevron { transform: rotate(180deg); }
+.sly-improve-body { display: none; padding: 14px; background: var(--surface); }
+.sly-improve-item.open .sly-improve-body { display: block; }
+.sly-orig-text {
+  background: rgba(0,0,0,.04); border-left: 3px solid var(--text-muted);
+  padding: 8px 12px; border-radius: 0 6px 6px 0;
+  font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;
+}
+.sly-suggestion-label { font-size: 11px; font-weight: 700; color: var(--lime); margin-bottom: 5px; }
+.sly-suggestion-text {
+  background: var(--lime-light);
+  border: 1px solid rgba(82,196,26,.25);
+  border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; white-space: pre-wrap; line-height: 1.6;
+}
+.sly-reason { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+
+/* 다운로드 */
+.sly-download-row {
+  display: flex; gap: 10px; margin-top: 16px;
+}
+.sly-dl-btn {
+  flex: 1; padding: 12px; border-radius: var(--radius);
+  font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.sly-dl-btn.docx { background: var(--pink-light); color: var(--pink); border: 1.5px solid rgba(255,107,157,.3); }
+.sly-dl-btn.pdf  { background: var(--gold-light); color: #b45309;   border: 1.5px solid rgba(245,158,11,.3); }
+.sly-dl-btn:hover { filter: brightness(.93); transform: translateY(-1px); }
+
+/* 드로어 하단 */
+.sly-drawer-footer {
+  position: sticky; bottom: 0;
+  background: var(--surface);
+  padding: 14px 0 0; border-top: 1px solid var(--border);
+  margin-top: 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
 .sly-drawer-price { font-size: 14px; font-weight: 800; color: var(--gold); }
+.sly-drawer-footer-btn {
+  background: linear-gradient(135deg, var(--pink), #f472b6);
+  color: #fff; border: none;
+  padding: 13px 28px; border-radius: 14px;
+  font-size: 15px; font-weight: 800;
+  cursor: pointer; transition: opacity .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.sly-drawer-footer-btn:hover { opacity: .9; }
+.sly-drawer-footer-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── 포인트 충전 모달 ── */
+.sly-modal-overlay {
+  position: fixed; inset: 0; z-index: 400;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.sly-modal-overlay.open { opacity: 1; pointer-events: all; }
+.sly-modal {
+  background: var(--surface); border-radius: 22px 22px 0 0;
+  width: 100%; max-width: 520px;
+  padding: 24px 20px 40px; max-height: 80vh; overflow-y: auto;
+  transform: translateY(60px); transition: transform .35s cubic-bezier(.32,1,.6,1);
+}
+.sly-modal-overlay.open .sly-modal { transform: translateY(0); }
+.sly-modal-title { font-size: 18px; font-weight: 800; margin-bottom: 18px; }
+.sly-charge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sly-charge-card {
+  border: 2px solid var(--border); border-radius: var(--radius);
+  padding: 14px; cursor: pointer; transition: all .2s; text-align: center;
+}
+.sly-charge-card.sel {
+  border-color: var(--pink);
+  background: var(--pink-light);
+}
+.sly-charge-pts { font-size: 17px; font-weight: 800; color: var(--text-primary); }
+.sly-charge-price { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.sly-charge-bonus { font-size: 11px; font-weight: 700; color: var(--lime); margin-top: 4px; }
+.sly-charge-cta {
+  width: 100%; margin-top: 16px;
+  padding: 14px; border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--gold), #fbbf24);
+  color: #fff; border: none; font-size: 15px; font-weight: 800;
+  cursor: pointer; transition: opacity .2s;
+}
+.sly-charge-cta:hover { opacity: .9; }
+
+/* ── 등기부 직접 검색 ── */
+.sly-reg-search { margin-bottom: 14px; }
+.sly-reg-search-row { display: flex; gap: 8px; }
+.sly-reg-search-row input {
+  flex: 1; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; font-size: 13px; outline: none; background: var(--bg);
+  color: var(--text-primary); transition: border-color .2s;
+}
+.sly-reg-search-row input:focus { border-color: var(--pink); }
+.sly-reg-search-btn {
+  padding: 10px 16px; border-radius: 10px;
+  background: var(--pink); color: #fff; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+
+/* ── AI 분석 점수 미리보기 데모 ── */
+.sly-demo-badge {
+  background: linear-gradient(135deg, #0f172a, #312e81);
+  border-radius: var(--radius); padding: 16px 18px;
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 12px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.07);
+  transition: transform .2s;
+}
+.sly-demo-badge:hover { transform: scale(1.01); }
+.sly-demo-resume-score {
+  font-size: 28px; font-weight: 900; color: var(--gold);
+  flex-shrink: 0; min-width: 48px; text-align: center;
+}
+.sly-demo-info { flex: 1; }
+.sly-demo-title { font-size: 14px; font-weight: 700; color: #fff; }
+.sly-demo-sub   { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+.sly-demo-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.sly-demo-chip  {
+  font-size: 10px; font-weight: 600; padding: 2px 9px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.1); color: rgba(255,255,255,.7);
+}
+.sly-demo-chip.hot { background: rgba(255,107,157,.2); color: var(--pink); }
+
+/* ── 토스트 ── */
+.sly-toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: #0f172a; color: #fff; font-size: 13px; font-weight: 600;
+  padding: 10px 20px; border-radius: 50px;
+  opacity: 0; transition: all .3s; pointer-events: none; z-index: 9999;
+  white-space: nowrap; max-width: 90vw; text-align: center;
+}
+.sly-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── 반응형 ── */
+@media (min-width: 600px) {
+  .sly-svc-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+}
+@media (max-width: 480px) {
+  .sly-hero { padding: 40px 16px 36px; }
+  .sly-hero h1 { font-size: 24px; }
+  .sly-steps-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── 인트로 오버레이 ── */
+.sly-intro-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: linear-gradient(135deg, #EEF6FF 0%, #FFF5FA 100%);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 30px; text-align: center;
+  transition: opacity .5s;
+}
+.sly-intro-overlay.hidden { opacity: 0; pointer-events: none; }
+.sly-intro-logo-wrap {
+  width: 80px; height: 80px;
+  background: linear-gradient(135deg, var(--gold), var(--pink));
+  border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 8px 32px rgba(245,158,11,.3);
+  animation: spin-in .6s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes spin-in {
+  from { transform: scale(.4) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0); opacity: 1; }
+}
+.sly-intro-logo-wrap svg { width: 40px; height: 40px; fill: #fff; }
+.sly-intro-title {
+  font-size: 28px; font-weight: 900; letter-spacing: -.5px;
+  margin-bottom: 10px; animation: fadeUp .5s .3s both;
+}
+.sly-intro-title em { font-style: normal; color: var(--pink); }
+.sly-intro-sub {
+  font-size: 14px; color: var(--text-secondary); line-height: 1.7;
+  max-width: 300px; animation: fadeUp .5s .4s both;
+}
+.sly-intro-chips {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 8px; margin: 20px 0;
+  animation: fadeUp .5s .5s both;
+}
+.sly-intro-skip {
+  background: linear-gradient(135deg, var(--pink), #f472b6);
+  color: #fff; border: none;
+  padding: 14px 36px; border-radius: 16px;
+  font-size: 16px; font-weight: 800; cursor: pointer;
+  animation: fadeUp .5s .6s both;
+  box-shadow: 0 6px 20px rgba(255,107,157,.3);
+}
+
+/* SVG 그라디언트 정의 */
+.sly-svg-defs { position: absolute; width: 0; height: 0; }
 </style>
+
+<!-- SVG 그라디언트 -->
+<svg class="sly-svg-defs" aria-hidden="true">
+  <defs>
+    <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#FF6B9D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- 토스트 -->
+<div class="sly-toast" id="slyToast"></div>
+
+<!-- 인트로 오버레이 -->
+<div class="sly-intro-overlay" id="slyIntro">
+  <div class="sly-intro-logo-wrap">
+    <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+  </div>
+  <div class="sly-intro-title">AI가 <em>5초</em>만에 분석</div>
+  <div class="sly-intro-sub">이력서·계약서·등기부 등<br>어떤 문서든 AI가 즉시 분석해드립니다</div>
+  <div class="sly-intro-chips">
+    <span class="sly-hero-chip pink">📄 이력서 분석</span>
+    <span class="sly-hero-chip lime">⚖️ 계약서 검토</span>
+    <span class="sly-hero-chip gold">🏠 전세사기 진단</span>
+    <span class="sly-hero-chip pink">🎬 시나리오 기획</span>
+  </div>
+  <button class="sly-intro-skip" onclick="_slySkipIntro()">시작하기 →</button>
+</div>
+
+<!-- 헤더 -->
+<header class="sly-header">
+  <a class="sly-logo" href="/scan">
+    <div class="sly-logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#fff" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    </div>
+    <span class="sly-logo-text">SCAN<span>AI</span></span>
+  </a>
+  <div class="sly-header-right">
+    <div class="sly-points-badge" id="slyPointsBadge" onclick="_slyOpenPoints()" style="display:none">
+      💰 <span id="slyPointsVal">0</span>P
+    </div>
+    <div id="slyUserInfo" style="display:none"></div>
+    <button class="sly-auth-btn" id="slyLoginBtn" onclick="_slySignIn()">구글 로그인</button>
+    <button class="sly-auth-out" id="slyLogoutBtn" onclick="_slySignOut()" style="display:none">로그아웃</button>
+  </div>
+</header>
+
+<!-- 히어로 -->
+<section class="sly-hero">
+  <canvas class="sly-hero-canvas" id="slyHeroCanvas"></canvas>
+  <div class="sly-hero-badge">🤖 AI 실시간 분석</div>
+  <h1>문서 하나로<br><em>모든 것을 파악</em></h1>
+  <p class="sly-hero-sub">이력서·계약서·등기부·보험약관·시나리오까지<br>Claude AI가 전문가 수준으로 즉시 분석합니다</p>
+  <div class="sly-hero-chips">
+    <span class="sly-hero-chip pink">✨ 5초 분석</span>
+    <span class="sly-hero-chip lime">📊 글로벌 데이터 기반</span>
+    <span class="sly-hero-chip gold">📥 DOCX/PDF 다운로드</span>
+  </div>
+</section>
+
+<!-- AI 소개 영상 섹션 -->
+<div class="sly-video-section">
+  <div class="sly-video-wrap" id="slyVideoWrap" onclick="_slyToggleVideo()">
+    <video id="slyDemoVideo" loop muted playsinline preload="none"
+      poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='860' height='484' viewBox='0 0 860 484'%3E%3Crect fill='%230f172a' width='860' height='484'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff30' font-size='18' font-family='sans-serif'%3EAI 분석 데모 영상%3C/text%3E%3C/svg%3E">
+    </video>
+    <div class="sly-video-overlay" id="slyVideoOverlay">
+      <div class="sly-video-play">
+        <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
+      </div>
+    </div>
+    <div class="sly-video-caption">
+      <div class="sly-subtitle-bar" id="slySubtitleBar">
+        <span id="slySubtitleText">▶ 클릭하면 AI 분석 과정을 확인할 수 있어요</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI 분석 단계 -->
+<div class="sly-steps-section">
+  <div class="sly-steps-title"><span>AI</span> 분석이 이렇게 진행돼요</div>
+  <div class="sly-steps-row">
+    <div class="sly-step-card c-pink">
+      <div class="sly-step-icon">📎</div>
+      <div class="sly-step-label">파일 업로드</div>
+      <div class="sly-step-desc">HWP·DOCX·PDF·TXT 모두 가능</div>
+    </div>
+    <div class="sly-step-card c-lime">
+      <div class="sly-step-icon">🔍</div>
+      <div class="sly-step-label">AI 파싱</div>
+      <div class="sly-step-desc">텍스트·이미지 자동 추출</div>
+    </div>
+    <div class="sly-step-card c-gold">
+      <div class="sly-step-icon">🧠</div>
+      <div class="sly-step-label">Claude 분석</div>
+      <div class="sly-step-desc">전세계 데이터 기반 심층 분석</div>
+    </div>
+    <div class="sly-step-card c-pink">
+      <div class="sly-step-icon">📥</div>
+      <div class="sly-step-label">리포트 다운로드</div>
+      <div class="sly-step-desc">DOCX·PDF로 즉시 저장</div>
+    </div>
+  </div>
+</div>
+
+<!-- 검색 -->
+<div class="sly-search-wrap">
+  <div class="sly-search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="slySearchInput" placeholder="이력서, 계약서, 등기부 검색…" oninput="_slySearch(this.value)">
+    <button class="sly-search-clear" id="slySearchClear" onclick="_slyClearSearch()" style="display:none">×</button>
+  </div>
+</div>
+
+<!-- 카테고리 탭 -->
+<div class="sly-cat-tabs" id="slyCatTabs"></div>
+
+<!-- 메인 그리드 -->
+<main class="sly-main" id="slyMain"></main>
+
+<!-- 드로어 -->
+<div class="sly-drawer-overlay" id="slyDrawerOverlay" onclick="_slyCloseDrawer()"></div>
+<div class="sly-drawer" id="slyDrawer">
+  <div class="sly-drawer-handle"></div>
+  <div id="slyDrawerContent"></div>
+</div>
+
+<!-- 포인트 모달 -->
+<div class="sly-modal-overlay" id="slyPointsModal">
+  <div class="sly-modal" onclick="event.stopPropagation()">
+    <div class="sly-modal-title">💰 포인트 충전</div>
+    <div class="sly-charge-grid" id="slyChargeGrid"></div>
+    <button class="sly-charge-cta" onclick="_slyRequestCharge()">충전 신청하기</button>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center">
+      충전 후 카카오톡 또는 이메일로 안내드립니다
+    </div>
+  </div>
+</div>
+
+<!-- 히어로 캔버스 파티클 -->
+<script>
+(function() {
+  const canvas = document.getElementById('slyHeroCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes = [];
+  function resize() {
+    W = canvas.width = canvas.offsetWidth;
+    H = canvas.height = canvas.offsetHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  const COLORS = ['#FF6B9D','#52C41A','#F59E0B'];
+  for (let i = 0; i < 28; i++) {
+    nodes.push({
+      x: Math.random() * 1000, y: Math.random() * 400,
+      vx: (Math.random()-.5)*.3, vy: (Math.random()-.5)*.3,
+      r: Math.random() * 2.5 + 1,
+      color: COLORS[Math.floor(Math.random()*3)],
+      pulse: Math.random() * Math.PI * 2
+    });
+  }
+  function frame(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      n.x += n.vx; n.y += n.vy; n.pulse += .03;
+      if (n.x < 0 || n.x > W) n.vx *= -1;
+      if (n.y < 0 || n.y > H) n.vy *= -1;
+      for (let j = i+1; j < nodes.length; j++) {
+        const m = nodes[j];
+        const dx = m.x - n.x, dy = m.y - n.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 100) {
+          ctx.beginPath();
+          ctx.moveTo(n.x, n.y); ctx.lineTo(m.x, m.y);
+          ctx.strokeStyle = n.color;
+          ctx.globalAlpha = (1 - dist/100) * .15;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+      const pulse = .5 + .5 * Math.sin(n.pulse);
+      ctx.fillStyle = n.color;
+      ctx.globalAlpha = pulse * 0.5;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    requestAnimationFrame(frame);
+  }
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) frame();
+})();
+
+// 자막 나레이션
+(function() {
+  const subtitles = [
+    '📄 이력서를 업로드하면 AI가 점수와 개선점을 바로 알려드립니다',
+    '⚖️ 계약서의 위험 조항을 자동으로 찾아 법적 근거와 함께 설명합니다',
+    '🏠 등기부등본으로 전세사기 위험도를 3단계로 진단합니다',
+    '🎬 시나리오를 업로드하면 흥행 가능성과 에피소드 기획안을 제안합니다',
+    '📊 글로벌 채용 데이터 기반으로 합격 가능성을 정밀 분석합니다',
+    '💊 보험약관의 핵심 면책 조항을 쉬운 말로 풀어드립니다',
+  ];
+  let idx = 0;
+  const el = document.getElementById('slySubtitleText');
+  if (!el) return;
+  function nextSub() {
+    if (!el) return;
+    el.style.opacity = 0;
+    setTimeout(() => {
+      el.textContent = subtitles[idx % subtitles.length];
+      el.style.opacity = 1;
+      idx++;
+    }, 400);
+  }
+  el.style.transition = 'opacity .4s';
+  nextSub();
+  setInterval(nextSub, 4000);
+})();
+
+// 영상 토글
+function _slyToggleVideo() {
+  const v = document.getElementById('slyDemoVideo');
+  const o = document.getElementById('slyVideoOverlay');
+  if (!v.src && !v.currentSrc) return; // 영상 없으면 무시
+  if (v.paused) { v.play(); o.style.opacity = 0; }
+  else          { v.pause(); o.style.opacity = 1; }
+}
+</script>
 
 <!-- Firebase (재사용) -->
 <script type="module">
@@ -4026,888 +3042,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
-
-<!-- ── HTML ── -->
-<header class="sly-header">
-  <a class="sly-logo" href="/scan">
-    <div class="sly-logo-mark">
-      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="10" height="13" rx="1.5" stroke="#08101f" stroke-width="1.5"/>
-        <line x1="4.5" y1="6" x2="9.5" y2="6" stroke="#08101f" stroke-width="1.2" stroke-linecap="round"/>
-        <line x1="4.5" y1="8.5" x2="9.5" y2="8.5" stroke="#08101f" stroke-width="1.2" stroke-linecap="round"/>
-        <line x1="4.5" y1="11" x2="7.5" y2="11" stroke="#08101f" stroke-width="1.2" stroke-linecap="round"/>
-        <path d="M13 8 L16 11 L13 14" stroke="#08101f" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <span class="sly-logo-text">SCAN<span> AI</span></span>
-  </a>
-  <div class="sly-header-right" id="slyHeaderRight">
-    <button class="sly-auth-btn" onclick="_slySignIn()">구글 로그인</button>
-  </div>
-</header>
-
-<main class="sly-main">
-  <!-- 랜딩 페이지 (비로그인) -->
-  <div class="sly-landing" id="slyLanding">
-
-    <!-- 히어로 -->
-    <div class="sly-landing-hero">
-      <canvas id="scanConst" aria-hidden="true"></canvas>
-      <div class="sly-hero-eyebrow-landing">AI 문서 분석 서비스</div>
-      <h1>서류 한 장이<br><span class="sly-h1-pink">무섭지 않은</span><br><span class="sly-h1-mint">세상</span></h1>
-      <p>이력서·자소서·계약서·공문서<br>올리면 AI가 즉시 읽고 개선안을 드립니다<br>1P = 1원, 써야 할 만큼만 충전</p>
-      <button class="sly-landing-hero-btn" onclick="_slySignIn()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M14 12H3"/></svg>
-        구글로 무료 시작
-      </button>
-      <p class="sly-cta-sub">설치 없음 · <strong style="color:#34D399">신규 가입 2,900P 무료 지급</strong> · 홈화면 설치 지원</p>
-
-      <!-- 폰 목업 데모 -->
-      <div class="sly-phone-wrap">
-        <div class="sly-phone">
-          <div class="sly-phone-notch"></div>
-          <div class="sly-phone-screen">
-            <div class="sly-phone-scanline"></div>
-            <div class="sly-phone-doc">
-              <div class="sly-phone-doc-line"></div>
-              <div class="sly-phone-doc-line" style="width:80%"></div>
-              <div class="sly-phone-doc-line" style="width:90%"></div>
-              <div class="sly-phone-doc-line"></div>
-              <div class="sly-phone-doc-line"></div>
-            </div>
-            <div class="sly-phone-result">
-              <div class="sly-phone-result-score">87점</div>
-              <div class="sly-phone-result-label">직무 적합도</div>
-            </div>
-            <div class="sly-phone-tags">
-              <span class="sly-phone-tag pink">경력 강점</span>
-              <span class="sly-phone-tag mint">키워드 매칭</span>
-              <span class="sly-phone-tag gold">보완 필요 2건</span>
-            </div>
-            <div class="sly-phone-advice">
-              💡 "직무 연관 성과 수치를 추가하면<br>합격률이 23% 높아집니다"
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 지표 바 -->
-    <div class="sly-stats-bar">
-      <div class="sly-stat">
-        <div class="sly-stat-num pink">30초</div>
-        <div class="sly-stat-label">평균 분석 시간</div>
-      </div>
-      <div class="sly-stat">
-        <div class="sly-stat-num mint">15종</div>
-        <div class="sly-stat-label">지원 서비스</div>
-      </div>
-      <div class="sly-stat">
-        <div class="sly-stat-num gold">2,900P~</div>
-        <div class="sly-stat-label">건당 이용 요금</div>
-      </div>
-    </div>
-
-    <!-- 왜 써야 하나 (Pain points) -->
-    <div class="sly-pain-section">
-      <h2>이런 상황,<br>혼자 해결하셨나요?</h2>
-      <p>SCAN이 AI로 즉시 해결해 드립니다</p>
-      <div class="sly-pain-list">
-        <div class="sly-pain-item">
-          <div class="sly-pain-icon pink">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-          </div>
-          <div class="sly-pain-text">
-            <strong>이력서 수십 번 고쳐도 서류 탈락</strong>
-            <span>AI가 JD 기반 키워드 매칭률·경력 표현·보완 포인트를 항목별로 채점합니다</span>
-          </div>
-        </div>
-        <div class="sly-pain-item">
-          <div class="sly-pain-icon mint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          </div>
-          <div class="sly-pain-text">
-            <strong>계약서 내용이 불리한지 모르겠어요</strong>
-            <span>AI가 불리한 조항·위약금·해지 조건을 30초 안에 요약합니다 (본 서비스는 정보 제공 목적이며 법률 자문이 아닙니다)</span>
-          </div>
-        </div>
-        <div class="sly-pain-item">
-          <div class="sly-pain-icon gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          </div>
-          <div class="sly-pain-text">
-            <strong>공문서 발급·해석이 복잡하고 번거롭다</strong>
-            <span>등기부·사업자·건강보험 서류를 AI가 즉시 발급 안내 + 핵심 내용 해설까지</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 기능 슬라이드 -->
-    <div class="sly-feat-section">
-      <div class="sly-feat-section-head">
-        <div class="sly-label">Core Features</div>
-        <h2>탭해서 상세 기능 확인</h2>
-        <p>오른쪽으로 밀어서 전체 기능을 살펴보세요</p>
-      </div>
-      <div class="sly-feat-track" id="slyFeatTrack">
-        <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(0)">
-          <div class="sly-feat-icon pink">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <h3>이력서 분석</h3>
-          <p>직무 적합도 채점 + 항목별 개선 포인트 + 합격 문구 샘플 자동 생성</p>
-          <span class="sly-feat-cost">29,900P</span>
-        </div>
-        <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(1)">
-          <div class="sly-feat-icon pink">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-          </div>
-          <h3>자기소개서 첨삭</h3>
-          <p>STAR 구조 분석 + 어휘 다양성 점수 + 합격률 높은 표현으로 재작성 제안</p>
-          <span class="sly-feat-cost">39,900P~</span>
-        </div>
-        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(2)">
-          <div class="sly-feat-icon mint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          </div>
-          <h3>계약서 검토</h3>
-          <p>불리한 조항 자동 하이라이트 + 법적 리스크 등급 + 수정 권장 문구 제안</p>
-          <span class="sly-feat-cost">39,900P</span>
-        </div>
-        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(3)">
-          <div class="sly-feat-icon mint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          </div>
-          <h3>면접 질문 생성</h3>
-          <p>이력서 기반 예상 면접 질문 + 모범 답변 구조 + 취약 포인트 대비 전략</p>
-          <span class="sly-feat-cost">19,900P</span>
-        </div>
-        <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(4)">
-          <div class="sly-feat-icon gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-          </div>
-          <h3>등기부 전세사기 분석</h3>
-          <p>전세가율·선순위채권·깡통전세 위험도 자동 산정 + 5대 체크포인트</p>
-          <span class="sly-feat-cost">34,900P</span>
-        </div>
-        <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(5)">
-          <div class="sly-feat-icon gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          </div>
-          <h3>공문서·범용 분석</h3>
-          <p>HWP · DOCX · PDF · 사업자·건강보험 어떤 서류든 AI 즉시 해설</p>
-          <span class="sly-feat-cost">2,900P~</span>
-        </div>
-        <div class="sly-feat-card pink-card" onclick="_slyFeatDetail(6)">
-          <div class="sly-feat-icon pink">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <h3>직장인 말투 변환기</h3>
-          <p>딱딱한 거절·항의 메일을 부드럽고 프로답게 · 텍스트 직접 입력 가능</p>
-          <span class="sly-feat-cost">2,900P</span>
-        </div>
-        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(7)">
-          <div class="sly-feat-icon mint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          </div>
-          <h3>커리어 사주풀이</h3>
-          <p>이력서로 직업운·성격유형·잘 맞는 업종을 재미있게 분석</p>
-          <span class="sly-feat-cost">9,900P</span>
-        </div>
-        <div class="sly-feat-card gold-card" onclick="_slyFeatDetail(8)">
-          <div class="sly-feat-icon gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>
-          </div>
-          <h3>가정통신문 요약</h3>
-          <p>긴 학교 공지를 3줄 + 체크리스트로 · 일정·준비물 자동 추출</p>
-          <span class="sly-feat-cost">2,900P</span>
-        </div>
-        <div class="sly-feat-card mint-card" onclick="_slyFeatDetail(9)">
-          <div class="sly-feat-icon mint">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-          </div>
-          <h3>보험약관 스캐너</h3>
-          <p>면책조항·예외조건 전수 탐지 · 보상 가능 vs 불가 케이스 정리</p>
-          <span class="sly-feat-cost">14,900P</span>
-        </div>
-      </div>
-
-      <!-- 상세 패널 -->
-      <div class="sly-feat-detail pink-detail" id="slyFeatDetail0">
-        <h4>이력서 분석</h4>
-        <ul>
-          <li>직무 키워드 매칭률 자동 채점 (0~100점)</li>
-          <li>경력·학력·스킬셋 항목별 피드백</li>
-          <li>채용공고 JD 기반 맞춤 분석 (선택)</li>
-          <li>개선 문구 샘플 자동 생성</li>
-          <li>HWP · DOCX · PDF 모든 형식 지원</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail pink-detail" id="slyFeatDetail1">
-        <h4>자기소개서 첨삭</h4>
-        <ul>
-          <li>문항별 STAR 구조 분석</li>
-          <li>어휘 다양성·문장 가독성 점수</li>
-          <li>중복 표현·진부한 표현 감지</li>
-          <li>분량 최적화 제안</li>
-          <li>합격률 높은 표현으로 재작성 제안</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail mint-detail" id="slyFeatDetail2">
-        <h4>계약서 검토</h4>
-        <ul>
-          <li>불리한 조항 자동 하이라이트</li>
-          <li>표준 계약서 대비 누락 항목 감지</li>
-          <li>위약금·해지 조건·갱신 조건 요약</li>
-          <li>법적 리스크 등급 (낮음/중간/높음)</li>
-          <li>수정 권장 문구 제안</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail mint-detail" id="slyFeatDetail3">
-        <h4>면접 질문 생성</h4>
-        <ul>
-          <li>이력서 기반 맞춤 예상 질문 10~20개</li>
-          <li>질문 유형 분류 (직무/경험/성격/압박)</li>
-          <li>취약 포인트 파악 및 대비 전략</li>
-          <li>모범 답변 구조 (STAR 방식) 제안</li>
-          <li>공고 JD 연계 심층 면접 예측 지원</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail gold-detail" id="slyFeatDetail4">
-        <h4>공문서 발급·분석</h4>
-        <ul>
-          <li>등기부등본: 주소 입력 → 인터넷등기소 연결</li>
-          <li>사업자등록: 국세청 API 즉시 조회</li>
-          <li>건강보험·소득증명: 기관 딥링크 제공</li>
-          <li>발급 문서 AI 해설 (갑구·을구·근저당 등)</li>
-          <li>Tilko API 연동 등기부 직접 조회 지원</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail gold-detail" id="slyFeatDetail5">
-        <h4>범용 문서 분석</h4>
-        <ul>
-          <li>HWP · DOCX · PDF · TXT 전 형식 지원</li>
-          <li>핵심 내용 3줄 요약 자동 생성</li>
-          <li>문서 유형 자동 감지</li>
-          <li>개선 포인트·오류 자동 탐지</li>
-          <li>Oracle 서버 LibreOffice 변환 지원</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail pink-detail" id="slyFeatDetail6">
-        <h4>직장인 말투 변환기</h4>
-        <ul>
-          <li>거절·항의·사과·요청 상황별 어조 변환</li>
-          <li>파일 업로드 또는 텍스트 직접 붙여넣기</li>
-          <li>단어·문장 레벨 세밀 조정</li>
-          <li>상대방 기분 살리면서 내 의도 명확히</li>
-          <li>직장 내 갈등 상황 대응 문구 제안</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail mint-detail" id="slyFeatDetail7">
-        <h4>커리어 사주풀이</h4>
-        <ul>
-          <li>이력서 기반 직업 기질·성격 분석</li>
-          <li>강점·약점·잠재력 캐릭터 표현</li>
-          <li>잘 맞는 직종·근무 환경 추천</li>
-          <li>진지한 분석 + 유머 있는 스타일</li>
-          <li>SNS 공유 용도로도 딱</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail gold-detail" id="slyFeatDetail8">
-        <h4>가정통신문 요약</h4>
-        <ul>
-          <li>핵심 일정·준비물·기한 자동 추출</li>
-          <li>필수 서명·제출 항목 별도 강조</li>
-          <li>복잡한 교육 안내도 쉽게 정리</li>
-          <li>3줄 요약 + 체크리스트 형태 제공</li>
-          <li>파일 업로드 또는 텍스트 입력 가능</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-      <div class="sly-feat-detail mint-detail" id="slyFeatDetail9">
-        <h4>보험약관 스캐너</h4>
-        <ul>
-          <li>면책조항·예외조건 전수 탐지</li>
-          <li>보상 가능 vs 불가 케이스 구분</li>
-          <li>동일 유형 분쟁 판례 참고 제공</li>
-          <li>가입 전 꼭 확인해야 할 핵심 포인트</li>
-          <li>실손·종신·자동차보험 전 유형 지원</li>
-        </ul>
-        <button class="sly-try-btn" onclick="_slySignIn()">지금 써보기 →</button>
-      </div>
-    </div>
-
-    <!-- 요금 안내 -->
-    <div class="sly-price-section">
-      <h2>포인트 충전제</h2>
-      <p>1P = 1원 · 써야 할 만큼만 충전 · 크몽 대비 66% 저렴</p>
-      <div class="sly-charge-cards">
-        <div class="sly-charge-card">
-          <div class="sly-charge-price">₩5,000</div>
-          <div class="sly-charge-pts">5,000P</div>
-          <div class="sly-charge-sub">공문서·가정통신문 체험</div>
-        </div>
-        <div class="sly-charge-card">
-          <div class="sly-charge-price">₩10,000</div>
-          <div class="sly-charge-pts">10,000P</div>
-          <div class="sly-charge-sub">면접 질문 1건</div>
-        </div>
-        <div class="sly-charge-card">
-          <div class="sly-charge-price">₩30,000</div>
-          <div class="sly-charge-pts">30,000P</div>
-          <div class="sly-charge-sub">이력서+자소서 세트</div>
-        </div>
-        <div class="sly-charge-card featured">
-          <div class="bonus-badge">+7,000P</div>
-          <div class="sly-charge-price">₩60,000</div>
-          <div class="sly-charge-pts">67,000P</div>
-          <div class="sly-charge-sub">가장 인기 · 이력서 2건</div>
-        </div>
-        <div class="sly-charge-card">
-          <div class="bonus-badge">+15,000P</div>
-          <div class="sly-charge-price">₩100,000</div>
-          <div class="sly-charge-pts">115,000P</div>
-          <div class="sly-charge-sub">이력서+자소서 3건</div>
-        </div>
-        <div class="sly-charge-card">
-          <div class="bonus-badge">+40,000P</div>
-          <div class="sly-charge-price">₩200,000</div>
-          <div class="sly-charge-pts">240,000P</div>
-          <div class="sly-charge-sub">대량 이용 · 최대 절약</div>
-        </div>
-      </div>
-      <div class="sly-svc-price-list">
-        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">공문서 분석</div><div class="sly-svc-cost">2,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">면접 질문 생성</div><div class="sly-svc-cost">19,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot pink"></div><div class="sly-svc-name">이력서 분석</div><div class="sly-svc-cost">29,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot mint"></div><div class="sly-svc-name">등기부 전세사기 분석</div><div class="sly-svc-cost">34,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">자소서 수정안 · 계약서 검토 · 번역</div><div class="sly-svc-cost">39,900P</div></div>
-        <div class="sly-svc-row"><div class="sly-svc-dot gold"></div><div class="sly-svc-name">자소서 AI 재작성</div><div class="sly-svc-cost">49,900P</div></div>
-      </div>
-      <p style="font-size:12px;color:var(--landing-muted);margin-top:16px;line-height:1.7">
-        충전: 하나은행 270-910019-24204 (유)엠비티아이<br>입금 확인 후 관리자 즉시 적립
-      </p>
-    </div>
-
-    <!-- CTA -->
-    <div class="sly-cta-section">
-      <h2>지금 바로 써보세요<br><span style="color:var(--sly-gold-dark)">신규 가입 2,900P 무료 지급</span></h2>
-      <p>구글 계정 하나면 충분합니다 · 공문서 분석 1건 바로 체험<br>설치 없이 홈화면에 추가해서 앱처럼 사용</p>
-      <button class="sly-landing-hero-btn" onclick="_slySignIn()" style="font-size:17px;padding:16px 40px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:22px;height:22px"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M14 12H3"/></svg>
-        구글로 무료 시작하기
-      </button>
-    </div>
-
-    <!-- 푸터 -->
-    <div class="sly-landing-footer">
-      <strong>SCAN AI — 문서 분석 서비스</strong><br>
-      유한회사 엠비티아이 · 사업자번호 373-86-02536<br>
-      문의: <a href="mailto:filo-dine@donway.ai.kr">filo-dine@donway.ai.kr</a><br>
-      <a href="/scan">서비스 이용</a> · <a href="/hub">MBTICO 홈</a>
-    </div>
-  </div>
-
-  <!-- 인트로 영상 화면 -->
-  <div id="slyIntroScreen">
-    <div class="sly-intro-header">
-      <div class="sly-intro-logo">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#FF6B9D"/><path d="M7 14l4 4 10-10" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span class="sly-intro-logo-text">SCAN<span class="sly-intro-logo-ai"> AI</span></span>
-      </div>
-      <button class="sly-intro-skip" onclick="_slySkipIntro()">건너뛰기 ›</button>
-    </div>
-    <div class="sly-intro-video-wrap" id="slyIntroVideoWrap">
-      <!-- JS로 YouTube iframe 또는 video 태그 삽입 -->
-    </div>
-    <div class="sly-intro-footer">
-      <div class="sly-intro-title">AI 문서 분석 서비스</div>
-      <div class="sly-intro-sub">계약서·이력서·등기부 — 몇 초 만에 핵심 파악</div>
-      <button class="sly-intro-start-btn" onclick="_slySkipIntro()">시작하기</button>
-    </div>
-  </div>
-
-  <!-- Main content (kmong-style) -->
-  <div id="slyMainContent" style="display:none">
-    <div class="sly-app">
-      <!-- Points bar -->
-      <div class="sly-user-bar">
-        <div>
-          <span class="sly-user-pts" id="slyPtsNum">0</span>
-          <span class="sly-pts-label">P 보유</span>
-        </div>
-        <button class="sly-charge-btn" onclick="_slyOpenPoints()">충전하기</button>
-      </div>
-      <!-- Search bar -->
-      <div class="sly-search-wrap">
-        <div class="sly-search-inner">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="sly-search-input" id="slySearchInput" type="text" placeholder="서비스 검색 (이력서, 계약서, 등기부...)" oninput="_slySearch(this.value)" autocomplete="off">
-          <button class="sly-search-clear" id="slySearchClear" onclick="_slyClearSearch()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-      </div>
-      <!-- Search results -->
-      <div class="sly-search-results" id="slySearchResults"></div>
-      <!-- Category grid -->
-      <div class="sly-cat-grid" id="slyCatGrid"></div>
-      <!-- Popular services (shown with grid, hidden when category open) -->
-      <div class="sly-popular" id="slyPopular">
-        <div class="sly-pop-hd">인기 서비스</div>
-        <div class="sly-pop-row" onclick="_slyOpenDrawer('resume')">
-          <div class="sly-pop-ico" style="background:#FFF0F6;color:#FF6B9D"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
-          <div class="sly-pop-info">
-            <div class="sly-pop-name">이력서 분석</div>
-            <div class="sly-pop-sub">기업 맞춤 평가 + ATS 전략</div>
-          </div>
-          <div class="sly-pop-right">
-            <div class="sly-pop-price">29,900P</div>
-            <div class="sly-pop-stars">★ 4.9 (342)</div>
-          </div>
-        </div>
-        <div class="sly-pop-row" onclick="_slyOpenDrawer('interview')">
-          <div class="sly-pop-ico" style="background:#FFF0F6;color:#FF6B9D"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></div>
-          <div class="sly-pop-info">
-            <div class="sly-pop-name">면접 질문</div>
-            <div class="sly-pop-sub">예상 질문 14개 + 답변 포인트</div>
-          </div>
-          <div class="sly-pop-right">
-            <div class="sly-pop-price">19,900P</div>
-            <div class="sly-pop-stars">★ 4.9 (189)</div>
-          </div>
-        </div>
-        <div class="sly-pop-row" onclick="_slyOpenDrawer('contract')">
-          <div class="sly-pop-ico" style="background:#FFF8E6;color:#C9A84C"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-          <div class="sly-pop-info">
-            <div class="sly-pop-name">계약서 검토</div>
-            <div class="sly-pop-sub">위험 조항 + 2026 최저임금 기준</div>
-          </div>
-          <div class="sly-pop-right">
-            <div class="sly-pop-price">39,900P</div>
-            <div class="sly-pop-stars">★ 4.8 (97)</div>
-          </div>
-        </div>
-        <div class="sly-pop-row" onclick="_slyOpenDrawer('career_saju')">
-          <div class="sly-pop-ico" style="background:#FFF0F6;color:#FF8FAB"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg></div>
-          <div class="sly-pop-info">
-            <div class="sly-pop-name">커리어 사주풀이</div>
-            <div class="sly-pop-sub">이력서 기반 직업 기질 분석</div>
-          </div>
-          <div class="sly-pop-right">
-            <div class="sly-pop-price">9,900P</div>
-            <div class="sly-pop-stars">★ 4.7 (156)</div>
-          </div>
-        </div>
-      </div>
-      <!-- Service panel (shown when category selected) -->
-      <div class="sly-svc-panel" id="slySvcPanel">
-        <div class="sly-panel-header">
-          <button class="sly-panel-back" onclick="_slyBackToCats()">‹</button>
-          <div class="sly-panel-ico" id="slyPanelIco"></div>
-          <div class="sly-panel-title" id="slyPanelTitle"></div>
-        </div>
-        <div class="sly-svc-cards" id="slySvcCards"></div>
-      </div>
-    </div>
-
-    <!-- Bottom drawer overlay -->
-    <div class="sly-drawer-overlay" id="slyDrawerOverlay" onclick="_slyCloseDrawer()"></div>
-
-    <!-- Bottom drawer -->
-    <div class="sly-drawer" id="slyDrawer">
-      <div class="sly-drawer-handle"></div>
-      <div class="sly-drawer-head">
-        <div class="sly-drawer-head-left">
-          <div class="sly-drawer-service-label" id="slyDrawerCat"></div>
-          <div class="sly-drawer-title" id="slyDrawerTitle"></div>
-          <div class="sly-drawer-rating">
-            <span class="sly-drawer-stars" id="slyDrawerStars">★ 4.9</span>
-            <span class="sly-drawer-rcount" id="slyDrawerRcount">(342)</span>
-            <span id="slyDrawerBadgeHead"></span>
-          </div>
-        </div>
-        <button class="sly-drawer-close" onclick="_slyCloseDrawer()">&#215;</button>
-      </div>
-      <div class="sly-drawer-scroll">
-      <div class="sly-drawer-body">
-
-        <!-- 서비스 설명 박스 -->
-        <div class="sly-desc-box" id="slyDescBox"></div>
-
-        <!-- Issue card (공문서 발급 모드) -->
-        <div class="sly-card" id="slyIssueCard" style="display:none">
-          <div class="sly-card-title" id="slyIssueTitleText">공문서 발급 & 분석</div>
-
-          <!-- 등기부등본 -->
-          <div id="slyIssueRegistry" style="display:none">
-            <!-- 탭: 주소 검색 / 고유번호 직접 입력 -->
-            <div style="display:flex;gap:4px;margin-bottom:12px;background:var(--bg);border-radius:10px;padding:4px">
-              <button id="slyRegTabAddr" onclick="_slyRegTab('addr')"
-                style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:var(--gold);color:var(--navy);transition:all .2s">
-                주소 검색
-              </button>
-              <button id="slyRegTabPin" onclick="_slyRegTab('pin')"
-                style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all .2s">
-                고유번호 직접 입력
-              </button>
-            </div>
-            <!-- 주소 검색 패널 -->
-            <div id="slyRegPanelAddr">
-              <div style="display:flex;gap:10px;margin-bottom:12px">
-                <input id="slyRegAddr" type="text" placeholder="도로명 또는 지번 주소 입력 (예: 서울시 강남구 테헤란로 123)"
-                  style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
-                  onkeydown="if(event.key==='Enter') _slyRegSearch()">
-                <select id="slyRegType" style="padding:12px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:13px;min-width:110px">
-                  <option value="all">전체현황</option>
-                  <option value="ownership">소유현황</option>
-                  <option value="mortgage">근저당·담보</option>
-                  <option value="lease">전세권·임차</option>
-                </select>
-              </div>
-              <button onclick="_slyRegSearch()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
-                주소 검색 →
-              </button>
-            </div>
-            <!-- 고유번호 직접 입력 패널 -->
-            <div id="slyRegPanelPin" style="display:none">
-              <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.5">등기부등본 상단의 14자리 고유번호<br><span style="color:var(--gold)">예) 1101-1996-004567</span></div>
-              <div style="display:flex;gap:10px;margin-bottom:12px">
-                <input id="slyRegPin" type="text" maxlength="16" placeholder="xxxx-xxxx-xxxxxx (14자리)"
-                  style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;letter-spacing:.05em"
-                  oninput="this.value=this.value.replace(/[^\d-]/g,'')"
-                  onkeydown="if(event.key==='Enter') _slyRegSearchPin()">
-                <select id="slyRegTypePin" style="padding:12px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:13px;min-width:110px">
-                  <option value="all">전체현황</option>
-                  <option value="ownership">소유현황</option>
-                  <option value="mortgage">근저당·담보</option>
-                  <option value="lease">전세권·임차</option>
-                </select>
-              </div>
-              <button onclick="_slyRegSearchPin()" style="width:100%;padding:13px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">
-                고유번호로 조회 →
-              </button>
-            </div>
-            <div id="slyRegResult" style="display:none;background:var(--surface);border-radius:10px;padding:14px 16px;margin-bottom:14px;border:1px solid var(--border)">
-              <!-- _slyShowRegResult()로 동적 렌더링 -->
-            </div>
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 PDF 업로드</div>
-          </div>
-
-          <!-- 사업자등록 조회 -->
-          <div id="slyIssueBiz" style="display:none">
-            <div style="display:flex;gap:10px;margin-bottom:12px">
-              <input id="slyBizNum" type="text" maxlength="12" placeholder="사업자등록번호 10자리 (예: 123-45-67890)"
-                style="flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;outline:none"
-                oninput="this.value=this.value.replace(/[^\d-]/g,'')"
-                onkeydown="if(event.key==='Enter') _slyBizSearch()">
-              <button onclick="_slyBizSearch()" style="padding:12px 20px;background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap">
-                조회
-              </button>
-            </div>
-            <div id="slyBizResult" style="display:none"></div>
-            <div style="font-size:13px;color:var(--text-secondary);margin-top:14px;margin-bottom:8px;font-weight:600">사업자등록증 PDF 업로드 (선택 — AI 상세 분석)</div>
-          </div>
-
-          <!-- 건강보험 / 소득 / 기타 -->
-          <div id="slyIssueLinks" style="display:none">
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px" id="slyIssueLinkGrid"></div>
-            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;font-weight:600">발급한 파일 업로드</div>
-          </div>
-        </div><!-- close slyIssueCard -->
-
-        <!-- Regular upload card -->
-        <div class="sly-card" id="slyUploadCard">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div class="sly-card-title" style="margin-bottom:0" id="slyUploadTitle">파일 업로드</div>
-            <div id="slyServiceBadge" style="background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:700"></div>
-          </div>
-          <!-- 입력 모드 탭 -->
-          <div id="slyInputModeTabs" style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg);border-radius:10px;padding:4px">
-            <button id="slyModeFile" onclick="_slySetInputMode('file')"
-              style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:var(--gold);color:var(--navy);transition:all .2s">
-              파일 업로드
-            </button>
-            <button id="slyModeText" onclick="_slySetInputMode('text')"
-              style="flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-secondary);transition:all .2s">
-              텍스트 직접 입력
-            </button>
-          </div>
-          <!-- 텍스트 입력 모드 -->
-          <div id="slyTextInputWrap" style="display:none;margin-bottom:14px">
-            <textarea id="slyDirectText" placeholder="이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요..."
-              style="width:100%;min-height:180px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-size:14px;line-height:1.6;resize:vertical;outline:none;font-family:inherit"></textarea>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">Ctrl+A → Ctrl+C로 복사 후 여기에 붙여넣기</div>
-          </div>
-          <div class="sly-dropzone" id="slyDropzone2">
-            <input type="file" id="slyFileInput2" accept=".hwp,.docx,.pdf,.txt">
-            <div class="sly-dz-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17,8 12,3 7,8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-            </div>
-            <div class="sly-dz-title">파일을 끌어다 놓거나 클릭하세요</div>
-            <div class="sly-dz-sub">최대 32MB</div>
-            <div class="sly-dz-types" id="slyDzTypes2">
-              <span class="sly-type-chip">HWP</span>
-              <span class="sly-type-chip">DOCX</span>
-              <span class="sly-type-chip">PDF</span>
-              <span class="sly-type-chip">TXT</span>
-            </div>
-          </div>
-          <div class="sly-file-preview" id="slyFilePrev2">
-            <div class="sly-file-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14,2 14,8 20,8"/>
-              </svg>
-            </div>
-            <div class="sly-file-info">
-              <div class="sly-file-name" id="slyFileName2"></div>
-              <div class="sly-file-size" id="slyFileSize2"></div>
-            </div>
-            <button class="sly-file-remove" onclick="_slyRemoveFile2()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <div class="sly-optional" id="slyJdWrap2">
-            <label id="slyJdLabel2">지원 공고 붙여넣기 (선택)</label>
-            <textarea id="slyJdText2" placeholder="공고문을 붙여넣으면 맞춤 분석을 제공합니다"></textarea>
-          </div>
-          <button class="sly-analyze-btn" id="slyAnalyzeBtn2" onclick="_slyAnalyze()" style="display:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            AI 분석 시작
-          </button>
-          <div class="sly-cost-note" id="slyCostNote2">분석 시 10P 차감됩니다</div>
-        </div>
-
-        <!-- Progress -->
-        <div class="sly-card sly-progress" id="slyProgress">
-          <div class="sly-prog-steps" id="slyProgSteps">
-            <div class="sly-prog-step active" id="slyStep0"><div class="sly-step-dot"></div><div class="sly-step-text" id="slyProgLabel">파일 업로드 중...</div></div>
-            <div class="sly-prog-step" id="slyStep1"><div class="sly-step-dot"></div><div class="sly-step-text">문서 파싱 & 텍스트 추출</div></div>
-            <div class="sly-prog-step" id="slyStep2"><div class="sly-step-dot"></div><div class="sly-step-text">AI 심층 분석 중...</div></div>
-            <div class="sly-prog-step" id="slyStep3"><div class="sly-step-dot"></div><div class="sly-step-text">보고서 작성 중...</div></div>
-            <div class="sly-prog-step" id="slyStep4"><div class="sly-step-dot"></div><div class="sly-step-text">완료!</div></div>
-          </div>
-          <div class="sly-progress-sub">약 10~30초 소요됩니다</div>
-        </div>
-
-        <!-- Results -->
-        <div id="slyResult" class="sly-result"></div>
-
-      </div><!-- .sly-drawer-body -->
-      </div><!-- .sly-drawer-scroll -->
-      <!-- 스티키 하단 CTA -->
-      <div class="sly-drawer-footer">
-        <div>
-          <div class="sly-drawer-footer-price" id="slyFooterPrice">29,900P</div>
-          <div class="sly-drawer-footer-unit">1P = ₩1</div>
-        </div>
-        <button class="sly-drawer-footer-btn" onclick="_slyAnalyze()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          AI 분석 시작
-        </button>
-      </div>
-    </div><!-- .sly-drawer -->
-  </div>
-</main>
-
-<!-- Points modal -->
-<div class="sly-overlay" id="slyPointsOverlay">
-  <div class="sly-modal" style="position:relative">
-    <button class="sly-modal-close" onclick="_slyClosePoints()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="sly-modal-title">포인트 충전</div>
-    <div class="sly-balance-display">
-      <div>
-        <div class="sly-balance-label">현재 보유 포인트</div>
-        <div class="sly-balance-val" id="slyBalanceVal">0 P</div>
-      </div>
-      <div style="font-size:13px;color:rgba(201,168,76,.6);text-align:right">1P = ₩1</div>
-    </div>
-
-    <div class="sly-charge-title">충전 옵션 선택</div>
-    <div class="sly-charge-options">
-      <div class="sly-charge-opt selected" onclick="_slySelectCharge(0)">
-        <div>
-          <div class="sly-charge-pts">5,000 P</div>
-          <div style="font-size:11px;color:var(--text-muted)">공문서 분석 1~2건</div>
-        </div>
-        <div class="sly-charge-price">₩5,000</div>
-      </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(1)">
-        <div>
-          <div class="sly-charge-pts">10,000 P</div>
-          <div style="font-size:11px;color:var(--text-muted)">면접 질문 1건</div>
-        </div>
-        <div class="sly-charge-price">₩10,000</div>
-      </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(2)">
-        <div>
-          <div class="sly-charge-pts">30,000 P</div>
-          <div style="font-size:11px;color:var(--text-muted)">이력서+자소서 세트</div>
-        </div>
-        <div class="sly-charge-price">₩30,000</div>
-      </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(3)">
-        <div>
-          <div class="sly-charge-pts">67,000 P <span class="sly-charge-bonus">+7,000P</span></div>
-          <div style="font-size:11px;color:var(--text-muted)">가장 인기</div>
-        </div>
-        <div class="sly-charge-price">₩60,000</div>
-      </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(4)">
-        <div>
-          <div class="sly-charge-pts">115,000 P <span class="sly-charge-bonus">+15,000P</span></div>
-          <div style="font-size:11px;color:var(--text-muted)">이력서 3건+</div>
-        </div>
-        <div class="sly-charge-price">₩100,000</div>
-      </div>
-      <div class="sly-charge-opt" onclick="_slySelectCharge(5)">
-        <div>
-          <div class="sly-charge-pts">240,000 P <span class="sly-charge-bonus">+40,000P</span></div>
-          <div style="font-size:11px;color:var(--text-muted)">최대 절약</div>
-        </div>
-        <div class="sly-charge-price">₩200,000</div>
-      </div>
-    </div>
-
-    <div class="sly-account-info">
-      <strong>입금 계좌</strong><br>
-      하나은행 270-910019-24204<br>
-      예금주: (유)엠비티아이<br>
-      <br>
-      입금 후 관리자 확인 시 <strong>즉시 포인트 충전</strong>됩니다.<br>
-      <span style="color:var(--text-muted)">신청 후 영업일 기준 1일 이내 처리</span>
-    </div>
-    <input id="slyDepositorName" type="text" placeholder="입금자명 (예: 홍길동)" maxlength="20"
-      style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text-primary);font-size:14px;margin-bottom:10px;outline:none">
-    <button class="sly-request-btn" onclick="_slyRequestCharge()">충전 신청하기</button>
-  </div>
-</div>
-
-<script>
-(function() {
-  var canvas = document.getElementById('scanConst');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var hero = canvas.parentElement;
-  var cw, ch, nodes = [];
-  var LINK = 140;
-  var pointer = { x: -9999, y: -9999 };
-
-  function resize() {
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);
-    var rect = hero.getBoundingClientRect();
-    cw = rect.width;
-    ch = rect.height;
-    canvas.width = Math.max(1, Math.floor(cw * dpr));
-    canvas.height = Math.max(1, Math.floor(ch * dpr));
-    canvas.style.width = cw + 'px';
-    canvas.style.height = ch + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function initNodes() {
-    nodes = [];
-    var count = cw < 480 ? 28 : 55;
-    for (var i = 0; i < count; i++) {
-      var isGold = Math.random() > 0.2;
-      nodes.push({
-        x: Math.random() * cw,
-        y: Math.random() * ch,
-        vx: (Math.random() - 0.5) * 0.28,
-        vy: (Math.random() - 0.5) * 0.28,
-        r: Math.random() * 2 + 1.6,
-        color: isGold ? '#C9A84C' : '#FF6B9D',
-        phase: Math.random() * Math.PI * 2
-      });
-    }
-  }
-
-  window.addEventListener('resize', function() { resize(); initNodes(); });
-  resize();
-  initNodes();
-
-  hero.addEventListener('mousemove', function(e) {
-    var rect = hero.getBoundingClientRect();
-    pointer.x = e.clientX - rect.left;
-    pointer.y = e.clientY - rect.top;
-  });
-  hero.addEventListener('mouseleave', function() { pointer.x = -9999; pointer.y = -9999; });
-
-  function frame() {
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.lineCap = 'butt';
-
-    // draw links
-    for (var i = 0; i < nodes.length; i++) {
-      for (var j = i + 1; j < nodes.length; j++) {
-        var dx = nodes[i].x - nodes[j].x, dy = nodes[i].y - nodes[j].y;
-        var d = Math.sqrt(dx*dx + dy*dy);
-        if (d < LINK) {
-          ctx.globalAlpha = 0.18 + (1 - d/LINK) * 0.48;
-          ctx.strokeStyle = '#C9A84C';
-          ctx.lineWidth = 0.8;
-          ctx.beginPath();
-          ctx.moveTo(nodes[i].x, nodes[i].y);
-          ctx.lineTo(nodes[j].x, nodes[j].y);
-          ctx.stroke();
-        }
-      }
-    }
-
-    // draw nodes
-    var t = Date.now() * 0.001;
-    for (var k = 0; k < nodes.length; k++) {
-      var n = nodes[k];
-      n.x += n.vx;
-      n.y += n.vy;
-      if (n.x < 0 || n.x > cw) n.vx *= -1;
-      if (n.y < 0 || n.y > ch) n.vy *= -1;
-
-      // pointer gravity
-      var pdx = n.x - pointer.x, pdy = n.y - pointer.y;
-      var pd = Math.sqrt(pdx*pdx + pdy*pdy);
-      if (pd < 200) {
-        n.x -= pdx * 0.005;
-        n.y -= pdy * 0.005;
-      }
-
-      var pulse = 0.78 + Math.sin(t + n.phase) * 0.22;
-      // halo
-      ctx.fillStyle = n.color;
-      ctx.globalAlpha = pulse * 0.22;
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r * 2.6, 0, Math.PI * 2);
-      ctx.fill();
-      // core
-      ctx.globalAlpha = pulse * 0.9;
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(frame);
-  }
-
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    frame();
-  }
-})();
-</script>
+-e 
+</body>
+</html>
