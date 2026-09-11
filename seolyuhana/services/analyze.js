@@ -755,55 +755,28 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
 
   const analysisPrompt = getScannedPrompt(serviceId, extraContext);
 
-  let requestHeaders, requestBody, method;
-
-  if (images && images.length > 0) {
-    // Oracle pdftoppm → JPEG 이미지 배열: 표준 image 블록 사용 (beta 헤더 불필요)
-    const imageBlocks = images.slice(0, 8).map(b64 => ({
-      type: 'image',
-      source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
-    }));
-    requestHeaders = {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    };
-    requestBody = {
-      model: 'claude-sonnet-5',
-      max_tokens: 6000,
-      messages: [{
-        role: 'user',
-        content: [...imageBlocks, { type: 'text', text: analysisPrompt }]
-      }]
-    };
-    method = 'vision_images';
-  } else {
-    // PDF 직접 전송 (anthropic-beta pdfs-2024-09-25 필요)
-    const base64Pdf = arrayBufferToBase64(pdfBuffer);
-    requestHeaders = {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'pdfs-2024-09-25'
-    };
-    requestBody = {
-      model: 'claude-sonnet-5',
-      max_tokens: 6000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Pdf } },
-          { type: 'text', text: analysisPrompt }
-        ]
-      }]
-    };
-    method = 'vision_pdf';
+  if (!images || images.length === 0) {
+    throw new Error('스캔 PDF 변환 실패: Oracle 서버에서 이미지를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.');
   }
+
+  // Oracle pdftoppm → JPEG 이미지 배열: 표준 image 블록 (beta 헤더 불필요)
+  const imageBlocks = images.slice(0, 8).map(b64 => ({
+    type: 'image',
+    source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+  }));
 
   const res = await fetch(ANTHROPIC_API, {
     method: 'POST',
-    headers: requestHeaders,
-    body: JSON.stringify(requestBody),
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 6000,
+      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: analysisPrompt }] }]
+    }),
     signal: AbortSignal.timeout(120000)
   });
 
@@ -817,7 +790,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/);
   if (!jsonMatch) throw new Error('스캔 PDF 분석 JSON을 찾을 수 없습니다');
 
-  return { ok: true, data: JSON.parse(jsonMatch[1]), usage: data.usage, method };
+  return { ok: true, data: JSON.parse(jsonMatch[1]), usage: data.usage, method: 'vision_images' };
 }
 
 function getScannedPrompt(serviceId, ctx) {
