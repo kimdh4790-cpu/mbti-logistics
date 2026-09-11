@@ -3226,8 +3226,18 @@ function setProgress(pct, label) {
   if (lbl && stepIdx === 0) lbl.textContent = label;
 }
 
-function pollResult(jobId) {
+function pollResult(jobId, _cnt) {
+  const cnt = (_cnt || 0) + 1;
   clearTimeout(_slyPollTimer);
+  if (cnt > 90) {
+    _slyToast('분석 시간 초과 (3분). 파일 크기를 줄이거나 다시 시도해주세요.');
+    document.getElementById('slyProgress')?.classList.remove('visible');
+    const b2 = document.getElementById('slyAnalyzeBtn2');
+    if (b2) b2.disabled = false;
+    const fb = document.querySelector('.sly-drawer-footer-btn');
+    if (fb) fb.disabled = false;
+    return;
+  }
   _slyPollTimer = setTimeout(async () => {
     try {
       const token = await window._slyGetToken();
@@ -3239,7 +3249,11 @@ function pollResult(jobId) {
         setProgress(100, '완료!');
         setTimeout(() => {
           document.getElementById('slyProgress')?.classList.remove('visible');
-          renderResult(d.result);
+          if (!d.result) {
+            _slyToast('분석 결과를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.');
+          } else {
+            renderResult(d.result);
+          }
           const b2 = document.getElementById('slyAnalyzeBtn2');
           if (b2) b2.disabled = false;
           const fb = document.querySelector('.sly-drawer-footer-btn');
@@ -3250,10 +3264,9 @@ function pollResult(jobId) {
         throw new Error(d.error || '분석 실패');
       } else if (d.status === 'processing' || d.status === 'pending') {
         setProgress(d.progress || 55, 'Claude AI 분석 중...');
-        pollResult(jobId);
+        pollResult(jobId, cnt);
       } else {
-        // 알 수 없는 상태 - 5회 이상이면 중단
-        pollResult(jobId);
+        pollResult(jobId, cnt);
       }
     } catch(e) {
       _slyToast('결과 조회 실패: ' + e.message);
