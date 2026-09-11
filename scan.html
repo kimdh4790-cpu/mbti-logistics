@@ -852,6 +852,305 @@ body {
 
 /* SVG 그라디언트 정의 */
 .sly-svg-defs { position: absolute; width: 0; height: 0; }
+
+/* ══════════════════════════════════════════════
+   PPT 보고서 스타일 결과 렌더링
+   ══════════════════════════════════════════════ */
+
+/* 커버 */
+.rpt-cover {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  margin-bottom: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.rpt-cover::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 70% 30%, rgba(255,107,157,.2) 0%, transparent 60%);
+}
+.rpt-cover-badge {
+  display: inline-block;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: rgba(255,255,255,.8);
+  font-size: 12px; font-weight: 700;
+  padding: 4px 14px; border-radius: 20px;
+  margin-bottom: 12px;
+}
+.rpt-cover-title {
+  font-size: 22px; font-weight: 900;
+  color: #fff; letter-spacing: -.4px;
+  margin-bottom: 8px;
+}
+.rpt-cover-meta { font-size: 12px; color: rgba(255,255,255,.45); }
+
+/* 섹션 */
+.rpt-section {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+.rpt-section-label {
+  font-size: 12px; font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .8px;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* 게이지 */
+.rpt-score-wrap {
+  display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.rpt-gauge-wrap {
+  position: relative; width: 120px; height: 120px; flex-shrink: 0;
+}
+.rpt-gauge-svg { width: 120px; height: 120px; }
+.rpt-gauge-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.rpt-gauge-num { font-size: 28px; font-weight: 900; line-height: 1; }
+.rpt-gauge-grade { font-size: 13px; font-weight: 700; margin-top: 2px; }
+.rpt-radar-wrap { flex: 1; display: flex; justify-content: center; }
+
+/* 적합도 바 */
+.rpt-fit-bar { margin-top: 14px; }
+.rpt-fit-label { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.rpt-bar-track {
+  background: rgba(0,0,0,.07);
+  border-radius: 10px; height: 10px;
+  overflow: hidden; margin-bottom: 4px;
+}
+.rpt-bar-fill { height: 100%; border-radius: 10px; }
+.rpt-fit-score { font-size: 13px; font-weight: 700; color: var(--pink); text-align: right; }
+.rpt-fit-comment { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* 총평 */
+.rpt-comment {
+  font-size: 14px; line-height: 1.7;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-radius: 10px; padding: 12px 14px;
+  border-left: 3px solid var(--pink);
+  margin-top: 12px;
+}
+
+/* 2컬럼 진단 */
+.rpt-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.rpt-diag-card {
+  border-radius: 10px; padding: 14px;
+  border: 1.5px solid transparent;
+}
+.rpt-diag-card.green { background: var(--lime-light); border-color: rgba(82,196,26,.25); }
+.rpt-diag-card.red   { background: rgba(239,68,68,.07); border-color: rgba(239,68,68,.2); }
+.rpt-diag-card.blue  { background: rgba(99,102,241,.07); border-color: rgba(99,102,241,.2); }
+.rpt-diag-title { font-size: 12px; font-weight: 800; margin-bottom: 8px; color: var(--text-primary); }
+.rpt-diag-item {
+  font-size: 12px; color: var(--text-secondary);
+  padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,.05);
+  line-height: 1.5;
+}
+.rpt-diag-item:last-child { border-bottom: none; }
+
+/* KPI 카드 */
+.rpt-kpi-card {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 16px;
+  text-align: center;
+}
+.rpt-kpi-val { font-size: 32px; font-weight: 900; line-height: 1; }
+.rpt-kpi-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 600; }
+
+/* 위험 요약 pills */
+.rpt-risk-summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.rpt-risk-pill {
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 700;
+}
+.rpt-risk-pill.red   { background: rgba(239,68,68,.1); color: #b91c1c; border: 1px solid rgba(239,68,68,.25); }
+.rpt-risk-pill.amber { background: rgba(245,158,11,.1); color: #92400e; border: 1px solid rgba(245,158,11,.25); }
+.rpt-risk-pill.green { background: var(--lime-light); color: #166534; border: 1px solid rgba(82,196,26,.25); }
+
+/* 개선 카드 */
+.rpt-improve-list { display: flex; flex-direction: column; gap: 8px; }
+.rpt-improve-card, .rpt-rewrite-card {
+  border: 1.5px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.rpt-improve-head, .rpt-rewrite-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; cursor: pointer;
+  background: var(--bg); transition: background .15s;
+}
+.rpt-improve-head:hover, .rpt-rewrite-head:hover { background: var(--pink-light); }
+.rpt-improve-badge {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 8px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.rpt-improve-title { flex: 1; font-size: 13px; font-weight: 700; }
+.rpt-chevron {
+  width: 18px; height: 18px; color: var(--text-muted);
+  transition: transform .2s; flex-shrink: 0;
+}
+.rpt-improve-card.open .rpt-chevron,
+.rpt-rewrite-card.open .rpt-chevron { transform: rotate(180deg); }
+.rpt-improve-body { display: none; padding: 14px; }
+.rpt-improve-card.open .rpt-improve-body,
+.rpt-rewrite-card.open .rpt-improve-body { display: block; }
+
+/* 비포/애프터 */
+.rpt-before-after {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px; align-items: start;
+  margin-bottom: 10px;
+}
+.rpt-before, .rpt-after { background: var(--bg); border-radius: 8px; padding: 10px; }
+.rpt-ba-label { font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; }
+.rpt-ba-text { font-size: 12px; line-height: 1.6; color: var(--text-primary); }
+.rpt-after { background: var(--lime-light); border: 1px solid rgba(82,196,26,.2); }
+.rpt-arrow { font-size: 18px; color: var(--lime); align-self: center; }
+.rpt-suggestion-box {
+  background: var(--lime-light); border: 1px solid rgba(82,196,26,.25);
+  border-radius: 8px; padding: 12px; font-size: 13px;
+  line-height: 1.7; white-space: pre-wrap; margin-bottom: 10px;
+}
+.rpt-reason-box {
+  background: var(--gold-light); border: 1px solid rgba(245,158,11,.25);
+  border-radius: 8px; padding: 10px 12px;
+  font-size: 12px; color: var(--text-secondary);
+  line-height: 1.6; margin-top: 8px;
+}
+
+/* Q&A */
+.rpt-qa-category { margin-bottom: 14px; }
+.rpt-qa-cat-title { font-size: 13px; font-weight: 800; color: var(--pink); margin-bottom: 8px; }
+.rpt-qa-card {
+  background: var(--bg); border-radius: 10px;
+  padding: 14px; margin-bottom: 8px;
+  border-left: 3px solid var(--pink);
+}
+.rpt-qa-q { font-size: 14px; font-weight: 700; margin-bottom: 8px; line-height: 1.5; }
+.rpt-qa-guide { display: flex; flex-direction: column; gap: 4px; }
+.rpt-qa-point { font-size: 12px; color: var(--text-secondary); padding: 4px 0; }
+.rpt-qa-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+/* 전세사기 위험 게이지 */
+.rpt-risk-gauge-wrap { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
+.rpt-risk-meter { flex: 1; }
+.rpt-risk-track {
+  background: rgba(0,0,0,.08); border-radius: 10px;
+  height: 14px; overflow: hidden; margin-bottom: 4px;
+}
+.rpt-risk-fill { height: 100%; border-radius: 10px; }
+.rpt-risk-labels {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--text-muted); font-weight: 600;
+}
+.rpt-risk-badge {
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; text-align: center;
+}
+.rpt-risk-score { font-size: 22px; font-weight: 900; line-height: 1; }
+.rpt-risk-lv { font-size: 11px; font-weight: 700; }
+.rpt-checkpoint-list { display: flex; flex-direction: column; gap: 8px; }
+.rpt-checkpoint {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg); border-radius: 10px;
+}
+.rpt-cp-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.rpt-cp-content { flex: 1; }
+.rpt-cp-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.rpt-cp-detail { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+.rpt-cp-badge {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* 담보 카드 */
+.rpt-enc-card {
+  background: var(--bg); border-radius: 8px;
+  padding: 12px 14px; margin-bottom: 8px;
+}
+.rpt-enc-type { font-size: 13px; font-weight: 700; }
+.rpt-enc-done { font-size: 10px; background: var(--lime-light); color: #166534; border-radius: 4px; padding: 1px 6px; }
+.rpt-enc-amount { font-size: 16px; font-weight: 900; color: var(--danger); margin: 4px 0; }
+.rpt-enc-meta { font-size: 11px; color: var(--text-muted); }
+
+/* 정보 그리드 */
+.rpt-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin-bottom: 12px;
+}
+.rpt-info-item { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.rpt-info-label { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-bottom: 3px; }
+.rpt-info-val { font-size: 13px; font-weight: 700; }
+
+/* 요약 배너 */
+.rpt-summary-banner {
+  background: var(--bg); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.rpt-summary-level { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+.rpt-summary-text { font-size: 13px; line-height: 1.7; color: var(--text-secondary); white-space: pre-line; }
+
+/* 액션 리스트 */
+.rpt-action-list { display: flex; flex-direction: column; gap: 8px; }
+.rpt-action-item { display: flex; gap: 12px; align-items: flex-start; }
+.rpt-action-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--pink), var(--gold));
+  color: #fff; font-size: 12px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rpt-action-text { font-size: 13px; line-height: 1.6; color: var(--text-primary); padding-top: 3px; }
+
+/* 다운로드 */
+.rpt-download-section {
+  background: linear-gradient(135deg, #0f172a, #1e1b4b);
+  border-radius: var(--radius-lg);
+  padding: 24px 20px; text-align: center;
+  margin-top: 16px;
+}
+.rpt-download-title { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 16px; }
+.rpt-download-row { display: flex; gap: 10px; }
+.rpt-dl-btn {
+  flex: 1; padding: 13px; border-radius: 12px;
+  font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.rpt-dl-btn svg { width: 16px; height: 16px; }
+.rpt-dl-btn.docx { background: var(--pink-light); color: var(--pink); border: 1.5px solid rgba(255,107,157,.3); }
+.rpt-dl-btn.pdf  { background: var(--gold-light); color: #b45309; border: 1.5px solid rgba(245,158,11,.3); }
+.rpt-dl-btn:hover { filter: brightness(.93); transform: translateY(-1px); }
+
+@media (max-width: 480px) {
+  .rpt-two-col { grid-template-columns: 1fr; }
+  .rpt-before-after { grid-template-columns: 1fr; }
+  .rpt-arrow { display: none; }
+  .rpt-score-wrap { flex-direction: column; align-items: flex-start; }
+}
 </style>
 
 <!-- SVG 그라디언트 -->
@@ -2359,305 +2658,412 @@ window._slyPollResult = pollResult;
 function renderResult(data) {
   const cont = document.getElementById('slyResult');
   if (!cont) return;
-  const svc = SVC.find(s => s.id === _slyService);
+  const svc = SVC.find(s => s.id === _slyService) || {};
   let html = '';
 
+  // ══════════════════════════════════════════════
+  // 0. PPT 커버 헤더
+  // ══════════════════════════════════════════════
+  const svcName = svc.label ? `${svc.label} ${svc.sublabel||''}` : 'AI 분석';
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+  html += `
+  <div class="rpt-cover">
+    <div class="rpt-cover-badge">📊 AI 분석 리포트</div>
+    <div class="rpt-cover-title">${svcName} 결과</div>
+    <div class="rpt-cover-meta">${dateStr} · Claude AI 분석 · SCAN</div>
+  </div>`;
+
+  // ══════════════════════════════════════════════
+  // 1. 종합 점수 — 게이지 + 레이더차트
+  // ══════════════════════════════════════════════
   if (data.score) {
     const sc = data.score;
     const total = sc.total || sc.score || 0;
-    const grade = total >= 85 ? '우수' : total >= 70 ? '양호' : total >= 55 ? '보통' : '개선 필요';
-    const circ = 163;
+    const grade = total >= 90 ? {t:'S등급',c:'#10b981'} : total >= 80 ? {t:'A등급',c:'#6366f1'} : total >= 70 ? {t:'B등급',c:'#f59e0b'} : total >= 55 ? {t:'C등급',c:'#f97316'} : {t:'D등급',c:'#ef4444'};
+    const circ = 220;
     const offset = circ - (circ * total / 100);
-    html += `<div class="sly-score-bar">
-      <div class="sly-score-circle">
-        <svg viewBox="0 0 72 72">
-          <circle class="score-track" cx="36" cy="36" r="26"/>
-          <circle class="score-fill" cx="36" cy="36" r="26"
-            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
-        </svg>
-        <div class="sly-score-num">${total}</div>
-      </div>
-      <div class="sly-score-info">
-        <div class="sly-score-label">종합 점수</div>
-        <div class="sly-score-grade">${grade}</div>
-        <div class="sly-score-comment">${data.overallComment || ''}</div>
-        ${sc.breakdown ? `<div class="sly-breakdown">${
-          Object.entries(sc.breakdown).map(([k,v]) => `
-            <div class="sly-breakdown-item">
-              <div class="sly-bk-label">${k}</div>
-              <div class="sly-bk-val">${v}</div>
-            </div>`).join('')
-        }</div>` : ''}
-      </div>
-    </div>`;
-  }
-
-  // Strengths
-  if (data.strengths?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">강점</div>
-      <div class="sly-tags">${data.strengths.map(s => `<span class="sly-tag tag-strength">${s}</span>`).join('')}</div>
-    </div>`;
-  }
-
-  // Improvements
-  if (data.improvements?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">개선 포인트 (${data.improvements.length}개)</div>
-      <div class="sly-improve-list" id="slyImproveList">
-        ${data.improvements.map((item, i) => {
-          const risk = (item.riskLevel || '').toLowerCase();
-          const dot = risk === 'high' ? 'risk-high' : risk === 'medium' ? 'risk-medium' : 'risk-low';
-          return `<div class="sly-improve-item" id="slyImp${i}">
-            <div class="sly-improve-head" onclick="_slyToggleImp(${i})">
-              <span class="sly-risk-dot ${dot}"></span>
-              <span class="sly-improve-section">${item.section || item.clauseTitle || item.category || '항목 ' + (i+1)}</span>
-              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div class="sly-improve-body">
-              ${item.original || item.originalText ? `<div class="sly-orig-text">${item.original || item.originalText}</div>` : ''}
-              ${item.suggestion || item.suggestedRevision ? `
-                <div class="sly-suggestion-label">수정 제안</div>
-                <div class="sly-suggestion-text">${item.suggestion || item.suggestedRevision}</div>` : ''}
-              ${item.reason || item.issue ? `<div class="sly-reason">${item.reason || item.issue}</div>` : ''}
-              ${item.legalBasis ? `<div class="sly-reason">⚖️ ${item.legalBasis}</div>` : ''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }
-
-  // Missing items / keywords
-  if (data.missingItems?.length || data.jdMissingKeywords?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">누락 항목</div><div class="sly-tags">
-      ${(data.missingItems || []).map(s => `<span class="sly-tag tag-miss">${s}</span>`).join('')}
-      ${(data.jdMissingKeywords || []).map(s => `<span class="sly-tag tag-keyword">${s}</span>`).join('')}
-    </div></div>`;
-  }
-
-  // Interview questions
-  if (data.categoryQuestions?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">면접 예상 질문</div>
-      <div class="sly-improve-list">
-        ${data.categoryQuestions.map((cat, ci) => `
-          <div class="sly-improve-item" id="slyCat${ci}">
-            <div class="sly-improve-head" onclick="_slyToggleCat(${ci})">
-              <span class="sly-improve-section">${cat.category}</span>
-              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div class="sly-improve-body">
-              ${(cat.questions || []).map((q, qi) => `
-                <div style="margin-bottom:14px">
-                  <div style="font-weight:600;font-size:14px;color:var(--text-primary);margin-bottom:6px">Q${qi+1}. ${q.question}</div>
-                  ${q.answerGuide?.keyPoints?.length ? `
-                    <div class="sly-suggestion-label">핵심 포인트</div>
-                    <div class="sly-suggestion-text">${q.answerGuide.keyPoints.join('\n')}</div>` : ''}
-                </div>`).join('')}
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-  }
-
-  // Cover letter rewrite sections
-  if (data.rewrittenSections?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">AI 재작성 결과</div>
-      <div class="sly-improve-list">
-        ${data.rewrittenSections.map((sec, si) => `
-          <div class="sly-improve-item" id="slyRw${si}">
-            <div class="sly-improve-head" onclick="_slyToggleRw(${si})">
-              <span class="sly-improve-section">${sec.title}</span>
-              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div class="sly-improve-body">
-              ${sec.original ? `<div class="sly-orig-text">${sec.original}</div>` : ''}
-              <div class="sly-suggestion-label">재작성 내용</div>
-              <div class="sly-suggestion-text">${sec.rewritten || ''}</div>
-              ${sec.improvements?.length ? `<div class="sly-reason" style="margin-top:8px">개선 포인트: ${sec.improvements.join(' · ')}</div>` : ''}
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-    if (data.writingTips?.length) {
-      html += `<div class="sly-card"><div class="sly-card-title">작성 팁</div><div class="sly-tags">
-        ${data.writingTips.map(t => `<span class="sly-tag tag-keyword">${t}</span>`).join('')}
-      </div></div>`;
+    // 레이더 차트 SVG (breakdown)
+    let radarSvg = '';
+    if (sc.breakdown) {
+      const entries = Object.entries(sc.breakdown);
+      const n = entries.length;
+      if (n >= 3) {
+        const cx = 90, cy = 90, r = 70;
+        const pts = entries.map(([k,v], i) => {
+          const angle = (Math.PI * 2 / n) * i - Math.PI / 2;
+          const ratio = Math.min(Number(v)||0, 100) / 100;
+          return { k, v: Number(v)||0, x: cx + r * ratio * Math.cos(angle), y: cy + r * ratio * Math.sin(angle), gx: cx + r * Math.cos(angle), gy: cy + r * Math.sin(angle) };
+        });
+        const polyPts = pts.map(p => `${p.x},${p.y}`).join(' ');
+        const gridPts = pts.map(p => `${p.gx},${p.gy}`).join(' ');
+        const lines = pts.map(p => `<line x1="${cx}" y1="${cy}" x2="${p.gx}" y2="${p.gy}" stroke="rgba(0,0,0,.08)" stroke-width="1"/>`).join('');
+        const labels = pts.map(p => {
+          const lx = cx + (r+18) * Math.cos(Math.PI * 2 / n * pts.indexOf(p) - Math.PI/2);
+          const ly = cy + (r+18) * Math.sin(Math.PI * 2 / n * pts.indexOf(p) - Math.PI/2);
+          return `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#64748b" font-family="sans-serif">${p.k}<tspan x="${lx}" dy="10" font-weight="700" fill="#0f172a">${p.v}</tspan></text>`;
+        }).join('');
+        radarSvg = `<svg viewBox="0 0 180 180" style="width:140px;height:140px;flex-shrink:0">
+          <polygon points="${gridPts}" fill="none" stroke="rgba(0,0,0,.1)" stroke-width="1"/>
+          <polygon points="${Array.from({length:n},((_,i)=>{const a=Math.PI*2/n*i-Math.PI/2;return `${cx+r*.5*Math.cos(a)},${cy+r*.5*Math.sin(a)}`})).join(' ')}" fill="none" stroke="rgba(0,0,0,.06)" stroke-width="1"/>
+          ${lines}
+          <polygon points="${polyPts}" fill="rgba(255,107,157,.18)" stroke="#FF6B9D" stroke-width="2"/>
+          ${labels}
+        </svg>`;
+      }
     }
-    if (data.overallNote) {
-      html += `<div class="sly-card"><div class="sly-card-title">총평</div>
-        <div style="font-size:14px;line-height:1.7">${data.overallNote}</div>
-      </div>`;
-    }
-  }
-
-  // Translation sections
-  if (data.sections?.length) {
-    const langLabel = data.targetLanguage || '번역';
-    html += `<div class="sly-card"><div class="sly-card-title">번역 결과 (${langLabel})</div>
-      <div class="sly-improve-list">
-        ${data.sections.map((sec, si) => `
-          <div class="sly-improve-item" id="slySec${si}">
-            <div class="sly-improve-head" onclick="_slyToggleSec(${si})">
-              <span class="sly-improve-section">${sec.title}</span>
-              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div class="sly-improve-body">
-              <div class="sly-orig-text">${sec.koreanOriginal || ''}</div>
-              <div class="sly-suggestion-label">${langLabel} 번역</div>
-              <div class="sly-suggestion-text">${sec.translation || sec.translatedText || sec.englishTranslation || ''}</div>
-              ${sec.translatorNotes ? `<div class="sly-reason">${sec.translatorNotes}</div>` : ''}
-            </div>
-          </div>`).join('')}
+    html += `
+    <div class="rpt-section">
+      <div class="rpt-section-label">📈 종합 평가</div>
+      <div class="rpt-score-wrap">
+        <div class="rpt-gauge-wrap">
+          <svg viewBox="0 0 120 120" class="rpt-gauge-svg">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,0,0,.07)" stroke-width="10"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="${grade.c}" stroke-width="10"
+              stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+              stroke-linecap="round" transform="rotate(-90 60 60)"
+              style="transition:stroke-dashoffset 1.2s ease"/>
+          </svg>
+          <div class="rpt-gauge-inner">
+            <div class="rpt-gauge-num" style="color:${grade.c}">${total}</div>
+            <div class="rpt-gauge-grade" style="color:${grade.c}">${grade.t}</div>
+          </div>
+        </div>
+        ${radarSvg ? `<div class="rpt-radar-wrap">${radarSvg}</div>` : ''}
       </div>
-    </div>`;
-  }
-
-  // Registry analysis (등기부등본)
-  if (data.property) {
-    const p = data.property;
-    html += `<div class="sly-card"><div class="sly-card-title">부동산 정보</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px">
-        ${p.address ? `<div><span style="color:var(--text-muted);font-size:12px">주소</span><div style="font-weight:600">${p.address}</div></div>` : ''}
-        ${p.type ? `<div><span style="color:var(--text-muted);font-size:12px">유형</span><div style="font-weight:600">${p.type}</div></div>` : ''}
-        ${p.area ? `<div><span style="color:var(--text-muted);font-size:12px">면적</span><div style="font-weight:600">${p.area}</div></div>` : ''}
-        ${p.registeredDate ? `<div><span style="color:var(--text-muted);font-size:12px">등기일</span><div style="font-weight:600">${p.registeredDate}</div></div>` : ''}
-      </div>
-    </div>`;
-  }
-  const _owners = data.ownership?.owners || (Array.isArray(data.ownership) ? data.ownership : []);
-  if (_owners.length) {
-    const multiRisk = data.ownership?.multiOwnerRisk;
-    html += `<div class="sly-card"><div class="sly-card-title">소유 현황</div>
-      <div class="sly-tags">${_owners.map(o => `<span class="sly-tag tag-strength">${typeof o === 'string' ? o : (o.name || '') + (o.share ? ' ' + o.share : '') + (o.acquireType ? ' (' + o.acquireType + ')' : '')}</span>`).join('')}</div>
-      ${multiRisk ? `<div style="margin-top:8px;font-size:13px;color:var(--warn)">⚠️ ${multiRisk}</div>` : ''}
-    </div>`;
-  }
-  if (data.encumbrances?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title" style="color:var(--danger)">담보·제한 현황 (${data.encumbrances.length}건)</div>
-      <div class="sly-improve-list">
-        ${data.encumbrances.map((e, i) => {
-          const rv = e.risk || e.riskLevel || '';
-          const dc = rv === '높음' || rv === 'high' ? 'risk-high' : rv === '낮음' || rv === 'low' ? 'risk-low' : 'risk-medium';
-          return `<div class="sly-improve-item" id="slyEnc${i}">
-            <div class="sly-improve-head" onclick="_slyToggleEnc(${i})">
-              <span class="sly-risk-dot ${dc}"></span>
-              <span class="sly-improve-section">${e.type || '제한사항'} ${e.amount ? '(' + e.amount + ')' : ''} ${e.status === '말소됨' ? '<span style="font-size:11px;color:var(--success)">[말소]</span>' : ''}</span>
-              <svg class="sly-improve-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6,9 12,15 18,9"/></svg>
-            </div>
-            <div class="sly-improve-body">
-              ${e.creditor ? `<div class="sly-reason">채권자: ${e.creditor}</div>` : ''}
-              ${(e.registeredDate || e.date) ? `<div class="sly-reason">설정일: ${e.registeredDate || e.date}</div>` : ''}
-              ${e.priority ? `<div class="sly-reason">순위: ${e.priority}</div>` : ''}
-              ${e.description ? `<div class="sly-reason">${e.description}</div>` : ''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }
-  // Jeonsae fraud analysis (전세사기 분석)
-  if (data.jeonseRiskAnalysis) {
-    const jr = data.jeonseRiskAnalysis;
-    const isKkangtong = jr.kkangtongAlert;
-    html += `<div class="sly-card" style="border-left:4px solid ${isKkangtong ? 'var(--danger)' : 'var(--warn)'}">
-      <div class="sly-card-title" style="color:${isKkangtong ? 'var(--danger)' : 'var(--text-primary)'}">
-        ${isKkangtong ? '⚠️ 깡통전세 위험 감지' : '전세사기 위험 분석'}
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;font-size:14px">
-        ${jr.totalPriorDebt ? `<div><span style="color:var(--text-muted);font-size:12px">선순위 채권 합계</span><div style="font-weight:700;color:var(--danger)">${jr.totalPriorDebt}</div></div>` : ''}
-        ${jr.jeonseRatio ? `<div><span style="color:var(--text-muted);font-size:12px">전세가율</span><div style="font-weight:700;color:${isKkangtong ? 'var(--danger)' : 'var(--text-primary)'}">${jr.jeonseRatio}</div></div>` : ''}
-        ${jr.estimatedJeonseDeposit ? `<div><span style="color:var(--text-muted);font-size:12px">추정 전세 보증금</span><div style="font-weight:700">${jr.estimatedJeonseDeposit}</div></div>` : ''}
-        ${jr.kkangtongReason ? `<div style="grid-column:1/-1"><span style="color:var(--text-muted);font-size:12px">위험 사유</span><div style="font-size:13px;margin-top:4px">${jr.kkangtongReason}</div></div>` : ''}
-      </div>
-      ${jr.fraudCheckpoints?.length ? `
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px">5대 전세사기 체크포인트</div>
-        ${jr.fraudCheckpoints.map(cp => {
-          const s = (cp.status || '').toLowerCase();
-          const col = s === '위험' ? 'var(--danger)' : s === '주의' ? 'var(--warn)' : 'var(--success)';
-          return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-            <span style="flex-shrink:0;background:${col};color:#fff;border-radius:4px;font-size:11px;font-weight:700;padding:2px 7px;margin-top:1px">${cp.status}</span>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--text-primary)">${cp.checkpoint}</div>
-              <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">${cp.detail || ''}</div>
-            </div>
-          </div>`;
-        }).join('')}` : ''}
-      ${(jr.safetyRatio || jr.hugEligibility || jr.trustRegistryNeeded || jr.corporateOwnerRisk) ? `
-        <div style="font-weight:600;font-size:13px;margin:14px 0 8px">SCAN 독점 추가 분석</div>
-        <div style="display:grid;gap:8px;font-size:13px">
-          ${jr.safetyRatio ? `<div style="background:var(--surface);border-radius:8px;padding:10px 12px"><span style="color:var(--text-muted)">선순위 안전도</span> <strong>${jr.safetyRatio}</strong></div>` : ''}
-          ${jr.hugEligibility ? `<div style="background:var(--surface);border-radius:8px;padding:10px 12px"><span style="color:var(--text-muted)">HUG 보증보험</span> <strong>${jr.hugEligibility}</strong></div>` : ''}
-          ${jr.trustRegistryNeeded ? `<div style="background:rgba(239,68,68,0.08);border-radius:8px;padding:10px 12px;border:1px solid var(--danger)">⚠️ <strong>신탁원부 발급 필요</strong><br><span style="color:var(--text-secondary)">${jr.trustRegistryReason || ''}</span></div>` : ''}
-          ${jr.corporateOwnerRisk ? `<div style="background:rgba(245,158,11,0.08);border-radius:8px;padding:10px 12px;border:1px solid var(--warn)">🏢 <strong>법인 임대인</strong><br><span style="color:var(--text-secondary)">${jr.corporateOwnerRisk}</span></div>` : ''}
+      ${data.overallComment ? `<div class="rpt-comment">${data.overallComment}</div>` : ''}
+      ${data.companyFit ? `
+        <div class="rpt-fit-bar">
+          <div class="rpt-fit-label">🎯 ${data.companyFit.detectedTargetCompany || '지원 기업'} 적합도</div>
+          <div class="rpt-bar-track"><div class="rpt-bar-fill" style="width:${data.companyFit.fitScore||0}%;background:linear-gradient(90deg,#6366f1,#FF6B9D)"></div></div>
+          <div class="rpt-fit-score">${data.companyFit.fitScore||0}점</div>
+          ${data.companyFit.fitComment ? `<div class="rpt-fit-comment">${data.companyFit.fitComment}</div>` : ''}
         </div>` : ''}
-      ${jr.safetyVerification?.length ? `
-        <div style="font-weight:600;font-size:13px;margin:12px 0 6px">안전 확인 사항</div>
-        <div class="sly-tags">${jr.safetyVerification.map(v => `<span class="sly-tag tag-strength">${v}</span>`).join('')}</div>` : ''}
     </div>`;
   }
 
-  if (data.riskSummary) {
-    const rs = typeof data.riskSummary === 'string' ? {summary: data.riskSummary} : data.riskSummary;
-    const rsLv = rs.level || '';
-    const rsColor = (rsLv === '고위험' || rsLv === '위험') ? 'var(--danger)' : rsLv === '주의' ? 'var(--warn)' : 'var(--success)';
-    html += `<div class="sly-card" style="border-left:4px solid ${rsColor}">
-      <div class="sly-card-title" style="color:${rsColor}">위험 요약${rsLv ? ' — ' + rsLv : ''}${rs.score ? ' (' + rs.score + '점)' : ''}</div>
-      ${rs.totalDebt ? `<div style="font-size:14px;margin-bottom:8px">총 채권최고액: <strong>${rs.totalDebt}</strong></div>` : ''}
-      ${rs.keyRisks?.length ? `<div class="sly-tags" style="margin-bottom:10px">${rs.keyRisks.map(k => `<span class="sly-tag tag-miss">${k}</span>`).join('')}</div>` : ''}
-      ${rs.summary ? `<div style="font-size:14px;line-height:1.7;white-space:pre-line">${rs.summary}</div>` : ''}
-    </div>`;
-  }
-  if (data.recommendations?.length) {
-    html += `<div class="sly-card"><div class="sly-card-title">추천 조치</div><div class="sly-tags">
-      ${data.recommendations.map(r => `<span class="sly-tag tag-keyword">${r}</span>`).join('')}
-    </div></div>`;
+  // ══════════════════════════════════════════════
+  // 2. 강점 / 위험 요소 — 2컬럼 카드
+  // ══════════════════════════════════════════════
+  const hasStrengths = data.strengths?.length;
+  const hasMissing   = data.missingItems?.length || data.jdMissingKeywords?.length;
+  const hasAts       = data.atsTips?.length;
+  if (hasStrengths || hasMissing || hasAts) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">🔍 핵심 진단</div><div class="rpt-two-col">`;
+    if (hasStrengths) {
+      html += `<div class="rpt-diag-card green">
+        <div class="rpt-diag-title">✅ 강점</div>
+        ${data.strengths.map(s=>`<div class="rpt-diag-item">${s}</div>`).join('')}
+      </div>`;
+    }
+    if (hasMissing) {
+      html += `<div class="rpt-diag-card red">
+        <div class="rpt-diag-title">❌ 누락·보완</div>
+        ${(data.missingItems||[]).map(s=>`<div class="rpt-diag-item">${s}</div>`).join('')}
+        ${(data.jdMissingKeywords||[]).map(s=>`<div class="rpt-diag-item">🔑 ${s}</div>`).join('')}
+      </div>`;
+    }
+    if (hasAts) {
+      html += `<div class="rpt-diag-card blue" style="grid-column:1/-1">
+        <div class="rpt-diag-title">🤖 ATS 통과 전략</div>
+        ${data.atsTips.map(t=>`<div class="rpt-diag-item">${t}</div>`).join('')}
+      </div>`;
+    }
+    html += `</div></div>`;
   }
 
-  // Public doc (건강보험/소득/공문서)
-  if (data.docType) {
-    html += `<div class="sly-card">
-      <div class="sly-card-title">${data.docType}</div>
-      ${data.issuedBy ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">발급: ${data.issuedBy}${data.issuedDate ? ' (' + data.issuedDate + ')' : ''}</div>` : ''}
-      ${data.subject ? `<div style="font-size:14px;font-weight:600;margin-bottom:12px">${data.subject}</div>` : ''}
-      ${data.keyFacts?.length ? `<div class="sly-tags" style="margin-bottom:10px">${data.keyFacts.map(f => `<span class="sly-tag tag-strength">${f}</span>`).join('')}</div>` : ''}
-      ${data.summary ? `<div style="font-size:14px;line-height:1.7">${data.summary}</div>` : ''}
-      ${data.validity ? `<div style="margin-top:10px;font-size:13px;color:var(--success);font-weight:600">유효기간: ${data.validity}</div>` : ''}
-      ${data.useCase ? `<div style="margin-top:8px;font-size:13px;color:var(--text-secondary)">활용처: ${data.useCase}</div>` : ''}
+  // ══════════════════════════════════════════════
+  // 3. 개선 포인트 — 수평 타임라인 카드
+  // ══════════════════════════════════════════════
+  if (data.improvements?.length) {
+    const high = data.improvements.filter(i=>(i.riskLevel||'').toLowerCase()==='high'||i.riskLevel==='높음');
+    const mid  = data.improvements.filter(i=>(i.riskLevel||'').toLowerCase()==='medium'||i.riskLevel==='보통');
+    const low  = data.improvements.filter(i=>!['high','medium','높음','보통'].includes((i.riskLevel||'').toLowerCase()));
+    html += `<div class="rpt-section">
+      <div class="rpt-section-label">✏️ 개선 포인트 (${data.improvements.length}건)</div>
+      <div class="rpt-risk-summary">
+        <div class="rpt-risk-pill red">🔴 긴급 ${high.length}건</div>
+        <div class="rpt-risk-pill amber">🟡 보통 ${mid.length}건</div>
+        <div class="rpt-risk-pill green">🟢 권장 ${low.length}건</div>
+      </div>
+      <div class="rpt-improve-list">
+        ${data.improvements.map((item,i)=>{
+          const rv = (item.riskLevel||'').toLowerCase();
+          const isH = rv==='high'||item.riskLevel==='높음';
+          const isM = rv==='medium'||item.riskLevel==='보통';
+          const col = isH ? '#ef4444' : isM ? '#f59e0b' : '#10b981';
+          const label = isH ? '긴급' : isM ? '보통' : '권장';
+          return `<div class="rpt-improve-card" id="slyImp${i}">
+            <div class="rpt-improve-head" onclick="this.parentElement.classList.toggle('open')">
+              <div class="rpt-improve-badge" style="background:${col}20;color:${col};border:1px solid ${col}40">${label}</div>
+              <div class="rpt-improve-title">${item.section||item.clauseTitle||item.category||`항목 ${i+1}`}</div>
+              <svg class="rpt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="rpt-improve-body">
+              ${item.original||item.originalText ? `<div class="rpt-before-after">
+                <div class="rpt-before"><div class="rpt-ba-label">📄 원문</div><div class="rpt-ba-text">${item.original||item.originalText}</div></div>
+                ${item.suggestion||item.suggestedRevision ? `<div class="rpt-arrow">→</div>
+                <div class="rpt-after"><div class="rpt-ba-label">✨ 개선안</div><div class="rpt-ba-text">${item.suggestion||item.suggestedRevision}</div></div>` : ''}
+              </div>` : item.suggestion||item.suggestedRevision ? `<div class="rpt-suggestion-box">${item.suggestion||item.suggestedRevision}</div>` : ''}
+              ${item.reason||item.issue ? `<div class="rpt-reason-box">💡 ${item.reason||item.issue}</div>` : ''}
+              ${item.legalBasis ? `<div class="rpt-reason-box">⚖️ ${item.legalBasis}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
-    if (data.warnings?.length) {
-      html += `<div class="sly-card" style="border-left:3px solid var(--warn)">
-        <div class="sly-card-title">주의사항</div>
-        ${data.warnings.map(w => `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">⚠️ ${w}</div>`).join('')}
+  }
+
+  // ══════════════════════════════════════════════
+  // 4. 면접 질문 — Q&A 카드
+  // ══════════════════════════════════════════════
+  if (data.categoryQuestions?.length) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">🎤 면접 예상 질문</div>
+      ${data.categoryQuestions.map((cat,ci)=>`
+        <div class="rpt-qa-category">
+          <div class="rpt-qa-cat-title">📂 ${cat.category}</div>
+          ${(cat.questions||[]).map((q,qi)=>`
+            <div class="rpt-qa-card">
+              <div class="rpt-qa-q">Q${qi+1}. ${q.question}</div>
+              ${q.answerGuide?.keyPoints?.length ? `
+                <div class="rpt-qa-guide">
+                  ${q.answerGuide.keyPoints.map(p=>`<div class="rpt-qa-point">✔ ${p}</div>`).join('')}
+                </div>` : ''}
+              ${q.answerGuide?.timeLimit ? `<div class="rpt-qa-meta">⏱ ${q.answerGuide.timeLimit}</div>` : ''}
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // ══════════════════════════════════════════════
+  // 5. 자소서 재작성 — 비포/애프터
+  // ══════════════════════════════════════════════
+  if (data.rewrittenSections?.length) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">✍️ AI 재작성</div>
+      ${data.rewrittenSections.map((sec,si)=>`
+        <div class="rpt-rewrite-card" id="slyRw${si}">
+          <div class="rpt-rewrite-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="rpt-improve-title">${sec.title}</div>
+            <svg class="rpt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+          </div>
+          <div class="rpt-improve-body">
+            ${sec.original ? `<div class="rpt-before-after">
+              <div class="rpt-before"><div class="rpt-ba-label">📄 원본</div><div class="rpt-ba-text">${sec.original}</div></div>
+              <div class="rpt-arrow">→</div>
+              <div class="rpt-after"><div class="rpt-ba-label">✨ 재작성</div><div class="rpt-ba-text">${sec.rewritten||''}</div></div>
+            </div>` : `<div class="rpt-suggestion-box">${sec.rewritten||''}</div>`}
+            ${sec.improvements?.length ? `<div class="rpt-reason-box">💡 ${sec.improvements.join(' · ')}</div>` : ''}
+          </div>
+        </div>`).join('')}
+      ${data.writingTips?.length ? `<div class="rpt-diag-card blue"><div class="rpt-diag-title">📝 작성 팁</div>${data.writingTips.map(t=>`<div class="rpt-diag-item">${t}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // ══════════════════════════════════════════════
+  // 6. 번역 결과
+  // ══════════════════════════════════════════════
+  if (data.sections?.length) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">🌐 번역 결과 (${data.targetLanguage||''})</div>
+      ${data.sections.map((sec,si)=>`
+        <div class="rpt-rewrite-card" id="slySec${si}">
+          <div class="rpt-rewrite-head" onclick="this.parentElement.classList.toggle('open')">
+            <div class="rpt-improve-title">${sec.title}</div>
+            <svg class="rpt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6,9 12,15 18,9"/></svg>
+          </div>
+          <div class="rpt-improve-body">
+            <div class="rpt-before-after">
+              <div class="rpt-before"><div class="rpt-ba-label">🇰🇷 원문</div><div class="rpt-ba-text">${sec.koreanOriginal||''}</div></div>
+              <div class="rpt-arrow">→</div>
+              <div class="rpt-after"><div class="rpt-ba-label">번역</div><div class="rpt-ba-text">${sec.translation||sec.translatedText||sec.englishTranslation||''}</div></div>
+            </div>
+            ${sec.translatorNotes ? `<div class="rpt-reason-box">📝 ${sec.translatorNotes}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // ══════════════════════════════════════════════
+  // 7. 등기부 / 전세사기 분석 — 위험 게이지
+  // ══════════════════════════════════════════════
+  if (data.property || data.jeonseRiskAnalysis || data.riskSummary) {
+    if (data.property) {
+      const p = data.property;
+      html += `<div class="rpt-section"><div class="rpt-section-label">🏠 부동산 정보</div>
+        <div class="rpt-info-grid">
+          ${p.address ? `<div class="rpt-info-item"><div class="rpt-info-label">주소</div><div class="rpt-info-val">${p.address}</div></div>` : ''}
+          ${p.type ? `<div class="rpt-info-item"><div class="rpt-info-label">유형</div><div class="rpt-info-val">${p.type}</div></div>` : ''}
+          ${p.area ? `<div class="rpt-info-item"><div class="rpt-info-label">면적</div><div class="rpt-info-val">${p.area}</div></div>` : ''}
+          ${p.buildYear ? `<div class="rpt-info-item"><div class="rpt-info-label">건축연도</div><div class="rpt-info-val">${p.buildYear}</div></div>` : ''}
+        </div>
+      </div>`;
+    }
+    if (data.jeonseRiskAnalysis) {
+      const jr = data.jeonseRiskAnalysis;
+      const riskScore = jr.riskScore || (jr.kkangtongAlert ? 85 : 40);
+      const riskColor = riskScore >= 70 ? '#ef4444' : riskScore >= 40 ? '#f59e0b' : '#10b981';
+      const riskLabel = riskScore >= 70 ? '고위험' : riskScore >= 40 ? '주의' : '안전';
+      html += `<div class="rpt-section">
+        <div class="rpt-section-label">⚠️ 전세사기 위험 분석</div>
+        <div class="rpt-risk-gauge-wrap">
+          <div class="rpt-risk-meter">
+            <div class="rpt-risk-track">
+              <div class="rpt-risk-fill" style="width:${riskScore}%;background:linear-gradient(90deg,#10b981,${riskColor})"></div>
+            </div>
+            <div class="rpt-risk-labels"><span>안전</span><span>주의</span><span>위험</span></div>
+          </div>
+          <div class="rpt-risk-badge" style="background:${riskColor}20;border:2px solid ${riskColor};color:${riskColor}">
+            <div class="rpt-risk-score">${riskScore}</div>
+            <div class="rpt-risk-lv">${riskLabel}</div>
+          </div>
+        </div>
+        ${jr.fraudCheckpoints?.length ? `
+          <div class="rpt-checkpoint-list">
+            ${jr.fraudCheckpoints.map(cp=>{
+              const s = cp.status||'';
+              const col = s==='위험'?'#ef4444':s==='주의'?'#f59e0b':'#10b981';
+              const icon = s==='위험'?'🔴':s==='주의'?'🟡':'🟢';
+              return `<div class="rpt-checkpoint">
+                <div class="rpt-cp-icon">${icon}</div>
+                <div class="rpt-cp-content">
+                  <div class="rpt-cp-title">${cp.checkpoint}</div>
+                  <div class="rpt-cp-detail">${cp.detail||''}</div>
+                </div>
+                <div class="rpt-cp-badge" style="color:${col};background:${col}15;border:1px solid ${col}30">${s}</div>
+              </div>`;
+            }).join('')}
+          </div>` : ''}
+        ${jr.kkangtongReason ? `<div class="rpt-reason-box" style="border-color:#ef444440;background:#ef444410">🚨 ${jr.kkangtongReason}</div>` : ''}
+      </div>`;
+    }
+    if (data.encumbrances?.length) {
+      const totalAmt = data.encumbrances.reduce((s,e)=>s+(parseInt((e.amount||'').replace(/[^0-9]/g,''),10)||0),0);
+      html += `<div class="rpt-section"><div class="rpt-section-label">🔒 담보·제한 현황 (${data.encumbrances.length}건 · ${totalAmt ? totalAmt.toLocaleString()+'원' : ''})</div>
+        ${data.encumbrances.map((e,i)=>{
+          const col = (e.risk==='높음'||e.riskLevel==='high') ? '#ef4444' : (e.risk==='보통') ? '#f59e0b' : '#64748b';
+          return `<div class="rpt-enc-card" style="border-left:3px solid ${col}">
+            <div class="rpt-enc-type">${e.type||''} ${e.status==='말소됨'?'<span class="rpt-enc-done">말소</span>':''}</div>
+            ${e.amount ? `<div class="rpt-enc-amount">${e.amount}</div>` : ''}
+            <div class="rpt-enc-meta">${[e.creditor,e.registeredDate||e.date].filter(Boolean).join(' · ')}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+    const rs = data.riskSummary;
+    if (rs) {
+      const rsObj = typeof rs==='string' ? {summary:rs} : rs;
+      const rsColor = rsObj.level==='고위험'?'#ef4444':rsObj.level==='주의'?'#f59e0b':'#10b981';
+      html += `<div class="rpt-section">
+        <div class="rpt-section-label">📋 위험 요약</div>
+        <div class="rpt-summary-banner" style="border-left:4px solid ${rsColor}">
+          ${rsObj.level ? `<div class="rpt-summary-level" style="color:${rsColor}">${rsObj.level}</div>` : ''}
+          ${rsObj.summary||rs ? `<div class="rpt-summary-text">${rsObj.summary||rs}</div>` : ''}
+          ${rsObj.keyRisks?.length ? `<div class="rpt-diag-card red" style="margin-top:10px"><div class="rpt-diag-title">핵심 위험</div>${rsObj.keyRisks.map(k=>`<div class="rpt-diag-item">${k}</div>`).join('')}</div>` : ''}
+          ${rsObj.totalDebt ? `<div class="rpt-reason-box">채권최고액 합계: <strong>${rsObj.totalDebt}</strong></div>` : ''}
+        </div>
       </div>`;
     }
   }
 
-  // Download
-  html += `<div class="sly-download-row">
-    <button class="sly-dl-btn btn-docx" onclick="_slyDownload('docx')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      DOCX 다운로드
-    </button>
-    <button class="sly-dl-btn btn-pdf" onclick="_slyDownload('pdf')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      PDF 다운로드
-    </button>
+  // ══════════════════════════════════════════════
+  // 8. 공문서 / 보험 / 사업계획서 / 창작 등
+  // ══════════════════════════════════════════════
+  if (data.docType) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">📄 ${data.docType}</div>
+      <div class="rpt-info-grid">
+        ${data.issuedBy ? `<div class="rpt-info-item"><div class="rpt-info-label">발급기관</div><div class="rpt-info-val">${data.issuedBy}</div></div>` : ''}
+        ${data.issuedDate ? `<div class="rpt-info-item"><div class="rpt-info-label">발급일</div><div class="rpt-info-val">${data.issuedDate}</div></div>` : ''}
+        ${data.validity ? `<div class="rpt-info-item"><div class="rpt-info-label">유효기간</div><div class="rpt-info-val" style="color:var(--lime)">${data.validity}</div></div>` : ''}
+      </div>
+      ${data.subject ? `<div class="rpt-reason-box">📌 ${data.subject}</div>` : ''}
+      ${data.keyFacts?.length ? `<div class="rpt-diag-card green"><div class="rpt-diag-title">핵심 사실</div>${data.keyFacts.map(f=>`<div class="rpt-diag-item">${f}</div>`).join('')}</div>` : ''}
+      ${data.summary ? `<div class="rpt-summary-banner" style="border-left:4px solid var(--lime)"><div class="rpt-summary-text">${data.summary}</div></div>` : ''}
+      ${data.warnings?.length ? `<div class="rpt-diag-card red"><div class="rpt-diag-title">⚠️ 주의사항</div>${data.warnings.map(w=>`<div class="rpt-diag-item">${w}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // 웹툰/시나리오
+  if (data.genre || data.hookStrength !== undefined) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">🎬 시나리오 분석</div>
+      <div class="rpt-two-col">
+        ${data.hookStrength!==undefined ? `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="color:var(--pink)">${data.hookStrength}</div><div class="rpt-kpi-label">훅 강도</div></div>` : ''}
+        ${data.cliffhangerScore!==undefined ? `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="color:var(--gold)">${data.cliffhangerScore}</div><div class="rpt-kpi-label">클리프행어</div></div>` : ''}
+        ${data.genre ? `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:16px">${data.genre}</div><div class="rpt-kpi-label">장르</div></div>` : ''}
+        ${data.targetPlatform ? `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:16px">${data.targetPlatform}</div><div class="rpt-kpi-label">추천 플랫폼</div></div>` : ''}
+      </div>
+      ${data.hookAnalysis ? `<div class="rpt-reason-box">🎣 ${data.hookAnalysis}</div>` : ''}
+      ${data.failPatterns?.length ? `<div class="rpt-diag-card red"><div class="rpt-diag-title">⚠️ 불합격 패턴</div>${data.failPatterns.map(p=>`<div class="rpt-diag-item">${p}</div>`).join('')}</div>` : ''}
+      ${data.episodePlan?.length ? `<div class="rpt-diag-card blue"><div class="rpt-diag-title">📋 에피소드 플랜</div>${data.episodePlan.map(e=>`<div class="rpt-diag-item"><strong>${e.episode}화 ${e.title}</strong><br><span style="font-size:11px;color:#64748b">${e.cliffhanger||''}</span></div>`).join('')}</div>` : ''}
+      ${data.ipExpansionPotential ? `<div class="rpt-reason-box">🚀 IP 확장: ${data.ipExpansionPotential}</div>` : ''}
+    </div>`;
+  }
+
+  // 사업계획서
+  if (data.marketAnalysis || data.businessModel) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">💼 사업계획서 분석</div>
+      ${data.marketAnalysis ? `<div class="rpt-summary-banner" style="border-left:4px solid var(--gold)"><div class="rpt-summary-text">${typeof data.marketAnalysis==='string'?data.marketAnalysis:JSON.stringify(data.marketAnalysis)}</div></div>` : ''}
+      ${data.strengths?.length ? `<div class="rpt-diag-card green"><div class="rpt-diag-title">강점</div>${data.strengths.map(s=>`<div class="rpt-diag-item">${s}</div>`).join('')}</div>` : ''}
+      ${data.weaknesses?.length ? `<div class="rpt-diag-card red"><div class="rpt-diag-title">보완점</div>${data.weaknesses.map(w=>`<div class="rpt-diag-item">${w}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // 추천 조치
+  if (data.recommendations?.length) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">🎯 권장 조치</div>
+      <div class="rpt-action-list">
+        ${data.recommendations.map((r,i)=>`<div class="rpt-action-item"><div class="rpt-action-num">${i+1}</div><div class="rpt-action-text">${r}</div></div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // 숏폼 스크립트
+  if (data.hook || data.scenes) {
+    html += `<div class="rpt-section"><div class="rpt-section-label">🎬 숏폼 스크립트</div>
+      ${data.hook ? `<div class="rpt-summary-banner" style="border-left:4px solid var(--pink)"><div class="rpt-ba-label">🪝 훅 (첫 3초)</div><div class="rpt-summary-text" style="font-weight:700">${data.hook}</div></div>` : ''}
+      ${data.scenes?.length ? `<div class="rpt-diag-card blue"><div class="rpt-diag-title">📹 씬 구성</div>${data.scenes.map(s=>`<div class="rpt-diag-item"><strong>[${s.sec}]</strong> ${s.visual} — <em>${s.narration}</em></div>`).join('')}</div>` : ''}
+      ${data.cta ? `<div class="rpt-reason-box">📢 CTA: ${data.cta}</div>` : ''}
+      ${data.hashtags?.length ? `<div class="rpt-diag-card green"><div class="rpt-diag-title">해시태그</div><div style="display:flex;flex-wrap:wrap;gap:6px">${data.hashtags.map(h=>`<span style="background:var(--lime-light);color:#166534;border-radius:12px;padding:3px 10px;font-size:12px">${h}</span>`).join('')}</div></div>` : ''}
+    </div>`;
+  }
+
+  // ══════════════════════════════════════════════
+  // 9. 다운로드 CTA
+  // ══════════════════════════════════════════════
+  html += `
+  <div class="rpt-download-section">
+    <div class="rpt-download-title">📥 전체 분석 리포트 다운로드</div>
+    <div class="rpt-download-row">
+      <button class="rpt-dl-btn docx" onclick="_slyDownload('docx')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        DOCX 다운로드
+      </button>
+      <button class="rpt-dl-btn pdf" onclick="_slyDownload('pdf')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF 다운로드
+      </button>
+    </div>
   </div>`;
 
   cont.innerHTML = html;
   cont.classList.add('visible');
+
+  // 게이지 애니메이션 (requestAnimationFrame)
+  requestAnimationFrame(() => {
+    cont.querySelectorAll('.rpt-bar-fill').forEach(el => {
+      const w = el.style.width; el.style.width = '0';
+      setTimeout(() => { el.style.transition = 'width 1s ease'; el.style.width = w; }, 50);
+    });
+    cont.querySelectorAll('.rpt-risk-fill').forEach(el => {
+      const w = el.style.width; el.style.width = '0';
+      setTimeout(() => { el.style.transition = 'width 1.2s ease'; el.style.width = w; }, 100);
+    });
+  });
+
   cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 window._slyToggleImp = i => document.getElementById(`slyImp${i}`)?.classList.toggle('open');
-window._slyToggleCat = i => document.getElementById(`slyCat${i}`)?.classList.toggle('open');
 window._slyToggleSec = i => document.getElementById(`slySec${i}`)?.classList.toggle('open');
 window._slyToggleRw  = i => document.getElementById(`slyRw${i}`)?.classList.toggle('open');
-window._slyToggleEnc = i => {
-  const el = document.getElementById(`slyEnc${i}`);
-  if (!el) return;
-  const open = el.style.maxHeight && el.style.maxHeight !== '0px';
-  el.style.maxHeight = open ? '0px' : el.scrollHeight + 'px';
-};
 
 async function _slyDownload(ext) {
   if (!_slyJobId) { _slyToast('먼저 분석을 완료해주세요'); return; }
