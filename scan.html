@@ -3170,8 +3170,8 @@ async function _slyAnalyze() {
   if (footerBtn) footerBtn.disabled = true;
 
   const prog = document.getElementById('slyProgress');
-  prog?.classList.add('visible');
   clearResult();
+  prog?.classList.add('visible');
   setProgress(10, 'AI 분석 요청 중...');
 
   try {
