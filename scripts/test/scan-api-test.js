@@ -352,14 +352,14 @@ async function suiteAnalyze() {
 async function suiteHelpers() {
   section('보조 API 테스트');
 
-  // registry-link (인증 있어야 함)
+  // registry-link (인증 있어야 함, POST)
   if (token) {
-    const r1 = await api('GET', '/api/seolyuhana/registry-link?address=서울시 강남구 역삼동');
+    const r1 = await api('POST', '/api/seolyuhana/registry-link', { body: { address: '서울시 강남구 역삼동' } });
     log(r1.status === 200 || r1.status === 404, 'registry-link 등기소 딥링크 생성', `status=${r1.status}`);
     if (r1.status === 200) log(typeof r1.data?.url === 'string' || typeof r1.data === 'string', 'registry-link URL 포함', '');
   } else {
     // 토큰 없이 → 401/403
-    const r1 = await api('GET', '/api/seolyuhana/registry-link?address=서울시 강남구 역삼동');
+    const r1 = await api('POST', '/api/seolyuhana/registry-link', { body: { address: '서울시 강남구 역삼동' } });
     log(r1.status === 401 || r1.status === 403, 'registry-link 토큰 없이 → 401/403', `status=${r1.status}`);
   }
 
