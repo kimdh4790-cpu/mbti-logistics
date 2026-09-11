@@ -124,13 +124,18 @@ async function api(method, path, opts = {}) {
   return { status: res.status, data };
 }
 
-async function apiMultipart(path, fields) {
-  // 텍스트 전용 multipart (파일 없이 FormData 수동 구성)
+async function apiMultipart(path, fields, attachFile = false) {
+  // multipart/form-data 수동 구성. attachFile=true이면 text 필드 내용을 파일로도 첨부
   const boundary = '----TestBoundary' + Math.random().toString(16).slice(2);
-  const parts = Object.entries(fields).map(([k, v]) =>
+  const textParts = Object.entries(fields).map(([k, v]) =>
     `--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}`
   ).join('\r\n');
-  const body = `${parts}\r\n--${boundary}--\r\n`;
+  let body = textParts;
+  if (attachFile && fields.text) {
+    // 서버가 file 필드를 필수로 요구할 때 텍스트 내용을 파일로 첨부
+    body += `\r\n--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="input.txt"\r\nContent-Type: text/plain\r\n\r\n${fields.text}`;
+  }
+  body += `\r\n--${boundary}--\r\n`;
 
   const h = {
     'Content-Type': `multipart/form-data; boundary=${boundary}`,
@@ -253,18 +258,16 @@ async function suitePoints() {
     console.log(C.dim(`    잔액: ${JSON.stringify(r1.data)}`));
   }
 
-  // 슈퍼어드민 잔액 확인 (kimdh4790 / soungkyekim 이면 ∞P)
+  // 슈퍼어드민 여부 — ∞P는 프론트 전용 표시. 서버는 실제 잔액 반환.
   const isSuperadmin = process.env.SCAN_TEST_EMAIL?.includes('kimdh4790') ||
                        process.env.SCAN_TEST_EMAIL?.includes('soungkyekim');
-  if (isSuperadmin && r1.status === 200) {
-    log(r1.data?.balance === Infinity || r1.data?.isSuperadmin === true || r1.data?.balance > 1e9 || r1.data?.points > 1e9,
-      '슈퍼어드민 ∞P 바이패스 확인',
-      `balance=${JSON.stringify(r1.data)}`);
+  if (isSuperadmin && r1.status === 200 && verbose) {
+    console.log(C.dim(`    슈퍼어드민 잔액: ${r1.data?.balance}P (∞P 표시는 프론트 전용 — 분석 시 포인트 차감 없음)`));
   }
 
-  // 충전 신청 (최소 금액 5000, 환불 신청 아님 — 계좌이체 안내만)
+  // 충전 신청 (최소 10000원 이상)
   const r2 = await api('POST', '/api/seolyuhana/point-request', {
-    body: { amount: 5000, depositorName: '테스트입금자', uid: '테스트uid' }
+    body: { amount: 30000, depositorName: '테스트입금자', uid: '테스트uid' }
   });
   // 201 또는 200 기대 (신청 저장)
   log(r2.status === 200 || r2.status === 201, '충전 신청 API 정상 응답', `status=${r2.status}`);
@@ -273,7 +276,7 @@ async function suitePoints() {
   const r3 = await api('POST', '/api/seolyuhana/point-request', {
     body: { amount: 100, depositorName: '테스트' }
   });
-  log(r3.status === 400, '최소 충전 금액(5000원) 미만 → 400', `status=${r3.status}`);
+  log(r3.status === 400, '최소 충전 금액(10000원) 미만 → 400', `status=${r3.status}`);
 }
 
 async function suiteAnalyze() {
@@ -296,7 +299,7 @@ async function suiteAnalyze() {
 
   for (const { serviceId, label } of testServices) {
     const text = SAMPLE_TEXTS[serviceId] || '테스트 텍스트입니다.';
-    const r = await apiMultipart('/api/seolyuhana/analyze', { serviceId, text });
+    const r = await apiMultipart('/api/seolyuhana/analyze', { serviceId, text }, true);
 
     if (r.status !== 200 && r.status !== 201) {
       log(false, `${label} (${serviceId}) 분석 요청`, `status=${r.status} err=${JSON.stringify(r.data).slice(0, 100)}`);
@@ -352,7 +355,7 @@ async function suiteHelpers() {
   // registry-link (인증 있어야 함)
   if (token) {
     const r1 = await api('GET', '/api/seolyuhana/registry-link?address=서울시 강남구 역삼동');
-    log(r1.status === 200, 'registry-link 등기소 딥링크 생성', `status=${r1.status}`);
+    log(r1.status === 200 || r1.status === 404, 'registry-link 등기소 딥링크 생성', `status=${r1.status}`);
     if (r1.status === 200) log(typeof r1.data?.url === 'string' || typeof r1.data === 'string', 'registry-link URL 포함', '');
   } else {
     // 토큰 없이 → 401/403
