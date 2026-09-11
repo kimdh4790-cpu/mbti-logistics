@@ -138,7 +138,7 @@ export async function analyzeResume({ text, jdText = '', env }) {
   ];
 
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: RESUME_SYSTEM,
     userBlocks,
     env,
@@ -223,7 +223,7 @@ export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: COVER_LETTER_SYSTEM,
     userBlocks,
     env,
@@ -289,7 +289,7 @@ export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: COVER_LETTER_REWRITE_SYSTEM,
     userBlocks,
     env,
@@ -474,7 +474,7 @@ export async function translateCoverLetter({ text, resumeText = '', targetLang =
   ];
 
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
@@ -587,7 +587,7 @@ export async function generateInterviewQuestions({ resumeText, coverLetterText =
   ];
 
   return callClaude({
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-haiku-4-5-20251001',
     system: INTERVIEW_SYSTEM,
     userBlocks,
     env,
@@ -739,7 +739,7 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
   ];
 
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: CONTRACT_SYSTEM,
     userBlocks,
     env,
@@ -770,7 +770,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
       'anthropic-version': '2023-06-01'
     };
     requestBody = {
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-5',
       max_tokens: 6000,
       messages: [{
         role: 'user',
@@ -788,7 +788,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
       'anthropic-beta': 'pdfs-2024-09-25'
     };
     requestBody = {
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-5',
       max_tokens: 6000,
       messages: [{
         role: 'user',
@@ -1016,7 +1016,7 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
 export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
   const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: REGISTRY_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` }],
     env,
@@ -1080,7 +1080,7 @@ export async function analyzePublicDoc({ text, serviceId = 'public_doc_analysis'
   const customPrompt = prompts[serviceId];
   if (customPrompt) {
     return callClaude({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-haiku-4-5-20251001',
       system: customPrompt,
       userBlocks: [{ type: 'text', text }],
       env,
@@ -1088,7 +1088,7 @@ export async function analyzePublicDoc({ text, serviceId = 'public_doc_analysis'
     });
   }
   return callClaude({
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-haiku-4-5-20251001',
     system: PUBLIC_DOC_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 공공문서를 분석해주세요:\n\n${text}` }],
     env,
@@ -1175,7 +1175,7 @@ const WEBTOON_SYSTEM = `당신은 네이버웹툰·카카오웹툰·레진코믹
 
 export async function analyzeWebtoon({ text, env }) {
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: WEBTOON_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 웹툰 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
@@ -1248,7 +1248,7 @@ const SHORTFILM_SYSTEM = `당신은 부산국제영화제(BIFF)·전주국제영
 
 export async function analyzeShortFilm({ text, env }) {
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: SHORTFILM_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
@@ -1331,7 +1331,7 @@ const DRAMA_SERIES_SYSTEM = `당신은 넷플릭스·웨이브·티빙·쿠팡�
 
 export async function analyzeDramaSeries({ text, env }) {
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: DRAMA_SERIES_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 드라마 시리즈 기획서를 분석해주세요:\n\n${text}` }],
     env,
@@ -1410,7 +1410,7 @@ const INSURANCE_SYSTEM = `당신은 금융감독원 공시 기반 보험약관 �
 
 export async function analyzeInsurance({ text, env }) {
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: INSURANCE_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 보험약관을 분석해주세요:\n\n${text}` }],
     env,
@@ -1477,7 +1477,7 @@ const BIZPLAN_SYSTEM = `당신은 중소벤처기업부·창업진흥원·스타
 
 export async function analyzeBizPlan({ text, env }) {
   return callClaude({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-sonnet-5',
     system: BIZPLAN_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 사업계획서를 분석해주세요:\n\n${text}` }],
     env,
