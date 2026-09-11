@@ -263,6 +263,8 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 | 날짜 | 내용 |
 |---|---|
 | 2026-09-11 | **분석 진행 표시 안 보이는 버그 수정** (`scan.html`): `_slyAnalyze()`에서 `prog.classList.add('visible')` 직후 `clearResult()`가 호출되어 `slyProgress`의 `'visible'` 클래스가 즉시 제거되던 버그. `clearResult()`를 `classList.add('visible')` 앞으로 이동해 진행 표시가 정상 노출되도록 수정. 등기부 PDF 업로드 시 "분석중" 표시 없던 현상 해결 |
+| 2026-09-11 | **interview_questions 분석 멈춤(progress=40) 버그 수정**: 원인: `generateInterviewQuestions` maxTokens 6000으로 16문항 생성 시 Claude 응답이 60초 초과 → Cloudflare waitUntil grace period 종료로 잡힘. 수정: ① `analyze.js` maxTokens 6000→3500으로 감소 ② `_worker.js` filo.ai.kr·mbtico.kr 양쪽 `_slyProcessJob`에 90초 `Promise.race` 타임아웃 래퍼 추가 — 초과 시 `failed` 상태로 명시적 실패 처리 (무한 대기 방지) |
+| 2026-09-11 | **SCAN API 통합 테스트 실행 (Oracle Cloud)**: `scripts/test/scan-api-test.js` — 슈퍼어드민(`kimdh4790@gmail.com`)으로 37 PASS / 1 FAIL (interview_questions 타임아웃만). 다음 실행 시 위 fix 적용 후 38 PASS 예상 |
 | 2026-09-10 | **포인트 새로고침 시 0P 버그 수정**: `_worker.js` verifyFirebaseToken에 `origin:'https://mbtico.kr'` 명시 (기존 filo.ai.kr 기본값으로 인증 실패). `scan.html` loadPoints() 재시도 로직 추가(최대 3회, 2초 간격) — Firebase auth 초기화 타이밍 문제 대응 |
 | 2026-09-09 | 글로벌 AI 문서 분석 시장 리서치 브리프 Artifact 게시 (https://claude.ai/code/artifact/b0640ae6-0a0e-4ce5-bd2b-74f929e48725) — Harvey AI/$288K·Luminance·Kira·Ironclad·한국 경쟁사 전수조사, 전환 UX 패턴 6가지, 전세사기 독점 영역 확인, P0~P2 전략 권고 12가지 |
 | 2026-09-06 | filo.ai.kr/seolyuhana → mbtico.kr/scan 이전. scan.html 리네임. PWA 추가 |
