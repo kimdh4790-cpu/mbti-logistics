@@ -1151,6 +1151,140 @@ body {
   .rpt-arrow { display: none; }
   .rpt-score-wrap { flex-direction: column; align-items: flex-start; }
 }
+
+/* ══ AI 라이브 데모 애니메이션 ══ */
+.sly-ai-demo-wrap {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 12px 48px rgba(99,102,241,.2);
+}
+.sly-ai-demo-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.04);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.sly-ai-demo-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.sly-ai-demo-dot.red   { background: #ef4444; }
+.sly-ai-demo-dot.amber { background: #f59e0b; }
+.sly-ai-demo-dot.green { background: #10b981; }
+.sly-ai-demo-title {
+  font-size: 12px; color: rgba(255,255,255,.5);
+  font-weight: 600; margin-left: 6px;
+}
+.sly-ai-demo-body {
+  display: flex; gap: 0;
+  padding: 20px 16px;
+  min-height: 180px;
+}
+/* 문서 패널 */
+.sly-ai-doc-panel {
+  flex: 1; position: relative;
+  background: rgba(255,255,255,.04);
+  border-radius: 10px; padding: 16px;
+  margin-right: 12px; overflow: hidden;
+}
+.sly-ai-doc-icon { font-size: 24px; margin-bottom: 12px; }
+.sly-ai-doc-lines { display: flex; flex-direction: column; gap: 7px; }
+.sly-ai-line {
+  height: 8px; border-radius: 4px;
+  background: rgba(255,255,255,.15);
+  animation: shimmer 2s ease-in-out infinite;
+}
+.sly-ai-line.w80 { width: 80%; }
+.sly-ai-line.w60 { width: 60%; }
+.sly-ai-line.w90 { width: 90%; }
+.sly-ai-line.w50 { width: 50%; }
+.sly-ai-line.w70 { width: 70%; }
+.sly-ai-line.w85 { width: 85%; }
+.anim1 { animation-delay: 0s; }
+.anim2 { animation-delay: .3s; }
+.anim3 { animation-delay: .6s; }
+@keyframes shimmer {
+  0%,100% { background: rgba(255,255,255,.1); }
+  50%      { background: rgba(255,107,157,.4); }
+}
+/* 스캔 빔 */
+.sly-ai-scan-beam {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #FF6B9D, transparent);
+  animation: scan-beam 2s ease-in-out infinite;
+  top: 20px;
+}
+@keyframes scan-beam {
+  0%   { top: 20px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: calc(100% - 10px); opacity: 0; }
+}
+/* 결과 패널 */
+.sly-ai-result-panel {
+  flex: 1; display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.sly-ai-score-demo {
+  position: relative; width: 80px; height: 80px;
+}
+.sly-demo-gauge {
+  animation: gauge-fill 2s ease-out forwards;
+}
+@keyframes gauge-fill {
+  from { stroke-dashoffset: 201; }
+  to   { stroke-dashoffset: 40; }
+}
+.sly-ai-score-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; color: #FF6B9D;
+  animation: count-up 2s ease-out;
+}
+@keyframes count-up {
+  from { opacity: 0; transform: scale(.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.sly-ai-result-lines { width: 100%; display: flex; flex-direction: column; gap: 5px; }
+.sly-ai-tag {
+  font-size: 11px; font-weight: 600;
+  padding: 5px 10px; border-radius: 20px;
+  animation: tag-appear .5s ease both;
+  white-space: nowrap;
+}
+.sly-ai-tag.green { background: rgba(16,185,129,.2); color: #6ee7b7; animation-delay: .8s; }
+.sly-ai-tag.red   { background: rgba(239,68,68,.2);  color: #fca5a5; animation-delay: 1.1s; }
+.sly-ai-tag.gold  { background: rgba(245,158,11,.2); color: #fcd34d; animation-delay: 1.4s; }
+@keyframes tag-appear {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ══ 서비스 패널 ══ */
+.sly-svc-panel { display: none; }
+.sly-svc-panel.active { display: block; }
+.sly-panel-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px; padding-top: 4px;
+}
+.sly-panel-back {
+  background: none; border: 1.5px solid var(--border);
+  border-radius: 20px; padding: 6px 14px;
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  cursor: pointer; transition: all .18s;
+}
+.sly-panel-back:hover { border-color: var(--pink); color: var(--pink); }
+.sly-panel-title-wrap { display: flex; align-items: center; gap: 8px; }
+.sly-panel-ico {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.sly-panel-title { font-size: 16px; font-weight: 800; }
+.sly-svc-cards-wrap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 12px;
+}
 </style>
 
 <!-- SVG 그라디언트 -->
@@ -1213,21 +1347,52 @@ body {
   </div>
 </section>
 
-<!-- AI 소개 영상 섹션 -->
+<!-- AI 분석 라이브 데모 애니메이션 -->
 <div class="sly-video-section">
-  <div class="sly-video-wrap" id="slyVideoWrap" onclick="_slyToggleVideo()">
-    <video id="slyDemoVideo" loop muted playsinline preload="none"
-      poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='860' height='484' viewBox='0 0 860 484'%3E%3Crect fill='%230f172a' width='860' height='484'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23ffffff30' font-size='18' font-family='sans-serif'%3EAI 분석 데모 영상%3C/text%3E%3C/svg%3E">
-    </video>
-    <div class="sly-video-overlay" id="slyVideoOverlay">
-      <div class="sly-video-play">
-        <svg viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></svg>
+  <div class="sly-ai-demo-wrap" id="slyVideoWrap">
+    <div class="sly-ai-demo-header">
+      <span class="sly-ai-demo-dot red"></span>
+      <span class="sly-ai-demo-dot amber"></span>
+      <span class="sly-ai-demo-dot green"></span>
+      <span class="sly-ai-demo-title">🤖 Claude AI · 실시간 분석 중</span>
+    </div>
+    <div class="sly-ai-demo-body">
+      <!-- 왼쪽: 문서 업로드 시뮬 -->
+      <div class="sly-ai-doc-panel">
+        <div class="sly-ai-doc-icon">📄</div>
+        <div class="sly-ai-doc-lines">
+          <div class="sly-ai-line w80 anim1"></div>
+          <div class="sly-ai-line w60 anim2"></div>
+          <div class="sly-ai-line w90 anim1"></div>
+          <div class="sly-ai-line w50 anim3"></div>
+          <div class="sly-ai-line w70 anim2"></div>
+          <div class="sly-ai-line w85 anim1"></div>
+        </div>
+        <div class="sly-ai-scan-beam"></div>
+      </div>
+      <!-- 오른쪽: 결과 시뮬 -->
+      <div class="sly-ai-result-panel">
+        <div class="sly-ai-score-demo">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,107,157,.2)" stroke-width="8"/>
+            <circle cx="40" cy="40" r="32" fill="none" stroke="#FF6B9D" stroke-width="8"
+              stroke-dasharray="201" stroke-dashoffset="40"
+              stroke-linecap="round" transform="rotate(-90 40 40)"
+              class="sly-demo-gauge"/>
+          </svg>
+          <div class="sly-ai-score-num">87</div>
+        </div>
+        <div class="sly-ai-result-lines">
+          <div class="sly-ai-tag green anim2">✅ 경력 기술 우수</div>
+          <div class="sly-ai-tag red anim3">❌ 수치화 부족</div>
+          <div class="sly-ai-tag gold anim1">💡 ATS 키워드 추가</div>
+          <div class="sly-ai-tag green anim2">✅ STAR 구조 적합</div>
+        </div>
       </div>
     </div>
-    <div class="sly-video-caption">
-      <div class="sly-subtitle-bar" id="slySubtitleBar">
-        <span id="slySubtitleText">▶ 클릭하면 AI 분석 과정을 확인할 수 있어요</span>
-      </div>
+    <!-- 자막 바 -->
+    <div class="sly-subtitle-bar">
+      <span id="slySubtitleText">📄 이력서를 업로드하면 AI가 점수와 개선점을 바로 알려드립니다</span>
     </div>
   </div>
 </div>
@@ -1268,11 +1433,22 @@ body {
   </div>
 </div>
 
-<!-- 카테고리 탭 -->
-<div class="sly-cat-tabs" id="slyCatTabs"></div>
-
-<!-- 메인 그리드 -->
-<main class="sly-main" id="slyMain"></main>
+<!-- 메인 콘텐츠 -->
+<main class="sly-main" id="slyMain">
+  <!-- 카테고리 그리드 (JS가 채움) -->
+  <div id="slyCatGrid"></div>
+  <!-- 서비스 패널 (카테고리 클릭 시) -->
+  <div id="slySvcPanel" class="sly-svc-panel">
+    <div class="sly-panel-header">
+      <button class="sly-panel-back" onclick="_slyBackToCats()">← 전체보기</button>
+      <div class="sly-panel-title-wrap">
+        <span class="sly-panel-ico" id="slyPanelIco"></span>
+        <span id="slyPanelTitle" class="sly-panel-title"></span>
+      </div>
+    </div>
+    <div id="slySvcCards" class="sly-svc-cards-wrap"></div>
+  </div>
+</main>
 
 <!-- 드로어 -->
 <div class="sly-drawer-overlay" id="slyDrawerOverlay" onclick="_slyCloseDrawer()"></div>
@@ -1586,6 +1762,8 @@ window._slyLoadPoints = loadPoints;
 onAuthStateChanged(auth, user => {
   window._slyUser = user;
   updateAuthUI(user);
+  // 로그인 여부 상관없이 서비스 그리드는 항상 렌더링
+  if (typeof renderCatGrid === 'function') renderCatGrid();
 });
 
 // 뒤로가기: 드로어 열림 → 드로어 닫기 / 카테고리 패널 열림 → 그리드로 / 그 외 → 앱 유지
@@ -1605,15 +1783,10 @@ window.addEventListener('popstate', e => {
   }
 });
 
-// 페이지 로드 시 redirect 결과 처리
+// getRedirectResult — 오류 무시 (팝업 방식으로 전환)
 getRedirectResult(auth).then(result => {
   if (result?.user) updateAuthUI(result.user);
-}).catch(e => {
-  if (e && e.code && e.code !== 'auth/no-auth-event') {
-    console.error('getRedirectResult error:', e.code, e.message);
-    _slyToast('로그인 오류: ' + e.code);
-  }
-});
+}).catch(() => {}); // 세션 오류 무시
 
 window._slySignIn = async () => {
   const provider = new GoogleAuthProvider();
@@ -3464,6 +3637,7 @@ window._slyBizSearch = _slyBizSearch;
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   renderServiceList();
+  renderCatGrid();
 
   const dz2 = document.getElementById('slyDropzone2');
   const fi2 = document.getElementById('slyFileInput2');
