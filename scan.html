@@ -3261,7 +3261,14 @@ function pollResult(jobId, _cnt) {
           window._slyLoadPoints?.();
         }, 500);
       } else if (d.status === 'failed') {
-        throw new Error(d.error || '분석 실패');
+        const errMsg = d.error || '분석 실패';
+        _slyToast('분석 실패: ' + errMsg, 8000);
+        document.getElementById('slyProgress')?.classList.remove('visible');
+        const b2 = document.getElementById('slyAnalyzeBtn2');
+        if (b2) b2.disabled = false;
+        const fb2 = document.querySelector('.sly-drawer-footer-btn');
+        if (fb2) fb2.disabled = false;
+        return;
       } else if (d.status === 'processing' || d.status === 'pending') {
         setProgress(d.progress || 55, 'Claude AI 분석 중...');
         pollResult(jobId, cnt);
@@ -3269,7 +3276,7 @@ function pollResult(jobId, _cnt) {
         pollResult(jobId, cnt);
       }
     } catch(e) {
-      _slyToast('결과 조회 실패: ' + e.message);
+      _slyToast('오류: ' + e.message, 6000);
       document.getElementById('slyProgress')?.classList.remove('visible');
       const b2 = document.getElementById('slyAnalyzeBtn2');
       if (b2) b2.disabled = false;
