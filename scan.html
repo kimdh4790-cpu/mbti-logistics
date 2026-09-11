@@ -1261,19 +1261,38 @@ onAuthStateChanged(auth, user => {
   updateAuthUI(user);
 });
 
-// 뒤로가기: 드로어 열림 → 드로어 닫기 / 카테고리 패널 열림 → 그리드로 / 그 외 → 앱 유지
-window.addEventListener('popstate', e => {
+// 뒤로가기: 드로어→닫기 / 카테고리패널→그리드 / 그 외→앱 유지 (절대 종료 안 됨)
+// 앱 진입 시 히스토리 2개 쌓아서 뒤로가기가 앱 밖으로 나가지 않게 함
+(function() {
+  // 최초 진입: slyBase + slyApp 두 개 쌓기
+  if (!window.history.state || !window.history.state.slyApp) {
+    history.replaceState({ slyBase: true }, '');
+    history.pushState({ slyApp: true }, '');
+  }
+})();
+
+window.addEventListener('popstate', function(e) {
   const drawer = document.getElementById('slyDrawer');
   const drawerOpen = drawer && drawer.classList.contains('open');
   const panel = document.getElementById('slySvcPanel');
   const panelOpen = panel && panel.classList.contains('active');
+  const overlay = document.getElementById('slyPointsModal');
+  const modalOpen = overlay && overlay.classList.contains('open');
+
   if (drawerOpen) {
+    // 드로어 닫고 히스토리 유지
     _slyCloseDrawer();
     history.pushState({ slyApp: true }, '');
   } else if (panelOpen) {
+    // 카테고리 패널 닫고 유지
     _slyBackToCats();
     history.pushState({ slyApp: true }, '');
+  } else if (modalOpen) {
+    // 포인트 모달 닫기
+    _slyClosePoints && _slyClosePoints();
+    history.pushState({ slyApp: true }, '');
   } else {
+    // 아무것도 열려있지 않아도 앱에서 나가지 않음 — 항상 pushState로 막기
     history.pushState({ slyApp: true }, '');
   }
 });
