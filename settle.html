@@ -3761,8 +3761,8 @@ var PLAN_DEF = {
     }
   },
   starter: {
-    name:'STARTER', label:'스타터 (17,000원/명)', color:'#00c8f8',
-    pricePerPerson:17000, maxPerson:1000,
+    name:'STARTER', label:'스타터 (2,500원/명)', color:'#00c8f8',
+    pricePerPerson:2500, maxPerson:1000,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
@@ -3780,8 +3780,8 @@ var PLAN_DEF = {
     }
   },
   pro: {
-    name:'PRO', label:'프로 (25,000원/명)', color:'#f59e0b',
-    pricePerPerson:25000, maxPerson:1000,
+    name:'PRO', label:'프로 (2,500원/명)', color:'#f59e0b',
+    pricePerPerson:2500, maxPerson:1000,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
@@ -3799,8 +3799,8 @@ var PLAN_DEF = {
     }
   },
   business: {
-    name:'BUSINESS', label:'비즈니스 (25,000원/명)', color:'#ff9500',
-    pricePerPerson:25000, maxPerson:9999,
+    name:'BUSINESS', label:'비즈니스 (2,500원/명)', color:'#ff9500',
+    pricePerPerson:2500, maxPerson:9999,
     features:{
       settleLimit:999,
       industries:['ai_settle','delivery'],
@@ -3837,6 +3837,7 @@ var PLAN_DEF = {
     }
   }
 };
+
 
 
 // ?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�?�
@@ -9279,18 +9280,19 @@ function doLogout(){
 
 // ?�?� ?�?�페?�먼츠 결제 ?�?�
 var PLAN_INFO={
-  settle:      {label:'?�?AI ?�??,       unitPrice:17000, amount:510000, group:1, field:'settlePaid',      desc:'쿠???�??AI ?�??},
-  qr:          {label:'?�� QR 근태',       unitPrice:12000, amount:360000, group:2, field:'qrPaid',          desc:'QR출?�근·근무?�'},
-  payroll:     {label:'?�?급?��?�?,      unitPrice:12000, amount:360000, group:2, field:'payrollPaid',     desc:'급????�보험'},
-  qr_payroll:  {label:'?��?�?QR+급??,    unitPrice:17000, amount:510000, group:1, field:'qrPayrollPaid',   desc:'QR출?�근+급???��?},
-  delivery:    {label:'?�?배달대?�',      unitPrice:17000, amount:510000, group:1, field:'deliveryPaid',    desc:'배달대?� ?�??},
-  universal:   {label:'?�� 범???�??,     unitPrice:25000, amount:750000, group:1, field:'universalPaid',   desc:'?�?�종·복합업종 ?�??},
-  inventory:   {label:'?�??��?관�?,      unitPrice:15000, amount:150000, group:1, field:'inventoryPaid',   desc:'?�고/출고/?��??�??관�?},
-  customer_g1: {label:'?��️ 고객관�?G1', unitPrice:8500,  amount:255000, group:1, field:'customerG1Paid',  desc:'고객방문·?�림�?IP'},
-  customer_g2: {label:'?��️ 고객관�?G2', unitPrice:6000,  amount:180000, group:2, field:'customerG2Paid',  desc:'고객방문·?�림�?IP'},
-  contract:    {label:'?�?�?� 계?�서',    unitPrice:0,     amount:9900,   group:0, field:'contractPaid',    desc:'계?�서 관�?},
-  roster:      {label:'?�� 근무?�',        unitPrice:0,     amount:9900,   group:0, field:'rosterPaid',      desc:'근무?�'},
+  settle:      {label:'📊 AI 정산',        unitPrice:2500, amount:75000,  group:1, field:'settlePaid',      desc:'쿠팡·배달 AI 정산'},
+  qr:          {label:'📱 QR 근태',        unitPrice:2500, amount:75000,  group:2, field:'qrPaid',          desc:'QR출퇴근·근무표'},
+  payroll:     {label:'💰 급여명세서',     unitPrice:2500, amount:75000,  group:2, field:'payrollPaid',     desc:'급여·4대보험'},
+  qr_payroll:  {label:'⭐ QR+급여',       unitPrice:2500, amount:75000,  group:1, field:'qrPayrollPaid',   desc:'QR출퇴근+급여명세'},
+  delivery:    {label:'🚚 배달대행',       unitPrice:2500, amount:75000,  group:1, field:'deliveryPaid',    desc:'배달대행 정산'},
+  universal:   {label:'🌟 범용 전업종',    unitPrice:2500, amount:75000,  group:1, field:'universalPaid',   desc:'전업종·복합업종 정산'},
+  inventory:   {label:'📦 재고관리',       unitPrice:2500, amount:75000,  group:1, field:'inventoryPaid',   desc:'재고/출고/입고 관리'},
+  customer_g1: {label:'🗂️ 고객관리G1',   unitPrice:2500, amount:75000,  group:1, field:'customerG1Paid',  desc:'고객방문·알림톡IP'},
+  customer_g2: {label:'🗂️ 고객관리G2',   unitPrice:2500, amount:75000,  group:2, field:'customerG2Paid',  desc:'고객방문·알림톡IP'},
+  contract:    {label:'📄 계약서',         unitPrice:0,    amount:9900,   group:0, field:'contractPaid',    desc:'계약서 관리'},
+  roster:      {label:'📋 근무표',         unitPrice:0,    amount:9900,   group:0, field:'rosterPaid',      desc:'근무표'},
 };
+
 function _calcPlanAmount(planKey,headcount){
   var p=PLAN_INFO[planKey];if(!p)return 0;
   if(!p.unitPrice)return p.amount;
