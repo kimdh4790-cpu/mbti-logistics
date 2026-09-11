@@ -2356,7 +2356,6 @@ const SVC = [
     hasJd: false, serviceId: 'subtitle_create',
     desc: '영상 또는 스크립트 텍스트로 자막을 생성하고 6개 언어로 번역합니다',
     bullets: ['한국어·영어·일본어·중국어 등 6개 언어 자막 생성', 'SRT·VTT·ASS 파일 형식 지원', '타임코드 자동 생성 (텍스트 입력 시 균등 분배)', 'SNS 플랫폼별 자막 스타일 가이드 제공'] },
-  // ── 창작·콘텐츠 ──
   { id: 'webtoon', label: '웹툰', sublabel: '시나리오 분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt', allowText: true,
     hasJd: false, serviceId: 'webtoon_analysis',
     desc: '웹툰 시나리오·기획안을 분석해 흥행 가능성과 에피소드 전략을 제시합니다',
@@ -2416,8 +2415,7 @@ const SVC_CATS = [
   { label: '부동산', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>', svcs: ['registry'] },
   { label: '직장생활', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', svcs: ['workplace_tone','career_saju','notice_summary'] },
   { label: '공문서', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14,2 14,7.5 20,7.5"/><path d="M2 15h10M5 12l-3 3 3 3"/></svg>', svcs: ['biz_cert','health_ins','income','gov_doc','bizplan'] },
-  { label: '영상·미디어', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', svcs: ['shortform','ai_photo','subtitle'] },
-  { label: '창작·콘텐츠', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>', svcs: ['webtoon','shortfilm','drama_series'] },
+  { label: '영상·미디어', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', svcs: ['shortform','ai_photo','subtitle','webtoon','shortfilm','drama_series'] },
 ];
 
 let _slyCatFilter = 'all';
@@ -2426,7 +2424,7 @@ const SVC_CAT_MAP = {};
 SVC_CATS.forEach(cat => cat.svcs.forEach(id => { SVC_CAT_MAP[id] = cat.label; }));
 
 const CAT_EMOJI = {
-  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬', '창작·콘텐츠': '✍️',
+  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬',
 };
 
 const CAT_DEMO = {
@@ -2535,7 +2533,6 @@ const CAT_ACCENT = {
   '직장생활':   { bg: '#F5F0FF', color: '#7C3AED' },   // 퍼플
   '공문서':     { bg: '#EFF6FF', color: '#2563EB' },   // 블루
   '영상·미디어':{ bg: '#FFF7F0', color: '#EA580C' },   // 오렌지
-  '창작·콘텐츠':  { bg: '#F0FDF4', color: '#16A34A' },   // 그린
 };
 
 const SVC_LABEL_MAP = {};
