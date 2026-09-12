@@ -197,13 +197,19 @@ async function parsePdf(buffer, env) {
     return { text: oracleText.trim(), pageCount, method: 'oracle_pdf', scanned: false };
   }
 
-  // 3차: Oracle pdftoppm → JPEG 이미지 (PDF beta 없이 Vision 가능)
+  // 3차: Oracle pdftoppm → PaddleOCR (스캔PDF, 장수 제한 없음)
+  const ocrText = await tryOraclePdfOcr(buffer, env);
+  if (ocrText && ocrText.replace(/\s/g, '').length > 50) {
+    return { text: ocrText.trim(), pageCount, method: 'oracle_ocr', scanned: false };
+  }
+
+  // 4차: Oracle pdftoppm → JPEG 이미지 → Claude Vision
   const oracleImages = await tryOraclePdfImages(buffer, env);
   if (oracleImages && oracleImages.length > 0) {
     return { text: '', pageCount, method: 'pdf_vision_images', scanned: true, images: oracleImages, rawBuffer: buffer };
   }
 
-  // 4차: PDF 직접 전송 (anthropic-beta pdfs-2024-09-25 필요)
+  // 5차: PDF 직접 전송 (anthropic-beta pdfs-2024-09-25 필요)
   return { text: '', pageCount, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
 }
 
@@ -253,6 +259,31 @@ async function tryOraclePdfText(buffer, env) {
     return data.text || '';
   } catch (e) {
     console.error('[tryOraclePdfText] 네트워크 오류:', e.message);
+    return '';
+  }
+}
+
+/**
+ * Oracle Cloud pdf-ocr: pdftoppm → PaddleOCR → 텍스트
+ * 스캔 PDF 전체 페이지 텍스트 추출 (장수 제한 없음)
+ */
+async function tryOraclePdfOcr(buffer, env) {
+  try {
+    const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
+    const res = await fetch(`${oracleBase}/api/pdf-ocr?maxPages=30`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: buffer,
+      signal: AbortSignal.timeout(60000)
+    });
+    if (!res.ok) {
+      console.error('[tryOraclePdfOcr] HTTP 오류:', res.status);
+      return '';
+    }
+    const data = await res.json();
+    return data.text || '';
+  } catch (e) {
+    console.error('[tryOraclePdfOcr] 오류:', e.message);
     return '';
   }
 }
