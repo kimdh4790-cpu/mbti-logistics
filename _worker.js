@@ -9,7 +9,7 @@ const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 // ────────────────────────────────────────────────────────────
 // 공통 Claude 호출 헬퍼
 // ────────────────────────────────────────────────────────────
-async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
+async function callClaude({ model, system, userBlocks, env, maxTokens = 2000 }) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
 
@@ -137,7 +137,7 @@ async function analyzeResume({ text, jdText = '', env }) {
     system: RESUME_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 5000
+    maxTokens: 2500
   });
 }
 
@@ -825,7 +825,7 @@ async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
     system: REGISTRY_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 2500
   });
 }
 
@@ -984,7 +984,7 @@ async function analyzeWebtoon({ text, env }) {
     system: WEBTOON_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 웹툰 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 2500
   });
 }
 
@@ -1057,7 +1057,7 @@ async function analyzeShortFilm({ text, env }) {
     system: SHORTFILM_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 2500
   });
 }
 
@@ -1257,7 +1257,7 @@ async function analyzeInsurance({ text, env }) {
     system: INSURANCE_SYSTEM,
     userBlocks: [{ type: 'text', text: `[보험약관 내용]\n${text}` }],
     env,
-    maxTokens: 5000
+    maxTokens: 2500
   });
 }
 
@@ -1313,7 +1313,7 @@ async function analyzeBizPlan({ text, env }) {
     system: BIZ_SYSTEM,
     userBlocks: [{ type: 'text', text: `[사업계획서]\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 2500
   });
 }
 
@@ -1786,7 +1786,7 @@ async function _sendFCMv1(env, fcmToken, t, b, d) {
           android: { priority: 'high', notification: { click_action: (d && d.url) || '' } },
           apns: { payload: { aps: { sound: 'default', badge: 1 } } },
           webpush: {
-            notification: { title: t, body: b, icon: '/mbtico-icon-192.png' },
+            notification: { title: t, body: b, icon: '/mbtico-192.png' },
             fcm_options: { link: (d && d.url) || 'https://donway.ai.kr' }
           }
         }
@@ -4253,7 +4253,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             await setProgress(25);
             let resumeText='';
             if(resumeJobId){const rDoc=await fsGet(token,`${FS_BASE}/sly_jobs/${resumeJobId}`);resumeText=rDoc?.fields?.originalText?.stringValue||'';}
-            // analyze functions already available in global scope
+            // analyze functions inlined
             await setProgress(40);
             const _slyAnalysisTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')),150000));
             const _runAnalysis=async()=>{
@@ -9500,7 +9500,7 @@ async function _submit(){
       }
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
-        const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbtico-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbtico-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+        const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
         return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
       }
       if (path === '/' || path === '') return new Response(_MBTICO_LANDING_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
@@ -10525,7 +10525,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // 3. Claude 분석
-          // analyze functions already available in global scope
+          // analyze functions inlined
           await setProgress(40);
 
           // 90초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
