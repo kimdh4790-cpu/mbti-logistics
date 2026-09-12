@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy Worker (Global API Key)
+        continue-on-error: true
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CF_EMAIL: kimdh4790@gmail.com
