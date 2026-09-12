@@ -1482,22 +1482,23 @@ ${_sStoreRows ? `<div class="sec" style="margin-top:8px">
 <p style="margin-top:8px;font-size:11px;color:#475569">다음 예약을 더 편하게!</p></div>
 </div>
 <script>
+function _toast(msg,dur){var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;max-width:80vw;text-align:center;white-space:pre-wrap';document.body.appendChild(t);setTimeout(function(){t.remove();},(dur||2800));}
 function addToHome(){
   if(window.matchMedia('(display-mode: standalone)').matches){
-    alert('이미 홈 화면에 추가되어 있어요!');return;
+    _toast('이미 홈 화면에 추가되어 있어요!');return;
   }
   var ua=navigator.userAgent;
   if(/iPhone|iPad|iPod/.test(ua)){
-    alert('홈 화면 추가 방법\n\n① 하단 공유 버튼(□↑) 탭\n② "홈 화면에 추가" 선택\n③ 추가 버튼 탭');
+    _toast('홈 화면 추가 방법\n\n① 하단 공유 버튼(□↑) 탭\n② "홈 화면에 추가" 선택\n③ 추가 버튼 탭',4000);
   } else if(/Android/.test(ua)){
     if(window._deferredPrompt){
       window._deferredPrompt.prompt();
       window._deferredPrompt.userChoice.then(function(){window._deferredPrompt=null;});
     } else {
-      alert('홈 화면 추가 방법\n\n① 브라우저 우측 상단 메뉴(⋮) 탭\n② "홈 화면에 추가" 선택');
+      _toast('홈 화면 추가 방법\n\n① 브라우저 우측 상단 메뉴(⋮) 탭\n② "홈 화면에 추가" 선택',4000);
     }
   } else {
-    alert('브라우저 주소창의 설치 버튼을 눌러 홈 화면에 추가하세요.');
+    _toast('브라우저 주소창의 설치 버튼을 눌러 홈 화면에 추가하세요.');
   }
 }
 window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window._deferredPrompt=e;});
@@ -1510,17 +1511,17 @@ async function submitReserve(){
   var designer=(document.getElementById('r-designer')||{}).value||'';
   var menu=document.getElementById('r-menu').value.trim();
   var memo=document.getElementById('r-memo').value.trim();
-  if(!date){alert('날짜를 선택해주세요');return;}
-  if(!name){alert('고객명을 입력해주세요');return;}
-  if(!phone){alert('연락처를 입력해주세요');return;}
+  if(!date){_toast('날짜를 선택해주세요');return;}
+  if(!name){_toast('고객명을 입력해주세요');return;}
+  if(!phone){_toast('연락처를 입력해주세요');return;}
   var btn=document.getElementById('r-submit');
   btn.disabled=true;btn.textContent='예약 중...';
   try{
     var res=await fetch('/reserve?c=${c}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,time,customerName:name,phone,designer,menu,memo})});
     var data=await res.json();
     if(data.ok){document.getElementById('form-wrap').style.display='none';var sw=document.getElementById('success-wrap');sw.style.display='block';document.getElementById('success-msg').textContent=date+' '+time+' '+name+'님 예약이 완료됐습니다.';}
-    else{alert('오류: '+(data.error||'다시 시도해주세요'));btn.disabled=false;btn.textContent='예약 신청';}
-  }catch(e){alert('오류가 발생했습니다');btn.disabled=false;btn.textContent='예약 신청';}
+    else{_toast('오류: '+(data.error||'다시 시도해주세요'));btn.disabled=false;btn.textContent='예약 신청';}
+  }catch(e){_toast('오류가 발생했습니다');btn.disabled=false;btn.textContent='예약 신청';}
 }
 </script></body></html>`;
           return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
@@ -1844,16 +1845,18 @@ var _myDays={};
 var _selectedDate='';
 var _selectedDocId='';
 
+function _toast(msg,dur){var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;max-width:80vw;text-align:center';document.body.appendChild(t);setTimeout(function(){t.remove();},(dur||2800));}
+
 async function loadMyDays(){
   var name=document.getElementById('swap-name').value.trim();
-  if(!name){alert('이름을 입력해주세요');return;}
+  if(!name){_toast('이름을 입력해주세요');return;}
   var params=new URLSearchParams(window.location.search);
   var did=params.get('did')||'';
   var ws=params.get('ws')||'';
   try{
     var res=await fetch('/swap?id=${docId}&action=mydays&name='+encodeURIComponent(name)+'&did='+did+'&ws='+ws);
     var data=await res.json();
-    if(!data.ok){alert(data.error||'조회 실패');return;}
+    if(!data.ok){_toast(data.error||'조회 실패');return;}
     _myDays=data.dayDocs||{};
     var dates=Object.keys(_myDays).sort();
     var el=document.getElementById('day-list');
@@ -1879,13 +1882,13 @@ async function loadMyDays(){
       });
     }
     document.getElementById('days-wrap').style.display='block';
-  }catch(e){alert('오류: '+e.message);}
+  }catch(e){_toast('오류: '+e.message);}
 }
 
 async function acceptExchange(){
   var name=document.getElementById('swap-name').value.trim();
   var myRoute=document.getElementById('my-route').value.trim();
-  if(!_selectedDate||!_selectedDocId){alert('날짜를 선택해주세요');return;}
+  if(!_selectedDate||!_selectedDocId){_toast('날짜를 선택해주세요');return;}
   try{
     var params=new URLSearchParams(window.location.search);
     var res=await fetch('/swap?id=${docId}&did='+params.get('did')+'&ws='+params.get('ws')+'&di='+params.get('di'),
@@ -1896,8 +1899,8 @@ async function acceptExchange(){
       document.getElementById('form-wrap').style.display='none';
       document.getElementById('success-wrap').style.display='block';
       document.getElementById('success-msg').textContent='${date}(${fromName}) ↔ '+_selectedDate+'('+name+') 교체 완료!';
-    }else{alert('오류: '+(data.error||'다시 시도해주세요'));}
-  }catch(e){alert('오류가 발생했습니다');}
+    }else{_toast('오류: '+(data.error||'다시 시도해주세요'));}
+  }catch(e){_toast('오류가 발생했습니다');}
 }
 </script>
 </body></html>`;
@@ -8175,15 +8178,48 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const enabled   = svcDoc?.fields ? (svcDoc.fields.enabled?.booleanValue ?? true) : true;
           if (!enabled) return Response.json({ok:false,error:'현재 사용 불가능한 서비스입니다.'},{status:503});
 
-          // 포인트 잔액 확인 (슈퍼어드민 바이패스)
-          const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
-          const balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
-          if (!isSuperAdmin && balance < pointCost) {
-            return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402});
+          // 포인트 잔액 확인 + 원자적 차감 (슈퍼어드민 바이패스)
+          // updateTime 선행조건 패턴: 읽기 시점의 updateTime을 커밋 조건으로 사용해 동시 요청 overdraw 방지
+          let balance = 0;
+          let jobId = '';
+          if (!isSuperAdmin && pointCost > 0) {
+            let deducted = false;
+            let lastErr = '';
+            for (let attempt = 0; attempt < 3 && !deducted; attempt++) {
+              const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+              balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
+              if (balance < pointCost) {
+                return Response.json({ok:false,error:`포인트가 부족합니다. 필요: ${pointCost}P, 보유: ${balance}P`},{status:402});
+              }
+              const docUpdateTime = pointDoc?.updateTime;
+              const patchUrl = `${FS_BASE}/sly_points/${uid}?updateMask.fieldPaths=balance&currentDocument.updateTime=${encodeURIComponent(docUpdateTime)}`;
+              const patchRes = await fetch(patchUrl, {
+                method: 'PATCH',
+                headers: {'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json'},
+                body: JSON.stringify({fields:{balance:{integerValue: String(balance - pointCost)}}})
+              });
+              if (patchRes.ok) {
+                deducted = true;
+                balance = balance - pointCost;
+              } else if (patchRes.status === 409) {
+                lastErr = '409';
+                // concurrent write — retry with fresh read
+              } else {
+                lastErr = `${patchRes.status}`;
+                break;
+              }
+            }
+            if (!deducted) {
+              return Response.json({ok:false,error:lastErr==='409'?'동시 요청 충돌. 잠시 후 다시 시도해주세요.':'포인트 차감 중 오류가 발생했습니다.'},{status:500});
+            }
+            jobId = crypto.randomUUID();
+          } else {
+            const pointDoc = await fsGet(token, `${FS_BASE}/sly_points/${uid}`);
+            balance = pointDoc?.fields?.balance?.integerValue|0 || 0;
+            jobId = crypto.randomUUID();
           }
 
           // Job 레코드 생성 (processing 상태)
-          const jobId = crypto.randomUUID();
           const filename = file.name || 'document';
           await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
             uid:           { stringValue: uid },
@@ -8197,18 +8233,13 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             resumeJobId:   { stringValue: resumeJobId }
           });
 
-          // 포인트 차감 (슈퍼어드민 바이패스)
-          if (!isSuperAdmin) {
-            const txRes = await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:-pointCost}}]}}]})});
-            if (!txRes.ok) {
-              await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {status:{stringValue:'failed'},error:{stringValue:'포인트 차감 실패'}});
-              return Response.json({ok:false,error:'포인트 차감 중 오류가 발생했습니다.'},{status:500});
-            }
+          // 포인트 이력 기록
+          if (!isSuperAdmin && pointCost > 0) {
             const histId = crypto.randomUUID();
             await fsPatch(token, `${FS_BASE}/sly_point_history/${histId}`, {
               uid:{stringValue:uid}, type:{stringValue:'spend'}, amount:{integerValue:-pointCost},
               serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
-              balanceAfter:{integerValue:balance-pointCost}, createdAt:{stringValue:new Date().toISOString()}
+              balanceAfter:{integerValue:balance}, createdAt:{stringValue:new Date().toISOString()}
             });
           }
 
