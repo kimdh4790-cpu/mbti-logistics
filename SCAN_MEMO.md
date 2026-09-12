@@ -320,6 +320,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-12 | **SCAN 분석 403 근본 원인 수정 — Oracle Cloud 프록시 경유**: 모델/키 변경이 전부 실패한 진짜 원인은 Cloudflare Workers IP가 Anthropic API에서 IP 레벨 차단됨(CLAUDE.md "Cloudflare IP 차단 대응"에도 기록됨). `oracle-server.js`에 `/claude-proxy` 엔드포인트 추가 → `analyze.js` `callClaude()`가 `api.anthropic.com` 직접 호출 대신 `oracle.mbtico.kr/claude-proxy` 경유. Oracle Cloud VM은 일반 IP라 차단 없음. Oracle VM에서 `git reset --hard origin/main && pm2 restart oracle-server` 적용 완료. |
 | 2026-09-12 | **SCAN 분석 403 완전 수정 (PR #70)**: analyze.js 15곳 `claude-3-5-haiku-20241022` → 프리미엄(이력서/자소서/계약서/등기부/스캔PDF) `claude-sonnet-4-6`, 표준(번역/면접/공문서 등) `claude-haiku-4-5-20251001`. scan.html 중복 헤더 52줄 제거 (미닫힌 `<style>` + 중복 meta/link). |
 | 2026-09-12 | INSURANCE_SYSTEM 섀도잉 제거(analyze.js), TOCTOU 원자 차감(_worker.js), alert()→_toast() 교체(_worker.js /booking·/swap) |
 | 2026-09-12 | _worker.js + analyze.js 전체에서 anthropic-workspace-id 헤더 16개 완전 제거 → SCAN "Claude API 400" 오류 근본 수정. 원인: 개인 API키로 workspace-id 헤더 전송 시 400 반환 |
