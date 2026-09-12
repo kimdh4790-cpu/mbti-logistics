@@ -465,7 +465,7 @@ async function _sendFCMv1(env, fcmToken, t, b, d) {
           android: { priority: 'high', notification: { click_action: (d && d.url) || '' } },
           apns: { payload: { aps: { sound: 'default', badge: 1 } } },
           webpush: {
-            notification: { title: t, body: b, icon: '/mbtico-192.png' },
+            notification: { title: t, body: b, icon: '/mbtico-icon-192.png' },
             fcm_options: { link: (d && d.url) || 'https://donway.ai.kr' }
           }
         }
@@ -8179,7 +8179,7 @@ async function _submit(){
       }
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
-        const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+        const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbtico-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbtico-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
         return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
       }
       if (path === '/' || path === '') return new Response(_MBTICO_LANDING_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});

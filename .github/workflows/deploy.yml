@@ -114,7 +114,7 @@ jobs:
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          for FILE in dine-icon-192.png dine-icon-512.png dine-apple-icon.png filo-icon-192.png filo-icon-512.png filo-apple-icon.png donway-icon-192.png donway-icon-512.png donway-apple-icon.png yongcha-icon-192.png yongcha-icon-512.png yongcha-apple-icon.png apple-touch-icon.png icon-192.png icon-512.png scan-icon-192.png scan-icon-512.png; do
+          for FILE in dine-icon-192.png dine-icon-512.png dine-apple-icon.png filo-icon-192.png filo-icon-512.png filo-apple-icon.png donway-icon-192.png donway-icon-512.png donway-apple-icon.png yongcha-icon-192.png yongcha-icon-512.png yongcha-apple-icon.png apple-touch-icon.png icon-192.png icon-512.png scan-icon-192.png scan-icon-512.png mbtico-icon-192.png mbtico-icon-512.png; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
               -H "X-Auth-Email: kimdh4790@gmail.com" \
