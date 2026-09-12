@@ -8439,6 +8439,22 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
+      // GET /api/seolyuhana/key-check — API 키 진단 (슈퍼어드민 전용)
+      if (path === '/api/seolyuhana/key-check' && method === 'GET') {
+        const _kcUser = await verifyFirebaseToken(request, env);
+        if (!_kcUser || !SUPER_ADMINS.includes(_kcUser.uid)) return Response.json({error:'슈퍼어드민 전용'},{status:403,headers});
+        const slyAk = request.headers.get('x-sly-ak');
+        const testKey = slyAk || env.ANTHROPIC_API_KEY;
+        const keyHint = testKey ? testKey.slice(0,12)+'...' : '(없음)';
+        const testRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method:'POST',
+          headers:{'x-api-key':testKey,'anthropic-version':'2023-06-01','content-type':'application/json'},
+          body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'hi'}]})
+        });
+        const testBody = await testRes.text();
+        return Response.json({status:testRes.status,keyHint,source:slyAk?'x-sly-ak':'env',body:testBody},{headers});
+      }
+
       // POST /api/seolyuhana/biz-status — 국세청 사업자 상태조회
       if (path === '/api/seolyuhana/biz-status' && method === 'POST') {
         const _bizUser = await verifyFirebaseToken(request, env);
