@@ -4538,6 +4538,13 @@ app.post('/claude-proxy', async (req, res) => {
   }
 });
 
+process.on('uncaughtException', (err) => {
+  console.error('[oracle-server] uncaughtException (프로세스 유지):', err.message);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[oracle-server] unhandledRejection (프로세스 유지):', reason);
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[seolyuhana-oracle] 서버 시작 port=${PORT}`);
