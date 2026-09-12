@@ -689,7 +689,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
 
   // 이미지 블록 생성 — PDF 변환 이미지(JPEG) 또는 직접 업로드 이미지(다양한 형식)
   const imgMediaType = images.mediaType || 'image/jpeg'; // 직접 업로드 시 mediaType 전달
-  const imageBlocks = images.slice(0, 8).map((b64, i) => ({
+  const imageBlocks = images.slice(0, 15).map((b64, i) => ({
     type: 'image',
     source: {
       type: 'base64',
@@ -710,7 +710,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
       max_tokens: 6000,
       messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: analysisPrompt }] }]
     }),
-    signal: AbortSignal.timeout(120000)
+    signal: AbortSignal.timeout(100000)
   });
 
   if (!res.ok) {
