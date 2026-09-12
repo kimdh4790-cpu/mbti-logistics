@@ -2,7 +2,7 @@ name = "seolyuhana"
 main = "seolyuhana_worker.js"
 compatibility_date = "2025-11-01"
 account_id = "02709cbec18d848913b4246015b9148f"
-workers_dev = false
+workers_dev = true
 
 [[routes]]
 pattern = "mbtico.kr/api/seolyuhana/*"
