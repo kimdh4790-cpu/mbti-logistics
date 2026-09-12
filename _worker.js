@@ -3296,7 +3296,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               const res=await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',signal:ctrl.signal,
                 headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:50,messages:[{role:'user',content:'Translate to '+{en:'English',zh:'Chinese (Simplified)',ja:'Japanese'}[lang]+', return ONLY the translation: '+name}]})
+                body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:50,messages:[{role:'user',content:'Translate to '+{en:'English',zh:'Chinese (Simplified)',ja:'Japanese'}[lang]+', return ONLY the translation: '+name}]})
               });
               clearTimeout(tid);
               if(res.ok){const d=await res.json();const t=(d.content&&d.content[0]&&d.content[0].text||'').trim();if(isValid(t))translated=t;}
@@ -3355,7 +3355,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               const bRes = await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST', signal:_ac.signal,
                 headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
-                body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1024,messages:[{role:'user',content:prompt2}]})
+                body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1024,messages:[{role:'user',content:prompt2}]})
               });
               clearTimeout(_at);
               dbg.antStatus = bRes.status;
@@ -3412,7 +3412,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const _tk = (env.ANTHROPIC_API_KEY||'').trim();
         const _gk = (env.GOOGLE_TRANSLATE_KEY||'').trim();
         const _tres = {antKeyLen:_tk.length, gKeyLen:_gk.length, antStatus:0, antOk:false, antText:'', gStatus:0, gOk:false, gText:''};
-        if(_tk){try{const _tr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':_tk,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:20,messages:[{role:'user',content:'Translate to Japanese: 김치찌개'}]})});_tres.antStatus=_tr.status;_tres.antOk=_tr.ok;if(_tr.ok){const _td=await _tr.json();_tres.antText=(_td.content&&_td.content[0]&&_td.content[0].text)||'';}else{_tres.antText=(await _tr.text()).slice(0,200);}}catch(e){_tres.antText=String(e).slice(0,100);}}
+        if(_tk){try{const _tr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':_tk,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:20,messages:[{role:'user',content:'Translate to Japanese: 김치찌개'}]})});_tres.antStatus=_tr.status;_tres.antOk=_tr.ok;if(_tr.ok){const _td=await _tr.json();_tres.antText=(_td.content&&_td.content[0]&&_td.content[0].text)||'';}else{_tres.antText=(await _tr.text()).slice(0,200);}}catch(e){_tres.antText=String(e).slice(0,100);}}
         if(_gk){try{const _gr=await fetch('https://translation.googleapis.com/language/translate/v2?key='+_gk,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:'김치찌개',source:'ko',target:'ja',format:'text'})});_tres.gStatus=_gr.status;_tres.gOk=_gr.ok;if(_gr.ok){const _gd=await _gr.json();_tres.gText=(_gd&&_gd.data&&_gd.data.translations&&_gd.data.translations[0]&&_gd.data.translations[0].translatedText)||'';}else{_tres.gText=(await _gr.text()).slice(0,200);}}catch(e){_tres.gText=String(e).slice(0,100);}}
         return new Response(JSON.stringify(_tres),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
@@ -3433,7 +3433,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               'content-type':'application/json'
             },
             body:JSON.stringify({
-              model: body.model||'claude-3-5-sonnet-20241022',
+              model: body.model||'claude-sonnet-4-6',
               max_tokens: Math.min(body.max_tokens||500, 1000),
               messages: body.messages||[]
             })
@@ -4983,7 +4983,7 @@ ${JSON.stringify(postSummary)}
               const dogs=menuEngineering.filter(m=>m.category==='dog').map(m=>m.name).slice(0,3);
               const unregList=[...unregistered].slice(0,5);
               const prompt=`외식업 마진 분석 전문가로서 한국어로 3문장 이내로 핵심 조언을 작성하세요.\n업종: ${bench.name}\n식재료 원가율: ${foodCostPct}% (업종 기준 ${bench.low}~${bench.high}%)\n프라임코스트: ${primeCost}% (목표 ${bench.prime}% 이하)\n월 매출: ₩${totalRev.toLocaleString()}\n스타메뉴: ${stars.join(', ')||'없음'}\n개선필요(Dog): ${dogs.join(', ')||'없음'}\n원가미등록: ${unregList.join(', ')||'없음'}\n실행 가능한 조언:`;
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:250,messages:[{role:'user',content:prompt}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:250,messages:[{role:'user',content:prompt}]})});
               const pd=await pr.json();
               aiNarrative=pd.content?.[0]?.text||'';
               if(aiNarrative) aiPowered=true;
@@ -10010,7 +10010,7 @@ function doRegister(){
             'anthropic-version':'2023-06-01'
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-sonnet-4-6',
             max_tokens: 10,
             messages: [{role:'user', content:'hi'}]
           })
