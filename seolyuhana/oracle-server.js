@@ -4528,8 +4528,8 @@ app.post('/claude-proxy', async (req, res) => {
     const apiKey = (process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'] || '').replace(/[^\x21-\x7E]/g, '');
     if (!apiKey || apiKey.length < 20) return res.status(401).json({ error: 'ANTHROPIC_API_KEY 미설정 또는 오류' });
 
-    const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^\x21-\x7E]/g, '').trim();
-    if (!wsId) return res.status(500).json({ error: 'ANTHROPIC_WORKSPACE_ID가 설정되지 않았습니다. VM에서 export ANTHROPIC_WORKSPACE_ID=wrkspc_01... 후 pm2 restart oracle-server --update-env 실행' });
+    const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^\x21-\x7E]/g, '').trim()
+      || 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx';
 
     const bodyStr = JSON.stringify(req.body);
     const result = await new Promise((resolve, reject) => {
