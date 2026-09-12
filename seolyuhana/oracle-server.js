@@ -4527,8 +4527,9 @@ app.post('/claude-proxy', (req, res) => {
     'x-api-key': apiKey,
     'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
   };
-  if (process.env.ANTHROPIC_WORKSPACE_ID) {
-    reqHeaders['anthropic-workspace-id'] = process.env.ANTHROPIC_WORKSPACE_ID;
+  const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^a-zA-Z0-9_\-]/g, '');
+  if (wsId) {
+    reqHeaders['anthropic-workspace-id'] = wsId;
   }
   const options = {
     hostname: 'api.anthropic.com',
@@ -4588,12 +4589,14 @@ async function autoFetchWorkspaceId() {
         res.on('end', () => {
           try {
             const json = JSON.parse(data);
-            const wid = json.data?.[0]?.id;
+            const rawWid = json.data?.[0]?.id || '';
+            // 헤더 안전 문자만 허용 (알파벳·숫자·언더스코어·하이픈)
+            const wid = rawWid.replace(/[^a-zA-Z0-9_\-]/g, '').trim();
             if (wid) {
               process.env.ANTHROPIC_WORKSPACE_ID = wid;
               console.log(`[claude-proxy] workspace ID 자동 설정: ${wid}`);
             } else {
-              console.warn('[claude-proxy] workspace 목록 비어 있음:', data.slice(0, 200));
+              console.warn('[claude-proxy] workspace ID 없음 rawWid:', JSON.stringify(rawWid), 'resp:', data.slice(0, 300));
             }
           } catch (e) {
             console.warn('[claude-proxy] workspace ID 파싱 실패:', e.message);
