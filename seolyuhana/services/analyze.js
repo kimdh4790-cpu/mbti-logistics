@@ -25,10 +25,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     headers: {
       'content-type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-workspace-id': 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx',
-      'anthropic-workspace-id': 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx',
-      'anthropic-workspace-id': 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'
+      'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(120000)
@@ -688,10 +685,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     headers: {
       'content-type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-workspace-id': 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx',
-      'anthropic-workspace-id': 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx',
-      'anthropic-workspace-id': 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'
+      'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
