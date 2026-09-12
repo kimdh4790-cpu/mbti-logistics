@@ -4402,3 +4402,5 @@ function doRegister(){
     return new Response('Not Found', {status:404});
   }
 };
+
+// build trigger
