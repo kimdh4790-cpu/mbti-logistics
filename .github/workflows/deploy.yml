@@ -61,6 +61,22 @@ jobs:
             printf '%s' "$IROS_EMONEY_NO2" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_NO2 2>&1 || echo "⚠️ IROS_EMONEY_NO2 시크릿 설정 실패 (무시)"
             printf '%s' "$IROS_EMONEY_PWD" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_PWD 2>&1 || echo "⚠️ IROS_EMONEY_PWD 시크릿 설정 실패 (무시)"
           fi
+      - name: Deploy Seolyuhana Worker
+        env:
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          CF_EMAIL: kimdh4790@gmail.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npm install -g wrangler@4 --silent
+          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1; then
+            echo "Seolyuhana OK"
+            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
+          else
+            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1 || true
+            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
+          fi
+
       - name: Deploy Yongcha Worker
         continue-on-error: true
         env:
