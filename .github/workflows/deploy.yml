@@ -69,13 +69,9 @@ jobs:
         run: |
           npm install -g wrangler@4 --silent
           CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1; then
-            echo "Seolyuhana OK"
-            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
-          else
-            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1 || true
-            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
-          fi
+          CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1
+          printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
+          echo "Seolyuhana 배포 완료"  
 
       - name: Deploy Yongcha Worker
         continue-on-error: true
