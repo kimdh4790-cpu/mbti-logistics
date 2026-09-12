@@ -16,10 +16,14 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
   const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
   const proxyUrl = `${oracleBase}/claude-proxy`;
 
+  // 환각 방지: 모든 분석에 문서 근거 원칙 주입
+  const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
+  const systemWithGuard = system + ANTI_HALLUCINATION;
+
   const body = {
     model,
     max_tokens: maxTokens,
-    system,
+    system: systemWithGuard,
     messages: [{ role: 'user', content: userBlocks }]
   };
 
