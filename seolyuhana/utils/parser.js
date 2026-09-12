@@ -31,7 +31,29 @@ export async function parseFile(buffer, filename, mimeType, env) {
     return { text: text.trim(), pageCount: 1, method: 'text', scanned: false };
   }
 
-  throw new Error(`지원하지 않는 파일 형식입니다: .${ext}`);
+  // 이미지 파일 → Claude Vision으로 직접 분석
+  const IMAGE_EXTS = ['jpg','jpeg','png','webp','gif','bmp','heic','heif'];
+  const IMAGE_MIMES = ['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/heic','image/heif'];
+  if (IMAGE_EXTS.includes(ext) || IMAGE_MIMES.includes(mimeType)) {
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const mediaType = mimeType && IMAGE_MIMES.includes(mimeType)
+      ? mimeType
+      : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg'
+      : ext === 'png' ? 'image/png'
+      : ext === 'webp' ? 'image/webp'
+      : 'image/jpeg';
+    return {
+      text: '',
+      pageCount: 1,
+      method: 'image_vision',
+      scanned: true,
+      images: [b64],
+      imageMediaType: mediaType,
+      rawBuffer: buffer
+    };
+  }
+
+  throw new Error(`지원하지 않는 파일 형식입니다. (지원: HWP, DOCX, PDF, TXT, JPG, PNG, WEBP)`);
 }
 
 /**
