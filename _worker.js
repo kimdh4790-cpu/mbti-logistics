@@ -8245,8 +8245,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
           // 비동기 처리 (waitUntil 사용)
           const fileBuffer = await file.arrayBuffer();
-          // 메인 워커 ANTHROPIC_API_KEY 사용 (seolyuhana 프록시 워커의 x-sly-ak 무시)
-          const slyEnv = env;
+          // x-sly-ak: seolyuhana 프록시 워커가 자신의 ANTHROPIC_API_KEY 전달 → 우선 사용 (없으면 메인 워커 폴백)
+          const slyAk = request.headers.get('x-sly-ak');
+          const slyEnv = slyAk ? Object.assign(Object.create(null), env, {ANTHROPIC_API_KEY: slyAk}) : env;
           const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env: slyEnv, token, pointCost, isSuperAdmin};
           ctx.waitUntil(_slyProcessJob(processingCtx));
 
