@@ -4559,7 +4559,7 @@ function fetchWorkspaceId(apiKey) {
 
 app.post('/claude-proxy', async (req, res) => {
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
+    const apiKey = (process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'] || '').trim();
     if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
 
     // workspace ID: 환경변수 → 캐시 → 지연 조회 순서
