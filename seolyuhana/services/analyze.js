@@ -1262,3 +1262,88 @@ export async function analyzeBizPlan({ text, env }) {
     maxTokens: 6000
   });
 }
+
+// ────────────────────────────────────────────────────────────
+// 13. 경쟁사 분석 리포트
+// ────────────────────────────────────────────────────────────
+const COMPETITOR_SYSTEM = `당신은 10년 경력의 수석 시장 분석가입니다. 스타트업·SaaS·플랫폼 시장에서 수백 건의 경쟁 분석 리포트를 작성했습니다.
+반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+[분석 원칙]
+- 확인된 공개 정보(공식 홈페이지·언론·앱스토어 리뷰)에만 근거
+- 확인할 수 없는 내용은 "정보 없음"으로 명시, 절대 추측하지 않음
+- 각 경쟁사의 강점은 솔직하게 인정, 약점은 증거 기반으로 기술
+- 최종 포지셔닝은 "내 서비스"의 차별화 기회 중심으로 도출
+
+출력 스키마:
+{
+  "marketOverview": {
+    "marketName": "분석 시장명",
+    "summary": "시장 현황 요약 (150자 이내)",
+    "totalPlayers": "주요 플레이어 수 추정",
+    "maturityLevel": "초기/성장/성숙/포화 중 하나",
+    "keyTrend": "2024-2026 핵심 트렌드 (100자 이내)"
+  },
+  "myServiceAnalysis": {
+    "name": "내 서비스명",
+    "coreValue": "핵심 가치 제안",
+    "targetCustomer": "주요 타겟 고객",
+    "currentStrengths": ["강점1", "강점2", "강점3"],
+    "currentWeaknesses": ["약점1", "약점2"]
+  },
+  "competitors": [
+    {
+      "name": "경쟁사명",
+      "type": "직접경쟁/간접경쟁/대체재 중 하나",
+      "coreFeatures": ["핵심 기능1", "기능2", "기능3"],
+      "pricingModel": "가격 구조 설명 (무료/구독/종량제 등)",
+      "targetCustomer": "주요 타겟 고객",
+      "knownStrengths": ["검증된 강점1", "강점2"],
+      "knownWeaknesses": ["알려진 약점1", "약점2"],
+      "userComplaints": ["앱스토어·커뮤니티에서 확인된 불만1", "불만2"],
+      "estimatedMarketShare": "시장점유율 추정 또는 정보 없음",
+      "differentiationVsMe": "내 서비스 대비 차이점 (객관적으로)"
+    }
+  ],
+  "comparisonMatrix": {
+    "criteria": ["기준1(예:가격)", "기준2", "기준3", "기준4", "기준5"],
+    "scores": [
+      { "name": "내 서비스명", "values": [점수1~10, 점수2, 점수3, 점수4, 점수5] }
+    ]
+  },
+  "opportunityGaps": [
+    {
+      "gap": "시장에서 아무도 잘 못 하고 있는 것",
+      "evidence": "근거",
+      "howToCapture": "내 서비스가 이 기회를 잡는 방법"
+    }
+  ],
+  "positioningRecommendation": {
+    "uniquePositioning": "권장 포지셔닝 한 문장 (슬로건 수준)",
+    "primaryDifferentiators": ["핵심 차별화 포인트1", "포인트2", "포인트3"],
+    "avoidCompetingOn": ["이 기준으로는 싸우지 마라 (이유 포함)1", "기준2"],
+    "priorityActions": [
+      { "action": "즉시 실행 가능한 액션", "rationale": "이유", "effort": "상/중/하" }
+    ]
+  },
+  "dataLimitations": ["확인하지 못한 정보1", "한계2"]
+}
+
+경쟁사 수가 3개 미만이면 있는 것만 분석. 5개 초과면 가장 위협적인 5개만 선별.`;
+
+export async function analyzeCompetitors({ myService, competitors, marketContext = '', env }) {
+  const competitorList = Array.isArray(competitors) ? competitors.join(', ') : competitors;
+  const userText = [
+    `[내 서비스]\n${myService}`,
+    `[분석할 경쟁사]\n${competitorList}`,
+    marketContext ? `[시장/업종 맥락]\n${marketContext}` : ''
+  ].filter(Boolean).join('\n\n');
+
+  return callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    system: COMPETITOR_SYSTEM,
+    userBlocks: [{ type: 'text', text: userText }],
+    env,
+    maxTokens: 6000
+  });
+}
