@@ -65,17 +65,18 @@ jobs:
       - name: Deploy Seolyuhana Worker
         continue-on-error: true
         env:
-          CF_TOKEN: ${{ secrets.CF_KV_TOKEN }}
+          CF_TOKEN: ${{ secrets.CF_API_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           WORKER="seolyuhana"
           CF_TOKEN="$(printf '%s' "$CF_TOKEN" | tr -d '\r\n\t ')"
+          # multipart/form-data로 ES Module Worker 업로드
           RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$WORKER" \
             -H "Authorization: Bearer $CF_TOKEN" \
-            -H "Content-Type: application/javascript" \
-            --data-binary @seolyuhana_worker.js)
-          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('SUCCESS' if d.get('success') else 'FAIL:'+str(d.get('errors','')))"
+            -F "index.js=@seolyuhana_worker.js;type=application/javascript+module" \
+            -F 'metadata={"main_module":"index.js"};type=application/json')
+          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✅ SUCCESS' if d.get('success') else '❌ FAIL:'+str(d.get('errors',''))[:200])" || echo "결과: $RESULT" | head -c 300
           printf '%s' "$ANTHROPIC_API_KEY" | \
             CLOUDFLARE_API_TOKEN="$CF_TOKEN" \
             npx wrangler@4 secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
