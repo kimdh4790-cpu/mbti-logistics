@@ -4515,51 +4515,6 @@ app.post('/api/iros-selftest', async (req, res) => {
   }
 });
 
-// ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
-// Node.js 내장 https 모듈 사용 — Node < 18 fetch() 미지원 우회
-app.post('/claude-proxy', (req, res) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
-  if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
-  const bodyStr = JSON.stringify(req.body);
-  const reqHeaders = {
-    'content-type': 'application/json',
-    'content-length': Buffer.byteLength(bodyStr),
-    'x-api-key': apiKey,
-    'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
-  };
-  const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^a-zA-Z0-9_\-]/g, '');
-  if (wsId) {
-    reqHeaders['anthropic-workspace-id'] = wsId;
-  }
-  const options = {
-    hostname: 'api.anthropic.com',
-    port: 443,
-    path: '/v1/messages',
-    method: 'POST',
-    headers: reqHeaders,
-    timeout: 120000
-  };
-  const proxyReq = https.request(options, (proxyRes) => {
-    let data = '';
-    proxyRes.on('data', chunk => { data += chunk; });
-    proxyRes.on('end', () => {
-      try { res.status(proxyRes.statusCode).json(JSON.parse(data)); }
-      catch (e) { res.status(proxyRes.statusCode).send(data); }
-    });
-  });
-  proxyReq.on('error', (e) => {
-    console.error('[claude-proxy] https error:', e.message);
-    if (!res.headersSent) res.status(502).json({ error: e.message });
-  });
-  proxyReq.on('timeout', () => {
-    console.error('[claude-proxy] timeout');
-    proxyReq.destroy();
-    if (!res.headersSent) res.status(504).json({ error: 'Upstream timeout' });
-  });
-  proxyReq.write(bodyStr);
-  proxyReq.end();
-});
-
 process.on('uncaughtException', (err) => {
   console.error('[oracle-server] uncaughtException (프로세스 유지):', err.message);
 });
@@ -4567,53 +4522,86 @@ process.on('unhandledRejection', (reason) => {
   console.error('[oracle-server] unhandledRejection (프로세스 유지):', reason);
 });
 
-// 서버 시작 시 workspace ID 자동 조회 (ANTHROPIC_WORKSPACE_ID 미설정 시)
-async function autoFetchWorkspaceId() {
-  if (process.env.ANTHROPIC_WORKSPACE_ID) return;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return;
-  try {
-    await new Promise((resolve) => {
-      const req = https.request({
-        hostname: 'api.anthropic.com',
-        port: 443,
-        path: '/v1/workspaces?limit=1',
-        method: 'GET',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        }
-      }, (res) => {
-        let data = '';
-        res.on('data', c => { data += c; });
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            const rawWid = json.data?.[0]?.id || '';
-            // 헤더 안전 문자만 허용 (알파벳·숫자·언더스코어·하이픈)
-            const wid = rawWid.replace(/[^a-zA-Z0-9_\-]/g, '').trim();
-            if (wid) {
-              process.env.ANTHROPIC_WORKSPACE_ID = wid;
-              console.log(`[claude-proxy] workspace ID 자동 설정: ${wid}`);
-            } else {
-              console.warn('[claude-proxy] workspace ID 없음 rawWid:', JSON.stringify(rawWid), 'resp:', data.slice(0, 300));
-            }
-          } catch (e) {
-            console.warn('[claude-proxy] workspace ID 파싱 실패:', e.message);
+// ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
+// workspace ID 지연 조회: 첫 요청 시 1회 조회 후 캐시 (서버 시작 시 API 호출 금지)
+let _workspaceIdCache = null;
+
+function fetchWorkspaceId(apiKey) {
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'api.anthropic.com', port: 443,
+      path: '/v1/workspaces?limit=1', method: 'GET',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
+    }, (wsRes) => {
+      let data = '';
+      wsRes.on('data', c => { data += c; });
+      wsRes.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const wid = (json.data?.[0]?.id || '').replace(/[^a-zA-Z0-9_\-]/g, '').trim();
+          if (wid) {
+            _workspaceIdCache = wid;
+            console.log('[claude-proxy] workspace ID 캐시:', wid);
+          } else {
+            console.warn('[claude-proxy] workspace ID 없음, 응답:', data.slice(0, 200));
           }
-          resolve();
-        });
+        } catch (e) {
+          console.warn('[claude-proxy] workspace ID 파싱 오류:', e.message);
+        }
+        resolve(_workspaceIdCache);
       });
-      req.on('error', (e) => { console.warn('[claude-proxy] workspace 조회 실패:', e.message); resolve(); });
-      req.end();
     });
-  } catch (e) {
-    console.warn('[claude-proxy] autoFetchWorkspaceId 오류:', e.message);
-  }
+    req.on('error', (e) => { console.warn('[claude-proxy] workspace 조회 실패:', e.message); resolve(null); });
+    req.setTimeout(10000, () => { req.destroy(); resolve(null); });
+    req.end();
+  });
 }
 
+app.post('/claude-proxy', async (req, res) => {
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
+    if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
+
+    // workspace ID: 환경변수 → 캐시 → 지연 조회 순서
+    let wsId = (process.env.ANTHROPIC_WORKSPACE_ID || _workspaceIdCache || '').replace(/[^a-zA-Z0-9_\-]/g, '');
+    if (!wsId) {
+      wsId = (await fetchWorkspaceId(apiKey)) || '';
+    }
+
+    const bodyStr = JSON.stringify(req.body);
+    const reqHeaders = {
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(bodyStr),
+      'x-api-key': apiKey,
+      'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
+    };
+    if (wsId) reqHeaders['anthropic-workspace-id'] = wsId;
+
+    const result = await new Promise((resolve, reject) => {
+      const proxyReq = https.request({
+        hostname: 'api.anthropic.com', port: 443,
+        path: '/v1/messages', method: 'POST',
+        headers: reqHeaders, timeout: 120000
+      }, (proxyRes) => {
+        let data = '';
+        proxyRes.on('data', chunk => { data += chunk; });
+        proxyRes.on('end', () => resolve({ status: proxyRes.statusCode, body: data }));
+      });
+      proxyReq.on('error', reject);
+      proxyReq.on('timeout', () => { proxyReq.destroy(); reject(new Error('upstream timeout')); });
+      proxyReq.write(bodyStr);
+      proxyReq.end();
+    });
+
+    try { res.status(result.status).json(JSON.parse(result.body)); }
+    catch (e) { res.status(result.status).send(result.body); }
+  } catch (e) {
+    console.error('[claude-proxy] 오류:', e.message);
+    if (!res.headersSent) res.status(502).json({ error: e.message });
+  }
+});
+
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', async () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`[seolyuhana-oracle] 서버 시작 port=${PORT}`);
-  await autoFetchWorkspaceId();
 });
