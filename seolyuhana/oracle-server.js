@@ -22,6 +22,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { chromium } from 'playwright';
 import JSZip from 'jszip';
+import https from 'https';
 
 const execFileAsync = promisify(execFile);
 const app = express();
@@ -4515,27 +4516,43 @@ app.post('/api/iros-selftest', async (req, res) => {
 });
 
 // ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
-// Oracle VM 자신의 ANTHROPIC_API_KEY(workspace 스코프)를 사용 — Cloudflare Admin키 우회
-app.post('/claude-proxy', async (req, res) => {
+// Node.js 내장 https 모듈 사용 — Node < 18 fetch() 미지원 우회
+app.post('/claude-proxy', (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
   if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
-  try {
-    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
-      },
-      body: JSON.stringify(req.body),
-      signal: AbortSignal.timeout(120000)
+  const bodyStr = JSON.stringify(req.body);
+  const options = {
+    hostname: 'api.anthropic.com',
+    port: 443,
+    path: '/v1/messages',
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(bodyStr),
+      'x-api-key': apiKey,
+      'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
+    },
+    timeout: 120000
+  };
+  const proxyReq = https.request(options, (proxyRes) => {
+    let data = '';
+    proxyRes.on('data', chunk => { data += chunk; });
+    proxyRes.on('end', () => {
+      try { res.status(proxyRes.statusCode).json(JSON.parse(data)); }
+      catch (e) { res.status(proxyRes.statusCode).send(data); }
     });
-    const data = await upstream.json().catch(() => ({}));
-    res.status(upstream.status).json(data);
-  } catch (e) {
-    console.error('[claude-proxy]', e.message);
-    res.status(502).json({ error: e.message });
-  }
+  });
+  proxyReq.on('error', (e) => {
+    console.error('[claude-proxy] https error:', e.message);
+    if (!res.headersSent) res.status(502).json({ error: e.message });
+  });
+  proxyReq.on('timeout', () => {
+    console.error('[claude-proxy] timeout');
+    proxyReq.destroy();
+    if (!res.headersSent) res.status(504).json({ error: 'Upstream timeout' });
+  });
+  proxyReq.write(bodyStr);
+  proxyReq.end();
 });
 
 process.on('uncaughtException', (err) => {
