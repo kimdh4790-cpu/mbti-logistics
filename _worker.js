@@ -8273,7 +8273,14 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const f = doc.fields;
           const isSA = _SUPERADMIN_EMAILS.includes(_au.email||'');
           if (!isSA && f.uid?.stringValue !== uid) return Response.json({ok:false,error:'권한 없음'},{status:403});
-          const status = f.status?.stringValue || 'unknown';
+          let status = f.status?.stringValue || 'unknown';
+          let kvErrMsg = null;
+          // KV 폴백: Firestore 쓰기가 실패했어도 KV 신호로 상태 복원
+          if (status === 'processing' || status === 'pending') {
+            const kvStatus = await env.DONWAY_ASSETS.get(`sly_job_${jobId}_status`).catch(()=>null);
+            if (kvStatus?.startsWith('failed:')) { status = 'failed'; kvErrMsg = kvStatus.slice(7); }
+            else if (kvStatus === 'completed') status = 'completed';
+          }
           let result = null;
           if (status === 'completed') {
             const resultJson = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`);
@@ -8289,7 +8296,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               docx: f.downloadUrls.mapValue.fields.docx?.stringValue,
               pdf:  f.downloadUrls.mapValue.fields.pdf?.stringValue
             } : null,
-            error: f.error?.stringValue || null,
+            error: f.error?.stringValue || kvErrMsg || null,
             completedAt: f.completedAt?.stringValue || null
           });
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
@@ -8879,8 +8886,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
       // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
       async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang='en', jeonseDeposit=null, env, token, pointCost=0, isSuperAdmin=false}) {
+        // 백그라운드 처리용 SA 토큰 — 사용자 ID 토큰이 아닌 서비스 계정으로 Firestore 쓰기 보장
+        let _writeToken = token;
+        try { _writeToken = await getAccessToken(env); } catch(e) { console.error('[SCAN] SA token failed, using user token:', e.message); }
         const setProgress = async (p, status='processing') => {
-          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
+          await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
         };
         try {
           // 1. 파일 파싱 (동적 import — Workers 모듈 시스템)
@@ -8901,9 +8911,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
-          // 150초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
+          // 155초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
           const _slyAnalysisTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('분석 시간 초과 (180초). 잠시 후 다시 시도해주세요.')), 180000)
+            setTimeout(() => reject(new Error('분석 시간 초과. 파일이 크거나 복잡할 경우 페이지를 줄이거나 텍스트 PDF를 사용하세요.')), 155000)
           );
 
           let analysisData;
@@ -8964,7 +8974,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const outputDocx = makeOutputFilename(filename, 'docx');
           const outputPdf  = makeOutputFilename(filename, 'pdf');
           const summary = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
-          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+          await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
             status:      { stringValue: 'completed' },
             progress:    { integerValue: 100 },
             summary:     { stringValue: summary.slice(0,300) },
@@ -8976,23 +8986,26 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             }}},
             completedAt: { stringValue: new Date().toISOString() }
           });
+          await env.DONWAY_ASSETS.put(`sly_job_${jobId}_status`, 'completed', {expirationTtl:86400});
         } catch(err) {
           console.error('[SCAN] _slyProcessJob error:', jobId, serviceId, err?.message, err?.stack);
-          await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {
+          await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
             status:  { stringValue: 'failed' },
             error:   { stringValue: err.message || '알 수 없는 오류' }
           }).catch((e2) => { console.error('[SCAN] fsPatch failed status update:', e2?.message); });
+          // KV 폴백: Firestore 쓰기 실패 시에도 프론트엔드가 failed 상태 감지 가능
+          await env.DONWAY_ASSETS.put(`sly_job_${jobId}_status`, `failed:${err.message||'오류'}`, {expirationTtl:3600}).catch(()=>{});
 
           // 분석 실패 시 포인트 자동 환불
           if (!isSuperAdmin && pointCost > 0) {
             try {
               await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {
                 method: 'POST',
-                headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+                headers: {'Authorization':`Bearer ${_writeToken}`,'Content-Type':'application/json'},
                 body: JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:pointCost}}]}}]})
               });
               const refundHistId = crypto.randomUUID();
-              await fsPatch(token, `${FS_BASE}/sly_point_history/${refundHistId}`, {
+              await fsPatch(_writeToken, `${FS_BASE}/sly_point_history/${refundHistId}`, {
                 uid:{stringValue:uid}, type:{stringValue:'refund'}, amount:{integerValue:pointCost},
                 serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
                 reason:{stringValue:'분석 실패 자동 환불'}, createdAt:{stringValue:new Date().toISOString()}
