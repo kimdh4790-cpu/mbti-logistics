@@ -1,0 +1,3 @@
+name = "seolyuhana"
+main = "seolyuhana_worker.js"
+compatibility_date = "2025-11-01"

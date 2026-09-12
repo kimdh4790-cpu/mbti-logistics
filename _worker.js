@@ -1029,7 +1029,7 @@ export default {
     const url      = new URL(request.url);
     const path     = url.pathname;
     const method   = request.method;
-    const hostname = url.hostname;
+    const hostname = request.headers.get('x-mbtico-host') || url.hostname;
 
     // ★ 슈퍼어드민 비밀번호 강제 재설정 — hostname 무관, 모든 도메인에서 호출 가능
     if (path === '/api/admin-set-pw' && method === 'POST') {
