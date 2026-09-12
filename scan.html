@@ -3127,6 +3127,13 @@ function _slySelectService(id) {
 }
 window._slySelectService = _slySelectService;
 
+// 분석 완료 후 면접 질문 업셀 — interview 서비스로 전환 후 상단 스크롤
+window._slyUpsellInterview = function() {
+  _slySelectService('interview');
+  document.getElementById('slyUploadCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  _slyToast('면접 예상 질문 서비스가 선택되었습니다. 동일 서류를 다시 업로드해주세요.');
+};
+
 // 사업자 조회 버튼 핸들러
 window._slyBizSearch = async function() {
   const num = document.getElementById('slyBizNum')?.value?.replace(/\D/g, '');
@@ -3770,6 +3777,22 @@ function renderResult(data) {
         PDF 다운로드
       </button>
     </div>
+  </div>
+  ${['resume','cover_letter','cover_rewrite'].includes(_slyService) ? `
+  <div style="margin-top:20px;background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:16px;padding:20px;text-align:center">
+    <div style="font-size:13px;color:#a5b4fc;font-weight:600;margin-bottom:6px">서류 통과 이후 면접까지 대비하세요</div>
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">면접 예상 질문 생성</div>
+    <div style="font-size:12px;color:#c7d2fe;margin-bottom:16px">이 서류 기반으로 기업별 예상 질문 16개 + 답변 가이드</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px">
+      <span style="font-size:24px;font-weight:900;color:#fbbf24">19,900P</span>
+      <span style="font-size:13px;color:#a5b4fc">= ₩19,900</span>
+    </div>
+    <button onclick="_slyUpsellInterview()" style="width:100%;padding:14px;background:linear-gradient(90deg,#6366f1,#8b5cf6);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">
+      면접 예상 질문 받기 →
+    </button>
+  </div>` : ''}
+  <div style="margin-top:14px;padding:12px 14px;background:rgba(0,0,0,.04);border-radius:10px;font-size:11px;color:#94a3b8;line-height:1.6;text-align:center">
+    🔒 업로드된 파일은 분석 완료 즉시 서버에서 삭제되며 저장되지 않습니다. 개인정보는 분석 목적 외 사용되지 않습니다.
   </div>`;
 
   cont.innerHTML = html;
