@@ -845,6 +845,7 @@ function _filoGoPage(p, _fromPopstate){
  else if(p==='branch_mgmt') _filoPageBranchMgmt(el);
  else if(p==='hq_notice') _filoPageHqNotice(el);
  else if(p==='hq_qsc') _filoPageQSC(el);
+ else if(p==='delivery') _filoPageDelivery(el);
  else _routed=false;
 
  /* 라우팅되지 않은 페이지 안내 (이전 화면이 그대로 남는 것을 막는다) */
