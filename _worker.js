@@ -8245,10 +8245,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
           // 비동기 처리 (waitUntil 사용)
           const fileBuffer = await file.arrayBuffer();
-          // x-sly-ak: seolyuhana 프록시 워커가 자신의 ANTHROPIC_API_KEY 전달 → 우선 사용 (없으면 메인 워커 폴백)
-          const slyAk = request.headers.get('x-sly-ak');
-          const slyEnv = slyAk ? Object.assign(Object.create(null), env, {ANTHROPIC_API_KEY: slyAk}) : env;
-          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env: slyEnv, token, pointCost, isSuperAdmin};
+          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env, token, pointCost, isSuperAdmin};
           ctx.waitUntil(_slyProcessJob(processingCtx));
 
           const SERVICE_EST_SEC = {resume_analysis:60,cover_letter_analysis:70,cover_letter_rewrite:90,cover_letter_translation:60,interview_questions:45,employment_contract:60,freelance_contract:60,rental_contract:60,registry_analysis:70,public_doc_analysis:30,workplace_tone:20,career_saju:25,notice_summary:20,insurance_scan:50,webtoon_analysis:60,shortfilm_analysis:70,drama_series_analysis:80,bizplan_analysis:70,shortform_script:30,ai_photo:25,subtitle_create:35};
