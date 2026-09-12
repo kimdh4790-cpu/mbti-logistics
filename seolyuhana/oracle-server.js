@@ -4523,89 +4523,37 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
-// workspace ID 지연 조회: 첫 요청 시 1회 조회 후 캐시 (서버 시작 시 API 호출 금지)
-let _workspaceIdCache = null;
-
-function fetchWorkspaceId(apiKey) {
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname: 'api.anthropic.com', port: 443,
-      path: '/v1/workspaces?limit=1', method: 'GET',
-      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' }
-    }, (wsRes) => {
-      let data = '';
-      wsRes.on('data', c => { data += c; });
-      wsRes.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          const wid = (json.data?.[0]?.id || '').replace(/[^a-zA-Z0-9_\-]/g, '').trim();
-          if (wid) {
-            _workspaceIdCache = wid;
-            console.log('[claude-proxy] workspace ID 캐시:', wid);
-          } else {
-            console.warn('[claude-proxy] workspace ID 없음, 응답:', data.slice(0, 200));
-          }
-        } catch (e) {
-          console.warn('[claude-proxy] workspace ID 파싱 오류:', e.message);
-        }
-        resolve(_workspaceIdCache);
-      });
-    });
-    req.on('error', (e) => { console.warn('[claude-proxy] workspace 조회 실패:', e.message); resolve(null); });
-    req.setTimeout(10000, () => { req.destroy(); resolve(null); });
-    req.end();
-  });
-}
-
-function makeClaudeRequest(bodyStr, apiKey, wsId) {
-  return new Promise((resolve, reject) => {
-    const reqHeaders = {
-      'content-type': 'application/json',
-      'content-length': Buffer.byteLength(bodyStr),
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    };
-    if (wsId) reqHeaders['anthropic-workspace-id'] = wsId;
-    const proxyReq = https.request({
-      hostname: 'api.anthropic.com', port: 443,
-      path: '/v1/messages', method: 'POST',
-      headers: reqHeaders, timeout: 120000
-    }, (proxyRes) => {
-      let data = '';
-      proxyRes.on('data', chunk => { data += chunk; });
-      proxyRes.on('end', () => resolve({ status: proxyRes.statusCode, body: data }));
-    });
-    proxyReq.on('error', reject);
-    proxyReq.on('timeout', () => { proxyReq.destroy(); reject(new Error('upstream timeout')); });
-    proxyReq.write(bodyStr);
-    proxyReq.end();
-  });
-}
-
 app.post('/claude-proxy', async (req, res) => {
   try {
     const apiKey = (process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'] || '').replace(/[^\x21-\x7E]/g, '');
-    if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
-    if (apiKey.length < 20) return res.status(401).json({ error: 'ANTHROPIC_API_KEY가 너무 짧습니다.' });
+    if (!apiKey || apiKey.length < 20) return res.status(401).json({ error: 'ANTHROPIC_API_KEY 미설정 또는 오류' });
+
+    const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^\x21-\x7E]/g, '').trim();
+    if (!wsId) return res.status(500).json({ error: 'ANTHROPIC_WORKSPACE_ID가 설정되지 않았습니다. VM에서 export ANTHROPIC_WORKSPACE_ID=wrkspc_01... 후 pm2 restart oracle-server --update-env 실행' });
 
     const bodyStr = JSON.stringify(req.body);
-
-    // 1차: 캐시된 workspace ID로 시도 (없으면 헤더 생략)
-    let result = await makeClaudeRequest(bodyStr, apiKey, _workspaceIdCache || '');
-
-    // 400이고 workspace 관련 오류면 ID 새로 조회 후 1회 재시도
-    if (result.status === 400) {
-      try {
-        const parsed = JSON.parse(result.body);
-        const errMsg = (parsed.error?.message || '').toLowerCase();
-        if (errMsg.includes('workspace')) {
-          console.log('[claude-proxy] workspace 오류 → ID 재조회 후 재시도');
-          _workspaceIdCache = null;
-          const freshId = await fetchWorkspaceId(apiKey);
-          result = await makeClaudeRequest(bodyStr, apiKey, freshId || '');
-        }
-      } catch (_) {}
-    }
+    const result = await new Promise((resolve, reject) => {
+      const proxyReq = https.request({
+        hostname: 'api.anthropic.com', port: 443,
+        path: '/v1/messages', method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(bodyStr),
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-workspace-id': wsId
+        },
+        timeout: 120000
+      }, (proxyRes) => {
+        let data = '';
+        proxyRes.on('data', chunk => { data += chunk; });
+        proxyRes.on('end', () => resolve({ status: proxyRes.statusCode, body: data }));
+      });
+      proxyReq.on('error', reject);
+      proxyReq.on('timeout', () => { proxyReq.destroy(); reject(new Error('upstream timeout')); });
+      proxyReq.write(bodyStr);
+      proxyReq.end();
+    });
 
     try { res.status(result.status).json(JSON.parse(result.body)); }
     catch (e) { res.status(result.status).send(result.body); }
