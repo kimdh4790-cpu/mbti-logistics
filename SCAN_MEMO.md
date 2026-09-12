@@ -55,6 +55,22 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-12~13)
+
+### Claude API 연결 오류 — 완전 해결
+- **증상**: SCAN 앱 분석 시 Claude API 오류 연속 발생 (며칠간 중단)
+- **원인 1**: Oracle VM `oracle-server.js`가 잘못된 workspace ID(플레이스홀더 `sk-ant-여기에키입력`)를 PM2에 저장, 자동 조회 로직이 `/v1/workspaces`도 workspace ID 필요해 chicken-egg 문제 발생
+- **원인 2**: 분석 모델 `claude-3-5-haiku-20241022` → 해당 workspace에 없는 모델
+- **해결**:
+  1. `seolyuhana/oracle-server.js`: workspace ID 자동조회 제거, `ANTHROPIC_WORKSPACE_ID` env 변수 필수화
+  2. VM에 `ANTHROPIC_WORKSPACE_ID=wrkspc_01QZEG8BPU9b7jE5S87zAnKx` 설정 (`pm2 restart --update-env`)
+  3. `seolyuhana/services/analyze.js`: 모델 전체 `claude-3-5-haiku-20241022` → `claude-haiku-4-5-20251001`
+- **VM 설정값** (재시작 시 필요):
+  - `ANTHROPIC_API_KEY`: sk-ant-api03-... (Anthropic Console에서 확인)
+  - `ANTHROPIC_WORKSPACE_ID`: wrkspc_01QZEG8BPU9b7jE5S87zAnKx (Default workspace)
+
+---
+
 ## 경쟁사 조사 결과 (2026-09-07 전수조사 v2, Artifact 보고서 참고)
 
 ### 이력서·자소서 분석
