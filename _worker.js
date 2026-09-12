@@ -8214,12 +8214,13 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
           // 비동기 처리 (waitUntil 사용)
           const fileBuffer = await file.arrayBuffer();
-          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env, token};
+          const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env, token, pointCost, isSuperAdmin};
           ctx.waitUntil(_slyProcessJob(processingCtx));
 
+          const SERVICE_EST_SEC = {resume_analysis:60,cover_letter_analysis:70,cover_letter_rewrite:90,cover_letter_translation:60,interview_questions:45,employment_contract:60,freelance_contract:60,rental_contract:60,registry_analysis:70,public_doc_analysis:30,workplace_tone:20,career_saju:25,notice_summary:20,insurance_scan:50,webtoon_analysis:60,shortfilm_analysis:70,drama_series_analysis:80,bizplan_analysis:70,shortform_script:30,ai_photo:25,subtitle_create:35};
           return Response.json({
             ok: true, jobId,
-            estimatedSec: 30,
+            estimatedSec: SERVICE_EST_SEC[serviceId] || 60,
             pointsCharged: pointCost,
             balance: balance - pointCost
           });
@@ -8379,13 +8380,25 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           if (f.status?.stringValue !== 'pending') return Response.json({ok:false,error:'이미 처리된 신청입니다.'},{status:409});
           const uid = f.uid?.stringValue;
           const points = parseInt(f.points?.integerValue) || 0;
+          const docUpdateTime = reqDoc.updateTime; // 동시 승인 방지용 precondition
 
-          // 포인트 적립 + 상태 변경
-          const [_, __, ___] = await Promise.all([
-            fetch(`${FS_BASE}:runQuery`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+          // 상태를 approved로 원자적 변경 (updateTime precondition — 두 번째 승인 시 409 반환)
+          const approveStatusRes = await fetch(
+            `${FS_BASE}/sly_point_requests/${reqId}?updateMask.fieldPaths=status&updateMask.fieldPaths=approvedAt&currentDocument.updateTime=${encodeURIComponent(docUpdateTime)}`,
+            {method:'PATCH',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+             body:JSON.stringify({fields:{status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}}) }
+          );
+          if (!approveStatusRes.ok) {
+            const approveErr = await approveStatusRes.json().catch(()=>({}));
+            if (approveStatusRes.status === 409) return Response.json({ok:false,error:'이미 처리된 신청입니다. (동시 승인 방지)'},{status:409});
+            throw new Error('상태 업데이트 실패: ' + (approveErr.error?.message || approveStatusRes.status));
+          }
+
+          // 포인트 적립 + 이력 기록 (상태 변경 후 실행)
+          await Promise.all([
+            fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {method:'POST',headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
               body:JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,
               fieldTransforms:[{fieldPath:'balance',increment:{integerValue:points}}]}}]})}),
-            fsPatch(token, `${FS_BASE}/sly_point_requests/${reqId}`, {status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}),
             fsPatch(token, `${FS_BASE}/sly_point_history/${crypto.randomUUID()}`, {uid:{stringValue:uid},type:{stringValue:'charge'},amount:{integerValue:points},reqId:{stringValue:reqId},createdAt:{stringValue:new Date().toISOString()}})
           ]);
           return Response.json({ok:true, uid, points, message:`${points.toLocaleString()}P 충전 완료`});
@@ -8834,7 +8847,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       }
 
       // ── 서류하나 비동기 처리 함수 (waitUntil 내에서 실행) ──────────────
-      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang='en', jeonseDeposit=null, env, token}) {
+      async function _slyProcessJob({jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang='en', jeonseDeposit=null, env, token, pointCost=0, isSuperAdmin=false}) {
         const setProgress = async (p, status='processing') => {
           await fsPatch(token, `${FS_BASE}/sly_jobs/${jobId}`, {progress:{integerValue:p},status:{stringValue:status}});
         };
@@ -8857,7 +8870,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
-          // 90초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
+          // 150초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
           const _slyAnalysisTimeout = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')), 150000)
           );
@@ -8938,6 +8951,26 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             status:  { stringValue: 'failed' },
             error:   { stringValue: err.message || '알 수 없는 오류' }
           }).catch((e2) => { console.error('[SCAN] fsPatch failed status update:', e2?.message); });
+
+          // 분석 실패 시 포인트 자동 환불
+          if (!isSuperAdmin && pointCost > 0) {
+            try {
+              await fetch(`${FS_BASE.replace('/documents','').replace('/v1','')}/v1${FS_BASE.split('/v1')[1]}:runTransaction`, {
+                method: 'POST',
+                headers: {'Authorization':`Bearer ${token}`,'Content-Type':'application/json'},
+                body: JSON.stringify({writes:[{transform:{document:`projects/mbti-logistics/databases/(default)/documents/sly_points/${uid}`,fieldTransforms:[{fieldPath:'balance',increment:{integerValue:pointCost}}]}}]})
+              });
+              const refundHistId = crypto.randomUUID();
+              await fsPatch(token, `${FS_BASE}/sly_point_history/${refundHistId}`, {
+                uid:{stringValue:uid}, type:{stringValue:'refund'}, amount:{integerValue:pointCost},
+                serviceId:{stringValue:serviceId}, jobId:{stringValue:jobId},
+                reason:{stringValue:'분석 실패 자동 환불'}, createdAt:{stringValue:new Date().toISOString()}
+              });
+              console.log('[SCAN] 포인트 환불 완료:', uid, pointCost, jobId);
+            } catch(refundErr) {
+              console.error('[SCAN] 포인트 환불 실패:', refundErr?.message, uid, pointCost, jobId);
+            }
+          }
         }
       }
 
