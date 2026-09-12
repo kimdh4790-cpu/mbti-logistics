@@ -30,6 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy Worker (Global API Key)
+        continue-on-error: true
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CF_EMAIL: kimdh4790@gmail.com
@@ -61,6 +62,26 @@ jobs:
             printf '%s' "$IROS_EMONEY_NO2" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_NO2 2>&1 || echo "⚠️ IROS_EMONEY_NO2 시크릿 설정 실패 (무시)"
             printf '%s' "$IROS_EMONEY_PWD" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_PWD 2>&1 || echo "⚠️ IROS_EMONEY_PWD 시크릿 설정 실패 (무시)"
           fi
+      - name: Deploy Seolyuhana Worker
+        continue-on-error: true
+        env:
+          CF_TOKEN: ${{ secrets.WORKERS_EDIT_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ACCOUNT="02709cbec18d848913b4246015b9148f"
+          WORKER="seolyuhana"
+          CF_TOKEN="$(printf '%s' "$CF_TOKEN" | tr -d '\r\n\t ')"
+          # multipart/form-data로 ES Module Worker 업로드
+          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$WORKER" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            -F "index.js=@seolyuhana_worker.js;type=application/javascript+module" \
+            -F 'metadata={"main_module":"index.js"};type=application/json')
+          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✅ SUCCESS' if d.get('success') else '❌ FAIL:'+str(d.get('errors',''))[:200])" || echo "결과: $RESULT" | head -c 300
+          printf '%s' "$ANTHROPIC_API_KEY" | \
+            CLOUDFLARE_API_TOKEN="$CF_TOKEN" \
+            npx wrangler@4 secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
+          echo "Worker 시크릿 등록 완료" 
+
       - name: Deploy Yongcha Worker
         continue-on-error: true
         env:
@@ -110,6 +131,21 @@ jobs:
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
+          # seolyuhana 서비스 파일 업로드
+          for SFILE in seolyuhana/services/analyze.js seolyuhana/utils/parser.js seolyuhana/output/builder.js; do
+            [ -f "$SFILE" ] || continue
+            KV_KEY="${SFILE}"
+            RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$KV_KEY" \
+              -H "X-Auth-Email: kimdh4790@gmail.com" \
+              -H "X-Auth-Key: $CF_KEY_CLEAN" \
+              -H "Content-Type: text/plain; charset=utf-8" \
+              --data-binary @"$SFILE")
+            if echo "$RESULT" | grep -q '"success":true'; then
+              echo "✅ $SFILE"
+            else
+              echo "❌ $SFILE: $RESULT"
+            fi
+          done
           for FILE in filo.html filo-smart-pos.html filo-common.js filo-auth.js filo-margin.js filo-booking.js filo-members.js filo-menu-mgmt.js filo-menu-recipe.js filo-menu-image.js filo-menu-templates.js filo-payroll2.js filo-payment.js filo-schedule.js filo-settings.js filo-pos.js filo-pos-core.js filo-pos-ui.js filo-pos-pay.js filo-menu.js filo-qr.js filo-inventory.js filo-report.js filo-table.js filo-staff.js filo-order.js filo-order-common.js filo-landing.js filo-landing.html filo-memo.js dine.html dine.js dine-schedule.js dine-analytics.js dine-staff.js dine-payroll.js dine-sales.js dine-tax.js dine-member.js dine-landing.html donway_landing.js order.html order.js order-done.html table-order.html store.html kitchen.html yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html contract.html contract-sign.html emergency.html drivers.html scan.html label.html mbtico_hub.html seolyuhana.html; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
