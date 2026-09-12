@@ -224,7 +224,7 @@ async function tryOraclePdfImages(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(40000)
+      signal: AbortSignal.timeout(20000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfImages] HTTP 오류:', res.status, await res.text().catch(() => ''));
@@ -249,7 +249,7 @@ async function tryOraclePdfText(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(8000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
@@ -274,7 +274,7 @@ async function tryOraclePdfOcr(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(60000)
+      signal: AbortSignal.timeout(20000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfOcr] HTTP 오류:', res.status);
