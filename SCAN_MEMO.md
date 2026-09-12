@@ -320,6 +320,7 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-12 | **SCAN 분석 403 완전 수정 (PR #70)**: analyze.js 15곳 `claude-3-5-haiku-20241022` → 프리미엄(이력서/자소서/계약서/등기부/스캔PDF) `claude-sonnet-4-6`, 표준(번역/면접/공문서 등) `claude-haiku-4-5-20251001`. scan.html 중복 헤더 52줄 제거 (미닫힌 `<style>` + 중복 meta/link). |
 | 2026-09-12 | INSURANCE_SYSTEM 섀도잉 제거(analyze.js), TOCTOU 원자 차감(_worker.js), alert()→_toast() 교체(_worker.js /booking·/swap) |
 | 2026-09-12 | _worker.js + analyze.js 전체에서 anthropic-workspace-id 헤더 16개 완전 제거 → SCAN "Claude API 400" 오류 근본 수정. 원인: 개인 API키로 workspace-id 헤더 전송 시 400 반환 |
 | 2026-09-12 | **SCAN 분석 403→400 오류 완전 수정**: ① `seolyuhana_worker.js` 프록시 대상 `mbti-logistics.kimdh4790.workers.dev`(workers_dev=false로 비활성화) → `filo.ai.kr` 교체 (404 수정). ② `analyze.js` `callClaude()` + 스캔 경로 `anthropic-workspace-id` 헤더 3중 중복 제거 — 개인 API 키에 workspace-id 헤더 포함 시 400 오류 발생. ③ `mbtico-pages/_worker.js:2860` API 키 검증 모델 `claude-3-haiku-20240307`(단종) → `claude-haiku-4-5` 교체. 현재 `analyze.js`는 `claude-sonnet-4-6` + 워크스페이스 헤더 없음 상태로 정상 작동 |
