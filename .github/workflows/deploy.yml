@@ -65,23 +65,19 @@ jobs:
       - name: Deploy Seolyuhana Worker
         continue-on-error: true
         env:
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-          CF_EMAIL: kimdh4790@gmail.com
+          CF_TOKEN: ${{ secrets.CF_API_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           WORKER="seolyuhana"
-          # Cloudflare API로 직접 Worker 스크립트 업로드
+          CF_TOKEN="$(printf '%s' "$CF_TOKEN" | tr -d '\r\n\t ')"
           RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$WORKER" \
-            -H "X-Auth-Email: $CF_EMAIL" \
-            -H "X-Auth-Key: $CF_KEY" \
+            -H "Authorization: Bearer $CF_TOKEN" \
             -H "Content-Type: application/javascript" \
             --data-binary @seolyuhana_worker.js)
-          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('배포 성공' if d.get('success') else '배포 실패: '+str(d.get('errors','')))"
-          # ANTHROPIC_API_KEY 시크릿 등록
+          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('SUCCESS' if d.get('success') else 'FAIL:'+str(d.get('errors','')))"
           printf '%s' "$ANTHROPIC_API_KEY" | \
-            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" \
+            CLOUDFLARE_API_TOKEN="$CF_TOKEN" \
             npx wrangler@4 secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
 
       - name: Deploy Yongcha Worker
