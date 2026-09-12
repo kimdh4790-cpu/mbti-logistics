@@ -214,11 +214,11 @@ async function parsePdf(buffer, env) {
 async function tryOraclePdfImages(buffer, env) {
   try {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
-    const res = await fetch(`${oracleBase}/api/pdf-to-images?maxPages=8`, {
+    const res = await fetch(`${oracleBase}/api/pdf-to-images?maxPages=15`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(50000)
+      signal: AbortSignal.timeout(40000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfImages] HTTP 오류:', res.status, await res.text().catch(() => ''));
@@ -243,7 +243,7 @@ async function tryOraclePdfText(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(25000)
+      signal: AbortSignal.timeout(20000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
