@@ -207,6 +207,75 @@ app.post('/api/pdf-to-images', async (req, res) => {
   }
 });
 
+// ── /api/pdf-ocr  PDF 전체 → pdftoppm → PaddleOCR → 텍스트 (장수 제한 없음) ────
+// 스캔 PDF도 텍스트 추출 가능. Vision 전 단계 폴백으로 사용.
+app.post('/api/pdf-ocr', async (req, res) => {
+  let tmpDir = null;
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const pdfBuffer = Buffer.concat(chunks);
+    if (!pdfBuffer || pdfBuffer.length === 0) return res.status(400).json({ error: '파일 없음' });
+
+    const maxPages = Math.min(parseInt(req.query.maxPages || '30', 10), 50);
+    const OCR_PORT = process.env.OCR_PORT || '3101';
+
+    tmpDir = await mkdtemp(join(tmpdir(), 'pdf-ocr-'));
+    const pdfPath = join(tmpDir, 'input.pdf');
+    await writeFile(pdfPath, pdfBuffer);
+
+    // 페이지 수 확인
+    let totalPages = 1;
+    try {
+      const info = await execFileAsync('pdfinfo', [pdfPath], { timeout: 8000 });
+      const m = info.stdout.match(/Pages:\s*(\d+)/);
+      if (m) totalPages = parseInt(m[1], 10);
+    } catch (_) {}
+
+    const pagesToConvert = Math.min(totalPages, maxPages);
+    const imgPrefix = join(tmpDir, 'page');
+
+    // 100dpi로 변환 (OCR 정확도 vs 속도 균형)
+    await execFileAsync('pdftoppm', [
+      '-jpeg', '-r', '150',
+      '-l', String(pagesToConvert),
+      pdfPath, imgPrefix
+    ], { timeout: 60000 });
+
+    const allFiles = await readdir(tmpDir);
+    const imgFiles = allFiles.filter(f => f.startsWith('page') && f.endsWith('.jpg')).sort();
+
+    const pageTexts = [];
+    for (const imgFile of imgFiles.slice(0, pagesToConvert)) {
+      try {
+        const imgData = await readFile(join(tmpDir, imgFile));
+        const form = new FormData();
+        form.append('file', new Blob([imgData], { type: 'image/jpeg' }), imgFile);
+        const ocrRes = await fetch(`http://localhost:${OCR_PORT}/ocr`, {
+          method: 'POST', body: form, signal: AbortSignal.timeout(15000)
+        });
+        if (ocrRes.ok) {
+          const d = await ocrRes.json();
+          const text = Array.isArray(d.texts) ? d.texts.join('\n') : (d.text || '');
+          if (text.trim()) pageTexts.push(text.trim());
+        }
+      } catch (e) {
+        console.error(`[pdf-ocr] 페이지 ${imgFile} OCR 실패:`, e.message);
+      }
+    }
+
+    res.json({ text: pageTexts.join('\n\n'), pageCount: totalPages, ocrPages: pageTexts.length });
+  } catch (e) {
+    if (e.cause?.code === 'ECONNREFUSED') {
+      return res.status(503).json({ error: 'OCR 서버 오프라인' });
+    }
+    console.error('[pdf-ocr]', e.message);
+    res.status(500).json({ error: e.message });
+  } finally {
+    if (tmpDir) await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 // ── /api/ocr  이미지·PDF → 텍스트 (PaddleOCR, 포트 3101) ──────────────────────
 app.post('/api/ocr', upload.single('file'), async (req, res) => {
   try {
