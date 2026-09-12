@@ -4559,8 +4559,10 @@ function fetchWorkspaceId(apiKey) {
 
 app.post('/claude-proxy', async (req, res) => {
   try {
-    const apiKey = (process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'] || '').trim();
+    // 모바일/쉘 입력 오염 방지: ASCII 출력 가능 문자만 허용 (0x21-0x7E)
+    const apiKey = (process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'] || '').replace(/[^\x21-\x7E]/g, '');
     if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
+    if (apiKey.length < 20) return res.status(401).json({ error: 'ANTHROPIC_API_KEY가 너무 짧습니다. VM에서 키를 다시 설정해주세요.' });
 
     // workspace ID: 환경변수 → 캐시 → 지연 조회 순서
     let wsId = (process.env.ANTHROPIC_WORKSPACE_ID || _workspaceIdCache || '').replace(/[^a-zA-Z0-9_\-]/g, '');
