@@ -224,6 +224,45 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 
 ---
 
+## ✅ 2026-09-12 버그 수정 (SCAN 코드 전체 체크 후 개선)
+
+### 수정 파일: `_worker.js`, `seolyuhana/services/analyze.js`, `scan.html`
+### 커밋: `52399db2`
+
+1. **Claude API 403 오류 수정** (이전 세션 커밋 `f948b00a`):
+   - 원인: `analyze.js` 전체 15곳에서 `claude-sonnet-4-6` 사용 → API 키 미허용 모델
+   - 수정: 전체 `claude-haiku-4-5-20251001`로 교체 (권한 있는 모델)
+
+2. **anthropic-workspace-id 400 오류 수정** (이전 세션 커밋 `a0beafbb`):
+   - 원인: `_worker.js` 16곳에 `'anthropic-workspace-id'` 헤더 잔존
+   - 수정: 전체 제거
+
+3. **분석 실패 시 포인트 자동 환불** (`_worker.js`):
+   - 포인트 선차감 후 `_slyProcessJob` catch 블록에서 Firestore 트랜잭션으로 환불
+   - `sly_point_history`에 `type:'refund'` 이력 기록
+   - `processingCtx`에 `pointCost`, `isSuperAdmin` 전달 추가
+
+4. **이중 승인 방지 (더블 어프루브)** (`_worker.js` `/api/seolyuhana/point-approve`):
+   - 기존: 상태 읽기 → 상태 쓰기 (비원자적, 두 번 승인 가능)
+   - 수정: Firestore `currentDocument.updateTime` precondition 적용 → 두 번째 승인 시 HTTP 409 반환
+
+5. **서비스별 estimatedSec 정확화** (`_worker.js`):
+   - 기존: 모든 서비스 하드코딩 `30s`
+   - 수정: `SERVICE_EST_SEC` 맵 추가 (interview_questions:45 ~ drama_series_analysis:80 등)
+
+6. **JSON 파싱 3단계 폴백** (`analyze.js`):
+   - 기존: `JSON.parse(rawText)` 단일 시도 → 코드블록 응답 시 실패
+   - 수정: ① 순수 JSON → ② ```json 코드블록 → ③ 정규식 `\{[\s\S]*\}` 추출
+
+7. **scan.html 폴링 지수 백오프** (`scan.html`):
+   - 기존: 고정 2초, 90회 초과 시 중단 (~3분)
+   - 수정: 2s → 1.3배 증가 → 최대 10s, 175s 경과 시 중단 (서버 부하 감소)
+
+8. **분석 실패 토스트 개선** (`scan.html`):
+   - 실패 시 "포인트는 자동 환불됩니다" 안내 + 2초 후 잔액 자동 갱신
+
+---
+
 ## 🗒️ 2026-09-08 논의·계획 메모
 
 ### SCAN 제조 견적 기능 (신규 수익화)
