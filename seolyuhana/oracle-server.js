@@ -4515,11 +4515,10 @@ app.post('/api/iros-selftest', async (req, res) => {
 });
 
 // ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
-// analyze.js에서 직접 api.anthropic.com 호출 시 403 (Cloudflare IP 차단)
-// → Oracle Cloud를 경유하면 일반 IP로 통과
+// Oracle VM 자신의 ANTHROPIC_API_KEY(workspace 스코프)를 사용 — Cloudflare Admin키 우회
 app.post('/claude-proxy', async (req, res) => {
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey) return res.status(401).json({ error: 'x-api-key 헤더 필수' });
+  const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
+  if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
   try {
     const upstream = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
