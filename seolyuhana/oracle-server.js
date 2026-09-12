@@ -4521,17 +4521,21 @@ app.post('/claude-proxy', (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'];
   if (!apiKey) return res.status(401).json({ error: 'ANTHROPIC_API_KEY not set on Oracle VM' });
   const bodyStr = JSON.stringify(req.body);
+  const reqHeaders = {
+    'content-type': 'application/json',
+    'content-length': Buffer.byteLength(bodyStr),
+    'x-api-key': apiKey,
+    'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
+  };
+  if (process.env.ANTHROPIC_WORKSPACE_ID) {
+    reqHeaders['anthropic-workspace-id'] = process.env.ANTHROPIC_WORKSPACE_ID;
+  }
   const options = {
     hostname: 'api.anthropic.com',
     port: 443,
     path: '/v1/messages',
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'content-length': Buffer.byteLength(bodyStr),
-      'x-api-key': apiKey,
-      'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
-    },
+    headers: reqHeaders,
     timeout: 120000
   };
   const proxyReq = https.request(options, (proxyRes) => {
