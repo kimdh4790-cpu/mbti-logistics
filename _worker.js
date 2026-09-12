@@ -8903,7 +8903,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 
           // 150초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
           const _slyAnalysisTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')), 150000)
+            setTimeout(() => reject(new Error('분석 시간 초과 (240초). 잠시 후 다시 시도해주세요.')), 240000)
           );
 
           let analysisData;
