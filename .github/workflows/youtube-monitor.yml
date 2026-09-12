@@ -1,0 +1,49 @@
+name: YouTube 채널 일별 모니터링
+
+# 매일 09:00 KST (00:00 UTC) 실행
+# 28개 YouTube 채널 새 영상 감지 → Claude Haiku 분류 → SMS 알림
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 매일 00:00 UTC = 09:00 KST
+  workflow_dispatch:
+
+jobs:
+  youtube-monitor:
+    name: YouTube 모니터링
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ALIGO_API_KEY: ${{ secrets.ALIGO_API_KEY }}
+      ALIGO_USER_ID: ${{ secrets.ALIGO_USER_ID }}
+      ALIGO_SENDER: ${{ secrets.ALIGO_SENDER }}
+      ADMIN_PHONE: ${{ secrets.ADMIN_PHONE }}
+
+    steps:
+      - name: 코드 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 의존성 설치
+        run: npm ci --ignore-scripts
+
+      - name: YouTube 채널 모니터링 실행
+        run: node scripts/monitor/content-monitor.js
+
+      - name: 결과 아티팩트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-monitor-${{ github.run_number }}
+          path: |
+            output/monitor-digest.json
+            output/monitor-state.json
+          if-no-files-found: warn
+          retention-days: 14
