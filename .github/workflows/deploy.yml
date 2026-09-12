@@ -80,6 +80,7 @@ jobs:
           printf '%s' "$ANTHROPIC_API_KEY" | \
             CLOUDFLARE_API_TOKEN="$CF_TOKEN" \
             npx wrangler@4 secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
+          echo "Worker 시크릿 등록 완료" 
 
       - name: Deploy Yongcha Worker
         continue-on-error: true
