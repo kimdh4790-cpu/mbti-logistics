@@ -3433,7 +3433,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               'content-type':'application/json'
             },
             body:JSON.stringify({
-              model: body.model||'claude-3-5-sonnet-20241022',
+              model: body.model||'claude-3-haiku-20240307',
               max_tokens: Math.min(body.max_tokens||500, 1000),
               messages: body.messages||[]
             })
