@@ -4,14 +4,17 @@
  * 모든 함수는 { ok: true, data: {...} } 또는 { ok: false, error: string } 반환
  */
 
-const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-
 // ────────────────────────────────────────────────────────────
 // 공통 Claude 호출 헬퍼
+// Cloudflare Workers → api.anthropic.com 직접 호출 시 403 (IP 차단)
+// → Oracle Cloud (oracle.mbtico.kr/claude-proxy) 경유로 우회
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
   const apiKey = env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+
+  const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
+  const proxyUrl = `${oracleBase}/claude-proxy`;
 
   const body = {
     model,
@@ -20,7 +23,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     messages: [{ role: 'user', content: userBlocks }]
   };
 
-  const res = await fetch(ANTHROPIC_API, {
+  const res = await fetch(proxyUrl, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',

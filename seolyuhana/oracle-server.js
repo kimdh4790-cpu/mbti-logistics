@@ -4514,6 +4514,31 @@ app.post('/api/iros-selftest', async (req, res) => {
   }
 });
 
+// ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
+// analyze.js에서 직접 api.anthropic.com 호출 시 403 (Cloudflare IP 차단)
+// → Oracle Cloud를 경유하면 일반 IP로 통과
+app.post('/claude-proxy', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+  if (!apiKey) return res.status(401).json({ error: 'x-api-key 헤더 필수' });
+  try {
+    const upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': req.headers['anthropic-version'] || '2023-06-01'
+      },
+      body: JSON.stringify(req.body),
+      signal: AbortSignal.timeout(120000)
+    });
+    const data = await upstream.json().catch(() => ({}));
+    res.status(upstream.status).json(data);
+  } catch (e) {
+    console.error('[claude-proxy]', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[seolyuhana-oracle] 서버 시작 port=${PORT}`);
