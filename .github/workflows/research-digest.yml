@@ -40,6 +40,10 @@ jobs:
       - name: 의존성 설치
         run: npm ci --ignore-scripts
 
+      - name: YouTube 채널 모니터링 (content-monitor)
+        run: node scripts/monitor/content-monitor.js
+        continue-on-error: true
+
       - name: 정보수집 실행
         run: node scripts/monitor/research-digest.js
 
@@ -52,5 +56,6 @@ jobs:
             output/research-digest-*.json
             output/inflearn-digest.json
             output/producthunt-digest.json
+            output/monitor-digest.json
           if-no-files-found: warn
           retention-days: 30
