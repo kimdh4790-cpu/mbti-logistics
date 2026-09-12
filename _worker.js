@@ -5284,14 +5284,14 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         async function _slyProcessJob({jobId,uid,serviceId,filename,fileBuffer,jdText,resumeJobId,targetLang='en',jeonseDeposit=null,env,token}) {
           const setProgress=async(p,status='processing')=>fsPatch(token,`${FS_BASE}/sly_jobs/${jobId}`,{progress:{integerValue:p},status:{stringValue:status}});
           try {
-            const {parseFile,makeOutputFilename}=Promise.resolve({parseFile,makeOutputFilename});
+            // parseFile, makeOutputFilename available globally
             await setProgress(10);
             const parsed=await parseFile(fileBuffer,filename,'',env);
             if(parsed.pageCount>50) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 50)`);
             await setProgress(25);
             let resumeText='';
             if(resumeJobId){const rDoc=await fsGet(token,`${FS_BASE}/sly_jobs/${resumeJobId}`);resumeText=rDoc?.fields?.originalText?.stringValue||'';}
-            const {analyzeResume,analyzeCoverLetter,rewriteCoverLetter,translateCoverLetter,generateInterviewQuestions,analyzeContract,analyzeScannedPdf,analyzeRegistry,analyzePublicDoc}=Promise.resolve({analyzeResume,analyzeCoverLetter,rewriteCoverLetter,translateCoverLetter,generateInterviewQuestions,analyzeContract,analyzeScannedPdf,analyzeRegistry,analyzePublicDoc,analyzeWebtoon,analyzeShortFilm,analyzeDramaSeries,analyzeInsurance,analyzeBizPlan});
+            // analyze functions available globally
             await setProgress(40);
             const _slyAnalysisTimeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error('분석 시간 초과 (150초). 잠시 후 다시 시도해주세요.')),150000));
             const _runAnalysis=async()=>{
@@ -5308,7 +5308,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             };
             let analysisData=await Promise.race([_runAnalysis(),_slyAnalysisTimeout]);
             await setProgress(70);
-            const {buildDocx,buildPdf}=Promise.resolve({buildDocx,buildPdf});
+            // buildDocx, buildPdf available globally
             const docxBuffer=await buildDocx(analysisData,serviceId,filename,parsed.text||'');
             await setProgress(85);
             let pdfBuffer=null;
@@ -11549,7 +11549,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         };
         try {
           // 1. 파일 파싱 (동적 import — Workers 모듈 시스템)
-          const { parseFile, makeOutputFilename } = Promise.resolve({parseFile,makeOutputFilename});
+          // parseFile, makeOutputFilename available globally
           await setProgress(10);
           const parsed = await parseFile(fileBuffer, filename, '', env);
           if (parsed.pageCount > 50) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 50)`);
@@ -11563,7 +11563,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // 3. Claude 분석
-          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan } = Promise.resolve({analyzeResume,analyzeCoverLetter,rewriteCoverLetter,translateCoverLetter,generateInterviewQuestions,analyzeContract,analyzeScannedPdf,analyzeRegistry,analyzePublicDoc,analyzeWebtoon,analyzeShortFilm,analyzeDramaSeries,analyzeInsurance,analyzeBizPlan});
+          // analyze functions available globally
           await setProgress(40);
 
           // 90초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
@@ -11610,7 +11610,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           await setProgress(70);
 
           // 4. 출력 파일 생성
-          const { buildDocx, buildPdf } = Promise.resolve({buildDocx,buildPdf});
+          // buildDocx, buildPdf available globally
           const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '');
           await setProgress(85);
           let pdfBuffer = null;
