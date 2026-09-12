@@ -298,9 +298,29 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 - **AIVO 섹션**: 히어로급으로 전면 배치
 - **우선순위**: scan.html 다음
 
+## ✅ 2026-09-12 코드 감사 후 잔여 이슈 수정 (세션 2)
+
+### 수정 파일: `_worker.js`, `seolyuhana/services/analyze.js`
+
+1. **analyzeInsurance INSURANCE_SYSTEM 섀도잉 제거** (`analyze.js`):
+   - 원인: 모듈 레벨에 66줄 분량의 `const INSURANCE_SYSTEM` 상수가 선언되어 함수 내부 동명 상수를 완전 가리는 dead code 존재
+   - 수정: 모듈 레벨 상수 전체 제거, 함수 선언 복원 → `analyzeInsurance` 함수 내부 `INSURANCE_SYSTEM`만 남음
+
+2. **TOCTOU 포인트 차감 원자화** (`_worker.js` `/api/seolyuhana/analyze`):
+   - 원인: 잔액 read → check → increment 순서가 비원자적 → 동시 요청 시 둘 다 check 통과 후 overdraw 가능
+   - 수정: `currentDocument.updateTime` precondition PATCH 패턴 적용 (최대 3회 재시도, 409 시 fresh read→retry)
+   - 동시 요청이 updateTime 불일치 → HTTP 409 → 재시도 또는 `포인트 부족` 반환으로 이중 차감 불가
+
+3. **alert() → _toast() 교체** (`_worker.js` `/booking`, `/swap` 인라인 HTML):
+   - 원인: filo-common.js 없는 독립 페이지에서 alert() 15곳 사용 (CLAUDE.md 금지 항목)
+   - 수정: 각 `<script>` 블록 상단에 `_toast(msg, dur)` 함수 인라인 정의 후 전체 교체
+   - `/booking`: 8곳 (`addToHome`·`submitReserve` 내 모든 alert)
+   - `/swap`: 7곳 (`loadMyDays`·`acceptExchange` 내 모든 alert)
+
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-12 | INSURANCE_SYSTEM 섀도잉 제거(analyze.js), TOCTOU 원자 차감(_worker.js), alert()→_toast() 교체(_worker.js /booking·/swap) |
 | 2026-09-12 | _worker.js + analyze.js 전체에서 anthropic-workspace-id 헤더 16개 완전 제거 → SCAN "Claude API 400" 오류 근본 수정. 원인: 개인 API키로 workspace-id 헤더 전송 시 400 반환 |
 | 2026-09-12 | **SCAN 분석 403→400 오류 완전 수정**: ① `seolyuhana_worker.js` 프록시 대상 `mbti-logistics.kimdh4790.workers.dev`(workers_dev=false로 비활성화) → `filo.ai.kr` 교체 (404 수정). ② `analyze.js` `callClaude()` + 스캔 경로 `anthropic-workspace-id` 헤더 3중 중복 제거 — 개인 API 키에 workspace-id 헤더 포함 시 400 오류 발생. ③ `mbtico-pages/_worker.js:2860` API 키 검증 모델 `claude-3-haiku-20240307`(단종) → `claude-haiku-4-5` 교체. 현재 `analyze.js`는 `claude-sonnet-4-6` + 워크스페이스 헤더 없음 상태로 정상 작동 |
 | 2026-09-12 | **Cloudflare "Deployment failed" 이메일 원인 조사 완료**: deploy.yml Step4(curl ES Module 업로드)가 code 10021("No such module: index.js")로 실패 → 이 실패가 CF 알림 이메일을 트리거. 그러나 Step6(wrangler Global API Key 폴백)이 성공(Version ID: 8bd929e7) — seolyuhana worker는 `mbtico.kr/api/seolyuhana/*`에 정상 배포됨. 이메일은 오해를 유발하지만 실제 배포는 완료된 상태. curl Step4 오류는 비차단(continue-on-error: true) |
