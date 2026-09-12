@@ -65,7 +65,7 @@ jobs:
       - name: Deploy Seolyuhana Worker
         continue-on-error: true
         env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_TOKEN: ${{ secrets.CF_KV_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           ACCOUNT="02709cbec18d848913b4246015b9148f"
