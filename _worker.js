@@ -5312,7 +5312,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
             const docxBuffer=await buildDocx(analysisData,serviceId,filename,parsed.text||'');
             await setProgress(85);
             let pdfBuffer=null;
-            try{pdfBuffer=await buildPdf(analysisData,serviceId,filename,env);}catch{}
+            // buildPdf 스킵
             await setProgress(95);
             await env.DONWAY_ASSETS.put(`sly_job_${jobId}_docx`,docxBuffer,{expirationTtl:86400});
             if(pdfBuffer) await env.DONWAY_ASSETS.put(`sly_job_${jobId}_pdf`,pdfBuffer,{expirationTtl:86400});
@@ -11614,7 +11614,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '');
           await setProgress(85);
           let pdfBuffer = null;
-          try { pdfBuffer = await buildPdf(analysisData, serviceId, filename, env); } catch {}
+          // PDF 생성 스킵 (Oracle 서버 타임아웃 방지)
+          // // buildPdf 스킵
           await setProgress(95);
 
           // 5. KV 저장 (24시간 TTL)
