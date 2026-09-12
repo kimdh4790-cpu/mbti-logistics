@@ -3295,7 +3295,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               const ctrl=new AbortController();const tid=setTimeout(()=>ctrl.abort(),8000);
               const res=await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST',signal:ctrl.signal,
-                headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
+                headers:{'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
                 body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:50,messages:[{role:'user',content:'Translate to '+{en:'English',zh:'Chinese (Simplified)',ja:'Japanese'}[lang]+', return ONLY the translation: '+name}]})
               });
               clearTimeout(tid);
@@ -3354,7 +3354,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
               const prompt2 = 'Translate these Korean restaurant menu names to '+langNames2[lang2]+'. Return ONLY a JSON object {"Korean name":"Translation",...}. No markdown, no code blocks, ONLY raw JSON:\n'+JSON.stringify(needTr);
               const bRes = await fetch('https://api.anthropic.com/v1/messages',{
                 method:'POST', signal:_ac.signal,
-                headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
+                headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
                 body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1024,messages:[{role:'user',content:prompt2}]})
               });
               clearTimeout(_at);
@@ -3412,7 +3412,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
         const _tk = (env.ANTHROPIC_API_KEY||'').trim();
         const _gk = (env.GOOGLE_TRANSLATE_KEY||'').trim();
         const _tres = {antKeyLen:_tk.length, gKeyLen:_gk.length, antStatus:0, antOk:false, antText:'', gStatus:0, gOk:false, gText:''};
-        if(_tk){try{const _tr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':_tk,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:20,messages:[{role:'user',content:'Translate to Japanese: 김치찌개'}]})});_tres.antStatus=_tr.status;_tres.antOk=_tr.ok;if(_tr.ok){const _td=await _tr.json();_tres.antText=(_td.content&&_td.content[0]&&_td.content[0].text)||'';}else{_tres.antText=(await _tr.text()).slice(0,200);}}catch(e){_tres.antText=String(e).slice(0,100);}}
+        if(_tk){try{const _tr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':_tk,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:20,messages:[{role:'user',content:'Translate to Japanese: 김치찌개'}]})});_tres.antStatus=_tr.status;_tres.antOk=_tr.ok;if(_tr.ok){const _td=await _tr.json();_tres.antText=(_td.content&&_td.content[0]&&_td.content[0].text)||'';}else{_tres.antText=(await _tr.text()).slice(0,200);}}catch(e){_tres.antText=String(e).slice(0,100);}}
         if(_gk){try{const _gr=await fetch('https://translation.googleapis.com/language/translate/v2?key='+_gk,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({q:'김치찌개',source:'ko',target:'ja',format:'text'})});_tres.gStatus=_gr.status;_tres.gOk=_gr.ok;if(_gr.ok){const _gd=await _gr.json();_tres.gText=(_gd&&_gd.data&&_gd.data.translations&&_gd.data.translations[0]&&_gd.data.translations[0].translatedText)||'';}else{_tres.gText=(await _gr.text()).slice(0,200);}}catch(e){_tres.gText=String(e).slice(0,100);}}
         return new Response(JSON.stringify(_tres),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
@@ -3577,7 +3577,7 @@ const _DINE_APPLE_ICON = 'iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAEAAElEQV
                 try {
                   const res2 = await fetch('https://api.anthropic.com/v1/messages',{
                     method:'POST',
-                    headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
+                    headers:{'Content-Type':'application/json','x-api-key':k2,'anthropic-version':'2023-06-01'},
                     body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:60,messages:[{role:'user',content:'Translate this Korean restaurant menu item name to '+langNames[lang]+'. This is a Korean traditional meal set restaurant menu. Return ONLY the translated name, keep it natural and appetizing, nothing else: '+name}]})
                   });
                   if (res2.ok) { const d2=await res2.json(); result=(d2.content&&d2.content[0]&&d2.content[0].text)||''; }
@@ -4530,7 +4530,7 @@ function doRegister(){
           const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
           const resp = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
+            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
             body: JSON.stringify({
               model: 'claude-haiku-4-5',
               max_tokens: 300,
@@ -4591,7 +4591,7 @@ ${JSON.stringify(postSummary)}
 
           const resp = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
+            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
             body: JSON.stringify({model:'claude-haiku-4-5',max_tokens:600,messages:[{role:'user',content:prompt}]})
           });
           const d = await resp.json();
@@ -4649,7 +4649,7 @@ ${JSON.stringify(postSummary)}
           const prompt = `당신은 "${compName||'저희 매장'}" 식당의 AI 직원입니다. 친절하고 간결하게 답변하세요.${langInst}\n메뉴: ${menuList||'다양한 메뉴가 있습니다'}\n고객 문의: ${question}\n2~3문장으로 간결하게 답변하세요.`;
           const resp = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
-            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},
+            headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
             body: JSON.stringify({model:'claude-haiku-4-5', max_tokens:200, messages:[{role:'user',content:prompt}]})
           });
           const d = await resp.json();
@@ -4700,7 +4700,7 @@ ${JSON.stringify(postSummary)}
 - ${invCtx}
 - 오늘 날짜: ${today}
 답변은 150자 이내로, 실용적인 조언 중심으로 작성하세요.`;
-          const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,system:systemPrompt,messages:messages.slice(-8).map(m=>({role:m.role,content:String(m.content||'').slice(0,500)}))})});
+          const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,system:systemPrompt,messages:messages.slice(-8).map(m=>({role:m.role,content:String(m.content||'').slice(0,500)}))})});
           const pd=await pr.json();
           const reply=pd.content?.[0]?.text||'';
           if(!reply) return new Response(JSON.stringify({ok:false,error:'AI 응답이 없습니다.'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
@@ -4736,7 +4736,7 @@ ${JSON.stringify(postSummary)}
           let insight='';
           if(apiKey && txCount>0){
             try {
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:80,messages:[{role:'user',content:`최근 7일 매출: ₩${totalSales.toLocaleString()} (${txCount}건). 재고부족: ${lowStockCount}건. 한 문장(30자 이내) 브리핑:`}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:80,messages:[{role:'user',content:`최근 7일 매출: ₩${totalSales.toLocaleString()} (${txCount}건). 재고부족: ${lowStockCount}건. 한 문장(30자 이내) 브리핑:`}]})});
               const pd=await pr.json();
               insight=pd.content?.[0]?.text||'';
             } catch(e){}
@@ -4810,7 +4810,7 @@ ${JSON.stringify(postSummary)}
           let insight='', aiPowered=false;
           if(apiKey){
             try {
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:100,messages:[{role:'user',content:`매출 추세: ${trend==='up'?'상승':'하락'}, 전주대비: ${wowPct}%, 평균 객단가: ₩${avgTicket.toLocaleString()}. 한 문장(40자 이내) 경영 인사이트:`}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:100,messages:[{role:'user',content:`매출 추세: ${trend==='up'?'상승':'하락'}, 전주대비: ${wowPct}%, 평균 객단가: ₩${avgTicket.toLocaleString()}. 한 문장(40자 이내) 경영 인사이트:`}]})});
               const pd=await pr.json();
               insight=pd.content?.[0]?.text||'';
               aiPowered=!!insight;
@@ -4855,7 +4855,7 @@ ${JSON.stringify(postSummary)}
           if(apiKey && avail.length){
             try{
               const menuList=avail.slice(0,30).map(m=>`${m.name}(${m.price}원)`).join(', ');
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:`날씨:${weather.label} ${weather.temp}°C, 시간대:${timeLabel}. 메뉴:${menuList}. 상위 3개 추천을 JSON 배열로(name,reason,score 1-100)만 출력:`}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:300,messages:[{role:'user',content:`날씨:${weather.label} ${weather.temp}°C, 시간대:${timeLabel}. 메뉴:${menuList}. 상위 3개 추천을 JSON 배열로(name,reason,score 1-100)만 출력:`}]})});
               const pd=await pr.json();
               const raw=pd.content?.[0]?.text||'';
               const match=raw.match(/\[[\s\S]*?\]/);
@@ -4983,7 +4983,7 @@ ${JSON.stringify(postSummary)}
               const dogs=menuEngineering.filter(m=>m.category==='dog').map(m=>m.name).slice(0,3);
               const unregList=[...unregistered].slice(0,5);
               const prompt=`외식업 마진 분석 전문가로서 한국어로 3문장 이내로 핵심 조언을 작성하세요.\n업종: ${bench.name}\n식재료 원가율: ${foodCostPct}% (업종 기준 ${bench.low}~${bench.high}%)\n프라임코스트: ${primeCost}% (목표 ${bench.prime}% 이하)\n월 매출: ₩${totalRev.toLocaleString()}\n스타메뉴: ${stars.join(', ')||'없음'}\n개선필요(Dog): ${dogs.join(', ')||'없음'}\n원가미등록: ${unregList.join(', ')||'없음'}\n실행 가능한 조언:`;
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:250,messages:[{role:'user',content:prompt}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:250,messages:[{role:'user',content:prompt}]})});
               const pd=await pr.json();
               aiNarrative=pd.content?.[0]?.text||'';
               if(aiNarrative) aiPowered=true;
@@ -5056,7 +5056,7 @@ ${JSON.stringify(postSummary)}
           let advice='', aiPowered=false;
           if(apiKey && members.length){
             try{
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:80,messages:[{role:'user',content:`직원 ${members.length}명, 주 인건비 ₩${laborCost.toLocaleString()}. 한 문장(40자) 스케줄 조언:`}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:80,messages:[{role:'user',content:`직원 ${members.length}명, 주 인건비 ₩${laborCost.toLocaleString()}. 한 문장(40자) 스케줄 조언:`}]})});
               const pd=await pr.json();
               advice=pd.content?.[0]?.text||'';
               aiPowered=!!advice;
@@ -5090,7 +5090,7 @@ ${JSON.stringify(postSummary)}
           if(apiKey && menus.length){
             try {
               const menuList=menus.slice(0,40).map(m=>`${m.name}(${m.price}원)`).join(', ');
-              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-workspace-id':'wrkspc_01QZEG8BPU9b7jE5S87zAnKx'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,messages:[{role:'user',content:`메뉴판: ${menuList}\n음성입력: "${text}"\n주문 항목을 JSON 배열로만 출력 [{name,qty}]:`}]})});
+              const pr=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:200,messages:[{role:'user',content:`메뉴판: ${menuList}\n음성입력: "${text}"\n주문 항목을 JSON 배열로만 출력 [{name,qty}]:`}]})});
               const pd=await pr.json();
               const raw=pd.content?.[0]?.text||'';
               const match=raw.match(/\[[\s\S]*?\]/);
