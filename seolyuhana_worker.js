@@ -4,7 +4,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const originalHostname = url.hostname; // e.g. mbtico.kr
-    url.hostname = 'mbti-logistics.kimdh4790.workers.dev';
+    url.hostname = 'filo.ai.kr';
 
     const newHeaders = new Headers(request.headers);
     newHeaders.set('x-mbtico-host', originalHostname);
