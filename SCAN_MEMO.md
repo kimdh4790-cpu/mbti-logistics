@@ -55,6 +55,23 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-12~)
+
+### 분석 타임아웃 "분석 시간 초과 (3.5분)" — 2026-09-12 수정
+- **증상**: 파일 업로드 후 3.5분(215s) 뒤 프론트엔드 타임아웃 메시지 반복
+- **근본 원인 3가지**:
+  1. Oracle 폴백 단계 합산 120s (pdftotext 20s + OCR 60s + images 40s) → Claude에 60s도 안 남음
+  2. `_slyProcessJob` catch 블록에서 Firestore `fsPatch`가 HTTP 오류 시 예외 없이 반환 → 사용자 토큰 문제 시 status='failed' 미업데이트
+  3. KV 폴백 없어 Firestore 업데이트 실패 시 프론트엔드가 failed 상태 감지 불가
+- **수정** (커밋 559ebe0):
+  - `parser.js` oracle 타임아웃: pdftotext 20→8s, OCR 60→20s, images 40→20s (합계 48s)
+  - `_slyProcessJob`: SA 토큰(`getAccessToken`) 으로 Firestore 쓰기 보장 (`_writeToken`)
+  - catch 블록: KV `sly_job_{jobId}_status` = `failed:...` 추가 저장
+  - result 엔드포인트: status가 processing일 때 KV 폴백으로 failed 복원
+  - `_slyAnalysisTimeout`: 180s → 155s
+
+---
+
 ## 장애 이력 및 해결 (2026-09-12~13)
 
 ### Claude API 연결 오류 — 완전 해결
