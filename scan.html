@@ -3365,10 +3365,13 @@ function setProgress(pct, label) {
   if (bar) { bar.style.width = pct + '%'; bar.style.transition = 'width .5s ease'; }
 }
 
-function pollResult(jobId, _cnt) {
+function pollResult(jobId, _cnt, _interval) {
   const cnt = (_cnt || 0) + 1;
+  // 지수 백오프: 2s → 3s → 4.5s → 6.75s → 최대 10s, 총 3분(180s) 초과 시 중단
+  const interval = Math.min((_interval || 2000) * 1.3, 10000);
+  const elapsed = cnt <= 1 ? 0 : (cnt - 1) * (_interval || 2000); // 근사 경과 시간
   clearTimeout(_slyPollTimer);
-  if (cnt > 90) {
+  if (elapsed > 175000) {
     _slyToast('분석 시간 초과 (3분). 파일 크기를 줄이거나 다시 시도해주세요.');
     document.getElementById('slyProgress')?.classList.remove('visible');
     const b2 = document.getElementById('slyAnalyzeBtn2');
@@ -3405,18 +3408,20 @@ function pollResult(jobId, _cnt) {
         }, 500);
       } else if (d.status === 'failed') {
         const errMsg = d.error || '분석 실패';
-        _slyToast('분석 실패: ' + errMsg, 8000);
+        _slyToast('분석 실패: ' + errMsg + ' (사용된 포인트는 자동 환불됩니다)', 10000);
         document.getElementById('slyProgress')?.classList.remove('visible');
         const b2 = document.getElementById('slyAnalyzeBtn2');
         if (b2) b2.disabled = false;
         const fb2 = document.querySelector('.sly-drawer-footer-btn');
         if (fb2) fb2.disabled = false;
+        // 환불된 포인트 잔액 갱신
+        setTimeout(() => window._slyLoadPoints?.(), 2000);
         return;
       } else if (d.status === 'processing' || d.status === 'pending') {
         setProgress(d.progress || 55, 'Claude AI 분석 중...');
-        pollResult(jobId, cnt);
+        pollResult(jobId, cnt, interval);
       } else {
-        pollResult(jobId, cnt);
+        pollResult(jobId, cnt, interval);
       }
     } catch(e) {
       _slyToast('오류: ' + e.message, 6000);
@@ -3426,7 +3431,7 @@ function pollResult(jobId, _cnt) {
       const fb2 = document.querySelector('.sly-drawer-footer-btn');
       if (fb2) fb2.disabled = false;
     }
-  }, 2000);
+  }, interval);
 }
 window._slyPollResult = pollResult;
 

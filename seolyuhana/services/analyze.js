@@ -38,17 +38,28 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
   }
 
   const data = await res.json();
-  const rawText = data.content?.[0]?.text || '';
+  const rawText = (data.content?.[0]?.text || '').trim();
 
-  // JSON 파싱 시도
-  const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/);
-  if (!jsonMatch) throw new Error('Claude 응답에서 JSON을 찾을 수 없습니다');
-
-  try {
-    return { ok: true, data: JSON.parse(jsonMatch[1]), usage: data.usage };
-  } catch {
-    throw new Error(`JSON 파싱 실패: ${jsonMatch[1].slice(0, 200)}`);
+  // JSON 파싱 — 3단계 폴백
+  // 1) 순수 JSON 응답
+  if (rawText.startsWith('{')) {
+    try { return { ok: true, data: JSON.parse(rawText), usage: data.usage }; } catch {}
   }
+  // 2) ```json ... ``` 코드블록
+  const codeBlock = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlock) {
+    try { return { ok: true, data: JSON.parse(codeBlock[1]), usage: data.usage }; } catch(e) {
+      throw new Error(`JSON 파싱 실패 (코드블록): ${codeBlock[1].slice(0, 200)}`);
+    }
+  }
+  // 3) 텍스트 내 첫 JSON 객체
+  const jsonObj = rawText.match(/(\{[\s\S]*\})/);
+  if (jsonObj) {
+    try { return { ok: true, data: JSON.parse(jsonObj[1]), usage: data.usage }; } catch(e) {
+      throw new Error(`JSON 파싱 실패 (추출): ${jsonObj[1].slice(0, 200)}`);
+    }
+  }
+  throw new Error(`Claude 응답에서 JSON을 찾을 수 없습니다. 응답 시작: ${rawText.slice(0, 100)}`);
 }
 
 // ────────────────────────────────────────────────────────────
