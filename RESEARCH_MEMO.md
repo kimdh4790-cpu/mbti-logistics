@@ -175,3 +175,6 @@ node scripts/monitor/content-monitor.js  # YouTube (일별)
 | 2026-09-04 | 최초 생성: inflearn-monitor.js, producthunt-monitor.js, research-digest.js, research-digest.yml 구축 |
 | 2026-09-04 | 큐레이션 현황 섹션 추가 — 강의소재 5개·앱기능 10개·수익성 외부플랜 6개 정리 |
 | 2026-09-04 | channels.json 채널 11개 추가 (AI부업플랜/방구석컴퍼니/코딩못하는중개사/마일드코드/maker39/MONEY_TOUCH/Channel_AION/배움에끝은없다/hs_academy/stevesurfing/with2511) — 17→28개 |
+| 2026-09-12 | channels.json: @horangwave(호랑웨이브) 추가 — 28→29개 |
+| 2026-09-12 | youtube-monitor.yml 신규: 매일 09:00 KST GitHub Actions에서 content-monitor.js 자동 실행 (Oracle Cloud cron 의존 제거) |
+| 2026-09-12 | research-digest.yml: 주간 다이제스트 전 content-monitor.js 선행 실행 추가, monitor-digest.json 아티팩트에 포함 |
