@@ -5,12 +5,9 @@
  */
 
 // ────────────────────────────────────────────────────────────
-// 공통 Claude 호출 헬퍼
-// Oracle VM의 /claude-proxy 경유 → VM 자체 ANTHROPIC_API_KEY 사용
+// 공통 Claude 호출 헬퍼 — Anthropic API 직접 호출
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
-  const oracleBase = (env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr').replace(/\/$/, '');
-
   // 환각 방지: 모든 분석에 문서 근거 원칙 주입
   const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
   const systemWithGuard = system + ANTI_HALLUCINATION;
@@ -22,13 +19,13 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     messages: [{ role: 'user', content: userBlocks }]
   };
 
-  // CF Worker의 ANTHROPIC_API_KEY를 x-api-key 헤더로 전달 → Oracle VM IP로 Anthropic 호출 (CF IP 차단 우회)
-  const proxyHeaders = { 'content-type': 'application/json' };
-  if (env && env.ANTHROPIC_API_KEY) proxyHeaders['x-api-key'] = env.ANTHROPIC_API_KEY;
-
-  const res = await fetch(`${oracleBase}/claude-proxy`, {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: proxyHeaders,
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': env.ANTHROPIC_API_KEY || '',
+      'anthropic-version': '2023-06-01'
+    },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000)
   });
@@ -672,38 +669,60 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
 // ────────────────────────────────────────────────────────────
 // 6. 스캔 PDF 분석 (Claude Vision)
 // ────────────────────────────────────────────────────────────
+// PDF ArrayBuffer → base64 (청크 분할로 스택오버플로 방지)
+function _bufToB64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunk = 8192;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraContext = {}, env }) {
   if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
 
   const analysisPrompt = getScannedPrompt(serviceId, extraContext);
+  let content;
+  let extraHeaders = {};
 
   if (!images || images.length === 0) {
-    throw new Error('스캔 PDF 변환 실패: Oracle 서버에서 이미지를 가져오지 못했습니다. 잠시 후 다시 시도해주세요.');
+    // PDF 직접 전송 — Anthropic PDF beta (pdftotext/Oracle 불필요)
+    if (!pdfBuffer) throw new Error('PDF 버퍼 없음');
+    content = [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: _bufToB64(pdfBuffer) } },
+      { type: 'text', text: analysisPrompt }
+    ];
+    extraHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
+  } else {
+    // 이미지 블록 생성 — Oracle pdftoppm 변환 이미지(JPEG)
+    const imgMediaType = images.mediaType || 'image/jpeg';
+    const imageBlocks = images.slice(0, 15).map((b64, i) => ({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: Array.isArray(images.mediaTypes) ? (images.mediaTypes[i] || imgMediaType) : imgMediaType,
+        data: b64
+      }
+    }));
+    content = [...imageBlocks, { type: 'text', text: analysisPrompt }];
   }
 
-  // 이미지 블록 생성 — PDF 변환 이미지(JPEG) 또는 직접 업로드 이미지(다양한 형식)
-  const imgMediaType = images.mediaType || 'image/jpeg';
-  const imageBlocks = images.slice(0, 15).map((b64, i) => ({
-    type: 'image',
-    source: {
-      type: 'base64',
-      media_type: Array.isArray(images.mediaTypes) ? (images.mediaTypes[i] || imgMediaType) : imgMediaType,
-      data: b64
-    }
-  }));
-
-  const oracleBase2 = (env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr').replace(/\/$/, '');
-  const proxyHeaders2 = { 'content-type': 'application/json' };
-  if (env && env.ANTHROPIC_API_KEY) proxyHeaders2['x-api-key'] = env.ANTHROPIC_API_KEY;
-  const res = await fetch(`${oracleBase2}/claude-proxy`, {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: proxyHeaders2,
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': env.ANTHROPIC_API_KEY || '',
+      'anthropic-version': '2023-06-01',
+      ...extraHeaders
+    },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
-      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: analysisPrompt }] }]
+      messages: [{ role: 'user', content }]
     }),
-    signal: AbortSignal.timeout(60000)
+    signal: AbortSignal.timeout(90000)
   });
 
   if (!res.ok) {

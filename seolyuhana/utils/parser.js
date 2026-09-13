@@ -183,28 +183,9 @@ function xmlToPlainText(xml) {
  * PDF 파싱 — 0차 Worker 내 순수 JS, 실패 시 Oracle 서버 위임
  */
 async function parsePdf(buffer, env) {
-  // 1차: Oracle pdf-text (pdftotext + CIDFont HEX 폴백, pageCount 포함)
-  const oracleResult = await tryOraclePdfText(buffer, env);
-  const pageCount = oracleResult?.pageCount || 1;
-
-  if (oracleResult?.text && oracleResult.text.replace(/\s/g, '').length > 50) {
-    return { text: oracleResult.text.trim(), pageCount, method: 'oracle_pdf', scanned: false };
-  }
-
-  // 2차: Oracle pdftoppm → JPEG → Claude Vision (스캔PDF)
-  const oracleImages = await tryOraclePdfImages(buffer, env);
-  if (oracleImages && oracleImages.length > 0) {
-    return { text: '', pageCount, method: 'pdf_vision_images', scanned: true, images: oracleImages, rawBuffer: buffer };
-  }
-
-  // 3차: Oracle PaddleOCR (이미지 변환 실패 시 폴백)
-  const ocrText = await tryOraclePdfOcr(buffer, env);
-  if (ocrText && ocrText.replace(/\s/g, '').length > 50) {
-    return { text: ocrText.trim(), pageCount, method: 'oracle_ocr', scanned: false };
-  }
-
-  // 4차: PDF 직접 전송 (anthropic-beta pdfs-2024-09-25)
-  return { text: '', pageCount, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
+  // Anthropic PDF beta — PDF 원본을 Claude에 직접 전송 (Oracle pdftotext 불필요)
+  // 일반 PDF, 스캔 PDF, CIDFont RIS 등기부등본 모두 지원
+  return { text: '', pageCount: 1, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
 }
 
 /**
