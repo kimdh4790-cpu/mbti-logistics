@@ -30,7 +30,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     method: 'POST',
     headers: proxyHeaders,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(60000)
+    signal: AbortSignal.timeout(90000)
   });
 
   if (!res.ok) {
