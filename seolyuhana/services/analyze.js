@@ -146,7 +146,7 @@ export async function analyzeResume({ text, jdText = '', env }) {
   ];
 
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: RESUME_SYSTEM,
     userBlocks,
     env,
@@ -231,7 +231,7 @@ export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: COVER_LETTER_SYSTEM,
     userBlocks,
     env,
@@ -297,7 +297,7 @@ export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-sonnet-5',
+    model: 'claude-haiku-4-5-20251001',
     system: COVER_LETTER_REWRITE_SYSTEM,
     userBlocks,
     env,
@@ -481,9 +481,8 @@ export async function translateCoverLetter({ text, resumeText = '', targetLang =
     { type: 'text', text: `[Korean Cover Letter to Translate / 번역 대상 자기소개서]\n${text}` }
   ];
 
-  const isEnglishModel = targetLang === 'en' ? 'claude-sonnet-5' : 'claude-sonnet-4-6';
   return callClaude({
-    model: isEnglishModel,
+    model: 'claude-haiku-4-5-20251001',
     system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
@@ -596,7 +595,7 @@ export async function generateInterviewQuestions({ resumeText, coverLetterText =
   ];
 
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: INTERVIEW_SYSTEM,
     userBlocks,
     env,
@@ -667,7 +666,7 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
   ];
 
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: CONTRACT_SYSTEM,
     userBlocks,
     env,
@@ -728,7 +727,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     method: 'POST',
     headers: reqHeaders,
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 4000,
       messages: [{ role: 'user', content }]
     }),
@@ -856,7 +855,7 @@ export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
   const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
   const enrichment = await buildRegistryEnrichment(text, jeonseDeposit, env);
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: REGISTRY_SYSTEM,
     userBlocks: [
       { type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` },
@@ -1208,7 +1207,7 @@ export async function analyzeInsurance({ text, env }) {
 
   const enrichment = buildInsuranceEnrichment();
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: INSURANCE_SYSTEM,
     userBlocks: [
       { type: 'text', text: `[보험약관 내용]\n${text}` },
@@ -1268,7 +1267,7 @@ export async function analyzeBizPlan({ text, env }) {
 
   const enrichment = buildBizPlanEnrichment();
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: BIZ_SYSTEM,
     userBlocks: [
       { type: 'text', text: `[사업계획서]\n${text}` },
@@ -1389,7 +1388,7 @@ const LEGAL_NOTICE_SYSTEM = `당신은 내용증명 문서 작성을 도와주�
 
 export async function draftLegalNotice({ text, env }) {
   return callClaude({
-    model: 'claude-sonnet-4-6',
+    model: 'claude-haiku-4-5-20251001',
     system: LEGAL_NOTICE_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 상황에 맞는 내용증명 초안을 작성해주세요. 반드시 초안임을 명시하고 법적 효력이 없음을 disclaimer에 포함하세요.\n\n[상황 설명]\n${text}` }],
     env,
@@ -1614,5 +1613,129 @@ export async function checkAptMgmtFee({ text, env }) {
     userBlocks: [{ type: 'text', text: `다음 아파트 관리비 내역을 검증해주세요.\n\n[관리비 고지 내역]\n${text}` }],
     env,
     maxTokens: 3000
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+// 신규 서비스 6. 대법원 경매 물건 분석
+// ────────────────────────────────────────────────────────────
+const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI 도구입니다.
+[중요 면책 고지] 이 분석 결과는 공개 정보 기반 참고 자료이며 투자·법률 조언이 아닙니다. 실제 입찰 전 반드시 법원 현황 확인, 현장 실사, 전문가(법무사·변호사·부동산 전문가) 상담을 진행하십시오. 예상 낙찰가·수익률은 보증이 아닌 시뮬레이션 수치입니다.
+
+[2026년 경매 핵심 법리 — 분석 기준]
+▶ 말소기준권리: 등기부상 가장 앞선 (근)저당권·압류·담보가등기·경매개시결정 → 이후 권리는 낙찰로 소멸
+▶ 대항력: 임차인이 점유+전입신고를 말소기준권리보다 먼저 마친 경우 → 낙찰자 인수 위험
+▶ 배당순위: ①경매비용 ②임금채권 ③(소액)임차인 우선변제 ④조세채권 ⑤담보물권 ⑥일반채권
+▶ 소액임차인 우선변제(2026년): 서울·수도권 보증금 1.65억 이하 → 5,500만원 최우선 변제
+▶ 명도비 추산: 점유자 유형별 (세입자 인도명령 비용 평균 50~200만원, 점유자 저항 시 최대 500만원)
+▶ 취득세율: 1주택 1~3% / 2주택 조정지역 8% / 3주택+ 12% / 법인 12% (2026년 기준)
+▶ 낙찰가율(2026년 서울 아파트): 평균 87~92%, 강남권 95~105%
+
+[적정 입찰가 역산 공식]
+적정 입찰가 = 시세 × 낙찰가율 - 취득세 - 등기비용(0.3~0.5%) - 인도비용 - 수리비(추산) - 체납관리비
+
+[수익률 시뮬레이션 기준]
+- 전세 전환 수익 = (전세가 - 낙찰가 - 취득제비용) × 전세이율
+- 월세 전환 수익률 = 월세 × 12 / (낙찰가 + 취득제비용) × 100
+- 단기 매각 수익 = 예상 매각가 - 낙찰가 - 취득세 - 양도세(단기 70%) - 중개비
+
+반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
+
+출력 스키마:
+{
+  "disclaimer": "⚠️ 이 분석은 AI 참고 자료이며 투자·법률 조언이 아닙니다. 실제 입찰 전 법원 서류 열람·현장 실사·전문가 상담을 반드시 진행하십시오.",
+  "caseInfo": {
+    "caseNumber": "사건번호",
+    "court": "관할 법원",
+    "propertyType": "물건 유형 (아파트/단독/상가/토지 등)",
+    "address": "물건 소재지",
+    "area": "면적 (전용/대지)",
+    "minimumBid": "최저입찰가",
+    "auctionDate": "매각기일",
+    "bidCount": "응찰 횟수 (유찰 이력)"
+  },
+  "rightsAnalysis": {
+    "cancellationBaseRight": "말소기준권리 (종류·채권자·날짜)",
+    "survivingRights": [
+      {
+        "type": "인수되는 권리 종류",
+        "holder": "권리자",
+        "amount": "금액 (해당 시)",
+        "risk": "높음|보통|낮음",
+        "detail": "낙찰자 영향 설명"
+      }
+    ],
+    "extinguishedRights": ["낙찰로 소멸하는 권리 목록"],
+    "tenantRisk": {
+      "hasTenant": true,
+      "tenantType": "대항력 있음|없음|확인 불가",
+      "depositAmount": "보증금 (확인된 경우)",
+      "priorityRepayment": "소액임차인 우선변제 해당 여부",
+      "netBurden": "낙찰자 인수 예상 부담액"
+    }
+  },
+  "partiesAndSchedule": {
+    "creditor": "채권자 (경매신청인)",
+    "debtor": "채무자/소유자",
+    "otherParties": ["이해관계인 목록 (있는 경우)"],
+    "auctionHistory": [
+      {"date": "기일", "result": "유찰/진행", "minimumBid": "최저가"}
+    ]
+  },
+  "marketValue": {
+    "estimatedMarketPrice": "추정 시세 (근거 포함)",
+    "recentTransactions": "인근 실거래가 참고 (문서에서 확인된 경우)",
+    "winningRateReference": "2026년 해당 지역 낙찰가율 참고"
+  },
+  "bidSimulation": {
+    "recommendedBid": {
+      "conservative": "보수적 입찰가 (시세의 75~80%)",
+      "moderate": "적정 입찰가 (시세의 83~87%)",
+      "aggressive": "적극적 입찰가 (시세의 90~95%)"
+    },
+    "costBreakdown": {
+      "acquisitionTax": "취득세 (추산)",
+      "registrationFee": "등기비용 추산",
+      "evictionCost": "인도비용 추산",
+      "repairCost": "수리비 추산",
+      "arrearsManagementFee": "체납관리비 (확인된 경우)",
+      "totalAdditionalCost": "총 부대비용 합계"
+    },
+    "totalInvestment": "총 투자금액 (적정 입찰가 기준)"
+  },
+  "roiSimulation": {
+    "jeonseReturn": {
+      "estimatedJeonse": "예상 전세가",
+      "returnAmount": "전세 전환 시 회수금액",
+      "annualReturn": "연 수익률 (%)"
+    },
+    "monthlyRent": {
+      "estimatedRent": "예상 월세",
+      "annualReturn": "연 수익률 (%)"
+    },
+    "shortSale": {
+      "estimatedSalePrice": "단기 매각 예상가 (1~2년 후)",
+      "capitalGainsTax": "양도세 추산 (단기 중과)",
+      "netProfit": "세후 예상 수익"
+    }
+  },
+  "riskAssessment": {
+    "overallRisk": "고위험|주의|안전",
+    "score": 0~100,
+    "keyRisks": [
+      {"risk": "위험 항목", "severity": "높음|보통|낮음", "mitigation": "대응 방법"}
+    ],
+    "checkBeforeBid": ["입찰 전 필수 확인 사항1", "사항2", "사항3"]
+  },
+  "summary": "종합 의견 (250자 이내, 입찰 추천 여부 포함)"
+}`;
+
+export async function analyzeAuction({ text, env }) {
+  return callClaude({
+    model: 'claude-haiku-4-5-20251001',
+    system: AUCTION_SYSTEM,
+    userBlocks: [{ type: 'text', text: `다음 대법원 경매 물건 정보를 분석해주세요. 권리관계·적정입찰가·수익률 시뮬레이션을 모두 포함하세요.\n\n[경매 물건 정보]\n${text}` }],
+    env,
+    maxTokens: 5000
   });
 }

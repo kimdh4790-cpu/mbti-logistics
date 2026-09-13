@@ -8164,8 +8164,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const targetLang = form.get('targetLang') || 'en';
           const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
-          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','insurance_scan','bizplan_analysis','legal_notice_draft','service_cancel_calc','health_ins_calc','tax_notice_check','apt_mgmt_check'];
-          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,insurance_scan:14900,bizplan_analysis:29900,legal_notice_draft:19900,service_cancel_calc:4900,health_ins_calc:4900,tax_notice_check:4900,apt_mgmt_check:4900};
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','insurance_scan','bizplan_analysis','legal_notice_draft','service_cancel_calc','health_ins_calc','tax_notice_check','apt_mgmt_check','auction_analysis'];
+          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,insurance_scan:14900,bizplan_analysis:29900,legal_notice_draft:19900,service_cancel_calc:4900,health_ins_calc:4900,tax_notice_check:4900,apt_mgmt_check:4900,auction_analysis:14900};
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
@@ -8947,7 +8947,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
 
           // 3. Claude 분석
-          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan, draftLegalNotice, calcServiceCancel, calcHealthInsurance, checkTaxNotice, checkAptMgmtFee } = await import('./seolyuhana/services/analyze.js');
+          const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan, draftLegalNotice, calcServiceCancel, calcHealthInsurance, checkTaxNotice, checkAptMgmtFee, analyzeAuction } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
           // 220초 타임아웃 — Oracle proxy 경유 시 여유 확보 (90s Claude + 60s PDF + 70s 여유)
@@ -8986,6 +8986,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               const r = await checkTaxNotice({text, env}); return r.data;
             } else if (serviceId === 'apt_mgmt_check') {
               const r = await checkAptMgmtFee({text, env}); return r.data;
+            } else if (serviceId === 'auction_analysis') {
+              const r = await analyzeAuction({text, env}); return r.data;
             } else {
               const r = await analyzeContract({text, contractType:serviceId, env}); return r.data;
             }
