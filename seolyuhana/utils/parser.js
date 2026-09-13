@@ -180,13 +180,19 @@ function xmlToPlainText(xml) {
 }
 
 /**
- * PDF 파싱 — Oracle 서버에서 모든 추출 처리 (Worker CPU 사용 최소화)
- * extractPdfText/countPdfPages 같은 인워커 CPU 집약적 연산은 Worker CPU 한도 초과 위험.
- * Oracle Node.js 서버에는 CPU 제한이 없으므로 모든 파싱을 위임.
+ * PDF 파싱 — 0차 Worker 내 순수 JS, 실패 시 Oracle 서버 위임
  */
 async function parsePdf(buffer, env) {
+  // 0차: Worker 내 순수 JS 추출 (네트워크 없음 — 텍스트 기반 PDF는 여기서 끝)
+  try {
+    const localText = extractPdfText(buffer);
+    if (localText && localText.replace(/\s/g, '').length > 100) {
+      const pageCount = countPdfPages(buffer);
+      return { text: localText, pageCount, method: 'pdf_js', scanned: false };
+    }
+  } catch {}
+
   // 1차: Oracle pdf-text (pdftotext + CIDFont HEX 폴백, pageCount 포함)
-  // Oracle에서 처리하므로 Worker CPU 사용 없음
   const oracleResult = await tryOraclePdfText(buffer, env);
   const pageCount = oracleResult?.pageCount || 1;
 
@@ -221,7 +227,7 @@ async function tryOraclePdfImages(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(15000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfImages] HTTP 오류:', res.status, await res.text().catch(() => ''));
@@ -246,7 +252,7 @@ async function tryOraclePdfText(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
@@ -271,7 +277,7 @@ async function tryOraclePdfOcr(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(20000)
+      signal: AbortSignal.timeout(15000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfOcr] HTTP 오류:', res.status);
