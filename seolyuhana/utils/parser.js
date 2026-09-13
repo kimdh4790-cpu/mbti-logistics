@@ -180,14 +180,15 @@ function xmlToPlainText(xml) {
 }
 
 /**
- * PDF 파싱 — 3단계 폴백
- * 1. 순수 JS 텍스트 추출 (인터넷등기소 RIS CIDFont HEX UTF-16BE 포함)
- * 2. Oracle 이미지 변환 (텍스트 추출 실패 시)
- * 3. Claude PDF document 타입 직접 전송 (Oracle 접속 불가 시)
+ * PDF 파싱 — 4단계 폴백
+ * 1. 순수 JS 텍스트 추출 (비압축 BT/ET + FlateDecode 압축 해제 포함)
+ * 2. Oracle pdftotext (poppler 기반, 모든 압축 형식·CIDFont 완전 지원)
+ * 3. Oracle 이미지 변환 (스캔 PDF 또는 텍스트 추출 실패)
+ * 4. Claude PDF document 타입 직접 전송 (최후 수단)
  */
 async function parsePdf(buffer, env) {
-  // 1차: 순수 JS 텍스트 추출 — Anthropic API 불필요, Oracle 불필요
-  const extracted = extractPdfText(buffer);
+  // 1차: 순수 JS 텍스트 추출 (비압축 + FlateDecode 자동 해제)
+  const extracted = await extractPdfText(buffer);
   if (extracted && extracted.length > 50) {
     return {
       text: extracted,
@@ -197,7 +198,18 @@ async function parsePdf(buffer, env) {
     };
   }
 
-  // 2차: Oracle 이미지 변환 (스캔 PDF 또는 JS 추출 실패)
+  // 2차: Oracle pdftotext — FlateDecode 압축 포함, CIDFont HEX 폴백 내장
+  const oracleText = await tryOraclePdfText(buffer, env);
+  if (oracleText && oracleText.text && oracleText.text.length > 50) {
+    return {
+      text: oracleText.text,
+      pageCount: oracleText.pageCount,
+      method: 'pdf_oracle_text',
+      scanned: false
+    };
+  }
+
+  // 3차: Oracle 이미지 변환 (스캔 PDF 또는 pdftotext 실패)
   const oracleImages = await tryOraclePdfImages(buffer, env);
   if (oracleImages && oracleImages.length > 0) {
     return {
@@ -210,7 +222,7 @@ async function parsePdf(buffer, env) {
     };
   }
 
-  // 3차: Claude PDF document 타입 직접 전송 (폴백)
+  // 4차: Claude PDF document 타입 직접 전송 (폴백)
   return { text: '', pageCount: 1, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
 }
 
@@ -291,38 +303,110 @@ async function tryOraclePdfOcr(buffer, env) {
 
 /**
  * PDF 텍스트 스트림 파싱 (순수 JS, PDF 스펙 §7.8.3 BT/ET 블록)
+ * 비압축 스트림 + FlateDecode 압축 스트림 자동 해제 포함
+ * 인터넷등기소 RIS CIDFont HEX UTF-16BE 인코딩 완전 지원
  */
-function extractPdfText(buffer) {
+async function extractPdfText(buffer) {
   const bytes = new Uint8Array(buffer);
   const raw = new TextDecoder('latin1').decode(bytes);
 
   const chunks = [];
-  // BT ... ET 블록에서 Tj / TJ 연산자 추출
+
+  // 비압축 BT/ET 블록
+  _parseBtBlocks(raw, chunks);
+
+  // FlateDecode 압축 스트림 자동 해제 후 BT/ET 추출
+  await _parseFlatecodeStreams(bytes, raw, chunks);
+
+  return chunks.join('').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function _parseBtBlocks(raw, chunks) {
   const btRe = /BT([\s\S]*?)ET/g;
   let m;
   while ((m = btRe.exec(raw)) !== null) {
-    const block = m[1];
-    // (text) Tj — 일반 ASCII/Latin
-    const tjRe = /\(([^)]*)\)\s*Tj/g;
-    let t;
-    while ((t = tjRe.exec(block)) !== null) chunks.push(decodePdfString(t[1]));
-    // <HEX> Tj — 인터넷등기소/한국 CIDFont UTF-16BE 인코딩
-    const hexTjRe = /<([0-9A-Fa-f]{4,})>\s*Tj/g;
-    while ((t = hexTjRe.exec(block)) !== null) chunks.push(hexToUnicode(t[1]));
-    // [(arr) ...] TJ
-    const TJRe = /\[([\s\S]*?)\]\s*TJ/g;
-    while ((t = TJRe.exec(block)) !== null) {
-      const inner = t[1];
-      const arrRe = /\(([^)]*)\)/g;
-      let a;
-      while ((a = arrRe.exec(inner)) !== null) chunks.push(decodePdfString(a[1]));
-      // HEX 배열: [<XXXX><YYYY>] TJ
-      const hexArrRe = /<([0-9A-Fa-f]{4,})>/g;
-      while ((a = hexArrRe.exec(inner)) !== null) chunks.push(hexToUnicode(a[1]));
-    }
-    chunks.push('\n');
+    _parseTjTJ(m[1], chunks);
   }
-  return chunks.join('').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function _parseTjTJ(block, chunks) {
+  // (text) Tj — 일반 ASCII/Latin
+  const tjRe = /\(([^)]*)\)\s*Tj/g;
+  let t;
+  while ((t = tjRe.exec(block)) !== null) chunks.push(decodePdfString(t[1]));
+  // <HEX> Tj — 인터넷등기소/한국 CIDFont UTF-16BE 인코딩
+  const hexTjRe = /<([0-9A-Fa-f]{4,})>\s*Tj/g;
+  while ((t = hexTjRe.exec(block)) !== null) chunks.push(hexToUnicode(t[1]));
+  // [(arr) ...] TJ
+  const TJRe = /\[([\s\S]*?)\]\s*TJ/g;
+  while ((t = TJRe.exec(block)) !== null) {
+    const inner = t[1];
+    const arrRe = /\(([^)]*)\)/g;
+    let a;
+    while ((a = arrRe.exec(inner)) !== null) chunks.push(decodePdfString(a[1]));
+    // HEX 배열: [<XXXX><YYYY>] TJ
+    const hexArrRe = /<([0-9A-Fa-f]{4,})>/g;
+    while ((a = hexArrRe.exec(inner)) !== null) chunks.push(hexToUnicode(a[1]));
+  }
+  chunks.push('\n');
+}
+
+async function _parseFlatecodeStreams(bytes, raw, chunks) {
+  let pos = 0;
+  while (pos < raw.length - 10) {
+    const sIdx = raw.indexOf('stream', pos);
+    if (sIdx === -1) break;
+
+    // stream 다음 \r\n 또는 \n이어야 유효한 스트림 시작
+    let dataStart;
+    if (raw[sIdx + 6] === '\r' && raw[sIdx + 7] === '\n') {
+      dataStart = sIdx + 8;
+    } else if (raw[sIdx + 6] === '\n') {
+      dataStart = sIdx + 7;
+    } else {
+      pos = sIdx + 6;
+      continue;
+    }
+
+    // 선행 딕셔너리 최대 600자 역방향 확인
+    const dictStr = raw.slice(Math.max(0, sIdx - 600), sIdx);
+
+    // FlateDecode 필터 확인 (/Filter /FlateDecode 또는 /Filter [/FlateDecode])
+    if (!dictStr.includes('/FlateDecode') && !dictStr.includes('/Fl ') &&
+        !dictStr.includes('/Fl\n') && !dictStr.includes('/Fl\r')) {
+      pos = dataStart;
+      continue;
+    }
+
+    // /Length N (직접 참조만)
+    const lenMatch = dictStr.match(/\/Length\s+(\d+)/);
+    if (!lenMatch) { pos = dataStart; continue; }
+    const length = parseInt(lenMatch[1]);
+    if (length < 10 || dataStart + length > bytes.length) { pos = dataStart; continue; }
+
+    const compressed = bytes.slice(dataStart, dataStart + length);
+    try {
+      const ds = new DecompressionStream('deflate-raw');
+      const writer = ds.writable.getWriter();
+      const reader = ds.readable.getReader();
+      writer.write(compressed);
+      writer.close();
+
+      const parts = [];
+      let done = false;
+      while (!done) {
+        const { value, done: d } = await reader.read();
+        if (value) parts.push(value);
+        done = d;
+      }
+      const decompressed = new TextDecoder('latin1').decode(concatUint8Arrays(parts));
+      _parseBtBlocks(decompressed, chunks);
+    } catch {
+      // 압축 해제 실패 — 건너뜀
+    }
+
+    pos = dataStart + length;
+  }
 }
 
 // CIDFont HEX → 유니코드 문자열 변환 (UTF-16BE 기준, 인터넷등기소 RIS PDF 대응)
