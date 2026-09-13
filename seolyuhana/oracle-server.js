@@ -4594,7 +4594,7 @@ process.on('unhandledRejection', (reason) => {
 // ── /claude-proxy  Anthropic API 중계 (Cloudflare Workers IP 차단 우회) ─────────
 app.post('/claude-proxy', async (req, res) => {
   try {
-    const apiKey = (process.env.ANTHROPIC_API_KEY || req.headers['x-api-key'] || '').replace(/[^\x21-\x7E]/g, '');
+    const apiKey = (req.headers['x-api-key'] || process.env.ANTHROPIC_API_KEY || '').replace(/[^\x21-\x7E]/g, '');
     if (!apiKey || apiKey.length < 20) return res.status(401).json({ error: 'ANTHROPIC_API_KEY 미설정 또는 오류' });
 
     const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^\x21-\x7E]/g, '').trim()
