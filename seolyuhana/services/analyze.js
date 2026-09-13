@@ -6,11 +6,10 @@
 
 // ────────────────────────────────────────────────────────────
 // 공통 Claude 호출 헬퍼
-// Cloudflare Workers → api.anthropic.com 직접 호출 가능 (Worker 전체에서 이미 사용 중)
+// Oracle VM의 /claude-proxy 경유 → VM 자체 ANTHROPIC_API_KEY 사용
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
-  const apiKey = (env.ANTHROPIC_API_KEY || '').trim();
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+  const oracleBase = (env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr').replace(/\/$/, '');
 
   // 환각 방지: 모든 분석에 문서 근거 원칙 주입
   const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
@@ -23,15 +22,11 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     messages: [{ role: 'user', content: userBlocks }]
   };
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch(`${oracleBase}/claude-proxy`, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(120000)
+    signal: AbortSignal.timeout(90000)
   });
 
   if (!res.ok) {
@@ -693,21 +688,16 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     }
   }));
 
-  const apiKey2 = (env.ANTHROPIC_API_KEY || '').trim();
-  if (!apiKey2) throw new Error('ANTHROPIC_API_KEY not configured');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const oracleBase2 = (env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr').replace(/\/$/, '');
+  const res = await fetch(`${oracleBase2}/claude-proxy`, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey2,
-      'anthropic-version': '2023-06-01'
-    },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-haiku-4-5',
       max_tokens: 6000,
       messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: analysisPrompt }] }]
     }),
-    signal: AbortSignal.timeout(100000)
+    signal: AbortSignal.timeout(90000)
   });
 
   if (!res.ok) {

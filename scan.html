@@ -3328,8 +3328,8 @@ function pollResult(jobId, _cnt, _interval, _startTs) {
   const startTs = _startTs || Date.now();
   const elapsed = Date.now() - startTs;
   clearTimeout(_slyPollTimer);
-  if (elapsed > 180000) {
-    _slyToast('분석 시간 초과 (3분). 파일 크기를 줄이거나 다시 시도해주세요.');
+  if (elapsed > 240000) {
+    _slyToast('분석 시간 초과 (4분). 파일 크기를 줄이거나 다시 시도해주세요.');
     document.getElementById('slyProgress')?.classList.remove('visible');
     const b2 = document.getElementById('slyAnalyzeBtn2');
     if (b2) b2.disabled = false;
