@@ -99,7 +99,45 @@ app.post('/api/pdf-render', async (req, res) => {
   }
 });
 
-// ── /api/pdf-text  PDF → 텍스트 (pdftotext, 한글 CIDFont CMap 대응) ────────────
+// ── 인터넷등기소 RIS PDF용 CIDFont HEX → 유니코드 추출 (Node.js, CPU 제한 없음) ──
+function _pdfHexToUnicode(hex) {
+  try {
+    const bytes = [];
+    for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.slice(i, i + 2), 16));
+    if (bytes.length % 2 === 0) return Buffer.from(new Uint8Array(bytes)).toString('utf16le').split('').map(c => {
+      const b = Buffer.alloc(2); b.writeUInt16LE(c.charCodeAt(0)); const be = b.readUInt16BE(0); return String.fromCodePoint(be);
+    }).join('');
+    return '';
+  } catch { return ''; }
+}
+function _pdfDecodePdfStr(s) {
+  return s.replace(/\\n/g,'\n').replace(/\\r/g,'\r').replace(/\\t/g,'\t').replace(/\\\(/g,'(').replace(/\\\)/g,')').replace(/\\\\/g,'\\');
+}
+function _extractPdfTextNode(buf) {
+  const raw = buf.toString('latin1');
+  const chunks = [];
+  const btRe = /BT([\s\S]*?)ET/g;
+  let m;
+  while ((m = btRe.exec(raw)) !== null) {
+    const block = m[1];
+    const tjRe = /\(([^)]*)\)\s*Tj/g; let t;
+    while ((t = tjRe.exec(block)) !== null) chunks.push(_pdfDecodePdfStr(t[1]));
+    const hexTj = /<([0-9A-Fa-f]{4,})>\s*Tj/g;
+    while ((t = hexTj.exec(block)) !== null) chunks.push(_pdfHexToUnicode(t[1]));
+    const TJRe = /\[([\s\S]*?)\]\s*TJ/g;
+    while ((t = TJRe.exec(block)) !== null) {
+      const inner = t[1];
+      const arrRe = /\(([^)]*)\)/g; let a;
+      while ((a = arrRe.exec(inner)) !== null) chunks.push(_pdfDecodePdfStr(a[1]));
+      const hexArr = /<([0-9A-Fa-f]{4,})>/g;
+      while ((a = hexArr.exec(inner)) !== null) chunks.push(_pdfHexToUnicode(a[1]));
+    }
+    chunks.push('\n');
+  }
+  return chunks.join('').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// ── /api/pdf-text  PDF → 텍스트 (pdftotext + CIDFont 폴백, pageCount 포함) ───────
 // raw binary (application/pdf) 또는 multipart/form-data 모두 지원
 app.post('/api/pdf-text', async (req, res) => {
   let tmpDir = null;
@@ -122,9 +160,33 @@ app.post('/api/pdf-text', async (req, res) => {
     const pdfPath = join(tmpDir, 'input.pdf');
     const txtPath = join(tmpDir, 'output.txt');
     await writeFile(pdfPath, pdfBuffer);
-    await execFileAsync('pdftotext', ['-enc', 'UTF-8', '-layout', pdfPath, txtPath], { timeout: 60000 });
-    const text = await readFile(txtPath, 'utf-8').catch(() => '');
-    res.json({ text: text.trim() });
+
+    // 페이지 수 (pdfinfo)
+    let pageCount = 1;
+    try {
+      const info = await execFileAsync('pdfinfo', [pdfPath], { timeout: 8000 });
+      const pm = info.stdout.match(/Pages:\s*(\d+)/);
+      if (pm) pageCount = parseInt(pm[1], 10);
+    } catch {}
+
+    // 1차: pdftotext (일반 PDF, CMap 있는 한글 PDF)
+    let text = '';
+    try {
+      await execFileAsync('pdftotext', ['-enc', 'UTF-8', '-layout', pdfPath, txtPath], { timeout: 30000 });
+      text = (await readFile(txtPath, 'utf-8').catch(() => '')).trim();
+    } catch (e) {
+      console.error('[pdf-text] pdftotext 실패:', e.message);
+    }
+
+    // 2차: CIDFont HEX→유니코드 직접 파싱 (인터넷등기소 RIS PDF 등 CMap 없는 경우)
+    if (!text || text.replace(/\s/g, '').length < 50) {
+      const extracted = _extractPdfTextNode(pdfBuffer);
+      if (extracted && extracted.replace(/\s/g, '').length > text.replace(/\s/g, '').length) {
+        text = extracted;
+      }
+    }
+
+    res.json({ text: text.trim(), pageCount });
   } catch (e) {
     console.error('[pdf-text]', e.message);
     res.status(500).json({ error: e.message });

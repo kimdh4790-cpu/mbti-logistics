@@ -180,36 +180,33 @@ function xmlToPlainText(xml) {
 }
 
 /**
- * PDF 파싱 — 텍스트 레이어 추출 시도, 실패 시 Oracle pdftotext 폴백, 마지막에 Vision
+ * PDF 파싱 — Oracle 서버에서 모든 추출 처리 (Worker CPU 사용 최소화)
+ * extractPdfText/countPdfPages 같은 인워커 CPU 집약적 연산은 Worker CPU 한도 초과 위험.
+ * Oracle Node.js 서버에는 CPU 제한이 없으므로 모든 파싱을 위임.
  */
 async function parsePdf(buffer, env) {
-  const pageCount = countPdfPages(buffer);
+  // 1차: Oracle pdf-text (pdftotext + CIDFont HEX 폴백, pageCount 포함)
+  // Oracle에서 처리하므로 Worker CPU 사용 없음
+  const oracleResult = await tryOraclePdfText(buffer, env);
+  const pageCount = oracleResult?.pageCount || 1;
 
-  // 1차: 인워커 추출 (ASCII + CIDFont HEX)
-  const text = extractPdfText(buffer);
-  if (text && text.replace(/\s/g, '').length > 50) {
-    return { text: text.trim(), pageCount, method: 'pdf_text', scanned: false };
+  if (oracleResult?.text && oracleResult.text.replace(/\s/g, '').length > 50) {
+    return { text: oracleResult.text.trim(), pageCount, method: 'oracle_pdf', scanned: false };
   }
 
-  // 2차: Oracle pdftotext (한글 CIDFont CMap 대응)
-  const oracleText = await tryOraclePdfText(buffer, env);
-  if (oracleText && oracleText.replace(/\s/g, '').length > 50) {
-    return { text: oracleText.trim(), pageCount, method: 'oracle_pdf', scanned: false };
-  }
-
-  // 3차: Oracle pdftoppm → PaddleOCR (스캔PDF, 장수 제한 없음)
-  const ocrText = await tryOraclePdfOcr(buffer, env);
-  if (ocrText && ocrText.replace(/\s/g, '').length > 50) {
-    return { text: ocrText.trim(), pageCount, method: 'oracle_ocr', scanned: false };
-  }
-
-  // 4차: Oracle pdftoppm → JPEG 이미지 → Claude Vision
+  // 2차: Oracle pdftoppm → JPEG → Claude Vision (스캔PDF)
   const oracleImages = await tryOraclePdfImages(buffer, env);
   if (oracleImages && oracleImages.length > 0) {
     return { text: '', pageCount, method: 'pdf_vision_images', scanned: true, images: oracleImages, rawBuffer: buffer };
   }
 
-  // 5차: PDF 직접 전송 (anthropic-beta pdfs-2024-09-25 필요)
+  // 3차: Oracle PaddleOCR (이미지 변환 실패 시 폴백)
+  const ocrText = await tryOraclePdfOcr(buffer, env);
+  if (ocrText && ocrText.replace(/\s/g, '').length > 50) {
+    return { text: ocrText.trim(), pageCount, method: 'oracle_ocr', scanned: false };
+  }
+
+  // 4차: PDF 직접 전송 (anthropic-beta pdfs-2024-09-25)
   return { text: '', pageCount, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
 }
 
@@ -239,8 +236,8 @@ async function tryOraclePdfImages(buffer, env) {
 }
 
 /**
- * Oracle Cloud LibreOffice로 PDF 텍스트 추출 (CIDFont 한글 PDF 대응)
- * raw binary body로 전송 (FormData/Blob Cloudflare Worker 호환성 문제 우회)
+ * Oracle Cloud pdf-text: pdftotext + CIDFont HEX 폴백 (인터넷등기소 RIS PDF 포함)
+ * pageCount도 함께 반환 (Oracle에서 pdfinfo로 계산)
  */
 async function tryOraclePdfText(buffer, env) {
   try {
@@ -249,17 +246,17 @@ async function tryOraclePdfText(buffer, env) {
       method: 'POST',
       headers: { 'Content-Type': 'application/pdf' },
       body: buffer,
-      signal: AbortSignal.timeout(8000)
+      signal: AbortSignal.timeout(20000)
     });
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
-      return '';
+      return null;
     }
     const data = await res.json();
-    return data.text || '';
+    return { text: data.text || '', pageCount: data.pageCount || 1 };
   } catch (e) {
     console.error('[tryOraclePdfText] 네트워크 오류:', e.message);
-    return '';
+    return null;
   }
 }
 
