@@ -678,8 +678,7 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
 // 6. 스캔 PDF 분석 (Claude Vision)
 // ────────────────────────────────────────────────────────────
 export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraContext = {}, env }) {
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+  if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
 
   const analysisPrompt = getScannedPrompt(serviceId, extraContext);
 
@@ -688,7 +687,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   }
 
   // 이미지 블록 생성 — PDF 변환 이미지(JPEG) 또는 직접 업로드 이미지(다양한 형식)
-  const imgMediaType = images.mediaType || 'image/jpeg'; // 직접 업로드 시 mediaType 전달
+  const imgMediaType = images.mediaType || 'image/jpeg';
   const imageBlocks = images.slice(0, 15).map((b64, i) => ({
     type: 'image',
     source: {
@@ -698,11 +697,13 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     }
   }));
 
-  const res = await fetch(ANTHROPIC_API, {
+  // Cloudflare → api.anthropic.com 직접 호출 시 403 (IP 차단) → oracle proxy 경유
+  const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
+  const res = await fetch(`${oracleBase}/claude-proxy`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': apiKey,
+      'x-api-key': env.ANTHROPIC_API_KEY,
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
