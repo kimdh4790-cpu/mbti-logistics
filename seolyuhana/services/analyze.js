@@ -22,9 +22,13 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     messages: [{ role: 'user', content: userBlocks }]
   };
 
+  // CF Worker의 ANTHROPIC_API_KEY를 x-api-key 헤더로 전달 → Oracle VM IP로 Anthropic 호출 (CF IP 차단 우회)
+  const proxyHeaders = { 'content-type': 'application/json' };
+  if (env && env.ANTHROPIC_API_KEY) proxyHeaders['x-api-key'] = env.ANTHROPIC_API_KEY;
+
   const res = await fetch(`${oracleBase}/claude-proxy`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: proxyHeaders,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(90000)
   });
@@ -689,9 +693,11 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   }));
 
   const oracleBase2 = (env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr').replace(/\/$/, '');
+  const proxyHeaders2 = { 'content-type': 'application/json' };
+  if (env && env.ANTHROPIC_API_KEY) proxyHeaders2['x-api-key'] = env.ANTHROPIC_API_KEY;
   const res = await fetch(`${oracleBase2}/claude-proxy`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: proxyHeaders2,
     body: JSON.stringify({
       model: 'claude-haiku-4-5',
       max_tokens: 6000,
