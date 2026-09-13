@@ -8315,7 +8315,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
           let antStatus = null, antMs = null;
           if (apiKey) {
-            const antRes = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'content-type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:5,messages:[{role:'user',content:'hi'}]}), signal: AbortSignal.timeout(15000) }).catch(e=>({ok:false,status:null,_err:e.message}));
+            const antRes = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'content-type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:5,messages:[{role:'user',content:'hi'}]}), signal: AbortSignal.timeout(15000) }).catch(e=>({ok:false,status:null,_err:e.message}));
             antMs = Date.now() - t1;
             antStatus = antRes.status || antRes._err;
           }
