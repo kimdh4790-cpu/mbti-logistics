@@ -23,6 +23,17 @@ import { tmpdir } from 'os';
 import { chromium } from 'playwright';
 import JSZip from 'jszip';
 import https from 'https';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// .env 자동 로드 (pm2 set 없이 파일 한 번만 수정하면 적용)
+try {
+  const _require = createRequire(import.meta.url);
+  const _dotenv = _require('dotenv');
+  const _dir = dirname(fileURLToPath(import.meta.url));
+  _dotenv.config({ path: _dir + '/../.env' });
+} catch (_e) {}
 
 const execFileAsync = promisify(execFile);
 const app = express();
