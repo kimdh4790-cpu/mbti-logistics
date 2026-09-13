@@ -139,7 +139,7 @@ jobs:
               -H "X-Auth-Email: kimdh4790@gmail.com" \
               -H "X-Auth-Key: $CF_KEY_CLEAN" \
               -H "Content-Type: text/plain; charset=utf-8" \
-              --data-binary @"$SFILE")
+              --data-binary @"$SFILE" || true)
             if echo "$RESULT" | grep -q '"success":true'; then
               echo "✅ $SFILE"
             else
@@ -152,7 +152,7 @@ jobs:
               -H "X-Auth-Email: kimdh4790@gmail.com" \
               -H "X-Auth-Key: $CF_KEY_CLEAN" \
               -H "Content-Type: text/plain; charset=utf-8" \
-              --data-binary @"$FILE")
+              --data-binary @"$FILE" || true)
             if echo "$RESULT" | grep -q '"success":true'; then
               echo "✅ $FILE"
             else
