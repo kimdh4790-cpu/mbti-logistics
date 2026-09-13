@@ -8311,15 +8311,17 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const t0 = Date.now();
           const oracleRes = await fetch(`${oracleBase}/health`, { signal: AbortSignal.timeout(10000) }).catch(e => ({ok:false,status:null,_err:e.message}));
           const oracleMs = Date.now() - t0;
-          const t1 = Date.now();
           const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
-          let antStatus = null, antMs = null;
+          const modelTests = {};
           if (apiKey) {
-            const antRes = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'content-type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:5,messages:[{role:'user',content:'hi'}]}), signal: AbortSignal.timeout(15000) }).catch(e=>({ok:false,status:null,_err:e.message}));
-            antMs = Date.now() - t1;
-            antStatus = antRes.status || antRes._err;
+            const testModels = ['claude-haiku-4-5','claude-sonnet-4-6','claude-3-5-haiku-20241022','claude-3-haiku-20240307','claude-3-5-sonnet-20241022'];
+            await Promise.all(testModels.map(async m => {
+              const t = Date.now();
+              const r = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'content-type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:m,max_tokens:5,messages:[{role:'user',content:'hi'}]}), signal: AbortSignal.timeout(15000) }).catch(e=>({status:'err:'+e.message}));
+              modelTests[m] = { status: r.status, ms: Date.now()-t };
+            }));
           }
-          return Response.json({ ok:true, oracle:{ url:oracleBase, status: oracleRes.status||oracleRes._err, ms: oracleMs }, anthropic:{ status: antStatus, ms: antMs } });
+          return Response.json({ ok:true, apiKeyLen: apiKey.length, oracle:{ url:oracleBase, status: oracleRes.status||oracleRes._err, ms: oracleMs }, models: modelTests });
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
