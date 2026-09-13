@@ -8302,6 +8302,27 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
+      // GET /api/scan/ping — Oracle + Anthropic 연결 진단 (슈퍼어드민 전용)
+      if (path === '/api/scan/ping' && method === 'GET') {
+        try {
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_SUPERADMIN_EMAILS.includes(_au?.email||'')) return Response.json({ok:false,error:'권한 없음'},{status:403});
+          const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
+          const t0 = Date.now();
+          const oracleRes = await fetch(`${oracleBase}/health`, { signal: AbortSignal.timeout(10000) }).catch(e => ({ok:false,status:null,_err:e.message}));
+          const oracleMs = Date.now() - t0;
+          const t1 = Date.now();
+          const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
+          let antStatus = null, antMs = null;
+          if (apiKey) {
+            const antRes = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'content-type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:5,messages:[{role:'user',content:'hi'}]}), signal: AbortSignal.timeout(15000) }).catch(e=>({ok:false,status:null,_err:e.message}));
+            antMs = Date.now() - t1;
+            antStatus = antRes.status || antRes._err;
+          }
+          return Response.json({ ok:true, oracle:{ url:oracleBase, status: oracleRes.status||oracleRes._err, ms: oracleMs }, anthropic:{ status: antStatus, ms: antMs } });
+        } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
+      }
+
       // GET /api/seolyuhana/download/:jobId — 파일 다운로드 스트림
       if (path.startsWith('/api/seolyuhana/download/') && method === 'GET') {
         const jobId = path.replace('/api/seolyuhana/download/', '');

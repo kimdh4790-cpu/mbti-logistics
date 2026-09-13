@@ -6,15 +6,11 @@
 
 // ────────────────────────────────────────────────────────────
 // 공통 Claude 호출 헬퍼
-// Cloudflare Workers → api.anthropic.com 직접 호출 시 403 (IP 차단)
-// → Oracle Cloud (oracle.mbtico.kr/claude-proxy) 경유로 우회
+// Cloudflare Workers → api.anthropic.com 직접 호출 가능 (Worker 전체에서 이미 사용 중)
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
-  const apiKey = env.ANTHROPIC_API_KEY;
+  const apiKey = (env.ANTHROPIC_API_KEY || '').trim();
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
-
-  const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
-  const proxyUrl = `${oracleBase}/claude-proxy`;
 
   // 환각 방지: 모든 분석에 문서 근거 원칙 주입
   const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
@@ -27,7 +23,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     messages: [{ role: 'user', content: userBlocks }]
   };
 
-  const res = await fetch(proxyUrl, {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -697,13 +693,13 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     }
   }));
 
-  // Cloudflare → api.anthropic.com 직접 호출 시 403 (IP 차단) → oracle proxy 경유
-  const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
-  const res = await fetch(`${oracleBase}/claude-proxy`, {
+  const apiKey2 = (env.ANTHROPIC_API_KEY || '').trim();
+  if (!apiKey2) throw new Error('ANTHROPIC_API_KEY not configured');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
+      'x-api-key': apiKey2,
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
