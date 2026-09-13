@@ -685,16 +685,14 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
 
   const analysisPrompt = getScannedPrompt(serviceId, extraContext);
   let content;
-  let extraHeaders = {};
 
   if (!images || images.length === 0) {
-    // PDF 직접 전송 — Anthropic PDF beta (pdftotext/Oracle 불필요)
+    // PDF 직접 전송 — Claude 네이티브 PDF 지원 (GA, beta 헤더 불필요)
     if (!pdfBuffer) throw new Error('PDF 버퍼 없음');
     content = [
       { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: _bufToB64(pdfBuffer) } },
       { type: 'text', text: analysisPrompt }
     ];
-    extraHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
   } else {
     // 이미지 블록 생성 — Oracle pdftoppm 변환 이미지(JPEG)
     const imgMediaType = images.mediaType || 'image/jpeg';
@@ -714,8 +712,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     headers: {
       'content-type': 'application/json',
       'x-api-key': env.ANTHROPIC_API_KEY || '',
-      'anthropic-version': '2023-06-01',
-      ...extraHeaders
+      'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
