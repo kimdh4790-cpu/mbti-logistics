@@ -716,13 +716,17 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     content = [...imageBlocks, { type: 'text', text: analysisPrompt }];
   }
 
+  const hasPdfBlock = content.some(b => b.type === 'document');
+  const reqHeaders = {
+    'content-type': 'application/json',
+    'x-api-key': env.ANTHROPIC_API_KEY || '',
+    'anthropic-version': '2023-06-01'
+  };
+  if (hasPdfBlock) reqHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
+
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY || '',
-      'anthropic-version': '2023-06-01'
-    },
+    headers: reqHeaders,
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
       max_tokens: 4000,
