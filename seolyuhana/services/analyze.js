@@ -11,10 +11,77 @@ import {
 } from './enrich.js';
 
 // ────────────────────────────────────────────────────────────
-// 공통 Claude 호출 헬퍼 — Anthropic API 직접 호출
+// Gemini API 호출 헬퍼 (1차 — 무료 tier 사용)
+// ────────────────────────────────────────────────────────────
+async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
+  const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
+  // Anthropic content blocks → Gemini parts 변환
+  const parts = (userBlocks || []).map(b => {
+    if (b.type === 'text') return { text: b.text };
+    if (b.type === 'document' && b.source?.type === 'base64') {
+      return { inlineData: { mimeType: b.source.media_type || 'application/pdf', data: b.source.data } };
+    }
+    if (b.type === 'image' && b.source?.type === 'base64') {
+      return { inlineData: { mimeType: b.source.media_type || 'image/jpeg', data: b.source.data } };
+    }
+    return { text: JSON.stringify(b) };
+  });
+
+  const body = {
+    systemInstruction: { parts: [{ text: system + ANTI_HALLUCINATION }] },
+    contents: [{ role: 'user', parts }],
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 }
+  };
+
+  const apiKey = env.GOOGLE_AI_API_KEY || '';
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90000)
+    }
+  );
+
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    const detail = JSON.stringify(errBody).slice(0, 300);
+    throw new Error(`Gemini API ${res.status}: ${errBody.error?.message || res.statusText} | ${detail}`);
+  }
+
+  const data = await res.json();
+  const rawText = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
+
+  // JSON 파싱 — 3단계 폴백
+  if (rawText.startsWith('{')) {
+    try { return { ok: true, data: JSON.parse(rawText) }; } catch {}
+  }
+  const codeBlock = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlock) {
+    try { return { ok: true, data: JSON.parse(codeBlock[1]) }; } catch(e) {
+      throw new Error(`JSON 파싱 실패 (코드블록): ${codeBlock[1].slice(0, 200)}`);
+    }
+  }
+  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try { return { ok: true, data: JSON.parse(jsonMatch[0]) }; } catch {}
+  }
+  throw new Error(`JSON 파싱 실패: ${rawText.slice(0, 200)}`);
+}
+
+// ────────────────────────────────────────────────────────────
+// 통합 AI 호출 — Gemini 1차, Claude 2차 폴백
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
-  // 환각 방지: 모든 분석에 문서 근거 원칙 주입
+  // Gemini 키가 있으면 Gemini 우선 사용
+  if (env.GOOGLE_AI_API_KEY) {
+    return callGemini({ system, userBlocks, env, maxTokens });
+  }
+
+  // ────────────────────────────────────────────────────────────
+  // Anthropic Claude 폴백
+  // ────────────────────────────────────────────────────────────
   const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
   const systemWithGuard = system + ANTI_HALLUCINATION;
 
