@@ -16,7 +16,7 @@
 ### 서비스별 차감 포인트
 | 서비스 | serviceId | 포인트 | 모델 |
 |---|---|---|---|
-| 면접 질문 생성 | interview_questions | **19,900P** | claude-haiku-4-5 |
+| 면접 질문 생성 | interview_questions | **19,900P** | claude-sonnet-4-6 |
 | 이력서 분석 | resume_analysis | **29,900P** | **claude-sonnet-4-6** |
 | 자소서 번역 (6개 언어) | cover_letter_translation | **39,900P** | sonnet-5(영어)/sonnet-4-6(기타) |
 | 등기부 전세사기 분석 | registry_analysis | **34,900P** | **claude-sonnet-4-6** |
@@ -137,19 +137,34 @@
 
 ## 구현된 기능 전체 목록
 
-### 분석 서비스 (analyze.js) — v2 모델 업그레이드
+### 분석 서비스 (analyze.js) — v3 모델 업그레이드 + enrich.js 데이터 강화
 | 함수 | serviceId | 모델 | 주요 강화 내용 |
 |---|---|---|---|
 | `analyzeResume()` | resume_analysis | **sonnet-4-6** | 기업별 이력서 평가기준(삼성/SK/현대/LG/카카오/네이버/쿠팡/공기업), ATS 전략 |
 | `analyzeCoverLetter()` | cover_letter_analysis | **sonnet-4-6** | 기업별 자소서 심사기준+불합격 5대 패턴, 기업문화적합도 |
 | `rewriteCoverLetter()` | cover_letter_rewrite | **sonnet-5** | 합격자소서 5원칙+기업별 스타일 가이드+불합격→합격 변환 DB |
-| `translateCoverLetter()` | cover_letter_translation | sonnet-5(영어)/haiku(기타) | 6개 언어, 커리어 특화 번역 |
-| `generateInterviewQuestions()` | interview_questions | haiku | 기업별 면접 출제패턴(2026)+압박질문 패턴 |
-| `analyzeContract()` | employment/freelance/rental_contract | **sonnet-4-6** | 2026 최저임금 10,030원·주52시간·고위험 조항 패턴 DB |
-| `analyzeRegistry()` | registry_analysis | **sonnet-4-6** | 전세사기 5대체크포인트·깡통전세·선순위채권 |
+| `translateCoverLetter()` | cover_letter_translation | sonnet-5(영어)/sonnet-4-6(기타) | 6개 언어, 커리어 특화 번역 |
+| `generateInterviewQuestions()` | interview_questions | **sonnet-4-6** | 기업별 면접 출제패턴(2026)+압박질문 패턴 |
+| `analyzeContract()` | employment/freelance/rental_contract | **sonnet-4-6** | 최저임금 위반 자동계산 + 노동판례 DB 주입 (enrich.js) |
+| `analyzeRegistry()` | registry_analysis | **sonnet-4-6** | 전세위험 계산+실거래가+악성임대인 DB+판례 주입 (enrich.js) |
+| `analyzeInsurance()` | insurance_scan | **sonnet-4-6** | 보험분쟁 판례 DB 주입 (enrich.js) |
+| `analyzeBizPlan()` | biz_plan | **sonnet-4-6** | 정부지원사업 DB + 성공/실패 판례 주입 (enrich.js) |
 | `analyzePublicDoc()` | public_doc_analysis / workplace_tone / career_saju / notice_summary | haiku | 공문서 범용 + 신규 3종 전용 프롬프트 |
-| `analyzeContract()` (insurance_scan 경유) | insurance_scan | haiku | 보험약관 면책조항 분석 |
-| `analyzeScannedPdf()` | — | haiku | PDF 스캔 전처리 |
+| `analyzeScannedPdf()` | — | **sonnet-4-6** | PDF 스캔 전처리 (Vision + document block) |
+
+### enrich.js 데이터 강화 모듈 (2026-09-13 신규)
+> `seolyuhana/services/enrich.js` — 일반 AI 구독으로는 불가능한 실시간·계산 데이터를 Claude 분석 전 주입
+| 기능 | 방식 | 강화 서비스 |
+|---|---|---|
+| 최저임금 자동 계산 (2026: 10,320원) | 순수 계산 (API 불필요) | analyzeContract |
+| 전세가율·깡통전세 위험 자동 계산 | 순수 계산 | analyzeRegistry |
+| 국토부 실거래가 API | MOLIT_API_KEY (선택) | analyzeRegistry |
+| HUG 악성임대인 조회 | HUG_API_KEY (선택) | analyzeRegistry |
+| 지역별 전세가율 비교 (전국 주요 지역 임베딩) | 임베딩 데이터 | analyzeRegistry |
+| 전세사기 실제 판례 DB (2025~2026 5건) | 임베딩 데이터 | analyzeRegistry |
+| 노동법 위반 실제 판례 DB (2025~2026 5건) | 임베딩 데이터 | analyzeContract |
+| 보험분쟁 거부 패턴 DB (5종) | 임베딩 데이터 | analyzeInsurance |
+| 정부지원사업 매칭 DB (2026년 기준) | 임베딩 데이터 | analyzeBizPlan |
 
 ### 번역 지원 언어
 영어(en) / 일본어(ja) / 중국어 간체(zh) / 독일어(de) / 프랑스어(fr) / 스페인어(es)
