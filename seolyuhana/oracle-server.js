@@ -4659,8 +4659,8 @@ app.post('/claude-proxy', async (req, res) => {
     const apiKey = (req.headers['x-api-key'] || process.env.ANTHROPIC_API_KEY || '').replace(/[^\x21-\x7E]/g, '');
     if (!apiKey || apiKey.length < 20) return res.status(401).json({ error: 'ANTHROPIC_API_KEY 미설정 또는 오류' });
 
-    const wsId = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^\x21-\x7E]/g, '').trim()
-      || 'wrkspc_01QZEG8BPU9b7jE5S87zAnKx';
+    const wsIdRaw = (process.env.ANTHROPIC_WORKSPACE_ID || '').replace(/[^\x21-\x7E]/g, '').trim();
+    const wsHeaders = wsIdRaw ? { 'anthropic-workspace-id': wsIdRaw } : {};
 
     const bodyStr = JSON.stringify(req.body);
     const result = await new Promise((resolve, reject) => {
@@ -4672,7 +4672,7 @@ app.post('/claude-proxy', async (req, res) => {
           'content-length': Buffer.byteLength(bodyStr),
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
-          'anthropic-workspace-id': wsId
+          ...wsHeaders
         },
         timeout: 120000
       }, (proxyRes) => {
