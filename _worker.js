@@ -8934,9 +8934,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const { analyzeResume, analyzeCoverLetter, rewriteCoverLetter, translateCoverLetter, generateInterviewQuestions, analyzeContract, analyzeScannedPdf, analyzeRegistry, analyzePublicDoc, analyzeWebtoon, analyzeShortFilm, analyzeDramaSeries, analyzeInsurance, analyzeBizPlan } = await import('./seolyuhana/services/analyze.js');
           await setProgress(40);
 
-          // 155초 타임아웃 — 초과 시 failed 상태로 명시적 실패 (waitUntil 무한 대기 방지)
+          // 220초 타임아웃 — Oracle proxy 경유 시 여유 확보 (90s Claude + 60s PDF + 70s 여유)
           const _slyAnalysisTimeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('분석 시간 초과. 파일이 크거나 복잡할 경우 페이지를 줄이거나 텍스트 PDF를 사용하세요.')), 155000)
+            setTimeout(() => reject(new Error('분석 시간 초과. 파일이 크거나 복잡할 경우 페이지를 줄이거나 텍스트 PDF를 사용하세요.')), 220000)
           );
 
           let analysisData;
