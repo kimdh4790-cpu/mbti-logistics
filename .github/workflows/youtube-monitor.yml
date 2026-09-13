@@ -29,10 +29,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-
-      - name: 의존성 설치
-        run: npm install --ignore-scripts
 
       - name: YouTube 채널 모니터링 실행
         run: node scripts/monitor/content-monitor.js
