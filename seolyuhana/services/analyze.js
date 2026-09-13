@@ -30,7 +30,7 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
     method: 'POST',
     headers: proxyHeaders,
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90000)
+    signal: AbortSignal.timeout(30000)
   });
 
   if (!res.ok) {
@@ -147,7 +147,7 @@ export async function analyzeResume({ text, jdText = '', env }) {
     system: RESUME_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 5000
+    maxTokens: 3000
   });
 }
 
@@ -232,7 +232,7 @@ export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdT
     system: COVER_LETTER_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 7000
+    maxTokens: 4000
   });
 }
 
@@ -298,7 +298,7 @@ export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdT
     system: COVER_LETTER_REWRITE_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 10000
+    maxTokens: 4000
   });
 }
 
@@ -483,7 +483,7 @@ export async function translateCoverLetter({ text, resumeText = '', targetLang =
     system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
-    maxTokens: 9000
+    maxTokens: 5000
   });
 }
 
@@ -665,7 +665,7 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
     system: CONTRACT_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 7000
+    maxTokens: 4000
   });
 }
 
@@ -700,10 +700,10 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     headers: proxyHeaders2,
     body: JSON.stringify({
       model: 'claude-3-haiku-20240307',
-      max_tokens: 6000,
+      max_tokens: 4000,
       messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: analysisPrompt }] }]
     }),
-    signal: AbortSignal.timeout(90000)
+    signal: AbortSignal.timeout(30000)
   });
 
   if (!res.ok) {
@@ -830,7 +830,7 @@ export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
     system: REGISTRY_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 4000
   });
 }
 
@@ -989,7 +989,7 @@ export async function analyzeWebtoon({ text, env }) {
     system: WEBTOON_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 웹툰 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 4000
   });
 }
 
@@ -1062,7 +1062,7 @@ export async function analyzeShortFilm({ text, env }) {
     system: SHORTFILM_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 4000
   });
 }
 
@@ -1145,7 +1145,7 @@ export async function analyzeDramaSeries({ text, env }) {
     system: DRAMA_SERIES_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 드라마 시리즈 기획서를 분석해주세요:\n\n${text}` }],
     env,
-    maxTokens: 8000
+    maxTokens: 4000
   });
 }
 
@@ -1196,7 +1196,7 @@ export async function analyzeInsurance({ text, env }) {
     system: INSURANCE_SYSTEM,
     userBlocks: [{ type: 'text', text: `[보험약관 내용]\n${text}` }],
     env,
-    maxTokens: 5000
+    maxTokens: 3500
   });
 }
 
@@ -1252,7 +1252,7 @@ export async function analyzeBizPlan({ text, env }) {
     system: BIZ_SYSTEM,
     userBlocks: [{ type: 'text', text: `[사업계획서]\n${text}` }],
     env,
-    maxTokens: 6000
+    maxTokens: 4000
   });
 }
 
@@ -1337,6 +1337,6 @@ export async function analyzeCompetitors({ myService, competitors, marketContext
     system: COMPETITOR_SYSTEM,
     userBlocks: [{ type: 'text', text: userText }],
     env,
-    maxTokens: 6000
+    maxTokens: 4000
   });
 }
