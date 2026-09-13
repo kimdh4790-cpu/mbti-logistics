@@ -34,21 +34,35 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
   };
 
   const apiKey = env.GOOGLE_AI_API_KEY || '';
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(90000)
+  // 503(과부하) 시 폴백 순서로 재시도
+  const MODELS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+  let res, lastErr;
+  for (const model of MODELS) {
+    try {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(90000)
+        }
+      );
+      if (res.status === 503) {
+        lastErr = new Error(`Gemini API 503 (${model}): 과부하`);
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
+      if (res.ok) break;
+      const errBody = await res.json().catch(() => ({}));
+      lastErr = new Error(`Gemini API ${res.status} (${model}): ${errBody.error?.message || res.statusText}`);
+      if (res.status === 429 || res.status === 404) continue;
+      break;
+    } catch (e) {
+      lastErr = e;
     }
-  );
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}));
-    const detail = JSON.stringify(errBody).slice(0, 300);
-    throw new Error(`Gemini API ${res.status}: ${errBody.error?.message || res.statusText} | ${detail}`);
   }
+  if (!res || !res.ok) throw lastErr || new Error('Gemini API 모든 모델 실패');
 
   const data = await res.json();
   const rawText = (data.candidates?.[0]?.content?.parts?.[0]?.text || '').trim();
