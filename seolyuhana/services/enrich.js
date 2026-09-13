@@ -179,7 +179,9 @@ function extractDongCode(address) {
  * 공공데이터포털 MOLIT_API_KEY 필요 (무료 등록)
  */
 export async function fetchMolitAptPrice(address, env) {
-  if (!env.MOLIT_API_KEY || !address) return null;
+  // BIZ_API_KEY = data.go.kr 통합 서비스키 — MOLIT API도 동일 포털이라 폴백 사용 가능
+  const serviceKey = env.MOLIT_API_KEY || env.BIZ_API_KEY;
+  if (!serviceKey || !address) return null;
   try {
     const lawdCd = extractDongCode(address);
     if (!lawdCd) return null;
@@ -189,7 +191,7 @@ export async function fetchMolitAptPrice(address, env) {
     const prevYyyymm = `${now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()}${String(now.getMonth() === 0 ? 12 : now.getMonth()).padStart(2, '0')}`;
 
     const fetchMonth = async (ym) => {
-      const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTrade?serviceKey=${env.MOLIT_API_KEY}&LAWD_CD=${lawdCd}&DEAL_YMD=${ym}&pageNo=1&numOfRows=10&_type=json`;
+      const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTrade?serviceKey=${encodeURIComponent(serviceKey)}&LAWD_CD=${lawdCd}&DEAL_YMD=${ym}&pageNo=1&numOfRows=10&_type=json`;
       const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) return [];
       const data = await res.json();
@@ -493,7 +495,7 @@ export async function buildRegistryEnrichment(text, jeonseDeposit, env) {
       lines.push(`[실거래가 기준 전세가율] ${realRatio}% (보증금 ${(jeonseDeposit / 10000).toFixed(0)}만원 ÷ 실거래 평균 ${(molitData.avgPrice / 10000).toFixed(0)}만원)`, '');
     }
   } else {
-    lines.push(`[국토부 실거래가] MOLIT_API_KEY 미설정 — 실거래가 조회 불가 (매매가를 직접 확인하세요)`, '');
+    lines.push(`[국토부 실거래가] 조회 불가 — 주소에서 법정동 코드를 추출하지 못했거나 해당 지역 거래 데이터 없음 (매매가를 직접 확인하세요)`, '');
   }
 
   if (hugData) {
