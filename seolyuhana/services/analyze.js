@@ -85,13 +85,12 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
 }
 
 // ────────────────────────────────────────────────────────────
-// 통합 AI 호출 — Gemini 1차, Claude 2차 폴백
+// 통합 AI 호출 — Claude 1차, Gemini 2차 폴백
+// (Gemini는 한국 Cloudflare PoP에서 지역 차단됨)
 // ────────────────────────────────────────────────────────────
-async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) {
-  // Gemini 키가 있으면 Gemini 우선 사용
-  if (env.GOOGLE_AI_API_KEY) {
-    return callGemini({ system, userBlocks, env, maxTokens });
-  }
+async function callClaude({ model: _model, system, userBlocks, env, maxTokens = 4096 }) {
+  // 항상 최신 haiku 사용 (구형 모델은 403)
+  const model = 'claude-haiku-4-5';
 
   // ────────────────────────────────────────────────────────────
   // Anthropic Claude 폴백
@@ -119,8 +118,14 @@ async function callClaude({ model, system, userBlocks, env, maxTokens = 4096 }) 
 
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
-    const detail = JSON.stringify(errBody).slice(0, 300);
-    throw new Error(`Claude API ${res.status} (model:${model}): ${errBody.error?.message || res.statusText} | ${detail}`);
+    const claudeErr = `Claude API ${res.status}: ${errBody.error?.message || res.statusText}`;
+    // Gemini를 폴백으로 시도 (지역 차단 시 에러 반환)
+    if (env.GOOGLE_AI_API_KEY) {
+      try { return await callGemini({ system, userBlocks, env, maxTokens }); } catch (gemErr) {
+        throw new Error(`${claudeErr} | Gemini 폴백 실패: ${gemErr.message}`);
+      }
+    }
+    throw new Error(claudeErr);
   }
 
   const data = await res.json();

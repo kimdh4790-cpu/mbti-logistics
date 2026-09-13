@@ -58,6 +58,13 @@ async function main() {
   const pubDir = path.join(ROOT, 'public');
   fs.mkdirSync(pubDir, { recursive: true });
 
+  // 카테고리 이미지 public 폴더에 복사
+  const catImg = path.join(__dirname, 'scan-categories.png');
+  if (fs.existsSync(catImg)) {
+    fs.copyFileSync(catImg, path.join(pubDir, 'scan-categories.png'));
+    console.log('[Remotion] 카테고리 이미지 복사 완료');
+  }
+
   const narFile = path.join(OUT_DIR, 'scan-narration.mp3');
   let hasNarration = false;
   if (fs.existsSync(narFile)) {
