@@ -1,5 +1,5 @@
 const React = require('react');
-const { useCurrentFrame, useVideoConfig, interpolate, Sequence, AbsoluteFill, Easing } = require('remotion');
+const { useCurrentFrame, useVideoConfig, interpolate, Sequence, AbsoluteFill, Easing, staticFile, Img } = require('remotion');
 
 // ── 색상 테마 (주차별 로테이션)
 var THEMES = [
@@ -323,55 +323,94 @@ function SceneSolution() {
   );
 }
 
-// ── 씬4: 카테고리 (1020-1380프레임, 12초)
+// ── 씬4: 카테고리 이미지 쇼케이스 (1020-1380프레임, 12초)
 function SceneCategories() {
   var frame = useCurrentFrame();
+  // 이미지 줌인 (1.05 → 1.0)
+  var imgScale = interpolate(frame, [0, 120], [1.08, 1.0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) });
+  // 하이라이트 순환: 각 카드 0.5초(15프레임)씩 순서대로 강조
+  var CARDS = [
+    { label: '취업서류 AI 분석', color: '#FF6B9D' },
+    { label: '법률·계약서 AI 검토', color: '#FF9500' },
+    { label: '부동산 등기부 분석', color: '#34D399' },
+    { label: '공문서·건보·사업자', color: '#F59E0B' },
+  ];
+  var cardIdx = Math.floor(frame / 60) % CARDS.length;
+  var highlightCard = CARDS[cardIdx];
+
   return React.createElement(AbsoluteFill, {
-    style: { ...BASE, background: 'linear-gradient(180deg, ' + T.bg + ' 0%, ' + T.mid + '44 100%)' },
+    style: { ...BASE, background: '#0a0a14' },
   },
-    React.createElement(Particles),
-    // 제목
+    // 배경 이미지 (줌인 효과)
     React.createElement('div', {
       style: {
-        position: 'absolute', top: '10%', width: '100%', textAlign: 'center', padding: '0 40px',
-        opacity: fi(frame, 0, 20),
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
       },
     },
-      React.createElement('div', { style: { color: T.accent, fontSize: 28, fontWeight: 800, letterSpacing: 1, marginBottom: 10 } }, '서비스'),
-      React.createElement('div', { style: { color: '#fff', fontSize: 54, fontWeight: 900, letterSpacing: -1.5 } }, '6가지 카테고리'),
-    ),
-    // 칩들 (흐르는 효과)
-    React.createElement('div', {
-      style: {
-        position: 'absolute', top: '32%', left: 0, right: 0,
-        display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center',
-        padding: '0 40px',
-      },
-    },
-      ...V.cats.map(function(cat, i) {
-        return React.createElement('div', {
-          key: i,
-          style: {
-            background: T.accent + '22', border: '2px solid ' + T.accent + '88',
-            borderRadius: 40, padding: '14px 28px',
-            color: '#fff', fontSize: 28, fontWeight: 700,
-            opacity: fi(frame, 10 + i * 10, 18),
-            transform: 'scale(' + interpolate(frame, [10 + i * 10, 28 + i * 10], [0.8, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.back(1.2)) }) + ')',
-          },
-        }, cat);
+      React.createElement(Img, {
+        src: staticFile('scan-categories.png'),
+        style: {
+          width: '100%', height: '100%', objectFit: 'cover',
+          transform: 'scale(' + imgScale + ')',
+          opacity: fi(frame, 0, 25),
+          filter: 'brightness(0.55)',
+        },
       }),
     ),
-    // 가격 정보
+    // 스캔 라인 애니메이션 (위→아래)
     React.createElement('div', {
       style: {
-        position: 'absolute', bottom: '14%', left: 40, right: 40,
-        background: 'rgba(255,255,255,.06)', border: '1.5px solid rgba(255,255,255,.12)',
-        borderRadius: 20, padding: '24px 32px', textAlign: 'center',
-        opacity: fi(frame, 80, 20), transform: 'translateY(' + su(frame, 80, 20) + 'px)',
+        position: 'absolute', left: 0, right: 0, height: 4,
+        background: 'linear-gradient(90deg, transparent 0%, ' + T.accent + ' 50%, transparent 100%)',
+        top: interpolate(frame % 120, [0, 120], [-4, 1924], { extrapolateRight: 'clamp' }) + 'px',
+        opacity: 0.7,
+        boxShadow: '0 0 24px ' + T.accent + ', 0 0 8px #fff',
+        zIndex: 2,
+      },
+    }),
+    // 상단 타이틀
+    React.createElement('div', {
+      style: {
+        position: 'absolute', top: '6%', width: '100%', textAlign: 'center',
+        opacity: fi(frame, 10, 20), zIndex: 3,
       },
     },
-      React.createElement('div', { style: { color: 'rgba(255,255,255,.6)', fontSize: 26, marginBottom: 8 } }, '포인트 1P = 1원 · 충전 즉시 사용'),
-      React.createElement('div', { style: { color: T.accent, fontSize: 42, fontWeight: 900 } }, '19,900P ~ 39,900P'),
+      React.createElement('div', {
+        style: {
+          display: 'inline-block',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+          borderRadius: 50, padding: '14px 40px',
+          border: '1.5px solid ' + T.accent + '66',
+        },
+      },
+        React.createElement('span', { style: { color: T.accent, fontSize: 26, fontWeight: 900, letterSpacing: 2 } }, 'SCAN AI'),
+        React.createElement('span', { style: { color: '#fff', fontSize: 26, fontWeight: 700, marginLeft: 14 } }, '4가지 서비스'),
+      ),
+    ),
+    // 현재 하이라이트 카드 레이블 (하단)
+    React.createElement('div', {
+      style: {
+        position: 'absolute', bottom: '10%', left: 40, right: 40, zIndex: 3,
+        opacity: fi(frame, 20, 15),
+      },
+    },
+      React.createElement('div', {
+        style: {
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)',
+          borderRadius: 20, padding: '24px 36px',
+          border: '2px solid ' + highlightCard.color,
+          display: 'flex', alignItems: 'center', gap: 20,
+          transform: 'translateY(' + su(frame % 60, 0, 15, 16) + 'px)',
+        },
+      },
+        React.createElement('div', {
+          style: { width: 16, height: 16, borderRadius: '50%', background: highlightCard.color, flexShrink: 0, boxShadow: '0 0 12px ' + highlightCard.color },
+        }),
+        React.createElement('div', { style: { color: '#fff', fontSize: 34, fontWeight: 900, lineHeight: 1.2 } }, highlightCard.label),
+        React.createElement('div', { style: { marginLeft: 'auto', color: highlightCard.color, fontSize: 28, fontWeight: 800, whiteSpace: 'nowrap' } }, 'AI 분석 →'),
+      ),
     ),
   );
 }
