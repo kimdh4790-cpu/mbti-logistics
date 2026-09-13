@@ -180,11 +180,37 @@ function xmlToPlainText(xml) {
 }
 
 /**
- * PDF 파싱 — 0차 Worker 내 순수 JS, 실패 시 Oracle 서버 위임
+ * PDF 파싱 — 3단계 폴백
+ * 1. 순수 JS 텍스트 추출 (인터넷등기소 RIS CIDFont HEX UTF-16BE 포함)
+ * 2. Oracle 이미지 변환 (텍스트 추출 실패 시)
+ * 3. Claude PDF document 타입 직접 전송 (Oracle 접속 불가 시)
  */
 async function parsePdf(buffer, env) {
-  // Anthropic PDF beta — PDF 원본을 Claude에 직접 전송 (Oracle pdftotext 불필요)
-  // 일반 PDF, 스캔 PDF, CIDFont RIS 등기부등본 모두 지원
+  // 1차: 순수 JS 텍스트 추출 — Anthropic API 불필요, Oracle 불필요
+  const extracted = extractPdfText(buffer);
+  if (extracted && extracted.length > 50) {
+    return {
+      text: extracted,
+      pageCount: countPdfPages(buffer),
+      method: 'pdf_text_js',
+      scanned: false
+    };
+  }
+
+  // 2차: Oracle 이미지 변환 (스캔 PDF 또는 JS 추출 실패)
+  const oracleImages = await tryOraclePdfImages(buffer, env);
+  if (oracleImages && oracleImages.length > 0) {
+    return {
+      text: '',
+      pageCount: oracleImages.length,
+      method: 'pdf_oracle_images',
+      scanned: true,
+      images: oracleImages,
+      rawBuffer: buffer
+    };
+  }
+
+  // 3차: Claude PDF document 타입 직접 전송 (폴백)
   return { text: '', pageCount: 1, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
 }
 
