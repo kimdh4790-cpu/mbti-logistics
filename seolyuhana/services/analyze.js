@@ -146,7 +146,7 @@ export async function analyzeResume({ text, jdText = '', env }) {
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: RESUME_SYSTEM,
     userBlocks,
     env,
@@ -231,7 +231,7 @@ export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: COVER_LETTER_SYSTEM,
     userBlocks,
     env,
@@ -297,7 +297,7 @@ export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: COVER_LETTER_REWRITE_SYSTEM,
     userBlocks,
     env,
@@ -482,7 +482,7 @@ export async function translateCoverLetter({ text, resumeText = '', targetLang =
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
@@ -595,7 +595,7 @@ export async function generateInterviewQuestions({ resumeText, coverLetterText =
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: INTERVIEW_SYSTEM,
     userBlocks,
     env,
@@ -666,7 +666,7 @@ export async function analyzeContract({ text, contractType = 'auto', env }) {
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: CONTRACT_SYSTEM,
     userBlocks,
     env,
@@ -727,7 +727,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
     method: 'POST',
     headers: reqHeaders,
     body: JSON.stringify({
-      model: 'claude-haiku-4-5',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 4000,
       messages: [{ role: 'user', content }]
     }),
@@ -855,7 +855,7 @@ export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
   const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
   const enrichment = await buildRegistryEnrichment(text, jeonseDeposit, env);
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: REGISTRY_SYSTEM,
     userBlocks: [
       { type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` },
@@ -912,7 +912,7 @@ const PUBLIC_DOC_SYSTEM = `당신은 한국 공공문서 분석 전문가입니�
 
 export async function analyzePublicDoc({ text, serviceId = 'public_doc_analysis', env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: PUBLIC_DOC_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 공공문서를 분석해주세요:\n\n${text}` }],
     env,
@@ -999,7 +999,7 @@ const WEBTOON_SYSTEM = `당신은 네이버웹툰·카카오웹툰·레진코믹
 
 export async function analyzeWebtoon({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: WEBTOON_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 웹툰 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
@@ -1072,7 +1072,7 @@ const SHORTFILM_SYSTEM = `당신은 부산국제영화제(BIFF)·전주국제영
 
 export async function analyzeShortFilm({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: SHORTFILM_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 시나리오/기획안을 분석해주세요:\n\n${text}` }],
     env,
@@ -1155,7 +1155,7 @@ const DRAMA_SERIES_SYSTEM = `당신은 넷플릭스·웨이브·티빙·쿠팡�
 
 export async function analyzeDramaSeries({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: DRAMA_SERIES_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 드라마 시리즈 기획서를 분석해주세요:\n\n${text}` }],
     env,
@@ -1207,7 +1207,7 @@ export async function analyzeInsurance({ text, env }) {
 
   const enrichment = buildInsuranceEnrichment();
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: INSURANCE_SYSTEM,
     userBlocks: [
       { type: 'text', text: `[보험약관 내용]\n${text}` },
@@ -1267,7 +1267,7 @@ export async function analyzeBizPlan({ text, env }) {
 
   const enrichment = buildBizPlanEnrichment();
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: BIZ_SYSTEM,
     userBlocks: [
       { type: 'text', text: `[사업계획서]\n${text}` },
@@ -1355,7 +1355,7 @@ export async function analyzeCompetitors({ myService, competitors, marketContext
   ].filter(Boolean).join('\n\n');
 
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: COMPETITOR_SYSTEM,
     userBlocks: [{ type: 'text', text: userText }],
     env,
@@ -1388,7 +1388,7 @@ const LEGAL_NOTICE_SYSTEM = `당신은 내용증명 문서 작성을 도와주�
 
 export async function draftLegalNotice({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: LEGAL_NOTICE_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 상황에 맞는 내용증명 초안을 작성해주세요. 반드시 초안임을 명시하고 법적 효력이 없음을 disclaimer에 포함하세요.\n\n[상황 설명]\n${text}` }],
     env,
@@ -1440,7 +1440,7 @@ const CANCEL_CALC_SYSTEM = `당신은 소비자 환불 계산을 도와주는 AI
 
 export async function calcServiceCancel({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: CANCEL_CALC_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 중도해지 상황의 예상 환불 금액을 소비자분쟁해결기준 참고로 계산해주세요.\n\n[상황/계약 내용]\n${text}` }],
     env,
@@ -1494,7 +1494,7 @@ const HEALTH_INS_SYSTEM = `당신은 건강보험료·국민연금 납부액 검
 
 export async function calcHealthInsurance({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: HEALTH_INS_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 건강보험·국민연금 납부 내역을 2026년 요율 기준으로 검증해주세요.\n\n[납부 내역 및 소득 정보]\n${text}` }],
     env,
@@ -1549,7 +1549,7 @@ const TAX_NOTICE_SYSTEM = `당신은 세금 고지서 계산 검증을 도와주
 
 export async function checkTaxNotice({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: TAX_NOTICE_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 세금 고지서 내용을 검증해주세요.\n\n[고지서 내용]\n${text}` }],
     env,
@@ -1608,7 +1608,7 @@ const APT_MGMT_SYSTEM = `당신은 아파트 관리비 및 장기수선충당금
 
 export async function checkAptMgmtFee({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: APT_MGMT_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 아파트 관리비 내역을 검증해주세요.\n\n[관리비 고지 내역]\n${text}` }],
     env,
@@ -1732,7 +1732,7 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
 
 export async function analyzeAuction({ text, env }) {
   return callClaude({
-    model: 'claude-haiku-4-5',
+    model: 'claude-3-5-haiku-20241022',
     system: AUCTION_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 대법원 경매 물건 정보를 분석해주세요. 권리관계·적정입찰가·수익률 시뮬레이션을 모두 포함하세요.\n\n[경매 물건 정보]\n${text}` }],
     env,
