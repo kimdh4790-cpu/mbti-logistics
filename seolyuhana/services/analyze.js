@@ -3,6 +3,12 @@
  * Claude API 호출 — 서비스별 분석 모듈
  * 모든 함수는 { ok: true, data: {...} } 또는 { ok: false, error: string } 반환
  */
+import {
+  buildRegistryEnrichment,
+  buildContractEnrichment,
+  buildInsuranceEnrichment,
+  buildBizPlanEnrichment
+} from './enrich.js';
 
 // ────────────────────────────────────────────────────────────
 // 공통 Claude 호출 헬퍼 — Anthropic API 직접 호출
@@ -140,7 +146,7 @@ export async function analyzeResume({ text, jdText = '', env }) {
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: RESUME_SYSTEM,
     userBlocks,
     env,
@@ -225,7 +231,7 @@ export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: COVER_LETTER_SYSTEM,
     userBlocks,
     env,
@@ -291,11 +297,11 @@ export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdT
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-5',
     system: COVER_LETTER_REWRITE_SYSTEM,
     userBlocks,
     env,
-    maxTokens: 4000
+    maxTokens: 5000
   });
 }
 
@@ -475,8 +481,9 @@ export async function translateCoverLetter({ text, resumeText = '', targetLang =
     { type: 'text', text: `[Korean Cover Letter to Translate / 번역 대상 자기소개서]\n${text}` }
   ];
 
+  const isEnglishModel = targetLang === 'en' ? 'claude-sonnet-5' : 'claude-sonnet-4-6';
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: isEnglishModel,
     system: buildTranslationSystem(targetLang),
     userBlocks,
     env,
@@ -589,7 +596,7 @@ export async function generateInterviewQuestions({ resumeText, coverLetterText =
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: INTERVIEW_SYSTEM,
     userBlocks,
     env,
@@ -652,13 +659,15 @@ const CONTRACT_SYSTEM = `당신은 대한민국 노동법·민법·상법 전문
 개선 제안 최소 5개, 위험도 순 정렬.`
 
 export async function analyzeContract({ text, contractType = 'auto', env }) {
+  const enrichment = buildContractEnrichment(text, contractType);
   const userBlocks = [
     ...(contractType !== 'auto' ? [{ type: 'text', text: `계약서 유형: ${contractType}` }] : []),
-    { type: 'text', text: `[계약서 전문]\n${text}` }
+    { type: 'text', text: `[계약서 전문]\n${text}` },
+    { type: 'text', text: enrichment }
   ];
 
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: CONTRACT_SYSTEM,
     userBlocks,
     env,
@@ -715,7 +724,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       messages: [{ role: 'user', content }]
     }),
@@ -841,12 +850,16 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
 
 export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
   const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
+  const enrichment = await buildRegistryEnrichment(text, jeonseDeposit, env);
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: REGISTRY_SYSTEM,
-    userBlocks: [{ type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` }],
+    userBlocks: [
+      { type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` },
+      { type: 'text', text: enrichment }
+    ],
     env,
-    maxTokens: 4000
+    maxTokens: 4500
   });
 }
 
@@ -1207,12 +1220,16 @@ export async function analyzeInsurance({ text, env }) {
   "overallComment": "약관 종합평가 (200자 이내)"
 }`;
 
+  const enrichment = buildInsuranceEnrichment();
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: INSURANCE_SYSTEM,
-    userBlocks: [{ type: 'text', text: `[보험약관 내용]\n${text}` }],
+    userBlocks: [
+      { type: 'text', text: `[보험약관 내용]\n${text}` },
+      { type: 'text', text: enrichment }
+    ],
     env,
-    maxTokens: 3500
+    maxTokens: 4000
   });
 }
 
@@ -1263,12 +1280,16 @@ export async function analyzeBizPlan({ text, env }) {
   "overallComment": "전체 총평 (200자 이내)"
 }`;
 
+  const enrichment = buildBizPlanEnrichment();
   return callClaude({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-sonnet-4-6',
     system: BIZ_SYSTEM,
-    userBlocks: [{ type: 'text', text: `[사업계획서]\n${text}` }],
+    userBlocks: [
+      { type: 'text', text: `[사업계획서]\n${text}` },
+      { type: 'text', text: enrichment }
+    ],
     env,
-    maxTokens: 4000
+    maxTokens: 4500
   });
 }
 
