@@ -2305,6 +2305,11 @@ const SVC = [
     hasJd: false, serviceId: 'apt_mgmt_check',
     desc: '아파트 관리비·장기수선충당금 고지서를 공동주택관리법 기준으로 검증합니다',
     bullets: ['공동주택관리법 기준 항목별 적정 여부 판단', '장기수선충당금 면적 기준 예상 범위 제시', 'K-apt(공동주택관리정보시스템) 조회 방법 안내', '부당 관리비 이의 신청 절차 안내', '⚠️ 예상 수치 — 단지별 실제 금액 차이 있음'] },
+  // ── 경매 분석 ──
+  { id: 'auction', label: '대법원 경매', sublabel: '물건 분석', cost: 14900, accept: '.pdf,.jpg,.jpeg,.png,.webp,.hwp,.docx,.txt', allowText: true,
+    hasJd: false, serviceId: 'auction_analysis',
+    desc: '경매 물건의 권리관계·적정 입찰가·수익률을 AI가 종합 분석합니다',
+    bullets: ['말소기준권리·대항력·배당순위 자동 판단', '임차인 인수 위험·체납관리비 분석', '보수적/적정/적극적 3단계 입찰가 시뮬레이션', '전세·월세·단기매각 수익률 비교 계산', '⚠️ 투자 조언 아님 — 입찰 전 현장 실사·전문가 상담 필수'] },
 ];
 
 const ICONS = {
@@ -2324,6 +2329,7 @@ const ICONS = {
   health_ins_calc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
   tax_notice_check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>`,
   apt_mgmt_check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/><line x1="12" y1="9" x2="12" y2="9.01"/></svg>`,
+  auction: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l4 4"/><path d="M13 3l4 4"/><path d="M3 13l4 4"/><path d="M14.5 9.5l-5 5"/><path d="m21 21-6.5-6.5"/><path d="M3 21h18"/></svg>`,
 };
 
 function _slyToast(msg, dur = 3000) {
@@ -2339,7 +2345,7 @@ window._slyToast = _slyToast;
 const SVC_CATS = [
   { label: '취업서류', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>', svcs: ['resume','cover_letter','cover_rewrite'] },
   { label: '법률·계약', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>', svcs: ['contract','insurance_scan','legal_notice_draft'] },
-  { label: '부동산', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>', svcs: ['registry','apt_mgmt_check'] },
+  { label: '부동산', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>', svcs: ['registry','apt_mgmt_check','auction'] },
   { label: '공문서', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14,2 14,7.5 20,7.5"/><path d="M2 15h10M5 12l-3 3 3 3"/></svg>', svcs: ['biz_cert','health_ins','income','gov_doc','bizplan'] },
   { label: '생활계산기', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>', svcs: ['service_cancel_calc','health_ins_calc','tax_notice_check'] },
 ];
