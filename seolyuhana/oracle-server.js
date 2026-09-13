@@ -41,6 +41,13 @@ const upload = multer({ limits: { fileSize: 32 * 1024 * 1024 } });
 
 app.use(express.json({ limit: '10mb' }));
 
+// 요청 로그 — PM2 out.log에서 실제 트래픽 확인용
+app.use((req, _res, next) => {
+  const size = req.headers['content-length'] ? `${Math.round(+req.headers['content-length']/1024)}KB` : '?';
+  console.log(`[REQ] ${new Date().toISOString().slice(11,19)} ${req.method} ${req.path} size=${size} from=${req.ip}`);
+  next();
+});
+
 // ── /health ─────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
