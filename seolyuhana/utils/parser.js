@@ -183,15 +183,6 @@ function xmlToPlainText(xml) {
  * PDF 파싱 — 0차 Worker 내 순수 JS, 실패 시 Oracle 서버 위임
  */
 async function parsePdf(buffer, env) {
-  // 0차: Worker 내 순수 JS 추출 (네트워크 없음 — 텍스트 기반 PDF는 여기서 끝)
-  try {
-    const localText = extractPdfText(buffer);
-    if (localText && localText.replace(/\s/g, '').length > 100) {
-      const pageCount = countPdfPages(buffer);
-      return { text: localText, pageCount, method: 'pdf_js', scanned: false };
-    }
-  } catch {}
-
   // 1차: Oracle pdf-text (pdftotext + CIDFont HEX 폴백, pageCount 포함)
   const oracleResult = await tryOraclePdfText(buffer, env);
   const pageCount = oracleResult?.pageCount || 1;
