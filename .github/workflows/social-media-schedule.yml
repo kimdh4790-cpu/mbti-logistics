@@ -84,7 +84,7 @@ jobs:
           cache: 'npm'
 
       - name: 의존성 설치
-        run: npm install --ignore-scripts
+        run: npm install --ignore-scripts --legacy-peer-deps
 
       - name: FFmpeg 설치
         run: sudo apt-get install -y ffmpeg fonts-noto-cjk
