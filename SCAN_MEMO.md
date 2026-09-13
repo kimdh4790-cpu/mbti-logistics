@@ -11,32 +11,26 @@
 
 ---
 
-## 포인트·요금 체계 (2026-09-07 v2 확정)
+## 포인트·요금 체계 (2026-09-13 v3 확정 — 일반 AI 구독 대체가능 서비스 삭제)
 
-### 서비스별 차감 포인트
+### 서비스별 차감 포인트 (10종 유지)
 | 서비스 | serviceId | 포인트 | 모델 |
 |---|---|---|---|
-| 면접 질문 생성 | interview_questions | **19,900P** | claude-sonnet-4-6 |
 | 이력서 분석 | resume_analysis | **29,900P** | **claude-sonnet-4-6** |
-| 자소서 번역 (6개 언어) | cover_letter_translation | **39,900P** | sonnet-5(영어)/sonnet-4-6(기타) |
-| 등기부 전세사기 분석 | registry_analysis | **34,900P** | **claude-sonnet-4-6** |
 | 자소서 수정안 제시 | cover_letter_analysis | **39,900P** | **claude-sonnet-4-6** |
-| 계약서 검토 | employment/freelance/rental_contract | **39,900P** | **claude-sonnet-4-6** |
 | 자소서 AI 전면 재작성 | cover_letter_rewrite | **49,900P** | **claude-sonnet-5** |
+| 근로계약서 검토 | employment_contract | **39,900P** | **claude-sonnet-4-6** |
+| 프리랜서계약서 검토 | freelance_contract | **39,900P** | **claude-sonnet-4-6** |
+| 부동산임대차계약 검토 | rental_contract | **39,900P** | **claude-sonnet-4-6** |
+| 등기부 전세사기 분석 | registry_analysis | **34,900P** | **claude-sonnet-4-6** |
 | 공문서 분석 | public_doc_analysis | **2,900P** | claude-haiku-4-5 |
+| 보험약관 면책조항 스캐너 | insurance_scan | **14,900P** | **claude-sonnet-4-6** |
+| 사업계획서 분석 | bizplan_analysis | **29,900P** | **claude-sonnet-4-6** |
 | 슈퍼어드민 | — | ∞P | kimdh4790@gmail.com·soungkyekim@naver.com |
 
-> **가격 근거**: 번역 < 이력서 < 등기부 < 수정안 = 계약서 < 재작성 (기능 복잡도 순)
-> **모델 업그레이드**: 모든 유료 서비스 haiku→sonnet-4-6, 재작성만 sonnet-5 사용
-
-### 서비스별 차감 포인트 (신규 4종 추가 — 2026-09-07)
-| 서비스 | serviceId | 포인트 |
-|---|---|---|
-| 직장인 말투 변환기 | workplace_tone | **2,900P** |
-| 가정통신문 요약 | notice_summary | **2,900P** |
-| 공문서 분석 | public_doc_analysis | **2,900P** |
-| 커리어 사주풀이 | career_saju | **9,900P** |
-| 보험약관 면책조항 스캐너 | insurance_scan | **14,900P** |
+> **v3 변경**: 일반 ChatGPT/Gemini/Claude 구독으로 가능한 서비스 11종 삭제
+> 삭제: 면접질문, 자소서번역, 직장말투변환, 커리어사주, 가정통신문요약, 숏폼스크립트, AI프롬프트이미지, 자막생성, 웹툰분석, 단편영화분석, 드라마분석
+> 유지 기준: 실시간 데이터(판례DB·최저임금계산·전세가율·악성임대인) 주입, 문서 전용 파싱(HWP/PDF), 정량 수치 산출이 필요한 서비스만
 
 ### 충전 플랜 (v3 — 소액 플랜 추가, 2026-09-07)
 | 결제금액 | 지급포인트 | 보너스 | 비고 |
@@ -137,19 +131,17 @@
 
 ## 구현된 기능 전체 목록
 
-### 분석 서비스 (analyze.js) — v3 모델 업그레이드 + enrich.js 데이터 강화
+### 분석 서비스 (analyze.js) — v4 서비스 정리 + enrich.js 데이터 강화
 | 함수 | serviceId | 모델 | 주요 강화 내용 |
 |---|---|---|---|
 | `analyzeResume()` | resume_analysis | **sonnet-4-6** | 기업별 이력서 평가기준(삼성/SK/현대/LG/카카오/네이버/쿠팡/공기업), ATS 전략 |
 | `analyzeCoverLetter()` | cover_letter_analysis | **sonnet-4-6** | 기업별 자소서 심사기준+불합격 5대 패턴, 기업문화적합도 |
 | `rewriteCoverLetter()` | cover_letter_rewrite | **sonnet-5** | 합격자소서 5원칙+기업별 스타일 가이드+불합격→합격 변환 DB |
-| `translateCoverLetter()` | cover_letter_translation | sonnet-5(영어)/sonnet-4-6(기타) | 6개 언어, 커리어 특화 번역 |
-| `generateInterviewQuestions()` | interview_questions | **sonnet-4-6** | 기업별 면접 출제패턴(2026)+압박질문 패턴 |
 | `analyzeContract()` | employment/freelance/rental_contract | **sonnet-4-6** | 최저임금 위반 자동계산 + 노동판례 DB 주입 (enrich.js) |
 | `analyzeRegistry()` | registry_analysis | **sonnet-4-6** | 전세위험 계산+실거래가+악성임대인 DB+판례 주입 (enrich.js) |
 | `analyzeInsurance()` | insurance_scan | **sonnet-4-6** | 보험분쟁 판례 DB 주입 (enrich.js) |
-| `analyzeBizPlan()` | biz_plan | **sonnet-4-6** | 정부지원사업 DB + 성공/실패 판례 주입 (enrich.js) |
-| `analyzePublicDoc()` | public_doc_analysis / workplace_tone / career_saju / notice_summary | haiku | 공문서 범용 + 신규 3종 전용 프롬프트 |
+| `analyzeBizPlan()` | bizplan_analysis | **sonnet-4-6** | 정부지원사업 DB + 성공/실패 판례 주입 (enrich.js) |
+| `analyzePublicDoc()` | public_doc_analysis | haiku | 공문서 범용 분석 |
 | `analyzeScannedPdf()` | — | **sonnet-4-6** | PDF 스캔 전처리 (Vision + document block) |
 
 ### enrich.js 데이터 강화 모듈 (2026-09-13 신규)
@@ -165,9 +157,6 @@
 | 노동법 위반 실제 판례 DB (2025~2026 5건) | 임베딩 데이터 | analyzeContract |
 | 보험분쟁 거부 패턴 DB (5종) | 임베딩 데이터 | analyzeInsurance |
 | 정부지원사업 매칭 DB (2026년 기준) | 임베딩 데이터 | analyzeBizPlan |
-
-### 번역 지원 언어
-영어(en) / 일본어(ja) / 중국어 간체(zh) / 독일어(de) / 프랑스어(fr) / 스페인어(es)
 
 ### Worker 엔드포인트 (mbtico.kr 블록)
 | 경로 | 역할 |

@@ -8164,8 +8164,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const targetLang = form.get('targetLang') || 'en';
           const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
-          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','cover_letter_translation','interview_questions','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','workplace_tone','career_saju','notice_summary','insurance_scan','webtoon_analysis','shortfilm_analysis','drama_series_analysis','bizplan_analysis','shortform_script','ai_photo','subtitle_create'];
-          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,cover_letter_translation:39900,interview_questions:19900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,workplace_tone:2900,career_saju:9900,notice_summary:2900,insurance_scan:14900,webtoon_analysis:29900,shortfilm_analysis:34900,drama_series_analysis:39900,bizplan_analysis:29900,shortform_script:29900,ai_photo:19900,subtitle_create:14900};
+          const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','insurance_scan','bizplan_analysis'];
+          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,insurance_scan:14900,bizplan_analysis:29900};
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
@@ -8248,7 +8248,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const processingCtx = {jobId, uid, serviceId, filename, fileBuffer, jdText, resumeJobId, targetLang, jeonseDeposit, env, token, pointCost, isSuperAdmin};
           ctx.waitUntil(_slyProcessJob(processingCtx));
 
-          const SERVICE_EST_SEC = {resume_analysis:60,cover_letter_analysis:70,cover_letter_rewrite:90,cover_letter_translation:60,interview_questions:45,employment_contract:60,freelance_contract:60,rental_contract:60,registry_analysis:70,public_doc_analysis:30,workplace_tone:20,career_saju:25,notice_summary:20,insurance_scan:50,webtoon_analysis:60,shortfilm_analysis:70,drama_series_analysis:80,bizplan_analysis:70,shortform_script:30,ai_photo:25,subtitle_create:35};
+          const SERVICE_EST_SEC = {resume_analysis:60,cover_letter_analysis:70,cover_letter_rewrite:90,employment_contract:60,freelance_contract:60,rental_contract:60,registry_analysis:70,public_doc_analysis:30,insurance_scan:50,bizplan_analysis:70};
           return Response.json({
             ok: true, jobId,
             estimatedSec: SERVICE_EST_SEC[serviceId] || 60,
@@ -8968,20 +8968,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               const r = await analyzeCoverLetter({coverLetterText:text, resumeText, jdText, env}); return r.data;
             } else if (serviceId === 'cover_letter_rewrite') {
               const r = await rewriteCoverLetter({coverLetterText:text, resumeText, jdText, env}); return r.data;
-            } else if (serviceId === 'cover_letter_translation') {
-              const r = await translateCoverLetter({text, resumeText, targetLang, env}); return r.data;
-            } else if (serviceId === 'interview_questions') {
-              const r = await generateInterviewQuestions({resumeText:text, coverLetterText:'', jdText, env}); return r.data;
             } else if (serviceId === 'registry_analysis') {
               const r = await analyzeRegistry({text, jeonseDeposit, env}); return r.data;
-            } else if (serviceId === 'public_doc_analysis' || serviceId === 'workplace_tone' || serviceId === 'career_saju' || serviceId === 'notice_summary' || serviceId === 'shortform_script' || serviceId === 'ai_photo' || serviceId === 'subtitle_create') {
+            } else if (serviceId === 'public_doc_analysis') {
               const r = await analyzePublicDoc({text, serviceId, env}); return r.data;
-            } else if (serviceId === 'webtoon_analysis') {
-              const r = await analyzeWebtoon({text, env}); return r.data;
-            } else if (serviceId === 'shortfilm_analysis') {
-              const r = await analyzeShortFilm({text, env}); return r.data;
-            } else if (serviceId === 'drama_series_analysis') {
-              const r = await analyzeDramaSeries({text, env}); return r.data;
             } else if (serviceId === 'insurance_scan') {
               const r = await analyzeInsurance({text, env}); return r.data;
             } else if (serviceId === 'bizplan_analysis') {

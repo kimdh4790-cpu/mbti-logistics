@@ -2020,25 +2020,14 @@ const SLY_SERVICES = [
   { id: 'resume',          label: '이력서 분석',      cost: 29900, icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'cover_letter',    label: '자소서 수정안',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'cover_rewrite',   label: '자소서 재작성',    cost: 49900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'cv_translate',    label: '자소서 번역',      cost: 39900, icon: 'lang',   accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', hasLangSelect: true },
-  { id: 'interview',       label: '면접 질문',        cost: 19900, icon: 'mic',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'contract',        label: '계약서 검토',      cost: 39900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'registry',        label: '등기부 전세사기',  cost: 34900, icon: 'home',   accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', hasDepositInput: true },
   { id: 'insurance_scan',  label: '보험약관 분석',    cost: 14900, icon: 'shield', accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'workplace_tone',  label: '직장 말투 교정',   cost: 9900,  icon: 'edit',   accept: '.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'career_saju',     label: '커리어 사주',      cost: 9900,  icon: 'doc',    accept: '.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'notice_summary',  label: '공지사항 요약',    cost: 4900,  icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'biz_cert',        label: '사업자등록증',     cost: 4900,  icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'health_ins',      label: '건강보험료 확인',  cost: 4900,  icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'income',          label: '소득확인서',       cost: 4900,  icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'gov_doc',         label: '공문서 분석',      cost: 4900,  icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
   { id: 'bizplan',         label: '사업계획서 분석',  cost: 29900, icon: 'doc',    accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'shortform',       label: '숏폼 스크립트',    cost: 19900, icon: 'edit',   accept: '.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'ai_photo',        label: 'AI 사진 프롬프트', cost: 9900,  icon: 'edit',   accept: '.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'subtitle',        label: '자막 생성·번역',   cost: 14900, icon: 'lang',   accept: '.txt,.jpg,.jpeg,.png,.webp', hasLangSelect: true },
-  { id: 'webtoon',         label: '웹툰 시나리오',    cost: 29900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'shortfilm',       label: '단편영화 시나리오', cost: 34900, icon: 'edit',  accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
-  { id: 'drama_series',    label: '드라마 시리즈',    cost: 39900, icon: 'edit',   accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp' },
 ];
 
 const CHARGE_PLANS = [
@@ -2262,14 +2251,6 @@ const SVC = [
     hasJd: true, jdLabel: '지원 공고 붙여넣기 (선택)', serviceId: 'cover_letter_rewrite',
     desc: '내용을 유지하며 합격 자소서 스타일로 전면 재작성합니다',
     bullets: ['Claude Sonnet 5 최상위 모델 사용', '합격자소서 5원칙 완전 적용', '기업별 문체·어조 최적화', '원본 대비 변경사항 표시'] },
-  { id: 'cv_translate', label: '자소서', sublabel: '번역', cost: 39900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp',
-    hasJd: false, serviceId: 'cover_letter_translation', hasLangSelect: true,
-    desc: '커리어 문서에 특화된 6개 언어 전문 번역을 제공합니다',
-    bullets: ['영·일·중·독·불·스 6개 언어 지원', '업계 전문 용어집 적용 (직역 아닌 의역)', '직함·성과 수치·날짜 정확 변환', '영문이력서 국제 표준 포맷 준수'] },
-  { id: 'interview', label: '면접', sublabel: '질문', cost: 19900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp',
-    hasJd: true, jdLabel: '지원 공고 (선택)', serviceId: 'interview_questions',
-    desc: '이력서·공고 분석으로 예상 면접 질문 14개와 답변 포인트를 생성합니다',
-    bullets: ['기업별 면접 출제패턴(2026) 반영', '압박·인성·직무 질문 유형별 분류', '각 질문별 핵심 답변 포인트 제시', '자기소개서와 연계한 예상 꼬리질문'] },
   { id: 'contract', label: '계약서', sublabel: '검토', cost: 39900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp',
     hasJd: false, serviceId: 'employment_contract',
     desc: '근로·프리랜서·임대차 계약서의 위험 조항을 찾아냅니다',
@@ -2295,48 +2276,10 @@ const SVC = [
     hasJd: false, serviceId: 'public_doc_analysis', isIssue: false,
     desc: '관공서·법원·세무서에서 받은 공문서를 업로드하면 핵심 내용을 요약합니다',
     bullets: ['HWP·PDF·DOCX 모든 공문서 형식 지원', '법률·행정 용어를 쉬운 말로 해설', '주의사항·이행기한·제출처 자동 추출', '어떤 공문서든 업로드 → AI 즉시 분석'] },
-  // ── 놀이방 서비스 ──
-  { id: 'workplace_tone', label: '직장인', sublabel: '말투 변환기', cost: 2900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
-    hasJd: false, serviceId: 'workplace_tone',
-    desc: '딱딱한 거절·반박·사과 메일을 부드럽고 프로답게 바꿔드립니다',
-    bullets: ['거절/항의/사과/요청 상황별 어조 변환', '파일 또는 텍스트 직접 붙여넣기', '단어·문장 레벨 세밀 조정', '상대방 기분 살리면서 내 의도 명확히'] },
-  { id: 'career_saju', label: '커리어', sublabel: '사주풀이', cost: 9900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
-    hasJd: false, serviceId: 'career_saju',
-    desc: '이력서·자소서로 직업운·성격유형·맞는 업종을 재미있게 풀어드립니다',
-    bullets: ['이력서 기반 직업 기질 분석', '강점·약점·잠재력 캐릭터 표현', '잘 맞는 직종·근무 환경 추천', '진지한 분석 + 유머 있는 스타일'] },
-  { id: 'notice_summary', label: '가정통신문', sublabel: '요약', cost: 2900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
-    hasJd: false, serviceId: 'notice_summary',
-    desc: '학교·유치원에서 온 긴 가정통신문을 3줄+일정 목록으로 요약합니다',
-    bullets: ['핵심 일정·준비물·기한 자동 추출', '필수 서명·제출 항목 별도 강조', '복잡한 교육 안내도 쉽게 정리', '3줄 요약 + 체크리스트 형태 제공'] },
   { id: 'insurance_scan', label: '보험약관', sublabel: '면책조항 스캐너', cost: 14900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp',
     hasJd: false, serviceId: 'insurance_scan',
     desc: '보험약관의 보상 안 되는 면책 조항을 찾아 쉬운 말로 알려드립니다',
     bullets: ['면책조항·예외조건 전수 탐지', '보상 가능 vs 불가 케이스 구분', '동일 유형 분쟁 판례 참고 제공', '가입 전 꼭 확인해야 할 핵심 포인트'] },
-  // ── 영상·미디어 ──
-  { id: 'shortform', label: '숏폼 영상', sublabel: '스크립트', cost: 29900, accept: '.txt,.hwp,.docx,.pdf', allowText: true,
-    hasJd: false, serviceId: 'shortform_script',
-    desc: '브랜드·제품 소개 15~60초 숏폼 영상 스크립트를 AI가 기획·작성합니다',
-    bullets: ['Instagram Reels·TikTok·YouTube Shorts 형식별 최적화', '후킹 오프닝 + 핵심 메시지 + CTA 구성 자동화', '자막 텍스트·보이스오버 대본 함께 제공', '경쟁사 분석 기반 차별화 포인트 반영'] },
-  { id: 'ai_photo', label: 'AI 사진', sublabel: '프로필·제품', cost: 19900, accept: '.jpg,.jpeg,.png,.webp',
-    hasJd: false, serviceId: 'ai_photo',
-    desc: '사진 한 장으로 전문 증명사진·링크드인 프로필·제품 이미지를 AI로 업그레이드합니다',
-    bullets: ['배경 제거 + 스튜디오 배경 자동 합성', '증명사진·링크드인·이력서 전문 프로필 최적화', '제품 화이트·라이프스타일 배경 생성', '고해상도 PNG 납품 + 색보정 포함'] },
-  { id: 'subtitle', label: '자막', sublabel: '생성·번역', cost: 14900, accept: '.mp4,.mov,.avi,.srt,.txt', allowText: true,
-    hasJd: false, serviceId: 'subtitle_create',
-    desc: '영상 또는 스크립트 텍스트로 자막을 생성하고 6개 언어로 번역합니다',
-    bullets: ['한국어·영어·일본어·중국어 등 6개 언어 자막 생성', 'SRT·VTT·ASS 파일 형식 지원', '타임코드 자동 생성 (텍스트 입력 시 균등 분배)', 'SNS 플랫폼별 자막 스타일 가이드 제공'] },
-  { id: 'webtoon', label: '웹툰', sublabel: '시나리오 분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
-    hasJd: false, serviceId: 'webtoon_analysis',
-    desc: '웹툰 시나리오·기획안을 분석해 흥행 가능성과 에피소드 전략을 제시합니다',
-    bullets: ['네이버·카카오·레진·타파스 플랫폼별 최적화 전략', '장르별 흥행 공식(로맨스·판타지·액션·스릴러) 적용', '클리프행어·캐릭터·플롯 구조 정밀 진단', 'IP 확장(드라마·애니·영화) 가능성 평가'] },
-  { id: 'shortfilm', label: '단편영화·숏폼', sublabel: '시나리오 분석', cost: 34900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
-    hasJd: false, serviceId: 'shortfilm_analysis',
-    desc: '단편영화·마이크로드라마 시나리오를 분석하고 영화제·플랫폼 전략을 제안합니다',
-    bullets: ['부산·전주·선댄스 영화제 출품 기준 적용', 'ReelShort·DramaBox 숏폼 드라마 수익화 전략', '3막 구조·감정 곡선·클리프행어 정밀 진단', '시리즈 확장 가능성 및 플랫폼별 배포 전략'] },
-  { id: 'drama_series', label: '드라마 시리즈', sublabel: '기획서 분석', cost: 39900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
-    hasJd: false, serviceId: 'drama_series_analysis',
-    desc: 'OTT·방송 드라마 시리즈 기획서를 넷플릭스 피칭 기준으로 정밀 분석합니다',
-    bullets: ['넷플릭스·웨이브·티빙 피칭 기준 적용', 'K드라마 글로벌 흥행 공식(캐릭터·갈등·세계관) 진단', '에피소드 구성·시즌 전략·IP 수익화 방향 제안', '로그라인·시놉시스·타겟 오디언스 최적화'] },
   { id: 'bizplan', label: '사업계획서', sublabel: '분석', cost: 29900, accept: '.hwp,.docx,.pdf,.txt,.jpg,.jpeg,.png,.webp', allowText: true,
     hasJd: false, serviceId: 'bizplan_analysis',
     desc: '정부지원사업·투자IR·크몽 제안서를 심사 기준으로 분석하고 개선안을 제시합니다',
@@ -2347,24 +2290,13 @@ const ICONS = {
   resume: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
   cover_letter: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
   cover_rewrite: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/><circle cx="19" cy="5" r="3" fill="#C9A84C" stroke="none"/></svg>`,
-  cv_translate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
-  interview: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>`,
   contract: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
   registry: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>`,
   biz_cert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
   health_ins: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
   income: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
   gov_doc: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
-  workplace_tone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h8M8 14h5"/></svg>`,
-  career_saju: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/></svg>`,
-  notice_summary: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
   insurance_scan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9,12 11,14 15,10"/></svg>`,
-  shortform: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`,
-  ai_photo: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
-  subtitle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><line x1="6" y1="10" x2="14" y2="10"/><line x1="6" y1="13" x2="12" y2="13"/></svg>`,
-  webtoon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="9" y2="9"/><line x1="3" y1="15" x2="9" y2="15"/></svg>`,
-  shortfilm: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16 10,8"/></svg>`,
-  drama_series: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M6 7h.01M10 7h.01"/><rect x="14" y="6" width="4" height="5" rx="1"/></svg>`,
   bizplan: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>`,
 };
 
@@ -2379,12 +2311,10 @@ function _slyToast(msg, dur = 3000) {
 window._slyToast = _slyToast;
 
 const SVC_CATS = [
-  { label: '취업서류', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>', svcs: ['resume','cover_letter','cover_rewrite','cv_translate','interview'] },
+  { label: '취업서류', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>', svcs: ['resume','cover_letter','cover_rewrite'] },
   { label: '법률·계약', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>', svcs: ['contract','insurance_scan'] },
   { label: '부동산', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>', svcs: ['registry'] },
-  { label: '직장생활', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', svcs: ['workplace_tone','career_saju','notice_summary'] },
   { label: '공문서', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14,2 14,7.5 20,7.5"/><path d="M2 15h10M5 12l-3 3 3 3"/></svg>', svcs: ['biz_cert','health_ins','income','gov_doc','bizplan'] },
-  { label: '영상·미디어', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23,7 16,12 23,17 23,7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>', svcs: ['shortform','ai_photo','subtitle','webtoon','shortfilm','drama_series'] },
 ];
 
 // 카테고리 색상 정의
@@ -2392,9 +2322,7 @@ const CAT_ACCENT = {
   '취업서류':  { bg: '#FFF0F6', color: '#F43F8B' },
   '법률·계약': { bg: '#FFF7ED', color: '#EA580C' },
   '부동산':    { bg: '#F0FDF4', color: '#16A34A' },
-  '직장생활':  { bg: '#EFF6FF', color: '#2563EB' },
   '공문서':    { bg: '#FEFCE8', color: '#CA8A04' },
-  '영상·미디어':{ bg: '#FAF5FF', color: '#9333EA' },
 };
 
 let _slyCatFilter = 'all';
@@ -2403,7 +2331,7 @@ const SVC_CAT_MAP = {};
 SVC_CATS.forEach(cat => cat.svcs.forEach(id => { SVC_CAT_MAP[id] = cat.label; }));
 
 const CAT_EMOJI = {
-  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '직장생활': '💼', '공문서': '📋', '영상·미디어': '🎬',
+  '취업서류': '📄', '법률·계약': '⚖️', '부동산': '🏠', '공문서': '📋',
 };
 
 const CAT_DEMO = {
@@ -2493,12 +2421,6 @@ const SVC_META = {
   cover_rewrite:  { stars: '4.9', reviews: 156, badge: 'pick', badgeLabel: '⭐ 추천',
     desc: '기존 자소서를 AI가 전면 재작성합니다. 지원 공고와 이력서를 함께 업로드하면 더 정확합니다.',
     bullets: ['지원공고 맞춤 재작성','STAR구조 적용','핵심 경험 강조','기업별 톤앤매너 반영'] },
-  cv_translate:   { stars: '4.7', reviews: 89,
-    desc: '자소서·이력서를 영어·일본어·중국어 등으로 전문가 수준으로 번역합니다.',
-    bullets: ['영어·일본어·중국어·독일어·프랑스어·스페인어','직역 아닌 현지화 번역','HR 용어 최적화'] },
-  interview:      { stars: '4.8', reviews: 203, badge: 'new', badgeLabel: '✨ 신규',
-    desc: '지원서 기반으로 실제 면접에서 나올 가능성 높은 질문과 답변 가이드를 제공합니다.',
-    bullets: ['직무별 핵심 질문','압박면접 대비','STAR 답변 구조 가이드','기업문화 맞춤 질문'] },
   contract:       { stars: '4.9', reviews: 178,
     desc: '2026년 최신 근로기준법·대법원 판례 기준으로 계약서 불공정 조항을 검출합니다.',
     bullets: ['포괄임금제 위법성 체크 (대법원 2024 기준)','가짜 3.3% 리스크 진단','최저임금·주휴수당 계산','경업금지·비밀유지 적정성'] },
@@ -2508,15 +2430,6 @@ const SVC_META = {
   insurance_scan: { stars: '4.8', reviews: 94,
     desc: '보험금 지급거부 85.8%(2025 한국소비자원). 약관 속 면책조항을 쉽게 풀어드립니다.',
     bullets: ['숨겨진 면책조항 발굴','고지의무 위반 리스크','보험금 청구 실전 팁','분쟁 가능성 진단'] },
-  workplace_tone: { stars: '4.7', reviews: 312,
-    desc: '직장 이메일·메시지를 상황에 맞는 전문적인 표현으로 바꿔드립니다.',
-    bullets: ['딱딱한↔친근한 변환','비공식↔공식 변환','간결하게 줄이기','공손한 거절·요청문'] },
-  career_saju:    { stars: '4.6', reviews: 89,
-    desc: '이력서 기반으로 커리어 성향과 직업운을 유머있게 분석합니다.',
-    bullets: ['캐릭터 유형 분석','최적 직종 추천','업무 스타일 파악','행운의 업종'] },
-  notice_summary: { stars: '4.9', reviews: 445,
-    desc: '가정통신문·공지문의 핵심만 3줄로 요약합니다. 날짜·준비물·제출기한 자동 추출.',
-    bullets: ['핵심 날짜·기한 추출','준비물 목록 정리','서명 필요 항목 확인','한 눈에 보는 요약'] },
   biz_cert:       { stars: '4.8', reviews: 156,
     desc: '사업자등록증으로 사업 현황·업종·대표자 정보를 자동 정리합니다.',
     bullets: ['기업 기본정보 추출','업종코드 해석','개업일·소재지 정리','계약 전 거래처 검증'] },
@@ -2532,24 +2445,6 @@ const SVC_META = {
   bizplan:        { stars: '4.8', reviews: 45,
     desc: '투자사·정부지원 심사 기준으로 사업계획서를 분석합니다. TIPS·창진원 기준 적용.',
     bullets: ['투자 준비도 평가','팀·시장·제품·수익모델 채점','TIPS·창진원 적합성','개선 우선순위 제시'] },
-  shortform:      { stars: '4.7', reviews: 234,
-    desc: '15~60초 숏폼 영상 스크립트를 AI가 기획합니다. 인스타그램·틱톡·유튜브쇼츠 최적화.',
-    bullets: ['첫 3초 훅 문구','씬별 나레이션','CTA·해시태그 생성','플랫폼별 최적화'] },
-  ai_photo:       { stars: '4.6', reviews: 189,
-    desc: '사진·이미지를 설명하면 AI 이미지 생성 프롬프트를 만들어드립니다.',
-    bullets: ['Midjourney·DALL-E 프롬프트','스타일·조명·구도 지정','부정 프롬프트 제안','다국어 프롬프트 제공'] },
-  subtitle:       { stars: '4.8', reviews: 123,
-    desc: '영상 스크립트·대사를 자막 형식(.srt)으로 변환하고 다국어 번역도 해드립니다.',
-    bullets: ['SRT 포맷 자막 생성','한→영·일·중 번역 자막','타임코드 자동 분할','유튜브·인스타 최적화'] },
-  webtoon:        { stars: '4.9', reviews: 67,
-    desc: '네이버웹툰·카카오웹툰 연재 기준으로 시나리오를 분석합니다. 글로벌 웹툰 시장 144억달러(2026) 기준.',
-    bullets: ['장르별 흥행공식 분석','클리프행어 강도 체크','플랫폼별 최적화 전략','IP 확장 가능성 평가'] },
-  shortfilm:      { stars: '4.8', reviews: 34,
-    desc: '단편영화 시나리오를 영화제·OTT 기준으로 분석합니다.',
-    bullets: ['3막 구조 분석','캐릭터 아크 평가','대화 자연스러움','영화제 출품 전략'] },
-  drama_series:   { stars: '4.9', reviews: 28,
-    desc: '드라마 시나리오를 Netflix·tvN·웨이브 기준으로 분석합니다.',
-    bullets: ['파일럿 경쟁력 평가','시즌 확장성','OTT 트렌드 부합도','마케팅 포인트 제안'] }
 };
 
 const SVC_LABEL_MAP = {};
@@ -2560,12 +2455,10 @@ function renderCatGrid() {
   if (!el) return;
 
   const iconMap = {
-    '취업서류':   ['📄','🏢','✅','🎯','📝'],
+    '취업서류':   ['📄','✅','🎯'],
     '법률·계약':  ['⚖️','🛡️'],
     '부동산':     ['🏠'],
-    '직장생활':   ['💬','🔮','📢'],
     '공문서':     ['🏢','💊','💰','📋','📊'],
-    '영상·미디어':['🎬','📸','🎞️','🎨','🎭','📺'],
   };
   const colorMap = CAT_ACCENT;
 
@@ -2631,10 +2524,9 @@ function _slyOpenCat(catLabel) {
 
   // 서비스별 이모지
   const svcEmoji = {
-    resume:'📄', cover_letter:'✏️', cover_rewrite:'🔄', cv_translate:'🌐', interview:'🎤',
-    contract:'📋', insurance_scan:'🛡️', registry:'🏠', workplace_tone:'💬', career_saju:'🔮',
-    notice_summary:'📢', biz_cert:'🏢', health_ins:'💊', income:'💰', gov_doc:'📋',
-    bizplan:'📊', shortform:'🎬', ai_photo:'📸', subtitle:'🎞️', webtoon:'🎨', shortfilm:'🎭', drama_series:'📺'
+    resume:'📄', cover_letter:'✏️', cover_rewrite:'🔄',
+    contract:'📋', insurance_scan:'🛡️', registry:'🏠',
+    biz_cert:'🏢', health_ins:'💊', income:'💰', gov_doc:'📋', bizplan:'📊'
   };
 
   cardsEl.innerHTML = svcs.map(s => {
@@ -2708,10 +2600,9 @@ function _slySearch(q) {
   }
 
   const svcEmoji = {
-    resume:'📄',cover_letter:'✏️',cover_rewrite:'🔄',cv_translate:'🌐',interview:'🎤',
-    contract:'📋',insurance_scan:'🛡️',registry:'🏠',workplace_tone:'💬',career_saju:'🔮',
-    notice_summary:'📢',biz_cert:'🏢',health_ins:'💊',income:'💰',gov_doc:'📋',
-    bizplan:'📊',shortform:'🎬',ai_photo:'📸',subtitle:'🎞️',webtoon:'🎨',shortfilm:'🎭',drama_series:'📺'
+    resume:'📄',cover_letter:'✏️',cover_rewrite:'🔄',
+    contract:'📋',insurance_scan:'🛡️',registry:'🏠',
+    biz_cert:'🏢',health_ins:'💊',income:'💰',gov_doc:'📋',bizplan:'📊'
   };
 
   grid.style.display = 'grid';
@@ -2958,118 +2849,15 @@ function _slySelectService(id) {
   const badge = document.getElementById('slyServiceBadge');
   if (badge) badge.textContent = `${svc.cost.toLocaleString()}P`;
 
-  // ── 서비스별 전용 커스텀 UI ──
-  // 사주풀이: 생년월일·생시 입력 먼저
-  let sajuWrap = document.getElementById('slySajuWrap');
-  if (!sajuWrap) {
-    sajuWrap = document.createElement('div');
-    sajuWrap.id = 'slySajuWrap';
-    sajuWrap.className = 'sly-custom-section';
-    sajuWrap.innerHTML = `<span class="sly-custom-label">✨ 생년월일·생시 입력 (선택 — 이력서 없을 때 사용)</span>
-      <div class="sly-date-row" style="margin-bottom:8px">
-        <input class="sly-custom-input" id="slySajuName" placeholder="이름 (예: 홍길동)">
-        <input class="sly-custom-input" id="slySajuBirth" type="text" placeholder="생년월일 (예: 1995-03-22)">
-        <input class="sly-custom-input" id="slySajuTime" type="text" placeholder="생시 (예: 자시, 오전 11시)">
-      </div>`;
-    uploadCard?.parentNode?.insertBefore(sajuWrap, uploadCard);
-  }
-  sajuWrap.style.display = svc.id === 'career_saju' ? 'block' : 'none';
-
-  // 숏폼 스크립트: 브랜드·플랫폼 입력 먼저
-  let shortformWrap = document.getElementById('slyShortformWrap');
-  if (!shortformWrap) {
-    shortformWrap = document.createElement('div');
-    shortformWrap.id = 'slyShortformWrap';
-    shortformWrap.className = 'sly-custom-section';
-    shortformWrap.innerHTML = `<span class="sly-custom-label">🎬 영상 정보</span>
-      <input class="sly-custom-input" id="slyShortBrand" placeholder="브랜드/제품명 (예: 엠비티아이 FILO)" style="margin-bottom:8px">
-      <input class="sly-custom-input" id="slyShortMsg" placeholder="핵심 메시지 (예: 매장 관리 앱, 월 3만원)" style="margin-bottom:8px">
-      <div class="sly-custom-label" style="margin-top:4px">타겟 플랫폼</div>
-      <div class="sly-platform-chips">
-        <div class="sly-platform-chip sel" data-plat="instagram">Instagram Reels</div>
-        <div class="sly-platform-chip" data-plat="tiktok">TikTok</div>
-        <div class="sly-platform-chip" data-plat="youtube">YouTube Shorts</div>
-      </div>`;
-    shortformWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
-      shortformWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
-      this.classList.add('sel');
-    }));
-    uploadCard?.parentNode?.insertBefore(shortformWrap, uploadCard);
-  }
-  shortformWrap.style.display = svc.id === 'shortform' ? 'block' : 'none';
-
-  // 자막 생성: 언어 선택 + 텍스트 안내
-  let subtitleWrap = document.getElementById('slySubtitleWrap');
-  if (!subtitleWrap) {
-    subtitleWrap = document.createElement('div');
-    subtitleWrap.id = 'slySubtitleWrap';
-    subtitleWrap.className = 'sly-custom-section';
-    subtitleWrap.innerHTML = `<span class="sly-custom-label">🌐 자막 언어</span>
-      <div class="sly-platform-chips">
-        <div class="sly-platform-chip sel" data-lang="ko">한국어</div>
-        <div class="sly-platform-chip" data-lang="en">English</div>
-        <div class="sly-platform-chip" data-lang="ja">日本語</div>
-        <div class="sly-platform-chip" data-lang="zh">中文</div>
-      </div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:8px">영상 파일(.mp4) 또는 스크립트 텍스트를 아래에 붙여넣기 하세요</div>`;
-    subtitleWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
-      subtitleWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
-      this.classList.add('sel');
-    }));
-    uploadCard?.parentNode?.insertBefore(subtitleWrap, uploadCard);
-  }
-  subtitleWrap.style.display = svc.id === 'subtitle' ? 'block' : 'none';
-
   // slyBizInputWrap은 slyIssueBiz 안에 이미 포함 — 중복 제거됨
 
-  // 서비스별 텍스트 placeholder 및 커스텀 UI 교체
+  // 서비스별 텍스트 placeholder
   const directTA = document.getElementById('slyDirectText');
   const textHint = document.getElementById('slyTextHint');
-  let toneWrap = document.getElementById('slyToneWrap');
-  if (!toneWrap) {
-    toneWrap = document.createElement('div');
-    toneWrap.id = 'slyToneWrap';
-    toneWrap.className = 'sly-custom-section';
-    toneWrap.innerHTML = `<span class="sly-custom-label">변환 방향</span>
-      <div class="sly-platform-chips" id="slyToneChips">
-        <div class="sly-platform-chip sel" data-v="formal">딱딱한 → 친근한</div>
-        <div class="sly-platform-chip" data-v="casual">비공식 → 공식</div>
-        <div class="sly-platform-chip" data-v="short">길게 → 간결하게</div>
-        <div class="sly-platform-chip" data-v="polite">직설적 → 공손하게</div>
-      </div>`;
-    toneWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
-      toneWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
-      this.classList.add('sel');
-    }));
-    const textWrap = document.getElementById('slyTextInputWrap');
-    textWrap?.parentNode?.insertBefore(toneWrap, textWrap);
-  }
-  let summaryWrap = document.getElementById('slySummaryWrap');
-  if (!summaryWrap) {
-    summaryWrap = document.createElement('div');
-    summaryWrap.id = 'slySummaryWrap';
-    summaryWrap.className = 'sly-custom-section';
-    summaryWrap.innerHTML = `<span class="sly-custom-label">요약 길이</span>
-      <div class="sly-platform-chips">
-        <div class="sly-platform-chip sel" data-v="one">한 줄 요약</div>
-        <div class="sly-platform-chip" data-v="three">3줄 핵심</div>
-        <div class="sly-platform-chip" data-v="full">주요사항 전체</div>
-      </div>`;
-    summaryWrap.querySelectorAll('.sly-platform-chip').forEach(c => c.addEventListener('click', function() {
-      summaryWrap.querySelectorAll('.sly-platform-chip').forEach(x => x.classList.remove('sel'));
-      this.classList.add('sel');
-    }));
-    const textWrap = document.getElementById('slyTextInputWrap');
-    textWrap?.parentNode?.insertBefore(summaryWrap, textWrap);
-  }
-  toneWrap.style.display = svc.id === 'workplace_tone' ? 'block' : 'none';
-  summaryWrap.style.display = svc.id === 'notice_summary' ? 'block' : 'none';
 
   // ── 입력 탭 표시/숨김 ──
-  // tabs는 파일과 텍스트 둘 다 의미 있는 서비스(subtitle·career_saju)만 표시
   const inputModeTabs = document.getElementById('slyInputModeTabs');
-  const showTabs = ['subtitle', 'career_saju'].includes(svc.id);
-  if (inputModeTabs) inputModeTabs.style.display = showTabs ? 'flex' : 'none';
+  if (inputModeTabs) inputModeTabs.style.display = 'none';
 
   // ── 업로드 카드 제목 서비스별 지정 ──
   const uploadTitle = document.getElementById('slyUploadTitle');
@@ -3081,58 +2869,25 @@ function _slySelectService(id) {
         resume:         '이력서 파일 업로드',
         cover_letter:   '자소서 파일 업로드',
         cover_rewrite:  '자소서 파일 업로드',
-        cv_translate:   '자소서 파일 업로드',
-        interview:      '이력서·자소서 업로드',
         contract:       '계약서 파일 업로드',
         insurance_scan: '보험약관 파일 업로드',
         gov_doc:        '공문서 파일 업로드',
-        ai_photo:       '이미지 업로드',
-        subtitle:       '영상 또는 스크립트 파일',
-        career_saju:    '이력서 업로드 (선택)',
-        workplace_tone: '문서 업로드 (선택)',
-        notice_summary: '가정통신문 업로드 (선택)',
-        shortform:      '참고 문서 업로드 (선택)',
       };
       uploadTitle.textContent = titleMap[svc.id] || '파일 업로드';
     }
   }
 
   if (directTA) {
-    if (svc.id === 'workplace_tone') {
-      directTA.placeholder = '변환할 문장이나 이메일을 붙여넣기 하세요.\n예: "김대리, 저번에 말한거 언제까지 줄거야?"';
-      directTA.style.minHeight = '160px';
-    } else if (svc.id === 'notice_summary') {
-      directTA.placeholder = '가정통신문 전체 내용을 붙여넣기 하세요.\nAI가 핵심 날짜·준비물·제출기한을 요약해드립니다.';
-      directTA.style.minHeight = '160px';
-    } else if (svc.id === 'shortform') {
-      directTA.placeholder = '영상 주제·아이디어를 자유롭게 입력하세요.\n예: "카페 사장님을 위한 FILO POS 앱 소개, 직원 근태관리도 가능"';
-      directTA.style.minHeight = '140px';
-    } else if (svc.id === 'subtitle') {
-      directTA.placeholder = '영상 스크립트나 대사를 붙여넣기 하세요.\nAI가 자막 파일(.srt)을 생성해드립니다.';
-      directTA.style.minHeight = '160px';
-    } else {
-      directTA.placeholder = '이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요...';
-      directTA.style.minHeight = '180px';
-    }
+    directTA.placeholder = '이력서, 자소서, 계약서 내용을 여기에 붙여넣기 하세요...';
+    directTA.style.minHeight = '180px';
   }
 
-  // 텍스트 우선 서비스: 자동으로 텍스트 모드 활성화 (tabs 숨겨도 내부 view는 text로 설정)
-  if (['workplace_tone', 'notice_summary', 'shortform', 'career_saju'].includes(svc.id)) {
-    setTimeout(() => _slySetInputMode('text'), 50);
-  } else {
-    setTimeout(() => _slySetInputMode('file'), 50);
-  }
+  setTimeout(() => _slySetInputMode('file'), 50);
 
   clearResult();
 }
 window._slySelectService = _slySelectService;
 
-// 분석 완료 후 면접 질문 업셀 — interview 서비스로 전환 후 상단 스크롤
-window._slyUpsellInterview = function() {
-  _slySelectService('interview');
-  document.getElementById('slyUploadCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  _slyToast('면접 예상 질문 서비스가 선택되었습니다. 동일 서류를 다시 업로드해주세요.');
-};
 
 // 사업자 조회 버튼 핸들러
 window._slyBizSearch = async function() {
@@ -3230,22 +2985,7 @@ async function _slyAnalyze() {
   if (_slyInputMode === 'text') {
     const svcForCheck = SVC.find(s => s.id === _slyService);
     let txt = document.getElementById('slyDirectText')?.value?.trim() || '';
-    // 사주: 생년월일 정보를 텍스트로 합성
-    if (_slyService === 'career_saju') {
-      const name = document.getElementById('slySajuName')?.value?.trim() || '';
-      const birth = document.getElementById('slySajuBirth')?.value?.trim() || '';
-      const time = document.getElementById('slySajuTime')?.value?.trim() || '';
-      txt = `이름: ${name}\n생년월일: ${birth}\n생시: ${time || '모름'}\n${txt}`.trim();
-      if (!name && !birth) { _slyToast('이름과 생년월일을 입력해주세요'); return; }
-    } else if (_slyService === 'shortform') {
-      const brand = document.getElementById('slyShortBrand')?.value?.trim() || '';
-      const msg = document.getElementById('slyShortMsg')?.value?.trim() || '';
-      const plat = document.querySelector('#slyShortformWrap .sly-platform-chip.sel')?.dataset?.plat || 'instagram';
-      if (!txt && !brand) { _slyToast('영상 주제를 입력해주세요'); return; }
-      txt = `브랜드/제품: ${brand || '(없음)'}\n핵심 메시지: ${msg || '(없음)'}\n타겟 플랫폼: ${plat}\n\n영상 아이디어:\n${txt}`.trim();
-    } else if (_slyService === 'subtitle') {
-      if (!txt || txt.length < 10) { _slyToast('자막으로 변환할 내용을 입력해주세요'); return; }
-    } else if (!txt || txt.length < 30) {
+    if (!txt || txt.length < 30) {
       _slyToast('내용을 30자 이상 입력해주세요'); return;
     }
     const blob = new Blob([txt], { type: 'text/plain' });
@@ -3278,11 +3018,6 @@ async function _slyAnalyze() {
     if (svc.hasLangSelect) fd.append('targetLang', targetLang);
     const jeonseDeposit = document.getElementById('slyJeonseDeposit')?.value || '';
     if (svc.hasDepositInput && jeonseDeposit) fd.append('jeonseDeposit', jeonseDeposit);
-    const toneDir = document.querySelector('#slyToneChips .sly-platform-chip.sel')?.dataset?.v || '';
-    if (svc.serviceId === 'workplace_tone' && toneDir) fd.append('toneDirection', toneDir);
-    const summaryLen = document.querySelector('#slySummaryWrap .sly-platform-chip.sel')?.dataset?.v || '';
-    if (svc.serviceId === 'notice_summary' && summaryLen) fd.append('summaryLength', summaryLen);
-
     const r = await fetch('/api/seolyuhana/analyze', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token },
