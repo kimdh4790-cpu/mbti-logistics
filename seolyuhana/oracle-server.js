@@ -235,12 +235,12 @@ app.post('/api/pdf-ocr', async (req, res) => {
     const pagesToConvert = Math.min(totalPages, maxPages);
     const imgPrefix = join(tmpDir, 'page');
 
-    // 100dpi로 변환 (OCR 정확도 vs 속도 균형)
+    // 150dpi 변환 (OCR 정확도 vs 속도 균형), 15s 이내 완료 안 되면 포기
     await execFileAsync('pdftoppm', [
       '-jpeg', '-r', '150',
       '-l', String(pagesToConvert),
       pdfPath, imgPrefix
-    ], { timeout: 60000 });
+    ], { timeout: 15000 });
 
     const allFiles = await readdir(tmpDir);
     const imgFiles = allFiles.filter(f => f.startsWith('page') && f.endsWith('.jpg')).sort();
