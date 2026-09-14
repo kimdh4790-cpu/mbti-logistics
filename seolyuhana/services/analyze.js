@@ -1013,12 +1013,16 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
   - 신탁등기 여부: 신탁원부 별도 발급 필수, 수익자 확인
   - 최근 소유권 변동 빈도 (6개월내 변동 시 주의)
   - 가압류·가처분·경매개시결정 유무
+  - 소유권 보유기간 및 매매 빈도 (1년 이내 전매 시 위험 신호)
 
 ▶ 을구(담보·제한) 확인:
-  - 근저당권 채권최고액 합계 계산
+  ★★★ 핵심 규칙: 말소된 권리(취소선, 말소사항, "말소됨" 표기)는 채권최고액 합계에 절대 포함하지 말 것 ★★★
+  - "현재 유효한 근저당권"만 합산하여 totalActiveMortgageDebt 계산
+  - 말소된 항목은 mortgageHistory에 이력으로만 기록
   - 전세가율 = 전세보증금 ÷ 시세 (70% 초과 시 주의, 80% 초과 시 고위험)
-  - 깡통전세 판단: (선순위채무 + 전세보증금) > 매매가 → 즉시 위험
+  - 깡통전세 판단: (현재 유효 선순위채무 + 전세보증금) > 매매가 → 즉시 위험
   - 전세권 설정 vs 임차권등기 차이 확인
+  - 동일 채권자(은행/금융기관) 반복 설정·해지 패턴 분석 (악성임대인 신호)
 
 ▶ 전세보증보험 가입 요건 (2026):
   - HUG: 보증금 ≤ 주택가액×126%, 임대인 미납세금 없음
@@ -1032,6 +1036,12 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
   4. 법인 임대인: 법인 도산 시 보증금 회수 불가
   5. 확정일자 누락: 전입신고 후 확정일자 미확보 → 우선순위 박탈
 
+▶ 악성임대인 패턴 분석 (신규):
+  - 단기간 반복 담보대출·상환: 유동성 위기 신호
+  - 동일 금융기관에서 3회 이상 재대출: 신용 압박 징후
+  - 가압류 이력 3건 이상: 채무불이행 상습
+  - 6개월 내 소유권 이전 후 전세계약: 갭투자 사기 패턴
+
 출력 스키마:
 {
   "property": {
@@ -1041,26 +1051,104 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
     "buildYear": "건축연도"
   },
   "ownership": {
-    "owners": ["소유자 목록"],
+    "current": {
+      "owner": "현재 소유자",
+      "acquiredDate": "취득일",
+      "holdingPeriod": "보유기간 (예: 3년 2개월)",
+      "acquisitionType": "매매|상속|증여|신탁 등"
+    },
+    "ownershipHistory": [
+      {
+        "rank": "등기 순위번호",
+        "event": "등기 원인 (매매/상속/증여 등)",
+        "date": "등기일",
+        "owner": "소유자명",
+        "status": "유효|말소됨",
+        "note": "특이사항 (가압류·처분제한 동반 여부 등)"
+      }
+    ],
+    "rapidTransferAlert": "6개월 내 소유권 변동 또는 잦은 전매 경고 (해당시)",
     "multiOwnerRisk": "다수소유·신탁·법인 위험 설명 (해당시)"
   },
   "encumbrances": [
     {
+      "rank": "등기 순위번호",
       "type": "근저당권설정|전세권설정|가압류|경매개시 등",
-      "amount": "채권최고액",
-      "creditor": "채권자",
-      "date": "설정일",
+      "amount": "채권최고액 또는 청구금액 (숫자, 원 단위)",
+      "creditor": "채권자/권리자",
+      "date": "설정일 또는 접수일",
+      "cancelDate": "말소일 (말소됐을 경우)",
       "status": "유효|말소됨",
-      "risk": "높음|보통|낮음"
+      "risk": "높음|보통|낮음|해당없음(말소)"
     }
   ],
+  "mortgageAnalysis": {
+    "activeMortgages": [
+      {
+        "rank": "순위번호",
+        "creditor": "채권자",
+        "amount": "채권최고액 (숫자)",
+        "date": "설정일",
+        "note": "특이사항"
+      }
+    ],
+    "totalActiveMortgageDebt": "현재 유효한 근저당 채권최고액 합계 (말소 제외, 숫자)",
+    "cancelledMortgages": [
+      {
+        "rank": "순위번호",
+        "creditor": "채권자",
+        "amount": "채권최고액 (숫자)",
+        "setDate": "설정일",
+        "cancelDate": "말소일",
+        "loanDuration": "대출 유지기간 (예: 7년 3개월)"
+      }
+    ],
+    "mortgageTimeline": [
+      {
+        "date": "날짜",
+        "event": "근저당 설정|근저당 말소|가압류 설정|가압류 말소 등",
+        "creditor": "채권자",
+        "amount": "금액",
+        "status": "유효|말소됨"
+      }
+    ],
+    "lenderPattern": {
+      "uniqueLenders": ["채권자별 고유 목록"],
+      "repeatLender": "동일 금융기관 반복 대출 여부 (있으면 기관명·횟수)",
+      "totalCycles": "대출 설정-해지 반복 횟수",
+      "riskFlag": "악성임대인 의심 패턴 여부 true/false",
+      "riskReason": "패턴 위험 이유 (있을 경우)"
+    }
+  },
+  "lienHistory": {
+    "items": [
+      {
+        "rank": "순위번호",
+        "type": "가압류|가처분|경매개시결정 등",
+        "claimAmount": "청구금액",
+        "creditor": "채권자",
+        "date": "등기일",
+        "cancelDate": "말소일 (말소됐을 경우)",
+        "status": "유효|말소됨"
+      }
+    ],
+    "activeLiens": "현재 유효한 가압류·가처분 건수",
+    "historicalLienCount": "이력상 총 가압류·가처분 건수 (말소 포함)",
+    "riskFlag": "가압류 3건 이상 이력 시 상습 채무불이행 위험 true/false"
+  },
   "jeonseRiskAnalysis": {
-    "riskScore": 0~100,
-    "kkangtongAlert": true/false,
-    "kkangtongReason": "깡통전세 판단 근거 (수치 포함)",
-    "totalPriorDebt": "선순위 채권 합계",
-    "jeonseRatio": "전세가율 (계산값)",
+    "riskScore": "0~100 (숫자)",
+    "kkangtongAlert": "true/false",
+    "kkangtongReason": "깡통전세 판단 근거 (현재 유효 선순위채무 + 보증금 vs 매매가 수치 포함)",
+    "totalActivePriorDebt": "현재 유효한 선순위 채권 합계 (말소 제외, 숫자)",
+    "jeonseRatio": "전세가율 (계산값, 예: 72.5%)",
     "estimatedJeonseDeposit": "입력 보증금 또는 추정값",
+    "safetyMargin": {
+      "formula": "안전마진 계산식 (예: 매매가 3억 - 유효선순위채무 1.2억 - 보증금 1억 = 8천만원)",
+      "marginAmount": "안전마진 금액 (숫자, 원)",
+      "marginRatio": "안전마진 비율 (매매가 대비 %, 예: 26.7%)",
+      "verdict": "안전|주의|위험 — 마진이 보증금 대비 20% 이상이면 안전, 10% 미만이면 위험"
+    },
     "fraudCheckpoints": [
       {
         "checkpoint": "5대 체크포인트명",
@@ -1070,21 +1158,34 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
         "action": "임차인이 해야 할 구체적 조치사항"
       }
     ],
-    "hugEligibility": "HUG 보증보험 가입 가능 여부",
-    "trustRegistryNeeded": true/false,
+    "hugEligibility": "HUG 보증보험 가입 가능 여부 및 조건",
+    "trustRegistryNeeded": "true/false",
     "trustRegistryReason": "신탁원부 발급 필요 이유",
     "corporateOwnerRisk": "법인 임대인 위험 설명 (해당시)",
     "safetyRatio": "선순위 안전도 %",
     "safetyVerification": ["계약 전 반드시 확인할 사항 목록"]
   },
+  "badLandlordCheck": {
+    "score": "0~100 (악성임대인 위험도)",
+    "flags": [
+      {
+        "pattern": "패턴명 (예: 반복 담보 설정-해지)",
+        "detected": "true/false",
+        "evidence": "등기부 상 근거 (날짜·금액·채권자 인용)"
+      }
+    ],
+    "verdict": "정상|주의|고위험",
+    "summary": "악성임대인 종합 판단 (100자 이내)"
+  },
   "riskSummary": {
     "level": "고위험|주의|안전",
-    "score": 0~100,
-    "totalDebt": "총 채권최고액",
+    "score": "0~100",
+    "totalActiveDebt": "현재 유효한 담보 채권 합계 (말소 항목 제외, 숫자)",
+    "totalHistoricalDebt": "이력 전체 채권 합계 (말소 포함, 참고용, 숫자)",
     "keyRisks": ["핵심 위험요소"],
     "summary": "종합 판단 (200자 이내)"
   },
-  "recommendations": ["계약 전 필수 조치 사항"]
+  "recommendations": ["계약 전 필수 조치 사항 (우선순위 순)"]
 }
 `
 
@@ -1103,6 +1204,12 @@ export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
 3. 단순 내용 요약이 아닌 전문가 의견 형태로: "~이므로 위험", "~확인 필요" 등 명확한 판단 표현 사용
 4. 수치가 있으면 반드시 계산 결과 포함 (전세가율 = 보증금 ÷ 시세, 선순위채무 합산 등)
 5. recommendations는 구체적이고 실행 가능한 조치사항으로 (법무사 방문, 미납세금조회 방법 등)
+6. ★★★ 채권최고액 합계(totalActiveMortgageDebt, totalActiveDebt)는 반드시 현재 유효한 항목만 합산 ★★★
+   말소사항(취소선, 말소됨, 말소원인 기재, 말소등기)은 절대 합계에 포함하지 말 것
+   말소된 항목은 cancelledMortgages와 mortgageTimeline에만 이력으로 기록
+7. ownershipHistory: 갑구 소유권 변동 전체 이력을 순서대로 기록 (매매·상속·증여·경매취득 포함)
+8. lenderPattern: 동일 은행에서 반복 설정·말소 반복 시 횟수와 패턴을 구체적으로 명시
+9. badLandlordCheck: 등기부 이력 기반으로 악성임대인 패턴 5가지 여부 체크
 ${depositNote}
 
 [등기부등본 원문]
