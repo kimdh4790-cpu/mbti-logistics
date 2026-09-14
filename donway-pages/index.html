@@ -20412,7 +20412,6 @@ var MENUS_DELIVERY = [
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'}
   ]},
   {s:'💸 경비 관리', items:[
     {ic:'💸',l:'경비 관리',        p:'expenses',         plan_key:'delivery'}
@@ -20432,17 +20431,13 @@ var MENUS_SETTLE = [
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
     {ic:'📝',l:'전자계약서 작성',   p:'ext_contract',     plan_key:'free'},
-    {ic:'💸',l:'송금 관리',        p:'payout',           plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'any_paid'},
-    {ic:'📋',l:'근무표',           p:'roster',           plan_key:'settle'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'settle'},
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'delivery'},
   ]},
 ];
 
@@ -20459,17 +20454,13 @@ var MENUS_UNIVERSAL = [
     {ic:'📋',l:'범용 엑셀 정산',   p:'universal_input',  plan_key:'universal'},
     {ic:'⚙️',l:'계산 규칙 설정',   p:'universal_rules',  plan_key:'universal'},
     {ic:'👥',l:'직원 명단 등록',   p:'universal_emp',    plan_key:'universal'},
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share',        plan_key:'universal'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'}
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'기사·직원 관리',   p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'universal'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'universal'},
-    {ic:'💸',l:'경비 관리',        p:'expense',          plan_key:'universal'}
   ]},
   {s:'🚚 원스톱 물류', items:[
-    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'universal'},
     {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'universal'},
     {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'universal'}
   ]},
@@ -20483,13 +20474,8 @@ var MENUS_UNIVERSAL = [
 var MENUS_QR_PAYROLL = [
   {s:'🏠 홈', items:[{ic:'🏠',l:'대시보드',p:'home',plan_key:'free'}]},
   {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',p:'attendance',plan_key:'qr'},
-    {ic:'🗓',l:'근무표',p:'roster',plan_key:'qr'},
-    {ic:'🌴',l:'연차·휴가',p:'leave',plan_key:'qr'},
-    {ic:'⏰',l:'연장 승인',p:'overtime',plan_key:'qr'}]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',p:'hourly_settle',plan_key:'payroll'},
-    {ic:'🧾',l:'세무사 연동',p:'tax_share',plan_key:'any_paid'}]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',p:'drivers',plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',p:'contract',plan_key:'settle'},
@@ -20499,17 +20485,10 @@ var MENUS_QR = [
   {s:'🏠 홈', items:[
     {ic:'🏠',l:'대시보드',         p:'home',             plan_key:'free'}
   ]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-    {ic:'🗓',l:'근무표',           p:'roster',           plan_key:'qr'},
-    {ic:'🌴',l:'연차·휴가',        p:'leave',            plan_key:'qr'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
-  ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
     
   ]},
   {s:'💼 급여 관리', items:[
@@ -20535,23 +20514,16 @@ var MENUS_FULL = [
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
     {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
-    {ic:'⭐',l:'직원 평가',        p:'evaluation',       plan_key:'free'},
     
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
-  ]},
-  {s:'🔐 QR 근태관리', items:[
-    {ic:'🔐',l:'QR 출퇴근',        p:'attendance',       plan_key:'qr'},
-        {ic:'🌴',l:'연차·휴가',        p:'leave',            plan_key:'qr'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime',         plan_key:'qr'}
   ]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
   ]},
   {s:'🚚 원스톱 물류', items:[
     {ic:'📦',l:'배달 실적',        p:'delivery_report',  plan_key:'settle'},
-    {ic:'🚗',l:'차량 관리',        p:'vehicle',          plan_key:'free'},
     {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'free'},
     {ic:'📷',l:'수령 스캔',        p:'ext_scan',         plan_key:'free'},
     {ic:'🚛',l:'간선차 GPS',       p:'ext_truck',        plan_key:'free'}
@@ -20562,21 +20534,14 @@ var MENUS_FULL = [
 var MENUS_HOURLY = [
   {s:'메인', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle', plan_key:'payroll'},
-    {ic:'🔐',l:'출퇴근 현황',      p:'attendance',    plan_key:'qr'},
     {ic:'📅',l:'달력',             p:'schedule',      plan_key:'free'}
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',  plan_key:'free'},
-    {ic:'🌴',l:'연차·휴가',        p:'leave',    plan_key:'qr'},
-    {ic:'⏰',l:'연장 승인',        p:'overtime', plan_key:'payroll'},
-    {ic:'🗓',l:'근무표',           p:'roster',   plan_key:'payroll'}
   ]},
   {s:'🛵 배달대행 정산', items:[
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',    plan_key:'delivery'}
   ]},
-  {s:'공통', items:[
-    {ic:'🧾',l:'세무사 연동',      p:'tax_share', plan_key:'any_paid'}
-  ]}
 ];
 
 // 기사/직원 전용 (플랜 무관)
@@ -21285,15 +21250,10 @@ var MENUS_MANAGER = [
     {ic:'📊',l:'정산 현황',p:'settle',plan_key:'settle'},
     {ic:'📋',l:'정산 관리',p:'settlements',plan_key:'settle'},
     {ic:'👤',l:'기사 관리',p:'drivers',plan_key:'settle'},
-    {ic:'💸',l:'송금 관리',p:'payout',plan_key:'settle'},
   ]},
 ];
 var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
-  {s:'출퇴근',items:[
-    {ic:'📷',l:'🔐 QR 출퇴근',p:'my_qr', plan_key:'free'},
-    {ic:'🌴',l:'내 휴가',  p:'leave', plan_key:'free'}
-  ]},
   {s:'내 정산',items:[
     {ic:'📊',l:'내 정산 현황',p:'my_settle',    plan_key:'free'},
     {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
