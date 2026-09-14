@@ -1172,9 +1172,11 @@ export default {
           const contractTitle = _cg('title') || '계약서';
           const typeMap = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
           const typeName = typeMap[_cg('type')] || contractTitle;
+          const _kakaoKey = env.KAKAO_JS_KEY || '';
           const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>계약서 서명</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+${_kakaoKey ? `<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>` : ''}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Pretendard","Apple SD Gothic Neo",sans-serif;background:#f8fafc;min-height:100vh;padding:20px}
@@ -1187,34 +1189,77 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 .btn-submit{background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff}
 .btn-submit:disabled{background:#94a3b8;cursor:not-allowed}
 .notice{font-size:11px;color:#94a3b8;text-align:center;margin-top:12px;line-height:1.6}
+#kakao-step{text-align:center;padding:20px 0}
+#sign-step{display:none}
+.kakao-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#FEE500;color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.kakao-verified{font-size:13px;color:#10b981;font-weight:700;margin-bottom:12px;text-align:center}
 </style></head>
 <body>
 <div class="card">
 <h1>✍️ 전자서명 요청</h1>
 <div class="sub">${typeName}</div>
-<div style="font-size:13px;color:#334155;margin-bottom:16px"><b>${driverName}</b>님, 아래 서명란에 서명해 주세요.</div>
-<canvas id="sig-pad"></canvas>
-<button class="btn btn-clear" onclick="pad.clear()">지우기</button>
-<button class="btn btn-submit" id="submit-btn" onclick="submitSign()">서명 완료 및 제출</button>
-<p class="notice">서명 후 제출하면 전자적 동의 효력이 발생합니다.<br>계약 내용에 동의하는 경우에만 서명해 주세요.</p>
+<div id="kakao-step">
+  <div style="font-size:13px;color:#334155;margin-bottom:20px"><b>${driverName}</b>님,<br>서명 전 카카오 본인확인이 필요합니다.</div>
+  ${_kakaoKey
+    ? `<button class="kakao-btn" onclick="kakaoLogin()">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.74 5.19 4.36 6.6L5.4 21l4.2-2.1c.78.12 1.58.18 2.4.18 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/></svg>
+        카카오로 본인확인
+      </button>`
+    : `<div style="font-size:12px;color:#f59e0b;padding:12px;background:#fefce8;border-radius:8px;margin-bottom:10px">⚠️ 카카오 앱키 미설정 — 서명만 진행합니다</div>
+       <button class="btn btn-submit" onclick="showSignStep(null,'미설정')">서명하러 가기</button>`
+  }
+  <p class="notice" style="margin-top:16px">카카오 계정으로 본인을 확인한 후<br>전자서명이 가능합니다.</p>
+</div>
+<div id="sign-step">
+  <div class="kakao-verified" id="kakao-name-badge"></div>
+  <div style="font-size:13px;color:#334155;margin-bottom:12px">아래 서명란에 서명해 주세요.</div>
+  <canvas id="sig-pad"></canvas>
+  <button class="btn btn-clear" onclick="pad.clear()">지우기</button>
+  <button class="btn btn-submit" id="submit-btn" onclick="submitSign()">서명 완료 및 제출</button>
+  <p class="notice">서명 후 제출하면 전자적 동의 효력이 발생합니다.<br>계약 내용에 동의하는 경우에만 서명해 주세요.</p>
+</div>
 </div>
 <script>
-var pad;
-window.onload=function(){
+var pad, _kakaoId='', _kakaoNick='';
+function initPad(){
   var canvas=document.getElementById('sig-pad');
   var ratio=Math.max(window.devicePixelRatio||1,1);
   canvas.width=canvas.offsetWidth*ratio;
   canvas.height=canvas.offsetHeight*ratio;
   canvas.getContext('2d').scale(ratio,ratio);
   pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
-};
+}
+function showSignStep(id, nick){
+  _kakaoId=id||''; _kakaoNick=nick||'';
+  document.getElementById('kakao-step').style.display='none';
+  document.getElementById('sign-step').style.display='block';
+  document.getElementById('kakao-name-badge').textContent= id ? '✓ '+nick+'님 본인확인 완료' : '';
+  initPad();
+}
+${_kakaoKey ? `
+window.onload=function(){ if(window.Kakao&&!Kakao.isInitialized()) Kakao.init('${_kakaoKey}'); };
+function kakaoLogin(){
+  Kakao.Auth.login({
+    success:function(auth){
+      Kakao.API.request({
+        url:'/v2/user/me',
+        success:function(res){
+          var nick=(res.kakao_account&&res.kakao_account.profile&&res.kakao_account.profile.nickname)||res.id;
+          showSignStep(String(res.id), nick);
+        },
+        fail:function(){ alert('카카오 정보 조회 실패'); }
+      });
+    },
+    fail:function(err){ alert('카카오 로그인 실패: '+JSON.stringify(err)); }
+  });
+}` : ''}
 async function submitSign(){
   if(!pad||pad.isEmpty()){alert('서명을 해주세요.');return;}
   var btn=document.getElementById('submit-btn');
   btn.disabled=true;btn.textContent='제출 중...';
   var sig=pad.toDataURL('image/png');
   try{
-    var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig})});
+    var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig,kakaoId:_kakaoId,kakaoNick:_kakaoNick})});
     var data=await res.json();
     if(data.ok){document.body.innerHTML='<div style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#10b981;margin-bottom:12px">✓ 서명이 완료되었습니다!</h2><p style="color:#64748b">감사합니다, '+${JSON.stringify(driverName)}+'님.<br>계약서가 정상적으로 접수되었습니다.</p></div>';}
     else{alert('오류: '+(data.error||'서명 저장 실패'));btn.disabled=false;btn.textContent='서명 완료 및 제출';}
@@ -1229,7 +1274,7 @@ async function submitSign(){
       if (path === '/api/contract/sign-driver' && method === 'POST') {
         try {
           const body = await request.json();
-          const { signToken, driverSig } = body;
+          const { signToken, driverSig, kakaoId, kakaoNick } = body;
           if (!signToken || !driverSig) return new Response(JSON.stringify({ok:false,error:'필수값 누락'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
           const _dsFs = await getAccessToken(env);
           // signToken으로 계약서 문서 ID 조회
@@ -1248,8 +1293,8 @@ async function submitSign(){
           const now = new Date().toISOString();
           const signIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
           const signUa = request.headers.get('User-Agent') || '';
-          // 서명 저장 + 메타데이터
-          await fetch(`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa}}})});
+          // 서명 저장 + 메타데이터 + 카카오 본인확인
+          await fetch(`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa&updateMask.fieldPaths=kakaoId&updateMask.fieldPaths=kakaoNick`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa},kakaoId:{stringValue:kakaoId||''},kakaoNick:{stringValue:kakaoNick||''}}})});
           // 기사에게 서명 완료 SMS 발송 (법적 인지 증거)
           if (driverPhone) {
             const nowKst = new Date(Date.now()+9*3600000).toISOString().slice(0,16).replace('T',' ');
