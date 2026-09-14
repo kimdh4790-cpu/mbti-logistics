@@ -1864,6 +1864,16 @@ body {
       <div id="slyCaseNumStatus" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;font-size:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--text-secondary)">
         대법원에서 물건정보를 가져오는 중...
       </div>
+      <!-- 자동 조회 실패 시 표시: 붙여넣기 영역 -->
+      <div id="slyCaseNumPasteWrap" style="display:none;margin-top:12px">
+        <div style="padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);font-size:12px;color:#dc2626;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+          ⚠️ 자동 조회 실패 — <a href="https://www.courtauction.go.kr" target="_blank" style="color:#2563eb;text-decoration:underline">법원경매정보</a>에서 내용 복사 후 아래 붙여넣기
+        </div>
+        <textarea id="slyCaseNumPaste" rows="5"
+          style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px;font-size:13px;font-family:inherit;resize:vertical;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box"
+          placeholder="물건번호, 소재지, 감정가, 최저매각가격, 임차인 현황, 등기사항 등을 복사해 붙여넣어 주세요"></textarea>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">붙여넣기 후 다시 분석 시작 버튼을 눌러주세요</div>
+      </div>
     </div>
 
     <!-- 텍스트 입력 영역 -->
@@ -3415,19 +3425,23 @@ async function _slyAnalyze() {
       if (!fetchData.ok) throw new Error(fetchData.error || '조회 실패');
       if (statusEl) statusEl.style.display = 'none';
       if (!fetchData.scraped) {
-        // 자동 조회 실패 → 텍스트 입력 모드로 전환, 사용자가 직접 붙여넣기
-        _slySetInputMode('text');
-        const ta = document.getElementById('slyDirectText');
-        if (ta) {
-          ta.value = '';
-          ta.placeholder = `법원경매정보(www.courtauction.go.kr)에서 ${caseNum} 사건의 내용을 복사해 여기에 붙여넣어 주세요.\n\n예) 물건번호, 소재지, 감정가, 최저매각가격, 임차인 현황, 등기사항 등`;
-          ta.focus();
+        // 자동 조회 실패 → 사건번호 뷰 내 붙여넣기 영역 펼치기
+        const pasteWrap = document.getElementById('slyCaseNumPasteWrap');
+        const pasteTA = document.getElementById('slyCaseNumPaste');
+        const pastedContent = pasteTA?.value?.trim() || '';
+        if (!pastedContent) {
+          // 아직 붙여넣기 없음 → 영역 표시 후 중단
+          if (pasteWrap) { pasteWrap.style.display = 'block'; pasteTA?.focus(); }
+          return;
         }
-        _slyToast('자동 조회 실패 — 내용을 직접 붙여넣어 주세요', 4000);
-        return;
+        // 붙여넣기 내용이 있으면 그것으로 분석
+        const combined = `[대법원 경매 물건 — 사건번호: ${caseNum}]\n\n${pastedContent}`;
+        const blob = new Blob([combined], { type: 'text/plain' });
+        _slyFile = new File([blob], `auction_${caseNum.replace(/\s+/g,'_')}.txt`, { type: 'text/plain' });
+      } else {
+        const blob = new Blob([fetchData.text], { type: 'text/plain' });
+        _slyFile = new File([blob], `auction_${caseNum.replace(/\s+/g,'_')}.txt`, { type: 'text/plain' });
       }
-      const blob = new Blob([fetchData.text], { type: 'text/plain' });
-      _slyFile = new File([blob], `auction_${caseNum.replace(/\s+/g,'_')}.txt`, { type: 'text/plain' });
     } catch(e) {
       if (statusEl) statusEl.style.display = 'none';
       _slyToast('조회 실패: ' + e.message); return;
