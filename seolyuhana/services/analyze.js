@@ -85,7 +85,98 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
 }
 
 // ────────────────────────────────────────────────────────────
-// 통합 AI 호출 — Claude 1차, Gemini 2차 폴백
+// PDF base64 → 텍스트 추출 (텍스트 기반 PDF 전용)
+// ────────────────────────────────────────────────────────────
+function _extractPdfText(b64) {
+  try {
+    // base64 → binary string (Workers 환경: atob 사용)
+    const binary = atob(b64);
+    // BT...ET 블록에서 Tj / TJ 연산자로 텍스트 추출
+    const chunks = [];
+    const btEtRe = /BT([\s\S]{0,4000}?)ET/g;
+    let m;
+    while ((m = btEtRe.exec(binary)) !== null) {
+      const block = m[1];
+      // ( ... ) Tj  또는  ( ... ) '  형식
+      const tjRe = /\(([^)]{0,300})\)\s*(?:Tj|')/g;
+      let tj;
+      while ((tj = tjRe.exec(block)) !== null) chunks.push(tj[1]);
+      // [ ... ] TJ 배열 형식
+      const tjaRe = /\[([^\]]{0,500})\]\s*TJ/g;
+      let tja;
+      while ((tja = tjaRe.exec(block)) !== null) {
+        const parts = tja[1].match(/\(([^)]{0,200})\)/g);
+        if (parts) chunks.push(...parts.map(p => p.slice(1, -1)));
+      }
+    }
+    const text = chunks.join(' ').replace(/[^\x20-\x7E가-힣ㄱ-ㆎ]/g, ' ').replace(/\s+/g, ' ').trim();
+    return text.length > 50 ? text.slice(0, 8000) : null;
+  } catch { return null; }
+}
+
+// ────────────────────────────────────────────────────────────
+// Cloudflare Workers AI 호출 (3차 폴백 — CF_GLOBAL_KEY 사용)
+// ────────────────────────────────────────────────────────────
+async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
+  const cfKey = env.CF_GLOBAL_KEY;
+  if (!cfKey) throw new Error('CF_GLOBAL_KEY 미설정');
+
+  const CF_ACCOUNT = '02709cbec18d848913b4246015b9148f';
+  const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+
+  // document 블록 → 텍스트 추출, image 블록 → 설명 텍스트로 변환
+  let userText = '';
+  for (const b of userBlocks) {
+    if (b.type === 'text') { userText += b.text + '\n'; }
+    else if (b.type === 'document' && b.source?.data) {
+      const extracted = _extractPdfText(b.source.data);
+      userText += extracted
+        ? `[PDF 텍스트 내용]\n${extracted}\n`
+        : '[PDF 파일이 업로드되었습니다. 이미지 기반 스캔 PDF로 텍스트 추출 불가]\n';
+    } else if (b.type === 'image') {
+      userText += '[이미지 파일이 업로드되었습니다]\n';
+    }
+  }
+
+  const messages = [
+    { role: 'system', content: system + '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.' },
+    { role: 'user', content: userText.trim() }
+  ];
+
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${MODEL}`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${cfKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages, max_tokens: maxTokens }),
+      signal: AbortSignal.timeout(90000)
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Workers AI ${res.status}: ${err.errors?.[0]?.message || res.statusText}`);
+  }
+
+  const data = await res.json();
+  const rawText = (data.result?.response || '').trim();
+
+  if (rawText.startsWith('{')) {
+    try { return { ok: true, data: JSON.parse(rawText) }; } catch {}
+  }
+  const cb = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (cb) {
+    try { return { ok: true, data: JSON.parse(cb[1]) }; } catch {}
+  }
+  const jo = rawText.match(/(\{[\s\S]*\})/);
+  if (jo) {
+    try { return { ok: true, data: JSON.parse(jo[1]) }; } catch {}
+  }
+  throw new Error(`Workers AI JSON 파싱 실패: ${rawText.slice(0, 200)}`);
+}
+
+// ────────────────────────────────────────────────────────────
+// 통합 AI 호출 — Claude 1차, Gemini 2차, Workers AI 3차 폴백
 // (Gemini는 한국 Cloudflare PoP에서 지역 차단됨)
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model: _model, system, userBlocks, env, maxTokens = 4096 }) {
@@ -123,13 +214,16 @@ async function callClaude({ model: _model, system, userBlocks, env, maxTokens = 
   }
 
   if (!res || !res.ok) {
-    // Gemini를 폴백으로 시도
+    // Gemini 폴백 시도
     if (env.GOOGLE_AI_API_KEY) {
       try { return await callGemini({ system, userBlocks, env, maxTokens }); } catch (gemErr) {
-        throw new Error(`${claudeErr} | Gemini 폴백 실패: ${gemErr.message}`);
+        claudeErr = `${claudeErr} | Gemini 폴백 실패: ${gemErr.message}`;
       }
     }
-    throw new Error(claudeErr || 'Claude API 실패');
+    // Workers AI 최종 폴백 (CF_GLOBAL_KEY 사용, 무료)
+    try { return await callWorkersAI({ system, userBlocks, env, maxTokens }); } catch (wErr) {
+      throw new Error(`${claudeErr} | Workers AI 폴백 실패: ${wErr.message}`);
+    }
   }
 
   const data = await res.json();
