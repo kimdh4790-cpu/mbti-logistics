@@ -79,13 +79,14 @@ MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouT
 채널: ${channelName}
 제목: ${videoTitle}
 
-분류 기준 (폭넓게 판단, 조금이라도 해당하면 패스 금지):
+분류 기준 (AI트렌드 최우선 — 조금이라도 해당하면 패스 금지):
+- AI트렌드: 신규 AI 모델(Claude/GPT/Gemini/Grok 등)·새 AI 도구·AI 에이전트·MCP·RAG·LLM·프롬프트 엔지니어링·이미지/영상/음성 생성 AI·AI 자동화 기법 등 AI 분야 최신 동향. 다른 카테고리와 겹치면 AI트렌드 우선
 - 강의소재: AI·자동화·노코드·개발·SaaS·마케팅·수익화·창업 등 "AI 자동화 연구소" 강의 주제로 쓸 수 있는 것
 - 앱기능: FILO(매장POS)/DONWAY(정산)/용차앱에 추가하면 좋을 기능·UX·워크플로우 아이디어
 - 수익성: 새로운 사업 아이템, 수익 모델, 트렌드 아이디어, 부업·투자·비즈니스 기회 — 분야 무관하게 돈이 될 가능성 있는 것
-- 패스: 개인 일상·먹방·여행·순수 오락 등 위 세 가지와 전혀 무관한 것만
+- 패스: 개인 일상·먹방·여행·순수 오락 등 위 네 가지와 전혀 무관한 것만
 
-JSON만: {"category":"강의소재","reason":"한줄이유"}`;
+JSON만: {"category":"AI트렌드","reason":"한줄이유"}`;
 
   const body = Buffer.from(JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
