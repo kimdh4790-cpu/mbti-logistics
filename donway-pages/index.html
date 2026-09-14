@@ -8118,14 +8118,14 @@ function _ctrGenHTML(data){
         ?'<img src="'+data.adminSig+'" style="max-height:55px;max-width:100%;margin:4px auto;display:block">'
         :'<div class="sign-line"></div>')
       +'<img src="'+_CTR_STAMP_B64+'" style="max-height:80px;max-width:100%;margin:2px auto;display:block;opacity:0.9">'
+      +'<div style="font-size:11px;text-align:right">(인)</div>'
       +'</div>'
       +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
-      +'<div style="font-size:12px;margin-bottom:4px">사업자번호: '+(data.driverBiz||'　　　　　　　　')+'</div>'
       +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
       +(data.driverSig
         ?'<img src="'+data.driverSig+'" style="max-height:70px;max-width:100%;margin:8px auto;display:block">'
-        :'<div class="sign-line"></div><div style="font-size:11px;color:#999">(서명 또는 날인)</div>')
+        :'<div class="sign-line"></div><div style="font-size:11px;color:#999">(인)</div>')
       +'</div>'
       +'</div>'
       +'<div style="margin-top:30px;padding-top:20px;border-top:2px dashed #999">'
@@ -8143,10 +8143,10 @@ function _ctrGenHTML(data){
       +'마. 동의를 거부할 권리<br>'
       +'&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용의 동의를 거부할 권리가 있습니다.<br>'
       +'&nbsp;&nbsp;◦ 단, 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.</div>'
-      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 수집‧이용하는데 동의합니다. &nbsp;&nbsp;<label><input type="checkbox"> 동의함</label> &nbsp;&nbsp;<label><input type="checkbox"> 동의하지 않음</label></div>'
-      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 수집‧이용하는데 동의합니다. &nbsp;&nbsp;<label><input type="checkbox"> 동의함</label> &nbsp;&nbsp;<label><input type="checkbox"> 동의하지 않음</label></div>'
+      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 수집‧이용하는데 동의합니다. (동의함 □ 동의하지 않음 □)</div>'
+      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 수집‧이용하는데 동의합니다. (동의함 □ 동의하지 않음 □)</div>'
       +'<div style="font-size:11px;margin-top:12px">'+yr+'년 　　월 　　일</div>'
-      +'<div style="font-size:11px;margin-top:6px">사업자등록번호: 　　　　　　　 / (주민등록번호): 　　　　　　　 / 성명: 　　　　　 (서명)<br>쿠팡로지스틱스 대리점 엠비티아이(유) 대표 귀하</div>'
+      +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : 　　　　　　　<br>(주민등록번호) : 　　　　　　　<br>성 명 : 　　　　　　　　　　 (서명)<br>쿠팡로지스틱스 대리점<br>엠비티아이(유) 대표 귀하</div>'
       +'</div>'
       +'<div style="margin-top:24px;padding-top:20px;border-top:1px dashed #ccc">'
       +'<div style="font-size:14px;font-weight:700;margin-bottom:12px;text-align:center">개인정보 제3자 제공 동의서</div>'
@@ -8162,10 +8162,10 @@ function _ctrGenHTML(data){
       +'마. 동의를 거부할 권리<br>'
       +'&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 대한 동의를 거부할 권리가 있습니다.<br>'
       +'&nbsp;&nbsp;◦ 단, 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.</div>'
-      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 제3자에게 제공하는데 동의합니다. &nbsp;&nbsp;<label><input type="checkbox"> 동의함</label> &nbsp;&nbsp;<label><input type="checkbox"> 동의하지 않음</label></div>'
-      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 제3자에게 제공하는데 동의합니다. &nbsp;&nbsp;<label><input type="checkbox"> 동의함</label> &nbsp;&nbsp;<label><input type="checkbox"> 동의하지 않음</label></div>'
+      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 제3자에게 제공하는데 동의합니다. (동의함 □ 동의하지 않음 □)</div>'
+      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 제3자에게 제공하는데 동의합니다. (동의함 □ 동의하지 않음 □)</div>'
       +'<div style="font-size:11px;margin-top:12px">'+yr+'년 　　월 　　일</div>'
-      +'<div style="font-size:11px;margin-top:6px">사업자등록번호: 　　　　　　　 / (주민등록번호): 　　　　　　　 / 성명: 　　　　　 (서명)<br>쿠팡로지스틱스 대리점 엠비티아이(유) 대표 귀하</div>'
+      +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : 　　　　　　　<br>(주민등록번호) : 　　　　　　　<br>성 명 : 　　　　　　　　　　 (서명)<br>쿠팡로지스틱스 대리점<br>엠비티아이(유) 대표 귀하</div>'
       +'</div>';
     return html;
   }
@@ -8179,7 +8179,7 @@ function _ctrGenHTML(data){
       +'① 수탁자 외 원 계약에 의해 수행해야 할 업무를 이유 없이 거부하였을 경우<br>'
       +'② 수탁자의 계약불이행으로 계약해지가 이뤄진 경우에는 수수료 지급을 반품 및 파손금 확인 후 150일 이후에 지급한다.<br>'
       +'③ 근무 일정은 1주일 전까지 사무실과 협의하여 확정하며, 확정된 일정에 결근하여 발생하는 제반 비용은 수탁자가 전액 부담한다.<br>'
-      +'④ 표준계약서(제10조(손해배상)의 항목 추가: 본 조에 따른 손해배상 의무를 정당한 사유 없이 이행하지 않거나 회피하는 경우, 이는 계약 해지의 사유가 되며 상대방은 계약을 해지할 수 있다.<br>'
+      +'④ 표준계약서(제10조(손해배상)의 항목 추가<br>③ 본 조에 따른 손해배상 의무를 정당한 사유 없이 이행하지 않거나 회피하는 경우, 이는 계약 해지의 사유가 되며 상대방은 계약을 해지할 수 있다.<br>'
       +'⑤ 수탁자가 원 계약에 따른 비밀유지의무, 개인정보보호의무 또는 정보보안의무를 위반한 경우</div>'
       +'<div class="clause"><div class="clause-title">계약의 즉시 해지 (CLS → 영업점)</div>'
       +'CLS는 영업점에게 다음 각 호의 어느 하나에 해당하는 사유가 발생하는 경우 영업점에 대한 서면 통지로써 원 계약을 즉시 해지하거나 영업점에 위탁하는 물량을 조정할 수 있다. 본 항에서 영업점의 직원 또는 영업점이 배송업무를 위탁한 자의 행위는 영업점의 행위로 본다.<br>'
@@ -8225,7 +8225,7 @@ function _ctrGenHTML(data){
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
       +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
       +'<div class="sign-line"></div>'
-      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +'<div style="font-size:11px;color:#999">(인)</div></div>'
       +'</div>';
     return html;
   }
