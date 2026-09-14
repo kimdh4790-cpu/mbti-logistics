@@ -48,6 +48,8 @@ function buildDocxXml(data, serviceId, originalText) {
     body += buildContractDocx(data, originalText);
   } else if (serviceId === 'registry_analysis') {
     body += buildRegistryDocx(data);
+  } else if (serviceId === 'auction_analysis') {
+    body += buildAuctionDocx(data);
   }
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -764,6 +766,161 @@ function buildRegistryDocx(d) {
 
   // 8. 법적 면책 고지
   xml += para('본 분석은 AI가 자동 생성한 참고 자료로서 법적 효력이 없습니다. 실제 계약 전 법무사·변호사 등 전문가의 검토를 받으시기 바랍니다.', { size: 18, color: '9e9e9e' });
+
+  return xml;
+}
+
+// ────────────────────────────────────────────────────────────
+// 경매 분석 DOCX
+// ────────────────────────────────────────────────────────────
+function buildAuctionDocx(d) {
+  let xml = '';
+  const ci = d.caseInfo || {};
+  const ra = d.rightsAnalysis || {};
+  const ps = d.partiesAndSchedule || {};
+  const mv = d.marketValue || {};
+  const bs = d.bidSimulation || {};
+  const roi = d.roiSimulation || {};
+  const risk = d.riskAssessment || {};
+
+  // 면책 고지
+  if (d.disclaimer) xml += para(d.disclaimer, { size: 18, color: 'e65100' }) + para('');
+
+  // 1. 사건 기본 정보
+  xml += para('사건 기본 정보', { heading: 2 });
+  xml += table([
+    ['항목', '내용'],
+    ['사건번호', ci.caseNumber || '–'],
+    ['관할 법원', ci.court || '–'],
+    ['물건 유형', ci.propertyType || '–'],
+    ['소재지', ci.address || '–'],
+    ['면적', ci.area || '–'],
+    ['최저입찰가', ci.minimumBid || '–'],
+    ['매각기일', ci.auctionDate || '–'],
+    ['응찰 횟수', ci.bidCount || '–'],
+  ]);
+  xml += para('');
+
+  // 2. 당사자 및 경매 이력
+  if (ps.creditor || ps.debtor || ps.auctionHistory?.length) {
+    xml += para('당사자 및 경매 이력', { heading: 2 });
+    xml += table([
+      ['채권자', ps.creditor || '–'],
+      ['채무자/소유자', ps.debtor || '–'],
+    ]);
+    if (ps.auctionHistory?.length) {
+      const rows = [['기일', '결과', '최저가']];
+      for (const h of ps.auctionHistory) rows.push([h.date || '', h.result || '', h.minimumBid || '']);
+      xml += para('');
+      xml += table(rows);
+    }
+    xml += para('');
+  }
+
+  // 3. 권리관계 분석
+  xml += para('권리관계 분석', { heading: 2 });
+  if (ra.cancellationBaseRight) xml += para('말소기준권리: ' + ra.cancellationBaseRight, { bold: true });
+  if (ra.survivingRights?.length) {
+    const rows = [['권리 종류', '권리자', '금액', '위험도', '낙찰자 영향']];
+    for (const r of ra.survivingRights) rows.push([r.type || '', r.holder || '', r.amount || '–', r.risk || '–', r.detail || '']);
+    xml += table(rows);
+  }
+  if (ra.extinguishedRights?.length) {
+    xml += para('소멸 권리: ' + ra.extinguishedRights.join(', '), { color: '1b5e20' });
+  }
+  const tr = ra.tenantRisk;
+  if (tr) {
+    xml += para('');
+    xml += para('임차인 현황', { heading: 2 });
+    xml += table([
+      ['임차 여부', tr.hasTenant ? '있음' : '없음'],
+      ['대항력', tr.tenantType || '–'],
+      ['보증금', tr.depositAmount || '–'],
+      ['소액임차 우선변제', tr.priorityRepayment || '–'],
+      ['낙찰자 인수 부담', tr.netBurden || '–'],
+    ]);
+  }
+  xml += para('');
+
+  // 4. 시세 참고
+  if (mv.estimatedMarketPrice) {
+    xml += para('시세 참고', { heading: 2 });
+    xml += table([
+      ['추정 시세', mv.estimatedMarketPrice || '–'],
+      ['실거래가 참고', mv.recentTransactions || '–'],
+      ['낙찰가율 참고', mv.winningRateReference || '–'],
+    ]);
+    xml += para('');
+  }
+
+  // 5. 입찰가 시뮬레이션
+  const rb = bs.recommendedBid;
+  if (rb) {
+    xml += para('입찰가 시뮬레이션', { heading: 2 });
+    xml += table([
+      ['전략', '입찰가'],
+      ['보수적', rb.conservative || '–'],
+      ['적정', rb.moderate || '–'],
+      ['적극적', rb.aggressive || '–'],
+    ]);
+    const cb = bs.costBreakdown;
+    if (cb) {
+      xml += para('');
+      xml += para('부대비용 상세', { bold: true });
+      xml += table([
+        ['항목', '추산액'],
+        ['취득세', cb.acquisitionTax || '–'],
+        ['등기비용', cb.registrationFee || '–'],
+        ['인도비용', cb.evictionCost || '–'],
+        ['수리비', cb.repairCost || '–'],
+        ['체납관리비', cb.arrearsManagementFee || '–'],
+        ['부대비용 합계', cb.totalAdditionalCost || '–'],
+      ]);
+    }
+    if (bs.totalInvestment) xml += para('총 투자금액(적정 기준): ' + bs.totalInvestment, { bold: true });
+    xml += para('');
+  }
+
+  // 6. 수익률 시뮬레이션
+  if (roi.jeonseReturn || roi.monthlyRent || roi.shortSale) {
+    xml += para('수익률 시뮬레이션', { heading: 2 });
+    const roiRows = [['구분', '예상가', '연 수익률']];
+    if (roi.jeonseReturn) roiRows.push(['전세 전환', roi.jeonseReturn.estimatedJeonse || '–', roi.jeonseReturn.annualReturn || '–']);
+    if (roi.monthlyRent) roiRows.push(['월세 전환', roi.monthlyRent.estimatedRent || '–', roi.monthlyRent.annualReturn || '–']);
+    if (roi.shortSale) roiRows.push(['단기 매각', roi.shortSale.estimatedSalePrice || '–', roi.shortSale.netProfit || '–(세후)']);
+    xml += table(roiRows);
+    xml += para('');
+  }
+
+  // 7. 위험 평가
+  if (risk.overallRisk) {
+    const riskColor = risk.overallRisk === '고위험' ? 'c62828' : risk.overallRisk === '주의' ? 'e65100' : '1b5e20';
+    xml += para('종합 위험 평가', { heading: 2 });
+    xml += para(`${risk.overallRisk} (점수 ${risk.score ?? '–'}/100)`, { bold: true, color: riskColor });
+    if (risk.keyRisks?.length) {
+      xml += para('');
+      xml += para('핵심 위험 요소', { bold: true });
+      const rrRows = [['위험 항목', '심각도', '대응 방법']];
+      for (const r of risk.keyRisks) rrRows.push([r.risk || '', r.severity || '', r.mitigation || '']);
+      xml += table(rrRows);
+    }
+    if (risk.checkBeforeBid?.length) {
+      xml += para('');
+      xml += para('입찰 전 필수 확인', { bold: true });
+      risk.checkBeforeBid.forEach((c, i) => { xml += para(`${i+1}. ${c}`); });
+    }
+    xml += para('');
+  }
+
+  // 8. 종합 의견
+  if (d.summary) {
+    xml += para('종합 의견', { heading: 2 });
+    xml += para(d.summary);
+    xml += para('');
+  }
+
+  // 9. 면책 고지
+  xml += para('본 분석은 AI가 자동 생성한 참고 자료이며 투자·법률 조언이 아닙니다. 실제 입찰 전 법원 서류 열람·현장 실사·전문가(법무사·변호사·부동산 전문가) 상담을 반드시 진행하십시오.', { size: 18, color: '9e9e9e' });
 
   return xml;
 }

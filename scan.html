@@ -4035,7 +4035,173 @@ function renderResult(data, downloadUrls) {
   }
 
   // ══════════════════════════════════════════════
-  // 8. 공문서 / 보험 / 사업계획서 / 창작 등
+  // 8. 경매 분석
+  // ══════════════════════════════════════════════
+  if (data.caseInfo) {
+    const ci = data.caseInfo;
+    const ra = data.rightsAnalysis || {};
+    const ps = data.partiesAndSchedule || {};
+    const mv = data.marketValue || {};
+    const bs = data.bidSimulation || {};
+    const roi = data.roiSimulation || {};
+    const risk = data.riskAssessment || {};
+
+    // 면책 고지
+    if (data.disclaimer) {
+      html += `<div style="background:rgba(255,165,0,.1);border:1.5px solid rgba(255,165,0,.4);border-radius:10px;padding:12px 14px;font-size:12px;color:#b45309;line-height:1.6;margin-bottom:12px">${data.disclaimer}</div>`;
+    }
+
+    // 위험 점수 KPI
+    if (risk.overallRisk) {
+      const rColor = risk.overallRisk === '고위험' ? '#ef4444' : risk.overallRisk === '주의' ? '#f59e0b' : '#22c55e';
+      const rBg = risk.overallRisk === '고위험' ? 'rgba(239,68,68,.08)' : risk.overallRisk === '주의' ? 'rgba(245,158,11,.08)' : 'rgba(34,197,94,.08)';
+      html += `<div class="rpt-two-col" style="margin-bottom:12px">
+        <div class="rpt-kpi-card" style="background:${rBg};border:1.5px solid ${rColor}33">
+          <div class="rpt-kpi-val" style="color:${rColor}">${risk.overallRisk}</div>
+          <div class="rpt-kpi-label">종합 위험도</div>
+        </div>
+        <div class="rpt-kpi-card">
+          <div class="rpt-kpi-val" style="color:${rColor}">${risk.score ?? '–'}</div>
+          <div class="rpt-kpi-label">위험 점수 /100</div>
+        </div>
+        ${ci.minimumBid ? `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:14px">${ci.minimumBid}</div><div class="rpt-kpi-label">최저입찰가</div></div>` : ''}
+        ${bs.totalInvestment ? `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:14px">${bs.totalInvestment}</div><div class="rpt-kpi-label">총 투자금액</div></div>` : ''}
+      </div>`;
+    }
+
+    // 사건 기본 정보
+    html += `<div class="rpt-section"><div class="rpt-section-label">🏛️ 사건 기본 정보</div>
+      <div class="rpt-info-grid">
+        ${ci.caseNumber ? `<div class="rpt-info-item"><div class="rpt-info-label">사건번호</div><div class="rpt-info-val">${ci.caseNumber}</div></div>` : ''}
+        ${ci.court ? `<div class="rpt-info-item"><div class="rpt-info-label">관할 법원</div><div class="rpt-info-val">${ci.court}</div></div>` : ''}
+        ${ci.propertyType ? `<div class="rpt-info-item"><div class="rpt-info-label">물건 유형</div><div class="rpt-info-val">${ci.propertyType}</div></div>` : ''}
+        ${ci.address ? `<div class="rpt-info-item" style="grid-column:1/-1"><div class="rpt-info-label">소재지</div><div class="rpt-info-val">${ci.address}</div></div>` : ''}
+        ${ci.area ? `<div class="rpt-info-item"><div class="rpt-info-label">면적</div><div class="rpt-info-val">${ci.area}</div></div>` : ''}
+        ${ci.minimumBid ? `<div class="rpt-info-item"><div class="rpt-info-label">최저입찰가</div><div class="rpt-info-val" style="color:var(--gold);font-weight:700">${ci.minimumBid}</div></div>` : ''}
+        ${ci.auctionDate ? `<div class="rpt-info-item"><div class="rpt-info-label">매각기일</div><div class="rpt-info-val">${ci.auctionDate}</div></div>` : ''}
+        ${ci.bidCount ? `<div class="rpt-info-item"><div class="rpt-info-label">응찰 횟수</div><div class="rpt-info-val">${ci.bidCount}</div></div>` : ''}
+      </div>
+    </div>`;
+
+    // 당사자 정보
+    if (ps.creditor || ps.debtor) {
+      html += `<div class="rpt-section"><div class="rpt-section-label">👥 당사자 정보</div>
+        <div class="rpt-info-grid">
+          ${ps.creditor ? `<div class="rpt-info-item"><div class="rpt-info-label">채권자(신청인)</div><div class="rpt-info-val">${ps.creditor}</div></div>` : ''}
+          ${ps.debtor ? `<div class="rpt-info-item"><div class="rpt-info-label">채무자/소유자</div><div class="rpt-info-val">${ps.debtor}</div></div>` : ''}
+        </div>
+        ${ps.auctionHistory?.length ? `<div class="rpt-diag-card" style="margin-top:8px"><div class="rpt-diag-title">경매 이력</div>${ps.auctionHistory.map(h=>`<div class="rpt-diag-item"><strong>${h.date||''}</strong> — ${h.result||''} (최저가 ${h.minimumBid||'–'})</div>`).join('')}</div>` : ''}
+      </div>`;
+    }
+
+    // 권리관계 분석
+    html += `<div class="rpt-section"><div class="rpt-section-label">⚖️ 권리관계 분석</div>`;
+    if (ra.cancellationBaseRight) {
+      html += `<div class="rpt-reason-box" style="border-left:4px solid var(--gold)">📌 말소기준권리: <strong>${ra.cancellationBaseRight}</strong></div>`;
+    }
+    if (ra.survivingRights?.length) {
+      html += `<div class="rpt-diag-card red" style="margin-top:8px"><div class="rpt-diag-title">⚠️ 낙찰자 인수 권리 (소멸 안 됨)</div>`;
+      ra.survivingRights.forEach(r => {
+        const sev = r.risk === '높음' ? '#ef4444' : r.risk === '보통' ? '#f59e0b' : '#22c55e';
+        html += `<div class="rpt-diag-item"><strong style="color:${sev}">[${r.risk||''}]</strong> ${r.type||''} — ${r.holder||''} ${r.amount?'('+r.amount+')':''}<br><span style="font-size:11px;color:#64748b">${r.detail||''}</span></div>`;
+      });
+      html += `</div>`;
+    }
+    if (ra.extinguishedRights?.length) {
+      html += `<div class="rpt-diag-card green" style="margin-top:8px"><div class="rpt-diag-title">✅ 낙찰로 소멸하는 권리</div>${ra.extinguishedRights.map(r=>`<div class="rpt-diag-item">${r}</div>`).join('')}</div>`;
+    }
+    const tr = ra.tenantRisk;
+    if (tr) {
+      const tColor = tr.tenantType?.includes('대항력 있음') ? '#ef4444' : '#64748b';
+      html += `<div class="rpt-diag-card" style="margin-top:8px;border:1.5px solid ${tColor}33"><div class="rpt-diag-title">🏠 임차인 현황</div>
+        <div class="rpt-info-grid" style="margin-top:8px">
+          <div class="rpt-info-item"><div class="rpt-info-label">임차 여부</div><div class="rpt-info-val">${tr.hasTenant?'있음':'없음'}</div></div>
+          ${tr.tenantType?`<div class="rpt-info-item"><div class="rpt-info-label">대항력</div><div class="rpt-info-val" style="color:${tColor};font-weight:700">${tr.tenantType}</div></div>`:''}
+          ${tr.depositAmount?`<div class="rpt-info-item"><div class="rpt-info-label">보증금</div><div class="rpt-info-val">${tr.depositAmount}</div></div>`:''}
+          ${tr.netBurden?`<div class="rpt-info-item"><div class="rpt-info-label">낙찰자 인수 부담</div><div class="rpt-info-val" style="color:#ef4444;font-weight:700">${tr.netBurden}</div></div>`:''}
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+
+    // 시세 참고
+    if (mv.estimatedMarketPrice || mv.winningRateReference) {
+      html += `<div class="rpt-section"><div class="rpt-section-label">📊 시세 참고</div>
+        <div class="rpt-info-grid">
+          ${mv.estimatedMarketPrice?`<div class="rpt-info-item"><div class="rpt-info-label">추정 시세</div><div class="rpt-info-val" style="color:var(--gold);font-weight:700">${mv.estimatedMarketPrice}</div></div>`:''}
+          ${mv.winningRateReference?`<div class="rpt-info-item"><div class="rpt-info-label">낙찰가율 참고</div><div class="rpt-info-val">${mv.winningRateReference}</div></div>`:''}
+          ${mv.recentTransactions?`<div class="rpt-info-item" style="grid-column:1/-1"><div class="rpt-info-label">실거래가</div><div class="rpt-info-val">${mv.recentTransactions}</div></div>`:''}
+        </div>
+      </div>`;
+    }
+
+    // 입찰가 시뮬레이션
+    const rb = bs.recommendedBid;
+    if (rb) {
+      html += `<div class="rpt-section"><div class="rpt-section-label">💰 입찰가 시뮬레이션</div>
+        <div class="rpt-two-col" style="margin-bottom:10px">
+          ${rb.conservative?`<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:14px;color:#22c55e">${rb.conservative}</div><div class="rpt-kpi-label">보수적 (75~80%)</div></div>`:''}
+          ${rb.moderate?`<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:14px;color:var(--gold)">${rb.moderate}</div><div class="rpt-kpi-label">적정 (83~87%)</div></div>`:''}
+          ${rb.aggressive?`<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:14px;color:#ef4444">${rb.aggressive}</div><div class="rpt-kpi-label">적극적 (90~95%)</div></div>`:''}
+        </div>`;
+      const cb = bs.costBreakdown;
+      if (cb) {
+        html += `<div class="rpt-diag-card"><div class="rpt-diag-title">부대비용 상세</div>
+          ${cb.acquisitionTax?`<div class="rpt-diag-item"><span style="color:#94a3b8">취득세</span> <strong>${cb.acquisitionTax}</strong></div>`:''}
+          ${cb.registrationFee?`<div class="rpt-diag-item"><span style="color:#94a3b8">등기비용</span> <strong>${cb.registrationFee}</strong></div>`:''}
+          ${cb.evictionCost?`<div class="rpt-diag-item"><span style="color:#94a3b8">인도비용</span> <strong>${cb.evictionCost}</strong></div>`:''}
+          ${cb.repairCost?`<div class="rpt-diag-item"><span style="color:#94a3b8">수리비</span> <strong>${cb.repairCost}</strong></div>`:''}
+          ${cb.arrearsManagementFee?`<div class="rpt-diag-item"><span style="color:#94a3b8">체납관리비</span> <strong>${cb.arrearsManagementFee}</strong></div>`:''}
+          ${cb.totalAdditionalCost?`<div class="rpt-diag-item" style="border-top:1px solid rgba(0,0,0,.1);margin-top:6px;padding-top:6px"><span style="font-weight:700">부대비용 합계</span> <strong style="color:var(--gold)">${cb.totalAdditionalCost}</strong></div>`:''}
+        </div>`;
+      }
+      if (bs.totalInvestment) html += `<div class="rpt-reason-box" style="margin-top:8px">총 투자금액 (적정 입찰가 기준): <strong style="color:var(--gold)">${bs.totalInvestment}</strong></div>`;
+      html += `</div>`;
+    }
+
+    // 수익률 시뮬레이션
+    if (roi.jeonseReturn || roi.monthlyRent || roi.shortSale) {
+      html += `<div class="rpt-section"><div class="rpt-section-label">📈 수익률 시뮬레이션</div>
+        <div class="rpt-two-col">`;
+      if (roi.jeonseReturn) {
+        html += `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="color:#3b82f6;font-size:14px">${roi.jeonseReturn.annualReturn||'–'}</div><div class="rpt-kpi-label">전세 전환 연 수익률</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">${roi.jeonseReturn.estimatedJeonse||''}</div></div>`;
+      }
+      if (roi.monthlyRent) {
+        html += `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="color:#8b5cf6;font-size:14px">${roi.monthlyRent.annualReturn||'–'}</div><div class="rpt-kpi-label">월세 전환 연 수익률</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">${roi.monthlyRent.estimatedRent||''}</div></div>`;
+      }
+      if (roi.shortSale) {
+        html += `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:13px">${roi.shortSale.netProfit||'–'}</div><div class="rpt-kpi-label">단기 매각 세후 수익</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">예상가 ${roi.shortSale.estimatedSalePrice||''}</div></div>`;
+      }
+      html += `</div></div>`;
+    }
+
+    // 위험 평가
+    if (risk.keyRisks?.length || risk.checkBeforeBid?.length) {
+      html += `<div class="rpt-section"><div class="rpt-section-label">🔍 위험 요인 분석</div>`;
+      if (risk.keyRisks?.length) {
+        html += `<div class="rpt-diag-card red"><div class="rpt-diag-title">핵심 위험 요소</div>`;
+        risk.keyRisks.forEach(r => {
+          const sev = r.severity === '높음' ? '#ef4444' : r.severity === '보통' ? '#f59e0b' : '#94a3b8';
+          html += `<div class="rpt-diag-item"><strong style="color:${sev}">[${r.severity||''}]</strong> ${r.risk||''}<br><span style="font-size:11px;color:#64748b">대응: ${r.mitigation||''}</span></div>`;
+        });
+        html += `</div>`;
+      }
+      if (risk.checkBeforeBid?.length) {
+        html += `<div class="rpt-diag-card green" style="margin-top:8px"><div class="rpt-diag-title">✅ 입찰 전 필수 확인</div>`;
+        risk.checkBeforeBid.forEach(c => { html += `<div class="rpt-diag-item">☐ ${c}</div>`; });
+        html += `</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // 종합 의견
+    if (data.summary) {
+      html += `<div class="rpt-summary-banner" style="border-left:4px solid var(--gold)"><div class="rpt-summary-label">📝 종합 의견</div><div class="rpt-summary-text">${data.summary}</div></div>`;
+    }
+  }
+
+  // ══════════════════════════════════════════════
+  // 9. 공문서 / 보험 / 사업계획서 / 창작 등
   // ══════════════════════════════════════════════
   if (data.docType) {
     html += `<div class="rpt-section"><div class="rpt-section-label">📄 ${data.docType}</div>
