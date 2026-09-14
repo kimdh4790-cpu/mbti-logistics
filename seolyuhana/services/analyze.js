@@ -115,14 +115,23 @@ function _extractPdfText(b64) {
 }
 
 // ────────────────────────────────────────────────────────────
-// Cloudflare Workers AI 호출 (3차 폴백 — CF_GLOBAL_KEY 사용)
+// Cloudflare Workers AI 호출 (3차 폴백)
+// CF_API_TOKEN(API Token) → Bearer 인증 우선
+// CF_GLOBAL_KEY(Global API Key) → X-Auth-Key+Email 폴백
 // ────────────────────────────────────────────────────────────
 async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
-  const cfKey = env.CF_GLOBAL_KEY;
-  if (!cfKey) throw new Error('CF_GLOBAL_KEY 미설정');
+  const cfToken = env.CF_API_TOKEN;   // API Token (cfut_...) — Bearer 인증
+  const cfGlobal = env.CF_GLOBAL_KEY; // Global API Key (cfk_...) — X-Auth-Key 인증
+  if (!cfToken && !cfGlobal) throw new Error('CF_API_TOKEN/CF_GLOBAL_KEY 미설정');
 
   const CF_ACCOUNT = '02709cbec18d848913b4246015b9148f';
+  const CF_EMAIL = 'kimdh4790@gmail.com';
   const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+
+  // API Token → Bearer, Global API Key → X-Auth-Key+Email
+  const authHeaders = cfToken
+    ? { 'Authorization': `Bearer ${cfToken}` }
+    : { 'X-Auth-Email': CF_EMAIL, 'X-Auth-Key': cfGlobal };
 
   // document 블록 → 텍스트 추출, image 블록 → 설명 텍스트로 변환
   let userText = '';
@@ -147,7 +156,7 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
     `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${MODEL}`,
     {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${cfKey}`, 'Content-Type': 'application/json' },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, max_tokens: maxTokens }),
       signal: AbortSignal.timeout(90000)
     }

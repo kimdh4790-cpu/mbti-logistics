@@ -3468,8 +3468,17 @@ function pollResult(jobId, _cnt, _interval, _startTs) {
         }, 500);
       } else if (d.status === 'failed') {
         const errMsg = d.error || '분석 실패';
-        _slyToast('분석 실패: ' + errMsg + ' (사용된 포인트는 자동 환불됩니다)', 10000);
+        _slyToast('분석 실패 — 포인트 자동 환불', 5000);
         document.getElementById('slyProgress')?.classList.remove('visible');
+        // 에러 전문 결과 영역에 표시 (toast가 잘릴 수 있어 별도 표시)
+        const cont = document.getElementById('slyResult');
+        if (cont) {
+          cont.innerHTML = `<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:12px;padding:20px 18px;margin:8px 0;color:#991b1b;font-size:13px;line-height:1.6;word-break:break-all;">
+            <div style="font-weight:700;font-size:14px;margin-bottom:8px;">분석 실패 — 포인트 자동 환불</div>
+            <div style="font-family:monospace;white-space:pre-wrap;font-size:12px;color:#7f1d1d;">${errMsg.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+          </div>`;
+          cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         const b2 = document.getElementById('slyAnalyzeBtn2');
         if (b2) b2.disabled = false;
         const fb2 = document.querySelector('.sly-drawer-footer-btn');
