@@ -34,13 +34,19 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
   };
 
   const apiKey = env.GOOGLE_AI_API_KEY || '';
-  // 503(과부하) 시 폴백 순서로 재시도
-  const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest'];
+  // v1(안정) → v1beta 순서, 모델별 올바른 API 버전 매핑
+  const MODEL_ROUTES = [
+    { model: 'gemini-2.0-flash',        ver: 'v1' },
+    { model: 'gemini-2.0-flash',        ver: 'v1beta' },
+    { model: 'gemini-1.5-flash',        ver: 'v1' },
+    { model: 'gemini-1.5-flash',        ver: 'v1beta' },
+    { model: 'gemini-1.5-flash-latest', ver: 'v1beta' },
+  ];
   let res, lastErr;
-  for (const model of MODELS) {
+  for (const { model, ver } of MODEL_ROUTES) {
     try {
       res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -49,13 +55,13 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
         }
       );
       if (res.status === 503) {
-        lastErr = new Error(`Gemini API 503 (${model}): 과부하`);
+        lastErr = new Error(`Gemini API 503 (${model}/${ver}): 과부하`);
         await new Promise(r => setTimeout(r, 2000));
         continue;
       }
       if (res.ok) break;
       const errBody = await res.json().catch(() => ({}));
-      lastErr = new Error(`Gemini API ${res.status} (${model}): ${errBody.error?.message || res.statusText}`);
+      lastErr = new Error(`Gemini API ${res.status} (${model}/${ver}): ${errBody.error?.message || res.statusText}`);
       if (res.status === 429 || res.status === 404) continue;
       break;
     } catch (e) {
@@ -213,16 +219,20 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
 // 통합 AI 호출 — Claude 1차, Gemini 2차, Workers AI 3차 폴백
 // (Gemini는 한국 Cloudflare PoP에서 지역 차단됨)
 // ────────────────────────────────────────────────────────────
-async function callClaude({ model: _model, system, userBlocks, env, maxTokens = 4096 }) {
+async function callClaude({ model: callerModel, system, userBlocks, env, maxTokens = 4096 }) {
   const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
   const systemWithGuard = system + ANTI_HALLUCINATION;
 
-  // 모델 시도 순서: haiku-4-5 전체 버전 → 구형 haiku → sonnet
-  const CLAUDE_MODELS = [
+  // 호출부 지정 모델 우선, 그 다음 sonnet → haiku 순서로 폴백
+  const FALLBACKS = [
+    'claude-sonnet-4-6',
     'claude-haiku-4-5-20251001',
     'claude-3-5-haiku-20241022',
     'claude-3-haiku-20240307',
   ];
+  const CLAUDE_MODELS = callerModel
+    ? [callerModel, ...FALLBACKS.filter(m => m !== callerModel)]
+    : FALLBACKS;
 
   const hasPdfBlock = userBlocks.some(b => b.type === 'document');
   const baseHeaders = {
