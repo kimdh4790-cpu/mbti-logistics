@@ -8317,6 +8317,31 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 
+      // POST /api/scan/auction-fetch — 사건번호로 대법원 경매정보 자동 수집
+      if (path === '/api/scan/auction-fetch' && method === 'POST') {
+        try {
+          const _au = await verifyFirebaseToken(request, env);
+          if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401,headers});
+          const body = await request.json().catch(() => ({}));
+          const { caseNum } = body;
+          if (!caseNum || !caseNum.trim()) return Response.json({ok:false,error:'사건번호 필수'},{headers});
+          const oracleBase = (env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr').replace(/\/+$/,'');
+          const scrapeRes = await fetch(`${oracleBase}/api/auction-scrape`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ caseNum: caseNum.trim() }),
+            signal: AbortSignal.timeout(45000)
+          }).catch(e => null);
+          if (!scrapeRes || !scrapeRes.ok) {
+            return Response.json({ ok: true, text: `[대법원 경매 물건 조회]\n사건번호: ${caseNum}\n\nOracle 서버 연결 실패. 매각물건명세서를 직접 업로드하거나 내용을 텍스트로 붙여넣어 주세요.`, scraped: false }, {headers});
+          }
+          const scrapeData = await scrapeRes.json();
+          return Response.json({ ok: true, text: scrapeData.text || '', scraped: scrapeData.scraped || false }, {headers});
+        } catch(e) {
+          return Response.json({ok:false,error:e.message},{status:500,headers});
+        }
+      }
+
       // GET /api/scan/ping — Oracle + Anthropic 연결 진단 (슈퍼어드민 전용)
       if (path === '/api/scan/ping' && method === 'GET') {
         try {

@@ -1822,6 +1822,7 @@ body {
     <div id="slyInputModeTabs" class="sly-input-toggle" style="display:none">
       <button id="slyModeFile" class="active" onclick="_slySetInputMode('file')">📎 파일 업로드</button>
       <button id="slyModeText" onclick="_slySetInputMode('text')">✏️ 텍스트 입력</button>
+      <button id="slyModeCaseNum" onclick="_slySetInputMode('casenum')" style="display:none">🔍 사건번호</button>
     </div>
 
     <!-- 파일 업로드 영역 -->
@@ -1847,6 +1848,22 @@ body {
         </div>
       </div>
       <div id="slyServiceBadge" style="display:none"></div>
+    </div>
+
+    <!-- 사건번호 직접 조회 영역 (경매 서비스 전용) -->
+    <div id="slyCaseNumView" style="display:none">
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">대법원 사건번호 입력</div>
+      <input id="slyCaseNumInput" type="text"
+        style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;font-family:inherit;outline:none;background:var(--bg);color:var(--text-primary);box-sizing:border-box"
+        placeholder="예: 서울중앙지방법원 2024타경12345"
+        onkeydown="if(event.key==='Enter')_slyAnalyze()">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:5px;line-height:1.5">
+        · 법원명 + 사건번호 또는 사건번호만 입력<br>
+        · 예: 2024타경12345 / 서울남부지방법원 2023타경9876
+      </div>
+      <div id="slyCaseNumStatus" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px;font-size:12px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--text-secondary)">
+        대법원에서 물건정보를 가져오는 중...
+      </div>
     </div>
 
     <!-- 텍스트 입력 영역 -->
@@ -3232,6 +3249,9 @@ function _slySelectService(id) {
   // ── 입력 탭 표시/숨김 ──
   const inputModeTabs = document.getElementById('slyInputModeTabs');
   if (inputModeTabs) inputModeTabs.style.display = 'none';
+  // 사건번호 탭: 경매 서비스에서만 표시
+  const caseNumBtn = document.getElementById('slyModeCaseNum');
+  if (caseNumBtn) caseNumBtn.style.display = svc.id === 'auction' ? '' : 'none';
 
   // ── 업로드 카드 제목 서비스별 지정 ──
   const uploadTitle = document.getElementById('slyUploadTitle');
@@ -3338,21 +3358,27 @@ function _slySetInputMode(mode) {
   _slyInputMode = mode;
   const fileBtn = document.getElementById('slyModeFile');
   const textBtn = document.getElementById('slyModeText');
+  const caseBtn = document.getElementById('slyModeCaseNum');
   const dz = document.getElementById('slyDropzone2');
   const fp = document.getElementById('slyFilePrev2');
   const tw = document.getElementById('slyTextInputWrap');
-  if (mode === 'text') {
-    if (fileBtn) { fileBtn.style.background = 'transparent'; fileBtn.style.color = 'var(--text-secondary)'; }
-    if (textBtn) { textBtn.style.background = 'var(--gold)'; textBtn.style.color = 'var(--navy)'; }
-    if (dz) dz.style.display = 'none';
-    if (fp) fp.style.display = 'none';
-    if (tw) tw.style.display = 'block';
-  } else {
-    if (fileBtn) { fileBtn.style.background = 'var(--gold)'; fileBtn.style.color = 'var(--navy)'; }
-    if (textBtn) { textBtn.style.background = 'transparent'; textBtn.style.color = 'var(--text-secondary)'; }
-    if (dz) dz.style.display = '';
-    if (tw) tw.style.display = 'none';
-  }
+  const cnv = document.getElementById('slyCaseNumView');
+  const inactive = 'transparent';
+  const active = 'var(--gold)';
+  const activeC = 'var(--navy)';
+  const inactiveC = 'var(--text-secondary)';
+  const setBtn = (btn, isActive) => {
+    if (!btn) return;
+    btn.style.background = isActive ? active : inactive;
+    btn.style.color = isActive ? activeC : inactiveC;
+  };
+  setBtn(fileBtn, mode === 'file');
+  setBtn(textBtn, mode === 'text');
+  setBtn(caseBtn, mode === 'casenum');
+  if (dz) dz.style.display = mode === 'file' ? '' : 'none';
+  if (fp) fp.style.display = (mode === 'file' && _slyFile) ? '' : 'none';
+  if (tw) tw.style.display = mode === 'text' ? 'block' : 'none';
+  if (cnv) cnv.style.display = mode === 'casenum' ? 'block' : 'none';
 }
 window._slySetInputMode = _slySetInputMode;
 
@@ -3366,6 +3392,29 @@ async function _slyAnalyze() {
     }
     const blob = new Blob([txt], { type: 'text/plain' });
     _slyFile = new File([blob], 'paste_input.txt', { type: 'text/plain' });
+  }
+  if (_slyInputMode === 'casenum') {
+    const caseNum = document.getElementById('slyCaseNumInput')?.value?.trim();
+    if (!caseNum) { _slyToast('사건번호를 입력해주세요'); return; }
+    const statusEl = document.getElementById('slyCaseNumStatus');
+    if (statusEl) statusEl.style.display = 'block';
+    try {
+      const token = await window._slyGetToken();
+      const fetchRes = await fetch('/api/scan/auction-fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ caseNum })
+      });
+      const fetchData = await fetchRes.json();
+      if (!fetchData.ok) throw new Error(fetchData.error || '조회 실패');
+      const blob = new Blob([fetchData.text], { type: 'text/plain' });
+      _slyFile = new File([blob], `auction_${caseNum.replace(/\s+/g,'_')}.txt`, { type: 'text/plain' });
+      if (statusEl) statusEl.style.display = 'none';
+      if (!fetchData.scraped) _slyToast('자동 조회 실패 — 기본 분석으로 진행합니다');
+    } catch(e) {
+      if (statusEl) statusEl.style.display = 'none';
+      _slyToast('조회 실패: ' + e.message); return;
+    }
   }
   if (!_slyFile) { _slyToast('파일을 선택하거나 텍스트를 입력해주세요'); return; }
 

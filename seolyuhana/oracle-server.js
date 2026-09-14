@@ -4712,6 +4712,136 @@ app.post('/claude-proxy', async (req, res) => {
   }
 });
 
+// ── /api/auction-scrape  대법원 경매정보 사건번호 조회 ──────────────────────────
+// body: { caseNum: "서울중앙지방법원 2024타경12345" }
+// courtauction.go.kr Puppeteer 스크래핑 → 구조화 텍스트 반환
+app.post('/api/auction-scrape', async (req, res) => {
+  const { caseNum } = req.body || {};
+  if (!caseNum || !caseNum.trim()) return res.status(400).json({ error: '사건번호 필수' });
+
+  let browser = null;
+  try {
+    browser = await chromium.launch({
+      executablePath: process.env.CHROMIUM_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      headless: true
+    });
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      locale: 'ko-KR'
+    });
+    const page = await context.newPage();
+
+    // 사건번호 파싱: "서울중앙지방법원 2024타경12345" → { court, year, type, num }
+    const raw = caseNum.trim();
+    const courtMatch = raw.match(/^(.+?지방법원|.+?법원|.+?가정법원|.+?행정법원)\s*/);
+    const courtName = courtMatch ? courtMatch[1].trim() : '';
+    const rest = courtMatch ? raw.slice(courtMatch[0].length) : raw;
+    const numMatch = rest.match(/(\d{4})(타경|타기|타채|임경)(\d+)/);
+    if (!numMatch) return res.status(400).json({ error: '사건번호 형식 오류 (예: 2024타경12345)' });
+    const [, year, caseType, caseNo] = numMatch;
+
+    // courtauction.go.kr 사건 검색 URL (GET 방식 직접 접근)
+    const searchUrl = `https://www.courtauction.go.kr/pgj/index.on?w2xPath=/pgj/ui/pgj100/PGJ159M00.xml`;
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForTimeout(2000);
+
+    // 법원 선택 (있을 경우)
+    try {
+      const courtSel = await page.$('select[name="s_jiwon"]') || await page.$('#jiwonNm') || await page.$('select[id*="court"]');
+      if (courtSel && courtName) {
+        const options = await courtSel.$$('option');
+        for (const opt of options) {
+          const txt = await opt.innerText();
+          if (txt.includes(courtName.replace('지방법원','').trim())) {
+            const val = await opt.getAttribute('value');
+            await courtSel.selectOption(val);
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 연도 입력
+    try {
+      const yearEl = await page.$('input[name="s_year"]') || await page.$('#s_year') || await page.$('input[id*="year"]');
+      if (yearEl) { await yearEl.fill(''); await yearEl.type(year); }
+    } catch (_) {}
+
+    // 사건 종류 선택 (타경 등)
+    try {
+      const typeSel = await page.$('select[name="s_sakBun"]') || await page.$('#s_sakBun');
+      if (typeSel) {
+        const opts = await typeSel.$$('option');
+        for (const opt of opts) {
+          const txt = await opt.innerText();
+          if (txt.includes(caseType)) { const v = await opt.getAttribute('value'); await typeSel.selectOption(v); break; }
+        }
+      }
+    } catch (_) {}
+
+    // 사건 번호 입력
+    try {
+      const numEl = await page.$('input[name="s_sakNo"]') || await page.$('#s_sakNo') || await page.$('input[id*="sakNo"]');
+      if (numEl) { await numEl.fill(''); await numEl.type(caseNo); }
+    } catch (_) {}
+
+    // 검색 버튼 클릭
+    try {
+      const searchBtn = await page.$('input[type="button"][value*="검색"]') || await page.$('button:has-text("검색")') || await page.$('a:has-text("검색")');
+      if (searchBtn) { await searchBtn.click(); await page.waitForTimeout(3000); }
+    } catch (_) {}
+
+    // 결과 페이지 텍스트 수집
+    let pageText = await page.evaluate(() => document.body.innerText);
+
+    // 물건 상세 링크 클릭 시도
+    try {
+      const detailLink = await page.$('a:has-text("물건상세")') || await page.$('td a[href*="PGJ"]') || await page.$('table a[onclick*="detail"]');
+      if (detailLink) {
+        await Promise.all([
+          detailLink.click(),
+          page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {})
+        ]);
+        await page.waitForTimeout(2000);
+        const detailText = await page.evaluate(() => document.body.innerText);
+        if (detailText.length > pageText.length) pageText = detailText;
+      }
+    } catch (_) {}
+
+    // 텍스트 정제 (탭·공백 정리)
+    const cleanText = pageText
+      .replace(/\t+/g, ' ')
+      .replace(/[ ]{3,}/g, '  ')
+      .replace(/\n{4,}/g, '\n\n')
+      .slice(0, 8000);
+
+    if (cleanText.trim().length < 100) {
+      // 스크래핑 실패 시 기본 텍스트 반환
+      return res.json({
+        ok: true,
+        text: `[대법원 경매 물건 조회]\n사건번호: ${caseNum}\n\n자동 조회에 실패했습니다. 대법원 법원경매정보(www.courtauction.go.kr)에서 직접 확인 후 텍스트를 붙여넣어 주세요.`,
+        scraped: false
+      });
+    }
+
+    res.json({
+      ok: true,
+      text: `[대법원 경매 물건 조회 — 자동 수집]\n사건번호: ${caseNum}\n\n${cleanText}`,
+      scraped: true
+    });
+  } catch (e) {
+    console.error('[auction-scrape]', e.message);
+    res.json({
+      ok: true,
+      text: `[대법원 경매 물건 조회]\n사건번호: ${caseNum}\n\n자동 조회 중 오류가 발생했습니다. (${e.message})\n\n대법원 법원경매정보(www.courtauction.go.kr) → 경매사건검색에서 직접 확인 후 내용을 붙여넣어 분석하거나, 매각물건명세서 파일을 업로드해주세요.`,
+      scraped: false
+    });
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+});
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[seolyuhana-oracle] 서버 시작 port=${PORT}`);
