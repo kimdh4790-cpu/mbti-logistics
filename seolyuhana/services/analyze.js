@@ -365,7 +365,8 @@ const RESUME_SYSTEM = `당신은 한국 대기업 인사팀 출신 이력서 분
   "missingItems": ["누락 항목1 (이유)"],
   "jdMissingKeywords": ["JD에 있지만 이력서에 없는 키워드"],
   "industryKeywords": ["해당 직무 필수 키워드"],
-  "overallComment": "전체 총평 (250자 이내, 합격 가능성 포함)"
+  "overallComment": "전체 총평 (250자 이내, 합격 가능성 포함)",
+  "plainFeedback": "이 이력서 전체를 채용 담당자 시각으로 쉬운 말로 풀어 설명 (5~7문장). 지원자가 어떤 강점이 있는지, 어떤 점이 아쉬운지, 실제 합격 가능성은 어느 정도인지 솔직하게 대화하듯 설명할 것. 점수 숫자보다 '왜 그 점수인지'를 사람 말로 풀어쓸 것."
 }
 개선 제안 최소 8개, 최대 15개. 원본 문장은 이력서에서 그대로 인용.`;
 
@@ -450,7 +451,8 @@ const COVER_LETTER_SYSTEM = `당신은 삼성·카카오·공기업 서류 전�
   ],
   "missingEpisodes": ["추가하면 합격률 올라가는 에피소드 유형1 (구체적 이유 포함)", "유형2"],
   "wordCountAdvice": "항목별 권장 글자수 대비 현재 분량 분석",
-  "overallComment": "전체 총평 (250자 이내, 합격 가능성 진단 + 최우선 보완 2가지)"
+  "overallComment": "전체 총평 (250자 이내, 합격 가능성 진단 + 최우선 보완 2가지)",
+  "plainFeedback": "이 자소서를 처음 읽는 사람도 알 수 있도록 쉬운 말로 종합 평가 (5~7문장). 어떤 점이 좋고 어떤 점이 걱정되는지, 합격 확률은 얼마나 되는지, 지금 당장 가장 먼저 고쳐야 할 것 한 가지를 솔직하게 대화하듯 설명할 것."
 }`;
 
 export async function analyzeCoverLetter({ coverLetterText, resumeText = '', jdText = '', env }) {
@@ -516,7 +518,8 @@ const COVER_LETTER_REWRITE_SYSTEM = `당신은 삼성·카카오·현대·공기
   "addedStrengths": ["새로 추가·강화된 설득 포인트1", "포인트2"],
   "writingTips": ["이 자소서를 더 발전시키기 위한 추가 팁1", "팁2"],
   "wordCount": 전체_재작성_자소서_글자수,
-  "overallNote": "재작성 방향 및 원본 대비 개선 효과 총평 (200자 이내)"
+  "overallNote": "재작성 방향 및 원본 대비 개선 효과 총평 (200자 이내)",
+  "plainNote": "재작성된 자소서를 쉬운 말로 소개 (3~5문장). 원본과 무엇이 달라졌는지, 왜 더 좋아졌는지, 어떤 부분을 집중적으로 바꿨는지를 지원자에게 직접 설명하듯 쓸 것."
 }`;
 
 export async function rewriteCoverLetter({ coverLetterText, resumeText = '', jdText = '', env }) {
@@ -883,7 +886,8 @@ const CONTRACT_SYSTEM = `당신은 대한민국 노동법·민법·상법 전문
   "missingClauses": ["누락된 필수 조항 (법적 근거 포함)"],
   "strengths": ["계약서 긍정적 조항"],
   "recommendations": ["계약 전 추가 확인 사항"],
-  "overallComment": "종합 평가 (200자 이내)"
+  "overallComment": "종합 평가 (200자 이내)",
+  "beginnerExplanation": "이 계약서의 핵심 위험과 주의점을 계약서를 처음 보는 사람도 이해하도록 쉬운 말로 설명 (5~7문장). 어떤 조항이 왜 문제인지, 지금 서명해도 될지 여부, 반드시 수정 요청해야 할 한두 가지를 솔직하게 말할 것. 법률 용어는 괄호 안에 쉬운 말로 부연 설명."
 }
 개선 제안 최소 5개, 위험도 순 정렬.`
 
@@ -957,7 +961,7 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   const SCAN_MODELS = serviceId === 'auction_analysis'
     ? ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022']
     : ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
-  const SCAN_MAX_TOKENS = serviceId === 'auction_analysis' ? 5000 : 4000;
+  const SCAN_MAX_TOKENS = serviceId === 'auction_analysis' ? 6500 : 4000;
   // 반드시 JSON만 출력하도록 system 지시 추가
   const SCAN_SYSTEM = '반드시 JSON만 출력. 마크다운 코드블록, 설명 텍스트, 인사말 없이 순수 JSON 객체({...})로만 응답.';
 
@@ -1202,7 +1206,8 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
     "keyRisks": ["핵심 위험요소"],
     "summary": "종합 판단 (200자 이내)"
   },
-  "recommendations": ["계약 전 필수 조치 사항 (우선순위 순)"]
+  "recommendations": ["계약 전 필수 조치 사항 (우선순위 순)"],
+  "beginnerNote": "이 등기부등본 전체를 전세 계약이 처음인 사람도 이해하도록 이야기 형식으로 설명 (5~7문장). 이 집에 어떤 빚이 얼마나 있는지, 지금 전세를 들어가도 괜찮은지, 반드시 확인해야 할 핵심 사항 한두 가지를 자연스럽게 풀어쓸 것. 금액은 '억 원' 단위로 쉽게 표현."
 }
 `
 
@@ -1279,7 +1284,8 @@ const PUBLIC_DOC_SYSTEM = `당신은 한국 공공문서 분석 전문가입니�
   "summary": "문서 주요 내용 요약 (150자 이내)",
   "useCase": "이 문서가 주로 활용되는 용도 (대출/임대차/비자/취업 등)",
   "validity": "유효기간 또는 주의사항",
-  "warnings": ["주의사항1", "주의사항2"]
+  "warnings": ["주의사항1", "주의사항2"],
+  "plainSummary": "이 문서를 처음 보는 사람도 이해하도록 쉬운 말로 설명 (3~5문장). 이 서류가 무엇을 증명하는지, 주요 수치(금액·기간)가 무엇을 의미하는지, 어디에 활용하면 되는지, 주의해야 할 점이 있으면 솔직하게 말할 것."
 }`;
 
 export async function analyzePublicDoc({ text, serviceId = 'public_doc_analysis', env }) {
@@ -1366,7 +1372,8 @@ const WEBTOON_SYSTEM = `당신은 네이버웹툰·카카오웹툰·레진코믹
   ],
   "monetizationAdvice": "추천 수익화 전략 (플랫폼+유료화 방식)",
   "ipExpansionPotential": "드라마·애니·영화 IP 전환 가능성 평가",
-  "overallComment": "전체 총평 (200자 이내)"
+  "overallComment": "전체 총평 (200자 이내)",
+  "plainFeedback": "이 웹툰 기획안을 처음 보는 사람도 이해하도록 쉬운 말로 종합 평가 (5~7문장). 어떤 점이 강점이고 어떤 점이 보완이 필요한지, 연재 성공 가능성은 어느 정도인지, 지금 당장 바꿔야 할 한 가지를 솔직하게 대화하듯 설명할 것."
 }`;
 
 export async function analyzeWebtoon({ text, env }) {
@@ -1439,7 +1446,8 @@ const SHORTFILM_SYSTEM = `당신은 부산국제영화제(BIFF)·전주국제영
   "festivalPotential": "영화제 출품 가능성 평가 (높음/중간/낮음 + 이유)",
   "platformStrategy": "추천 배포 전략 (플랫폼+수익화 방법)",
   "seriesPotential": "시리즈 확장 가능성 평가",
-  "overallComment": "전체 총평 (200자 이내)"
+  "overallComment": "전체 총평 (200자 이내)",
+  "plainFeedback": "이 시나리오를 처음 보는 사람도 이해하도록 쉬운 말로 종합 평가 (5~7문장). 어떤 점이 인상적이고 어떤 점이 아쉬운지, 영화제 통과 또는 OTT 피칭 가능성은 어느 정도인지, 지금 바로 고쳐야 할 한 가지를 솔직하게 대화하듯 설명할 것."
 }`;
 
 export async function analyzeShortFilm({ text, env }) {
@@ -2017,11 +2025,19 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
 - 월세 전환 수익률 = 월세 × 12 / (낙찰가 + 취득제비용) × 100
 - 단기 매각 수익 = 예상 매각가 - 낙찰가 - 취득세 - 양도세(단기 70%) - 중개비
 
+[쉬운 설명 작성 지침]
+- "plainExplanation" 필드는 경매를 처음 접하는 일반인도 이해할 수 있도록 쉬운 말로 풀어쓰기
+- 법률 용어는 반드시 괄호 안에 쉬운 말로 부연 설명 (예: "말소기준권리(이 날짜 이전의 담보 빚)")
+- 구체적인 금액·날짜·당사자명을 인용해서 설명할 것
+- "결론적으로", "쉽게 말해서", "예를 들어" 같은 접속어 적극 사용
+- beginnerNote는 5~7문장으로 이 물건 전체를 이야기하듯 설명
+
 반드시 다음 JSON 구조로만 응답. 마크다운 없이 JSON만 출력.
 
 출력 스키마:
 {
   "disclaimer": "⚠️ 이 분석은 AI 참고 자료이며 투자·법률 조언이 아닙니다. 실제 입찰 전 법원 서류 열람·현장 실사·전문가 상담을 반드시 진행하십시오.",
+  "beginnerNote": "이 물건 전체를 경매 초보자도 이해할 수 있도록 이야기 형식으로 설명 (5~7문장). 어떤 집인지, 왜 경매에 나왔는지, 핵심 주의점, 지금 살 만한지 여부를 자연스럽게 풀어쓸 것.",
   "caseInfo": {
     "caseNumber": "사건번호",
     "court": "관할 법원",
@@ -2034,22 +2050,24 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
   },
   "rightsAnalysis": {
     "cancellationBaseRight": "말소기준권리 (종류·채권자·날짜)",
+    "plainExplanation": "권리관계를 쉬운 말로 2~3문장 설명. 예: 'XX은행이 2019년에 건 근저당권이 기준점입니다. 이 날짜 이후에 등록된 빚이나 가압류는 낙찰 시 모두 없어지니 걱정 안 해도 됩니다. 단, 세입자 A씨는 이 날짜보다 먼저 들어왔기 때문에 낙찰자가 보증금을 돌려줘야 할 수 있습니다.'",
     "survivingRights": [
       {
         "type": "인수되는 권리 종류",
         "holder": "권리자",
         "amount": "금액 (해당 시)",
         "risk": "높음|보통|낮음",
-        "detail": "낙찰자 영향 설명"
+        "detail": "낙찰자 영향 설명 — 구체적으로 어떤 부담이 생기는지 쉬운 말로"
       }
     ],
-    "extinguishedRights": ["낙찰로 소멸하는 권리 목록"],
+    "extinguishedRights": ["낙찰로 소멸하는 권리 목록 — 각 항목에 '왜 없어지는지'도 괄호로 간략히"],
     "tenantRisk": {
       "hasTenant": true,
       "tenantType": "대항력 있음|없음|확인 불가",
       "depositAmount": "보증금 (확인된 경우)",
       "priorityRepayment": "소액임차인 우선변제 해당 여부",
-      "netBurden": "낙찰자 인수 예상 부담액"
+      "netBurden": "낙찰자 인수 예상 부담액",
+      "plainExplanation": "임차인 상황을 쉬운 말로. 예: '현재 세입자가 보증금 X원에 살고 있습니다. 이 세입자는 경매 전부터 살았기 때문에(대항력 있음) 낙찰받아도 보증금을 돌려줄 때까지 집을 비워달라고 강제할 수 없습니다. 실제로 낙찰자가 떠안아야 할 금액은 Y원입니다.'"
     }
   },
   "partiesAndSchedule": {
@@ -2058,12 +2076,14 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
     "otherParties": ["이해관계인 목록 (있는 경우)"],
     "auctionHistory": [
       {"date": "기일", "result": "유찰/진행", "minimumBid": "최저가"}
-    ]
+    ],
+    "whyAuction": "왜 이 집이 경매에 나왔는지 1~2문장으로 쉽게 설명"
   },
   "marketValue": {
     "estimatedMarketPrice": "추정 시세 (근거 포함)",
     "recentTransactions": "인근 실거래가 참고 (문서에서 확인된 경우)",
-    "winningRateReference": "2026년 해당 지역 낙찰가율 참고"
+    "winningRateReference": "2026년 해당 지역 낙찰가율 참고",
+    "plainExplanation": "시세 대비 현재 최저입찰가가 얼마나 싼지/비싼지 쉽게 설명. 예: '시세가 약 5억원인데 현재 최저입찰가는 3억 5천만원으로, 시세 대비 70% 수준입니다. 유찰이 2번 됐기 때문에 이 정도까지 내려온 것입니다.'"
   },
   "bidSimulation": {
     "recommendedBid": {
@@ -2079,7 +2099,8 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
       "arrearsManagementFee": "체납관리비 (확인된 경우)",
       "totalAdditionalCost": "총 부대비용 합계"
     },
-    "totalInvestment": "총 투자금액 (적정 입찰가 기준)"
+    "totalInvestment": "총 투자금액 (적정 입찰가 기준)",
+    "whyRecommended": "왜 이 가격대를 권장하는지 2~3문장. 예: '현재 유찰 횟수, 지역 경쟁률, 임차인 인수 부담을 고려하면 적정가는 X원 정도입니다. 이보다 높게 쓰면 시세 대비 메리트가 없고, 이보다 낮으면 낙찰 확률이 낮습니다.'"
   },
   "roiSimulation": {
     "jeonseReturn": {
@@ -2095,17 +2116,19 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
       "estimatedSalePrice": "단기 매각 예상가 (1~2년 후)",
       "capitalGainsTax": "양도세 추산 (단기 중과)",
       "netProfit": "세후 예상 수익"
-    }
+    },
+    "bestStrategy": "세 가지 전략(전세/월세/매각) 중 이 물건에 가장 적합한 전략과 이유를 2~3문장으로 구체적으로 설명"
   },
   "riskAssessment": {
     "overallRisk": "고위험|주의|안전",
-    "score": 0~100,
+    "score": 0,
     "keyRisks": [
-      {"risk": "위험 항목", "severity": "높음|보통|낮음", "mitigation": "대응 방법"}
+      {"risk": "위험 항목", "severity": "높음|보통|낮음", "mitigation": "대응 방법 — 구체적으로 어떻게 해야 하는지"}
     ],
-    "checkBeforeBid": ["입찰 전 필수 확인 사항1", "사항2", "사항3"]
+    "checkBeforeBid": ["입찰 전 필수 확인 사항 — 어디서 어떻게 확인하는지 포함", "사항2", "사항3"],
+    "simpleConclusion": "최종 판단을 쉬운 말로 3~4문장. 입찰 추천 여부, 이유, 주의할 점, 어떤 사람에게 적합한 물건인지 포함. 예: '이 물건은 OOO 때문에 경매 경험자에게 적합합니다. 초보자라면 임차인 문제 해결이 어려울 수 있으므로 주의가 필요합니다. 가격은 매력적이지만 XXX 리스크를 감안해야 합니다.'"
   },
-  "summary": "종합 의견 (250자 이내, 입찰 추천 여부 포함)"
+  "summary": "종합 의견 (400자 이내, 입찰 추천 여부·근거·주요 리스크·적합한 투자자 유형 모두 포함)"
 }`;
 
 export async function analyzeAuction({ text, env }) {
@@ -2116,6 +2139,6 @@ export async function analyzeAuction({ text, env }) {
     system: AUCTION_SYSTEM,
     userBlocks: [{ type: 'text', text: `다음 대법원 경매 물건 정보를 분석해주세요. 권리관계·적정입찰가·수익률 시뮬레이션을 모두 포함하세요.\n\n[경매 물건 정보]\n${truncated}` }],
     env,
-    maxTokens: 5000
+    maxTokens: 6500
   });
 }

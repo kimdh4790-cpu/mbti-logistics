@@ -1037,6 +1037,27 @@ body {
   font-size: 12px; color: var(--text-secondary);
   line-height: 1.6; margin-top: 8px;
 }
+.rpt-plain-box {
+  background: linear-gradient(135deg, rgba(99,102,241,.06) 0%, rgba(255,107,157,.06) 100%);
+  border: 1.5px solid rgba(99,102,241,.2);
+  border-radius: 12px; padding: 16px 18px; margin: 12px 0 4px;
+  font-size: 14px; color: var(--text-primary);
+  line-height: 1.8; position: relative;
+}
+.rpt-plain-box::before {
+  content: '💬'; position: absolute; top: -12px; left: 16px;
+  background: white; padding: 0 6px; font-size: 18px; line-height: 1;
+}
+.rpt-plain-label {
+  font-size: 11px; font-weight: 800; color: #6366f1; letter-spacing: .06em;
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.rpt-plain-inline {
+  background: rgba(99,102,241,.07); border-radius: 8px;
+  padding: 8px 12px; margin-top: 8px; font-size: 13px;
+  color: var(--text-secondary); line-height: 1.7;
+  border-left: 3px solid rgba(99,102,241,.35);
+}
 
 /* Q&A */
 .rpt-qa-category { margin-bottom: 14px; }
@@ -3684,6 +3705,21 @@ function renderResult(data, downloadUrls) {
   }
 
   // ══════════════════════════════════════════════
+  // 1-b. 알기 쉬운 설명 (모든 서비스 공통)
+  // ══════════════════════════════════════════════
+  const plainText = data.beginnerNote || data.plainFeedback || data.beginnerExplanation || data.plainNote || data.plainSummary;
+  if (plainText) {
+    html += `
+    <div class="rpt-section">
+      <div class="rpt-section-label">💬 알기 쉬운 설명</div>
+      <div class="rpt-plain-box">
+        <div class="rpt-plain-label">쉽게 풀어보면</div>
+        ${plainText}
+      </div>
+    </div>`;
+  }
+
+  // ══════════════════════════════════════════════
   // 2. 강점 / 위험 요소 — 2컬럼 카드
   // ══════════════════════════════════════════════
   const hasStrengths = data.strengths?.length;
@@ -4095,6 +4131,7 @@ function renderResult(data, downloadUrls) {
           ${ps.debtor ? `<div class="rpt-info-item"><div class="rpt-info-label">채무자/소유자</div><div class="rpt-info-val">${ps.debtor}</div></div>` : ''}
         </div>
         ${ps.auctionHistory?.length ? `<div class="rpt-diag-card" style="margin-top:8px"><div class="rpt-diag-title">경매 이력</div>${ps.auctionHistory.map(h=>`<div class="rpt-diag-item"><strong>${h.date||''}</strong> — ${h.result||''} (최저가 ${h.minimumBid||'–'})</div>`).join('')}</div>` : ''}
+        ${ps.whyAuction ? `<div class="rpt-plain-inline">💡 ${ps.whyAuction}</div>` : ''}
       </div>`;
     }
 
@@ -4114,6 +4151,9 @@ function renderResult(data, downloadUrls) {
     if (ra.extinguishedRights?.length) {
       html += `<div class="rpt-diag-card green" style="margin-top:8px"><div class="rpt-diag-title">✅ 낙찰로 소멸하는 권리</div>${ra.extinguishedRights.map(r=>`<div class="rpt-diag-item">${r}</div>`).join('')}</div>`;
     }
+    if (ra.plainExplanation) {
+      html += `<div class="rpt-plain-inline" style="margin-top:8px">💬 ${ra.plainExplanation}</div>`;
+    }
     const tr = ra.tenantRisk;
     if (tr) {
       const tColor = tr.tenantType?.includes('대항력 있음') ? '#ef4444' : '#64748b';
@@ -4124,6 +4164,7 @@ function renderResult(data, downloadUrls) {
           ${tr.depositAmount?`<div class="rpt-info-item"><div class="rpt-info-label">보증금</div><div class="rpt-info-val">${tr.depositAmount}</div></div>`:''}
           ${tr.netBurden?`<div class="rpt-info-item"><div class="rpt-info-label">낙찰자 인수 부담</div><div class="rpt-info-val" style="color:#ef4444;font-weight:700">${tr.netBurden}</div></div>`:''}
         </div>
+        ${tr.plainExplanation ? `<div class="rpt-plain-inline" style="margin-top:8px">💬 ${tr.plainExplanation}</div>` : ''}
       </div>`;
     }
     html += `</div>`;
@@ -4136,6 +4177,7 @@ function renderResult(data, downloadUrls) {
           ${mv.winningRateReference?`<div class="rpt-info-item"><div class="rpt-info-label">낙찰가율 참고</div><div class="rpt-info-val">${mv.winningRateReference}</div></div>`:''}
           ${mv.recentTransactions?`<div class="rpt-info-item" style="grid-column:1/-1"><div class="rpt-info-label">실거래가</div><div class="rpt-info-val">${mv.recentTransactions}</div></div>`:''}
         </div>
+        ${mv.plainExplanation ? `<div class="rpt-plain-inline" style="margin-top:8px">💬 ${mv.plainExplanation}</div>` : ''}
       </div>`;
     }
 
@@ -4160,6 +4202,7 @@ function renderResult(data, downloadUrls) {
         </div>`;
       }
       if (bs.totalInvestment) html += `<div class="rpt-reason-box" style="margin-top:8px">총 투자금액 (적정 입찰가 기준): <strong style="color:var(--gold)">${bs.totalInvestment}</strong></div>`;
+      if (bs.whyRecommended) html += `<div class="rpt-plain-inline" style="margin-top:8px">💬 ${bs.whyRecommended}</div>`;
       html += `</div>`;
     }
 
@@ -4177,6 +4220,7 @@ function renderResult(data, downloadUrls) {
         html += `<div class="rpt-kpi-card"><div class="rpt-kpi-val" style="font-size:13px">${roi.shortSale.netProfit||'–'}</div><div class="rpt-kpi-label">단기 매각 세후 수익</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">예상가 ${roi.shortSale.estimatedSalePrice||''}</div></div>`;
       }
       html += `</div></div>`;
+      if (roi.bestStrategy) html += `<div class="rpt-plain-inline" style="margin-bottom:8px">💬 ${roi.bestStrategy}</div>`;
     }
 
     // 위험 평가
@@ -4195,6 +4239,7 @@ function renderResult(data, downloadUrls) {
         risk.checkBeforeBid.forEach(c => { html += `<div class="rpt-diag-item">☐ ${c}</div>`; });
         html += `</div>`;
       }
+      if (risk.simpleConclusion) html += `<div class="rpt-plain-inline" style="margin-top:8px">💬 ${risk.simpleConclusion}</div>`;
       html += `</div>`;
     }
 
@@ -4218,6 +4263,7 @@ function renderResult(data, downloadUrls) {
       ${data.keyFacts?.length ? `<div class="rpt-diag-card green"><div class="rpt-diag-title">핵심 사실</div>${data.keyFacts.map(f=>`<div class="rpt-diag-item">${f}</div>`).join('')}</div>` : ''}
       ${data.summary ? `<div class="rpt-summary-banner" style="border-left:4px solid var(--lime)"><div class="rpt-summary-text">${data.summary}</div></div>` : ''}
       ${data.warnings?.length ? `<div class="rpt-diag-card red"><div class="rpt-diag-title">⚠️ 주의사항</div>${data.warnings.map(w=>`<div class="rpt-diag-item">${w}</div>`).join('')}</div>` : ''}
+      ${data.plainSummary ? `<div class="rpt-plain-inline" style="margin-top:10px">💬 ${data.plainSummary}</div>` : ''}
     </div>`;
   }
 
@@ -4234,6 +4280,7 @@ function renderResult(data, downloadUrls) {
       ${data.failPatterns?.length ? `<div class="rpt-diag-card red"><div class="rpt-diag-title">⚠️ 불합격 패턴</div>${data.failPatterns.map(p=>`<div class="rpt-diag-item">${p}</div>`).join('')}</div>` : ''}
       ${data.episodePlan?.length ? `<div class="rpt-diag-card blue"><div class="rpt-diag-title">📋 에피소드 플랜</div>${data.episodePlan.map(e=>`<div class="rpt-diag-item"><strong>${e.episode}화 ${e.title}</strong><br><span style="font-size:11px;color:#64748b">${e.cliffhanger||''}</span></div>`).join('')}</div>` : ''}
       ${data.ipExpansionPotential ? `<div class="rpt-reason-box">🚀 IP 확장: ${data.ipExpansionPotential}</div>` : ''}
+      ${data.plainFeedback ? `<div class="rpt-plain-inline" style="margin-top:10px">💬 ${data.plainFeedback}</div>` : ''}
     </div>`;
   }
 
