@@ -89,43 +89,47 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
 // (Gemini는 한국 Cloudflare PoP에서 지역 차단됨)
 // ────────────────────────────────────────────────────────────
 async function callClaude({ model: _model, system, userBlocks, env, maxTokens = 4096 }) {
-  // 항상 최신 haiku 사용 (구형 모델은 403)
-  const model = 'claude-haiku-4-5';
-
-  // ────────────────────────────────────────────────────────────
-  // Anthropic Claude 폴백
-  // ────────────────────────────────────────────────────────────
   const ANTI_HALLUCINATION = '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에 없는 정보를 추정하거나 지어내지 마라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.';
   const systemWithGuard = system + ANTI_HALLUCINATION;
 
-  const body = {
-    model,
-    max_tokens: maxTokens,
-    system: systemWithGuard,
-    messages: [{ role: 'user', content: userBlocks }]
+  // 모델 시도 순서: haiku-4-5 전체 버전 → 구형 haiku → sonnet
+  const CLAUDE_MODELS = [
+    'claude-haiku-4-5-20251001',
+    'claude-3-5-haiku-20241022',
+    'claude-3-haiku-20240307',
+  ];
+
+  const hasPdfBlock = userBlocks.some(b => b.type === 'document');
+  const baseHeaders = {
+    'content-type': 'application/json',
+    'x-api-key': env.ANTHROPIC_API_KEY || '',
+    'anthropic-version': '2023-06-01',
   };
+  if (hasPdfBlock) baseHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY || '',
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(90000)
-  });
-
-  if (!res.ok) {
+  let res, claudeErr;
+  for (const model of CLAUDE_MODELS) {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: baseHeaders,
+      body: JSON.stringify({ model, max_tokens: maxTokens, system: systemWithGuard, messages: [{ role: 'user', content: userBlocks }] }),
+      signal: AbortSignal.timeout(90000)
+    });
+    if (res.ok) break;
     const errBody = await res.json().catch(() => ({}));
-    const claudeErr = `Claude API ${res.status}: ${errBody.error?.message || res.statusText}`;
-    // Gemini를 폴백으로 시도 (지역 차단 시 에러 반환)
+    claudeErr = `Claude API ${res.status} (${model}): ${errBody.error?.message || res.statusText}`;
+    // 404(모델 없음)·403(권한 없음)이면 다음 모델 시도, 그 외는 즉시 중단
+    if (res.status !== 404 && res.status !== 403) break;
+  }
+
+  if (!res || !res.ok) {
+    // Gemini를 폴백으로 시도
     if (env.GOOGLE_AI_API_KEY) {
       try { return await callGemini({ system, userBlocks, env, maxTokens }); } catch (gemErr) {
         throw new Error(`${claudeErr} | Gemini 폴백 실패: ${gemErr.message}`);
       }
     }
-    throw new Error(claudeErr);
+    throw new Error(claudeErr || 'Claude API 실패');
   }
 
   const data = await res.json();
@@ -805,24 +809,27 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   const reqHeaders = {
     'content-type': 'application/json',
     'x-api-key': env.ANTHROPIC_API_KEY || '',
-    'anthropic-version': '2023-06-01'
+    'anthropic-version': '2023-06-01',
   };
   if (hasPdfBlock) reqHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: reqHeaders,
-    body: JSON.stringify({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content }]
-    }),
-    signal: AbortSignal.timeout(90000)
-  });
-
-  if (!res.ok) {
+  const SCAN_MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
+  let res, lastScanErr;
+  for (const model of SCAN_MODELS) {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: reqHeaders,
+      body: JSON.stringify({ model, max_tokens: 4000, messages: [{ role: 'user', content }] }),
+      signal: AbortSignal.timeout(90000)
+    });
+    if (res.ok) break;
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Claude Vision API ${res.status}: ${err.error?.message}`);
+    lastScanErr = `Claude Vision API ${res.status} (${model}): ${err.error?.message}`;
+    if (res.status !== 404 && res.status !== 403) break;
+  }
+
+  if (!res || !res.ok) {
+    throw new Error(lastScanErr || 'Claude Vision API 실패');
   }
 
   const data = await res.json();
