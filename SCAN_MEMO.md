@@ -73,6 +73,29 @@
 
 ---
 
+## 기능 추가 (2026-09-14) — 알기 쉬운 설명 전 서비스 추가
+
+### 변경 내용
+- **`seolyuhana/services/analyze.js`**: 전 서비스 스키마에 평이한 언어 설명 필드 추가
+  - RESUME_SYSTEM → `plainFeedback` (채용 담당자 시각 5~7문장 종합 평가)
+  - COVER_LETTER_SYSTEM → `plainFeedback` (합격 확률·즉시 수정 포인트 솔직 설명)
+  - COVER_LETTER_REWRITE_SYSTEM → `plainNote` (재작성 전후 차이 지원자 눈높이 설명)
+  - CONTRACT_SYSTEM (3종 공통) → `beginnerExplanation` (계약서 초보자도 이해하는 리스크 설명)
+  - REGISTRY_SYSTEM → `beginnerNote` (전세 계약 처음인 사람 이야기 형식 설명)
+  - PUBLIC_DOC_SYSTEM → `plainSummary` (공문서 활용법·주의점 3~5문장)
+  - WEBTOON_SYSTEM → `plainFeedback` (연재 가능성 솔직 평가)
+  - SHORTFILM_SYSTEM → `plainFeedback` (시나리오 영화제·OTT 피칭 가능성 솔직 평가)
+  - AUCTION_SYSTEM (이전 세션 완료) → `beginnerNote`, 각 블록별 `plainExplanation`/`whyAuction`/`whyRecommended`/`bestStrategy`/`simpleConclusion`
+  - `analyzeScannedPdf()` auction_analysis SCAN_MAX_TOKENS 5000 → 6500
+- **`scan.html`**: 새 필드 렌더링 추가
+  - CSS: `.rpt-plain-box`(말풍선 헤더, 연보라 그라데이션 테두리) + `.rpt-plain-label` + `.rpt-plain-inline`(좌측 컬러바 박스) 신규
+  - `renderResult()` 1b 섹션: 전 서비스 공통 "💬 알기 쉬운 설명" 블록 (점수 섹션 직후 — `beginnerNote || plainFeedback || beginnerExplanation || plainNote || plainSummary` 우선순위)
+  - 경매(섹션 8) 인라인: `ps.whyAuction`, `ra.plainExplanation`, `tr.plainExplanation`, `mv.plainExplanation`, `bs.whyRecommended`, `roi.bestStrategy`, `risk.simpleConclusion`
+  - 공문서(섹션 9): 주의사항 하단 `data.plainSummary`
+  - 웹툰/시나리오(섹션 9): 하단 `data.plainFeedback`
+
+---
+
 ## 장애 이력 및 해결 (2026-09-14 #3)
 
 ### auction_analysis "분析 시간 초과 4분" — 커밋 480911dc
