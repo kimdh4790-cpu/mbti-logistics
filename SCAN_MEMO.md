@@ -73,6 +73,20 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-14 #3)
+
+### auction_analysis "분析 시간 초과 4분" — 커밋 480911dc
+
+- **증상**: courtauction.go.kr 317KB PDF 분석 시 240초 후 "분析 시간 초과 (4분)" 표시
+- **근본 원인**: `_slyProcessJob()`에서 `buildPdf()`(Oracle 서버 60s AbortSignal 호출)가 `sly_result_{jobId}` KV 저장 **이전**에 실행됨. Oracle VM이 hang되면 AbortSignal 만료 후에도 응답 대기로 인해 KV 저장이 영원히 지연 → 프론트엔드 240s 타임아웃
+- **수정** (`_worker.js` `_slyProcessJob()`):
+  - `Promise.race([_runAnalysis(), _slyAnalysisTimeout])` 완료 직후 즉시 `sly_result_{jobId}` KV + Firestore `completed` 상태 저장
+  - `buildDocx()` / `buildPdf()` 호출을 KV 저장 **이후**로 이동
+  - `buildDocx` / `buildPdf` 실패 시 `.catch()`로 무시 — 다운로드 파일 없어도 분석 결과는 프론트엔드에 정상 전달
+  - 다운로드 URL은 파일 생성 완료 후 2차 Firestore 패치로 업데이트
+
+---
+
 ## 장애 이력 및 해결 (2026-09-14 #2)
 
 ### auction_analysis 스캔 PDF 경로 실패 — 커밋 cd766be4
