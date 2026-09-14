@@ -68,8 +68,8 @@
 
 ## 장애 이력 및 해결 (2026-09-14)
 
-### AI 분석 실패 버그 3건 수정 — 커밋 f4ec8cfd
-- **증상**: "분석이 안됨" 반복 보고
+### AI 분석 실패 버그 4건 수정 — 커밋 f4ec8cfd + 4f12dce6
+- **증상**: "분석이 안됨" 반복 보고, `trim is not a function` 에러
 - **원인 1**: Gemini 폴백 모델명 3개가 모두 존재하지 않는 이름
   - `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-flash-latest` → 404 오류
   - 수정: `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-flash-latest`
@@ -78,6 +78,13 @@
   - 수정: `model === 'claude-3-haiku-20240307'` 일 때 `Math.min(maxTokens, 4096)` 캡 적용
 - **원인 3**: Workers AI 폴백에서 Llama가 JSON이 아닌 마크다운/텍스트 혼합 출력
   - 수정: 시스템 프롬프트에 "JSON 객체만 출력, 마크다운 없이" 명시 추가
+- **원인 4**: Workers AI `data.result.response`가 string이 아닌 배열/객체로 반환 → `.trim() is not a function` 에러
+  - `const rawText = (data.result?.response || '').trim()` → string 이외 타입에서 크래시
+  - 수정 (커밋 4f12dce6): `typeof` 분기 처리 — string/array/object/기타 모든 케이스 안전 처리
+- **잔존 이슈** (코드로 해결 불가):
+  - Claude API 403 "Request not allowed": Anthropic 계정 크레딧 소진 또는 workspace 모델 제한
+  - Gemini API 404 (전 모델): GOOGLE_AI_API_KEY 프로젝트에서 Gemini API 미활성화 가능성
+  - 위 두 이슈는 Workers AI가 유일한 동작 경로 — 위 4번 수정으로 Workers AI 안정화
 
 ---
 
