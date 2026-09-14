@@ -15444,7 +15444,6 @@ function _submitHourlyLeave() {
   }).then(function(){
     toast('✅ 시간 휴가 신청 완료 ('+hours+'시간)');
     document.getElementById('mo-leave-h').remove();
-    pageLeave();
   }).catch(function(e){toast('❌ '+e.message);});
 }
 
@@ -22437,7 +22436,7 @@ work_settings:pageWorkSettings,
 monthly_stats:pageMonthlyStats,
 message:pageMessage,
 customer:pageCustomer,
-comp_leave:function(){pageLeave();setTimeout(function(){_leaveCompView();},300);},delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,notices:pageNotices,chat:pageChat,contract:pageContract,schedule:pageSchedule,attendance:pageAttendance,my_settle:pageMySettle,my_statements:pageMyStatements,my_qr:pageMyQR,my_roster:pageMyRoster,roster:pageRoster,camps:pageCamps,dispatch:pageDispatch,tax_share:pageTaxShare,leave:pageLeave,home:pageHome,payout:pagePayout,subscription:pageSubscription};
+delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,chat:pageChat,contract:pageContract,my_settle:pageMySettle,my_statements:pageMyStatements,home:pageHome,subscription:pageSubscription};
   var cd=window._cachedCompanyDoc||{};
   var planGate={
     
@@ -32670,7 +32669,7 @@ function _saveNoticeAlimtalk(){
 function _deleteNotice(id){
   if(!confirm('이 공지를 삭제하시겠습니까?'))return;
   _db.collection('notices').doc(id).delete().then(function(){
-    toast('✅ 공지 삭제됨');pageNotices();
+    toast('✅ 공지 삭제됨');
   }).catch(function(e){toast('❌ '+e.message);});
 }
 function _saveNotice(){
@@ -32743,7 +32742,6 @@ function _saveNotice(){
     }).then(function(cnt){
       toast('✅ 공지 발송 완료 — '+cnt+'명에게 알림');
       if(btn){btn.disabled=false;btn.textContent='📢 공지 발송';}
-      pageNotices();
     }).catch(function(e){
       toast('❌ '+e.message);
       if(btn){btn.disabled=false;btn.textContent='📢 공지 발송';}
