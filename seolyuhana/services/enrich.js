@@ -88,14 +88,21 @@ export function calcMinWageStatus(text) {
  * 등기부 텍스트에서 채권최고액 합계 및 전세가율 자동 계산
  */
 export function calcJeonseRisk(text, jeonseDeposit) {
-  // 채권최고액 모든 숫자 추출 (근저당권)
+  // 채권최고액 추출 — 말소된 항목 제외
+  // 등기부 텍스트에서 각 근저당권 블록 단위로 파싱하여 말소 여부 확인
   const amounts = [];
   const amountRe = /채권최고액[^\d]*([0-9,]+)\s*원|근저당권[^\d\n]*?([0-9,]+)\s*원/g;
   let m;
   while ((m = amountRe.exec(text)) !== null) {
     const raw = (m[1] || m[2]).replace(/,/g, '');
     const n = parseInt(raw);
-    if (!isNaN(n) && n > 100000) amounts.push(n);
+    if (isNaN(n) || n <= 100000) continue;
+    // 해당 위치 앞뒤 300자 내에 말소 관련 키워드가 있으면 제외
+    const start = Math.max(0, m.index - 300);
+    const end = Math.min(text.length, m.index + 300);
+    const ctx = text.slice(start, end);
+    const isCancelled = /말소됨|말소사항|말소원인|말소등기|취소선|말소\s*([0-9]{4}|됨)|해지됨/.test(ctx);
+    if (!isCancelled) amounts.push(n);
   }
 
   // 매매가 추출 시도
