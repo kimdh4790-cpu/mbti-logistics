@@ -46,6 +46,8 @@ function buildDocxXml(data, serviceId, originalText) {
     body += buildInterviewDocx(data);
   } else if (['employment_contract', 'freelance_contract', 'rental_contract'].includes(serviceId)) {
     body += buildContractDocx(data, originalText);
+  } else if (serviceId === 'registry_analysis') {
+    body += buildRegistryDocx(data);
   }
 
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -656,6 +658,117 @@ function buildContractHtml(d) {
 }
 
 // ────────────────────────────────────────────────────────────
+// 등기부 분석 DOCX 빌더
+// ────────────────────────────────────────────────────────────
+function buildRegistryDocx(d) {
+  const rs = d.riskSummary || {};
+  const rsObj = typeof rs === 'string' ? { summary: rs } : rs;
+  const riskLevel = rsObj.level || d.jeonseRiskAnalysis?.riskScore >= 70 ? '고위험' : '주의';
+  const riskScore = rsObj.score || d.jeonseRiskAnalysis?.riskScore || 0;
+  const jr = d.jeonseRiskAnalysis || {};
+
+  let xml = '';
+
+  // 1. 종합 위험 판정
+  xml += para(`[종합 위험 판정] ${riskLevel} (${riskScore}/100)`, { heading: 2, color: riskLevel === '고위험' ? 'c62828' : riskLevel === '주의' ? 'e65100' : '1b5e20' });
+  if (rsObj.summary) xml += para(rsObj.summary);
+  if (rsObj.totalDebt) xml += para(`채권최고액 합계: ${rsObj.totalDebt}`, { bold: true });
+  xml += para('');
+
+  // 2. 부동산 기본 정보
+  const p = d.property;
+  if (p) {
+    xml += para('부동산 기본 정보', { heading: 2 });
+    xml += table([
+      ['항목', '내용'],
+      ['주소', p.address || '–'],
+      ['유형', p.type || '–'],
+      ['면적', p.area || '–'],
+      ['건축연도', p.buildYear || '–'],
+    ]);
+    xml += para('');
+  }
+
+  // 3. 소유권(갑구) 분석
+  if (d.ownership) {
+    xml += para('소유권(갑구) 분석', { heading: 2 });
+    if (d.ownership.owners?.length) {
+      xml += para('소유자: ' + d.ownership.owners.join(', '));
+    }
+    if (d.ownership.multiOwnerRisk) {
+      xml += para('⚠ ' + d.ownership.multiOwnerRisk, { color: 'c62828' });
+    }
+    xml += para('');
+  }
+
+  // 4. 전세사기 5대 체크포인트
+  if (jr.fraudCheckpoints?.length) {
+    xml += para('전세사기 5대 체크포인트 점검', { heading: 2 });
+    const cpRows = [['체크포인트', '판정', '판단 근거', '권고 조치']];
+    for (const cp of jr.fraudCheckpoints) {
+      cpRows.push([
+        cp.checkpoint || '',
+        cp.status || '',
+        cp.detail || cp.reason || '',
+        cp.action || cp.recommendation || '–',
+      ]);
+    }
+    xml += table(cpRows);
+    xml += para('');
+  }
+
+  // 5. 담보·제한 현황(을구)
+  if (d.encumbrances?.length) {
+    xml += para(`담보·제한 현황(을구) — ${d.encumbrances.length}건`, { heading: 2 });
+    const encRows = [['권리 종류', '채권최고액', '채권자', '설정일', '상태', '위험도']];
+    for (const e of d.encumbrances) {
+      encRows.push([e.type || '', e.amount || '–', e.creditor || '–', e.date || '–', e.status || '–', e.risk || '–']);
+    }
+    xml += table(encRows);
+    if (jr.totalPriorDebt) xml += para(`선순위 채권 합계: ${jr.totalPriorDebt}`, { bold: true });
+    xml += para('');
+  }
+
+  // 6. 전세가율·깡통전세 분석
+  if (jr.kkangtongAlert !== undefined || jr.jeonseRatio) {
+    xml += para('전세가율·깡통전세 위험 분석', { heading: 2 });
+    xml += table([
+      ['분석 항목', '결과'],
+      ['예정 전세보증금', jr.estimatedJeonseDeposit || '미입력'],
+      ['전세가율', jr.jeonseRatio || '–'],
+      ['선순위 채권 합계', jr.totalPriorDebt || '–'],
+      ['깡통전세 여부', jr.kkangtongAlert ? '⚠ 위험' : '안전'],
+      ['HUG 보증보험 가입', jr.hugEligibility || '–'],
+      ['선순위 안전도', jr.safetyRatio || '–'],
+    ]);
+    if (jr.kkangtongReason) xml += para('판단 근거: ' + jr.kkangtongReason, { color: 'c62828' });
+    xml += para('');
+  }
+
+  // 7. 핵심 위험 및 권장 조치
+  if (rsObj.keyRisks?.length) {
+    xml += para('핵심 위험 요소', { heading: 2 });
+    for (const r of rsObj.keyRisks) xml += para('• ' + r, { color: 'c62828' });
+    xml += para('');
+  }
+  if (d.recommendations?.length) {
+    xml += para('계약 전 필수 확인 사항', { heading: 2 });
+    d.recommendations.forEach((r, i) => { xml += para(`${i+1}. ${r}`); });
+    xml += para('');
+  }
+  if (jr.safetyVerification?.length) {
+    xml += para('안전 확인 체크리스트', { heading: 2 });
+    for (const s of jr.safetyVerification) xml += para('☐ ' + s);
+    xml += para('');
+  }
+
+  // 8. 법적 면책 고지
+  xml += para('본 분석은 AI가 자동 생성한 참고 자료로서 법적 효력이 없습니다. 실제 계약 전 법무사·변호사 등 전문가의 검토를 받으시기 바랍니다.', { size: 18, color: '9e9e9e' });
+
+  return xml;
+}
+
+// ────────────────────────────────────────────────────────────
 // 유틸
 // ────────────────────────────────────────────────────────────
 function getServiceLabel(serviceId) {
@@ -666,7 +779,8 @@ function getServiceLabel(serviceId) {
     interview_questions: '면접 예상 질문 생성',
     employment_contract: '근로계약서 검토',
     freelance_contract: '프리랜서 계약서 검토',
-    rental_contract: '전월세 계약서 검토'
+    rental_contract: '전월세 계약서 검토',
+    registry_analysis: '등기부등본 전세사기 분석'
   };
   return labels[serviceId] || serviceId;
 }

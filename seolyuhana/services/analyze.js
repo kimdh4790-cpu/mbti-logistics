@@ -1046,7 +1046,9 @@ const REGISTRY_SYSTEM = `당신은 부동산 등기 및 전세사기 예방 전�
       {
         "checkpoint": "5대 체크포인트명",
         "status": "위험|주의|안전",
-        "detail": "구체적 판단 근거"
+        "detail": "구체적 판단 근거 (등기부 상 실제 수치·날짜 인용)",
+        "reason": "위험 또는 주의로 판정한 법적·수치적 근거",
+        "action": "임차인이 해야 할 구체적 조치사항"
       }
     ],
     "hugEligibility": "HUG 보증보험 가입 가능 여부",
@@ -1071,14 +1073,25 @@ export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
   const depositNote = jeonseDeposit ? `\n\n[입력된 예정 전세 보증금]: ${jeonseDeposit.toLocaleString()}원` : '';
   const enrichment = await buildRegistryEnrichment(text, jeonseDeposit, env);
   return callClaude({
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-sonnet-4-6',
     system: REGISTRY_SYSTEM,
     userBlocks: [
-      { type: 'text', text: `다음 등기부등본 내용을 분석해주세요. 전세사기 위험도 분석을 반드시 포함하세요.${depositNote}\n\n${text}` },
+      { type: 'text', text: `아래 등기부등본을 법무사 검토 의견서 수준으로 정밀 분석해주세요.
+
+[분석 지침]
+1. 등기부에 기재된 날짜·금액·권리자명을 직접 인용하여 판단 근거를 제시할 것
+2. 각 fraudCheckpoint마다 reason(판정 근거)과 action(임차인 조치사항)을 반드시 작성할 것
+3. 단순 내용 요약이 아닌 전문가 의견 형태로: "~이므로 위험", "~확인 필요" 등 명확한 판단 표현 사용
+4. 수치가 있으면 반드시 계산 결과 포함 (전세가율 = 보증금 ÷ 시세, 선순위채무 합산 등)
+5. recommendations는 구체적이고 실행 가능한 조치사항으로 (법무사 방문, 미납세금조회 방법 등)
+${depositNote}
+
+[등기부등본 원문]
+${text}` },
       { type: 'text', text: enrichment }
     ],
     env,
-    maxTokens: 4500
+    maxTokens: 5500
   });
 }
 
