@@ -3793,29 +3793,145 @@ function renderResult(data, downloadUrls) {
       </div>`;
     }
     if (data.encumbrances?.length) {
-      const totalAmt = data.encumbrances.reduce((s,e)=>s+(parseInt((e.amount||'').replace(/[^0-9]/g,''),10)||0),0);
-      html += `<div class="rpt-section"><div class="rpt-section-label">🔒 담보·제한 현황 (${data.encumbrances.length}건 · ${totalAmt ? totalAmt.toLocaleString()+'원' : ''})</div>
+      // 유효한 담보만 합계 (말소됨 제외)
+      const activeEncs = data.encumbrances.filter(e=>e.status!=='말소됨');
+      const cancelledEncs = data.encumbrances.filter(e=>e.status==='말소됨');
+      const toNum = v => parseInt((String(v||'')).replace(/[^0-9]/g,''),10)||0;
+      const activeAmt = activeEncs.reduce((s,e)=>s+toNum(e.amount),0);
+      const cancelledAmt = cancelledEncs.reduce((s,e)=>s+toNum(e.amount),0);
+      html += `<div class="rpt-section"><div class="rpt-section-label">🔒 담보·제한 현황</div>
+        <div class="rpt-reason-box" style="margin-bottom:8px">
+          <span style="color:var(--text-primary);font-weight:700">현재 유효: ${activeAmt?activeAmt.toLocaleString()+'원':'없음'}</span>
+          ${cancelledAmt ? `<span style="margin-left:12px;color:var(--text-muted);font-size:12px">말소 이력: <s>${cancelledAmt.toLocaleString()}원</s></span>` : ''}
+        </div>
         ${data.encumbrances.map((e,i)=>{
-          const col = (e.risk==='높음'||e.riskLevel==='high') ? '#ef4444' : (e.risk==='보통') ? '#f59e0b' : '#64748b';
-          return `<div class="rpt-enc-card" style="border-left:3px solid ${col}">
-            <div class="rpt-enc-type">${e.type||''} ${e.status==='말소됨'?'<span class="rpt-enc-done">말소</span>':''}</div>
-            ${e.amount ? `<div class="rpt-enc-amount">${e.amount}</div>` : ''}
-            <div class="rpt-enc-meta">${[e.creditor,e.registeredDate||e.date].filter(Boolean).join(' · ')}</div>
+          const isCancelled = e.status==='말소됨';
+          const col = isCancelled ? '#94a3b8' : (e.risk==='높음'||e.riskLevel==='high') ? '#ef4444' : (e.risk==='보통') ? '#f59e0b' : '#64748b';
+          return `<div class="rpt-enc-card" style="border-left:3px solid ${col};${isCancelled?'opacity:.55':''}">
+            <div class="rpt-enc-type">${e.type||''} <span style="font-size:11px;color:${col};font-weight:600">${e.rank?`[${e.rank}번]`:''}</span> ${isCancelled?'<span class="rpt-enc-done">말소</span>':''}</div>
+            ${e.amount ? `<div class="rpt-enc-amount" style="${isCancelled?'text-decoration:line-through;color:#94a3b8':''}">${typeof e.amount==='number'?e.amount.toLocaleString()+'원':e.amount}</div>` : ''}
+            <div class="rpt-enc-meta">${[e.creditor,e.date].filter(Boolean).join(' · ')}${e.cancelDate?` → 말소 ${e.cancelDate}`:''}</div>
           </div>`;
         }).join('')}
+      </div>`;
+    }
+    // 소유권 이력
+    if (data.ownership?.ownershipHistory?.length) {
+      const oh = data.ownership.ownershipHistory;
+      html += `<div class="rpt-section"><div class="rpt-section-label">🏷️ 소유권 변동 이력</div>
+        ${data.ownership.current ? `<div class="rpt-reason-box" style="margin-bottom:8px">현재 소유자: <strong>${data.ownership.current.owner||'미상'}</strong> · 취득 ${data.ownership.current.acquiredDate||'?'} · 보유 ${data.ownership.current.holdingPeriod||'?'}</div>` : ''}
+        ${data.ownership.rapidTransferAlert ? `<div class="rpt-diag-card red" style="margin-bottom:8px;padding:8px 12px"><div class="rpt-diag-item">⚡ ${data.ownership.rapidTransferAlert}</div></div>` : ''}
+        ${oh.map(o=>{
+          const col = o.status==='말소됨'?'#94a3b8':'#10b981';
+          return `<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+            <span style="min-width:52px;font-size:11px;color:#64748b;padding-top:2px">${o.date||''}</span>
+            <div>
+              <span style="font-size:12px;font-weight:600;color:${col}">${o.event||''}</span>
+              <span style="font-size:12px;color:var(--text-primary);margin-left:6px">${o.owner||''}</span>
+              ${o.note?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${o.note}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+    // 근저당 분석 (유효/말소/패턴)
+    if (data.mortgageAnalysis) {
+      const ma = data.mortgageAnalysis;
+      html += `<div class="rpt-section"><div class="rpt-section-label">🏦 근저당권 분석</div>`;
+      if (ma.activeMortgages?.length) {
+        html += `<div class="rpt-diag-card" style="background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.25);margin-bottom:8px">
+          <div class="rpt-diag-title" style="color:#ef4444">현재 유효 근저당 (채권최고액 합계: ${typeof ma.totalActiveMortgageDebt==='number'?ma.totalActiveMortgageDebt.toLocaleString()+'원':ma.totalActiveMortgageDebt||'계산 중'})</div>
+          ${ma.activeMortgages.map(m=>`<div class="rpt-diag-item"><strong>${m.creditor||'미상'}</strong> <span style="color:#ef4444;font-weight:700">${typeof m.amount==='number'?m.amount.toLocaleString()+'원':m.amount}</span> <span style="color:#64748b;font-size:11px">${m.date||''}</span>${m.note?` · ${m.note}`:''}</div>`).join('')}
+        </div>`;
+      } else {
+        html += `<div class="rpt-reason-box" style="color:var(--success,#10b981);border-color:rgba(16,185,129,.3)">✅ 현재 유효한 근저당 없음</div>`;
+      }
+      if (ma.cancelledMortgages?.length) {
+        html += `<div class="rpt-diag-card" style="background:rgba(148,163,184,.06);border:1px solid rgba(148,163,184,.2);margin-bottom:8px">
+          <div class="rpt-diag-title" style="color:#64748b">말소된 근저당 이력 (${ma.cancelledMortgages.length}건)</div>
+          ${ma.cancelledMortgages.map(m=>`<div class="rpt-diag-item" style="opacity:.7"><s style="color:#94a3b8">${m.creditor||'?'} ${typeof m.amount==='number'?m.amount.toLocaleString()+'원':m.amount}</s> <span style="font-size:11px;color:#64748b">${m.setDate||''} → ${m.cancelDate||''} (${m.loanDuration||'?'})</span></div>`).join('')}
+        </div>`;
+      }
+      if (ma.lenderPattern) {
+        const lp = ma.lenderPattern;
+        const lpColor = lp.riskFlag ? '#ef4444' : '#64748b';
+        html += `<div class="rpt-reason-box" style="border-color:${lpColor}40">
+          ${lp.riskFlag ? '⚠️' : '📊'} <strong>대출 패턴:</strong> ${lp.repeatLender||lp.summary||`총 ${lp.totalCycles||0}회 반복`}
+          ${lp.riskFlag ? `<div style="font-size:12px;color:#ef4444;margin-top:4px">${lp.riskReason||''}</div>` : ''}
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    // 가압류 이력
+    if (data.lienHistory?.items?.length || data.lienHistory?.historicalLienCount > 0) {
+      const lh = data.lienHistory;
+      html += `<div class="rpt-section"><div class="rpt-section-label">⚡ 가압류·가처분 이력</div>
+        <div class="rpt-reason-box" style="margin-bottom:8px">유효: ${lh.activeLiens||0}건 / 이력 전체: ${lh.historicalLienCount||0}건
+          ${lh.riskFlag ? ' <span style="color:#ef4444;font-weight:700">— 상습 채무불이행 위험</span>' : ''}
+        </div>
+        ${(lh.items||[]).map(item=>{
+          const isCancelled = item.status==='말소됨';
+          return `<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);display:flex;gap:8px;align-items:flex-start">
+            <span style="min-width:52px;font-size:11px;color:#64748b;padding-top:2px">${item.date||''}</span>
+            <div>
+              <span style="font-size:12px;font-weight:600;color:${isCancelled?'#64748b':'#f59e0b'}">${item.type||''}</span>
+              ${item.claimAmount?`<span style="font-size:12px;color:var(--text-primary);margin-left:6px">${item.claimAmount}</span>`:''}
+              <span style="font-size:11px;color:#64748b;margin-left:6px">${item.creditor||''}</span>
+              ${isCancelled?` <span style="font-size:11px;color:#64748b">→ 말소 ${item.cancelDate||''}</span>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+    // 안전마진
+    if (data.jeonseRiskAnalysis?.safetyMargin) {
+      const sm = data.jeonseRiskAnalysis.safetyMargin;
+      const marginColor = sm.verdict==='위험'?'#ef4444':sm.verdict==='주의'?'#f59e0b':'#10b981';
+      html += `<div class="rpt-section"><div class="rpt-section-label">🛡️ 안전마진 분석</div>
+        <div class="rpt-summary-banner" style="border-left:4px solid ${marginColor}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:13px;color:var(--text-muted)">${sm.formula||''}</span>
+            <span style="font-size:22px;font-weight:800;color:${marginColor}">${sm.marginRatio||''}</span>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted)">안전마진 금액: <strong style="color:var(--text-primary)">${typeof sm.marginAmount==='number'?sm.marginAmount.toLocaleString()+'원':sm.marginAmount||'계산 불가'}</strong></div>
+          <div style="font-size:13px;font-weight:700;color:${marginColor};margin-top:6px">${sm.verdict||''}</div>
+        </div>
+      </div>`;
+    }
+    // 악성임대인 체크
+    if (data.badLandlordCheck) {
+      const blc = data.badLandlordCheck;
+      const blColor = blc.verdict==='고위험'?'#ef4444':blc.verdict==='주의'?'#f59e0b':'#10b981';
+      html += `<div class="rpt-section"><div class="rpt-section-label">🔍 악성임대인 패턴 체크</div>
+        <div class="rpt-summary-banner" style="border-left:4px solid ${blColor}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-size:20px;font-weight:800;color:${blColor}">${blc.score||0}점</span>
+            <span style="font-size:14px;font-weight:700;color:${blColor}">${blc.verdict||''}</span>
+          </div>
+          ${blc.summary ? `<div style="font-size:12px;color:var(--text-muted)">${blc.summary}</div>` : ''}
+        </div>
+        ${(blc.flags||[]).filter(f=>f.detected).map(f=>`
+          <div class="rpt-diag-card red" style="margin-top:6px;padding:8px 12px">
+            <div style="font-size:12px;font-weight:700;color:#ef4444">⚠️ ${f.pattern||''}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px">${f.evidence||''}</div>
+          </div>`).join('')}
+        ${(blc.flags||[]).every(f=>!f.detected) ? `<div class="rpt-reason-box" style="color:#10b981;border-color:rgba(16,185,129,.3);margin-top:6px">✅ 감지된 악성임대인 패턴 없음</div>` : ''}
       </div>`;
     }
     const rs = data.riskSummary;
     if (rs) {
       const rsObj = typeof rs==='string' ? {summary:rs} : rs;
       const rsColor = rsObj.level==='고위험'?'#ef4444':rsObj.level==='주의'?'#f59e0b':'#10b981';
+      // 유효 채권 합계: totalActiveDebt 우선, 없으면 totalDebt 폴백 (하위 호환)
+      const activeDebt = rsObj.totalActiveDebt || rsObj.totalDebt;
+      const historicalDebt = rsObj.totalHistoricalDebt;
       html += `<div class="rpt-section">
         <div class="rpt-section-label">📋 위험 요약</div>
         <div class="rpt-summary-banner" style="border-left:4px solid ${rsColor}">
           ${rsObj.level ? `<div class="rpt-summary-level" style="color:${rsColor}">${rsObj.level}</div>` : ''}
           ${rsObj.summary||rs ? `<div class="rpt-summary-text">${rsObj.summary||rs}</div>` : ''}
           ${rsObj.keyRisks?.length ? `<div class="rpt-diag-card red" style="margin-top:10px"><div class="rpt-diag-title">핵심 위험</div>${rsObj.keyRisks.map(k=>`<div class="rpt-diag-item">${k}</div>`).join('')}</div>` : ''}
-          ${rsObj.totalDebt ? `<div class="rpt-reason-box">채권최고액 합계: <strong>${rsObj.totalDebt}</strong></div>` : ''}
+          ${activeDebt ? `<div class="rpt-reason-box" style="margin-top:8px">유효 채권 합계: <strong>${activeDebt}</strong>${historicalDebt?` <span style="font-size:11px;color:#64748b;margin-left:8px">(이력 전체: <s>${historicalDebt}</s>)</span>`:''}</div>` : ''}
         </div>
       </div>`;
     }
