@@ -9000,7 +9000,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '');
           await setProgress(85);
           let pdfBuffer = null;
-          // buildPdf 스킵
+          try {
+            pdfBuffer = await buildPdf(analysisData, serviceId, filename, env);
+          } catch(pdfErr) {
+            console.warn('[SCAN] PDF 생성 실패 (무시):', pdfErr?.message);
+          }
           await setProgress(95);
 
           // 5. KV 저장 (24시간 TTL)
