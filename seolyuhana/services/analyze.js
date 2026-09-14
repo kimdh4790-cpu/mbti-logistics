@@ -953,15 +953,21 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   };
   if (hasPdfBlock) reqHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
 
-  const SCAN_MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
+  // 경매 분석은 복잡한 JSON 스키마 → Sonnet으로 격상, 나머지는 Haiku
+  const SCAN_MODELS = serviceId === 'auction_analysis'
+    ? ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022']
+    : ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
+  const SCAN_MAX_TOKENS = serviceId === 'auction_analysis' ? 5000 : 4000;
+  // 반드시 JSON만 출력하도록 system 지시 추가
+  const SCAN_SYSTEM = '반드시 JSON만 출력. 마크다운 코드블록, 설명 텍스트, 인사말 없이 순수 JSON 객체({...})로만 응답.';
+
   let res, lastScanErr;
   for (const model of SCAN_MODELS) {
-    // claude-3-haiku-20240307은 최대 4096 토큰만 지원
-    const modelMaxTokens = model === 'claude-3-haiku-20240307' ? 4000 : 4000;
+    const modelMaxTokens = model === 'claude-3-haiku-20240307' ? Math.min(SCAN_MAX_TOKENS, 4096) : SCAN_MAX_TOKENS;
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: reqHeaders,
-      body: JSON.stringify({ model, max_tokens: modelMaxTokens, messages: [{ role: 'user', content }] }),
+      body: JSON.stringify({ model, max_tokens: modelMaxTokens, system: SCAN_SYSTEM, messages: [{ role: 'user', content }] }),
       signal: AbortSignal.timeout(90000)
     });
     if (res.ok) break;
@@ -975,11 +981,21 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   }
 
   const data = await res.json();
-  const rawText = data.content?.[0]?.text || '';
-  const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```/) || rawText.match(/(\{[\s\S]*\})/);
-  if (!jsonMatch) throw new Error('스캔 PDF 분석 JSON을 찾을 수 없습니다');
+  const rawText = (data.content?.[0]?.text || '').trim();
+  // JSON 파싱 3단계 폴백
+  let parsedJson = null;
+  if (rawText.startsWith('{')) { try { parsedJson = JSON.parse(rawText); } catch {} }
+  if (!parsedJson) {
+    const cb = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (cb) { try { parsedJson = JSON.parse(cb[1]); } catch {} }
+  }
+  if (!parsedJson) {
+    const jo = rawText.match(/(\{[\s\S]*\})/);
+    if (jo) { try { parsedJson = JSON.parse(jo[1]); } catch {} }
+  }
+  if (!parsedJson) throw new Error(`스캔 PDF 분석 JSON 파싱 실패: ${rawText.slice(0, 200)}`);
 
-  return { ok: true, data: JSON.parse(jsonMatch[1]), usage: data.usage, method: 'vision_images' };
+  return { ok: true, data: parsedJson, usage: data.usage, method: 'vision_images' };
 }
 
 function getScannedPrompt(serviceId, ctx) {
