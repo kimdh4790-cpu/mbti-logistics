@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded",function(){var a=document.getElemen
 var _bizDocFile=null;
 function onBizDocSelected(input){
   var file=input.files&&input.files[0];if(!file)return;
-  if(file.size>5*1024*1024){alert('파일 크기는 5MB 이하만 가능합니다.');return;}
+  if(file.size>5*1024*1024){toast('파일 크기는 5MB 이하만 가능합니다.');return;}
   _bizDocFile=file;
   var prev=document.getElementById('r-bizdoc-preview');
   var nm=document.getElementById('r-bizdoc-name');
@@ -10800,7 +10800,7 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
       '#{명세서링크}':stmtUrl,'#{담당자명}':(_CU&&_CU.settlementContact)||'',
       '#{문의전화}':(_CU&&_CU.settlementPhone)||'051-711-3103'
     };
-    var fallbackText='['+coName+'] '+riderId+'님 '+period+' 정산명세서\n실지급: ₩'+net.toLocaleString()+'원\n명세서: '+stmtUrl;
+    var fallbackText='['+coName+'] '+riderId+'님 '+period+' 정산명세서\n실지급: ₩'+(r.net||0).toLocaleString()+'원\n명세서: '+stmtUrl;
     var tkn='';try{if(_auth&&_auth.currentUser)tkn=await _auth.currentUser.getIdToken();}catch(e2){}
     var res=await fetch('/api/send-alimtalk',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
@@ -39455,7 +39455,7 @@ function _parseSmartStore(file, onDone) {
       var wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
       var ws = wb.Sheets[wb.SheetNames[0]];
       var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      if(rows.length < 2) { alert('데이터가 없습니다'); return; }
+      if(rows.length < 2) { toast('데이터가 없습니다'); return; }
 
       // 헤더 찾기 (첫 3행 내)
       var headerRow = 0;
@@ -39531,7 +39531,7 @@ function _parseSmartStore(file, onDone) {
       }
       onDone(orders);
     } catch(err) {
-      alert('파싱 오류: ' + err.message);
+      toast('파싱 오류: ' + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -39591,7 +39591,7 @@ function _ssProcess(file) {
 }
 
 function _ssRender(orders) {
-  if(!orders.length){ alert('주문 데이터가 없습니다'); return; }
+  if(!orders.length){ toast('주문 데이터가 없습니다'); return; }
 
   // 통계
   var totalAmt   = orders.reduce(function(s,o){ return s+o.totalAmt; }, 0);
@@ -39705,7 +39705,7 @@ function _parseCoupangWing(file, onDone) {
       var wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
       var ws = wb.Sheets[wb.SheetNames[0]];
       var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      if(rows.length < 2) { alert('데이터가 없습니다'); return; }
+      if(rows.length < 2) { toast('데이터가 없습니다'); return; }
 
       // 헤더 찾기
       var headerRow = 0;
@@ -39781,7 +39781,7 @@ function _parseCoupangWing(file, onDone) {
       }
       onDone(orders);
     } catch(err) {
-      alert('파싱 오류: ' + err.message);
+      toast('파싱 오류: ' + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -39852,7 +39852,7 @@ function _cwProcess(file) {
 }
 
 function _cwRender(orders) {
-  if(!orders.length){ alert('주문 데이터가 없습니다'); return; }
+  if(!orders.length){ toast('주문 데이터가 없습니다'); return; }
 
   function comma(n){ return Math.round(n).toLocaleString(); }
 
