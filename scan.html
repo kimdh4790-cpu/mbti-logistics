@@ -3248,11 +3248,16 @@ function _slySelectService(id) {
 
   // ── 입력 탭 표시/숨김 ──
   const inputModeTabs = document.getElementById('slyInputModeTabs');
-  // 사건번호 탭: 경매 서비스에서만 표시
+  const textModeBtn = document.getElementById('slyModeText');
   const caseNumBtn = document.getElementById('slyModeCaseNum');
-  if (caseNumBtn) caseNumBtn.style.display = svc.id === 'auction' ? '' : 'none';
-  // 탭 컨테이너: 탭이 하나라도 보이는 경우에만 표시 (현재는 경매 서비스에서 사건번호 탭)
-  if (inputModeTabs) inputModeTabs.style.display = svc.id === 'auction' ? '' : 'none';
+  const hasTextMode = !!svc.allowText;
+  const hasCaseNumMode = svc.id === 'auction';
+  // 탭 컨테이너: 텍스트 입력 또는 사건번호 탭이 있는 서비스에서만 표시
+  if (inputModeTabs) inputModeTabs.style.display = (hasTextMode || hasCaseNumMode) ? '' : 'none';
+  // 텍스트 탭: allowText 서비스에서만 표시
+  if (textModeBtn) textModeBtn.style.display = hasTextMode ? '' : 'none';
+  // 사건번호 탭: 경매 서비스에서만 표시
+  if (caseNumBtn) caseNumBtn.style.display = hasCaseNumMode ? '' : 'none';
 
   // ── 업로드 카드 제목 서비스별 지정 ──
   const uploadTitle = document.getElementById('slyUploadTitle');
