@@ -8286,6 +8286,21 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
             const resultJson = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`);
             if (resultJson) try { result = JSON.parse(resultJson); } catch {}
           }
+          // KV에 결과가 있으면 Firestore 상태와 무관하게 completed 처리
+          // (분석 완료 후 Firestore status update가 Worker 종료로 실패하는 케이스 대응)
+          if (!result && (status === 'processing' || status === 'pending')) {
+            const resultJson = await env.DONWAY_ASSETS.get(`sly_result_${jobId}`).catch(()=>null);
+            if (resultJson) {
+              try { result = JSON.parse(resultJson); status = 'completed'; } catch {}
+            }
+          }
+          // 오래된 processing 잡 타임아웃: createdAt 기준 8분 경과 시 자동 failed
+          if (!result && (status === 'processing' || status === 'pending')) {
+            const createdAt = f.createdAt?.stringValue || f.updatedAt?.stringValue;
+            if (createdAt && Date.now() - new Date(createdAt).getTime() > 480000) {
+              status = 'failed'; kvErrMsg = '분석 시간 초과 — 포인트가 자동 환불됩니다.';
+            }
+          }
           return Response.json({
             ok:true,
             status,
@@ -9007,19 +9022,20 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           }
           await setProgress(95);
 
-          // 5. KV 저장 (24시간 TTL)
+          // 5. KV 저장 (24시간 TTL) — 결과 JSON 먼저 저장해서 Firestore 실패해도 result 엔드포인트에서 복원 가능
           const docxKey = `sly_job_${jobId}_docx`;
           const pdfKey  = `sly_job_${jobId}_pdf`;
-          await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400});
-          if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400});
-          // 분석 결과 JSON KV 저장 (result 엔드포인트에서 반환용)
+          // 결과 JSON 최우선 저장 (Firestore 업데이트 전에)
           await env.DONWAY_ASSETS.put(`sly_result_${jobId}`, JSON.stringify(analysisData), {expirationTtl: 86400});
+          await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400}).catch(e => console.warn('[SCAN] docx KV put 실패:', e.message));
+          if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400}).catch(e => console.warn('[SCAN] pdf KV put 실패:', e.message));
 
           // 6. 완료 처리
           const outputDocx = makeOutputFilename(filename, 'docx');
           const outputPdf  = makeOutputFilename(filename, 'pdf');
           const _sumRaw = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
           const summary = typeof _sumRaw === 'string' ? _sumRaw : (Array.isArray(_sumRaw) ? _sumRaw.join(' ') : String(_sumRaw || '분석이 완료되었습니다.'));
+          // Firestore 완료 업데이트 (실패해도 KV result로 result 엔드포인트 복원)
           await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
             status:      { stringValue: 'completed' },
             progress:    { integerValue: 100 },
@@ -9031,8 +9047,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
               ...(pdfBuffer ? {pdf:{ stringValue: `/api/seolyuhana/download/${jobId}?type=pdf` }} : {})
             }}},
             completedAt: { stringValue: new Date().toISOString() }
-          });
-          await env.DONWAY_ASSETS.put(`sly_job_${jobId}_status`, 'completed', {expirationTtl:86400});
+          }).catch(e => console.error('[SCAN] Firestore completed 업데이트 실패 (KV fallback 있음):', e.message));
+          await env.DONWAY_ASSETS.put(`sly_job_${jobId}_status`, 'completed', {expirationTtl:86400}).catch(()=>{});
         } catch(err) {
           console.error('[SCAN] _slyProcessJob error:', jobId, serviceId, err?.message, err?.stack);
           await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
