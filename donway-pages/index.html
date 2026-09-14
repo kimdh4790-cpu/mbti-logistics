@@ -7799,6 +7799,7 @@ function _ctrRenderWrite(){
   var t=window._ctrType||'wisu';
   var TYPE_CARDS=[
     {k:'wisu',ic:'📦',l:'위수탁',sub1:'택배기사',sub2:'위수탁 계약'},
+    {k:'subok',ic:'📄',l:'부속합의서',sub1:'계약해지',sub2:'부속합의'},
     {k:'qflex',ic:'⚡',l:'퀵플렉스',sub1:'쿠팡',sub2:'QuickFlex'},
     {k:'labor',ic:'👔',l:'근로계약',sub1:'일반·단시간',sub2:'기간제'}
   ];
@@ -7901,19 +7902,32 @@ function _ctrRenderConditions(t){
     +'<input id="ctr-end" type="date" value="'+nextyear+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
     +'</div>';
 
-  if(t==='wisu'){
+  if(t==='wisu'||t==='subok'){
     el.innerHTML=common
-      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">담당 라우트 / 배송구역</div>'
-      +'<input id="ctr-route" type="text" placeholder="예) 부산1캠프 D01구역" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">담당구역</div>'
+      +'<input id="ctr-route" type="text" placeholder="예) 엠비티아이(유) 관할전구역(쿠팡 서 서브)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">건당 단가 (원)</div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">집화수수료 (건당, 원)</div>'
+      +'<input id="ctr-collectprice" type="number" placeholder="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">배송수수료 (건당, 원)</div>'
       +'<input id="ctr-unitprice" type="number" placeholder="850" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">정산 주기</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">수수료 지급일</div>'
       +'<select id="ctr-cycle" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-      +'<option value="월 1회(매월 25일)">월 1회(매월 25일)</option>'
-      +'<option value="월 2회(15·말일)">월 2회(15·말일)</option>'
-      +'<option value="주 1회(매주 금요일)">주 1회(매주 금요일)</option>'
+      +'<option value="매월 20일">매월 20일</option>'
+      +'<option value="매월 25일">매월 25일</option>'
+      +'<option value="매월 10일">매월 10일</option>'
+      +'<option value="매월 말일">매월 말일</option>'
       +'</select></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">분류수수료 (시간당, 원)</div>'
+      +'<input id="ctr-sortprice" type="number" placeholder="0 (미수행 시 0)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">차량 등록번호</div>'
+      +'<input id="ctr-carnum" type="text" placeholder="12가 3456" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">운수종사자 자격증 번호</div>'
+      +'<input id="ctr-licensenum" type="text" placeholder="자격증 번호" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
       +'</div>'
       +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">특약사항</div>'
       +'<textarea id="ctr-special" rows="3" placeholder="특약 내용 입력 (없으면 비워두세요)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box;resize:vertical"></textarea></div>';
@@ -7982,7 +7996,11 @@ function _ctrCollect(){
     endDate:_g('ctr-end'),
     route:_g('ctr-route'),
     unitPrice:_g('ctr-unitprice'),
+    collectPrice:_g('ctr-collectprice'),
+    sortPrice:_g('ctr-sortprice'),
     cycle:_g('ctr-cycle'),
+    carNum:_g('ctr-carnum'),
+    licenseNum:_g('ctr-licensenum'),
     rate:_g('ctr-rate'),
     workplace:_g('ctr-workplace'),
     job:_g('ctr-job'),
@@ -8020,15 +8038,137 @@ function _ctrPreview(){
 }
 
 function _ctrGenHTML(data){
-  var typeLabel={wisu:'화물자동차 위수탁 표준계약서',qflex:'퀵플렉스 배송 위수탁 계약서',labor:'근로계약서'}[data.type]||'계약서';
-  var dateStr=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  var now=new Date();
+  var yr=now.getFullYear(),mo=now.getMonth()+1,day=now.getDate();
+  var dateStr=yr+'년 '+mo+'월 '+day+'일';
+  var months='';
+  if(data.startDate&&data.endDate){
+    var s=new Date(data.startDate),e=new Date(data.endDate);
+    months=Math.round((e-s)/(1000*60*60*24*30))+'개월';
+  }
+  var pAmt=function(v){return v?Number(v).toLocaleString()+'원':'—';};
+  var companyName=data.companyName||'엠비티아이(유)';
+  var companyCeo=data.companyCeo||'김 형 우';
+  var companyBiz=data.companyBiz||'373-86-02536';
+  var companyAddr=data.companyAddr||'부산광역시 수영구 수영로668, 607호';
+
+  if(data.type==='wisu'){
+    var html='<h1>택배 운송 위·수탁 표준계약서</h1>'
+      +'<p style="text-align:center;font-size:12px;color:#555;margin-bottom:16px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p>'
+      +'<p style="font-size:13px;margin-bottom:16px">쿠팡로지스틱스서비스(주) 대리점 <b>'+companyName+'</b> (이하, "위탁자"라 한다)와 택배종사자인 <b>'+(data.driverName||'　　　　　　')+'</b> (이하, "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위·수탁계약을 체결한다.</p>'
+      +'<div style="border-top:2px solid #111;padding-top:16px">'
+      +'<div class="clause"><div class="clause-title">제1조(목적)</div>이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</div>'
+      +'<div class="clause"><div class="clause-title">제2조(기본원칙)</div>① "위탁자"와 "수탁자"는 이 계약에 따라 택배 운송 업무를 수행함에 있어 상호 대등한 입장에서 신의성실의 원칙에 따라 자신의 권리를 행사하며 의무를 이행한다.<br>② "위탁자"와 "수탁자"는 이 계약의 이행과 관련하여 「생활물류서비스산업발전법」, 「독점규제 및 공정거래에 관한 법률」 등 관련 법령의 규정을 준수한다.</div>'
+      +'<div class="clause"><div class="clause-title">제3조(용어의 정의)</div>① "택배"라 함은 고객의 요청에 따라 운송을 위탁받은 화물을 집화, 분류, 배송 등의 과정을 거쳐 수화인의 주택, 사무실 또는 기타의 장소에서 인도하는 것을 말한다.<br>② "집화"라 함은 고객으로부터 수령한 화물을 "위탁자"가 지정한 장소까지 운송하여 하차, 적재하는 작업을 말한다.<br>③ "분류"라 함은 서브터미널 등 택배화물의 분류시설·장소에서 다수의 화물을 담당구역별로 구분하는 작업을 말한다.<br>④ "배송"이라 함은 분류된 화물을 택배 운송차량에 상차하여 차량운행을 통해 운송장에 기재된 장소에서 고객에게 인도하는 것을 말한다.</div>'
+      +'<div class="clause"><div class="clause-title">제4조(계약의 주요내용)</div>'
+      +'① "위탁자"와 "수탁자" 간 계약의 주요내용은 다음과 같다.<br>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px;margin:8px 0">'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700;width:25%">계약기간</td><td style="border:1px solid #999;padding:6px 8px" colspan="3">'+(data.startDate||'　　년　　월　　일')+' ~ '+(data.endDate||'　　년　　월　　일')+(months?' ('+months+')':'')+'</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:6px 8px" colspan="3">'+(data.route||'엠비티아이(유) 관할전구역')+'</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700" rowspan="2">수수료</td><td style="border:1px solid #999;padding:6px 8px;background:#fafafa">집화수수료</td><td style="border:1px solid #999;padding:6px 8px" colspan="2">1건당 '+(data.collectPrice?pAmt(data.collectPrice):'0원')+'</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:6px 8px" colspan="2">1건당 '+(data.unitPrice?pAmt(data.unitPrice):'　　　원')+'</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700">지급일</td><td style="border:1px solid #999;padding:6px 8px" colspan="3">'+(data.cycle||'매월 20일')+'</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700">차량내역</td><td style="border:1px solid #999;padding:6px 8px" colspan="3">자동차 등록번호: '+(data.carNum||'　　　　　')+'</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700">종사자격</td><td style="border:1px solid #999;padding:6px 8px" colspan="3">종사자격증 번호: '+(data.licenseNum||'　　　　　')+'</td></tr>'
+      +'</table>'
+      +(data.sortPrice&&Number(data.sortPrice)>0?'③ "수탁자"는 분류작업을 수행하며, 분류수수료는 시간당 '+pAmt(data.sortPrice)+'로 한다.':'② "수탁자"는 분류작업을 수행하지 않는다.')
+      +'<br>④ 분류수수료는 시간당 최저임금에 상당하는 금액 이상으로 한다.</div>'
+      +'<div class="clause"><div class="clause-title">제5조(수수료의 지급)</div>① "수탁자"는 택배업무 수행 내역을 매월 26일~익월 25일 기준으로 마감하고, "위탁자"에게 수수료를 청구하여야 한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</div>'
+      +'<div class="clause"><div class="clause-title">제6조(택배 배송업무의 수행)</div>① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서 「생활물류서비스산업발전법」, 「도로교통법」, 「자동차관리법」 등 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공·공개하여서는 아니 된다.<br>⑤ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.</div>'
+      +'<div class="clause"><div class="clause-title">제7조(위탁자의 준수사항)</div>"위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위<br>4. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위<br>5. 천재지변, 전쟁, 내란 기타 불가항력적인 사유 시에 배송지연 책임을 전가시키는 행위</div>'
+      +'<div class="clause"><div class="clause-title">제8조(안전보건 조치 등)</div>① "위탁자"는 「산업안전보건법」 제77조에 따른 안전·보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」 및 「산업재해보상보험법」에 따라 고용보험과 산업재해보상보험에 가입하여야 하며, "위탁자"는 "수탁자"의 수수료에서 원천공제하여 보험료를 납부할 수 있다.<br>③ "위탁자"는 "수탁자"의 일 평균 작업시간이 일 8시간을 지속적으로 초과할 경우 연 1회 이상 건강검진을 실시하고, 그 결과에 따라 적정한 휴식시간 보장 등 건강관리 조치를 취하여야 한다.</div>'
+      +'<div class="clause"><div class="clause-title">제9조(작업시간 조정 등)</div>① 계약 당사자는 "수탁자"의 최대 작업시간이 일 12시간, 주 60시간을 초과하지 않도록 노력한다.<br>② 설·추석 등 성수기의 경우 해당 기간이 속한 2주 이내에 한해 불가피한 예외를 인정하되, 22시를 초과하여 작업하여서는 아니된다.</div>'
+      +'<div class="clause"><div class="clause-title">제10조(손해배상)</div>① 택배화물의 훼손, 멸실, 분실, 운송지연 등으로 고객에게 손해가 발생한 경우에 "위탁자"와 "수탁자"는 귀책사유에 따라 그 손해배상 책임을 부담하며, "위탁자"가 "수탁자"를 대신해 우선 배상하는 경우에는 "수탁자"에게 구상권을 행사할 수 있다.<br>② "수탁자"의 고의 또는 과실에 의하지 않은 손해배상책임은 "수탁자"에게만 일방적으로 부담시키지 않는다.</div>'
+      +'<div class="clause"><div class="clause-title">제11조(계약의 갱신 및 해지)</div>① "위탁자"와 "수탁자"는 상호 합의하는 경우에는 계약을 해지할 수 있다.<br>② "위탁자"는 계약기간 만료 전 150일부터 60일까지 사이에 "수탁자"가 계약의 갱신을 요구하는 경우로서 총 계약기간이 6년 이하인 때에는 「생활물류서비스산업발전법 시행령」제5조에서 규정한 경우를 제외하고는 이를 거절할 수 없다.<br>③ "위탁자"는 계약을 해지하려는 경우에는 "수탁자"에게 60일 이상의 유예기간을 두고 계약의 위반 사실을 구체적으로 밝히고 이를 시정하지 아니하면 그 계약을 해지한다는 사실을 서면으로 2회 이상 통지하여야 한다.<br>④ "수탁자"의 사정으로 계약을 해지할 경우, "수탁자"는 계약해지 60일 전에 "위탁자"에게 통지하고 업무가 원활하게 이전되도록 협조한다.</div>'
+      +'<div class="clause"><div class="clause-title">제12조(개인정보 수집)</div>① "위탁자"는 계약체결을 위해 필요한 "수탁자"의 개인정보를 "수탁자"의 동의를 받아 수집·이용할 수 있다.<br>② "위탁자"는 제1항의 목적 외 다른 용도로 "수탁자"의 개인정보를 사용할 수 없으며, 제3자에게 제공하여서는 아니 된다.</div>'
+      +'<div class="clause"><div class="clause-title">제13조(분쟁 해결)</div>① "위탁자"와 "수탁자"는 이 계약에 명시되지 아니한 사항 또는 계약의 해석에 관한 사항에 다툼이 있는 경우에는 쌍방의 합의에 의해 해결한다.<br>② 제1항에 따라 해결되지 않는 경우에는 민사소송법에 따라 법원에서의 소송을 통해 분쟁을 해결한다.</div>'
+      +'<div class="clause"><div class="clause-title">제14조(소의 관할)</div>본 계약에 관한 소송은 민사소송법에 따르거나, 양 당사자의 합의에 의해 정한 곳을 관할 법원으로 한다.</div>'
+      +'<div class="clause"><div class="clause-title">제15조(부속합의)</div>① "위탁자"와 "수탁자"는 이 계약의 내용을 보충하거나, 이 계약에서 정하지 아니한 사항을 규정하기 위하여 부속합의서를 작성할 수 있다.<br>② 부속합의는 이 계약의 내용에 배치 또는 위반되지 않는 범위 내에서 이 계약의 내용으로 인정된다.</div>'
+      +'<div class="clause"><div class="clause-title">제16조(계약의 효력)</div>① "위탁자"와 "수탁자"는 이 계약을 체결하기 전에 충분한 협의를 거쳤고, 계약 내용을 모두 숙지하였으며, 이 계약을 증명하기 위하여 쌍방이 기명날인한 계약서 원본 2부를 작성하여 각 1부씩 보관한다.<br>② 이 계약서의 내용은 "위탁자"와 "수탁자" 사이의 서면 합의에 의해서만 변경되거나 수정될 수 있다.</div>';
+    if(data.special){html+='<div class="clause"><div class="clause-title">특약사항</div>'+data.special.replace(/\n/g,'<br>')+'</div>';}
+    html+='</div>'
+      +'<div style="margin-top:20px;text-align:center">'+yr+'년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일</div>'
+      +'<div class="sign-area">'
+      +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">위탁자</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">주소: '+companyAddr+'</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">상호: '+companyName+'</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">사업자번호: '+companyBiz+'</div>'
+      +'<div style="font-size:12px">대표자: '+companyCeo+'</div>'
+      +'<div class="sign-line"></div>'
+      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">사업자번호: '+(data.driverBiz||'　　　　　　　　')+'</div>'
+      +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
+      +'<div class="sign-line"></div>'
+      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +'</div>'
+      +'<div style="margin-top:30px;padding-top:20px;border-top:1px dashed #999">'
+      +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">[별지] 개인정보 수집·이용 동의서</div>'
+      +'<div style="font-size:11px;line-height:1.7">가. 수집목적: 택배 운송 위·수탁계약 체결 및 이행, 자격보유 여부 확인<br>'
+      +'나. 수집항목: 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호, 운수종사자 자격증 등록번호<br>'
+      +'다. 보유기간: 개인정보 수집·이용목적이 달성된 후 지체 없이 파기<br>'
+      +'<b>본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 수집·이용하는데 동의합니다.</b></div>'
+      +'<div style="margin-top:10px;display:flex;gap:20px;font-size:12px">'
+      +'<label><input type="checkbox"> 동의함</label>'
+      +'<label><input type="checkbox"> 동의하지 않음</label></div>'
+      +'<div style="font-size:11px;margin-top:12px">사업자등록번호: 　　　　　　　 / 성명: 　　　　　 (서명)</div>'
+      +'</div>';
+    return html;
+  }
+
+  if(data.type==='subok'){
+    var html='<h1>계약해지에 관한 부속합의서</h1>'
+      +'<p style="font-size:13px;margin-bottom:16px"><b>'+companyName+'</b> (이하 "위탁자")와 택배종사자인 <b>'+(data.driverName||'　　　　　　')+'</b> (이하 "수탁자")은 계약해지에 관하여 다음과 같이 부속합의서를 체결한다.</p>'
+      +'<div style="border-top:2px solid #111;padding-top:16px">'
+      +'<div class="clause"><div class="clause-title">제1조(즉시 해지 사유)</div>위탁자는 수탁자에게 다음 각 호의 어느 하나에 해당하는 사유가 발생하는 경우 서면 통지로써 원 계약을 즉시 해지하거나 입차 제한 및 노선변경, 물량을 조정할 수 있다.<br>'
+      +'① 수탁자 외 원 계약에 의해 수행해야 할 업무를 이유 없이 거부하였을 경우<br>'
+      +'② 수탁자의 계약불이행으로 계약해지가 이뤄진 경우에는 수수료 지급을 반품 및 파손금 확인 후 150일 이후에 지급한다.<br>'
+      +'③ 수탁자가 원 계약에 따른 비밀유지의무, 개인정보보호의무 또는 정보보안의무를 위반한 경우<br>'
+      +'④ 손해배상 의무를 정당한 사유 없이 이행하지 않거나 회피하는 경우</div>'
+      +'<div class="clause"><div class="clause-title">제2조(근무 일정)</div>근무 일정은 1주일 전까지 사무실과 협의하여 확정하며, 확정된 일정에 결근하여 발생하는 제반 비용은 수탁자가 전액 부담한다.</div>'
+      +'<div class="clause"><div class="clause-title">제3조(성과 기준 및 페널티)</div>수탁자가 다음의 기준을 충족시키지 못한 경우 페널티가 적용된다.<br>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin:8px 0">'
+      +'<tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:5px 8px">구분</th><th style="border:1px solid #999;padding:5px 8px">적용</th></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">불가피한 사고가 아닌 당일 노쇼 (건당 주간 1,000원 / 야간 1,200원)</td><td style="border:1px solid #999;padding:5px 8px;text-align:center">페널티 적용 (용차비 청구)</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">프레시백 회수율 75% 이하 및 반품회수율 80% 이하 1개월 내 2회 적발</td><td style="border:1px solid #999;padding:5px 8px;text-align:center">페널티 적용 (20원 삭감)</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">크리티컬 인입 동일내용 3회 지적 시 (CS, 배송사진, 반품 등)</td><td style="border:1px solid #999;padding:5px 8px;text-align:center">계약해지 사유</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">캠프 출근 시간 및 업무 프로세스 미준수</td><td style="border:1px solid #999;padding:5px 8px;text-align:center">계약해지 사유</td></tr>'
+      +'</table></div>'
+      +'<div class="clause"><div class="clause-title">제4조(서비스 수준)</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin:8px 0">'
+      +'<tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:5px 8px">구분</th><th style="border:1px solid #999;padding:5px 8px">정의</th><th style="border:1px solid #999;padding:5px 8px">평가방법</th></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">미수행률</td><td style="border:1px solid #999;padding:5px 8px">서브 라우트에서 위탁된 월 물량 중 정상 배송 미완료 비율</td><td style="border:1px solid #999;padding:5px 8px">미완료 물량 / 위탁 물량</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">반품 미회수율</td><td style="border:1px solid #999;padding:5px 8px">서브 라우트에서 위탁된 월 반품 중 회수 미완료 비율</td><td style="border:1px solid #999;padding:5px 8px">미완료 / 반품 위탁 물량</td></tr>'
+      +'<tr><td style="border:1px solid #999;padding:5px 8px">고객불만발생률</td><td style="border:1px solid #999;padding:5px 8px">위탁자 귀책 고객 불만 발생 건수 비율</td><td style="border:1px solid #999;padding:5px 8px">불만 건수 / 위탁 물량</td></tr>'
+      +'</table></div>'
+      +'<div class="clause"><div class="clause-title">제5조(유효기간)</div>본 합의서는 합의서 체결일로부터 유효하며, 양 당사자의 별도 서면 합의가 없는 한 원 계약서의 해제, 해지 또는 기간 만료에 따른 종료 시까지 유효하다.</div>';
+    if(data.special){html+='<div class="clause"><div class="clause-title">특약사항</div>'+data.special.replace(/\n/g,'<br>')+'</div>';}
+    html+='</div>'
+      +'<div style="margin-top:20px;text-align:center">'+yr+'년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일</div>'
+      +'<div class="sign-area">'
+      +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">위탁자</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">주소: '+companyAddr+'</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">상호: '+companyName+'</div>'
+      +'<div style="font-size:12px">대표자: '+companyCeo+'</div>'
+      +'<div class="sign-line"></div>'
+      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
+      +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
+      +'<div class="sign-line"></div>'
+      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +'</div>';
+    return html;
+  }
+
+  var typeLabel={qflex:'퀵플렉스 배송 위수탁 계약서',labor:'근로계약서'}[data.type]||'계약서';
   var html='<h1>'+typeLabel+'</h1>'
-    +'<h2>계약일: '+dateStr+'</h2>'
     +'<div class="info-grid">'
-    +'<div class="info-box"><b>■ '+(data.type==='labor'?'사용자(갑)':'위탁자(갑)')+' — '+data.companyName+'</b>'
-    +'사업자번호: '+(data.companyBiz||'—')+'<br>'
-    +'대표자: '+(data.companyCeo||'—')+'<br>'
-    +'주소: '+(data.companyAddr||'—')+'<br>'
+    +'<div class="info-box"><b>■ '+(data.type==='labor'?'사용자(갑)':'위탁자(갑)')+' — '+companyName+'</b>'
+    +'사업자번호: '+companyBiz+'<br>'
+    +'대표자: '+companyCeo+'<br>'
+    +'주소: '+companyAddr+'<br>'
     +'연락처: '+(data.companyPhone||'—')+'</div>'
     +'<div class="info-box"><b>■ '+(data.type==='labor'?'근로자(을)':'수탁자(을)')+' — '+data.driverName+'</b>'
     +'사업자번호: '+(data.driverBiz||'—')+'<br>'
@@ -8036,59 +8176,25 @@ function _ctrGenHTML(data){
     +'연락처: '+(data.driverPhone||'—')+'</div>'
     +'</div>';
   html+='<div style="border-top:2px solid #111;padding-top:16px">';
-  if(data.type==='wisu'||data.type==='qflex'){
-    html+='<div class="clause"><div class="clause-title">제1조(목적)</div>'
-      +'본 계약은 화물자동차 운수사업법 제40조에 따라 갑(위탁자)과 을(수탁자) 간의 화물운송 위수탁 관계를 명확히 하기 위해 체결합니다.</div>'
-      +'<div class="clause"><div class="clause-title">제2조(계약기간)</div>'
-      +data.startDate+' ~ '+data.endDate+' (1년 단위 자동갱신, 어느 일방이 종료 30일 전 서면 통보 시 종료)</div>'
-      +'<div class="clause"><div class="clause-title">제3조(업무 범위)</div>'
-      +'담당 라우트/배송구역: '+(data.route||'별도 협의')+'</div>';
-    if(data.type==='wisu'){
-      html+='<div class="clause"><div class="clause-title">제4조(운임)</div>'
-        +'배송 건당 단가: '+(data.unitPrice?Number(data.unitPrice).toLocaleString()+'원':'별도 협의')
-        +' / 정산 주기: '+(data.cycle||'월 1회')+'</div>'
-        +'<div class="clause"><div class="clause-title">제5조(의무사항)</div>'
-        +'① 을은 갑이 지시하는 배송 라우트 및 배송기준을 성실히 이행한다.<br>'
-        +'② 갑은 을의 운임을 약정 정산일에 지급한다.<br>'
-        +'③ 을은 차량 보험·세금 등 제반 비용을 자부담한다.</div>'
-        +'<div class="clause"><div class="clause-title">제6조(계약해지)</div>'
-        +'① 일방이 본 계약을 위반할 경우 14일 이내 시정 요구 후 해지 가능<br>'
-        +'② 사고·불법행위 발생 시 즉시 해지 가능</div>';
-    } else {
-      html+='<div class="clause"><div class="clause-title">제4조(수수료)</div>'
-        +'쿠팡 정산금액 기준 수수료율: '+(data.rate||'별도 협의')+'%'
-        +' / 정산 주기: '+(data.cycle||'월 1회')+'</div>'
-        +'<div class="clause"><div class="clause-title">제5조(의무사항)</div>'
-        +'① 을은 퀵플렉스 배송표준을 준수하며 배송을 이행한다.<br>'
-        +'② 갑은 을의 정산금액에서 수수료를 공제 후 지급한다.<br>'
-        +'③ 을은 배송 중 발생한 분실·파손에 대한 책임을 진다.</div>';
-    }
+  if(data.type==='qflex'){
+    html+='<div class="clause"><div class="clause-title">제1조(목적)</div>본 계약은 화물자동차 운수사업법 제40조에 따라 위탁자와 수탁자 간의 퀵플렉스 배송 업무에 관한 권리·의무를 정하기 위해 체결합니다.</div>'
+      +'<div class="clause"><div class="clause-title">제2조(계약기간)</div>'+data.startDate+' ~ '+data.endDate+(months?' ('+months+')':'')+'</div>'
+      +'<div class="clause"><div class="clause-title">제3조(업무 범위)</div>배송 캠프/구역: '+(data.route||'별도 협의')+'</div>'
+      +'<div class="clause"><div class="clause-title">제4조(수수료)</div>쿠팡 정산금액 기준 수수료율: '+(data.rate||'별도 협의')+'% / 정산일: '+(data.cycle||'매월 20일')+'</div>'
+      +'<div class="clause"><div class="clause-title">제5조(의무사항)</div>① 수탁자는 퀵플렉스 배송표준을 준수하며 배송을 이행한다.<br>② 위탁자는 수탁자의 정산금액에서 수수료를 공제 후 지급한다.<br>③ 수탁자는 배송 중 발생한 분실·파손에 대한 책임을 진다.</div>';
   } else {
-    html+='<div class="clause"><div class="clause-title">제1조(근로계약의 체결)</div>'
-      +'갑(사용자)과 을(근로자)은 근로기준법에 따라 다음 조건으로 근로계약을 체결합니다.</div>'
-      +'<div class="clause"><div class="clause-title">제2조(계약기간)</div>'
-      +data.startDate+' ~ '+data.endDate+'</div>'
-      +'<div class="clause"><div class="clause-title">제3조(근무내용)</div>'
-      +'근무 장소: '+(data.workplace||'—')+'<br>'
-      +'담당 업무: '+(data.job||'—')+'<br>'
-      +'계약 형태: '+(data.laborType||'일반')+'</div>'
-      +'<div class="clause"><div class="clause-title">제4조(근무시간)</div>'
-      +'근무시간: '+(data.hours||'09:00~18:00')+' / 휴게시간: '+(data.rest||'60분')+' / 주 5일(월~금)</div>'
-      +'<div class="clause"><div class="clause-title">제5조(임금)</div>'
-      +'월 급여: '+(data.salary?Number(data.salary).toLocaleString()+'원':'별도 협의')
-      +' / 지급일: '+(data.payday||'매월 25일')+'<br>'
-      +'4대보험 가입(국민연금·건강보험·고용보험·산재보험)</div>'
-      +'<div class="clause"><div class="clause-title">제6조(휴일·휴가)</div>'
-      +'주휴일(일요일), 법정 공휴일, 연차휴가는 근로기준법 기준 부여</div>';
+    html+='<div class="clause"><div class="clause-title">제1조(근로계약의 체결)</div>사용자(갑)과 근로자(을)은 근로기준법에 따라 다음 조건으로 근로계약을 체결합니다.</div>'
+      +'<div class="clause"><div class="clause-title">제2조(계약기간)</div>'+data.startDate+' ~ '+data.endDate+'</div>'
+      +'<div class="clause"><div class="clause-title">제3조(근무내용)</div>근무 장소: '+(data.workplace||'—')+'<br>담당 업무: '+(data.job||'—')+'<br>계약 형태: '+(data.laborType||'일반')+'</div>'
+      +'<div class="clause"><div class="clause-title">제4조(근무시간)</div>근무시간: '+(data.hours||'09:00~18:00')+' / 휴게시간: '+(data.rest||'60분')+' / 주 5일(월~금)</div>'
+      +'<div class="clause"><div class="clause-title">제5조(임금)</div>월 급여: '+pAmt(data.salary)+' / 지급일: '+(data.payday||'매월 25일')+'<br>4대보험 가입(국민연금·건강보험·고용보험·산재보험)</div>'
+      +'<div class="clause"><div class="clause-title">제6조(휴일·휴가)</div>주휴일(일요일), 법정 공휴일, 연차휴가는 근로기준법 기준 부여</div>';
   }
-  if(data.special){
-    html+='<div class="clause"><div class="clause-title">특약사항</div>'
-      +data.special.replace(/\n/g,'<br>')+'</div>';
-  }
+  if(data.special){html+='<div class="clause"><div class="clause-title">특약사항</div>'+data.special.replace(/\n/g,'<br>')+'</div>';}
   html+='</div>'
     +'<div class="sign-area">'
     +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(data.type==='labor'?'사용자(갑)':'위탁자(갑)')+'</div>'
-    +'<div style="font-size:12px;color:#666">'+data.companyName+'</div>'
+    +'<div style="font-size:12px;color:#666">'+companyName+'</div>'
     +'<div class="sign-line"></div>'
     +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
     +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(data.type==='labor'?'근로자(을)':'수탁자(을)')+'</div>'
