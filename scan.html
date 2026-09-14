@@ -3413,10 +3413,21 @@ async function _slyAnalyze() {
       });
       const fetchData = await fetchRes.json();
       if (!fetchData.ok) throw new Error(fetchData.error || '조회 실패');
+      if (statusEl) statusEl.style.display = 'none';
+      if (!fetchData.scraped) {
+        // 자동 조회 실패 → 텍스트 입력 모드로 전환, 사용자가 직접 붙여넣기
+        _slySetInputMode('text');
+        const ta = document.getElementById('slyDirectText');
+        if (ta) {
+          ta.value = '';
+          ta.placeholder = `법원경매정보(www.courtauction.go.kr)에서 ${caseNum} 사건의 내용을 복사해 여기에 붙여넣어 주세요.\n\n예) 물건번호, 소재지, 감정가, 최저매각가격, 임차인 현황, 등기사항 등`;
+          ta.focus();
+        }
+        _slyToast('자동 조회 실패 — 내용을 직접 붙여넣어 주세요', 4000);
+        return;
+      }
       const blob = new Blob([fetchData.text], { type: 'text/plain' });
       _slyFile = new File([blob], `auction_${caseNum.replace(/\s+/g,'_')}.txt`, { type: 'text/plain' });
-      if (statusEl) statusEl.style.display = 'none';
-      if (!fetchData.scraped) _slyToast('자동 조회 실패 — 기본 분석으로 진행합니다');
     } catch(e) {
       if (statusEl) statusEl.style.display = 'none';
       _slyToast('조회 실패: ' + e.message); return;
