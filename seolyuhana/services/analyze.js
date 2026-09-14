@@ -177,18 +177,30 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
   const data = await res.json();
   const rawText = (data.result?.response || '').trim();
 
+  let parsed = null;
   if (rawText.startsWith('{')) {
-    try { return { ok: true, data: JSON.parse(rawText) }; } catch {}
+    try { parsed = JSON.parse(rawText); } catch {}
   }
-  const cb = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (cb) {
-    try { return { ok: true, data: JSON.parse(cb[1]) }; } catch {}
+  if (!parsed) {
+    const cb = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (cb) { try { parsed = JSON.parse(cb[1]); } catch {} }
   }
-  const jo = rawText.match(/(\{[\s\S]*\})/);
-  if (jo) {
-    try { return { ok: true, data: JSON.parse(jo[1]) }; } catch {}
+  if (!parsed) {
+    const jo = rawText.match(/(\{[\s\S]*\})/);
+    if (jo) { try { parsed = JSON.parse(jo[1]); } catch {} }
   }
-  throw new Error(`Workers AI JSON 파싱 실패: ${rawText.slice(0, 200)}`);
+  if (!parsed) throw new Error(`Workers AI JSON 파싱 실패: ${rawText.slice(0, 200)}`);
+
+  // Workers AI(Llama)는 string 스키마 필드를 배열/객체로 반환하는 경우가 있음
+  const STR_FIELDS = ['overallComment','riskSummary','summary','contractType','riskLevel',
+    'legalDisclaimer','hook','cta','genre','targetPlatform','ipExpansionPotential',
+    'hookAnalysis','marketAnalysis','docType','issuedBy','issuedDate','validity','subject'];
+  for (const f of STR_FIELDS) {
+    if (f in parsed && typeof parsed[f] !== 'string') {
+      parsed[f] = Array.isArray(parsed[f]) ? parsed[f].join(' ') : String(parsed[f] ?? '');
+    }
+  }
+  return { ok: true, data: parsed };
 }
 
 // ────────────────────────────────────────────────────────────

@@ -9014,7 +9014,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           // 6. 완료 처리
           const outputDocx = makeOutputFilename(filename, 'docx');
           const outputPdf  = makeOutputFilename(filename, 'pdf');
-          const summary = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
+          const _sumRaw = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
+          const summary = typeof _sumRaw === 'string' ? _sumRaw : (Array.isArray(_sumRaw) ? _sumRaw.join(' ') : String(_sumRaw || '분석이 완료되었습니다.'));
           await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
             status:      { stringValue: 'completed' },
             progress:    { integerValue: 100 },
