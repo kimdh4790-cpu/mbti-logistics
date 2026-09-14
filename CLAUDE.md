@@ -612,6 +612,17 @@ cd mbtico-pages && npx wrangler deploy
 - Firebase Auth popup→redirect 폴백 + getRedirectResult 초기화 추가
 - 슈퍼어드민(kimdh4790@gmail.com·soungkyekim@naver.com) 무제한 포인트(∞P) 바이패스
 
+### ✅ 완료 (2026-09-14 DONWAY 계약서 시스템 + 대시보드 정리)
+- **pageSchedule + _renderCalendar 복원**: git history(826ce16)에서 달력 함수 추출, pages 객체 참조 추가
+- **DONWAY 계약서 시스템 전면 구현** (donway-pages/index.html):
+  - 위수탁/퀵플렉스/근로계약 3종 계약 유형 카드 선택
+  - 등록 기사 드롭다운 → 성명·전화·사업자번호·주소 자동 입력
+  - 유형별 조건 폼 + 미리보기(새 창 인쇄 가능) + Firestore `contracts` 저장 + 보관함 조회·인쇄·삭제
+- **대시보드 퀵버튼 비정산 제거**: 세무사 연동·출퇴근 현황·근무 설정·근무표·급여 계산·연차 관리·배차 현황·직원 가입 QR·송금 관리 제거
+  - 유지: 정산하기·기사 관리·위수탁 계약서·달력 (settle 서비스 기준)
+  - isVisiting 슈퍼어드민 고객 방문 시 고객 services 기준 표시로 변경
+- **Firestore 읽기/쓰기 체크**: contracts·cal_memos·drivers 컬렉션 보안 규칙 정상 확인 (canRead/canWrite/canOwn 패턴)
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
