@@ -1906,6 +1906,12 @@ body {
   <!-- 분석 결과 -->
   <div class="sly-result" id="slyResult"></div>
 
+  <!-- 분석 에러 (drawer 내부 전용) -->
+  <div id="slyDrawerError" style="display:none;margin:0 0 8px;padding:14px 16px;background:#fff0f0;border:1.5px solid #f87171;border-radius:12px;color:#991b1b;font-size:12px;line-height:1.55;word-break:break-all">
+    <div style="font-weight:700;margin-bottom:6px;font-size:13px">분석 실패 — 포인트 자동 환불</div>
+    <div id="slyDrawerErrorMsg" style="font-family:monospace;white-space:pre-wrap;color:#7f1d1d"></div>
+  </div>
+
   <!-- 드로어 하단 -->
   <div class="sly-drawer-footer">
     <div>
@@ -3290,6 +3296,8 @@ window._slyBizSearch = async function() {
 function clearResult() {
   document.getElementById('slyResult')?.classList.remove('visible');
   document.getElementById('slyProgress')?.classList.remove('visible');
+  const errBox = document.getElementById('slyDrawerError');
+  if (errBox) errBox.style.display = 'none';
 }
 
 function handleFile(file) {
@@ -3470,14 +3478,13 @@ function pollResult(jobId, _cnt, _interval, _startTs) {
         const errMsg = d.error || '분석 실패';
         _slyToast('분석 실패 — 포인트 자동 환불', 5000);
         document.getElementById('slyProgress')?.classList.remove('visible');
-        // 에러 전문 결과 영역에 표시 (toast가 잘릴 수 있어 별도 표시)
-        const cont = document.getElementById('slyResult');
-        if (cont) {
-          cont.innerHTML = `<div style="background:#fff0f0;border:1.5px solid #f87171;border-radius:12px;padding:20px 18px;margin:8px 0;color:#991b1b;font-size:13px;line-height:1.6;word-break:break-all;">
-            <div style="font-weight:700;font-size:14px;margin-bottom:8px;">분석 실패 — 포인트 자동 환불</div>
-            <div style="font-family:monospace;white-space:pre-wrap;font-size:12px;color:#7f1d1d;">${errMsg.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-          </div>`;
-          cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 에러 전문 — drawer 내부 전용 슬롯에 표시 (항상 보임)
+        const errBox = document.getElementById('slyDrawerError');
+        const errMsgEl = document.getElementById('slyDrawerErrorMsg');
+        if (errBox && errMsgEl) {
+          errMsgEl.textContent = errMsg;
+          errBox.style.display = 'block';
+          errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         const b2 = document.getElementById('slyAnalyzeBtn2');
         if (b2) b2.disabled = false;

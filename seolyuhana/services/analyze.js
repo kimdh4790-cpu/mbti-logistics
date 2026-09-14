@@ -128,11 +128,6 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
   const CF_EMAIL = 'kimdh4790@gmail.com';
   const MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
-  // API Token → Bearer, Global API Key → X-Auth-Key+Email
-  const authHeaders = cfToken
-    ? { 'Authorization': `Bearer ${cfToken}` }
-    : { 'X-Auth-Email': CF_EMAIL, 'X-Auth-Key': cfGlobal };
-
   // document 블록 → 텍스트 추출, image 블록 → 설명 텍스트로 변환
   let userText = '';
   for (const b of userBlocks) {
@@ -152,20 +147,32 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
     { role: 'user', content: userText.trim() }
   ];
 
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${MODEL}`,
-    {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${MODEL}`;
+  const body = JSON.stringify({ messages, max_tokens: maxTokens });
+
+  // 인증 시도 순서:
+  // 1) CF_API_TOKEN Bearer (API Token, cfut_...)
+  // 2) CF_GLOBAL_KEY X-Auth-Key (Global API Key, cfk_...) — CF_API_TOKEN 권한 부족 시 폴백
+  const authAttempts = [];
+  if (cfToken) authAttempts.push({ 'Authorization': `Bearer ${cfToken}` });
+  if (cfGlobal) authAttempts.push({ 'X-Auth-Email': CF_EMAIL, 'X-Auth-Key': cfGlobal });
+
+  let res, lastErr;
+  for (const authHeaders of authAttempts) {
+    res = await fetch(url, {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, max_tokens: maxTokens }),
+      body,
       signal: AbortSignal.timeout(90000)
-    }
-  );
-
-  if (!res.ok) {
+    });
+    if (res.ok) break;
     const err = await res.json().catch(() => ({}));
-    throw new Error(`Workers AI ${res.status}: ${err.errors?.[0]?.message || res.statusText}`);
+    lastErr = new Error(`Workers AI ${res.status} (${Object.keys(authHeaders)[0]}): ${err.errors?.[0]?.message || res.statusText}`);
+    // 401/403 → 다음 인증 방식 시도, 그 외 → 즉시 중단
+    if (res.status !== 401 && res.status !== 403) break;
   }
+
+  if (!res || !res.ok) throw lastErr || new Error('Workers AI 인증 실패');
 
   const data = await res.json();
   const rawText = (data.result?.response || '').trim();
