@@ -3575,7 +3575,11 @@ function pollResult(jobId, _cnt, _interval, _startTs) {
         setTimeout(() => window._slyLoadPoints?.(), 2000);
         return;
       } else if (d.status === 'processing' || d.status === 'pending') {
-        setProgress(d.progress || 55, 'Claude AI 분석 중...');
+        const elapsedSec = Math.round((Date.now() - startTs) / 1000);
+        const msg = elapsedSec > 90
+          ? `Claude AI 분석 중... (${elapsedSec}초 경과 — 복잡한 문서는 최대 4분 소요)`
+          : 'Claude AI 분석 중...';
+        setProgress(d.progress || 55, msg);
         pollResult(jobId, cnt, interval, startTs);
       } else {
         pollResult(jobId, cnt, interval, startTs);
