@@ -9149,45 +9149,52 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           analysisData = await Promise.race([_runAnalysis(), _slyAnalysisTimeout]);
           await setProgress(70);
 
-          // 4. 출력 파일 생성
+          // ── 분석 완료 직후 즉시 KV + Firestore 저장 ──────────────────────────────
+          // buildPdf()가 Oracle 서버(http://161.33.136.154:3100) 호출로 수십 초 걸리거나
+          // 연결이 끊기면 아래 KV 저장이 무한정 지연된다. 그래서 분석 결과를 먼저 확정하고
+          // PDF 생성은 이후 별도로 시도한다.
+          const _sumRaw = analysisData.overallComment || analysisData.riskSummary || analysisData.summary || '분석이 완료되었습니다.';
+          const summary = typeof _sumRaw === 'string' ? _sumRaw : (Array.isArray(_sumRaw) ? _sumRaw.join(' ') : String(_sumRaw || '분석이 완료되었습니다.'));
+          const outputDocx = makeOutputFilename(filename, 'docx');
+          // 결과 JSON + 상태 즉시 저장
+          await env.DONWAY_ASSETS.put(`sly_result_${jobId}`, JSON.stringify(analysisData), {expirationTtl: 86400});
+          await env.DONWAY_ASSETS.put(`sly_job_${jobId}_status`, 'completed', {expirationTtl:86400}).catch(()=>{});
+          // Firestore도 즉시 completed (다운로드 URL은 아직 없음 — 아래 생성 후 패치)
+          await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
+            status:      { stringValue: 'completed' },
+            progress:    { integerValue: 85 },
+            summary:     { stringValue: summary.slice(0,300) },
+            originalText:{ stringValue: (parsed.text||'').slice(0,5000) },
+            outputFilename:{ stringValue: outputDocx },
+            completedAt: { stringValue: new Date().toISOString() }
+          }).catch(e => console.error('[SCAN] Firestore early-completed 업데이트 실패:', e.message));
+
+          // 4. 출력 파일 생성 (결과 저장 이후 시도 — 실패해도 프론트엔드는 이미 결과 수신 가능)
           const { buildDocx, buildPdf } = await import('./seolyuhana/output/builder.js');
-          const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '');
-          await setProgress(85);
+          const docxBuffer = await buildDocx(analysisData, serviceId, filename, parsed.text || '').catch(e => { console.warn('[SCAN] DOCX 생성 실패:', e.message); return null; });
           let pdfBuffer = null;
           try {
             pdfBuffer = await buildPdf(analysisData, serviceId, filename, env);
           } catch(pdfErr) {
             console.warn('[SCAN] PDF 생성 실패 (무시):', pdfErr?.message);
           }
-          await setProgress(95);
 
-          // 5. KV 저장 (24시간 TTL) — 결과 JSON 먼저 저장해서 Firestore 실패해도 result 엔드포인트에서 복원 가능
+          // 5. KV 저장 (24시간 TTL)
           const docxKey = `sly_job_${jobId}_docx`;
           const pdfKey  = `sly_job_${jobId}_pdf`;
-          // 결과 JSON 최우선 저장 (Firestore 업데이트 전에)
-          await env.DONWAY_ASSETS.put(`sly_result_${jobId}`, JSON.stringify(analysisData), {expirationTtl: 86400});
-          await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400}).catch(e => console.warn('[SCAN] docx KV put 실패:', e.message));
+          if (docxBuffer) await env.DONWAY_ASSETS.put(docxKey, docxBuffer, {expirationTtl: 86400}).catch(e => console.warn('[SCAN] docx KV put 실패:', e.message));
           if (pdfBuffer) await env.DONWAY_ASSETS.put(pdfKey, pdfBuffer, {expirationTtl: 86400}).catch(e => console.warn('[SCAN] pdf KV put 실패:', e.message));
 
-          // 6. 완료 처리
-          const outputDocx = makeOutputFilename(filename, 'docx');
+          // 6. 다운로드 URL 확정 후 Firestore 패치 (progress 100 업데이트)
           const outputPdf  = makeOutputFilename(filename, 'pdf');
-          const _sumRaw = analysisData.overallComment || analysisData.riskSummary || analysisData.summary || '분석이 완료되었습니다.';
-          const summary = typeof _sumRaw === 'string' ? _sumRaw : (Array.isArray(_sumRaw) ? _sumRaw.join(' ') : String(_sumRaw || '분석이 완료되었습니다.'));
-          // Firestore 완료 업데이트 (실패해도 KV result로 result 엔드포인트 복원)
+          await setProgress(100, 'completed');
           await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
-            status:      { stringValue: 'completed' },
             progress:    { integerValue: 100 },
-            summary:     { stringValue: summary.slice(0,300) },
-            originalText:{ stringValue: (parsed.text||'').slice(0,5000) },
-            outputFilename:{ stringValue: outputDocx },
             downloadUrls:{ mapValue:{ fields:{
-              docx:{ stringValue: `/api/seolyuhana/download/${jobId}?type=docx` },
-              ...(pdfBuffer ? {pdf:{ stringValue: `/api/seolyuhana/download/${jobId}?type=pdf` }} : {})
-            }}},
-            completedAt: { stringValue: new Date().toISOString() }
-          }).catch(e => console.error('[SCAN] Firestore completed 업데이트 실패 (KV fallback 있음):', e.message));
-          await env.DONWAY_ASSETS.put(`sly_job_${jobId}_status`, 'completed', {expirationTtl:86400}).catch(()=>{});
+              ...(docxBuffer ? {docx:{ stringValue: `/api/seolyuhana/download/${jobId}?type=docx` }} : {}),
+              ...(pdfBuffer  ? {pdf: { stringValue: `/api/seolyuhana/download/${jobId}?type=pdf`  }} : {})
+            }}}
+          }).catch(e => console.error('[SCAN] Firestore download URL 업데이트 실패:', e.message));
         } catch(err) {
           console.error('[SCAN] _slyProcessJob error:', jobId, serviceId, err?.message, err?.stack);
           await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {
