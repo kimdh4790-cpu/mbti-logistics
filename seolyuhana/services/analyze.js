@@ -2093,10 +2093,12 @@ const AUCTION_SYSTEM = `당신은 대법원 부동산 경매 전문 분석 AI �
 }`;
 
 export async function analyzeAuction({ text, env }) {
+  // 경매 문서는 핵심 정보(사건번호·권리관계·임차인)가 앞 30KB에 집중됨
+  const truncated = text.length > 30000 ? text.slice(0, 30000) + '\n...(이하 생략)' : text;
   return callClaude({
-    model: 'claude-3-5-haiku-20241022',
+    model: 'claude-sonnet-4-6',
     system: AUCTION_SYSTEM,
-    userBlocks: [{ type: 'text', text: `다음 대법원 경매 물건 정보를 분석해주세요. 권리관계·적정입찰가·수익률 시뮬레이션을 모두 포함하세요.\n\n[경매 물건 정보]\n${text}` }],
+    userBlocks: [{ type: 'text', text: `다음 대법원 경매 물건 정보를 분석해주세요. 권리관계·적정입찰가·수익률 시뮬레이션을 모두 포함하세요.\n\n[경매 물건 정보]\n${truncated}` }],
     env,
     maxTokens: 5000
   });
