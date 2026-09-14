@@ -25,6 +25,7 @@
 
 | 카테고리 | 설명 |
 |---|---|
+| AI트렌드 | 신규 AI 모델·AI 도구·에이전트·MCP·RAG·LLM·생성AI 등 AI 최신 동향 (최우선) |
 | 강의소재 | AI·자동화·노코드·개발·SaaS·마케팅·수익화 강의 주제 |
 | 앱기능 | FILO(매장POS)/DONWAY(정산)/용차앱 기능·UX 아이디어 |
 | 수익성 | 새로운 사업 아이템·수익 모델·트렌드·부업 기회 |
@@ -178,3 +179,4 @@ node scripts/monitor/content-monitor.js  # YouTube (일별)
 | 2026-09-12 | channels.json: @horangwave(호랑웨이브) 추가 — 28→29개 |
 | 2026-09-12 | youtube-monitor.yml 신규: 매일 09:00 KST GitHub Actions에서 content-monitor.js 자동 실행 (Oracle Cloud cron 의존 제거) |
 | 2026-09-12 | research-digest.yml: 주간 다이제스트 전 content-monitor.js 선행 실행 추가, monitor-digest.json 아티팩트에 포함 |
+| 2026-09-14 | content-monitor.js classify(): "AI트렌드" 카테고리 추가 (최우선) — 신규 AI 모델·도구·에이전트·MCP·RAG·LLM·생성AI 등 AI 최신 동향 전용 분류 |
