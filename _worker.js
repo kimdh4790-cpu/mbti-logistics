@@ -8165,7 +8165,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const jeonseDeposit = Number(form.get('jeonseDeposit')) || null;
 
           const VALID_SERVICES = ['resume_analysis','cover_letter_analysis','cover_letter_rewrite','employment_contract','freelance_contract','rental_contract','registry_analysis','public_doc_analysis','insurance_scan','bizplan_analysis','legal_notice_draft','service_cancel_calc','health_ins_calc','tax_notice_check','apt_mgmt_check','auction_analysis'];
-          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,employment_contract:39900,freelance_contract:39900,rental_contract:39900,registry_analysis:34900,public_doc_analysis:2900,insurance_scan:14900,bizplan_analysis:29900,legal_notice_draft:19900,service_cancel_calc:4900,health_ins_calc:4900,tax_notice_check:4900,apt_mgmt_check:4900,auction_analysis:14900};
+          const SERVICE_COSTS = {resume_analysis:29900,cover_letter_analysis:39900,cover_letter_rewrite:49900,employment_contract:44900,freelance_contract:44900,rental_contract:44900,registry_analysis:19900,public_doc_analysis:2900,insurance_scan:4900,bizplan_analysis:34900,legal_notice_draft:19900,service_cancel_calc:4900,health_ins_calc:4900,tax_notice_check:4900,apt_mgmt_check:4900,auction_analysis:14900};
           if (!VALID_SERVICES.includes(serviceId)) {
             return Response.json({ok:false,error:'유효하지 않은 서비스입니다.'},{status:400});
           }
@@ -8425,19 +8425,21 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const body = await request.json();
           const depositorName = (body.depositorName||'').trim();
           const amount = parseInt(body.amount) || 0;
+          // body.points = 보너스 포함 실지급 포인트 (60000원 → 67000P 등). 최대 amount*1.3 이내로 캡
+          const reqPoints = Math.min(parseInt(body.points) || amount, Math.ceil(amount * 1.3));
           if (!depositorName) return Response.json({ok:false,error:'입금자명을 입력하세요.'},{status:400});
-          if (amount < 10000) return Response.json({ok:false,error:'최소 충전 금액은 10,000원입니다.'},{status:400});
+          if (amount < 5000) return Response.json({ok:false,error:'최소 충전 금액은 5,000원입니다.'},{status:400});
           const token = await getAccessToken(env);
           const reqId = crypto.randomUUID();
           await fsPatch(token, `${FS_BASE}/sly_point_requests/${reqId}`, {
             uid:           { stringValue: uid },
             depositorName: { stringValue: depositorName },
             amount:        { integerValue: amount },
-            points:        { integerValue: amount }, // 1원 = 1P
+            points:        { integerValue: reqPoints },
             status:        { stringValue: 'pending' },
             createdAt:     { stringValue: new Date().toISOString() }
           });
-          return Response.json({ok:true, reqId, points: amount, message:`${depositorName}님 이름으로 ${amount.toLocaleString()}원 입금 후 24시간 내 포인트가 충전됩니다.`});
+          return Response.json({ok:true, reqId, points: reqPoints, message:`${depositorName}님 이름으로 ${amount.toLocaleString()}원 입금 후 24시간 내 ${reqPoints.toLocaleString()}P가 충전됩니다.`});
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 

@@ -1442,6 +1442,12 @@ export async function analyzeInsurance({ text, env }) {
   ],
   "missingProtections": ["가입자가 모를 수 있는 누락 보장"],
   "claimTips": ["보험금 청구 시 실전 팁"],
+  "claimProbability": {
+    "score": "보험금 수령 가능성 0~100%로 수치화",
+    "reasoning": "판단 근거 (면책조항·고지의무·약관 해석 기준)",
+    "blockingClauses": ["수령 가능성을 낮추는 핵심 조항들"]
+  },
+  "renewalRisk": "갱신 시 보험료 급등 위험 (있음/없음/불명확) + 예상 인상 구간",
   "disputeRisk": "분쟁 가능성 (높음/보통/낮음)",
   "overallComment": "약관 종합평가 (200자 이내)"
 }`;
