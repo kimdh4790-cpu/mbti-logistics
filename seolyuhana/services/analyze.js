@@ -228,7 +228,6 @@ async function callClaude({ model: callerModel, system, userBlocks, env, maxToke
     'claude-sonnet-4-6',
     'claude-haiku-4-5-20251001',
     'claude-3-5-haiku-20241022',
-    'claude-3-haiku-20240307',
   ];
   const CLAUDE_MODELS = callerModel
     ? [callerModel, ...FALLBACKS.filter(m => m !== callerModel)]
@@ -244,8 +243,7 @@ async function callClaude({ model: callerModel, system, userBlocks, env, maxToke
 
   let res, claudeErr;
   for (const model of CLAUDE_MODELS) {
-    // claude-3-haiku-20240307은 최대 4096 토큰만 지원
-    const modelMaxTokens = model === 'claude-3-haiku-20240307' ? Math.min(maxTokens, 4096) : maxTokens;
+    const modelMaxTokens = maxTokens;
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: baseHeaders,
@@ -960,14 +958,14 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   // 경매 분석은 복잡한 JSON 스키마 → Sonnet으로 격상, 나머지는 Haiku
   const SCAN_MODELS = serviceId === 'auction_analysis'
     ? ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022']
-    : ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
+    : ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'];
   const SCAN_MAX_TOKENS = serviceId === 'auction_analysis' ? 6500 : 4000;
   // 반드시 JSON만 출력하도록 system 지시 추가
   const SCAN_SYSTEM = '반드시 JSON만 출력. 마크다운 코드블록, 설명 텍스트, 인사말 없이 순수 JSON 객체({...})로만 응답.';
 
   let res, lastScanErr;
   for (const model of SCAN_MODELS) {
-    const modelMaxTokens = model === 'claude-3-haiku-20240307' ? Math.min(SCAN_MAX_TOKENS, 4096) : SCAN_MAX_TOKENS;
+    const modelMaxTokens = SCAN_MAX_TOKENS;
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: reqHeaders,

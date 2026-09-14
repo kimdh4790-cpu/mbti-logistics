@@ -8522,7 +8522,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const apiKey = (env.ANTHROPIC_API_KEY||'').trim();
           const modelTests = {};
           if (apiKey) {
-            const testModels = ['claude-haiku-4-5','claude-sonnet-4-6','claude-3-5-haiku-20241022','claude-3-haiku-20240307','claude-3-5-sonnet-20241022'];
+            const testModels = ['claude-haiku-4-5','claude-sonnet-4-6','claude-haiku-4-5-20251001','claude-3-5-haiku-20241022','claude-3-5-sonnet-20241022'];
             await Promise.all(testModels.map(async m => {
               const t = Date.now();
               const r = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers:{'content-type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'}, body:JSON.stringify({model:m,max_tokens:5,messages:[{role:'user',content:'hi'}]}), signal: AbortSignal.timeout(15000) }).catch(e=>({status:'err:'+e.message}));
