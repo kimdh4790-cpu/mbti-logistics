@@ -73,6 +73,22 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-14 #2)
+
+### auction_analysis 스캔 PDF 경로 실패 — 커밋 cd766be4
+- **증상**: courtauction.go.kr PDF 업로드 후 분석 없이 업로드 화면으로 복귀
+- **근본 원인 3가지** (`analyzeScannedPdf()` 내부):
+  1. 모델: Haiku 전용 리스트 — AUCTION_SYSTEM JSON 스키마(caseInfo/bidSimulation/roiSimulation 등 8개 블록)를 4000토큰으로 완성 못함 → JSON 파싱 실패
+  2. system 파라미터 누락 → Haiku가 마크다운 코드블록 포함 응답 → JSON 파싱 실패
+  3. 2단계 JSON 파싱만 있어 fallback 없음
+- **수정**:
+  - auction_analysis: 모델 `claude-sonnet-4-6` 우선 사용 (나머지 Haiku 폴백)
+  - auction_analysis: `max_tokens` 4000 → 5000
+  - system: `'반드시 JSON만 출력. 마크다운 코드블록, 설명 텍스트, 인사말 없이 순수 JSON 객체({...})로만 응답.'` 추가
+  - 3단계 JSON 파싱으로 확장 (직접파싱 → 코드블록 추출 → 중괄호 추출)
+
+---
+
 ## 장애 이력 및 해결 (2026-09-14)
 
 ### AI 분석 실패 버그 4건 수정 — 커밋 f4ec8cfd + 4f12dce6
