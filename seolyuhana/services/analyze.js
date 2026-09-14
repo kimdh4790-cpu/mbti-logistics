@@ -192,9 +192,10 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
   if (!parsed) throw new Error(`Workers AI JSON 파싱 실패: ${rawText.slice(0, 200)}`);
 
   // Workers AI(Llama)는 string 스키마 필드를 배열/객체로 반환하는 경우가 있음
-  const STR_FIELDS = ['overallComment','riskSummary','summary','contractType','riskLevel',
+  // riskSummary는 {level,summary,keyRisks} 객체 또는 string 둘 다 허용 — scan.html이 typeof 분기 처리
+  const STR_FIELDS = ['overallComment','summary','contractType','riskLevel',
     'legalDisclaimer','hook','cta','genre','targetPlatform','ipExpansionPotential',
-    'hookAnalysis','marketAnalysis','docType','issuedBy','issuedDate','validity','subject'];
+    'hookAnalysis','docType','issuedBy','issuedDate','validity','subject'];
   for (const f of STR_FIELDS) {
     if (f in parsed && typeof parsed[f] !== 'string') {
       parsed[f] = Array.isArray(parsed[f]) ? parsed[f].join(' ') : String(parsed[f] ?? '');
