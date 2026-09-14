@@ -7689,6 +7689,8 @@ var tossPayments=TossPayments(_tossCK);
 }
 
 function pageContract(){
+  // 탭·타입 state 초기화 (처음 진입 시만)
+  if(!window._ctrTabInited){window._ctrTab='write';window._ctrType='wisu';window._ctrDriver=null;window._ctrCompany=null;window._ctrTabInited=true;}
   if(_db&&_CU&&_CU.dealerId){
     _db.collection('companies').doc(_CU.dealerId).get().then(function(snap){
       var d=snap.exists?snap.data():{};
@@ -7758,51 +7760,420 @@ function _contractPayRequest(){
   }
   window.open("https://pf.kakao.com/_xkuxabX/chat","_blank");
 }
+// ══ 계약서 시스템 ══
 function _renderContractPage(){
-  // ★ Firebase Storage 직접 사용 (GitHub raw는 404)
-  var BASE='https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/contract/';
-  var BASESUF='';
-  var content=document.getElementById('content');
-  content.innerHTML='<div style="max-width:600px;margin:0 auto;padding:16px">'
-    +'<div style="font-size:18px;font-weight:800;margin-bottom:16px">📝 위수탁 계약서</div>'
-    +'<div class="card" style="margin-bottom:12px;background:linear-gradient(135deg,#EBF3FB,#f0f7ff)">'
-    +'<div style="font-size:14px;font-weight:700;margin-bottom:10px">📥 계약서 양식 다운로드 <span style="font-size:10px;color:var(--brand);font-weight:500">(택배기사 전용)</span></div>'
-    +'<div style="font-size:11px;color:var(--text2);margin-bottom:12px">아래 양식을 다운로드하여 기사와 계약 후 서명본을 업로드하세요.</div>'
-    +'<a href="'+BASE+'%EC%9C%84%EC%88%98%ED%83%81%EA%B3%84%EC%95%BD%EC%84%9C_%ED%83%9D%EB%B0%B0%EA%B8%B0%EC%82%AC%EC%82%AC%EC%9A%A9.pdf" target="_blank" download style="text-decoration:none">'
-    +'<button style="width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:6px">📄 위수탁 계약서 양식 다운로드</button></a>'
-    +'<a href="'+BASE+'%EB%B6%80%EC%86%8D%ED%95%A9%EC%9D%98%EC%84%9C_%ED%83%9D%EB%B0%B0%EA%B8%B0%EC%82%AC%EC%82%AC%EC%9A%A9.pdf" target="_blank" download style="text-decoration:none">'
-    +'<button style="width:100%;padding:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">📄 부속 합의서 양식 다운로드</button></a>'
-    +'</div>'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:14px;font-weight:700;margin-bottom:8px">📋 서명된 계약서 업로드</div>'
-    +'<div style="font-size:12px;color:var(--text2);margin-bottom:12px">서명된 위수탁 계약서를 PDF로 업로드하세요.</div>'
-    +'<div id="contract-upload-area" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px" onclick="uploadContractClick()">'
-    +'<div style="font-size:32px;margin-bottom:8px">📄</div>'
-    +'<div style="font-size:13px;font-weight:600">클릭하여 파일 선택</div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-top:4px">PDF 파일 (최대 10MB)</div>'
-    +'</div>'
-    +'<input id="contract-file-input" type="file" accept=".pdf" style="display:none" onchange="uploadContract(this)">'
-    +'<div id="contract-list" style="margin-top:8px"></div>'
-    +'</div>'
-    +'</div>';
-  if(_db&&_CU&&_CU.dealerId){
-    _db.collection('contracts').where('dealerId','==',_CU.dealerId).orderBy('createdAt','desc').limit(10).get()
-    .then(function(snap){
-      var html='';
-      snap.forEach(function(doc){
-        var d=doc.data();
-        var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
-        html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:var(--bg2);border-radius:6px;margin-bottom:6px">'
-          +'<div><div style="font-size:12px;font-weight:600">'+esc(d.fileName||'계약서')+'</div>'
-          +'<div style="font-size:10px;color:var(--text3)">'+date+'</div></div>'
-          +'</div>';
-      });
-      var el=document.getElementById('contract-list');
-      if(el) el.innerHTML=html||'<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px">업로드된 계약서가 없습니다</div>';
-    }).catch(function(){});
+  window._ctrType=window._ctrType||'wisu';
+  window._ctrTab=window._ctrTab||'write';
+  window._ctrDriver=window._ctrDriver||null;
+  var cid=_CU&&(_CU.dealerId||_CU.companyId);
+  if(_db&&cid&&!window._ctrCompany){
+    _db.collection('companies').doc(cid).get().then(function(snap){
+      window._ctrCompany=snap.exists?snap.data():{};
+      _ctrRender();
+    }).catch(function(){window._ctrCompany={};_ctrRender();});
+  } else {
+    _ctrRender();
   }
 }
-function uploadContractClick(){document.getElementById('contract-file-input').click();}
+
+function _ctrRender(){
+  var tab=window._ctrTab||'write';
+  var content=document.getElementById('content');
+  content.innerHTML=
+    '<div style="max-width:680px;margin:0 auto;padding:16px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<div style="font-size:18px;font-weight:800">📋 DONWAY 계약서</div>'
+    +'<button onclick="window._ctrTab=\'list\';_ctrRender();" style="padding:8px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗂 보관함</button>'
+    +'</div>'
+    +'<div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:16px">'
+    +'<div onclick="window._ctrTab=\'write\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='write'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">✏️ 계약 작성</div>'
+    +'<div onclick="window._ctrTab=\'list\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='list'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">🗂 계약 목록</div>'
+    +'</div>'
+    +'<div id="ctr-body"></div>'
+    +'</div>';
+  if(tab==='write') _ctrRenderWrite();
+  else _ctrRenderList();
+}
+
+function _ctrRenderWrite(){
+  var t=window._ctrType||'wisu';
+  var TYPE_CARDS=[
+    {k:'wisu',ic:'📦',l:'위수탁',sub1:'택배기사',sub2:'위수탁 계약'},
+    {k:'qflex',ic:'⚡',l:'퀵플렉스',sub1:'쿠팡',sub2:'QuickFlex'},
+    {k:'labor',ic:'👔',l:'근로계약',sub1:'일반·단시간',sub2:'기간제'}
+  ];
+  var typeHtml=TYPE_CARDS.map(function(c){
+    var active=t===c.k;
+    return '<div onclick="_ctrSelectType(\''+c.k+'\')" style="flex:1;min-width:100px;border:2px solid '+(active?'var(--brand)':'var(--border)')+';border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;background:'+(active?'rgba(0,102,255,.08)':'var(--bg2)')+';transition:.2s">'
+      +'<div style="font-size:28px;margin-bottom:6px">'+c.ic+'</div>'
+      +'<div style="font-size:14px;font-weight:800;color:'+(active?'var(--brand)':'var(--text1)')+';margin-bottom:2px">'+c.l+'</div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+c.sub1+'</div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+c.sub2+'</div>'
+      +'</div>';
+  }).join('');
+
+  var body=document.getElementById('ctr-body');
+  body.innerHTML=
+    '<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:12px">— ① 계약 유형</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+typeHtml+'</div>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:12px">— ② 기사 정보</div>'
+    +'<div style="margin-bottom:10px">'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">등록된 기사 선택 (자동 입력)</div>'
+    +'<select id="ctr-drv-sel" onchange="_ctrSelectDriver(this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<option value="">— 기사 선택 —</option>'
+    +'</select>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">성명 *</div>'
+    +'<input id="ctr-name" type="text" placeholder="홍길동" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
+    +'</div>'
+    +'<div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">전화번호 *</div>'
+    +'<input id="ctr-phone" type="text" placeholder="010-0000-0000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
+    +'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">사업자번호</div>'
+    +'<input id="ctr-biznum" type="text" placeholder="000-00-00000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
+    +'</div>'
+    +'<div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">주소</div>'
+    +'<input id="ctr-addr" type="text" placeholder="시/군/구" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
+    +'</div>'
+    +'</div>'
+    +'</div>'
+    +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button onclick="_ctrPreview()" style="flex:1;padding:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">👁 미리보기</button>'
+    +'<button onclick="_ctrSave()" style="flex:2;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 저장 + 인쇄</button>'
+    +'</div>';
+
+  _ctrLoadDrivers();
+  _ctrRenderConditions(t);
+}
+
+function _ctrSelectType(t){
+  window._ctrType=t;
+  window._ctrDriver=null;
+  _ctrRenderWrite();
+}
+
+function _ctrLoadDrivers(){
+  var cid=_CU&&(_CU.dealerId||_CU.companyId);
+  if(!_db||!cid)return;
+  _db.collection('drivers').where('dealerId','==',cid).orderBy('name').limit(200).get()
+  .then(function(snap){
+    var sel=document.getElementById('ctr-drv-sel');
+    if(!sel)return;
+    window._ctrDrivers=[];
+    snap.forEach(function(doc){
+      var d=doc.data();
+      if(d.is_active===false||d.status==='pending')return;
+      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||''});
+      sel.innerHTML+='<option value="'+doc.id+'">'+esc(d.name||doc.id)+'</option>';
+    });
+  }).catch(function(){});
+}
+
+function _ctrSelectDriver(id){
+  var drv=(window._ctrDrivers||[]).find(function(d){return d.id===id;});
+  if(!drv)return;
+  window._ctrDriver=drv;
+  var _s=function(id2,v){var el=document.getElementById(id2);if(el)el.value=v||'';};
+  _s('ctr-name',drv.name);_s('ctr-phone',drv.phone);_s('ctr-biznum',drv.bizNum);_s('ctr-addr',drv.address);
+}
+
+function _ctrRenderConditions(t){
+  var el=document.getElementById('ctr-conditions');
+  if(!el)return;
+  var today=new Date().toISOString().slice(0,10);
+  var nextyear=new Date(new Date().setFullYear(new Date().getFullYear()+1)).toISOString().slice(0,10);
+  var common='<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:12px">— ③ 계약 조건</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">계약 시작일 *</div>'
+    +'<input id="ctr-start" type="date" value="'+today+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">계약 종료일 *</div>'
+    +'<input id="ctr-end" type="date" value="'+nextyear+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'</div>';
+
+  if(t==='wisu'){
+    el.innerHTML=common
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">담당 라우트 / 배송구역</div>'
+      +'<input id="ctr-route" type="text" placeholder="예) 부산1캠프 D01구역" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">건당 단가 (원)</div>'
+      +'<input id="ctr-unitprice" type="number" placeholder="850" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">정산 주기</div>'
+      +'<select id="ctr-cycle" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+      +'<option value="월 1회(매월 25일)">월 1회(매월 25일)</option>'
+      +'<option value="월 2회(15·말일)">월 2회(15·말일)</option>'
+      +'<option value="주 1회(매주 금요일)">주 1회(매주 금요일)</option>'
+      +'</select></div>'
+      +'</div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">특약사항</div>'
+      +'<textarea id="ctr-special" rows="3" placeholder="특약 내용 입력 (없으면 비워두세요)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box;resize:vertical"></textarea></div>';
+  } else if(t==='qflex'){
+    el.innerHTML=common
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">배송 캠프 / 구역</div>'
+      +'<input id="ctr-route" type="text" placeholder="예) 부산2캠프 퀵플렉스" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">수수료율 (%)</div>'
+      +'<input id="ctr-rate" type="number" placeholder="10" min="0" max="100" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">정산 주기</div>'
+      +'<select id="ctr-cycle" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+      +'<option value="월 1회(매월 25일)">월 1회(매월 25일)</option>'
+      +'<option value="월 2회(15·말일)">월 2회(15·말일)</option>'
+      +'</select></div>'
+      +'</div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">특약사항</div>'
+      +'<textarea id="ctr-special" rows="3" placeholder="특약 내용 입력" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box;resize:vertical"></textarea></div>';
+  } else { // labor
+    el.innerHTML=common
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">근무 장소</div>'
+      +'<input id="ctr-workplace" type="text" placeholder="예) 부산시 수영구 본사" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">업무 내용</div>'
+      +'<input id="ctr-job" type="text" placeholder="예) 택배 배송 업무" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">근무시간</div>'
+      +'<input id="ctr-hours" type="text" placeholder="09:00~18:00" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">휴게시간</div>'
+      +'<input id="ctr-rest" type="text" placeholder="60분" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">월 급여 (원)</div>'
+      +'<input id="ctr-salary" type="number" placeholder="2500000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">임금 지급일</div>'
+      +'<select id="ctr-payday" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+      +'<option value="매월 25일">매월 25일</option><option value="매월 10일">매월 10일</option><option value="매월 말일">매월 말일</option>'
+      +'</select></div>'
+      +'</div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">계약 형태</div>'
+      +'<select id="ctr-labortype" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+      +'<option value="일반(정규직)">일반(정규직)</option>'
+      +'<option value="단시간 근로">단시간 근로</option>'
+      +'<option value="기간제 근로">기간제 근로</option>'
+      +'</select></div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">특약사항</div>'
+      +'<textarea id="ctr-special" rows="3" placeholder="특약 내용 입력" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box;resize:vertical"></textarea></div>';
+  }
+}
+
+function _ctrCollect(){
+  var _g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
+  var cp=window._ctrCompany||{};
+  return {
+    type:window._ctrType||'wisu',
+    dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
+    companyName:cp.companyName||cp.name||(_CU&&_CU.companyName)||'',
+    companyBiz:cp.bizNum||'',
+    companyCeo:cp.ceoName||cp.repName||'',
+    companyAddr:cp.address||cp.addr||'',
+    companyPhone:cp.phone||'',
+    driverName:_g('ctr-name'),
+    driverPhone:_g('ctr-phone'),
+    driverBiz:_g('ctr-biznum'),
+    driverAddr:_g('ctr-addr'),
+    startDate:_g('ctr-start'),
+    endDate:_g('ctr-end'),
+    route:_g('ctr-route'),
+    unitPrice:_g('ctr-unitprice'),
+    cycle:_g('ctr-cycle'),
+    rate:_g('ctr-rate'),
+    workplace:_g('ctr-workplace'),
+    job:_g('ctr-job'),
+    hours:_g('ctr-hours'),
+    rest:_g('ctr-rest'),
+    salary:_g('ctr-salary'),
+    payday:_g('ctr-payday'),
+    laborType:_g('ctr-labortype'),
+    special:_g('ctr-special'),
+    createdAt:new Date().toISOString()
+  };
+}
+
+function _ctrPreview(){
+  var data=_ctrCollect();
+  if(!data.driverName){toast('❌ 기사 성명을 입력하세요');return;}
+  var w=window.open('','_blank','width=800,height=900');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>계약서 미리보기</title>'
+    +'<style>body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;padding:40px;font-size:13px;color:#111;line-height:1.8}'
+    +'h1{text-align:center;font-size:16px;margin-bottom:4px}h2{text-align:center;font-size:13px;font-weight:400;margin-bottom:30px}'
+    +'.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}'
+    +'.info-box{border:1px solid #ccc;border-radius:6px;padding:14px}'
+    +'.info-box b{display:block;margin-bottom:8px;font-size:12px;color:#555}'
+    +'.clause{margin-bottom:12px}'
+    +'.clause-title{font-weight:700;margin-bottom:4px}'
+    +'.sign-area{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}'
+    +'.sign-box{border:1px solid #ccc;border-radius:6px;padding:20px;text-align:center}'
+    +'.sign-line{border-bottom:1px solid #999;margin:20px 0;height:1px}'
+    +'@media print{body{padding:20px}button{display:none}}'
+    +'</style></head><body>');
+  w.document.write(_ctrGenHTML(data));
+  w.document.write('<div style="margin-top:30px;text-align:center"><button onclick="window.print()" style="padding:12px 30px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄 / PDF 저장</button></div>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
+
+function _ctrGenHTML(data){
+  var typeLabel={wisu:'화물자동차 위수탁 표준계약서',qflex:'퀵플렉스 배송 위수탁 계약서',labor:'근로계약서'}[data.type]||'계약서';
+  var dateStr=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+  var html='<h1>'+typeLabel+'</h1>'
+    +'<h2>계약일: '+dateStr+'</h2>'
+    +'<div class="info-grid">'
+    +'<div class="info-box"><b>■ '+(data.type==='labor'?'사용자(갑)':'위탁자(갑)')+' — '+data.companyName+'</b>'
+    +'사업자번호: '+(data.companyBiz||'—')+'<br>'
+    +'대표자: '+(data.companyCeo||'—')+'<br>'
+    +'주소: '+(data.companyAddr||'—')+'<br>'
+    +'연락처: '+(data.companyPhone||'—')+'</div>'
+    +'<div class="info-box"><b>■ '+(data.type==='labor'?'근로자(을)':'수탁자(을)')+' — '+data.driverName+'</b>'
+    +'사업자번호: '+(data.driverBiz||'—')+'<br>'
+    +'주소: '+(data.driverAddr||'—')+'<br>'
+    +'연락처: '+(data.driverPhone||'—')+'</div>'
+    +'</div>';
+  html+='<div style="border-top:2px solid #111;padding-top:16px">';
+  if(data.type==='wisu'||data.type==='qflex'){
+    html+='<div class="clause"><div class="clause-title">제1조(목적)</div>'
+      +'본 계약은 화물자동차 운수사업법 제40조에 따라 갑(위탁자)과 을(수탁자) 간의 화물운송 위수탁 관계를 명확히 하기 위해 체결합니다.</div>'
+      +'<div class="clause"><div class="clause-title">제2조(계약기간)</div>'
+      +data.startDate+' ~ '+data.endDate+' (1년 단위 자동갱신, 어느 일방이 종료 30일 전 서면 통보 시 종료)</div>'
+      +'<div class="clause"><div class="clause-title">제3조(업무 범위)</div>'
+      +'담당 라우트/배송구역: '+(data.route||'별도 협의')+'</div>';
+    if(data.type==='wisu'){
+      html+='<div class="clause"><div class="clause-title">제4조(운임)</div>'
+        +'배송 건당 단가: '+(data.unitPrice?Number(data.unitPrice).toLocaleString()+'원':'별도 협의')
+        +' / 정산 주기: '+(data.cycle||'월 1회')+'</div>'
+        +'<div class="clause"><div class="clause-title">제5조(의무사항)</div>'
+        +'① 을은 갑이 지시하는 배송 라우트 및 배송기준을 성실히 이행한다.<br>'
+        +'② 갑은 을의 운임을 약정 정산일에 지급한다.<br>'
+        +'③ 을은 차량 보험·세금 등 제반 비용을 자부담한다.</div>'
+        +'<div class="clause"><div class="clause-title">제6조(계약해지)</div>'
+        +'① 일방이 본 계약을 위반할 경우 14일 이내 시정 요구 후 해지 가능<br>'
+        +'② 사고·불법행위 발생 시 즉시 해지 가능</div>';
+    } else {
+      html+='<div class="clause"><div class="clause-title">제4조(수수료)</div>'
+        +'쿠팡 정산금액 기준 수수료율: '+(data.rate||'별도 협의')+'%'
+        +' / 정산 주기: '+(data.cycle||'월 1회')+'</div>'
+        +'<div class="clause"><div class="clause-title">제5조(의무사항)</div>'
+        +'① 을은 퀵플렉스 배송표준을 준수하며 배송을 이행한다.<br>'
+        +'② 갑은 을의 정산금액에서 수수료를 공제 후 지급한다.<br>'
+        +'③ 을은 배송 중 발생한 분실·파손에 대한 책임을 진다.</div>';
+    }
+  } else {
+    html+='<div class="clause"><div class="clause-title">제1조(근로계약의 체결)</div>'
+      +'갑(사용자)과 을(근로자)은 근로기준법에 따라 다음 조건으로 근로계약을 체결합니다.</div>'
+      +'<div class="clause"><div class="clause-title">제2조(계약기간)</div>'
+      +data.startDate+' ~ '+data.endDate+'</div>'
+      +'<div class="clause"><div class="clause-title">제3조(근무내용)</div>'
+      +'근무 장소: '+(data.workplace||'—')+'<br>'
+      +'담당 업무: '+(data.job||'—')+'<br>'
+      +'계약 형태: '+(data.laborType||'일반')+'</div>'
+      +'<div class="clause"><div class="clause-title">제4조(근무시간)</div>'
+      +'근무시간: '+(data.hours||'09:00~18:00')+' / 휴게시간: '+(data.rest||'60분')+' / 주 5일(월~금)</div>'
+      +'<div class="clause"><div class="clause-title">제5조(임금)</div>'
+      +'월 급여: '+(data.salary?Number(data.salary).toLocaleString()+'원':'별도 협의')
+      +' / 지급일: '+(data.payday||'매월 25일')+'<br>'
+      +'4대보험 가입(국민연금·건강보험·고용보험·산재보험)</div>'
+      +'<div class="clause"><div class="clause-title">제6조(휴일·휴가)</div>'
+      +'주휴일(일요일), 법정 공휴일, 연차휴가는 근로기준법 기준 부여</div>';
+  }
+  if(data.special){
+    html+='<div class="clause"><div class="clause-title">특약사항</div>'
+      +data.special.replace(/\n/g,'<br>')+'</div>';
+  }
+  html+='</div>'
+    +'<div class="sign-area">'
+    +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(data.type==='labor'?'사용자(갑)':'위탁자(갑)')+'</div>'
+    +'<div style="font-size:12px;color:#666">'+data.companyName+'</div>'
+    +'<div class="sign-line"></div>'
+    +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+    +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(data.type==='labor'?'근로자(을)':'수탁자(을)')+'</div>'
+    +'<div style="font-size:12px;color:#666">'+data.driverName+'</div>'
+    +'<div class="sign-line"></div>'
+    +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+    +'</div>';
+  return html;
+}
+
+function _ctrSave(){
+  var data=_ctrCollect();
+  if(!data.driverName){toast('❌ 기사 성명을 입력하세요');return;}
+  if(!data.startDate){toast('❌ 계약 시작일을 입력하세요');return;}
+  if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
+  var typeLabel={wisu:'위수탁',qflex:'퀵플렉스',labor:'근로계약'}[data.type]||'계약';
+  data.title=data.driverName+' '+typeLabel+' ('+data.startDate+')';
+  _db.collection('contracts').add(Object.assign({},data,{
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  })).then(function(ref){
+    toast('✅ 계약서 저장 완료');
+    _ctrPreview();
+  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+}
+
+function _ctrRenderList(){
+  var body=document.getElementById('ctr-body');
+  body.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">⏳ 불러오는 중...</div>';
+  var cid=_CU&&(_CU.dealerId||_CU.companyId);
+  if(!_db||!cid){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">로그인 후 이용하세요</div>';return;}
+  _db.collection('contracts').where('dealerId','==',cid).orderBy('createdAt','desc').limit(30).get()
+  .then(function(snap){
+    if(snap.empty){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">저장된 계약서가 없습니다<br><br><button onclick="window._ctrTab=\'write\';_ctrRender();" style="padding:10px 20px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">계약서 작성하기</button></div>';return;}
+    var typeLabel={wisu:'위수탁',qflex:'퀵플렉스',labor:'근로계약'};
+    var typeColor={wisu:'#0066ff',qflex:'#f59e0b',labor:'#10b981'};
+    var html='';
+    snap.forEach(function(doc){
+      var d=doc.data();
+      var tl=typeLabel[d.type]||d.type||'계약';
+      var tc=typeColor[d.type]||'#6366f1';
+      var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):(d.createdAt||'').slice(0,10);
+      html+='<div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;background:var(--bg2)">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span style="background:'+tc+';color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">'+tl+'</span>'
+        +'<span style="font-size:14px;font-weight:700">'+esc(d.driverName||'—')+'</span>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'
+        +'</div>'
+        +'<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'
+        +(d.route?'📍 '+esc(d.route)+' &nbsp;':'')
+        +(d.startDate?'📅 '+d.startDate+' ~ '+d.endDate:'')
+        +'</div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button onclick="_ctrPrint('+JSON.stringify(JSON.stringify(d))+')" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨 인쇄·PDF</button>'
+        +'<button onclick="_db.collection(\'contracts\').doc(\''+doc.id+'\').delete().then(function(){_ctrRenderList();});" style="padding:8px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🗑</button>'
+        +'</div>'
+        +'</div>';
+    });
+    body.innerHTML=html;
+  }).catch(function(e){body.innerHTML='<div style="text-align:center;padding:20px;color:red">⚠️ '+e.message+'</div>';});
+}
+
+function _ctrPrint(jsonStr){
+  var data=typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr;
+  var w=window.open('','_blank','width=800,height=900');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+esc(data.title||'계약서')+'</title>'
+    +'<style>body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;padding:40px;font-size:13px;color:#111;line-height:1.8}'
+    +'h1{text-align:center;font-size:16px;margin-bottom:4px}h2{text-align:center;font-size:13px;font-weight:400;margin-bottom:30px}'
+    +'.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}'
+    +'.info-box{border:1px solid #ccc;border-radius:6px;padding:14px}'
+    +'.info-box b{display:block;margin-bottom:8px;font-size:12px;color:#555}'
+    +'.clause{margin-bottom:12px}.clause-title{font-weight:700;margin-bottom:4px}'
+    +'.sign-area{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px}'
+    +'.sign-box{border:1px solid #ccc;border-radius:6px;padding:20px;text-align:center}'
+    +'.sign-line{border-bottom:1px solid #999;margin:20px 0;height:1px}'
+    +'@media print{body{padding:20px}button{display:none}}</style>'
+    +'</head><body>');
+  w.document.write(_ctrGenHTML(data));
+  w.document.write('<div style="margin-top:30px;text-align:center"><button onclick="window.print()" style="padding:12px 30px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄 / PDF 저장</button></div>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
+
+function uploadContractClick(){document.getElementById('contract-file-input')&&document.getElementById('contract-file-input').click();}
 function uploadContract(input){
   var file=input.files[0];
   if(!file)return;
