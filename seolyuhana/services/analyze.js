@@ -35,7 +35,7 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
 
   const apiKey = env.GOOGLE_AI_API_KEY || '';
   // 503(과부하) 시 폴백 순서로 재시도
-  const MODELS = ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+  const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-latest'];
   let res, lastErr;
   for (const model of MODELS) {
     try {
@@ -143,7 +143,7 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
   }
 
   const messages = [
-    { role: 'system', content: system + '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.' },
+    { role: 'system', content: system + '\n\n[필수 원칙] 반드시 업로드된 문서에 실제로 존재하는 내용만 근거로 분석하라. 문서에서 확인할 수 없는 항목은 "문서에서 확인 불가"로 명시하라.\n\n[출력 형식 필수] 반드시 유효한 JSON 객체만 출력하라. 마크다운 코드블록 없이 { 로 시작하고 } 로 끝나는 JSON만 출력하라. JSON 외 어떤 텍스트도 출력 금지.' },
     { role: 'user', content: userText.trim() }
   ];
 
@@ -229,10 +229,12 @@ async function callClaude({ model: _model, system, userBlocks, env, maxTokens = 
 
   let res, claudeErr;
   for (const model of CLAUDE_MODELS) {
+    // claude-3-haiku-20240307은 최대 4096 토큰만 지원
+    const modelMaxTokens = model === 'claude-3-haiku-20240307' ? Math.min(maxTokens, 4096) : maxTokens;
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: baseHeaders,
-      body: JSON.stringify({ model, max_tokens: maxTokens, system: systemWithGuard, messages: [{ role: 'user', content: userBlocks }] }),
+      body: JSON.stringify({ model, max_tokens: modelMaxTokens, system: systemWithGuard, messages: [{ role: 'user', content: userBlocks }] }),
       signal: AbortSignal.timeout(90000)
     });
     if (res.ok) break;
@@ -902,7 +904,7 @@ function _bufToB64(buffer) {
 }
 
 export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraContext = {}, env }) {
-  if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not configured');
+  if (!env.ANTHROPIC_API_KEY) throw new Error('Claude API 키가 설정되지 않았습니다. 스캔 PDF 분석에는 Claude Vision이 필요합니다.');
 
   const analysisPrompt = getScannedPrompt(serviceId, extraContext);
   let content;
@@ -939,10 +941,12 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   const SCAN_MODELS = ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
   let res, lastScanErr;
   for (const model of SCAN_MODELS) {
+    // claude-3-haiku-20240307은 최대 4096 토큰만 지원
+    const modelMaxTokens = model === 'claude-3-haiku-20240307' ? 4000 : 4000;
     res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: reqHeaders,
-      body: JSON.stringify({ model, max_tokens: 4000, messages: [{ role: 'user', content }] }),
+      body: JSON.stringify({ model, max_tokens: modelMaxTokens, messages: [{ role: 'user', content }] }),
       signal: AbortSignal.timeout(90000)
     });
     if (res.ok) break;
