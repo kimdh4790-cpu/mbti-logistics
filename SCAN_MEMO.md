@@ -66,6 +66,21 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-14)
+
+### AI 분석 실패 버그 3건 수정 — 커밋 f4ec8cfd
+- **증상**: "분석이 안됨" 반복 보고
+- **원인 1**: Gemini 폴백 모델명 3개가 모두 존재하지 않는 이름
+  - `gemini-3.5-flash`, `gemini-3.1-flash-lite`, `gemini-flash-latest` → 404 오류
+  - 수정: `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-flash-latest`
+- **원인 2**: `callClaude` 내 `claude-3-haiku-20240307` 모델에 `maxTokens=5500` 전달 → 400 오류
+  - 해당 모델 최대 4096 토큰 — 400 발생 시 loop break → Gemini 폴백(이미 오류) → Workers AI
+  - 수정: `model === 'claude-3-haiku-20240307'` 일 때 `Math.min(maxTokens, 4096)` 캡 적용
+- **원인 3**: Workers AI 폴백에서 Llama가 JSON이 아닌 마크다운/텍스트 혼합 출력
+  - 수정: 시스템 프롬프트에 "JSON 객체만 출력, 마크다운 없이" 명시 추가
+
+---
+
 ## 장애 이력 및 해결 (2026-09-12~13)
 
 ### Claude API 연결 오류 — 완전 해결
