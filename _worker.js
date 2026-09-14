@@ -9060,7 +9060,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           // 6. 완료 처리
           const outputDocx = makeOutputFilename(filename, 'docx');
           const outputPdf  = makeOutputFilename(filename, 'pdf');
-          const _sumRaw = analysisData.overallComment || analysisData.riskSummary || '분석이 완료되었습니다.';
+          const _sumRaw = analysisData.overallComment || analysisData.riskSummary || analysisData.summary || '분석이 완료되었습니다.';
           const summary = typeof _sumRaw === 'string' ? _sumRaw : (Array.isArray(_sumRaw) ? _sumRaw.join(' ') : String(_sumRaw || '분석이 완료되었습니다.'));
           // Firestore 완료 업데이트 (실패해도 KV result로 result 엔드포인트 복원)
           await fsPatch(_writeToken, `${FS_BASE}/sly_jobs/${jobId}`, {

@@ -989,7 +989,8 @@ function getScannedPrompt(serviceId, ctx) {
     rental_contract:     '이 스캔된 전월세 계약서를 읽고 JSON으로 분석하세요. ' + CONTRACT_SYSTEM,
     resume_analysis:     '이 스캔된 이력서를 읽고 JSON으로 분석하세요. ' + RESUME_SYSTEM,
     cover_letter_analysis: '이 스캔된 자기소개서를 읽고 JSON으로 분석하세요. ' + COVER_LETTER_SYSTEM,
-    registry_analysis:   '이 스캔된 등기부등본을 읽고 전세사기 위험 분석을 포함하여 JSON으로 분석하세요. ' + REGISTRY_SYSTEM
+    registry_analysis:   '이 스캔된 등기부등본을 읽고 전세사기 위험 분석을 포함하여 JSON으로 분석하세요. ' + REGISTRY_SYSTEM,
+    auction_analysis:    '이 대법원 경매 물건 문서를 읽고 입찰가·권리관계·수익률을 분석하세요. ' + AUCTION_SYSTEM
   };
   return prompts[serviceId] || '이 문서를 읽고 내용을 JSON으로 정리하세요.';
 }
