@@ -175,7 +175,12 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
   if (!res || !res.ok) throw lastErr || new Error('Workers AI 인증 실패');
 
   const data = await res.json();
-  const rawText = (data.result?.response || '').trim();
+  // Llama 모델이 response를 string 외 다른 타입(배열, 객체)으로 반환하는 케이스 대응
+  const rawResp = data.result?.response ?? data.response ?? '';
+  const rawText = (typeof rawResp === 'string' ? rawResp :
+                   Array.isArray(rawResp) ? rawResp.join('') :
+                   typeof rawResp === 'object' && rawResp !== null ? (rawResp.text || rawResp.content || JSON.stringify(rawResp)) :
+                   String(rawResp ?? '')).trim();
 
   let parsed = null;
   if (rawText.startsWith('{')) {
