@@ -1151,6 +1151,118 @@ export default {
       if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
         return serveKVFile(env, 'settle.html', 'text/html');
       }
+      // /contract/sign/{token} → 기사 전자서명 페이지 (GET) / 서명 저장 (POST)
+      if (path.startsWith('/contract/sign/') && path.length > 15) {
+        const _cToken = path.slice(15).split('/')[0];
+        const _cFsToken = await getAccessToken(env);
+        if (method === 'GET') {
+          // 계약서 signToken으로 조회
+          const _cQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_cToken}}},limit:1}});
+          const _cRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_cFsToken,'Content-Type':'application/json'},body:_cQ});
+          const _cData = await _cRes.json();
+          const _cDoc = _cData?.[0]?.document;
+          if (!_cDoc) return new Response('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>오류</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#64748b">계약서를 찾을 수 없습니다.</h2><p style="color:#94a3b8">링크가 만료되었거나 잘못된 접근입니다.</p></body></html>',{status:404,headers:{'Content-Type':'text/html; charset=utf-8'}});
+          const _cf = _cDoc.fields || {};
+          const _cg = k => _cf[k]?.stringValue || '';
+          const _cStatus = _cg('status');
+          if (_cStatus === 'signed') {
+            return new Response('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>서명완료</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#10b981">✓ 이미 서명이 완료되었습니다.</h2><p style="color:#94a3b8;margin-top:8px">'+_cg('driverName')+'님의 서명이 완료되었습니다.</p></body></html>',{status:200,headers:{'Content-Type':'text/html; charset=utf-8'}});
+          }
+          const driverName = _cg('driverName');
+          const contractTitle = _cg('title') || '계약서';
+          const typeMap = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
+          const typeName = typeMap[_cg('type')] || contractTitle;
+          const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>계약서 서명</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Pretendard","Apple SD Gothic Neo",sans-serif;background:#f8fafc;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+h1{font-size:16px;font-weight:800;color:#08101f;margin-bottom:4px}
+.sub{font-size:12px;color:#64748b;margin-bottom:16px}
+canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;background:#fff;display:block;touch-action:none}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
+.btn-clear{background:#f1f5f9;color:#64748b}
+.btn-submit{background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff}
+.btn-submit:disabled{background:#94a3b8;cursor:not-allowed}
+.notice{font-size:11px;color:#94a3b8;text-align:center;margin-top:12px;line-height:1.6}
+</style></head>
+<body>
+<div class="card">
+<h1>✍️ 전자서명 요청</h1>
+<div class="sub">${typeName}</div>
+<div style="font-size:13px;color:#334155;margin-bottom:16px"><b>${driverName}</b>님, 아래 서명란에 서명해 주세요.</div>
+<canvas id="sig-pad"></canvas>
+<button class="btn btn-clear" onclick="pad.clear()">지우기</button>
+<button class="btn btn-submit" id="submit-btn" onclick="submitSign()">서명 완료 및 제출</button>
+<p class="notice">서명 후 제출하면 전자적 동의 효력이 발생합니다.<br>계약 내용에 동의하는 경우에만 서명해 주세요.</p>
+</div>
+<script>
+var pad;
+window.onload=function(){
+  var canvas=document.getElementById('sig-pad');
+  var ratio=Math.max(window.devicePixelRatio||1,1);
+  canvas.width=canvas.offsetWidth*ratio;
+  canvas.height=canvas.offsetHeight*ratio;
+  canvas.getContext('2d').scale(ratio,ratio);
+  pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
+};
+async function submitSign(){
+  if(!pad||pad.isEmpty()){alert('서명을 해주세요.');return;}
+  var btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='제출 중...';
+  var sig=pad.toDataURL('image/png');
+  try{
+    var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig})});
+    var data=await res.json();
+    if(data.ok){document.body.innerHTML='<div style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#10b981;margin-bottom:12px">✓ 서명이 완료되었습니다!</h2><p style="color:#64748b">감사합니다, '+${JSON.stringify(driverName)}+'님.<br>계약서가 정상적으로 접수되었습니다.</p></div>';}
+    else{alert('오류: '+(data.error||'서명 저장 실패'));btn.disabled=false;btn.textContent='서명 완료 및 제출';}
+  }catch(e){alert('네트워크 오류: '+e.message);btn.disabled=false;btn.textContent='서명 완료 및 제출';}
+}
+</script></body></html>`;
+          return new Response(signPage, {headers:{'Content-Type':'text/html; charset=utf-8'}});
+        }
+      }
+
+      // /api/contract/sign-driver → 기사 서명 저장 (POST, 비로그인 공개)
+      if (path === '/api/contract/sign-driver' && method === 'POST') {
+        try {
+          const body = await request.json();
+          const { signToken, driverSig } = body;
+          if (!signToken || !driverSig) return new Response(JSON.stringify({ok:false,error:'필수값 누락'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _dsFs = await getAccessToken(env);
+          // signToken으로 계약서 문서 ID 조회
+          const _dsQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:signToken}}},limit:1}});
+          const _dsQRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:_dsQ});
+          const _dsQData = await _dsQRes.json();
+          const _dsDoc = _dsQData?.[0]?.document;
+          if (!_dsDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _dsDocName = _dsDoc.name;
+          const _dsF = _dsDoc.fields || {};
+          const dealerId = _dsF.dealerId?.stringValue || '';
+          const driverName = _dsF.driverName?.stringValue || '';
+          const now = new Date().toISOString();
+          // 서명 저장
+          await fetch(`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'}}})});
+          // 관리자에게 FCM 푸시 (admin_tokens/{dealerId} 조회)
+          if (dealerId) {
+            try {
+              const _tkRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/admin_tokens/${dealerId}`,{headers:{Authorization:'Bearer '+_dsFs}});
+              if (_tkRes.ok) {
+                const _tkData = await _tkRes.json();
+                const _tkF = _tkData.fields || {};
+                const _fcmTk = _tkF.token?.stringValue || _tkF.fcmToken?.stringValue || '';
+                if (_fcmTk) await _sendFCMv1(env, _fcmTk, '✍️ 계약서 서명 완료', driverName+'님이 계약서에 서명했습니다. 보관함에서 확인하세요.', {url:'https://donway.ai.kr/settle'}).catch(()=>{});
+              }
+            } catch(_fe){}
+          }
+          return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       // /s/{token} → 배달대행 정산명세서 (알림톡 공유 링크)
       if (path.startsWith('/s/') && path.length > 3) {
         const _sToken = path.slice(3).split('/')[0];

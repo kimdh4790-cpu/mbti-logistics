@@ -139,6 +139,7 @@ tr:hover>td{background:var(--bg3)}
 </script>
 <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
 <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" integrity="sha384-TiCUE00h649CAMonG018J2ujOgDKW/kVWlChEuu4jK2vxfAAD0eZxzCKakxg55G4" crossorigin="anonymous"></script>
 <script>
 // 카카오 SDK 초기화 — 서버에서 앱키 안전하게 로드
@@ -7849,13 +7850,28 @@ function _ctrRenderWrite(){
     +'</div>'
     +'</div>'
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">✍️ 대리점 서명 <span style="font-size:11px;font-weight:400;color:var(--text3)">(저장 전 서명하세요)</span></div>'
+    +'<canvas id="ctr-admin-sig" style="border:1px solid var(--border);border-radius:8px;width:100%;height:130px;background:#fff;touch-action:none;display:block"></canvas>'
+    +'<button onclick="window._adminSigPad&&window._adminSigPad.clear()" style="margin-top:6px;padding:6px 14px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
+    +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button onclick="_ctrPreview()" style="flex:1;padding:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">👁 미리보기</button>'
-    +'<button onclick="_ctrSave()" style="flex:2;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 저장 + 인쇄</button>'
+    +'<button onclick="_ctrSave()" style="flex:2;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 저장 + 서명요청</button>'
     +'</div>';
 
   _ctrLoadDrivers();
   _ctrRenderConditions(t);
+  setTimeout(function(){
+    var canvas=document.getElementById('ctr-admin-sig');
+    if(!canvas||!window.SignaturePad)return;
+    window._adminSigPad=null;
+    var ratio=Math.max(window.devicePixelRatio||1,1);
+    canvas.width=canvas.offsetWidth*ratio;
+    canvas.height=canvas.offsetHeight*ratio;
+    canvas.getContext('2d').scale(ratio,ratio);
+    window._adminSigPad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
+  },200);
 }
 
 function _ctrSelectType(t){
@@ -8094,14 +8110,18 @@ function _ctrGenHTML(data){
       +'<div style="font-size:12px;margin-bottom:4px">상호: '+companyName+'</div>'
       +'<div style="font-size:12px;margin-bottom:4px">사업자번호: '+companyBiz+'</div>'
       +'<div style="font-size:12px">대표자: '+companyCeo+'</div>'
-      +'<div class="sign-line"></div>'
-      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +(data.adminSig
+        ?'<img src="'+data.adminSig+'" style="max-height:70px;max-width:100%;margin:8px auto;display:block">'
+        :'<div class="sign-line"></div><div style="font-size:11px;color:#999">(서명 또는 날인)</div>')
+      +'</div>'
       +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
       +'<div style="font-size:12px;margin-bottom:4px">사업자번호: '+(data.driverBiz||'　　　　　　　　')+'</div>'
       +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
-      +'<div class="sign-line"></div>'
-      +'<div style="font-size:11px;color:#999">(서명 또는 날인)</div></div>'
+      +(data.driverSig
+        ?'<img src="'+data.driverSig+'" style="max-height:70px;max-width:100%;margin:8px auto;display:block">'
+        :'<div class="sign-line"></div><div style="font-size:11px;color:#999">(서명 또는 날인)</div>')
+      +'</div>'
       +'</div>'
       +'<div style="margin-top:30px;padding-top:20px;border-top:1px dashed #999">'
       +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">[별지] 개인정보 수집·이용 동의서</div>'
@@ -8205,19 +8225,41 @@ function _ctrGenHTML(data){
   return html;
 }
 
-function _ctrSave(){
+async function _ctrSave(){
   var data=_ctrCollect();
   if(!data.driverName){toast('❌ 기사 성명을 입력하세요');return;}
   if(!data.startDate){toast('❌ 계약 시작일을 입력하세요');return;}
   if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
-  var typeLabel={wisu:'위수탁',qflex:'퀵플렉스',labor:'근로계약'}[data.type]||'계약';
+  var adminSig='';
+  if(window._adminSigPad&&!window._adminSigPad.isEmpty()){
+    adminSig=window._adminSigPad.toDataURL('image/png');
+  }
+  var typeLabel={wisu:'위수탁',subok:'부속합의서',qflex:'퀵플렉스',labor:'근로계약'}[data.type]||'계약';
   data.title=data.driverName+' '+typeLabel+' ('+data.startDate+')';
-  _db.collection('contracts').add(Object.assign({},data,{
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
-  })).then(function(ref){
-    toast('✅ 계약서 저장 완료');
+  var signToken=_db.collection('contract_signs').doc().id;
+  var dealerId=_CU.dealerId||_CU.uid;
+  try{
+    var ref=await _db.collection('contracts').add(Object.assign({},data,{
+      dealerId:dealerId,adminSig:adminSig,signToken:signToken,
+      status:adminSig?'pending_driver':'draft',
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }));
+    toast('✅ 저장 완료');
+    window._adminSigPad=null;
+    // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송
+    if(adminSig&&data.driverPhone){
+      var signUrl='https://donway.ai.kr/contract/sign/'+signToken;
+      var smsText='[엠비티아이] '+data.driverName+'님 계약서 서명을 요청드립니다.\n확인 및 서명: '+signUrl;
+      var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e2){}
+      fetch('/api/send-sms',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
+        body:JSON.stringify({to:data.driverPhone.replace(/[^0-9]/g,''),text:smsText})
+      }).then(function(){toast('📲 서명 요청 SMS 발송 완료');}).catch(function(){});
+    } else if(adminSig&&!data.driverPhone){
+      toast('⚠️ 기사 전화번호 없음 — 보관함에서 서명요청 재발송 가능');
+    }
     _ctrPreview();
-  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+  }catch(e){toast('❌ 저장 실패: '+e.message);}
 }
 
 function _ctrRenderList(){
@@ -8228,19 +8270,22 @@ function _ctrRenderList(){
   _db.collection('contracts').where('dealerId','==',cid).orderBy('createdAt','desc').limit(30).get()
   .then(function(snap){
     if(snap.empty){body.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3)">저장된 계약서가 없습니다<br><br><button onclick="window._ctrTab=\'write\';_ctrRender();" style="padding:10px 20px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer">계약서 작성하기</button></div>';return;}
-    var typeLabel={wisu:'위수탁',qflex:'퀵플렉스',labor:'근로계약'};
-    var typeColor={wisu:'#0066ff',qflex:'#f59e0b',labor:'#10b981'};
+    var typeLabel={wisu:'위수탁',subok:'부속합의서',qflex:'퀵플렉스',labor:'근로계약'};
+    var typeColor={wisu:'#0066ff',subok:'#7c3aed',qflex:'#f59e0b',labor:'#10b981'};
+    var statusBadge={draft:'<span style="background:#94a3b8;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">서명없음</span>',pending_driver:'<span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">기사서명대기</span>',signed:'<span style="background:#10b981;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">✓ 서명완료</span>'};
     var html='';
     snap.forEach(function(doc){
       var d=doc.data();
       var tl=typeLabel[d.type]||d.type||'계약';
       var tc=typeColor[d.type]||'#6366f1';
+      var sb=statusBadge[d.status]||'';
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):(d.createdAt||'').slice(0,10);
       html+='<div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;background:var(--bg2)">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
         +'<span style="background:'+tc+';color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">'+tl+'</span>'
         +'<span style="font-size:14px;font-weight:700">'+esc(d.driverName||'—')+'</span>'
+        +sb
         +'</div>'
         +'<div style="font-size:11px;color:var(--text3)">'+date+'</div>'
         +'</div>'
@@ -8248,14 +8293,28 @@ function _ctrRenderList(){
         +(d.route?'📍 '+esc(d.route)+' &nbsp;':'')
         +(d.startDate?'📅 '+d.startDate+' ~ '+d.endDate:'')
         +'</div>'
-        +'<div style="display:flex;gap:6px">'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
         +'<button onclick="_ctrPrint('+JSON.stringify(JSON.stringify(d))+')" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨 인쇄·PDF</button>'
+        +(d.status==='pending_driver'&&d.signToken&&d.driverPhone
+          ?'<button onclick="_ctrResendSign(\''+doc.id+'\',\''+esc(d.driverPhone||'')+'\',\''+d.signToken+'\',\''+esc(d.driverName||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📲 재발송</button>':'')
         +'<button onclick="_db.collection(\'contracts\').doc(\''+doc.id+'\').delete().then(function(){_ctrRenderList();});" style="padding:8px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🗑</button>'
         +'</div>'
         +'</div>';
     });
     body.innerHTML=html;
   }).catch(function(e){body.innerHTML='<div style="text-align:center;padding:20px;color:red">⚠️ '+e.message+'</div>';});
+}
+
+async function _ctrResendSign(docId,phone,token,name,btn){
+  if(btn){btn.disabled=true;btn.textContent='발송중...';}
+  var signUrl='https://donway.ai.kr/contract/sign/'+token;
+  var smsText='[엠비티아이] '+name+'님 계약서 서명을 요청드립니다.\n확인 및 서명: '+signUrl;
+  var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e2){}
+  fetch('/api/send-sms',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
+    body:JSON.stringify({to:phone.replace(/[^0-9]/g,''),text:smsText})
+  }).then(function(){toast('📲 서명요청 SMS 재발송 완료');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}})
+  .catch(function(){toast('❌ 발송 실패');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}});
 }
 
 function _ctrPrint(jsonStr){
