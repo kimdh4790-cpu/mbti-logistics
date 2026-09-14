@@ -1242,9 +1242,20 @@ async function submitSign(){
           const _dsF = _dsDoc.fields || {};
           const dealerId = _dsF.dealerId?.stringValue || '';
           const driverName = _dsF.driverName?.stringValue || '';
+          const driverPhone = _dsF.driverPhone?.stringValue || '';
+          const contractType = _dsF.type?.stringValue || 'wisu';
+          const typeLabel = {wisu:'위수탁',subok:'부속합의서',qflex:'퀵플렉스',labor:'근로계약'}[contractType]||'계약';
           const now = new Date().toISOString();
-          // 서명 저장
-          await fetch(`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'}}})});
+          const signIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
+          const signUa = request.headers.get('User-Agent') || '';
+          // 서명 저장 + 메타데이터
+          await fetch(`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa}}})});
+          // 기사에게 서명 완료 SMS 발송 (법적 인지 증거)
+          if (driverPhone) {
+            const nowKst = new Date(Date.now()+9*3600000).toISOString().slice(0,16).replace('T',' ');
+            const smsText = `[엠비티아이] ${driverName}님의 ${typeLabel} 전자서명이 완료되었습니다.\n서명일시: ${nowKst}\n문의: 010-0000-0000`;
+            fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:driverPhone.replace(/[^0-9]/g,''),text:smsText})}).catch(()=>{});
+          }
           // 관리자에게 FCM 푸시 (admin_tokens/{dealerId} 조회)
           if (dealerId) {
             try {

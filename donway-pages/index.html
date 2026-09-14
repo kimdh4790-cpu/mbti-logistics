@@ -8296,7 +8296,9 @@ async function _ctrSave(){
     var ref=await _db.collection('contracts').add(Object.assign({},data,{
       dealerId:dealerId,adminSig:adminSig,signToken:signToken,
       status:adminSig?'pending_driver':'draft',
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      adminSignedAt:adminSig?new Date().toISOString():'',
+      adminUid:_CU.uid||''
     }));
     toast('✅ 저장 완료');
     window._adminSigPad=null;
