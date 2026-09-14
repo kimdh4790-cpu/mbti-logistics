@@ -8146,7 +8146,9 @@ function _ctrGenHTML(data){
       +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 수집‧이용하는데 동의합니다. (동의함 <input type="checkbox"> &nbsp;동의하지 않음 <input type="checkbox">)</div>'
       +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 수집‧이용하는데 동의합니다. (동의함 <input type="checkbox"> &nbsp;동의하지 않음 <input type="checkbox">)</div>'
       +'<div style="font-size:11px;margin-top:12px">'+yr+'년 　　월 　　일</div>'
-      +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : 　　　　　　　<br>(주민등록번호) : 　　　　　　　<br>성 명 : 　　　　　　　　　　 (서명)<br>쿠팡로지스틱스 대리점<br>엠비티아이(유) 대표 귀하</div>'
+      +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : 　　　　　　　<br>(주민등록번호) : 　　　　　　　<br>성 명 : '+(data.driverName||'　　　　　　　　　')
+      +(data.driverSig?'<br><img src="'+data.driverSig+'" style="max-height:40px;max-width:160px;margin:2px 0;display:block">':' (서명)')
+      +'<br>쿠팡로지스틱스 대리점<br>엠비티아이(유) 대표 귀하</div>'
       +'</div>'
       +'<div style="margin-top:24px;padding-top:20px;border-top:1px dashed #ccc">'
       +'<div style="font-size:14px;font-weight:700;margin-bottom:12px;text-align:center">개인정보 제3자 제공 동의서</div>'
@@ -8165,7 +8167,9 @@ function _ctrGenHTML(data){
       +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 제3자에게 제공하는데 동의합니다. (동의함 <input type="checkbox"> &nbsp;동의하지 않음 <input type="checkbox">)</div>'
       +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 제3자에게 제공하는데 동의합니다. (동의함 <input type="checkbox"> &nbsp;동의하지 않음 <input type="checkbox">)</div>'
       +'<div style="font-size:11px;margin-top:12px">'+yr+'년 　　월 　　일</div>'
-      +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : 　　　　　　　<br>(주민등록번호) : 　　　　　　　<br>성 명 : 　　　　　　　　　　 (서명)<br>쿠팡로지스틱스 대리점<br>엠비티아이(유) 대표 귀하</div>'
+      +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : 　　　　　　　<br>(주민등록번호) : 　　　　　　　<br>성 명 : '+(data.driverName||'　　　　　　　　　')
+      +(data.driverSig?'<br><img src="'+data.driverSig+'" style="max-height:40px;max-width:160px;margin:2px 0;display:block">':' (서명)')
+      +'<br>쿠팡로지스틱스 대리점<br>엠비티아이(유) 대표 귀하</div>'
       +'</div>';
     return html;
   }
@@ -8224,7 +8228,9 @@ function _ctrGenHTML(data){
       +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
       +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
-      +'<div class="sign-line"></div>'
+      +(data.driverSig
+        ?'<img src="'+data.driverSig+'" style="max-height:70px;max-width:100%;margin:8px auto;display:block">'
+        :'<div class="sign-line"></div>')
       +'<div style="font-size:11px;color:#999">(인)</div></div>'
       +'</div>';
     return html;
