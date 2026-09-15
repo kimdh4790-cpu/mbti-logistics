@@ -23869,6 +23869,58 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
     });
   }
 
+  // DONWAY 카카오 OAuth → Firebase Custom Token
+  if (path === '/api/kakao-auth' && method === 'OPTIONS') {
+    return new Response(null, { headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    }});
+  }
+  if (path === '/api/kakao-auth' && method === 'POST') {
+    try {
+      const body = await request.json();
+      const { accessToken } = body;
+      if (!accessToken) throw new Error('accessToken required');
+      if (!env.FIREBASE_SA_KEY) throw new Error('FIREBASE_SA_KEY not configured');
+
+      const kakaoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (!kakaoRes.ok) throw new Error('Kakao API error: ' + kakaoRes.status);
+      const kakaoUser = await kakaoRes.json();
+      if (!kakaoUser.id) throw new Error('Invalid Kakao response');
+
+      const kakaoId = String(kakaoUser.id);
+      const kakaoEmail = (kakaoUser.kakao_account && kakaoUser.kakao_account.email) || null;
+      const kakaoName = (kakaoUser.properties && kakaoUser.properties.nickname) ||
+        (kakaoUser.kakao_account && kakaoUser.kakao_account.profile && kakaoUser.kakao_account.profile.nickname) || null;
+
+      const sa = JSON.parse(env.FIREBASE_SA_KEY);
+      const now = Math.floor(Date.now() / 1000);
+      const uid = 'kakao:' + kakaoId;
+      const hdr = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+      const pay = b64url(JSON.stringify({
+        iss: sa.client_email, sub: sa.client_email,
+        aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+        iat: now, exp: now + 3600, uid,
+        claims: { kakaoId }
+      }));
+      const key = await importPrivateKey(sa.private_key);
+      const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(`${hdr}.${pay}`));
+      const firebaseToken = `${hdr}.${pay}.${b64urlBuf(sig)}`;
+
+      return new Response(JSON.stringify({ firebaseToken, kakaoId, kakaoEmail, kakaoName }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    } catch(e) {
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      });
+    }
+  }
+
   // 카카오 OAuth → Firebase Custom Token
   if (path === '/api/yongcha/kakao-auth' && method === 'OPTIONS') {
     return new Response(null, { headers: {
