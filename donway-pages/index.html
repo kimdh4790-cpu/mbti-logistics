@@ -7908,7 +7908,7 @@ function _ctrRenderWrite(){
     +'<input type="file" id="ctr-stamp-file" accept="image/*" onchange="_ctrStampUpload(this)" style="display:none">'
     +'<div id="ctr-stamp-preview" style="margin-bottom:6px"><span style="font-size:28px">📂</span><br>도장 이미지 업로드</div>'
     +'</label>'
-    +'<button onclick="document.getElementById(\'ctr-stamp-file\').value=\'\';document.getElementById(\'ctr-stamp-preview\').innerHTML=\'<span style=\\\"font-size:28px\\\">📂</span><br>도장 이미지 업로드\';window._adminStampImg=null" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
+    +'<button onclick="_ctrStampClear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
     +'</div>'
     +'</div>'
     +'<div style="display:flex;gap:8px">'
@@ -8103,6 +8103,13 @@ function _ctrStampUpload(inp){
     document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+e.target.result+'" style="max-height:80px;border-radius:4px">';
   };
   reader.readAsDataURL(file);
+}
+function _ctrStampClear(){
+  var fi=document.getElementById('ctr-stamp-file');
+  if(fi)fi.value='';
+  var pr=document.getElementById('ctr-stamp-preview');
+  if(pr)pr.innerHTML='<span style="font-size:28px">📂</span><br>도장 이미지 업로드';
+  window._adminStampImg=null;
 }
 function _ctrPreview(){
   var data=_ctrCollect();
