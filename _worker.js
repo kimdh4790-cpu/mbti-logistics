@@ -1284,8 +1284,26 @@ ${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td col
 <div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
 <div class="sign-box"><h4>수탁자 (을) ${dName}</h4>${driverSig?`<img src="${driverSig}" alt="기사서명">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
 </div>
-<button class="print-btn" onclick="window.print()">🖨 계약서 인쇄 / PDF 저장</button>
-</div></body></html>`;
+<div id="kakao-notice" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.6">
+📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>
+우측 상단 <b>···</b> 메뉴 → <b>외부 브라우저로 열기</b>를 탭한 후 인쇄해 주세요.
+</div>
+<button class="print-btn" onclick="tryPrint()">🖨 계약서 인쇄 / PDF 저장</button>
+</div>
+<script>
+(function(){
+  var ua=navigator.userAgent;
+  if(/KAKAOTALK/i.test(ua)){document.getElementById('kakao-notice').style.display='block';}
+})();
+function tryPrint(){
+  if(/KAKAOTALK/i.test(navigator.userAgent)){
+    alert('카카오톡 브라우저에서는 인쇄가 지원되지 않습니다.\n우측 상단 ··· → 외부 브라우저로 열기를 선택해 주세요.');
+    return;
+  }
+  window.print();
+}
+</script>
+</body></html>`;
             return new Response(signedHtml, {status:200, headers:{'Content-Type':'text/html; charset=utf-8'}});
           }
           const driverName = _cg('driverName');
