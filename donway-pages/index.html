@@ -17322,7 +17322,7 @@ function pageHome(){
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">';
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📊','정산하기','settle','#0066ff');
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('👤','기사 관리','drivers','#0891b2');
-    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📋','위수탁 계약서','contract','#059669');
+    if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📋','전자계약서','contract','#059669');
     if(hasSvc('settle')||isSA) html += _homeQuickBtn2('📅','달력','schedule','#7c3aed');
     html += '</div>';
 
@@ -21026,7 +21026,7 @@ var MENUS_DELIVERY = [
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'}
+    {ic:'📝',l:'전자계약서',    p:'contract',         plan_key:'settle'}
   ]},
 ];
 
@@ -21038,7 +21038,7 @@ var MENUS_SETTLE = [
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'settle'},
-    {ic:'📝',l:'전자계약서 작성',   p:'ext_contract',     plan_key:'free'},
+    {ic:'📝',l:'전자계약서',        p:'ext_contract',     plan_key:'free'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'any_paid'},
   ]},
   {s:'🛵 배달대행 정산', items:[
@@ -21066,7 +21066,7 @@ var MENUS_UNIVERSAL = [
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'기사·직원 관리',   p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'universal'},
+    {ic:'📝',l:'전자계약서',    p:'contract',         plan_key:'universal'},
   ]},
   {s:'🚚 원스톱 물류', items:[
     {ic:'🖨',l:'라벨 출력',        p:'ext_label',        plan_key:'universal'},
@@ -21086,7 +21086,7 @@ var MENUS_QR_PAYROLL = [
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',p:'drivers',plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',p:'contract',plan_key:'settle'},
+    {ic:'📝',l:'전자계약서',p:'contract',plan_key:'settle'},
     {ic:'📅',l:'달력',p:'schedule',plan_key:'free'}
   ]},
 ];
@@ -21096,7 +21096,7 @@ var MENUS_QR = [
   ]},
   {s:'👤 직원 관리', items:[
     {ic:'👤',l:'직원 관리',        p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
+    {ic:'📝',l:'전자계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     
   ]},
@@ -21121,7 +21121,7 @@ var MENUS_FULL = [
     {ic:'📊',l:'정산 현황',        p:'settle',           plan_key:'settle'},
     {ic:'📋',l:'정산 관리',        p:'settlements',      plan_key:'settle'},
     {ic:'👤',l:'기사 관리',        p:'drivers',          plan_key:'free'},
-    {ic:'📝',l:'위수탁 계약서',    p:'contract',         plan_key:'settle'},
+    {ic:'📝',l:'전자계약서',    p:'contract',         plan_key:'settle'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
     
   ]},
