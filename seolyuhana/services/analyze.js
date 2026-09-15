@@ -10,6 +10,17 @@ import {
   buildBizPlanEnrichment
 } from './enrich.js';
 
+// AbortSignal.timeout()은 CF Workers에서 불안정 → AbortController + setTimeout 사용
+function _timeoutSignal(ms) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(new DOMException('timeout', 'TimeoutError')), ms);
+  return { signal: ac.signal, clear: () => clearTimeout(t) };
+}
+async function _fetchWithTimeout(url, opts, ms = 90000) {
+  const { signal, clear } = _timeoutSignal(ms);
+  try { return await fetch(url, { ...opts, signal }); } finally { clear(); }
+}
+
 // ────────────────────────────────────────────────────────────
 // Gemini API 호출 헬퍼 (1차 — 무료 tier 사용)
 // ────────────────────────────────────────────────────────────
@@ -45,14 +56,9 @@ async function callGemini({ system, userBlocks, env, maxTokens = 4096 }) {
   let res, lastErr;
   for (const { model, ver } of MODEL_ROUTES) {
     try {
-      res = await fetch(
+      res = await _fetchWithTimeout(
         `https://generativelanguage.googleapis.com/${ver}/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(90000)
-        }
+        { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
       );
       if (res.status === 503) {
         lastErr = new Error(`Gemini API 503 (${model}/${ver}): 과부하`);
@@ -165,11 +171,10 @@ async function callWorkersAI({ system, userBlocks, env, maxTokens = 4096 }) {
 
   let res, lastErr;
   for (const authHeaders of authAttempts) {
-    res = await fetch(url, {
+    res = await _fetchWithTimeout(url, {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body,
-      signal: AbortSignal.timeout(90000)
+      body
     });
     if (res.ok) break;
     const err = await res.json().catch(() => ({}));
@@ -244,11 +249,10 @@ async function callClaude({ model: callerModel, system, userBlocks, env, maxToke
   let res, claudeErr;
   for (const model of CLAUDE_MODELS) {
     const modelMaxTokens = maxTokens;
-    res = await fetch('https://api.anthropic.com/v1/messages', {
+    res = await _fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: baseHeaders,
-      body: JSON.stringify({ model, max_tokens: modelMaxTokens, system: systemWithGuard, messages: [{ role: 'user', content: userBlocks }] }),
-      signal: AbortSignal.timeout(90000)
+      body: JSON.stringify({ model, max_tokens: modelMaxTokens, system: systemWithGuard, messages: [{ role: 'user', content: userBlocks }] })
     });
     if (res.ok) break;
     const errBody = await res.json().catch(() => ({}));
@@ -966,11 +970,10 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   let res, lastScanErr;
   for (const model of SCAN_MODELS) {
     const modelMaxTokens = SCAN_MAX_TOKENS;
-    res = await fetch('https://api.anthropic.com/v1/messages', {
+    res = await _fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: reqHeaders,
-      body: JSON.stringify({ model, max_tokens: modelMaxTokens, system: SCAN_SYSTEM, messages: [{ role: 'user', content }] }),
-      signal: AbortSignal.timeout(90000)
+      body: JSON.stringify({ model, max_tokens: modelMaxTokens, system: SCAN_SYSTEM, messages: [{ role: 'user', content }] })
     });
     if (res.ok) break;
     const err = await res.json().catch(() => ({}));
