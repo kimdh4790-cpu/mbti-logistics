@@ -1300,6 +1300,16 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       <div class="acc-body" id="acc-scan"></div>
     </div>
 
+    <!-- 🚚 DONWAY 구독 인원 현황 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('donway_sub')">
+        <span class="acc-icon" id="ico-donway_sub">▶</span>
+        <span class="acc-title">🚚 DONWAY 구독 인원 현황</span>
+        <span class="acc-badge" id="badge-donway_sub"></span>
+      </div>
+      <div class="acc-body" id="acc-donway_sub"></div>
+    </div>
+
   </div><!-- /main-scroll -->
 </div><!-- /main-screen -->
 
@@ -1516,7 +1526,8 @@ function _ctrlLoad(id) {
     notice:    _ctrlLoadNotice,
     billing:   _ctrlLoadBilling,
     apps:      _ctrlLoadApps,
-    scan:      _ctrlLoadScanUsers
+    scan:      _ctrlLoadScanUsers,
+    donway_sub: _ctrlLoadDonwaySub
   }[id];
   if (fn) fn();
 }
@@ -2429,6 +2440,135 @@ function _ctrlScanAdjust(uid, email) {
     delete _loaded['scan'];
     _ctrlLoadScanUsers();
   }).catch(function(e) { _ctrlToast('오류: ' + e.message); });
+}
+
+// ── DONWAY 구독 인원 현황 ─────────────────────────────────────
+var _DW_TIERS = [50, 100, 200, 300, 400, 500, 1000];
+var _DW_PRICES = [125000, 250000, 500000, 750000, 1000000, 1250000, null];
+
+function _dwGetTier(count) {
+  for (var i = 0; i < _DW_TIERS.length; i++) {
+    if (count <= _DW_TIERS[i]) return {max: _DW_TIERS[i], price: _DW_PRICES[i]};
+  }
+  return {max: null, price: null};
+}
+
+function _ctrlLoadDonwaySub() {
+  var c = document.getElementById('acc-donway_sub');
+  c.innerHTML = '<div class="ctrl-loading">DONWAY 기사 현황 조회 중...</div>';
+
+  // 1) DONWAY 서비스 보유 업체 + subscriptions + drivers 동시 조회
+  Promise.all([
+    _db.collection('companies').limit(300).get(),
+    _db.collection('subscriptions').limit(300).get(),
+    _db.collection('drivers').get()
+  ]).then(function(results) {
+    var compSnap = results[0], subSnap = results[1], driverSnap = results[2];
+
+    // subscriptions headcount 맵 (dealerId → headcount)
+    var subMap = {};
+    subSnap.forEach(function(doc) {
+      var d = doc.data();
+      subMap[doc.id] = {headcount: d.headcount || null, status: d.status};
+    });
+
+    var companies = [];
+    compSnap.forEach(function(doc) {
+      var d = doc.data();
+      var svcs = d.services || [];
+      if (svcs.includes('settle') || svcs.includes('delivery')) {
+        var sub = subMap[doc.id] || {};
+        companies.push({
+          id: doc.id,
+          name: d.companyName || d.name || '이름없음',
+          email: d.email || '-',
+          tierMax: sub.headcount || d.tierMax || d.driverLimit || null,
+          subStatus: sub.status || '-'
+        });
+      }
+    });
+
+    if (!companies.length) {
+      c.innerHTML = '<div class="ctrl-empty">DONWAY 고객사 없음</div>';
+      return;
+    }
+
+    // 2) drivers 컬렉션 → dealerId별 카운팅
+    var counts = {};
+    driverSnap.forEach(function(doc) {
+      var d = doc.data();
+      var did = d.dealerId || d.companyId;
+      if (did) counts[did] = (counts[did] || 0) + 1;
+    });
+
+      var totalDrivers = 0, warningCount = 0;
+      var rows = companies.map(function(co) {
+        var actual = counts[co.id] || 0;
+        totalDrivers += actual;
+        var correctTier = _dwGetTier(actual);
+        var exceeded = co.tierMax && actual > co.tierMax;
+        if (exceeded) warningCount++;
+        return {co: co, actual: actual, correctTier: correctTier, exceeded: exceeded};
+      }).sort(function(a, b) { return (b.exceeded ? 1 : 0) - (a.exceeded ? 1 : 0) || b.actual - a.actual; });
+
+      // 배지 업데이트
+      var badge = document.getElementById('badge-donway_sub');
+      if (badge) {
+        badge.textContent = warningCount || '';
+        badge.style.display = warningCount ? 'flex' : 'none';
+      }
+
+      var html =
+        '<div class="dash-grid" style="margin-bottom:14px">' +
+          '<div class="dash-card"><div class="dash-val" style="font-size:22px">' + companies.length + '</div><div class="dash-label">DONWAY 업체</div></div>' +
+          '<div class="dash-card"><div class="dash-val" style="font-size:22px">' + totalDrivers + '</div><div class="dash-label">총 등록 기사</div></div>' +
+          '<div class="dash-card"><div class="dash-val" style="font-size:22px;color:' + (warningCount ? 'var(--red)' : 'var(--green)') + '">' + warningCount + '</div><div class="dash-label">구간 초과</div></div>' +
+        '</div>' +
+        '<div style="text-align:right;margin-bottom:8px">' +
+          '<button class="ctrl-btn ctrl-btn-sub" onclick="delete _loaded[\'donway_sub\'];_ctrlLoadDonwaySub()">🔄 새로고침</button>' +
+        '</div>' +
+        '<div class="ctrl-table-wrap"><table class="ctrl-table"><thead><tr>' +
+          '<th>업체명</th><th>등록 기사</th><th>구독 구간</th><th>적정 구간</th><th>상태</th>' +
+        '</tr></thead><tbody>';
+
+      rows.forEach(function(r) {
+        var tierLabel = r.co.tierMax
+          ? '~' + r.co.tierMax + '명'
+          : '<span style="color:var(--tx3)">미설정</span>';
+        var ct = r.correctTier;
+        var correctLabel = ct.max
+          ? '~' + ct.max + '명 · ' + (ct.price ? Math.round(ct.price / 10000) + '만원' : '문의')
+          : '1000명+';
+        var statusBadge = r.exceeded
+          ? '<span class="badge badge-err">⚠️ 구간초과</span>'
+          : r.co.tierMax
+            ? '<span class="badge badge-ok">정상</span>'
+            : '<span class="badge badge-hold">미확인</span>';
+        var subBadge = r.co.subStatus === 'active'
+          ? '<span class="badge badge-ok" style="font-size:10px">구독중</span>'
+          : r.co.subStatus !== '-'
+            ? '<span class="badge badge-warn" style="font-size:10px">' + _esc(r.co.subStatus) + '</span>'
+            : '';
+
+        html +=
+          '<tr>' +
+          '<td><div style="font-weight:700">' + _esc(r.co.name) + '</div>' +
+            '<div style="font-size:11px;color:var(--tx2)">' + _esc(r.co.email) + '</div>' +
+            '<div style="margin-top:3px">' + subBadge + '</div></td>' +
+          '<td style="font-size:18px;font-weight:900">' + r.actual + '명</td>' +
+          '<td>' + tierLabel + '</td>' +
+          '<td style="font-size:12px;color:var(--tx2)">' + correctLabel + '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>' +
+        '<div class="ctrl-hint">* drivers 컬렉션 등록 수 기준 · subscriptions.headcount = 구독 구간</div>';
+
+      c.innerHTML = html;
+    }).catch(function(e) {
+      c.innerHTML = '<div class="ctrl-empty">조회 실패: ' + _esc(e.message) + '</div>';
+    });
 }
 
 function _ctrlAppsTab(tab) {
