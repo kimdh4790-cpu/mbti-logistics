@@ -1308,25 +1308,86 @@ function tryPrint(){
           }
           const driverName = _cg('driverName');
           const contractTitle = _cg('title') || '계약서';
+          const _cType = _cg('type');
           const typeMap = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
-          const typeName = typeMap[_cg('type')] || contractTitle;
+          const typeName = typeMap[_cType] || contractTitle;
           const _kakaoKey = env.KAKAO_JS_KEY || '';
-          // 계약서 내용 (기사에게 표시)
+          // 계약서 전문 생성용 필드
           const _sc_start = _cg('startDate'); const _sc_end = _cg('endDate');
           const _sc_route = _cg('route'); const _sc_camp = _cg('camp');
           const _sc_unit = _cg('unitPrice'); const _sc_collect = _cg('collectPrice');
           const _sc_sort = _cg('sortPrice'); const _sc_cycle = _cg('cycle') || '매월 20일';
-          const _sc_dphone = _cg('driverPhone');
+          const _sc_dphone = _cg('driverPhone'); const _sc_daddr = _cg('driverAddr');
+          const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth');
+          const _sc_carnum = _cg('carNum'); const _sc_licnum = _cg('licenseNum');
+          const _sc_special = _cg('special');
+          const _sc_cname = _cg('companyName') || '엠비티아이(유)'; // 위탁자명
+          const _sc_cbiz = '373-86-02536';
+          const _sc_caddr = '부산광역시 남구 황령산로 274, 111동 1305호';
+          const _sc_ceo = '김 형 우';
           const _sc_pAmt = v => v ? Number(v).toLocaleString('ko-KR')+'원' : '　　원';
-          const contractSummaryRows = [
-            `<tr><td class="ct">계약기간</td><td>${_sc_start||'　　　　'} ~ ${_sc_end||'　　　　'}</td></tr>`,
-            _sc_route ? `<tr><td class="ct">담당구역</td><td>${_sc_route}</td></tr>` : '',
-            _sc_camp ? `<tr><td class="ct">캠프명</td><td>${_sc_camp}</td></tr>` : '',
-            `<tr><td class="ct" rowspan="3">수수료</td><td><span class="cl">집화</span> 1건당 ${_sc_pAmt(_sc_collect)}</td></tr>`,
-            `<tr><td><span class="cl">배송</span> 1건당 ${_sc_pAmt(_sc_unit)}</td></tr>`,
-            `<tr><td><span class="cl">지급일</span> ${_sc_cycle}</td></tr>`,
-            _sc_sort && Number(_sc_sort) > 0 ? `<tr><td class="ct">분류수수료</td><td>시간당 ${_sc_pAmt(_sc_sort)}</td></tr>` : '',
-          ].join('');
+          const _sc_months = (_sc_start && _sc_end) ? Math.round((new Date(_sc_end)-new Date(_sc_start))/(1000*60*60*24*30))+'개월' : '';
+          // 계약서 전문 HTML (위수탁)
+          let _fullContractHtml = '';
+          if (_cType === 'wisu') {
+            _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2>
+<p style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p>
+<p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>엠비티아이(유)</b> (이하 "위탁자"라 한다)와 택배종사자인 <b>${driverName||'　　　　'}</b> (이하 "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위‧수탁계약을 체결한다.</p>
+<div style="border-top:2px solid #111;padding-top:12px">
+<p class="cl2"><b>제1조(목적)</b> 이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</p>
+<p class="cl2"><b>제2조(기본원칙)</b> ① "위탁자"와 "수탁자"는 이 계약에 따라 택배 운송 업무를 수행함에 있어 상호 대등한 입장에서 신의성실의 원칙에 따라 자신의 권리를 행사하며 의무를 이행한다.<br>② "위탁자"와 "수탁자"는 이 계약의 이행과 관련하여 「생활물류서비스산업발전법」, 「독점규제 및 공정거래에 관한 법률」등 관련 법령의 규정을 준수한다.</p>
+<p class="cl2"><b>제3조(용어의 정의)</b> ① "택배"라 함은 고객의 요청에 따라 운송을 위탁받은 화물을 집화, 분류, 배송 등의 과정을 거쳐 수화인의 주택, 사무실 또는 기타의 장소에서 인도하는 것을 말한다.<br>② "집화"라 함은 고객으로부터 수령한 화물을 "위탁자"가 지정한 장소까지 운송하여 하차, 적재하는 작업을 말한다.<br>③ "분류"라 함은 서브터미널 등 택배화물의 분류시설‧장소에서 다수의 화물을 담당구역별로 구분하는 작업을 말한다.<br>④ "배송"이라 함은 분류된 화물을 택배 운송차량에 상차하여 차량운행을 통해 운송장에 기재된 장소에서 고객에게 인도하는 것을 말한다.</p>
+<p class="cl2"><b>제4조(계약의 주요내용)</b> ① "위탁자"와 "수탁자" 간 계약의 주요내용은 다음과 같다.<br>
+<table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0">
+<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_start||'　　년　　월　　일'}부터 ${_sc_end||'　　년　　월　　일'}까지${_sc_months?' ('+_sc_months+')':''}</td></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_route||'엠비티아이(유) 관할전구역'}</td></tr>
+${_sc_camp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_camp}</td></tr>`:''}
+<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="3">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_collect?_sc_pAmt(_sc_collect):'0원'}</td></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_unit?_sc_pAmt(_sc_unit):'　　　원'}</td></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_sc_cycle}</td></tr>
+${_sc_carnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_sc_carnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_sc_licnum||'　　　　　'}</td></tr>`:''}
+</table>
+② "수탁자"는 집화, 배송 외에 분류작업을 ${(_sc_sort&&Number(_sc_sort)>0)?'수행':'미수행'}한다.${(_sc_sort&&Number(_sc_sort)>0)?`<br>③ 분류수수료는 시간당 ${_sc_pAmt(_sc_sort)}로 한다.`:''}
+</p>
+<p class="cl2"><b>제5조(수수료의 지급)</b> ① "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>② "위탁자"는 "수탁자"에게 수수료 지급내역을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>③ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</p>
+<p class="cl2"><b>제6조(택배 배송업무의 수행)</b> ① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공‧공개하여서는 아니 된다.<br>⑤ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.</p>
+<p class="cl2"><b>제7조(위탁자의 준수사항)</b> "위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위<br>4. 정당한 사유 없이 "수탁자"의 업무 수행에 필요한 시스템 접근을 차단하는 행위<br>5. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위</p>
+<p class="cl2"><b>제8조(안전보건 조치 등)</b> ① "위탁자"는 「산업안전보건법」 제77조에 따른 안전‧보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」, 「산업재해보상보험법」에 따라 고용보험과 산업재해보상보험에 가입하여야 한다.</p>
+<p class="cl2"><b>제9조(작업시간 조정 등)</b> ① 계약 당사자는 "수탁자"의 최대 작업시간이 일 12시간, 주 60시간을 초과하지 않도록 노력한다.<br>② 제1항에도 불구하고, 설·추석 등이 속한 2주 이내의 기간에는 불가피한 예외를 인정할 수 있다. 단, 22시를 초과하여 작업하여서는 아니된다.</p>
+<p class="cl2"><b>제10조(손해배상)</b> ① 택배화물의 훼손, 멸실, 분실, 운송지연 등으로 고객에게 손해가 발생한 경우에 "위탁자"와 "수탁자"는 귀책사유에 따라 그 손해배상 책임을 부담한다.<br>② "위탁자"는 손해배상에 대한 기준을 일방적으로 정하여 "수탁자"가 따르도록 거래조건을 설정하지 않는다.</p>
+<p class="cl2"><b>제11조(계약의 갱신 및 해지)</b> ① "위탁자"와 "수탁자"는 상호 합의하는 경우에는 계약을 해지할 수 있다.<br>② "위탁자"는 계약기간 만료 전 150일부터 60일까지 사이에 "수탁자"가 계약의 갱신을 요구하는 경우로서 총 계약기간이 6년 이하인 때에는 법령에서 규정한 경우를 제외하고는 이를 거절할 수 없다.<br>③ "위탁자"는 계약을 해지하려는 경우에는 "수탁자"에게 60일 이상의 유예기간을 두고 계약의 위반 사실을 구체적으로 밝히고 이를 시정하지 아니하면 그 계약을 해지한다는 사실을 서면으로 2회 이상 통지하여야 한다.<br>④ "수탁자"의 사정으로 계약을 해지할 경우, "수탁자"는 계약해지 60일 전에 "위탁자"에게 통지하고 업무가 원활하게 이전되도록 협조한다.</p>
+<p class="cl2"><b>제12조(개인정보 수집)</b> ① "위탁자"는 계약체결을 위해 필요한 "수탁자"의 개인정보를 "수탁자"의 동의를 받아 수집‧이용할 수 있다.<br>② "위탁자"는 제1항 목적 외 다른 용도로 "수탁자"의 개인정보를 사용할 수 없으며, 제3자에게 제공하여서는 아니 된다.</p>
+<p class="cl2"><b>제13조(분쟁 해결)</b> "위탁자"와 "수탁자"는 이 계약에 명시되지 아니한 사항 또는 계약의 해석에 관한 사항에 다툼이 있는 경우에는 쌍방의 합의에 의해 해결하며, 해결되지 않는 경우에는 민사소송법에 따라 법원에서의 소송을 통해 분쟁을 해결한다.</p>
+<p class="cl2"><b>제14조(소의 관할)</b> 본 계약에 관한 소송은 민사소송법에 따르거나, 양 당사자의 합의에 의해 정한 곳을 관할 법원으로 한다.</p>
+<p class="cl2"><b>제15조(부속합의)</b> "위탁자"와 "수탁자"는 이 계약의 내용을 보충하거나, 이 계약에서 정하지 아니한 사항을 규정하기 위하여 부속 합의서를 작성할 수 있다.</p>
+<p class="cl2"><b>제16조(계약의 효력)</b> "위탁자"와 "수탁자"는 이 계약을 체결하기 전에 충분한 협의를 거쳤고, 계약 내용을 모두 숙지하였으며, 이 계약을 증명하기 위하여 "위탁자"와 "수탁자"는 쌍방이 기명날인한 계약서 원본 2부를 작성하여 각 1부씩 보관한다.</p>
+${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
+</div>`;
+          } else if (_cType === 'subok') {
+            _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">계약해지에 관한 부속합의서</h2>
+<p style="font-size:12px;margin-bottom:12px"><b>엠비티아이(유)</b> (이하"위탁자")와 택배종사자인 <b>${driverName}</b> (이하 "수탁자")은 계약해지에 관하여 다음과 같이 부속합의서를 체결한다.</p>
+<div style="border-top:2px solid #111;padding-top:12px">
+<p class="cl2"><b>계약의 즉시 해지 (영업점 → 수탁자)</b><br>영업점은 수탁자에게 다음 각 호의 어느 하나에 해당하는 사유가 발생하는 경우 서면 통지로서 원 계약을 즉시 해지하거나 입차 제한 및 노선변경 또는 물량을 조정할 수 있다.<br>① 수탁자 외 원 계약에 의해 수행해야 할 업무를 이유 없이 거부하였을 경우<br>② 수탁자의 계약불이행으로 계약해지가 이뤄진 경우<br>③ 확정된 일정에 결근하여 발생하는 제반 비용은 수탁자가 전액 부담한다<br>④ 수탁자가 비밀유지의무, 개인정보보호의무 또는 정보보안의무를 위반한 경우</p>
+<p class="cl2"><b>성과 기준 및 페널티</b><br>수탁자가 다음의 기준을 충족시키지 못한 경우 페널티가 적용된다.<br>
+<table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0">
+<tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:5px 7px">구분</th><th style="border:1px solid #999;padding:5px 7px">적용</th></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px">불가피한 사고가 아닌 당일 노쇼 (건당 주간 1,000원 / 야간 1,200원)</td><td style="border:1px solid #999;padding:5px 7px;text-align:center">페널티 적용 (용차비 청구)</td></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px">프레시백 회수율 75%이하 및 반품회수율 80%이하 1개월내 2회 적발</td><td style="border:1px solid #999;padding:5px 7px;text-align:center">페널티 적용 (20원 삭감)</td></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px">크리티컬 인입 동일내용 3회지적시</td><td style="border:1px solid #999;padding:5px 7px;text-align:center">계약해지 사유</td></tr>
+</table></p>
+<p class="cl2"><b>유효기간</b> 본 합의서는 합의서 체결일로부터 유효하며, 양 당사자의 별도 서면 합의가 없는 한 원 계약서의 해제, 해지 또는 기간 만료에 따른 종료 시까지 유효하다.</p>
+${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
+</div>`;
+          } else {
+            _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">${typeName}</h2>
+<div style="border-top:2px solid #111;padding-top:12px">
+<p class="cl2"><b>계약기간</b> ${_sc_start||'　　'} ~ ${_sc_end||'　　'}</p>
+<p class="cl2"><b>수수료</b> 배송 1건당 ${_sc_pAmt(_sc_unit)} / 집화 1건당 ${_sc_pAmt(_sc_collect)} / 지급일 ${_sc_cycle}</p>
+${_sc_route?`<p class="cl2"><b>담당구역</b> ${_sc_route}</p>`:''}
+${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
+</div>`;
+          }
+          const contractSummaryRows = '';
           const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>계약서 서명</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
@@ -1357,13 +1418,16 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 </style></head>
 <body>
 <div class="card">
-<h1>📄 계약서 내용 확인</h1>
-<div class="sub">${typeName}</div>
-<table class="ctable">
-<tr><td class="ct">위탁자(갑)</td><td>엠비티아이(유) · 373-86-02536</td></tr>
+<h1>📄 계약서 전문 확인</h1>
+<div class="sub">${typeName} · 아래 내용을 끝까지 읽어주세요</div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">
+<style>.cl2{margin-bottom:10px}</style>
+<table class="ctable" style="margin-bottom:14px">
+<tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr>
 <tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>
-${contractSummaryRows}
 </table>
+${_fullContractHtml}
+</div>
 </div>
 <div class="card">
 <div class="agree-box" onclick="toggleAgree()">
