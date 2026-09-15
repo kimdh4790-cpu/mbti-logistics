@@ -1550,22 +1550,8 @@ ${_sStoreRows ? `<div class="sec" style="margin-top:8px">
       if (path === '/join' || path === '/join/') {
         const joinKv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html', {type:'text'}) : null;
         if (joinKv) {
-          // 범용정산·재고관리 숨김 + AI정산 요금 실제값 교체
-          const joinPatch = '<style>' +
-            '#svc-universal-card,#svc-inventory-card{display:none!important}' +
-            '</style>' +
-            '<script>(function(){' +
-            'function _fixJoin(){' +
-            'var sel=document.getElementById("settle-tier-select");' +
-            'if(sel&&!sel.dataset.fixed){sel.dataset.fixed="1";' +
-            '[["50","~50명 — 12.5만원/월"],["100","~100명 — 25만원/월"],["200","~200명 — 50만원/월"],' +
-            '["300","~300명 — 75만원/월"],["400","~400명 — 100만원/월"],["500","~500명 — 125만원/월"],' +
-            '["1000","~1000명 — 250만원/월"],["9999","1000명+ — 별도 문의"]].forEach(function(r){' +
-            'var o=Array.prototype.find.call(sel.options,function(op){return op.value===r[0];});if(o)o.textContent=r[1];});}' +
-            '}' +
-            'document.addEventListener("DOMContentLoaded",_fixJoin);' +
-            'var obs=new MutationObserver(_fixJoin);obs.observe(document.body,{childList:true,subtree:true});' +
-            '})();</script>';
+          // 범용정산·재고관리 숨김 (가격은 settle.html에 이미 반영)
+          const joinPatch = '<style>#svc-universal-card,#svc-inventory-card{display:none!important}</style>';
           const joinHtml = joinKv.replace('</head>', joinPatch + '</head>');
           return new Response(joinHtml, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
         }

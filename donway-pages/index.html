@@ -6803,7 +6803,7 @@ var _socialAuthToken=null; // kakao custom token
         return;
       }
       return _auth.signInWithCustomToken(data.firebaseToken);
-    }).catch(function(e){_dwToast&&_dwToast('카카오 로그인 실패: '+e.message,'err');});
+    }).catch(function(e){if(typeof _dwToast==='function')_dwToast('카카오 로그인 실패: '+e.message,'err');else console.error('카카오 로그인 실패:',e.message);});
 })();
 
 function doGoogleAuth(){
