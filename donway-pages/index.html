@@ -22983,7 +22983,7 @@ function goPage(page, _fromPopstate){
   if(page==='ext_label'){window.open("/label","_blank");return;}
   if(page==='ext_scan'){window.open("/scan","_blank");return;}
   if(page==='ext_truck'){window.open("/truck","_blank");return;}
-  if(page==='ext_contract'){window.location.href='/contract';return;}
+  if(page==='ext_contract'){page='contract';}
 
   document.querySelectorAll('.ni').forEach(function(n){n.classList.remove('on');});
   var nav=document.getElementById('nav-'+page);
