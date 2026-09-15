@@ -8363,8 +8363,9 @@ async function _ctrSave(){
       }).then(function(){toast('📲 서명 요청 알림톡 발송 완료');}).catch(function(){});
     } else if(adminSig&&!data.driverPhone){
       toast('⚠️ 기사 전화번호 없음 — 보관함에서 서명요청 재발송 가능');
+    } else if(!adminSig){
+      toast('ℹ️ 대리점 서명 후 저장하면 기사에게 서명 요청이 발송됩니다');
     }
-    _ctrPreview();
   }catch(e){toast('❌ 저장 실패: '+e.message);}
 }
 
