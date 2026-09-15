@@ -23848,8 +23848,23 @@ self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());}
   if (path === '/api/kakao-auth' && method === 'POST') {
     try {
       const body = await request.json();
-      const { accessToken } = body;
-      if (!accessToken) throw new Error('accessToken required');
+      let accessToken = body.accessToken;
+      if (!accessToken && body.code) {
+        const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: env.KAKAO_REST_KEY,
+            redirect_uri: body.redirectUri || 'https://donway.ai.kr',
+            code: body.code
+          })
+        });
+        const tokenData = await tokenRes.json();
+        if (tokenData.error) throw new Error('Token exchange failed: ' + tokenData.error_description);
+        accessToken = tokenData.access_token;
+      }
+      if (!accessToken) throw new Error('accessToken or code required');
       if (!env.FIREBASE_SA_KEY) throw new Error('FIREBASE_SA_KEY not configured');
 
       const kakaoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
