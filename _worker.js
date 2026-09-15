@@ -1229,7 +1229,64 @@ export default {
           const _cg = k => _cf[k]?.stringValue || '';
           const _cStatus = _cg('status');
           if (_cStatus === 'signed') {
-            return new Response('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>서명완료</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#10b981">✓ 이미 서명이 완료되었습니다.</h2><p style="color:#94a3b8;margin-top:8px">'+_cg('driverName')+'님의 서명이 완료되었습니다.</p></body></html>',{status:200,headers:{'Content-Type':'text/html; charset=utf-8'}});
+            const _sd = (k,fb='') => _cf[k]?.stringValue||fb;
+            const _si = (k,fb=0) => Number(_cf[k]?.integerValue||_cf[k]?.doubleValue||0)||fb;
+            const pAmt = v => Number(v).toLocaleString('ko-KR')+'원';
+            const typeNames = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
+            const typeName = typeNames[_sd('type')] || _sd('title','계약서');
+            const dName = _sd('driverName'); const dPhone = _sd('driverPhone'); const dBiz = _sd('driverBizNum');
+            const dBirth = _sd('driverBirth'); const dAddr = _sd('driverAddr');
+            const aName = _sd('adminName','엠비티아이(유)'); const aBiz = _sd('adminBizNum','373-86-02536');
+            const aAddr = _sd('adminAddr','부산광역시 남구 황령산로 274, 111동 1305호');
+            const startDate = _sd('startDate'); const endDate = _sd('endDate');
+            const route = _sd('route'); const camp = _sd('camp');
+            const unitPrice = _sd('unitPrice'); const collectPrice = _sd('collectPrice');
+            const sortPrice = _sd('sortPrice'); const cycle = _sd('cycle','매월 20일');
+            const signedAt = _sd('driverSignedAt','').slice(0,10);
+            const adminSig = _sd('adminSig'); const driverSig = _sd('driverSig');
+            const kakaoNick = _sd('kakaoNick');
+            const signedHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${typeName} - 서명완료</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:#f8fafc;padding:16px}
+.wrap{max-width:700px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.done-banner{background:#ecfdf5;border:1.5px solid #10b981;border-radius:10px;padding:14px 18px;margin-bottom:20px;text-align:center}
+.done-banner h2{color:#10b981;font-size:16px;margin-bottom:4px}
+.done-banner p{color:#64748b;font-size:12px}
+h1{text-align:center;font-size:17px;font-weight:900;margin-bottom:4px}
+.subtitle{text-align:center;font-size:12px;color:#64748b;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}
+td{border:1px solid #ccc;padding:6px 8px}
+.th{background:#f1f5f9;font-weight:700}
+.sign-area{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+.sign-box{border:1px solid #ccc;border-radius:8px;padding:12px;text-align:center}
+.sign-box h4{font-size:12px;color:#64748b;margin-bottom:8px}
+.sign-box img{max-height:80px;max-width:100%}
+.print-btn{display:block;width:100%;padding:14px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px}
+@media print{.print-btn{display:none}.wrap{box-shadow:none;padding:0}.done-banner{border-color:#aaa}}
+</style></head><body>
+<div class="wrap">
+<div class="done-banner"><h2>✓ 서명이 완료되었습니다</h2><p>${dName}님의 전자서명이 완료되었습니다 · 서명일: ${signedAt}${kakaoNick?' · 카카오 본인확인: '+kakaoNick:''}</p></div>
+<h1>${typeName}</h1>
+<div class="subtitle">아래 계약서를 저장 또는 인쇄하세요</div>
+<table>
+<tr><td class="th">위탁자(갑)</td><td>${aName} · 사업자등록번호: ${aBiz}<br><span style="font-size:11px;color:#64748b">${aAddr}</span></td></tr>
+<tr><td class="th">수탁자(을)</td><td>${dName} · ${dPhone}${dBiz?' · 사업자번호: '+dBiz:''}<br><span style="font-size:11px;color:#64748b">${dBirth?'생년월일: '+dBirth+' ':''} ${dAddr||''}</span></td></tr>
+</table>
+<table>
+<tr><td class="th">계약기간</td><td colspan="3">${startDate} ~ ${endDate}</td></tr>
+${route?`<tr><td class="th">담당구역</td><td colspan="3">${route}</td></tr>`:''}
+${camp?`<tr><td class="th">캠프명</td><td colspan="3">${camp}</td></tr>`:''}
+<tr><td class="th" rowspan="3">수수료</td><td class="th">집화수수료</td><td colspan="2">1건당 ${collectPrice?pAmt(collectPrice):'0원'}</td></tr>
+<tr><td class="th">배송수수료</td><td colspan="2">1건당 ${unitPrice?pAmt(unitPrice):'　　원'}</td></tr>
+<tr><td class="th">지급일</td><td colspan="2">${cycle}</td></tr>
+${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td colspan="3">시간당 ${pAmt(sortPrice)}</td></tr>`:''}
+</table>
+<div class="sign-area">
+<div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
+<div class="sign-box"><h4>수탁자 (을) ${dName}</h4>${driverSig?`<img src="${driverSig}" alt="기사서명">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
+</div>
+<button class="print-btn" onclick="window.print()">🖨 계약서 인쇄 / PDF 저장</button>
+</div></body></html>`;
+            return new Response(signedHtml, {status:200, headers:{'Content-Type':'text/html; charset=utf-8'}});
           }
           const driverName = _cg('driverName');
           const contractTitle = _cg('title') || '계약서';
@@ -1325,7 +1382,7 @@ async function submitSign(){
   try{
     var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig,kakaoId:_kakaoId,kakaoNick:_kakaoNick})});
     var data=await res.json();
-    if(data.ok){document.body.innerHTML='<div style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#10b981;margin-bottom:12px">✓ 서명이 완료되었습니다!</h2><p style="color:#64748b">감사합니다, '+${JSON.stringify(driverName)}+'님.<br>계약서가 정상적으로 접수되었습니다.</p></div>';}
+    if(data.ok){location.reload();}
     else{alert('오류: '+(data.error||'서명 저장 실패'));btn.disabled=false;btn.textContent='서명 완료 및 제출';}
   }catch(e){alert('네트워크 오류: '+e.message);btn.disabled=false;btn.textContent='서명 완료 및 제출';}
 }
