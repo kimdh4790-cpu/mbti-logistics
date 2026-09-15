@@ -8104,12 +8104,13 @@ function _ctrStampUpload(inp){
     var img=new Image();
     img.onload=function(){
       var cv=document.createElement('canvas');
-      var sz=Math.min(img.width,img.height,300);
+      var sz=Math.min(img.width,img.height,200);
       cv.width=sz;cv.height=sz;
       var ctx=cv.getContext('2d');
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,sz,sz);
       var sx=(img.width-sz)/2,sy=(img.height-sz)/2;
       ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
-      var dataUrl=cv.toDataURL('image/png',0.85);
+      var dataUrl=cv.toDataURL('image/jpeg',0.65);
       window._adminStampImg=dataUrl;
       document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="max-height:80px;border-radius:4px">';
       // Firestore에 자동 저장
