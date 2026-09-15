@@ -1214,6 +1214,68 @@ export default {
       if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
         return serveKVFile(env, 'settle.html', 'text/html');
       }
+      // /contract/download/{token} → 서명 완료 계약서 HTML 파일 다운로드
+      if (path.startsWith('/contract/download/') && path.length > 19 && method === 'GET') {
+        const _dlToken = path.slice(19).split('/')[0];
+        const _dlFsToken = await getAccessToken(env);
+        const _dlQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_dlToken}}},limit:1}});
+        const _dlRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_dlFsToken,'Content-Type':'application/json'},body:_dlQ});
+        const _dlData = await _dlRes.json();
+        const _dlDoc = Array.isArray(_dlData) && _dlData[0]?.document;
+        if (!_dlDoc) return new Response('계약서를 찾을 수 없습니다.',{status:404});
+        const _df = _dlDoc.fields||{};
+        const _dg = k => _df[k]?.stringValue||'';
+        const _dd = k => _df[k]?.stringValue||'미기재';
+        const _dlType = _dg('type')||'wisu';
+        const _dlTypeNames = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
+        const _dlTypeName = _dlTypeNames[_dlType]||_dg('title')||'계약서';
+        const _dlDriver = _dg('driverName')||'기사';
+        const _dlPhone = _dg('driverPhone');
+        const _dlBiz = _dg('driverBiz');
+        const _dlAddr = _dg('driverAddr');
+        const _dlDrSig = _dg('driverSig');
+        const _dlAdSig = _dg('adminSig');
+        const _dlSignedAt = _dg('signedAt')||_dg('createdAt')||'';
+        const _dlDateStr = _dlSignedAt ? new Date(_dlSignedAt).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
+        const _dlPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
+        const _dlStart=_dg('contractStart'),_dlEnd=_dg('contractEnd'),_dlMonths=_dg('contractMonths');
+        const _dlRoute=_dg('route'),_dlCamp=_dg('camp'),_dlUnit=_dg('unitFee'),_dlCollect=_dg('collectFee'),_dlCycle=_dg('payCycle')||'매월 말일',_dlSort=_dg('sortFee'),_dlCarnum=_dg('carNum'),_dlLicnum=_dg('licNum'),_dlSpecial=_dg('specialTerms');
+        let _dlBody='';
+        if(_dlType==='wisu'){_dlBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2><p style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>엠비티아이(유)</b> (이하 "위탁자"라 한다)와 택배종사자인 <b>${_dlDriver||'　　　　'}</b> (이하 "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위‧수탁계약을 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(목적)</b> 이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</p><p style="margin-bottom:10px"><b>제4조(계약의 주요내용)</b><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_dlStart||'　　년　　월　　일'}부터 ${_dlEnd||'　　년　　월　　일'}까지${_dlMonths?' ('+_dlMonths+')':''}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_dlRoute||'엠비티아이(유) 관할전구역'}</td></tr>${_dlCamp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_dlCamp}</td></tr>`:''}<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="3">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlPAmt(_dlCollect)}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlUnit?_dlPAmt(_dlUnit):'　　　원'}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_dlCycle}</td></tr>${_dlCarnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_dlCarnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_dlLicnum||'　　　　　'}</td></tr>`:''}</table>수탁자는 분류작업을 ${(_dlSort&&Number(_dlSort)>0)?'수행':'미수행'}한다.</p>${_dlSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_dlSpecial.replace(/\n/g,'<br>')}</p>`:''}</div>`;}
+        else if(_dlType==='subok'){_dlBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">계약해지에 관한 부속합의서</h2><p style="font-size:12px;margin-bottom:12px"><b>엠비티아이(유)</b>와 택배종사자인 <b>${_dlDriver}</b>은 계약해지에 관하여 다음과 같이 부속합의서를 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px">${_dlSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_dlSpecial.replace(/\n/g,'<br>')}</p>`:''}</div>`;}
+        else{_dlBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">${_dlTypeName}</h2><div style="border-top:2px solid #111;padding-top:12px">${_dlStart?`<p style="margin-bottom:10px"><b>계약기간</b> ${_dlStart} ~ ${_dlEnd}</p>`:''}<p style="margin-bottom:10px"><b>수수료</b> 배송 1건당 ${_dlPAmt(_dlUnit)} / 집화 1건당 ${_dlPAmt(_dlCollect)} / 지급일 ${_dlCycle}</p>${_dlRoute?`<p style="margin-bottom:10px"><b>담당구역</b> ${_dlRoute}</p>`:''}${_dlSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_dlSpecial.replace(/\n/g,'<br>')}</p>`:''}</div>`;}
+        const _dlHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>${_dlTypeName} - 서명완료</title>
+<style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;line-height:1.8;color:#1e293b;max-width:800px;margin:0 auto;padding:24px}
+h1{font-size:18px;text-align:center;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;margin-bottom:16px}
+td{border:1px solid #cbd5e1;padding:6px 10px;font-size:12px}
+td:first-child{background:#f8fafc;font-weight:600}
+.sig-box{display:inline-block;border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:#fff}
+.sig-box img{display:block;max-width:200px;max-height:80px}
+@media print{body{padding:0}}</style></head><body>
+<h1>${_dlTypeName}</h1>
+<p style="text-align:center;color:#64748b;font-size:12px;margin-bottom:20px">서명 완료 · ${_dlDateStr}</p>
+<table><tr><td style="width:120px">위탁자(갑)</td><td>엠비티아이(유) · 373-86-02536</td></tr>
+<tr><td>수탁자(을)</td><td>${_dlDriver}${_dlPhone?' · '+_dlPhone:''}</td></tr>
+${_dlBiz?`<tr><td>사업자번호</td><td>${_dlBiz}</td></tr>`:''}
+${_dlAddr?`<tr><td>주소</td><td>${_dlAddr}</td></tr>`:''}</table>
+<hr style="margin:20px 0">
+${_dlBody}
+<hr style="margin:20px 0">
+<table><tr><td style="text-align:center;padding:16px">
+<div style="font-size:11px;margin-bottom:6px">위탁자(갑) 서명</div>
+${_dlAdSig?`<div class="sig-box"><img src="${_dlAdSig}"></div>`:'<div style="color:#94a3b8">미서명</div>'}
+<div style="font-size:11px;margin-top:6px">엠비티아이(유)</div>
+</td><td style="text-align:center;padding:16px">
+<div style="font-size:11px;margin-bottom:6px">수탁자(을) 서명</div>
+${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="color:#94a3b8">미서명</div>'}
+<div style="font-size:11px;margin-top:6px">${_dlDriver}</div>
+</td></tr></table>
+<p style="text-align:center;font-size:11px;color:#64748b;margin-top:16px">이 계약서는 전자서명법에 따라 유효한 전자문서입니다.</p>
+</body></html>`;
+        return new Response(_dlHtml,{headers:{'Content-Type':'text/html;charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(_dlTypeName+'-'+_dlDriver+'.html')}`,'Cache-Control':'no-store'}});
+      }
+
       // /contract/sign/{token} → 기사 전자서명 페이지 (GET) / 서명 저장 (POST)
       if (path.startsWith('/contract/sign/') && path.length > 15) {
         const _cToken = path.slice(15).split('/')[0];
@@ -1265,10 +1327,9 @@ td{border:1px solid #ccc;padding:6px 8px}
 </style></head><body>
 <div class="wrap">
 <div class="done-banner"><h2>✓ 서명이 완료되었습니다</h2><p>${dName}님의 전자서명이 완료되었습니다 · 서명일: ${signedAt}${kakaoNick?' · 카카오 본인확인: '+kakaoNick:''}</p></div>
-<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#1e40af;line-height:1.7">
-📎 <b>이 페이지 링크를 저장해 두세요.</b><br>
-나중에 계약서를 다시 확인하거나 인쇄할 때 같은 링크로 접속하면 됩니다.<br>
-<span style="word-break:break-all;font-size:11px;color:#3b82f6">https://donway.ai.kr/contract/sign/${_cToken}</span>
+<div style="display:flex;gap:8px;margin-bottom:16px">
+<a href="/contract/download/${_cToken}" style="flex:1;display:block;padding:13px;background:#0066ff;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-align:center;text-decoration:none">📥 계약서 파일 저장</a>
+<button onclick="tryPrint()" style="flex:1;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄/PDF</button>
 </div>
 <h1>${typeName}</h1>
 <div class="subtitle">아래 계약서를 저장 또는 인쇄하세요</div>
@@ -1293,7 +1354,6 @@ ${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td col
 📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>
 우측 상단 <b>···</b> 메뉴 → <b>외부 브라우저로 열기</b>를 탭한 후 인쇄해 주세요.
 </div>
-<button class="print-btn" onclick="tryPrint()">🖨 계약서 인쇄 / PDF 저장</button>
 </div>
 <script>
 (function(){
@@ -1326,7 +1386,7 @@ function tryPrint(){
           const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth');
           const _sc_carnum = _cg('carNum'); const _sc_licnum = _cg('licenseNum');
           const _sc_special = _cg('special');
-          const _sc_cname = _cg('companyName') || '엠비티아이(유)'; // 위탁자명
+          const _sc_cname = '엠비티아이(유)'; // 위탁자명 고정
           const _sc_cbiz = '373-86-02536';
           const _sc_caddr = '부산광역시 남구 황령산로 274, 111동 1305호';
           const _sc_ceo = '김 형 우';
@@ -1423,18 +1483,6 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 </style></head>
 <body>
 <div class="card">
-<h1>📄 계약서 전문 확인</h1>
-<div class="sub">${typeName} · 아래 내용을 끝까지 읽어주세요</div>
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">
-<style>.cl2{margin-bottom:10px}</style>
-<table class="ctable" style="margin-bottom:14px">
-<tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr>
-<tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>
-</table>
-${_fullContractHtml}
-</div>
-</div>
-<div class="card">
 <div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:14px;border-bottom:2px solid #111;padding-bottom:10px">개인정보 수집·이용 동의서</div>
 <div style="font-size:11px;color:#1e293b;line-height:2">
 <b>가. 개인정보 수집·이용 목적</b><br>
@@ -1499,6 +1547,18 @@ ${_fullContractHtml}
   성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${driverName} (전자서명)<br>
   쿠팡로지스틱스 대리점 ${_sc_cname} 대표 귀하
 </div>
+</div>
+</div>
+<div class="card">
+<h1>📄 계약서 전문 확인</h1>
+<div class="sub">${typeName} · 아래 내용을 끝까지 읽어주세요</div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">
+<style>.cl2{margin-bottom:10px}</style>
+<table class="ctable" style="margin-bottom:14px">
+<tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr>
+<tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>
+</table>
+${_fullContractHtml}
 </div>
 </div>
 <div class="card">
