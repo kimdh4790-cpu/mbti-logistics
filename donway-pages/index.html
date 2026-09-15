@@ -7917,6 +7917,7 @@ function _ctrRenderWrite(){
     +'</div>';
 
   _ctrLoadDrivers();
+  _ctrLoadStamp();
   _ctrRenderConditions(t);
   setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
@@ -8099,8 +8100,27 @@ function _ctrStampUpload(inp){
   var file=inp.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
-    window._adminStampImg=e.target.result;
-    document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+e.target.result+'" style="max-height:80px;border-radius:4px">';
+    // 300x300으로 압축해서 Firestore 저장 가능한 크기로 줄이기
+    var img=new Image();
+    img.onload=function(){
+      var cv=document.createElement('canvas');
+      var sz=Math.min(img.width,img.height,300);
+      cv.width=sz;cv.height=sz;
+      var ctx=cv.getContext('2d');
+      var sx=(img.width-sz)/2,sy=(img.height-sz)/2;
+      ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
+      var dataUrl=cv.toDataURL('image/png',0.85);
+      window._adminStampImg=dataUrl;
+      document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="max-height:80px;border-radius:4px">';
+      // Firestore에 자동 저장
+      var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+      if(_db&&cid){
+        _db.collection('companies').doc(cid).update({stampImage:dataUrl})
+          .then(function(){toast('✅ 도장 등록 완료 — 다음부터 자동 적용');})
+          .catch(function(){_db.collection('companies').doc(cid).set({stampImage:dataUrl},{merge:true}).then(function(){toast('✅ 도장 등록 완료');});});
+      }
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -8110,6 +8130,20 @@ function _ctrStampClear(){
   var pr=document.getElementById('ctr-stamp-preview');
   if(pr)pr.innerHTML='<span style="font-size:28px">📂</span><br>도장 이미지 업로드';
   window._adminStampImg=null;
+  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  if(_db&&cid)_db.collection('companies').doc(cid).update({stampImage:firebase.firestore.FieldValue.delete()}).catch(function(){});
+}
+function _ctrLoadStamp(){
+  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  if(!_db||!cid)return;
+  _db.collection('companies').doc(cid).get().then(function(doc){
+    var img=doc.exists&&doc.data()&&doc.data().stampImage;
+    if(!img)return;
+    window._adminStampImg=img;
+    var pr=document.getElementById('ctr-stamp-preview');
+    if(pr)pr.innerHTML='<img src="'+img+'" style="max-height:80px;border-radius:4px">';
+    _ctrSigTab('stamp');
+  });
 }
 function _ctrPreview(){
   var data=_ctrCollect();
