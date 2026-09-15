@@ -8977,7 +8977,10 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           // 1. 파일 파싱 (동적 import — Workers 모듈 시스템)
           const { parseFile, makeOutputFilename } = await import('./seolyuhana/utils/parser.js');
           await setProgress(10);
-          const parsed = await parseFile(fileBuffer, filename, '', env);
+          const _parseTimeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('파일 파싱 시간 초과 (60초). 스캔 PDF의 경우 파일 크기를 줄이거나 다시 시도해주세요.')), 60000)
+          );
+          const parsed = await Promise.race([parseFile(fileBuffer, filename, '', env), _parseTimeout]);
           if (parsed.pageCount > 50) throw new Error(`페이지 수 초과: ${parsed.pageCount}페이지 (최대 50)`);
           await setProgress(25);
 
