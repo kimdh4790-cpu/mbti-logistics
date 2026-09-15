@@ -6777,8 +6777,8 @@ var _socialAuthToken=null; // kakao custom token
 (function(){
   var params=new URLSearchParams(window.location.search);
   var code=params.get('code');
-  var intent=sessionStorage.getItem('kakao_auth_intent');
-  if(!code||!intent)return;
+  var intent=sessionStorage.getItem('kakao_auth_intent')||'login';
+  if(!code)return;
   sessionStorage.removeItem('kakao_auth_intent');
   history.replaceState({},'',window.location.pathname);
   fetch('/api/kakao-auth',{method:'POST',headers:{'Content-Type':'application/json'},
