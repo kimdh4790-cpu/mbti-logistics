@@ -7894,9 +7894,22 @@ function _ctrRenderWrite(){
     +'</div>'
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">✍️ 대리점 서명 <span style="font-size:11px;font-weight:400;color:var(--text3)">(저장 전 서명하세요)</span></div>'
-    +'<canvas id="ctr-admin-sig" style="border:1px solid var(--border);border-radius:8px;width:100%;height:130px;background:#fff;touch-action:none;display:block"></canvas>'
-    +'<button onclick="window._adminSigPad&&window._adminSigPad.clear()" style="margin-top:6px;padding:6px 14px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🖊 대리점 서명 / 도장</div>'
+    +'<div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">'
+    +'<button id="ctr-sig-tab" onclick="_ctrSigTab(\'sig\')" style="flex:1;padding:8px;background:var(--primary);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer">✍️ 서명</button>'
+    +'<button id="ctr-stamp-tab" onclick="_ctrSigTab(\'stamp\')" style="flex:1;padding:8px;background:var(--bg2);color:var(--text3);border:none;font-size:12px;font-weight:700;cursor:pointer">🔴 도장</button>'
+    +'</div>'
+    +'<div id="ctr-sig-panel">'
+    +'<canvas id="ctr-admin-sig" style="border:1px solid var(--border);border-radius:8px;width:100%;height:120px;background:#fff;touch-action:none;display:block"></canvas>'
+    +'<button onclick="window._adminSigPad&&window._adminSigPad.clear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
+    +'</div>'
+    +'<div id="ctr-stamp-panel" style="display:none">'
+    +'<label style="display:block;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;color:var(--text3);font-size:12px">'
+    +'<input type="file" id="ctr-stamp-file" accept="image/*" onchange="_ctrStampUpload(this)" style="display:none">'
+    +'<div id="ctr-stamp-preview" style="margin-bottom:6px"><span style="font-size:28px">📂</span><br>도장 이미지 업로드</div>'
+    +'</label>'
+    +'<button onclick="document.getElementById(\'ctr-stamp-file\').value=\'\';document.getElementById(\'ctr-stamp-preview\').innerHTML=\'<span style=\\\"font-size:28px\\\">📂</span><br>도장 이미지 업로드\';window._adminStampImg=null" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
+    +'</div>'
     +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button onclick="_ctrPreview()" style="flex:1;padding:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">👁 미리보기</button>'
@@ -8073,6 +8086,24 @@ function _ctrCollect(){
   };
 }
 
+function _ctrSigTab(mode){
+  var isSig=mode==='sig';
+  document.getElementById('ctr-sig-panel').style.display=isSig?'':'none';
+  document.getElementById('ctr-stamp-panel').style.display=isSig?'none':'';
+  document.getElementById('ctr-sig-tab').style.background=isSig?'var(--primary)':'var(--bg2)';
+  document.getElementById('ctr-sig-tab').style.color=isSig?'#fff':'var(--text3)';
+  document.getElementById('ctr-stamp-tab').style.background=isSig?'var(--bg2)':'var(--primary)';
+  document.getElementById('ctr-stamp-tab').style.color=isSig?'var(--text3)':'#fff';
+}
+function _ctrStampUpload(inp){
+  var file=inp.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    window._adminStampImg=e.target.result;
+    document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+e.target.result+'" style="max-height:80px;border-radius:4px">';
+  };
+  reader.readAsDataURL(file);
+}
 function _ctrPreview(){
   var data=_ctrCollect();
   if(!data.driverName){toast('❌ 기사 성명을 입력하세요');return;}
@@ -8328,7 +8359,9 @@ async function _ctrSave(){
   if(!data.startDate){toast('❌ 계약 시작일을 입력하세요');return;}
   if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
   var adminSig='';
-  if(window._adminSigPad&&!window._adminSigPad.isEmpty()){
+  if(window._adminStampImg){
+    adminSig=window._adminStampImg;
+  } else if(window._adminSigPad&&!window._adminSigPad.isEmpty()){
     adminSig=window._adminSigPad.toDataURL('image/png');
   }
   var typeLabel={wisu:'위수탁',subok:'부속합의서',qflex:'퀵플렉스',labor:'근로계약'}[data.type]||'계약';
@@ -8345,6 +8378,7 @@ async function _ctrSave(){
     }));
     toast('✅ 저장 완료');
     window._adminSigPad=null;
+    window._adminStampImg=null;
     // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송
     if(adminSig&&data.driverPhone){
       var signUrl='https://donway.ai.kr/contract/sign/'+signToken;
@@ -8364,7 +8398,7 @@ async function _ctrSave(){
     } else if(adminSig&&!data.driverPhone){
       toast('⚠️ 기사 전화번호 없음 — 보관함에서 서명요청 재발송 가능');
     } else if(!adminSig){
-      toast('ℹ️ 대리점 서명 후 저장하면 기사에게 서명 요청이 발송됩니다');
+      toast('ℹ️ 서명 또는 도장 등록 후 저장하면 기사에게 서명 요청이 발송됩니다');
     }
   }catch(e){toast('❌ 저장 실패: '+e.message);}
 }
