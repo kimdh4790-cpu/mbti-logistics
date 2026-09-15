@@ -1435,46 +1435,70 @@ ${_fullContractHtml}
 </div>
 </div>
 <div class="card">
-<div style="font-size:13px;font-weight:700;color:#08101f;margin-bottom:10px">📋 개인정보 수집·이용 동의서</div>
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;max-height:200px;overflow-y:auto;font-size:11px;color:#334155;line-height:1.8;margin-bottom:12px">
+<div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:14px;border-bottom:2px solid #111;padding-bottom:10px">개인정보 수집·이용 동의서</div>
+<div style="font-size:11px;color:#1e293b;line-height:2">
 <b>가. 개인정보 수집·이용 목적</b><br>
-&nbsp;· 택배 운송 위수탁계약 체결 및 그 이행<br>
-&nbsp;· 「화물자동차 운수사업법」등 관련 법령에 따른 자격보유 여부 확인<br><br>
+&nbsp;&nbsp;◦ 택배 운송 위·수탁계약 체결 및 그 이행<br>
+&nbsp;&nbsp;◦ 「화물자동차 운수사업법」등 관련 법령에 따른 자격보유 여부 확인<br><br>
 <b>나. 개인정보 수집 항목</b><br>
-&nbsp;· 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br>
+&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br>
 <b>다. 개인정보의 보유·이용 기간</b><br>
-&nbsp;· 개인정보 수집·이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.<br><br>
+&nbsp;&nbsp;◦ 개인정보 수집·이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.<br><br>
 <b>라. 고유식별정보(주민등록번호) 처리 근거</b><br>
-&nbsp;· 「고용보험법 시행령」제145조의 2, 「근로기준법」제48조, 동법 시행령 제27조, 「소득세법」제145조, 「국세기본법 시행령」제68조<br><br>
+&nbsp;&nbsp;◦ 「고용보험법 시행령」 제145조의 2, 「근로기준법」 제48조, 동법 시행령 제27조, 「소득세법」 제145조, 「국세기본법 시행령」 제68조<br><br>
 <b>마. 동의를 거부할 권리</b><br>
-&nbsp;· 정보주체는 본인의 개인정보 수집·이용 또는 고유식별정보 수집 및 이용의 동의를 거부할 권리가 있습니다.<br>
-&nbsp;· 단, 동의하지 않을 경우에는 택배운송 위수탁 계약이 불가합니다.
+&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용의 동의를 거부할 권리가 있습니다.<br>
+&nbsp;&nbsp;◦ 단, 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.
 </div>
+<div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px;font-size:11px;color:#1e293b;line-height:2.2">
 <div class="agree-box" onclick="toggleAgree2()">
   <input type="checkbox" id="agree-chk2" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk2">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 개인정보 및 고유식별정보를 수집·이용하는데 <b>동의합니다.</b> (필수)</label>
+  <label for="agree-chk2">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>개인정보</b>를 수집·이용하는데 <b>동의합니다.</b></label>
+</div>
+<div class="agree-box" style="margin-top:8px" onclick="toggleAgree2b()">
+  <input type="checkbox" id="agree-chk2b" onclick="event.stopPropagation();updateAgree()">
+  <label for="agree-chk2b">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>고유식별정보(주민등록번호)</b>를 수집·이용하는데 <b>동의합니다.</b></label>
+</div>
+<div style="margin-top:14px;font-size:11px;color:#334155;line-height:2">
+  <span id="priv-date-1"></span><br>
+  사업자등록번호 : ${_sc_dbiz||'　　　　　　　'}<br>
+  성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${driverName} (전자서명)<br>
+  쿠팡로지스틱스 대리점 ${_sc_cname} 대표 귀하
+</div>
 </div>
 </div>
 <div class="card">
-<div style="font-size:13px;font-weight:700;color:#08101f;margin-bottom:10px">📋 개인정보 제3자 제공 동의서</div>
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;max-height:200px;overflow-y:auto;font-size:11px;color:#334155;line-height:1.8;margin-bottom:12px">
+<div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:14px;border-bottom:2px solid #111;padding-bottom:10px">개인정보 제3자 제공 동의서</div>
+<div style="font-size:11px;color:#1e293b;line-height:2">
 <b>가. 개인정보를 제공받는 자</b><br>
-&nbsp;· 국토교통부장관, 한국교통안전공단, 시·도지사, 경찰청장<br><br>
+&nbsp;&nbsp;◦ 국토교통부장관, 한국교통안전공단, 시·도지사, 경찰청장<br><br>
 <b>나. 제공 목적</b><br>
-&nbsp;· 「화물자동차 운수사업법」 제8조(화물자동차 운수사업의 운전업무 종사자 등)<br>
-&nbsp;· 「화물자동차 운수사업법」 제9조의2(화물자동차 운수사업의 운전업무 종사의 제한)<br>
-&nbsp;· 「화물자동차 운수사업법 시행령」 제15조의2(민감정보 및 고유식별정보의 처리)<br><br>
+&nbsp;&nbsp;◦ 「화물자동차 운수사업법」 제8조(화물자동차 운수사업의 운전업무 종사자격 등)<br>
+&nbsp;&nbsp;◦ 「화물자동차 운수사업법」 제9조의2(화물자동차 운수사업의 운전업무 종사의 제한)<br>
+&nbsp;&nbsp;◦ 「화물자동차 운수사업법 시행령」 제15조의2(민감정보 및 고유식별정보의 처리)<br><br>
 <b>다. 제공 항목</b><br>
-&nbsp;· 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br>
+&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br>
 <b>라. 보유기간</b><br>
-&nbsp;· 개인정보 제공 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.<br><br>
+&nbsp;&nbsp;◦ 개인정보 제공 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.<br><br>
 <b>마. 동의를 거부할 권리</b><br>
-&nbsp;· 정보주체는 본인의 개인정보 제공 또는 고유식별정보 제공에 대한 동의를 거부할 권리가 있습니다.<br>
-&nbsp;· 단, 동의하지 않을 경우에는 택배운송 위수탁 계약이 불가합니다.
+&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 대한 동의를 거부할 권리가 있습니다.<br>
+&nbsp;&nbsp;◦ 단, 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.
 </div>
+<div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px">
 <div class="agree-box" onclick="toggleAgree3()">
   <input type="checkbox" id="agree-chk3" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk3">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 개인정보 및 고유식별정보를 제3자에게 제공하는데 <b>동의합니다.</b> (필수)</label>
+  <label for="agree-chk3">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>개인정보</b>를 제3자에게 제공하는데 <b>동의합니다.</b></label>
+</div>
+<div class="agree-box" style="margin-top:8px" onclick="toggleAgree3b()">
+  <input type="checkbox" id="agree-chk3b" onclick="event.stopPropagation();updateAgree()">
+  <label for="agree-chk3b">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>고유식별정보(주민등록번호)</b>를 제3자에게 제공하는데 <b>동의합니다.</b></label>
+</div>
+<div style="margin-top:14px;font-size:11px;color:#334155;line-height:2">
+  <span id="priv-date-2"></span><br>
+  사업자등록번호 : ${_sc_dbiz||'　　　　　　　'}<br>
+  성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${driverName} (전자서명)<br>
+  쿠팡로지스틱스 대리점 ${_sc_cname} 대표 귀하
+</div>
 </div>
 </div>
 <div class="card">
@@ -1511,16 +1535,28 @@ ${_fullContractHtml}
 var pad, _kakaoId='', _kakaoNick='';
 function toggleAgree1(){var c=document.getElementById('agree-chk');c.checked=!c.checked;updateAgree();}
 function toggleAgree2(){var c=document.getElementById('agree-chk2');c.checked=!c.checked;updateAgree();}
+function toggleAgree2b(){var c=document.getElementById('agree-chk2b');c.checked=!c.checked;updateAgree();}
 function toggleAgree3(){var c=document.getElementById('agree-chk3');c.checked=!c.checked;updateAgree();}
+function toggleAgree3b(){var c=document.getElementById('agree-chk3b');c.checked=!c.checked;updateAgree();}
 function updateAgree(){
   var c1=document.getElementById('agree-chk');
   var c2=document.getElementById('agree-chk2');
+  var c2b=document.getElementById('agree-chk2b');
   var c3=document.getElementById('agree-chk3');
-  var ok=c1&&c1.checked&&c2&&c2.checked&&c3&&c3.checked;
+  var c3b=document.getElementById('agree-chk3b');
+  var ok=c1&&c1.checked&&c2&&c2.checked&&c2b&&c2b.checked&&c3&&c3.checked&&c3b&&c3b.checked;
   var card=document.getElementById('sign-card');
   card.style.opacity=ok?'1':'0.4';
   card.style.pointerEvents=ok?'auto':'none';
 }
+(function(){
+  var d=new Date();
+  var ds=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
+  var p1=document.getElementById('priv-date-1');
+  var p2=document.getElementById('priv-date-2');
+  if(p1) p1.textContent=ds;
+  if(p2) p2.textContent=ds;
+})();
 function initPad(){
   var canvas=document.getElementById('sig-pad');
   var ratio=Math.max(window.devicePixelRatio||1,1);
