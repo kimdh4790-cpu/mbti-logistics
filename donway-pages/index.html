@@ -8420,7 +8420,8 @@ async function _ctrSave(){
       status:adminSig?'pending_driver':'draft',
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       adminSignedAt:adminSig?new Date().toISOString():'',
-      adminUid:_CU.uid||''
+      adminUid:_CU.uid||'',
+      appSource:'donway'
     }));
     toast('✅ 저장 완료');
     window._adminSigPad=null;
@@ -8560,7 +8561,7 @@ function uploadContract(input){
   if(_db&&_CU){
     _db.collection('contracts').add({
       dealerId:_CU.dealerId,fileName:file.name,fileSize:file.size,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp(),status:'uploaded'
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),status:'uploaded',appSource:'donway'
     }).then(function(){toast('✅ 계약서 업로드됐습니다');_renderContractPage();}).catch(function(e){toast('❌ 업로드 실패');});
   }
 }
