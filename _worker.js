@@ -1281,8 +1281,8 @@ ${camp?`<tr><td class="th">캠프명</td><td colspan="3">${camp}</td></tr>`:''}
 ${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td colspan="3">시간당 ${pAmt(sortPrice)}</td></tr>`:''}
 </table>
 <div class="sign-area">
-<div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
-<div class="sign-box"><h4>수탁자 (을) ${dName}</h4>${driverSig?`<img src="${driverSig}" alt="기사서명">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
+<div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
+<div class="sign-box"><h4>수탁자 (을) ${dName}</h4>${driverSig?`<img src="${driverSig}" alt="기사서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
 </div>
 <div id="kakao-notice" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.6">
 📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>
