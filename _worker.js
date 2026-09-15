@@ -1311,6 +1311,22 @@ function tryPrint(){
           const typeMap = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
           const typeName = typeMap[_cg('type')] || contractTitle;
           const _kakaoKey = env.KAKAO_JS_KEY || '';
+          // 계약서 내용 (기사에게 표시)
+          const _sc_start = _cg('startDate'); const _sc_end = _cg('endDate');
+          const _sc_route = _cg('route'); const _sc_camp = _cg('camp');
+          const _sc_unit = _cg('unitPrice'); const _sc_collect = _cg('collectPrice');
+          const _sc_sort = _cg('sortPrice'); const _sc_cycle = _cg('cycle') || '매월 20일';
+          const _sc_dphone = _cg('driverPhone');
+          const _sc_pAmt = v => v ? Number(v).toLocaleString('ko-KR')+'원' : '　　원';
+          const contractSummaryRows = [
+            `<tr><td class="ct">계약기간</td><td>${_sc_start||'　　　　'} ~ ${_sc_end||'　　　　'}</td></tr>`,
+            _sc_route ? `<tr><td class="ct">담당구역</td><td>${_sc_route}</td></tr>` : '',
+            _sc_camp ? `<tr><td class="ct">캠프명</td><td>${_sc_camp}</td></tr>` : '',
+            `<tr><td class="ct" rowspan="3">수수료</td><td><span class="cl">집화</span> 1건당 ${_sc_pAmt(_sc_collect)}</td></tr>`,
+            `<tr><td><span class="cl">배송</span> 1건당 ${_sc_pAmt(_sc_unit)}</td></tr>`,
+            `<tr><td><span class="cl">지급일</span> ${_sc_cycle}</td></tr>`,
+            _sc_sort && Number(_sc_sort) > 0 ? `<tr><td class="ct">분류수수료</td><td>시간당 ${_sc_pAmt(_sc_sort)}</td></tr>` : '',
+          ].join('');
           const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>계약서 서명</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
@@ -1331,37 +1347,63 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 #sign-step{display:none}
 .kakao-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#FEE500;color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
 .kakao-verified{font-size:13px;color:#10b981;font-weight:700;margin-bottom:12px;text-align:center}
+.ctable{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.ctable td{border:1px solid #e2e8f0;padding:8px 10px;vertical-align:middle}
+.ctable td.ct{background:#f1f5f9;font-weight:700;width:28%;white-space:nowrap}
+.cl{display:inline-block;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px}
+.agree-box{display:flex;align-items:flex-start;gap:10px;padding:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;margin-top:0;cursor:pointer}
+.agree-box input[type=checkbox]{width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:#0066ff;cursor:pointer}
+.agree-box label{font-size:13px;color:#334155;line-height:1.5;cursor:pointer}
 </style></head>
 <body>
 <div class="card">
-<h1>✍️ 전자서명 요청</h1>
+<h1>📄 계약서 내용 확인</h1>
 <div class="sub">${typeName}</div>
+<table class="ctable">
+<tr><td class="ct">위탁자(갑)</td><td>엠비티아이(유) · 373-86-02536</td></tr>
+<tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>
+${contractSummaryRows}
+</table>
+</div>
+<div class="card">
+<div class="agree-box" onclick="toggleAgree()">
+  <input type="checkbox" id="agree-chk" onclick="event.stopPropagation();updateAgree()">
+  <label for="agree-chk">위 계약 내용을 충분히 확인하였으며, 계약 내용에 동의합니다.</label>
+</div>
+</div>
+<div class="card" id="sign-card" style="opacity:0.4;pointer-events:none">
+<h1>✍️ 전자서명</h1>
+<div class="sub">${driverName}님, 아래에 서명해 주세요.</div>
 <div id="kakao-step">
-  <div style="font-size:13px;color:#334155;margin-bottom:20px"><b>${driverName}</b>님,<br>서명 전 카카오 본인확인이 필요합니다.</div>
   ${_kakaoKey
     ? `<button class="kakao-btn" onclick="kakaoLogin()">
         <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.74 5.19 4.36 6.6L5.4 21l4.2-2.1c.78.12 1.58.18 2.4.18 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/></svg>
-        카카오로 본인확인
+        카카오로 본인확인 후 서명
       </button>
       <div style="margin-top:14px;text-align:center">
         <span onclick="showSignStep(null,'')" style="font-size:12px;color:#94a3b8;text-decoration:underline;cursor:pointer">카카오 없이 서명만 진행</span>
       </div>`
-    : `<div style="font-size:12px;color:#f59e0b;padding:12px;background:#fefce8;border-radius:8px;margin-bottom:10px">⚠️ 카카오 앱키 미설정 — 서명만 진행합니다</div>
-       <button class="btn btn-submit" onclick="showSignStep(null,'미설정')">서명하러 가기</button>`
+    : `<button class="btn btn-submit" onclick="showSignStep(null,'')">서명하러 가기</button>`
   }
-  <p class="notice" style="margin-top:16px">카카오 계정으로 본인을 확인한 후<br>전자서명이 가능합니다.</p>
 </div>
-<div id="sign-step">
+<div id="sign-step" style="display:none">
   <div class="kakao-verified" id="kakao-name-badge"></div>
   <div style="font-size:13px;color:#334155;margin-bottom:12px">아래 서명란에 서명해 주세요.</div>
   <canvas id="sig-pad"></canvas>
   <button class="btn btn-clear" onclick="pad.clear()">지우기</button>
   <button class="btn btn-submit" id="submit-btn" onclick="submitSign()">서명 완료 및 제출</button>
-  <p class="notice">서명 후 제출하면 전자적 동의 효력이 발생합니다.<br>계약 내용에 동의하는 경우에만 서명해 주세요.</p>
+  <p class="notice">서명 후 제출하면 전자적 동의 효력이 발생합니다.</p>
 </div>
 </div>
 <script>
 var pad, _kakaoId='', _kakaoNick='';
+function toggleAgree(){var c=document.getElementById('agree-chk');c.checked=!c.checked;updateAgree();}
+function updateAgree(){
+  var c=document.getElementById('agree-chk');
+  var card=document.getElementById('sign-card');
+  card.style.opacity=c.checked?'1':'0.4';
+  card.style.pointerEvents=c.checked?'auto':'none';
+}
 function initPad(){
   var canvas=document.getElementById('sig-pad');
   var ratio=Math.max(window.devicePixelRatio||1,1);
