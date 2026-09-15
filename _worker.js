@@ -1265,6 +1265,11 @@ td{border:1px solid #ccc;padding:6px 8px}
 </style></head><body>
 <div class="wrap">
 <div class="done-banner"><h2>✓ 서명이 완료되었습니다</h2><p>${dName}님의 전자서명이 완료되었습니다 · 서명일: ${signedAt}${kakaoNick?' · 카카오 본인확인: '+kakaoNick:''}</p></div>
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:#1e40af;line-height:1.7">
+📎 <b>이 페이지 링크를 저장해 두세요.</b><br>
+나중에 계약서를 다시 확인하거나 인쇄할 때 같은 링크로 접속하면 됩니다.<br>
+<span style="word-break:break-all;font-size:11px;color:#3b82f6">https://donway.ai.kr/contract/sign/${_cToken}</span>
+</div>
 <h1>${typeName}</h1>
 <div class="subtitle">아래 계약서를 저장 또는 인쇄하세요</div>
 <table>
@@ -1576,7 +1581,8 @@ async function submitSign(){
           // 기사에게 서명 완료 SMS 발송 (법적 인지 증거)
           if (driverPhone) {
             const nowKst = new Date(Date.now()+9*3600000).toISOString().slice(0,16).replace('T',' ');
-            const smsText = `[엠비티아이] ${driverName}님의 ${typeLabel} 전자서명이 완료되었습니다.\n서명일시: ${nowKst}\n문의: 010-0000-0000`;
+            const contractUrl = `https://donway.ai.kr/contract/sign/${signToken}`;
+            const smsText = `[엠비티아이] ${driverName}님의 ${typeLabel} 전자서명이 완료되었습니다.\n서명일시: ${nowKst}\n\n계약서 저장·인쇄:\n${contractUrl}\n\n위 링크로 언제든 계약서를 확인하실 수 있습니다.`;
             fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:driverPhone.replace(/[^0-9]/g,''),text:smsText})}).catch(()=>{});
           }
           // 관리자에게 FCM 푸시 (admin_tokens/{dealerId} 조회)
