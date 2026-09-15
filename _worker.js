@@ -1625,6 +1625,12 @@ ${_sStoreRows ? `<div class="sec" style="margin-top:8px">
         return serveKVFile(env, 'settle.html', 'text/html');
       }
       if (path === '/' || path === '') {
+    // Kakao OAuth callback: code 파라미터 감지 → /join으로 전달 (settle.html이 처리)
+    if (url.searchParams.get('code')) {
+      const code = url.searchParams.get('code');
+      const state = url.searchParams.get('state') || '';
+      return Response.redirect('https://donway.ai.kr/join?code='+encodeURIComponent(code)+'&state='+encodeURIComponent(state), 302);
+    }
     const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
     let html = await ghRaw.text();
     html = html.replace('<head>', '<head><meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />');
