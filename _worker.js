@@ -1260,6 +1260,17 @@ td:first-child{background:#f8fafc;font-weight:600}
 ${_dlBiz?`<tr><td>사업자번호</td><td>${_dlBiz}</td></tr>`:''}
 ${_dlAddr?`<tr><td>주소</td><td>${_dlAddr}</td></tr>`:''}</table>
 <hr style="margin:20px 0">
+<div style="border:1px solid #d1fae5;border-radius:10px;padding:16px;margin-bottom:16px;background:#f0fdf4">
+<div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;border-bottom:1.5px solid #6ee7b7;padding-bottom:8px">개인정보 수집·이용 동의서</div>
+<div style="font-size:11px;color:#1e293b;line-height:2"><b>가. 개인정보 수집·이용 목적</b><br>&nbsp;&nbsp;◦ 택배 운송 위·수탁계약 체결 및 그 이행<br>&nbsp;&nbsp;◦ 「화물자동차 운수사업법」등 관련 법령에 따른 자격보유 여부 확인<br><br><b>나. 개인정보 수집 항목</b><br>&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br><b>다. 개인정보의 보유·이용 기간</b><br>&nbsp;&nbsp;◦ 개인정보 수집·이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.</div>
+<div style="margin-top:12px;padding:10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534;font-weight:700;text-align:center">✅ 동의 완료 (전자서명)</div>
+</div>
+<div style="border:1px solid #d1fae5;border-radius:10px;padding:16px;margin-bottom:16px;background:#f0fdf4">
+<div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;border-bottom:1.5px solid #6ee7b7;padding-bottom:8px">개인정보 제3자 제공 동의서</div>
+<div style="font-size:11px;color:#1e293b;line-height:2"><b>가. 개인정보를 제공받는 자</b><br>&nbsp;&nbsp;◦ 국토교통부장관, 한국교통안전공단, 시·도지사, 경찰청장<br><br><b>나. 제공 목적</b><br>&nbsp;&nbsp;◦ 「화물자동차 운수사업법」 제8조(화물자동차 운수사업의 운전업무 종사자격 등)<br><br><b>다. 제공 항목</b><br>&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호</div>
+<div style="margin-top:12px;padding:10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534;font-weight:700;text-align:center">✅ 동의 완료 (전자서명)</div>
+</div>
+<hr style="margin:20px 0">
 ${_dlBody}
 <hr style="margin:20px 0">
 <table><tr><td style="text-align:center;padding:16px">
@@ -1388,6 +1399,7 @@ function tryPrint(){
           const _sc_special = _cg('special');
           const _sc_cname = '엠비티아이(유)'; // 위탁자명 고정
           const _sc_cbiz = '373-86-02536';
+          const customContractUrl = _cg('customContractUrl');
           const _sc_caddr = '부산광역시 남구 황령산로 274, 111동 1305호';
           const _sc_ceo = '김 형 우';
           const _sc_pAmt = v => v ? Number(v).toLocaleString('ko-KR')+'원' : '　　원';
@@ -1452,6 +1464,9 @@ ${_sc_route?`<p class="cl2"><b>담당구역</b> ${_sc_route}</p>`:''}
 ${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
 </div>`;
           }
+          const _contractViewHtml = customContractUrl
+            ? `<div style="margin-bottom:10px"><a href="${customContractUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:11px 16px;background:#0066ff;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">📎 계약서 원본 파일 보기</a></div><iframe src="${customContractUrl}#toolbar=0" style="width:100%;height:60vh;border:1px solid #e2e8f0;border-radius:10px" title="계약서 원본"></iframe>`
+            : `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b"><style>.cl2{margin-bottom:10px}</style><table class="ctable" style="margin-bottom:14px"><tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr><tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr></table>${_fullContractHtml}</div>`;
           const contractSummaryRows = '';
           const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>계약서 서명</title>
@@ -1552,14 +1567,7 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 <div class="card">
 <h1>📄 계약서 전문 확인</h1>
 <div class="sub">${typeName} · 아래 내용을 끝까지 읽어주세요</div>
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">
-<style>.cl2{margin-bottom:10px}</style>
-<table class="ctable" style="margin-bottom:14px">
-<tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr>
-<tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>
-</table>
-${_fullContractHtml}
-</div>
+${_contractViewHtml}
 </div>
 <div class="card">
 <div class="agree-box" onclick="toggleAgree1()">
@@ -2845,6 +2853,8 @@ async function acceptExchange(){
             </div>
             <script>
             var _stmtToken="${token}", _stmtDealer="${gs('dealerId')}", _stmtName="${name}";
+            var _autoBiz="${driverBizNum}", _autoTaxSt="${taxState}";
+            if(_autoBiz&&!_autoTaxSt){document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){requestTax(_autoBiz);},900);});}
             async function requestTax(bizNum){
               var msg=document.getElementById("tax-msg");
               if(msg)msg.textContent="처리 중...";
