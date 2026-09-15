@@ -6777,8 +6777,8 @@ var _socialAuthToken=null; // kakao custom token
 (function(){
   var params=new URLSearchParams(window.location.search);
   var code=params.get('code');
-  var intent=sessionStorage.getItem('kakao_auth_intent')||'login';
   if(!code)return;
+  var intent=params.get('state')||sessionStorage.getItem('kakao_auth_intent')||'login';
   sessionStorage.removeItem('kakao_auth_intent');
   history.replaceState({},'',window.location.pathname);
   fetch('/api/kakao-auth',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -6815,8 +6815,7 @@ function doKakaoAuth(){
   if(!window.Kakao||!window.Kakao.isInitialized()){
     alert('카카오 SDK 초기화 중입니다. 잠시 후 다시 시도해주세요.');return;
   }
-  sessionStorage.setItem('kakao_auth_intent','login');
-  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr'});
+  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'login'});
 }
 
 function doGoogleRegister(){
@@ -6842,8 +6841,7 @@ function doKakaoRegister(){
   if(!window.Kakao||!window.Kakao.isInitialized()){
     alert('카카오 SDK 초기화 중입니다. 잠시 후 다시 시도해주세요.');return;
   }
-  sessionStorage.setItem('kakao_auth_intent','register');
-  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr'});
+  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'register'});
 }
 
 function doRegister(){
