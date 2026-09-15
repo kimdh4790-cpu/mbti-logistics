@@ -1267,7 +1267,10 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
     ? `<button class="kakao-btn" onclick="kakaoLogin()">
         <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.74 5.19 4.36 6.6L5.4 21l4.2-2.1c.78.12 1.58.18 2.4.18 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/></svg>
         카카오로 본인확인
-      </button>`
+      </button>
+      <div style="margin-top:14px;text-align:center">
+        <span onclick="showSignStep(null,'')" style="font-size:12px;color:#94a3b8;text-decoration:underline;cursor:pointer">카카오 없이 서명만 진행</span>
+      </div>`
     : `<div style="font-size:12px;color:#f59e0b;padding:12px;background:#fefce8;border-radius:8px;margin-bottom:10px">⚠️ 카카오 앱키 미설정 — 서명만 진행합니다</div>
        <button class="btn btn-submit" onclick="showSignStep(null,'미설정')">서명하러 가기</button>`
   }
@@ -1303,17 +1306,18 @@ ${_kakaoKey ? `
 window.onload=function(){ if(window.Kakao&&!Kakao.isInitialized()) Kakao.init('${_kakaoKey}'); };
 function kakaoLogin(){
   Kakao.Auth.login({
+    scope:'profile_nickname',
     success:function(auth){
       Kakao.API.request({
         url:'/v2/user/me',
         success:function(res){
-          var nick=(res.kakao_account&&res.kakao_account.profile&&res.kakao_account.profile.nickname)||res.id;
+          var nick=(res.kakao_account&&res.kakao_account.profile&&res.kakao_account.profile.nickname)||(res.properties&&res.properties.nickname)||String(res.id);
           showSignStep(String(res.id), nick);
         },
-        fail:function(){ alert('카카오 정보 조회 실패'); }
+        fail:function(e){ showSignStep('verified','카카오인증'); }
       });
     },
-    fail:function(err){ alert('카카오 로그인 실패: '+JSON.stringify(err)); }
+    fail:function(err){ alert('카카오 로그인 실패\\n앱에서 허용 후 다시 시도해주세요.'); }
   });
 }` : ''}
 async function submitSign(){
