@@ -1646,7 +1646,7 @@ ${_sStoreRows ? `<div class="sec" style="margin-top:8px">
       const state = url.searchParams.get('state') || '';
       if (state.startsWith('sign:')) {
         const signToken = state.slice(5);
-        return Response.redirect('https://donway.ai.kr/sign/'+encodeURIComponent(signToken)+'?kakaoCode='+encodeURIComponent(code), 302);
+        return Response.redirect('https://donway.ai.kr/contract/sign/'+encodeURIComponent(signToken)+'?kakaoCode='+encodeURIComponent(code), 302);
       }
       return Response.redirect('https://donway.ai.kr/join?code='+encodeURIComponent(code)+'&state='+encodeURIComponent(state), 302);
     }
