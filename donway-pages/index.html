@@ -6773,7 +6773,35 @@ function _checkSlugDuplicate(val) {
 var _socialAuthType=null; // 'google' | 'kakao'
 var _socialAuthToken=null; // kakao custom token
 
-// 카카오 팝업 방식 사용 — 리다이렉트 콜백 불필요
+// 카카오 OAuth 콜백 (SDK v2는 Kakao.Auth.authorize 리다이렉트 전용)
+(function(){
+  var params=new URLSearchParams(window.location.search);
+  var code=params.get('code');
+  if(!code)return;
+  var intent=params.get('state')||'login';
+  history.replaceState({},'',window.location.pathname);
+  fetch('/api/kakao-auth',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({code:code,redirectUri:'https://donway.ai.kr'})})
+    .then(function(r){return r.json();}).then(function(data){
+      if(data.error)throw new Error(data.error);
+      if(intent==='register'){
+        _socialAuthType='kakao';_socialAuthToken=data.firebaseToken;
+        var emailEl=document.getElementById('r-email');
+        if(emailEl&&data.kakaoEmail)emailEl.value=data.kakaoEmail;
+        var cnEl=document.getElementById('r-contact-name');
+        if(cnEl&&data.kakaoName&&!cnEl.value)cnEl.value=data.kakaoName;
+        ['r-pw','r-pw2'].forEach(function(id){
+          var fg=document.getElementById(id)&&document.getElementById(id).closest('.fg');
+          if(fg)fg.style.display='none';
+        });
+        var errEl=document.getElementById('r-err');
+        if(errEl){errEl.textContent='✅ 카카오 계정 연결됨. 아래 가입 신청을 눌러주세요.';errEl.style.color='var(--brand)';errEl.style.display='block';}
+        var t=document.getElementById('tab-register');if(t)t.click();
+        return;
+      }
+      return _auth.signInWithCustomToken(data.firebaseToken);
+    }).catch(function(e){if(typeof _dwToast==='function')_dwToast('카카오 로그인 실패: '+e.message,'err');else console.error('카카오 로그인 실패:',e.message);});
+})();
 
 function doGoogleAuth(){
   var provider=new firebase.auth.GoogleAuthProvider();
@@ -6787,19 +6815,7 @@ function doKakaoAuth(){
   if(!window.Kakao||!window.Kakao.isInitialized()){
     if(typeof _dwToast==='function')_dwToast('카카오 SDK 로딩 중...','err');return;
   }
-  Kakao.Auth.login({
-    success:function(authObj){
-      fetch('/api/kakao-auth',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({accessToken:authObj.access_token})})
-        .then(function(r){return r.json();})
-        .then(function(data){
-          if(data.error)throw new Error(data.error);
-          return _auth.signInWithCustomToken(data.firebaseToken);
-        })
-        .catch(function(e){if(typeof _dwToast==='function')_dwToast('카카오 로그인 실패: '+e.message,'err');});
-    },
-    fail:function(){if(typeof _dwToast==='function')_dwToast('카카오 로그인 취소','err');}
-  });
+  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'login'});
 }
 
 function doGoogleRegister(){
@@ -6825,33 +6841,7 @@ function doKakaoRegister(){
   if(!window.Kakao||!window.Kakao.isInitialized()){
     if(typeof _dwToast==='function')_dwToast('카카오 SDK 로딩 중...','err');return;
   }
-  Kakao.Auth.login({
-    success:function(authObj){
-      fetch('/api/kakao-auth',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({accessToken:authObj.access_token})})
-        .then(function(r){return r.json();})
-        .then(function(data){
-          if(data.error)throw new Error(data.error);
-          _socialAuthType='kakao';_socialAuthToken=data.firebaseToken;
-          var emailEl=document.getElementById('r-email');
-          if(emailEl&&data.kakaoEmail)emailEl.value=data.kakaoEmail;
-          var cnEl=document.getElementById('r-contact-name');
-          if(cnEl&&data.kakaoName&&!cnEl.value)cnEl.value=data.kakaoName;
-          ['r-pw','r-pw2'].forEach(function(id){
-            var fg=document.getElementById(id)&&document.getElementById(id).closest('.fg');
-            if(fg)fg.style.display='none';
-          });
-          var errEl=document.getElementById('r-err');
-          if(errEl){errEl.textContent='✅ 카카오 계정 연결됨. 아래 가입 신청을 눌러주세요.';errEl.style.color='var(--brand)';errEl.style.display='block';}
-          var t=document.getElementById('tab-register');if(t)t.click();
-        })
-        .catch(function(e){
-          var errEl=document.getElementById('r-err');
-          if(errEl){errEl.textContent='카카오 연결 실패: '+e.message;errEl.style.color='var(--red)';errEl.style.display='block';}
-        });
-    },
-    fail:function(){if(typeof _dwToast==='function')_dwToast('카카오 연결 취소','err');}
-  });
+  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'register'});
 }
 
 function doRegister(){
