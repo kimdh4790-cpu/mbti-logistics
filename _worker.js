@@ -1430,9 +1430,21 @@ ${_fullContractHtml}
 </div>
 </div>
 <div class="card">
-<div class="agree-box" onclick="toggleAgree()">
+<div style="font-size:13px;font-weight:700;color:#08101f;margin-bottom:10px">📋 개인정보 수집·이용 동의</div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;font-size:11px;color:#475569;line-height:1.7;margin-bottom:12px">
+<b>수집 항목:</b> 성명, 연락처, 주소, 사업자등록번호, 생년월일, 차량번호, 종사자격증번호<br>
+<b>수집 목적:</b> 위·수탁 계약 체결 및 수수료 정산, 본인 확인<br>
+<b>보유 기간:</b> 계약 종료일로부터 5년<br>
+<b>제3자 제공:</b> 쿠팡로지스틱스서비스(주) — 택배 운송 업무 수행 목적에 한함<br>
+※ 동의를 거부할 권리가 있으나, 거부 시 계약 체결이 불가합니다.
+</div>
+<div class="agree-box" onclick="toggleAgree2()">
+  <input type="checkbox" id="agree-chk2" onclick="event.stopPropagation();updateAgree()">
+  <label for="agree-chk2">개인정보 수집·이용에 동의합니다. (필수)</label>
+</div>
+<div class="agree-box" style="margin-top:10px" onclick="toggleAgree1()">
   <input type="checkbox" id="agree-chk" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk">위 계약 내용을 충분히 확인하였으며, 계약 내용에 동의합니다.</label>
+  <label for="agree-chk">위 계약 내용을 충분히 확인하였으며, 계약 내용에 동의합니다. (필수)</label>
 </div>
 </div>
 <div class="card" id="sign-card" style="opacity:0.4;pointer-events:none">
@@ -1461,12 +1473,15 @@ ${_fullContractHtml}
 </div>
 <script>
 var pad, _kakaoId='', _kakaoNick='';
-function toggleAgree(){var c=document.getElementById('agree-chk');c.checked=!c.checked;updateAgree();}
+function toggleAgree1(){var c=document.getElementById('agree-chk');c.checked=!c.checked;updateAgree();}
+function toggleAgree2(){var c=document.getElementById('agree-chk2');c.checked=!c.checked;updateAgree();}
 function updateAgree(){
-  var c=document.getElementById('agree-chk');
+  var c1=document.getElementById('agree-chk');
+  var c2=document.getElementById('agree-chk2');
+  var ok=c1&&c1.checked&&c2&&c2.checked;
   var card=document.getElementById('sign-card');
-  card.style.opacity=c.checked?'1':'0.4';
-  card.style.pointerEvents=c.checked?'auto':'none';
+  card.style.opacity=ok?'1':'0.4';
+  card.style.pointerEvents=ok?'auto':'none';
 }
 function initPad(){
   var canvas=document.getElementById('sig-pad');
