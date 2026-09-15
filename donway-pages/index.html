@@ -8462,14 +8462,17 @@ function _ctrRenderList(){
     var typeLabel={wisu:'위수탁',subok:'부속합의서',qflex:'퀵플렉스',labor:'근로계약'};
     var typeColor={wisu:'#0066ff',subok:'#7c3aed',qflex:'#f59e0b',labor:'#10b981'};
     var statusBadge={draft:'<span style="background:#94a3b8;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">서명없음</span>',pending_driver:'<span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">기사서명대기</span>',signed:'<span style="background:#10b981;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">✓ 서명완료</span>'};
+    window._ctrDocs=window._ctrDocs||{};
     var html='';
     snap.forEach(function(doc){
       var d=doc.data();
       if(['wisu','subok','qflex','labor'].indexOf(d.type)<0)return;
+      window._ctrDocs[doc.id]=d;
       var tl=typeLabel[d.type]||d.type||'계약';
       var tc=typeColor[d.type]||'#6366f1';
       var sb=statusBadge[d.status]||'';
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):(d.createdAt||'').slice(0,10);
+      var eid=doc.id.replace(/'/g,"\\'");
       html+='<div style="border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;background:var(--bg2)">'
         +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
@@ -8484,11 +8487,11 @@ function _ctrRenderList(){
         +(d.startDate?'📅 '+d.startDate+' ~ '+d.endDate:'')
         +'</div>'
         +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-        +'<button onclick="_ctrPrint('+JSON.stringify(JSON.stringify(d))+')" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨 인쇄·PDF</button>'
-        +'<button onclick="_ctrDownload('+JSON.stringify(JSON.stringify(d))+')" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">📥</button>'
+        +'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨 인쇄·PDF</button>'
+        +'<button onclick="_ctrDownload(window._ctrDocs[\''+eid+'\'])" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">📥</button>'
         +(d.status==='pending_driver'&&d.signToken&&d.driverPhone
-          ?'<button onclick="_ctrResendSign(\''+doc.id+'\',\''+esc(d.driverPhone||'')+'\',\''+d.signToken+'\',\''+esc(d.driverName||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📲 재발송</button>':'')
-        +'<button onclick="_db.collection(\'contracts\').doc(\''+doc.id+'\').delete().then(function(){_ctrRenderList();});" style="padding:8px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🗑</button>'
+          ?'<button onclick="_ctrResendSign(\''+eid+'\',\''+esc(d.driverPhone||'')+'\',\''+d.signToken+'\',\''+esc(d.driverName||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📲 재발송</button>':'')
+        +'<button onclick="_db.collection(\'contracts\').doc(\''+eid+'\').delete().then(function(){_ctrRenderList();});" style="padding:8px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🗑</button>'
         +'</div>'
         +'</div>';
     });
