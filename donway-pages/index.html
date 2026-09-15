@@ -6723,8 +6723,8 @@ function _regNext(n){
       var bizV=document.getElementById('r-biznum').dataset.verified||'';
       if(!bizV||bizV==='blocked'){e1.textContent='사업자등록번호 중복확인 버튼을 눌러 검증을 완료해주세요';e1.style.display='block';return;}
       // 사업자등록증 파일은 선택사항 — 국세청 API 검증으로 실사업자 확인
-      if(!document.getElementById('r-contact-name').value.trim()){e1.textContent='정산 담당자명을 입력해주세요';e1.style.display='block';return;}
-      if(!document.getElementById('r-contact-phone').value.trim()){e1.textContent='정산 연락처를 입력해주세요';e1.style.display='block';return;}
+      if(!_socialAuthType&&!document.getElementById('r-contact-name').value.trim()){e1.textContent='정산 담당자명을 입력해주세요';e1.style.display='block';return;}
+      if(!_socialAuthType&&!document.getElementById('r-contact-phone').value.trim()){e1.textContent='정산 연락처를 입력해주세요';e1.style.display='block';return;}
     }
     if(cur===2){
       var e2=document.getElementById('r-err2');e2.style.display='none';
@@ -6789,6 +6789,9 @@ var _socialAuthToken=null; // kakao custom token
         _socialAuthType='kakao';_socialAuthToken=data.firebaseToken;
         var emailEl=document.getElementById('r-email');
         if(emailEl&&data.kakaoEmail)emailEl.value=data.kakaoEmail;
+        // 카카오 닉네임 → 담당자명 자동 입력
+        var cnEl=document.getElementById('r-contact-name');
+        if(cnEl&&data.kakaoName&&!cnEl.value)cnEl.value=data.kakaoName;
         ['r-pw','r-pw2'].forEach(function(id){
           var fg=document.getElementById(id)&&document.getElementById(id).closest('.fg');
           if(fg)fg.style.display='none';
@@ -6863,8 +6866,8 @@ function doRegister(){
   if(!company||!biz||!email){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(!_socialAuthType&&!pw){err.textContent='비밀번호를 입력하세요';err.style.display='block';return;}
   // bizDocUrl은 가입 완료 후 업로드되므로 파일 선택 여부만 체크
-  if(!contactName){err.textContent='정산 문의 담당자명을 입력해주세요';err.style.display='block';return;}
-  if(!contactPhone){err.textContent='정산 문의 연락처를 입력해주세요';err.style.display='block';return;}
+  if(!_socialAuthType&&!contactName){err.textContent='정산 문의 담당자명을 입력해주세요';err.style.display='block';return;}
+  if(!_socialAuthType&&!contactPhone){err.textContent='정산 문의 연락처를 입력해주세요';err.style.display='block';return;}
   var selSvcEl=document.getElementById('r-services');
   var selSvcs=selSvcEl&&selSvcEl.value?selSvcEl.value.split(',').filter(Boolean):[];
   if(!selSvcs.length){err.textContent='사용할 서비스를 하나 이상 선택해주세요';err.style.display='block';return;}
@@ -6887,8 +6890,8 @@ function doRegister(){
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
 
-  // ★ 사업자등록증 확인
-  if(!_bizDocFile){err.textContent='사업자등록증을 업로드해 주세요';err.style.display='block';return;}
+  // ★ 사업자등록증 확인 (소셜 가입 시 선택사항 — 로그인 후 업로드 가능)
+  if(!_socialAuthType&&!_bizDocFile){err.textContent='사업자등록증을 업로드해 주세요';err.style.display='block';return;}
 
   err.textContent='계정 생성 중...';err.style.color='var(--text3)';err.style.display='block';
 
