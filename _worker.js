@@ -1303,22 +1303,19 @@ function showSignStep(id, nick){
   initPad();
 }
 ${_kakaoKey ? `
-window.onload=function(){ if(window.Kakao&&!Kakao.isInitialized()) Kakao.init('${_kakaoKey}'); };
+window.onload=function(){
+  if(window.Kakao&&!Kakao.isInitialized()) Kakao.init('${_kakaoKey}');
+  var params=new URLSearchParams(location.search);
+  var kc=params.get('kakaoCode');
+  if(kc){
+    fetch('/api/contract/kakao-identify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:kc})})
+      .then(function(r){return r.json();})
+      .then(function(d){if(d.ok)showSignStep(d.kakaoId,d.kakaoNick);else showSignStep(null,'');})
+      .catch(function(){showSignStep(null,'');});
+  }
+};
 function kakaoLogin(){
-  Kakao.Auth.login({
-    scope:'profile_nickname',
-    success:function(auth){
-      Kakao.API.request({
-        url:'/v2/user/me',
-        success:function(res){
-          var nick=(res.kakao_account&&res.kakao_account.profile&&res.kakao_account.profile.nickname)||(res.properties&&res.properties.nickname)||String(res.id);
-          showSignStep(String(res.id), nick);
-        },
-        fail:function(e){ showSignStep('verified','카카오인증'); }
-      });
-    },
-    fail:function(err){ alert('카카오 로그인 실패\\n앱에서 허용 후 다시 시도해주세요.'); }
-  });
+  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'sign:${_cToken}',scope:'profile_nickname'});
 }` : ''}
 async function submitSign(){
   if(!pad||pad.isEmpty()){alert('서명을 해주세요.');return;}
@@ -1337,6 +1334,24 @@ async function submitSign(){
         }
       }
 
+      // /api/contract/kakao-identify → 카카오 코드 → 사용자 정보 반환 (서명 페이지용)
+      if (path === '/api/contract/kakao-identify' && method === 'POST') {
+        try {
+          const { code } = await request.json();
+          const kakaoKey = env.KAKAO_REST_KEY;
+          if (!kakaoKey || !code) return new Response(JSON.stringify({ok:false,error:'파라미터 누락'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const tokenRes = await fetch('https://kauth.kakao.com/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&client_id=${kakaoKey}&redirect_uri=https://donway.ai.kr&code=${encodeURIComponent(code)}`});
+          const tokenData = await tokenRes.json();
+          if (!tokenData.access_token) return new Response(JSON.stringify({ok:false,error:'토큰 발급 실패'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const userRes = await fetch('https://kapi.kakao.com/v2/user/me',{headers:{Authorization:'Bearer '+tokenData.access_token}});
+          const userData = await userRes.json();
+          const kakaoId = String(userData.id||'');
+          const nick = (userData.kakao_account&&userData.kakao_account.profile&&userData.kakao_account.profile.nickname)||(userData.properties&&userData.properties.nickname)||kakaoId;
+          return new Response(JSON.stringify({ok:true,kakaoId,kakaoNick:nick}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
       // /api/contract/sign-driver → 기사 서명 저장 (POST, 비로그인 공개)
       if (path === '/api/contract/sign-driver' && method === 'POST') {
         try {
@@ -1350,7 +1365,7 @@ async function submitSign(){
           const _dsQData = await _dsQRes.json();
           const _dsDoc = _dsQData?.[0]?.document;
           if (!_dsDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _dsDocName = _dsDoc.name;
+          const _dsDocName = _dsDoc.name.startsWith('https://') ? _dsDoc.name : `https://firestore.googleapis.com/v1/${_dsDoc.name}`;
           const _dsF = _dsDoc.fields || {};
           const dealerId = _dsF.dealerId?.stringValue || '';
           const driverName = _dsF.driverName?.stringValue || '';
@@ -1629,6 +1644,10 @@ ${_sStoreRows ? `<div class="sec" style="margin-top:8px">
     if (url.searchParams.get('code')) {
       const code = url.searchParams.get('code');
       const state = url.searchParams.get('state') || '';
+      if (state.startsWith('sign:')) {
+        const signToken = state.slice(5);
+        return Response.redirect('https://donway.ai.kr/sign/'+encodeURIComponent(signToken)+'?kakaoCode='+encodeURIComponent(code), 302);
+      }
       return Response.redirect('https://donway.ai.kr/join?code='+encodeURIComponent(code)+'&state='+encodeURIComponent(state), 302);
     }
     const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
