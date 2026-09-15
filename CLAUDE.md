@@ -612,6 +612,14 @@ cd mbtico-pages && npx wrangler deploy
 - Firebase Auth popup→redirect 폴백 + getRedirectResult 초기화 추가
 - 슈퍼어드민(kimdh4790@gmail.com·soungkyekim@naver.com) 무제한 포인트(∞P) 바이패스
 
+### ✅ 완료 (2026-09-15 DONWAY 카카오 소셜 로그인/가입)
+- **카카오 OAuth 콜백 처리 수정** (_worker.js): 루트(`/`)에서 `?code=` 파라미터 감지 시 `/join?code=...&state=...`으로 302 리다이렉트 → `settle.html` IIFE가 콜백 처리 (이전에는 `donway_landing.html`이 서빙돼 콜백 실행 안 됨)
+- **카카오 SDK v2.7.x 호환** (donway-pages/index.html): `Kakao.Auth.login()` → `Kakao.Auth.authorize({redirectUri, state})`
+- **OAuth state 파라미터**: intent('login'/'register')를 state로 전달 (sessionStorage 소실 방지)
+- **소셜 가입 간소화**: 카카오 가입 시 사업자등록증·담당자명·연락처 필수 검증 제거 (`!_socialAuthType&&` 가드)
+- **`/api/kakao-auth` 엔드포인트** (_worker.js): 카카오 인증코드 → Firebase Custom Token 교환
+- 카카오 리다이렉트 URI: `https://donway.ai.kr` (Kakao Developers에 등록, 변경 불필요)
+
 ### ✅ 완료 (2026-09-14 DONWAY 계약서 시스템 + 대시보드 정리)
 - **pageSchedule + _renderCalendar 복원**: git history(826ce16)에서 달력 함수 추출, pages 객체 참조 추가
 - **DONWAY 계약서 시스템 전면 구현** (donway-pages/index.html):
