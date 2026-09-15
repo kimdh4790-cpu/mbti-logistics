@@ -39,6 +39,8 @@ jobs:
           IROS_EMONEY_NO1: ${{ secrets.IROS_EMONEY_NO1 }}
           IROS_EMONEY_NO2: ${{ secrets.IROS_EMONEY_NO2 }}
           IROS_EMONEY_PWD: ${{ secrets.IROS_EMONEY_PWD }}
+          KAKAO_REST_KEY: ${{ secrets.KAKAO_REST_KEY }}
+          KAKAO_JS_KEY: ${{ secrets.KAKAO_JS_KEY }}
         run: |
           npm install -g wrangler@4 --silent
           # 시크릿에 개행/공백이 섞이면 X-Auth-Key 형식 오류(code 6103)가 난다
@@ -53,6 +55,8 @@ jobs:
             printf '%s' "$IROS_EMONEY_NO1" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put IROS_EMONEY_NO1 2>&1 || echo "⚠️ IROS_EMONEY_NO1 시크릿 설정 실패 (무시)"
             printf '%s' "$IROS_EMONEY_NO2" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put IROS_EMONEY_NO2 2>&1 || echo "⚠️ IROS_EMONEY_NO2 시크릿 설정 실패 (무시)"
             printf '%s' "$IROS_EMONEY_PWD" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put IROS_EMONEY_PWD 2>&1 || echo "⚠️ IROS_EMONEY_PWD 시크릿 설정 실패 (무시)"
+            [ -n "$KAKAO_REST_KEY" ] && printf '%s' "$KAKAO_REST_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put KAKAO_REST_KEY 2>&1 || echo "⚠️ KAKAO_REST_KEY 시크릿 설정 실패/미설정 (무시)"
+            [ -n "$KAKAO_JS_KEY" ] && printf '%s' "$KAKAO_JS_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put KAKAO_JS_KEY 2>&1 || echo "⚠️ KAKAO_JS_KEY 시크릿 설정 실패/미설정 (무시)"
           else
             echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
             CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy 2>&1
@@ -61,6 +65,8 @@ jobs:
             printf '%s' "$IROS_EMONEY_NO1" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_NO1 2>&1 || echo "⚠️ IROS_EMONEY_NO1 시크릿 설정 실패 (무시)"
             printf '%s' "$IROS_EMONEY_NO2" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_NO2 2>&1 || echo "⚠️ IROS_EMONEY_NO2 시크릿 설정 실패 (무시)"
             printf '%s' "$IROS_EMONEY_PWD" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put IROS_EMONEY_PWD 2>&1 || echo "⚠️ IROS_EMONEY_PWD 시크릿 설정 실패 (무시)"
+            [ -n "$KAKAO_REST_KEY" ] && printf '%s' "$KAKAO_REST_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KAKAO_REST_KEY 2>&1 || echo "⚠️ KAKAO_REST_KEY 시크릿 설정 실패/미설정 (무시)"
+            [ -n "$KAKAO_JS_KEY" ] && printf '%s' "$KAKAO_JS_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KAKAO_JS_KEY 2>&1 || echo "⚠️ KAKAO_JS_KEY 시크릿 설정 실패/미설정 (무시)"
           fi
       - name: Deploy Seolyuhana Worker
         continue-on-error: true

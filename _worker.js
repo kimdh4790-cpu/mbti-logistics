@@ -1147,6 +1147,69 @@ export default {
 
     // ★ donway.ai.kr 라우팅 (명시적)
     if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
+      // ── 카카오 OAuth → Firebase Custom Token ──────────────────────────────
+      if (path === '/api/kakao-auth' && method === 'OPTIONS') {
+        return new Response(null, { headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+        }});
+      }
+      if (path === '/api/kakao-auth' && method === 'POST') {
+        try {
+          const body = await request.json();
+          let accessToken = body.accessToken;
+          if (!accessToken && body.code) {
+            if (!env.KAKAO_REST_KEY) throw new Error('KAKAO_REST_KEY not configured');
+            const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                client_id: env.KAKAO_REST_KEY,
+                redirect_uri: body.redirectUri || 'https://donway.ai.kr',
+                code: body.code
+              })
+            });
+            const tokenData = await tokenRes.json();
+            if (tokenData.error) throw new Error('카카오 토큰 오류: ' + (tokenData.error_description || tokenData.error));
+            accessToken = tokenData.access_token;
+          }
+          if (!accessToken) throw new Error('accessToken or code required');
+          if (!env.FIREBASE_SA_KEY) throw new Error('FIREBASE_SA_KEY not configured');
+          const kakaoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+            headers: { 'Authorization': 'Bearer ' + accessToken }
+          });
+          if (!kakaoRes.ok) throw new Error('Kakao API error: ' + kakaoRes.status);
+          const kakaoUser = await kakaoRes.json();
+          if (!kakaoUser.id) throw new Error('Invalid Kakao response');
+          const kakaoId = String(kakaoUser.id);
+          const kakaoEmail = (kakaoUser.kakao_account && kakaoUser.kakao_account.email) || null;
+          const kakaoName = (kakaoUser.properties && kakaoUser.properties.nickname) ||
+            (kakaoUser.kakao_account && kakaoUser.kakao_account.profile && kakaoUser.kakao_account.profile.nickname) || null;
+          const sa = JSON.parse(env.FIREBASE_SA_KEY);
+          const now2 = Math.floor(Date.now() / 1000);
+          const uid2 = 'kakao:' + kakaoId;
+          const hdr2 = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+          const pay2 = b64url(JSON.stringify({
+            iss: sa.client_email, sub: sa.client_email,
+            aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+            iat: now2, exp: now2 + 3600, uid: uid2,
+            claims: { kakaoId }
+          }));
+          const key2 = await importPrivateKey(sa.private_key);
+          const sig2 = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key2, new TextEncoder().encode(hdr2 + '.' + pay2));
+          const firebaseToken2 = hdr2 + '.' + pay2 + '.' + b64urlBuf(sig2);
+          return new Response(JSON.stringify({ firebaseToken: firebaseToken2, kakaoId, kakaoEmail, kakaoName }), {
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        } catch(e) {
+          return new Response(JSON.stringify({ error: e.message }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+          });
+        }
+      }
       // /admin → settle.html 서빙 (DONWAY 통합 어드민)
       if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
         return serveKVFile(env, 'settle.html', 'text/html');
