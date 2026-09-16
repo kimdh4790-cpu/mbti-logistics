@@ -8161,7 +8161,6 @@ function _ctrStampUpload(inp){
   var file=inp.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
-    // 300x300으로 압축해서 Firestore 저장 가능한 크기로 줄이기
     var img=new Image();
     img.onload=function(){
       var cv=document.createElement('canvas');
@@ -8173,18 +8172,28 @@ function _ctrStampUpload(inp){
       ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
       var dataUrl=cv.toDataURL('image/jpeg',0.65);
       window._adminStampImg=dataUrl;
-      document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="width:52px;height:52px;object-fit:contain;">';
-      // Firestore에 자동 저장
+      _ctrShowStampPreview(dataUrl,true);
+      // localStorage에도 즉시 저장 (오프라인/빠른 복원용)
+      try{localStorage.setItem('donway_admin_stamp',dataUrl);}catch(le){}
+      // Firestore에도 저장 (영구 보관)
       var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
       if(_db&&cid){
         _db.collection('companies').doc(cid).update({stampImage:dataUrl})
-          .then(function(){toast('✅ 도장 등록 완료 — 다음부터 자동 적용');})
-          .catch(function(){_db.collection('companies').doc(cid).set({stampImage:dataUrl},{merge:true}).then(function(){toast('✅ 도장 등록 완료');});});
+          .then(function(){toast('✅ 도장 저장 완료 — 다음 계약도 자동 적용됩니다');})
+          .catch(function(){_db.collection('companies').doc(cid).set({stampImage:dataUrl},{merge:true}).then(function(){toast('✅ 도장 저장 완료');});});
       }
     };
     img.src=e.target.result;
   };
   reader.readAsDataURL(file);
+}
+function _ctrShowStampPreview(dataUrl,isSaved){
+  var pr=document.getElementById('ctr-stamp-preview');
+  if(!pr)return;
+  pr.innerHTML='<div style="position:relative;display:inline-block">'
+    +'<img src="'+dataUrl+'" style="width:52px;height:52px;object-fit:contain;">'
+    +(isSaved?'<span style="position:absolute;bottom:-14px;left:0;right:0;font-size:9px;color:#10b981;text-align:center;white-space:nowrap">저장됨</span>':'')
+    +'</div>';
 }
 function _ctrStampClear(){
   var fi=document.getElementById('ctr-stamp-file');
@@ -8192,19 +8201,35 @@ function _ctrStampClear(){
   var pr=document.getElementById('ctr-stamp-preview');
   if(pr)pr.innerHTML='<span style="font-size:22px">📂</span>';
   window._adminStampImg=null;
+  try{localStorage.removeItem('donway_admin_stamp');}catch(le){}
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(_db&&cid)_db.collection('companies').doc(cid).update({stampImage:firebase.firestore.FieldValue.delete()}).catch(function(){});
+  toast('🗑 도장이 삭제되었습니다');
 }
 function _ctrLoadStamp(){
+  // localStorage에서 즉시 복원 (빠름)
+  try{
+    var cached=localStorage.getItem('donway_admin_stamp');
+    if(cached){
+      window._adminStampImg=cached;
+      _ctrShowStampPreview(cached,true);
+      _ctrSigTab('stamp');
+    }
+  }catch(le){}
+  // Firestore에서도 확인 (최신 동기화)
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(!_db||!cid)return;
   _db.collection('companies').doc(cid).get().then(function(doc){
     var img=doc.exists&&doc.data()&&doc.data().stampImage;
-    if(!img)return;
-    window._adminStampImg=img;
-    var pr=document.getElementById('ctr-stamp-preview');
-    if(pr)pr.innerHTML='<img src="'+img+'" style="width:52px;height:52px;object-fit:contain;">';
-    _ctrSigTab('stamp');
+    if(img){
+      window._adminStampImg=img;
+      _ctrShowStampPreview(img,true);
+      _ctrSigTab('stamp');
+      try{localStorage.setItem('donway_admin_stamp',img);}catch(le){}
+    } else if(window._adminStampImg){
+      // localStorage에는 있지만 Firestore에는 없음 → Firestore에도 업로드
+      _db.collection('companies').doc(cid).set({stampImage:window._adminStampImg},{merge:true}).catch(function(){});
+    }
   });
 }
 async function _ctrUploadPdf(inp){
@@ -8524,7 +8549,7 @@ async function _ctrSave(){
     }));
     toast('✅ 저장 완료');
     window._adminSigPad=null;
-    window._adminStampImg=null;
+    // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
     // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송
     if(adminSig&&data.driverPhone){
       var signUrl='https://donway.ai.kr/contract/sign/'+signToken;
