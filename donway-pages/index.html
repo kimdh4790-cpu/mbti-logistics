@@ -8033,6 +8033,11 @@ function _ctrRenderConditions(t){
       +'<input id="ctr-sortprice" type="number" placeholder="0 (미수행 시 0)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
       +'</div>'
       +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">선착불 입금 기한 (일)</div>'
+      +'<input id="ctr-predays" type="number" placeholder="예) 3" min="1" max="30" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+      +'<div></div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
       +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">차량 등록번호</div>'
       +'<input id="ctr-carnum" type="text" placeholder="12가 3456" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
       +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">운수종사자 자격증 번호</div>'
@@ -8116,7 +8121,7 @@ function _ctrCollect(){
     companyName:cp.companyName||cp.name||(_CU&&_CU.companyName)||'',
     companyBiz:cp.bizNum||'',
     companyCeo:cp.ceoName||cp.repName||'',
-    companyAddr:cp.address||cp.addr||'',
+    companyAddr:cp.bizAddr||cp.address||cp.addr||'',
     companyPhone:cp.phone||'',
     driverName:_g('ctr-name'),
     driverPhone:_g('ctr-phone'),
@@ -8134,6 +8139,7 @@ function _ctrCollect(){
     cycle:_g('ctr-cycle'),
     carNum:_g('ctr-carnum'),
     licenseNum:_g('ctr-licensenum'),
+    preDepositDays:_g('ctr-predays'),
     rate:_g('ctr-rate'),
     workplace:_g('ctr-workplace'),
     job:_g('ctr-job'),
@@ -8170,7 +8176,7 @@ function _ctrStampUpload(inp){
       ctx.fillStyle='#fff';ctx.fillRect(0,0,sz,sz);
       var sx=(img.width-sz)/2,sy=(img.height-sz)/2;
       ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
-      var dataUrl=cv.toDataURL('image/jpeg',0.65);
+      var dataUrl=cv.toDataURL('image/jpeg',0.92);
       window._adminStampImg=dataUrl;
       _ctrShowStampPreview(dataUrl,true);
       // localStorage에도 즉시 저장 (오프라인/빠른 복원용)
@@ -8331,7 +8337,7 @@ function _ctrGenHTML(data){
       +'② "수탁자"는 집화, 배송 외에 분류작업을 '+(data.sortPrice&&Number(data.sortPrice)>0?'수행':'미수행')+'한다.<br>'
       +(data.sortPrice&&Number(data.sortPrice)>0?'③ 전항에 따라 분류작업을 수행하는 경우 분류수수료는 시간당 '+pAmt(data.sortPrice)+'로 한다. 단, 분류된 화물을 택배차량에 상차하는 시간은 분류수수료 지급 시 포함하지 않는다. (사회적 대화의 규정을 준수한다)<br>':'')
       +'④ 제3항의 분류수수료는 시간당 최저임금에 상당하는 금액으로 하며, 이 경우 수수료는 「택배기사 과로방지 대책 사회적 합의기구 합의문(2차, \'21. 6. 22)」에 따른 분류인력 투입비용 이상으로 한다.</div>'
-      +'<div class="clause"><div class="clause-title">제5조(수수료의 지급)</div>① "수탁자"는 택배업무 수행 내역을 매월 26일 ~ 익월 25일을 기준으로 마감하고, 익월 20일까지 "위탁자"에게 수수료를 청구하여야 한다. 다만, 청구일이 휴무일인 경우에는 휴무일 익일에 수수료를 청구한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"가 고객으로부터 수취한 선착불 금액이 있는 경우 수취한 날로부터 　　　일 이내에 "위탁자"에게 입금하여야 한다.<br>⑤ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</div>'
+      +'<div class="clause"><div class="clause-title">제5조(수수료의 지급)</div>① "수탁자"는 택배업무 수행 내역을 매월 26일 ~ 익월 25일을 기준으로 마감하고, 익월 20일까지 "위탁자"에게 수수료를 청구하여야 한다. 다만, 청구일이 휴무일인 경우에는 휴무일 익일에 수수료를 청구한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"가 고객으로부터 수취한 선착불 금액이 있는 경우 수취한 날로부터 '+(data.preDepositDays||'　　　')+'일 이내에 "위탁자"에게 입금하여야 한다.<br>⑤ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</div>'
       +'<div class="clause"><div class="clause-title">제6조(택배 배송업무의 수행)</div>① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서「생활물류서비스산업발전법」, 「도로교통법」, 「자동차관리법」 등 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 정부기관 및 택배사의 요청에 따른 "위탁자"의 실태조사, 자료요청 등에 적극 협조한다.<br>⑤ "수탁자"는 이 계약의 이행에 필요한 택배용품, 전산장비, 차량 등을 구비하여야 하며, "위탁자"는 필요시 계약기간동안 이를 지원 또는 대여할 수 있다.<br>⑥ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공‧공개하여서는 아니 된다.<br>⑦ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.<br>⑧ "수탁자"가 동승인력을 사용할 경우에, "위탁자"는 그에 대한 책임을 지지 않는다.<br>⑨ "수탁자"가 "위탁자"에게 사전에 통지를 하지 않았거나, "수탁자"가 정당하지 않은 사유로 수탁업무를 해태하여 택배서비스 이행에 차질이 발생한 경우, "위탁자"는 제3자에게 수탁업무를 대신하도록 할 수 있으며, 이 경우 해당 수수료는 업무를 수행한 자에게 지급한다.</div>'
       +'<div class="clause"><div class="clause-title">제7조(위탁자의 준수사항)</div>"위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. "수탁자"가 부담하여야 할 정당한 사유가 없음에도 불구하고 "위탁자"가 수취하기로 사전에 약정한 수수료, 관리비 등과 별도의 비용을 징수하는 행위<br>4. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위("위탁자"와 "수탁자"의 합의하에 타 업무를 수행할 경우 타 업무에 수반되는 비용을 일방적으로 "수탁자"에게 부담시키지 않는다.)<br>5. 정당한 사유 없이 "수탁자"의 업무 수행에 필요한 시스템 접근을 차단하는 행위<br>6. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위<br>7. 계약 종료 시 "수탁자"에게 후임자를 구할 책임을 부담시키는 행위<br>8. 계약 종료 이후 정당한 사유 없이 동종 업종의 타 사업자와의 계약을 방해하는 행위<br>9. 천재지변, 전쟁, 내란 기타 불가항력적인 사유 시에 배송지연 책임을 전가시키는 행위</div>'
       +'<div class="clause"><div class="clause-title">제8조(안전보건 조치 등)</div>① "위탁자"는 「산업안전보건법」 제77조에 따른 안전‧보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」, 「산업재해보상보험법」 및 「고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률」에 따라 고용보험과 산업재해보상보험에 가입하여야 하며, "위탁자"는 "수탁자"의 수수료에서 원천공제하여 보험료를 납부할 수 있다.<br>③ "위탁자"는 "수탁자"의 일 평균 작업시간이 일 8시간을 지속적으로 초과할 경우 "위탁자"는 연 1회 이상 심혈관질환 등 건강검진 및 추가 프로그램을 실시하고, 그 결과에 따라 적정한 휴식시간 보장 등 별도의 건강관리 조치를 취하여야 한다.<br>④ "위탁자"는 "수탁자"가 작업시간 중 건강이상을 호소할 경우 긴급진료를 받을 수 있도록 하고, "수탁자"는 그 진료내역서를 "위탁자"와 공유한다.</div>'
