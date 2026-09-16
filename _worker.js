@@ -1318,6 +1318,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
             const signedAt = _sd('driverSignedAt','').slice(0,10);
             const adminSig = _sd('adminSig'); const driverSig = _sd('driverSig');
             const kakaoNick = _sd('kakaoNick');
+            const archiveUrl = _sd('archiveUrl');
             const signedHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${typeName} - 서명완료</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:#f8fafc;padding:16px}
 .wrap{max-width:700px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
@@ -1339,7 +1340,10 @@ td{border:1px solid #ccc;padding:6px 8px}
 <div class="wrap">
 <div class="done-banner"><h2>✓ 서명이 완료되었습니다</h2><p>${dName}님의 전자서명이 완료되었습니다 · 서명일: ${signedAt}${kakaoNick?' · 카카오 본인확인: '+kakaoNick:''}</p></div>
 <div style="display:flex;gap:8px;margin-bottom:16px">
-<a href="/contract/download/${_cToken}" style="flex:1;display:block;padding:13px;background:#0066ff;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-align:center;text-decoration:none">📥 계약서 파일 저장</a>
+${archiveUrl
+  ?`<a href="${archiveUrl}" download="${encodeURIComponent(typeName+'-'+dName+'.html')}" style="flex:1;display:block;padding:13px;background:#0066ff;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-align:center;text-decoration:none">📥 계약서 파일 저장</a>`
+  :`<a href="/contract/download/${_cToken}" style="flex:1;display:block;padding:13px;background:#0066ff;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-align:center;text-decoration:none">📥 계약서 파일 저장</a>`
+}
 <button onclick="tryPrint()" style="flex:1;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄/PDF</button>
 </div>
 <h1>${typeName}</h1>

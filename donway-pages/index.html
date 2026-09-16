@@ -7895,9 +7895,9 @@ function _ctrRenderWrite(){
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">📎 계약서 원본 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">대리점별 계약서 PDF를 업로드하면 기사 서명 시 이 파일을 그대로 표시합니다. 미업로드 시 자동생성 계약서가 사용됩니다.</div>'
-    +'<input type="file" id="ctr-pdf-file" accept="application/pdf" onchange="_ctrUploadPdf(this)" style="display:none">'
-    +'<div id="ctr-pdf-status" style="display:flex;align-items:center;gap:10px"><label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 PDF 파일 선택</label></div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">계약서 파일(PDF·이미지·Word 등)을 업로드하면 기사 서명 시 이 파일을 그대로 표시합니다. 미업로드 시 자동생성 계약서가 사용됩니다.</div>'
+    +'<input type="file" id="ctr-pdf-file" accept="application/pdf,image/*,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrUploadPdf(this)" style="display:none">'
+    +'<div id="ctr-pdf-status" style="display:flex;align-items:center;gap:10px"><label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 파일 선택 (PDF·이미지·Word)</label></div>'
     +'<input type="hidden" id="ctr-pdf-url">'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
@@ -7955,7 +7955,7 @@ function _ctrLoadDrivers(){
     snap.forEach(function(doc){
       var d=doc.data();
       if(d.is_active===false||d.status==='pending')return;
-      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||''});
+      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||d.bizNumber||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||''});
       sel.innerHTML+='<option value="'+doc.id+'">'+esc(d.name||doc.id)+'</option>';
     });
   }).catch(function(){});
@@ -8072,7 +8072,7 @@ function _ctrCollect(){
     companyPhone:cp.phone||'',
     driverName:_g('ctr-name'),
     driverPhone:_g('ctr-phone'),
-    driverBiz:_g('ctr-biznum'),
+    driverBizNum:_g('ctr-biznum'),
     driverAddr:_g('ctr-addr'),
     startDate:_g('ctr-start'),
     endDate:_g('ctr-end'),
@@ -8159,7 +8159,8 @@ function _ctrLoadStamp(){
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
-  if(!file.type.includes('pdf')){toast('❌ PDF 파일만 업로드 가능합니다');inp.value='';return;}
+  var allowed=['pdf','image/','msword','wordprocessingml','doc'];
+  if(!allowed.some(function(t){return file.type.includes(t)||file.name.toLowerCase().includes('.doc');})){toast('❌ PDF·이미지·Word 파일만 업로드 가능합니다');inp.value='';return;}
   var statusEl=document.getElementById('ctr-pdf-status');
   if(statusEl)statusEl.innerHTML='<span style="font-size:12px;color:var(--text3)">⏳ 업로드 중...</span>';
   try{
