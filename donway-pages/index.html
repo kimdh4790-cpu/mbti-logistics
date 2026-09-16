@@ -8416,7 +8416,7 @@ function _ctrGenHTML(data){
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
       +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
       +(data.driverSig
-        ?'<img src="'+data.driverSig+'" style="max-height:70px;max-width:100%;margin:8px auto;display:block">'
+        ?'<img src="'+data.driverSig+'" style="max-height:110px;max-width:200px;margin:8px auto;display:block;mix-blend-mode:multiply">'
         :'<div class="sign-line"></div><div style="font-size:11px;color:#999">(인)</div>')
       +'</div>'
       +'</div>'
@@ -8523,7 +8523,7 @@ function _ctrGenHTML(data){
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
       +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
       +(data.driverSig
-        ?'<img src="'+data.driverSig+'" style="max-height:70px;max-width:100%;margin:8px auto;display:block">'
+        ?'<img src="'+data.driverSig+'" style="max-height:110px;max-width:200px;margin:8px auto;display:block;mix-blend-mode:multiply">'
         :'<div class="sign-line"></div>')
       +'<div style="font-size:11px;color:#999">(인)</div></div>'
       +'</div>';
@@ -8618,7 +8618,10 @@ async function _ctrSave(){
       fetch('/api/send-alimtalk',{method:'POST',
         headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
         body:JSON.stringify({to:data.driverPhone.replace(/[^0-9]/g,''),templateCode:'KA01TP260914215829605ddx2vWo50Iy',variables:alimVariables,fallbackText:fallback})
-      }).then(function(){toast('📲 서명 요청 알림톡 발송 완료');}).catch(function(){});
+      }).then(function(r){return r.json();}).then(function(r){
+        if(r.ok)toast('📲 서명 요청 알림톡 발송 완료');
+        else toast('⚠️ 알림톡 발송 실패: '+(r.error||r.result?.errorMessage||JSON.stringify(r.result||r)));
+      }).catch(function(e){toast('⚠️ 알림톡 네트워크 오류: '+e.message);});
     } else if(adminSig&&!data.driverPhone){
       toast('⚠️ 기사 전화번호 없음 — 보관함에서 서명요청 재발송 가능');
     } else if(!adminSig){
