@@ -8668,10 +8668,12 @@ function _ctrRenderList(){
         +(d.startDate?'📅 '+d.startDate+' ~ '+d.endDate:'')
         +'</div>'
         +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-        +'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨 인쇄·PDF</button>'
         +(d.archiveUrl
-          ?'<a href="'+d.archiveUrl+'" download="'+esc((d.driverName||'계약서')+'-'+(typeLabel[d.type]||d.type)+'.html')+'" target="_blank" style="display:inline-flex;align-items:center;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none" title="계약서 파일 저장">📥 파일저장</a>'
-          :'<button onclick="_ctrDownload(window._ctrDocs[\''+eid+'\'])" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">📥</button>')
+          ?'<a href="'+d.archiveUrl+'" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none">서명완료본 보기</a>'
+          +'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="padding:8px 10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer" title="서명전 초안 인쇄">초안</button>'
+          +'<a href="'+d.archiveUrl+'" download="'+esc((d.driverName||'계약서')+'-'+(typeLabel[d.type]||d.type)+'.html')+'" target="_blank" style="display:inline-flex;align-items:center;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none" title="서명완료본 저장">저장</a>'
+          :'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">인쇄·PDF</button>'
+          +'<button onclick="_ctrDownload(window._ctrDocs[\''+eid+'\'])" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">저장</button>')
         +(d.status==='pending_driver'&&d.signToken&&d.driverPhone
           ?'<button onclick="_ctrResendSign(\''+eid+'\',\''+esc(d.driverPhone||'')+'\',\''+d.signToken+'\',\''+esc(d.driverName||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📲 재발송</button>':'')
         +'<button onclick="_db.collection(\'contracts\').doc(\''+eid+'\').delete().then(function(){_ctrRenderList();});" style="padding:8px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer">🗑</button>'
