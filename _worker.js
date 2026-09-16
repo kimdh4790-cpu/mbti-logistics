@@ -1396,6 +1396,8 @@ function tryPrint(){
           const _sc_start = _cg('startDate'); const _sc_end = _cg('endDate');
           const _sc_route = _cg('route'); const _sc_camp = _cg('camp');
           const _sc_unit = _cg('unitPrice'); const _sc_collect = _cg('collectPrice');
+          const _sc_rpJson = _cg('routePricesJson');
+          let _sc_rps = []; try{ if(_sc_rpJson) _sc_rps = JSON.parse(_sc_rpJson); }catch(e){};
           const _sc_sort = _cg('sortPrice'); const _sc_cycle = _cg('cycle') || '매월 20일';
           const _sc_dphone = _cg('driverPhone'); const _sc_daddr = _cg('driverAddr');
           const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth');
@@ -1423,8 +1425,8 @@ function tryPrint(){
 <tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_start||'　　년　　월　　일'}부터 ${_sc_end||'　　년　　월　　일'}까지${_sc_months?' ('+_sc_months+')':''}</td></tr>
 <tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_route||'엠비티아이(유) 관할전구역'}</td></tr>
 ${_sc_camp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_camp}</td></tr>`:''}
-<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="3">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_collect?_sc_pAmt(_sc_collect):'0원'}</td></tr>
-<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_unit?_sc_pAmt(_sc_unit):'　　　원'}</td></tr>
+<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="${1+Math.max(_sc_rps.length,1)+1}">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_collect?_sc_pAmt(_sc_collect):'0원'}</td></tr>
+${_sc_rps.length ? _sc_rps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_pAmt(r.price)}</td></tr>`).join('') : `<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_unit?_sc_pAmt(_sc_unit):'　　　원'}</td></tr>`}
 <tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_sc_cycle}</td></tr>
 ${_sc_carnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_sc_carnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_sc_licnum||'　　　　　'}</td></tr>`:''}
 </table>
@@ -1463,7 +1465,7 @@ ${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g
             _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">${typeName}</h2>
 <div style="border-top:2px solid #111;padding-top:12px">
 <p class="cl2"><b>계약기간</b> ${_sc_start||'　　'} ~ ${_sc_end||'　　'}</p>
-<p class="cl2"><b>수수료</b> 배송 1건당 ${_sc_pAmt(_sc_unit)} / 집화 1건당 ${_sc_pAmt(_sc_collect)} / 지급일 ${_sc_cycle}</p>
+<p class="cl2"><b>수수료</b> ${_sc_rps.length ? _sc_rps.map(r=>`${r.route}: 1건당 ${_sc_pAmt(r.price)}`).join(' | ') : `배송 1건당 ${_sc_pAmt(_sc_unit)}`} / 집화 1건당 ${_sc_pAmt(_sc_collect)} / 지급일 ${_sc_cycle}</p>
 ${_sc_route?`<p class="cl2"><b>담당구역</b> ${_sc_route}</p>`:''}
 ${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
 </div>`;
