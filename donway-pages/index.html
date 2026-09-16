@@ -7929,6 +7929,13 @@ function _ctrRenderWrite(){
 
   _ctrLoadDrivers();
   _ctrLoadStamp();
+  // 이전에 업로드한 계약서 파일 URL 복원 (페이지 재렌더 후에도 유지)
+  if(window._ctrCustomPdfUrl){
+    var _pu=document.getElementById('ctr-pdf-url');
+    var _ps=document.getElementById('ctr-pdf-status');
+    if(_pu)_pu.value=window._ctrCustomPdfUrl;
+    if(_ps)_ps.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ 업로드됨</span><a href="'+window._ctrCustomPdfUrl+'" target="_blank" style="font-size:12px;color:#0066ff">📄 확인</a><button onclick="window._ctrCustomPdfUrl=null;var s=document.getElementById(\'ctr-pdf-status\');if(s)s.innerHTML=\'<label for=ctr-pdf-file style=flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)>📁 계약서 파일 선택 (PDF·이미지·Word)</label>\'" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text3)">삭제</button>';
+  }
   _ctrRenderConditions(t);
   setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
@@ -8163,20 +8170,52 @@ function _ctrSigTab(mode){
   document.getElementById('ctr-stamp-tab').style.background=isSig?'var(--bg2)':'var(--primary)';
   document.getElementById('ctr-stamp-tab').style.color=isSig?'var(--text3)':'#fff';
 }
+function _ctrGetExifOrientation(buf){
+  var view=new DataView(buf);
+  if(view.getUint16(0,false)!==0xFFD8)return -1;
+  var len=view.byteLength,off=2;
+  while(off<len){
+    if(view.getUint16(off,false)!==0xFFE1){off+=2+view.getUint16(off+2,false);continue;}
+    if(view.getUint32(off+4,false)!==0x45786966)return -1;
+    var le=view.getUint16(off+10,false)===0x4949;
+    var tags=view.getUint16(off+14,le);
+    off+=16;
+    for(var i=0;i<tags;i++){
+      if(view.getUint16(off+(i*12),le)===0x0112)return view.getUint16(off+(i*12)+8,le);
+    }
+    return -1;
+  }
+  return -1;
+}
 function _ctrStampUpload(inp){
   var file=inp.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
+    var buf=e.target.result;
+    var orient=_ctrGetExifOrientation(buf);
+    var url=URL.createObjectURL(file);
     var img=new Image();
     img.onload=function(){
+      URL.revokeObjectURL(url);
+      var sw=img.width,sh=img.height;
+      var rotated=(orient>=5&&orient<=8);
+      var cw=rotated?sh:sw,ch=rotated?sw:sh;
+      var sz=Math.min(cw,ch,200);
+      var scale=sz/Math.min(cw,ch);
+      var dw=Math.round(cw*scale),dh=Math.round(ch*scale);
       var cv=document.createElement('canvas');
-      var sz=Math.min(img.width,img.height,200);
       cv.width=sz;cv.height=sz;
       var ctx=cv.getContext('2d');
       ctx.fillStyle='#fff';ctx.fillRect(0,0,sz,sz);
-      var sx=(img.width-sz)/2,sy=(img.height-sz)/2;
-      ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
-      var dataUrl=cv.toDataURL('image/jpeg',0.92);
+      ctx.save();
+      ctx.translate(sz/2,sz/2);
+      var deg={1:0,2:0,3:180,4:0,5:90,6:90,7:-90,8:-90}[orient]||0;
+      if(deg)ctx.rotate(deg*Math.PI/180);
+      var flipX={2:true,4:true,5:true,7:true}[orient]||false;
+      if(flipX)ctx.scale(-1,1);
+      ctx.drawImage(img,-dw/2,-dh/2,dw,dh);
+      ctx.restore();
+      var dataUrl=cv.toDataURL('image/png');
       window._adminStampImg=dataUrl;
       _ctrShowStampPreview(dataUrl,true);
       // localStorage에도 즉시 저장 (오프라인/빠른 복원용)
@@ -8189,9 +8228,9 @@ function _ctrStampUpload(inp){
           .catch(function(){_db.collection('companies').doc(cid).set({stampImage:dataUrl},{merge:true}).then(function(){toast('✅ 도장 저장 완료');});});
       }
     };
-    img.src=e.target.result;
+    img.src=url;
   };
-  reader.readAsDataURL(file);
+  reader.readAsArrayBuffer(file);
 }
 function _ctrShowStampPreview(dataUrl,isSaved){
   var pr=document.getElementById('ctr-stamp-preview');
@@ -8252,6 +8291,7 @@ async function _ctrUploadPdf(inp){
     var url=await snap.ref.getDownloadURL();
     var urlEl=document.getElementById('ctr-pdf-url');
     if(urlEl)urlEl.value=url;
+    window._ctrCustomPdfUrl=url; // 페이지 재렌더 후에도 유지
     if(statusEl)statusEl.innerHTML=
       '<span style="font-size:12px;color:#10b981;font-weight:700">✅ 업로드 완료</span>'
       +'<a href="'+url+'" target="_blank" style="font-size:12px;color:#0066ff">📄 확인</a>'
@@ -8361,8 +8401,8 @@ function _ctrGenHTML(data){
       +'<div style="font-size:12px;margin-bottom:4px;font-weight:700">상호: '+companyName+'</div>'
       +'<div style="font-size:12px">대표자: '+companyCeo+'</div>'
       +(data.adminSig
-        ?'<img src="'+data.adminSig+'" style="max-height:72px;max-width:90px;margin:8px auto;display:block;mix-blend-mode:multiply">'
-        :'<img src="'+_CTR_STAMP_B64+'" style="max-height:68px;max-width:80px;margin:8px auto;display:block;opacity:0.9;mix-blend-mode:multiply">')
+        ?'<img src="'+data.adminSig+'" style="max-height:72px;max-width:90px;margin:8px auto;display:block;mix-blend-mode:multiply;image-rendering:crisp-edges">'
+        :'<img src="'+_CTR_STAMP_B64+'" style="max-height:68px;max-width:80px;margin:8px auto;display:block;opacity:0.9;mix-blend-mode:multiply;image-rendering:crisp-edges">')
       +'<div style="font-size:11px;text-align:right">(인)</div>'
       +'</div>'
       +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
@@ -8468,8 +8508,8 @@ function _ctrGenHTML(data){
       +'<div style="font-size:12px;margin-bottom:4px;font-weight:700">상호: '+companyName+'</div>'
       +'<div style="font-size:12px">대표자: '+companyCeo+'</div>'
       +(data.adminSig
-        ?'<img src="'+data.adminSig+'" style="max-height:72px;max-width:90px;margin:8px auto;display:block;mix-blend-mode:multiply">'
-        :'<img src="'+_CTR_STAMP_B64+'" style="max-height:68px;max-width:80px;margin:8px auto;display:block;opacity:0.9;mix-blend-mode:multiply">')
+        ?'<img src="'+data.adminSig+'" style="max-height:72px;max-width:90px;margin:8px auto;display:block;mix-blend-mode:multiply;image-rendering:crisp-edges">'
+        :'<img src="'+_CTR_STAMP_B64+'" style="max-height:68px;max-width:80px;margin:8px auto;display:block;opacity:0.9;mix-blend-mode:multiply;image-rendering:crisp-edges">')
       +'<div style="font-size:11px;text-align:right">(인)</div>'
       +'</div>'
       +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
@@ -8517,8 +8557,8 @@ function _ctrGenHTML(data){
     +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(data.type==='labor'?'사용자(갑)':'위탁자(갑)')+'</div>'
     +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">'+companyName+'</div>'
     +(data.adminSig
-      ?'<img src="'+data.adminSig+'" style="max-height:72px;max-width:90px;margin:8px auto;display:block;mix-blend-mode:multiply">'
-      :'<img src="'+_CTR_STAMP_B64+'" style="max-height:68px;max-width:80px;margin:8px auto;display:block;opacity:0.9;mix-blend-mode:multiply">')
+      ?'<img src="'+data.adminSig+'" style="max-height:72px;max-width:90px;margin:8px auto;display:block;mix-blend-mode:multiply;image-rendering:crisp-edges">'
+      :'<img src="'+_CTR_STAMP_B64+'" style="max-height:68px;max-width:80px;margin:8px auto;display:block;opacity:0.9;mix-blend-mode:multiply;image-rendering:crisp-edges">')
     +'<div style="font-size:11px;text-align:right">(인)</div>'
     +'</div>'
     +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:4px">'+(data.type==='labor'?'근로자(을)':'수탁자(을)')+'</div>'
