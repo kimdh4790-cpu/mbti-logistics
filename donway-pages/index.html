@@ -7912,10 +7912,13 @@ function _ctrRenderWrite(){
     +'<button onclick="window._adminSigPad&&window._adminSigPad.clear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
     +'</div>'
     +'<div id="ctr-stamp-panel" style="display:none">'
-    +'<label style="display:block;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;color:var(--text3);font-size:12px">'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+    +'<label style="display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;flex-shrink:0;overflow:hidden">'
     +'<input type="file" id="ctr-stamp-file" accept="image/*" onchange="_ctrStampUpload(this)" style="display:none">'
-    +'<div id="ctr-stamp-preview" style="margin-bottom:6px"><span style="font-size:28px">📂</span><br>도장 이미지 업로드</div>'
+    +'<div id="ctr-stamp-preview" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><span style="font-size:22px">📂</span></div>'
     +'</label>'
+    +'<div style="font-size:11px;color:var(--text3);line-height:1.6">도장 이미지 업로드<br><span style="font-size:10px">클릭하여 파일 선택</span></div>'
+    +'</div>'
     +'<button onclick="_ctrStampClear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
     +'</div>'
     +'</div>'
@@ -8170,7 +8173,7 @@ function _ctrStampUpload(inp){
       ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
       var dataUrl=cv.toDataURL('image/jpeg',0.65);
       window._adminStampImg=dataUrl;
-      document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="max-height:50px;max-width:50px;object-fit:contain;border-radius:4px">';
+      document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="width:72px;height:72px;object-fit:contain;">';
       // Firestore에 자동 저장
       var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
       if(_db&&cid){
@@ -8187,7 +8190,7 @@ function _ctrStampClear(){
   var fi=document.getElementById('ctr-stamp-file');
   if(fi)fi.value='';
   var pr=document.getElementById('ctr-stamp-preview');
-  if(pr)pr.innerHTML='<span style="font-size:28px">📂</span><br>도장 이미지 업로드';
+  if(pr)pr.innerHTML='<span style="font-size:22px">📂</span>';
   window._adminStampImg=null;
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(_db&&cid)_db.collection('companies').doc(cid).update({stampImage:firebase.firestore.FieldValue.delete()}).catch(function(){});
@@ -8200,7 +8203,7 @@ function _ctrLoadStamp(){
     if(!img)return;
     window._adminStampImg=img;
     var pr=document.getElementById('ctr-stamp-preview');
-    if(pr)pr.innerHTML='<img src="'+img+'" style="max-height:50px;max-width:50px;object-fit:contain;border-radius:4px">';
+    if(pr)pr.innerHTML='<img src="'+img+'" style="width:72px;height:72px;object-fit:contain;">';
     _ctrSigTab('stamp');
   });
 }
