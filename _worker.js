@@ -1234,12 +1234,13 @@ export default {
         const _dlBiz = _dg('driverBizNum')||_dg('driverBiz');
         const _dlAddr = _dg('driverAddr');
         const _dlDrSig = _dg('driverSig');
-        const _dlAdSig = _dg('adminSig');
+        let _dlAdSig = _dg('adminSig');
+        if (!_dlAdSig) { const _dlCid=_dg('dealerId'); if(_dlCid){try{const _dlCR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${_dlCid}`,{headers:{Authorization:'Bearer '+_dlFsToken}});const _dlCD=await _dlCR.json();_dlAdSig=_dlCD.fields?.stampImage?.stringValue||'';}catch(_e){}} }
         const _dlSignedAt = _dg('signedAt')||_dg('createdAt')||'';
         const _dlDateStr = _dlSignedAt ? new Date(_dlSignedAt).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
         const _dlPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
-        const _dlStart=_dg('contractStart'),_dlEnd=_dg('contractEnd'),_dlMonths=_dg('contractMonths');
-        const _dlRoute=_dg('route'),_dlArea=_dg('area'),_dlCamp=_dg('camp'),_dlUnit=_dg('unitFee'),_dlCollect=_dg('collectFee'),_dlCycle=_dg('payCycle')||'매월 말일',_dlSort=_dg('sortFee'),_dlCarnum=_dg('carNum'),_dlLicnum=_dg('licNum'),_dlSpecial=_dg('specialTerms');
+        const _dlStart=_dg('startDate'),_dlEnd=_dg('endDate'),_dlMonths=(_dlStart&&_dlEnd)?Math.round((new Date(_dlEnd)-new Date(_dlStart))/(1000*60*60*24*30))+'개월':'';
+        const _dlRoute=_dg('route'),_dlArea=_dg('area'),_dlCamp=_dg('camp'),_dlUnit=_dg('unitPrice'),_dlCollect=_dg('collectPrice'),_dlCycle=_dg('cycle')||'매월 20일',_dlSort=_dg('sortPrice'),_dlCarnum=_dg('carNum'),_dlLicnum=_dg('licenseNum'),_dlSpecial=_dg('special');
         const _dlCompanyCeo=_dg('companyCeo')||'김 형 우';
         const _dlCompanyAddr=_dg('companyAddr')||'부산광역시 수영구 수영로668, 607호';
         const _dlPreDays=_dg('preDepositDays')||'';
@@ -1323,7 +1324,8 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
             const unitPrice = _sd('unitPrice'); const collectPrice = _sd('collectPrice');
             const sortPrice = _sd('sortPrice'); const cycle = _sd('cycle','매월 20일');
             const signedAt = _sd('driverSignedAt','').slice(0,10);
-            const adminSig = _sd('adminSig'); const driverSig = _sd('driverSig');
+            let adminSig = _sd('adminSig'); const driverSig = _sd('driverSig');
+            if (!adminSig) { const _svCid=_sd('dealerId'); if(_svCid){try{const _svCR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${_svCid}`,{headers:{Authorization:'Bearer '+_cFsToken}});const _svCD=await _svCR.json();adminSig=_svCD.fields?.stampImage?.stringValue||'';}catch(_e){}} }
             const kakaoNick = _sd('kakaoNick');
             const archiveUrl = _sd('archiveUrl');
             const signedHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${typeName} - 서명완료</title>
@@ -1744,7 +1746,8 @@ async function submitSign(){
             const _aPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
             const _aType = _ag('type'), _aTypeName = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'}[_aType]||_ag('title','계약서');
             const _aDriver=_ag('driverName'),_aPhone=_ag('driverPhone'),_aBiz=_ag('driverBizNum'),_aAddr=_ag('driverAddr');
-            const _aAdSig=_ag('adminSig');
+            let _aAdSig=_ag('adminSig');
+            if (!_aAdSig && dealerId) {try{const _aCompR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${dealerId}`,{headers:{Authorization:'Bearer '+_dsFs}});const _aCompD=await _aCompR.json();_aAdSig=_aCompD.fields?.stampImage?.stringValue||'';}catch(_e){}}
             const _aStart=_ag('startDate'),_aEnd=_ag('endDate');
             const _aMonths=(_aStart&&_aEnd)?Math.round((new Date(_aEnd)-new Date(_aStart))/(1000*60*60*24*30))+'개월':'';
             const _aRoute=_ag('route'),_aArea=_ag('area'),_aCamp=_ag('camp'),_aUnit=_ag('unitPrice'),_aCollect=_ag('collectPrice'),_aCycle=_ag('cycle')||'매월 20일',_aSort=_ag('sortPrice'),_aCarnum=_ag('carNum'),_aLicnum=_ag('licenseNum'),_aSpecial=_ag('special');
