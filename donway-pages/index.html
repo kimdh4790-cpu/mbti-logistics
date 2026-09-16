@@ -7913,7 +7913,7 @@ function _ctrRenderWrite(){
     +'</div>'
     +'<div id="ctr-stamp-panel" style="display:none">'
     +'<div style="display:flex;align-items:center;gap:12px">'
-    +'<label style="display:inline-flex;align-items:center;justify-content:center;width:80px;height:80px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;flex-shrink:0;overflow:hidden">'
+    +'<label style="display:inline-flex;align-items:center;justify-content:center;width:56px;height:56px;border:2px dashed var(--border);border-radius:6px;cursor:pointer;flex-shrink:0;overflow:hidden">'
     +'<input type="file" id="ctr-stamp-file" accept="image/*" onchange="_ctrStampUpload(this)" style="display:none">'
     +'<div id="ctr-stamp-preview" style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><span style="font-size:22px">📂</span></div>'
     +'</label>'
@@ -8173,7 +8173,7 @@ function _ctrStampUpload(inp){
       ctx.drawImage(img,sx,sy,sz,sz,0,0,sz,sz);
       var dataUrl=cv.toDataURL('image/jpeg',0.65);
       window._adminStampImg=dataUrl;
-      document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="width:72px;height:72px;object-fit:contain;">';
+      document.getElementById('ctr-stamp-preview').innerHTML='<img src="'+dataUrl+'" style="width:52px;height:52px;object-fit:contain;">';
       // Firestore에 자동 저장
       var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
       if(_db&&cid){
@@ -8203,7 +8203,7 @@ function _ctrLoadStamp(){
     if(!img)return;
     window._adminStampImg=img;
     var pr=document.getElementById('ctr-stamp-preview');
-    if(pr)pr.innerHTML='<img src="'+img+'" style="width:72px;height:72px;object-fit:contain;">';
+    if(pr)pr.innerHTML='<img src="'+img+'" style="width:52px;height:52px;object-fit:contain;">';
     _ctrSigTab('stamp');
   });
 }
