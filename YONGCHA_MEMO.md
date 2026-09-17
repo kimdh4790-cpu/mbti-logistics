@@ -345,3 +345,11 @@ git push -u origin claude/브랜치명
 | 2026-09-17 | yongcha.html, yongcha-worker.js | 카카오맵 다중 polling interval 방지: _kakaoInitPending 전역 플래그 추가, _updateMapZones 가드 (zone 추가/삭제마다 새 setInterval 생성 → 타임아웃 7번 반복 버그 수정). timeout handler retry 제거(_kakaoKey=null 상태 재시도 무한루프 버그). 근본 해결은 Kakao Developers에서 yongcha.app 도메인 등록 필요. |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | **카카오맵 → Leaflet.js + OpenStreetMap 전면 마이그레이션**: Kakao Developers 유료 API 활성화 불가(카드 등록 필요)로 카카오맵 완전 제거. Leaflet.js v1.9.4 (cdnjs, API 키/도메인 등록/과금 없음)로 교체. 지오코딩: /api/geocode (Nominatim 프록시), 역지오코딩: /api/reverse-geocode (Nominatim 프록시), 우편번호→좌표: 기존 /api/yongcha/basidco 재사용. yongcha-worker.js const YONGCHA_HTML 구조 복원(이전 파일 구조 파손 함께 수정). |
 | 2026-09-01 | — | 국토교통부 물류산업과 유권해석 질의 접수 완료. 신청번호: 1AA-2609-0025376. 질의내용: 소장-기사 위수탁 연결(화주 개입 없음, 월구독 수익) 구조가 화물자동차운수사업법 제24조의2 화물정보망사업자 등록 대상 및 제24조 주선사업 허가 대상 해당 여부. 답변 예상: 2~3주 내 (2026-09-15~22경). |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **법적 용어 정비 (근무→운행 15곳)**: 용자 UI에서 '근무'(고용관계 시사) 단어 전수 교체 → '운행'. 선호 근무타입→운행형태, 근무 조건→운행 조건, 근무 시간대→운행 시간대, 근무 요일→운행 요일, 월 근무일수→월 운행일수, 실제 근무 내용→실제 운행 내용. |
+| 2026-09-17 | scripts/content/variants/yongcha-variants.json | 변형 YouTube/Instagram 메타 법적 용어 정비: Variant C '직접 연결'→'직접 거래 정보', '연결 요청'→'지원 요청', '#기사직접연결'→'#기사직접지원'. Variant B '직접 연결하세요'→'직접 지원하세요'. |
+| 2026-09-17 | scripts/remotion/YongchaPromo.jsx | Remotion 영상 콘텐츠 법적 용어 정비: YONGCHA_VARIANTS punchline 4변형 업데이트 ('직접 매칭'→'직접 거래', '배차'→'운행'), SUBTITLES_ALL 6라인 교체, SceneMatching 타이틀 '직접 매칭'→'직접 거래'. |
+| 2026-09-17 | scripts/content/yongcha-narration.json | 나레이션 단일 스크립트 → 4변형 구조(A: 기사 타겟, B: 수수료 타겟, C: 소장 타겟, D: 충격 타겟)로 전면 재작성. 모든 변형에서 '직접 운행', '직접 지원', '공차 없이 운행' 등 법적 안전 문구 적용. |
+| 2026-09-17 | scripts/remotion/render-yongcha.js | WEEK_VARIANT 기반 4변형 자동 선택 + --variant= 수동 지정 옵션 추가. browserExecutable 옵션으로 headless_shell 경로 정확히 지정 (chrome 대신 headless_shell 사용). |
+| 2026-09-17 | scripts/content/yongcha-subtitles.srt | 자막 6구간 법적 용어 기반으로 전면 재작성 (60초 대응). |
+| 2026-09-17 | assets/promo/yongcha-promo.html | 캡쳐용 HTML 슬라이드 법적 문구 교체: '직접 계약'→'직접 거래 정보 서비스', '직접 연결'→'직접 거래', '직접 매칭'→'직접 거래 정보'. |
+| 2026-09-17 | output/ | Remotion 렌더링 완료: yongcha-promo.mp4(17.6MB, 1800프레임, 30fps). FFmpeg 자막 합성 완료: yongcha-final.mp4 + yongcha-reels.mp4(1.8MB, SRT→ASS 변환). |
