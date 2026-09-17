@@ -1364,6 +1364,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
             if (!adminSig) { const _svCid=_sd('dealerId'); if(_svCid){try{const _svCR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${_svCid}`,{headers:{Authorization:'Bearer '+_cFsToken}});const _svCD=await _svCR.json();adminSig=_svCD.fields?.stampImage?.stringValue||'';}catch(_e){}} }
             const kakaoNick = _sd('kakaoNick');
             const archiveUrl = _sd('archiveUrl');
+            const customContractUrl = _sd('customContractUrl');
             const signedHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${typeName} - 서명완료</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:#f8fafc;padding:16px}
 .wrap{max-width:700px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
