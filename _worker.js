@@ -9105,22 +9105,24 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
         try {
           const _au = await verifyFirebaseToken(request, env);
           if (!_au) return Response.json({ok:false,error:'로그인 필요'},{status:401});
-          const uid = _au.localId || _au;
+          const uid = _au.localId;
+          if (!uid) return Response.json({ok:false,error:'uid 없음',_au:JSON.stringify(_au)},{status:401});
           const token = await getAccessToken(env);
           const doc = await fsGet(token, 'sly_points', uid);
-          let balance = doc?.fields?.balance?.integerValue|0 || 0;
+          const rawIntVal = doc?.fields?.balance?.integerValue;
+          let balance = parseInt(rawIntVal, 10) || 0;
           let signupBonus = false;
           const alreadyBonused = doc?.fields?.bonusGranted?.booleanValue === true;
+          const _dbg = {uid, docExists:!!doc?.fields, rawIntVal, alreadyBonused};
           if (!alreadyBonused && !doc?.fields?.balance) {
             // 신규 가입 (balance 필드 없음 + 보너스 미수령): 2,900P 무료 지급
             const SIGNUP_BONUS = 2900;
             const patchRes = await fsPatch(token, `${FS_BASE}/sly_points/${uid}`, {balance:{integerValue:String(SIGNUP_BONUS)},bonusGranted:{booleanValue:true},createdAt:{stringValue:new Date().toISOString()}});
-            if (!patchRes?.error) {
-              const bId = crypto.randomUUID();
-              await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:String(SIGNUP_BONUS)},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
-              balance = SIGNUP_BONUS;
-              signupBonus = true;
-            }
+            if (patchRes?.error) return Response.json({ok:false,error:'포인트 쓰기 실패',detail:JSON.stringify(patchRes.error),_dbg},{status:500});
+            const bId = crypto.randomUUID();
+            await fsPatch(token, `${FS_BASE}/sly_point_history/${bId}`, {uid:{stringValue:uid},type:{stringValue:'signup_bonus'},amount:{integerValue:String(SIGNUP_BONUS)},serviceId:{stringValue:'signup'},balanceAfter:{integerValue:String(SIGNUP_BONUS)},createdAt:{stringValue:new Date().toISOString()}});
+            balance = SIGNUP_BONUS;
+            signupBonus = true;
           }
 
           // 최근 이력 5건
@@ -9137,9 +9139,9 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
           const histRows = await histRes.json();
           const history = (Array.isArray(histRows)?histRows:[]).filter(r=>r.document).map(r=>{
             const f=r.document.fields||{};
-            return {type:f.type?.stringValue,amount:f.amount?.integerValue|0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};
+            return {type:f.type?.stringValue,amount:parseInt(f.amount?.integerValue,10)||0,serviceId:f.serviceId?.stringValue,createdAt:f.createdAt?.stringValue};
           });
-          return Response.json({ok:true, balance, history, signupBonus});
+          return Response.json({ok:true, balance, history, signupBonus, _dbg});
         } catch(e) { return Response.json({ok:false,error:e.message},{status:500}); }
       }
 

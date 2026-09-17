@@ -2249,7 +2249,7 @@ async function loadPoints(retry) {
       return;
     }
     const d = await r.json();
-    console.log('[SCAN] loadPoints 성공 retry=' + retry + ' balance=' + d.balance, 'signupBonus=' + d.signupBonus);
+    console.log('[SCAN] loadPoints 성공 retry=' + retry + ' balance=' + d.balance, 'signupBonus=' + d.signupBonus, '_dbg=', JSON.stringify(d._dbg));
     const bal = d.balance || 0;
     window._slyPoints = bal;
     const el = document.getElementById('slyPtsBadge'); if (el) el.textContent = `${bal.toLocaleString()} P`;
