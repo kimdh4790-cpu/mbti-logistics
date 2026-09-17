@@ -317,6 +317,9 @@ git push -u origin claude/브랜치명
 
 | 날짜 | 파일 | 내용 |
 |------|------|------|
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **30일 무료체험 시스템**: 가입 시 trialEndsAt(+30일) 저장, D-7 주황 배너/D-0 빨간 배너+구독 모달 자동 표시 (_yCheckTrial, _yShowTrialBanner, _yShowSubscribeModal) |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **귀로 매칭**: 배송 완료 모달에 50km 이내 open 공고 자동 검색 패널 추가 (_yAutoFindReturnTrip, _yFindReturnTrip) — 완료 지점 기준 거리순 정렬, 상위 3건 표시 |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **소득장부 페이지** (_pgIncomeLedger): 기사 yongcha_applies 월별 집계, 단순경비율 61.5% 종합소득세 예상, 월별 운행 목록 펼침. 홈 퀵액션·프로필 진입 버튼 추가 |
 | 2026-08-17 | yongcha.html, _worker.js | 홈 지도 현위치 버그: watchPosition 실시간 GPS 추적으로 교체 |
 | 2026-08-17 | yongcha.html | 실수령액 계산기 토글 "부가세" → "사업소득세" 수정 |
 | 2026-08-17 | _worker.js | FILO/DINE 로고 base64 임베드 (아이콘 404 → 직접 서빙) |
