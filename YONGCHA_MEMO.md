@@ -353,3 +353,4 @@ git push -u origin claude/브랜치명
 | 2026-09-17 | scripts/content/yongcha-subtitles.srt | 자막 6구간 법적 용어 기반으로 전면 재작성 (60초 대응). |
 | 2026-09-17 | assets/promo/yongcha-promo.html | 캡쳐용 HTML 슬라이드 법적 문구 교체: '직접 계약'→'직접 거래 정보 서비스', '직접 연결'→'직접 거래', '직접 매칭'→'직접 거래 정보'. |
 | 2026-09-17 | output/ | Remotion 렌더링 완료: yongcha-promo.mp4(17.6MB, 1800프레임, 30fps). FFmpeg 자막 합성 완료: yongcha-final.mp4 + yongcha-reels.mp4(1.8MB, SRT→ASS 변환). |
+| 2026-09-17 | yongcha.html / yongcha-worker.js | _showDetailMap v4: 기사 공고 상세 지도를 기초구역 폴리곤+우편번호 라벨 방식으로 교체. 기존 반경 원(circle) 근사값 제거, z.coords 폴리곤(teal) + 라벨 마커 표시. void container.offsetWidth 리플로우 보장. 소장 지도(_doUpdateMapZones)와 동일 UX. |
