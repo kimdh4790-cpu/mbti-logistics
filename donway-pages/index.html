@@ -8485,7 +8485,8 @@ function _ctrGenHTML(data){
       +'</div>'
       +'<div class="sign-box"><div style="font-size:13px;font-weight:700;margin-bottom:8px">수탁자</div>'
       +'<div style="font-size:12px;margin-bottom:4px">주소: '+(data.driverAddr||'　　　　　　　　　　')+'</div>'
-      +'<div style="font-size:12px">성명: '+(data.driverName||'　　　　　　')+'</div>'
+      +'<div style="font-size:12px;margin-bottom:4px">성명: '+(data.driverName||'　　　　　　')+'</div>'
+      +'<div style="font-size:12px">주민등록번호: '+(data.driverIdNum||'　　　　　　　')+'</div>'
       +(data.driverSig
         ?'<img src="'+data.driverSig+'" style="max-height:110px;max-width:200px;margin:8px auto;display:block;mix-blend-mode:multiply">'
         :'<div class="sign-line"></div><div style="font-size:11px;color:#999">(인)</div>')
