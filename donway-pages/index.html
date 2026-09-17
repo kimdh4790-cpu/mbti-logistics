@@ -8322,17 +8322,25 @@ function _ctrRemoveContractTemplate(){
 }
 function _ctrLoadContractTemplate(t){
   var type=t||'wisu';
-  // 타입별 메모리 캐시 확인
   window._ctrPdfCache=window._ctrPdfCache||{};
   if(window._ctrPdfCache[type]){_ctrSetPdfStatus(window._ctrPdfCache[type],true);return;}
-  // 캐시 없으면 Firestore에서 해당 타입 URL 조회
+  function _doLoad(cid){
+    if(!_db||!cid)return;
+    _db.collection('companies').doc(cid).get().then(function(doc){
+      var templates=doc.exists&&doc.data()&&doc.data().contractTemplates;
+      var url=templates&&templates[type];
+      if(url){_ctrSetPdfStatus(url,true);}
+    }).catch(function(){});
+  }
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
-  if(!_db||!cid)return;
-  _db.collection('companies').doc(cid).get().then(function(doc){
-    var templates=doc.exists&&doc.data()&&doc.data().contractTemplates;
-    var url=templates&&templates[type];
-    if(url){_ctrSetPdfStatus(url,true);}
-  }).catch(function(){});
+  if(cid){_doLoad(cid);return;}
+  // _CU 아직 미로드 → auth 준비 후 1회 재시도
+  var _unsubCtr=firebase.auth().onAuthStateChanged(function(u){
+    _unsubCtr&&_unsubCtr();
+    if(!u)return;
+    var resolvedCid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid)||u.uid;
+    _doLoad(resolvedCid);
+  });
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
