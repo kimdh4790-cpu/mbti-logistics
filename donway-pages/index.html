@@ -13424,7 +13424,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
     var taxWork=Math.round(preTax*TAX_WORK);
     var taxEmp=Math.round(preTax*TAX_EMP);
     var deduct=tax33+taxWork+taxEmp;
-    var dailyList=Object.entries(d.dailyRecords||{}).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{date:e[0],orders:e[1].orders,amount:e[1].amount};});
+    var dailyList=Object.entries(d.dailyRecords||{}).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{date:e[0],orders:e[1].orders,amount:e[1].amount,rejected:e[1].rejected||0,cancelled:e[1].cancelled||0};});
     return{name:d.name,orders:Math.round(d.orders||0),preTax:preTax,tax33:tax33,taxWork:taxWork,taxEmp:taxEmp,deduct:deduct,net:preTax-deduct,days:dailyList};
   }).sort(function(a,b){return b.orders-a.orders;});
   window._dwDeliveryResults=results;
@@ -13433,10 +13433,14 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
   var byDate={};
   results.forEach(function(r){
     (r.days||[]).forEach(function(d){
-      if(!byDate[d.date]) byDate[d.date]={date:d.date,rows:[],totalOrders:0,totalAmount:0};
-      byDate[d.date].rows.push({name:r.name,orders:Math.round(d.orders||0),amount:Math.round(d.amount||0)});
+      if(!byDate[d.date]) byDate[d.date]={date:d.date,rows:[],totalOrders:0,totalAmount:0,totalRej:0,totalCan:0};
+      var rej=Math.round(d.rejected||0);
+      var can=Math.round(d.cancelled||0);
+      byDate[d.date].rows.push({name:r.name,orders:Math.round(d.orders||0),amount:Math.round(d.amount||0),rej:rej,can:can});
       byDate[d.date].totalOrders+=Math.round(d.orders||0);
       byDate[d.date].totalAmount+=Math.round(d.amount||0);
+      byDate[d.date].totalRej+=rej;
+      byDate[d.date].totalCan+=can;
     });
   });
   var dateKeys=Object.keys(byDate).sort();
@@ -13460,6 +13464,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
     +'<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
       +'<button onclick="_dwDeliveryExport()" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'
       +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">👤 기사별 세금정산</button>'
+      +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
       +'<button onclick="_dwDeliveryDelete(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ 초기화</button>'
     +'</div>';
 
@@ -13480,18 +13485,31 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
             +'<thead><tr style="background:var(--bg3)">'
               +'<th style="padding:6px 10px;text-align:left;font-weight:700">기사명</th>'
               +'<th style="padding:6px 10px;text-align:right;font-weight:700">건수</th>'
+              +'<th style="padding:6px 10px;text-align:center;font-weight:700;color:#dc2626">거절</th>'
+              +'<th style="padding:6px 10px;text-align:center;font-weight:700;color:#f59e0b">취소</th>'
               +'<th style="padding:6px 10px;text-align:right;font-weight:700;color:#10b981">정산금액</th>'
             +'</tr></thead><tbody>';
       dg.rows.forEach(function(r){
+        var safeId=dt.replace(/-/g,'')+'_'+r.name.replace(/[^a-zA-Z0-9가-힣]/g,'_');
         html+='<tr style="border-top:1px solid var(--border)">'
           +'<td style="padding:6px 10px">'+esc(r.name)+'</td>'
           +'<td style="padding:6px 10px;text-align:right">'+r.orders.toLocaleString()+'건</td>'
+          +'<td style="padding:4px 6px;text-align:center">'
+            +'<input type="number" min="0" value="'+(r.rej||0)+'" id="rej_'+safeId+'" data-date="'+esc(dt)+'" data-name="'+esc(r.name)+'" data-type="rej" style="width:52px;padding:3px 4px;border:1px solid #fca5a5;border-radius:5px;background:var(--bg);color:#dc2626;font-size:12px;font-weight:700;text-align:center">'
+          +'</td>'
+          +'<td style="padding:4px 6px;text-align:center">'
+            +'<input type="number" min="0" value="'+(r.can||0)+'" id="can_'+safeId+'" data-date="'+esc(dt)+'" data-name="'+esc(r.name)+'" data-type="can" style="width:52px;padding:3px 4px;border:1px solid #fcd34d;border-radius:5px;background:var(--bg);color:#f59e0b;font-size:12px;font-weight:700;text-align:center">'
+          +'</td>'
           +'<td style="padding:6px 10px;text-align:right;color:#10b981">₩'+r.amount.toLocaleString()+'</td>'
           +'</tr>';
       });
+      var totalRejStr=dg.totalRej?('<span style="color:#dc2626">−'+dg.totalRej+'건</span>'):'−';
+      var totalCanStr=dg.totalCan?('<span style="color:#f59e0b">−'+dg.totalCan+'건</span>'):'−';
       html+='<tr style="background:var(--bg3);font-weight:700;border-top:1px solid var(--border)">'
         +'<td style="padding:6px 10px">일계</td>'
         +'<td style="padding:6px 10px;text-align:right">'+dg.totalOrders.toLocaleString()+'건</td>'
+        +'<td style="padding:6px 10px;text-align:center">'+totalRejStr+'</td>'
+        +'<td style="padding:6px 10px;text-align:center">'+totalCanStr+'</td>'
         +'<td style="padding:6px 10px;text-align:right;color:#10b981">₩'+dg.totalAmount.toLocaleString()+'</td>'
         +'</tr>';
       html+='</tbody></table></div>';
@@ -13506,6 +13524,41 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
 
   res.innerHTML=html;
 }
+
+window._dwDeliverySaveExtra=function(did, ym){
+  var inputs=document.querySelectorAll('[id^="rej_"],[id^="can_"]');
+  if(!inputs.length){toast('저장할 데이터가 없습니다.');return;}
+  // 날짜+기사명 → {rejected, cancelled} 맵 구성
+  var extras={};// key: "date::name"
+  inputs.forEach(function(inp){
+    var type=inp.dataset.type;
+    var date=inp.dataset.date;
+    var name=inp.dataset.name;
+    if(!date||!name)return;
+    var key=date+'::'+name;
+    if(!extras[key])extras[key]={date:date,name:name,rejected:0,cancelled:0};
+    if(type==='rej')extras[key].rejected=parseInt(inp.value)||0;
+    else if(type==='can')extras[key].cancelled=parseInt(inp.value)||0;
+  });
+  var docRef=_db.collection('delivery_sessions').doc(did+'_coupang_'+ym);
+  docRef.get().then(function(snap){
+    if(!snap.exists)throw new Error('정산 문서가 없습니다.');
+    var data=snap.data();
+    var drivers=(data.drivers||[]).map(function(drv){
+      var dr=Object.assign({},drv.dailyRecords||{});
+      Object.values(extras).forEach(function(ex){
+        if(ex.name===drv.name&&dr[ex.date]){
+          dr[ex.date]=Object.assign({},dr[ex.date],{rejected:ex.rejected,cancelled:ex.cancelled});
+        }
+      });
+      return Object.assign({},drv,{dailyRecords:dr});
+    });
+    return docRef.update({drivers:drivers,savedAt:new Date().toISOString()});
+  }).then(function(){
+    toast('✅ 거절·취소 저장 완료');
+    _dwDeliveryLoad(did,ym);
+  }).catch(function(e){toast('❌ 저장 실패: '+e.message);});
+};
 
 window._dwDeliveryDriverView=function(){
   var results=window._dwDeliveryResults||[];
