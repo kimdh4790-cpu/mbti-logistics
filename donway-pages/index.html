@@ -13193,12 +13193,23 @@ function pageDeliverySettle(){
       +'</div>'
       +'<select id="dw-ym-sel" onchange="window._dwSettleYm=this.value;pageDeliverySettle()" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.3);color:#fff;font-size:12px;font-weight:700;cursor:pointer">'+monthOpts+'</select>'
     +'</div>'
-    +'<div id="dw-upload-zone" style="border:2px dashed var(--border);border-radius:12px;padding:28px;text-align:center;margin-bottom:16px;cursor:pointer;transition:.2s" ondragover="event.preventDefault();this.style.borderColor=\'var(--brand)\'" ondragleave="this.style.borderColor=\'var(--border)\'" ondrop="_dwDeliveryDrop(event)">'
-      +'<div style="font-size:36px;margin-bottom:8px">📂</div>'
-      +'<div style="font-size:13px;font-weight:700;margin-bottom:4px">쿠팡이츠 엑셀 파일 첨부</div>'
-      +'<div style="font-size:11px;color:var(--text3);margin-bottom:12px">일자별 정산내역 시트 자동 인식 · 매일 첨부 시 날짜별 누적 취합</div>'
-      +'<input id="dw-settle-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="_dwDeliveryFileLoad(this.files[0])">'
-      +'<button onclick="document.getElementById(\'dw-settle-file\').click()" style="padding:8px 22px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📎 파일 선택</button>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'
+      +'<div id="dw-upload-zone" style="border:2px dashed var(--border);border-radius:12px;padding:22px;text-align:center;cursor:pointer;transition:.2s" ondragover="event.preventDefault();this.style.borderColor=\'var(--brand)\'" ondragleave="this.style.borderColor=\'var(--border)\'" ondrop="_dwDeliveryDrop(event)">'
+        +'<div style="font-size:30px;margin-bottom:6px">📂</div>'
+        +'<div style="font-size:12px;font-weight:700;margin-bottom:3px">쿠팡이츠 엑셀 첨부</div>'
+        +'<div style="font-size:10px;color:var(--text3);margin-bottom:10px">일자별 정산내역 시트 자동 인식<br>매일 첨부 시 날짜별 누적 취합</div>'
+        +'<input id="dw-settle-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="_dwDeliveryFileLoad(this.files[0])">'
+        +'<button onclick="document.getElementById(\'dw-settle-file\').click()" style="padding:7px 18px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📎 파일 선택</button>'
+      +'</div>'
+      +'<div id="dw-img-upload-zone" style="border:2px dashed var(--border);border-radius:12px;padding:22px;text-align:center;cursor:pointer;transition:.2s" ondragover="event.preventDefault();this.style.borderColor=\'#7c3aed\'" ondragleave="this.style.borderColor=\'var(--border)\'" ondrop="_dwDeliveryImgDrop(event)">'
+        +'<div id="dw-img-preview" style="width:100%;height:80px;margin-bottom:6px;display:flex;align-items:center;justify-content:center">'
+          +'<span style="font-size:30px">🖼️</span>'
+        +'</div>'
+        +'<div style="font-size:12px;font-weight:700;margin-bottom:3px">증빙 이미지 첨부</div>'
+        +'<div style="font-size:10px;color:var(--text3);margin-bottom:10px">정산 증빙 · 영수증 · 캡처본<br>JPG / PNG / WEBP</div>'
+        +'<input id="dw-settle-img" type="file" accept="image/*" style="display:none" onchange="_dwDeliveryImgLoad(this.files[0])">'
+        +'<button onclick="document.getElementById(\'dw-settle-img\').click()" style="padding:7px 18px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🖼️ 이미지 선택</button>'
+      +'</div>'
     +'</div>'
     +'<div id="dw-settle-results"><div style="text-align:center;color:var(--text3);padding:32px">⏳ 데이터 불러오는 중...</div></div>'
     +'</div>';
@@ -13210,6 +13221,30 @@ window._dwDeliveryDrop=function(e){
   e.preventDefault();
   var f=e.dataTransfer&&e.dataTransfer.files[0];
   if(f) _dwDeliveryFileLoad(f);
+};
+
+window._dwDeliveryImgDrop=function(e){
+  e.preventDefault();
+  var z=document.getElementById('dw-img-upload-zone');
+  if(z) z.style.borderColor='var(--border)';
+  var f=e.dataTransfer&&e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/')) _dwDeliveryImgLoad(f);
+  else if(f) toast('❌ 이미지 파일만 가능합니다 (JPG/PNG/WEBP)');
+};
+
+window._dwDeliveryImgLoad=function(file){
+  if(!file||!file.type.startsWith('image/'))return;
+  window._dwSettleImg=file;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var prev=document.getElementById('dw-img-preview');
+    if(!prev)return;
+    prev.innerHTML='<img src="'+ev.target.result+'" style="max-width:100%;max-height:80px;border-radius:6px;object-fit:contain;box-shadow:0 2px 8px rgba(0,0,0,.15)">';
+    var z=document.getElementById('dw-img-upload-zone');
+    if(z){z.style.borderColor='#7c3aed';z.style.background='rgba(124,58,237,.05)';}
+    toast('✅ 이미지 첨부: '+file.name.slice(0,20));
+  };
+  reader.readAsDataURL(file);
 };
 
 function _dwDeliveryFileLoad(file){
