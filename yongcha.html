@@ -8782,6 +8782,8 @@ function _initPostMap(){
       _map.setZoomable(true);
       _map.relayout();
       _doUpdateMapZones();
+      // 컨테이너가 막 visible 된 경우를 위해 150ms 후 재레이아웃
+      setTimeout(function(){if(_map){_map.relayout();_doUpdateMapZones();}},150);
       // 지도 클릭 → 구역 자동 추가
       kakao.maps.event.addListener(_map,'click',function(mouseEvent){
         var latlng=mouseEvent.latLng;
@@ -8932,7 +8934,8 @@ function _updateMapZones(){
   if(wrap){
     wrap.style.display = window._zones.length ? 'block' : 'none';
     if(window._zones.length && !_map){
-      _initPostMap();
+      // setTimeout(0): wrap가 display:block으로 렌더링된 후 지도 초기화
+      setTimeout(function(){ _initPostMap(); }, 0);
       return;
     }
   }
