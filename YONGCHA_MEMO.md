@@ -339,4 +339,5 @@ git push -u origin claude/브랜치명
 | 2026-09-14 | YONGCHA_MEMO.md | 영업용 번호판 업계 지식 섹션 추가: 아바사자 vs 배넘버 차이, 적재량별 종류, 용차 실무 규칙 (국토부 기준) |
 | 2026-09-17 | YONGCHA_MEMO.md | 국토부 유권해석 결과 기록: 제24조 주선사업 해당 없음, 제24조의2 현행법 직접 해당 없음. 법 개정안(의안번호 15469) 모니터링 필요. 담당자: 김승현 044-201-4026. |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | 배송구역 지도 미표시 버그 수정: _updateMapZones setTimeout(0) 지연 + _initPostMap 150ms relayout 추가 (kakao SDK 이미 로드된 경우 동기 Map 생성으로 0×0 컨테이너 읽히던 문제 해결) |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | 카카오맵 다중 polling interval 방지: _kakaoInitPending 전역 플래그 추가, _updateMapZones 가드 (zone 추가/삭제마다 새 setInterval 생성 → 타임아웃 7번 반복 버그 수정). timeout handler retry 제거(_kakaoKey=null 상태 재시도 무한루프 버그). 근본 해결은 Kakao Developers에서 yongcha.app 도메인 등록 필요. |
 | 2026-09-01 | — | 국토교통부 물류산업과 유권해석 질의 접수 완료. 신청번호: 1AA-2609-0025376. 질의내용: 소장-기사 위수탁 연결(화주 개입 없음, 월구독 수익) 구조가 화물자동차운수사업법 제24조의2 화물정보망사업자 등록 대상 및 제24조 주선사업 허가 대상 해당 여부. 답변 예상: 2~3주 내 (2026-09-15~22경). |
