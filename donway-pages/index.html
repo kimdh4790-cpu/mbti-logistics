@@ -7952,6 +7952,9 @@ function _ctrRenderWrite(){
 function _ctrSelectType(t){
   window._ctrType=t;
   window._ctrDriver=null;
+  // 타입 전환 시 해당 타입 캐시로 교체 (없으면 null)
+  window._ctrPdfCache=window._ctrPdfCache||{};
+  window._ctrCustomPdfUrl=window._ctrPdfCache[t]||null;
   _ctrRenderWrite();
 }
 
@@ -8289,6 +8292,10 @@ function _ctrSetPdfStatus(url,saved){
   var urlEl=document.getElementById('ctr-pdf-url');
   var statusEl=document.getElementById('ctr-pdf-status');
   if(urlEl)urlEl.value=url;
+  // 타입별 캐시에 저장
+  window._ctrPdfCache=window._ctrPdfCache||{};
+  var _t=window._ctrType||'wisu';
+  window._ctrPdfCache[_t]=url;
   window._ctrCustomPdfUrl=url;
   if(!statusEl)return;
   statusEl.innerHTML=
@@ -8298,6 +8305,8 @@ function _ctrSetPdfStatus(url,saved){
 }
 function _ctrRemoveContractTemplate(){
   window._ctrCustomPdfUrl=null;
+  window._ctrPdfCache=window._ctrPdfCache||{};
+  delete window._ctrPdfCache[window._ctrType||'wisu'];
   var urlEl=document.getElementById('ctr-pdf-url');
   if(urlEl)urlEl.value='';
   var statusEl=document.getElementById('ctr-pdf-status');
@@ -8312,13 +8321,16 @@ function _ctrRemoveContractTemplate(){
   toast('계약서 파일이 삭제되었습니다');
 }
 function _ctrLoadContractTemplate(t){
-  // 메모리에 같은 유형 URL이 있으면 즉시 복원
-  if(window._ctrCustomPdfUrl){_ctrSetPdfStatus(window._ctrCustomPdfUrl,true);return;}
+  var type=t||'wisu';
+  // 타입별 메모리 캐시 확인
+  window._ctrPdfCache=window._ctrPdfCache||{};
+  if(window._ctrPdfCache[type]){_ctrSetPdfStatus(window._ctrPdfCache[type],true);return;}
+  // 캐시 없으면 Firestore에서 해당 타입 URL 조회
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(!_db||!cid)return;
   _db.collection('companies').doc(cid).get().then(function(doc){
     var templates=doc.exists&&doc.data()&&doc.data().contractTemplates;
-    var url=templates&&templates[t||'wisu'];
+    var url=templates&&templates[type];
     if(url){_ctrSetPdfStatus(url,true);}
   }).catch(function(){});
 }
