@@ -357,3 +357,4 @@ git push -u origin claude/브랜치명
 | 2026-09-17 | assets/promo/yongcha-promo.html | 캡쳐용 HTML 슬라이드 법적 문구 교체: '직접 계약'→'직접 거래 정보 서비스', '직접 연결'→'직접 거래', '직접 매칭'→'직접 거래 정보'. |
 | 2026-09-17 | output/ | Remotion 렌더링 완료: yongcha-promo.mp4(17.6MB, 1800프레임, 30fps). FFmpeg 자막 합성 완료: yongcha-final.mp4 + yongcha-reels.mp4(1.8MB, SRT→ASS 변환). |
 | 2026-09-17 | yongcha.html / yongcha-worker.js | _showDetailMap v4: 기사 공고 상세 지도를 기초구역 폴리곤+우편번호 라벨 방식으로 교체. 기존 반경 원(circle) 근사값 제거, z.coords 폴리곤(teal) + 라벨 마커 표시. void container.offsetWidth 리플로우 보장. 소장 지도(_doUpdateMapZones)와 동일 UX. |
+| 2026-09-17 | yongcha.html / yongcha-worker.js | 법적 리스크 수정: ① 공고 카드 "일 최소보장 30/35만원" 플랫폼 고정값 제거 → 소장이 직접 입력한 경우에만 "소장 제시 최저 N만원/일" 표시. ② 공고 상세 "소장 제시 최소보장" → "소장 직접 제시 조건"으로 변경, 플랫폼 계산 기본값 삭제. ③ 등록 폼 "최소보장금액" → "최저 지급 조건 (소장이 직접 제시하는 거래 조건)" 라벨 변경. ④ AI 예측 "최소보장" → "시세 하단 (참고용)". ⑤ 시세 분석 "최소보장 기준표" → "지역별 시세 참고" + 참고용 면책 문구 추가. 플랫폼이 보장의 당사자가 되는 표현 전면 제거. |

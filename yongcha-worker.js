@@ -3278,8 +3278,9 @@ function _makePostCard(d,mini){
       '</div>'+
       gauge+
       (tags.length?'<div class="pc-tags">'+tags.map(function(t){return '<span class="tag">'+t+'</span>';}).join('')+'</div>':'')+
-      '<div class="pc-guard"><span>일 최소보장 '+minG+'만원</span>'+
-        (dayEst>0?'<small>예상 '+dayEst+'만원/일</small>':'')+'</div>'+
+      (d.minGuarantee?'<div class="pc-guard"><span>소장 제시 최저 '+Math.round(d.minGuarantee/10000)+'만원/일</span>'+
+        (dayEst>0?'<small>예상 '+dayEst+'만원/일</small>':'')+'</div>':
+        (dayEst>0?'<div class="pc-guard"><small>예상 '+dayEst+'만원/일</small></div>':''))+
       (d.volume?'<div class="pc-stats"><span>일 물량 <b>'+_won(d.volume)+'건</b></span>'+
         (d.workDays?'<span>운행 <b>'+_esc(d.workDays)+'</b></span>':'')+'</div>':'')+
     '</div>'+
@@ -3674,9 +3675,9 @@ function _showPostDetail(d){
         '<div class="ai-predict-u">22일 기준</div>'+
       '</div>'+
       '<div class="ai-predict-col">'+
-        '<div class="ai-predict-t">최소보장</div>'+
+        '<div class="ai-predict-t">시세 하단</div>'+
         '<div class="ai-predict-n" style="color:var(--ac)">'+Math.round(gross*0.85/10000)+'<span style="font-size:13px">만</span></div>'+
-        '<div class="ai-predict-u">단가 × 85%</div>'+
+        '<div class="ai-predict-u">참고용 (단가×85%)</div>'+
       '</div>'+
     '</div>'+
     (isDriver?
@@ -3722,16 +3723,17 @@ function _showPostDetail(d){
     '</div>';
   })():'')+
 
-  // ── 소장 최소보장 안내 ──
+  // ── 소장 직접 제시 최저 지급 조건 ──
+  (d.minGuarantee?
   '<div style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(0,212,170,.08));'+
     'border:1px solid rgba(16,185,129,.25);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px">'+
     '<div>'+
-      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">소장 제시 최소보장</div>'+
-      '<div style="font-size:22px;font-weight:900;color:var(--gn)">'+(d.workShift==='야간'?'일 35만원':'일 30만원')+'</div>'+
-      '<div style="font-size:10px;color:var(--t3);margin-top:2px">건수 미달 시 소장이 제시한 보장액 (계약 조건에 따름)</div>'+
+      '<div style="font-size:11px;color:var(--gn);font-weight:800;margin-bottom:2px">소장 직접 제시 조건</div>'+
+      '<div style="font-size:22px;font-weight:900;color:var(--gn)">일 '+Math.round(d.minGuarantee/10000)+'만원 이상</div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-top:2px">물량 미달 시 소장이 제시한 최저 지급액 · 소장·기사 간 직접 거래 조건</div>'+
     '</div>'+
     '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(16,185,129,.4)" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'+
-  '</div>'+
+  '</div>':'')+
 
   // ── 정보 그리드 v3 ──
   '<div class="detail-info-grid">'+
@@ -4503,7 +4505,7 @@ function _showContract(contractId){
       '<div><span style="color:var(--t3)">택배사</span> <strong>'+_esc(t.courier||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">구역</span> <strong>'+_esc(t.area||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">건당 금액</span> <strong>'+(t.unitPrice?(t.unitPrice).toLocaleString()+'원':'—')+'</strong></div>'+
-      '<div><span style="color:var(--t3)">최소보장</span> <strong>'+(t.minGuarantee?(t.minGuarantee/10000)+'만원/일':'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">최저 지급 조건</span> <strong>'+(t.minGuarantee?(t.minGuarantee/10000)+'만원/일 (소장 직접 제시)':'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">운행 시간대</span> <strong>'+(t.workShift||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">운행 요일</span> <strong>'+(t.workDays||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">정산 주기</span> <strong>'+(t.settleFreq||'—')+'</strong></div>'+
@@ -4684,9 +4686,9 @@ function _pgPostWrite(el){
   '<div id="pw-est-val" style="font-size:18px;font-weight:900;color:var(--gn)"></div>'+
   '</div>'+
   '<div class="inp-wrap">'+
-  '<label class="inp-lbl">최소보장금액 (원/일) <span style="font-size:10px;font-weight:500;color:var(--t3)">(선택 · 물량 미달 시 기사에게 지급)</span></label>'+
-  '<input class="inp" id="pw-guarantee" type="number" placeholder="예: 300000 (비워두면 보장 없음)" min="0">'+
-  '<div style="font-size:10px;color:var(--t3);margin-top:4px;padding:0 2px">실건수×단가 미달 시 소장이 보장액 지급 — 소장·기사 간 직접 거래 조건</div>'+
+  '<label class="inp-lbl">최저 지급 조건 (원/일) <span style="font-size:10px;font-weight:500;color:var(--t3)">(선택 · 물량 미달 시 소장이 직접 제시하는 최저 금액)</span></label>'+
+  '<input class="inp" id="pw-guarantee" type="number" placeholder="예: 300000 (비워두면 조건 없음)" min="0">'+
+  '<div style="font-size:10px;color:var(--t3);margin-top:4px;padding:0 2px">소장이 직접 제시하는 거래 조건 · 플랫폼과 무관한 소장·기사 간 직접 계약</div>'+
   '</div>'+
   '</div>'+
 
@@ -4932,9 +4934,9 @@ function _calcEst(){
   if(disp&&val&&dayEst>0){
     disp.style.display='block';
     var shift=(document.getElementById('pw-shift')||{}).value||'주간';
-    var minG=shift==='야간'?35:30;
-    var actual=Math.max(dayEst,minG);
-    val.textContent='약 '+dayEst+'만원/일 (최소보장 적용시 '+actual+'만원)';
+    var minG=parseInt((document.getElementById('pw-guarantee')||{}).value)||0;
+    var actual=minG?Math.max(dayEst,Math.round(minG/10000)):dayEst;
+    val.textContent=minG?'약 '+dayEst+'만원/일 (최저조건 적용시 '+actual+'만원)':'약 '+dayEst+'만원/일';
   }
 }
 
@@ -8220,17 +8222,18 @@ function _riqHeatmap(el){
     });
     html+='</div>';
 
-    // 최소보장 기준표
+    // 지역별 시세 참고
     html+='<div class="card" style="margin-bottom:14px">'+
       '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">'+
-      '<div style="font-size:14px;font-weight:800">최소보장 기준</div>'+
-      '<span style="font-size:10.5px;color:var(--t2);background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:2px 7px">시세 × 85%</span></div>';
+      '<div style="font-size:14px;font-weight:800">지역별 시세 참고</div>'+
+      '<span style="font-size:10.5px;color:var(--t2);background:var(--bg3);border:1px solid var(--bd);border-radius:6px;padding:2px 7px">실거래 데이터 기반</span></div>'+
+      '<div style="font-size:10px;color:var(--t3);margin-bottom:10px;padding:6px 8px;background:var(--bg2);border-radius:6px">아래 시세는 참고용 정보입니다. 실제 거래 조건은 소장·기사 간 직접 협의하세요.</div>';
     regions.slice(0,10).forEach(function(r){
       html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bd)">'+
         '<div style="font-size:13px;font-weight:700">'+_esc(r.region)+'</div>'+
         '<div style="display:flex;align-items:center;gap:8px">'+
-        '<span style="font-size:12px;color:var(--gn);font-weight:800">'+_riqFmtP(r.guarantee)+' 이상</span>'+
-        '<span style="font-size:11px;color:var(--t3)">(평균 '+_riqFmtP(r.avg)+')</span>'+
+        '<span style="font-size:12px;color:var(--gn);font-weight:800">'+_riqFmtP(r.avg)+'</span>'+
+        '<span style="font-size:11px;color:var(--t3)">('+r.cnt+'건 집계)</span>'+
         '</div></div>';
     });
     html+='</div>';
