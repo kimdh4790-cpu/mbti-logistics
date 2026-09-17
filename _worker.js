@@ -1270,12 +1270,7 @@ export default {
         const _dlPreDays=_dg('preDepositDays')||'';
         const _dlRpJson=_dg('routePricesJson'); let _dlRps=[]; try{if(_dlRpJson)_dlRps=JSON.parse(_dlRpJson);}catch(e){}
         const _dlFeeRows=_dlRps.length?_dlRps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlPAmt(r.price)}</td></tr>`).join(''):`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlUnit?_dlPAmt(_dlUnit):'　　　원'}</td></tr>`;
-        // 1순위: 대리점이 직접 업로드한 계약서 파일
-        const _dlCustomUrl = _dg('customContractUrl');
-        if (_dlCustomUrl) {
-          return Response.redirect(_dlCustomUrl, 302);
-        }
-        // 2순위: 서명 완료 archiveUrl 원본 (내용 불일치 영구 방지)
+        // 1순위: 서명 완료 archiveUrl (내용 보장)
         const _dlArchiveUrl = _dg('archiveUrl');
         if (_dlArchiveUrl) {
           try {
@@ -1285,6 +1280,11 @@ export default {
               return new Response(_dlArHtml, {headers:{'Content-Type':'text/html;charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(_dlTypeName+'-'+_dlDriver+'.html')}`,'Cache-Control':'no-store'}});
             }
           } catch(_ae){}
+        }
+        // 2순위: 대리점이 직접 업로드한 계약서 파일 (미서명 상태 폴백)
+        const _dlCustomUrl = _dg('customContractUrl');
+        if (_dlCustomUrl) {
+          return Response.redirect(_dlCustomUrl, 302);
         }
         // 3순위: 코드 생성 (미서명·업로드 없는 계약서)
         let _dlBody='';
@@ -1410,7 +1410,6 @@ ${camp?`<tr><td class="th">캠프명</td><td colspan="3">${camp}</td></tr>`:''}
 ${(collectPrice||unitPrice)?`<tr><td class="th" rowspan="3">수수료</td><td class="th">집화수수료</td><td colspan="2">1건당 ${collectPrice?pAmt(collectPrice):'0원'}</td></tr><tr><td class="th">배송수수료</td><td colspan="2">1건당 ${unitPrice?pAmt(unitPrice):'　　원'}</td></tr><tr><td class="th">지급일</td><td colspan="2">${cycle}</td></tr>`:''}
 ${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td colspan="3">시간당 ${pAmt(sortPrice)}</td></tr>`:''}
 </table>
-${customContractUrl?`<div style="margin-top:6px;text-align:right"><a href="${customContractUrl}" download style="font-size:11px;color:#64748b;text-decoration:underline">📎 원본 업로드 파일 다운로드</a></div>`:''}
 <div style="font-size:12px;font-weight:700;color:#334155;margin:16px 0 8px">✍️ 전자서명</div>
 <div class="sign-area">
 <div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
