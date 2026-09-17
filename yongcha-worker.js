@@ -1065,9 +1065,9 @@ select.inp option{background:#24243d;color:#f0f1f8}
     document.head.appendChild(s);
   }
   fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
-    _doLoad(d.key||'3d5a58a3e1099aa2b6b221c3db2b0d13');
+    _doLoad(d.key||'e52ec615218ef0c9929498b185aa0955');
   }).catch(function(){
-    _doLoad('3d5a58a3e1099aa2b6b221c3db2b0d13');
+    _doLoad('e52ec615218ef0c9929498b185aa0955');
   });
 })();
 </script>
@@ -8756,7 +8756,7 @@ function _loadKakaoMap(callback){
     return;
   }
   // 직접 로드
-  var key=window._kakaoKey||'3d5a58a3e1099aa2b6b221c3db2b0d13';
+  var key=window._kakaoKey||'e52ec615218ef0c9929498b185aa0955';
   _kakaoKey=key;
   _initKakaoScript(callback);
 }
@@ -9584,17 +9584,9 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
 
     if (path === '/api/kakao-config') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-      // env.KAKAO_JS_KEY는 _worker.js 환경에만 등록됨 → filo.ai.kr로 프록시해서 실제 키 획득
-      if (env.KAKAO_JS_KEY) {
-        return new Response(JSON.stringify({ key: env.KAKAO_JS_KEY }), { headers: corsH });
-      }
-      try {
-        const pr = await fetch('https://filo.ai.kr/api/kakao-config', { signal: AbortSignal.timeout(5000) });
-        const data = await pr.text();
-        return new Response(data, { headers: corsH });
-      } catch(e) {
-        return new Response(JSON.stringify({ key: '' }), { headers: corsH });
-      }
+      // 용차 전용 Kakao JS 키 (앱 ID: 1530862, yongcha.app 도메인 등록됨)
+      const kakaoKey = env.KAKAO_JS_KEY || 'e52ec615218ef0c9929498b185aa0955';
+      return new Response(JSON.stringify({ key: kakaoKey }), { headers: corsH });
     }
 
     // 기초구역 중심 좌표 — juso.go.kr WFS → vWorld WFS → vWorld REST 순 폴백
