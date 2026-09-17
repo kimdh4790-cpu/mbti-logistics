@@ -93,12 +93,17 @@ async function main() {
     publicDir: pubDir,
   });
 
+  const browserOpts = chromiumPath ? {
+    browserExecutable: chromiumPath,
+    onBrowserDownload: () => ({ onProgress: () => undefined, version: null }),
+  } : {};
+
   console.log('[Remotion] 컴포지션 로딩...');
   const composition = await selectComposition({
     serveUrl: bundled,
     id: compositionId,
     inputProps: { hasNarration, hasBgm },
-    ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
+    ...browserOpts,
   });
 
   console.log(`[Remotion] 렌더링... (${composition.durationInFrames}프레임, ${composition.fps}fps)`);
@@ -110,7 +115,7 @@ async function main() {
     inputProps: { hasNarration, hasBgm },
     videoBitrate: '8M',
     backgroundColor: '#08101f',
-    ...(chromiumPath ? { chromiumExecutablePath: chromiumPath } : {}),
+    ...browserOpts,
     onProgress: ({ renderedFrames, totalFrames }) => {
       if (renderedFrames % 60 === 0 || renderedFrames === totalFrames) {
         const pct = Math.round((renderedFrames / totalFrames) * 100);
