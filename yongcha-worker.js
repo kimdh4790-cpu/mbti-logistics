@@ -1837,29 +1837,34 @@ function _pgHomeDriver(el){
     // 공고 존 마커 + 기초구역 폴리곤 — allPosts(이미 로딩된 경우) 또는 Firestore 재조회
     function _drawZoneMarkers(posts){
       posts.forEach(function(p){
-        // 각 공고의 모든 구역 폴리곤/원 + 라벨 그리기
         var drawnZones=p.zones&&p.zones.length?p.zones:[];
-        var firstLat=null,firstLng=null,firstLbl=p.area||p.region||'';
-        drawnZones.forEach(function(z,zi){
+        var hasAnyZone=false;
+        drawnZones.forEach(function(z){
           var zLat=typeof z.lat==='number'?z.lat:parseFloat(z.lat);
           var zLng=typeof z.lng==='number'?z.lng:parseFloat(z.lng);
           if(isNaN(zLat)||isNaN(zLng))return;
-          if(firstLat===null){firstLat=zLat;firstLng=zLng;firstLbl=z.name&&z.name!==z.zipcode?z.zipcode+' '+z.name:(z.zipcode||z.name||firstLbl);}
+          hasAnyZone=true;
+          // 폴리곤 or 원형
           if(z.coords&&z.coords.length>=3){
             var path=z.coords.map(function(c){return[c.lat,c.lng];});
             L.polygon(path,{color:'#00d4aa',weight:1.5,opacity:0.85,fillColor:'#00d4aa',fillOpacity:0.12,interactive:false}).addTo(m);
           } else {
             L.circle([zLat,zLng],{radius:400,color:'#00d4aa',weight:1.5,opacity:0.7,fillColor:'#00d4aa',fillOpacity:0.08,interactive:false}).addTo(m);
           }
+          // 구역마다 라벨 마커
+          var lbl=z.name&&z.name!==z.zipcode?z.zipcode+' '+z.name:(z.zipcode||z.name||'');
+          var ovHtml='<div style="background:#1e3a8a;color:#fff;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer;transform:translateX(-50%)" onclick="_showPostDetail(\''+p.id+'\')">'+_esc(lbl)+'</div>';
+          L.marker([zLat,zLng],{icon:L.divIcon({html:ovHtml,className:'',iconSize:null,iconAnchor:[0,0]})}).addTo(m);
         });
-        // 대표 라벨 마커 (첫 번째 구역 또는 loadingLat 기준)
-        var markerLat=null,markerLng=null;
-        if(typeof p.loadingLat==='number'){markerLat=p.loadingLat;markerLng=p.loadingLng;}
-        else if(firstLat!==null){markerLat=firstLat;markerLng=firstLng;}
-        if(markerLat===null)return;
-        var ovHtml='<div style="background:#1e3a8a;color:#fff;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer;transform:translateX(-50%)" onclick="_showPostDetail(\''+p.id+'\')">'+_esc(firstLbl)+'</div>';
-        var icon=L.divIcon({html:ovHtml,className:'',iconSize:null,iconAnchor:[0,0]});
-        L.marker([markerLat,markerLng],{icon:icon}).addTo(m);
+        // 구역 없는 구 방식 공고 — loadingLat 또는 d.lat으로 단일 마커
+        if(!hasAnyZone){
+          var fLat=typeof p.loadingLat==='number'?p.loadingLat:(typeof p.lat==='number'?p.lat:null);
+          var fLng=typeof p.loadingLng==='number'?p.loadingLng:(typeof p.lng==='number'?p.lng:null);
+          if(fLat===null)return;
+          var fbLbl=p.area||p.region||'';
+          var fbHtml='<div style="background:#1e3a8a;color:#fff;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer;transform:translateX(-50%)" onclick="_showPostDetail(\''+p.id+'\')">'+_esc(fbLbl)+'</div>';
+          L.marker([fLat,fLng],{icon:L.divIcon({html:fbHtml,className:'',iconSize:null,iconAnchor:[0,0]})}).addTo(m);
+        }
       });
     }
     if(_allPosts&&_allPosts.length){
