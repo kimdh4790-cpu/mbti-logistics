@@ -4,8 +4,9 @@ name: YouTube 채널 일별 모니터링
 # 28개 YouTube 채널 새 영상 감지 → Claude Haiku 분류 → SMS 알림
 
 on:
-  schedule:
-    - cron: '0 0 * * *'   # 매일 00:00 UTC = 09:00 KST
+  # 스케줄 비활성화 — Oracle Cloud cron으로 이전 (GitHub Actions IP 차단 문제)
+  # schedule:
+  #   - cron: '0 0 * * *'   # 매일 00:00 UTC = 09:00 KST
   workflow_dispatch:
 
 jobs:

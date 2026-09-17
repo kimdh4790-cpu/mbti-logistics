@@ -8781,6 +8781,7 @@ function _initPostMap(){
       _map.setDraggable(true);
       _map.setZoomable(true);
       _map.relayout();
+      _doUpdateMapZones();
       // 지도 클릭 → 구역 자동 추가
       kakao.maps.event.addListener(_map,'click',function(mouseEvent){
         var latlng=mouseEvent.latLng;
@@ -8932,7 +8933,6 @@ function _updateMapZones(){
     wrap.style.display = window._zones.length ? 'block' : 'none';
     if(window._zones.length && !_map){
       _initPostMap();
-      setTimeout(_doUpdateMapZones, 800);
       return;
     }
   }
