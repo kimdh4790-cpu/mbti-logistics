@@ -8730,7 +8730,7 @@ function _yAiRenderPicks(data,post,postId){
 }
 
 // ── 카카오맵 ────────────────────────────────────────────────
-var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[];
+var _kakaoKey=null, _map=null, _markers=[], _selectedZones=[], _kakaoInitPending=false;
 
 function _loadKakaoMap(callback){
   // 이미 로드됨
@@ -8747,11 +8747,10 @@ function _loadKakaoMap(callback){
       }
       if(t>20){
         clearInterval(check);
-        // 스크립트 태그 있지만 로드 실패한 경우 → 실패 태그 제거 후 재시도
+        _kakaoInitPending=false;
         var fs=document.querySelector('script[src*="dapi.kakao.com"]');
         if(fs&&fs.parentNode)fs.parentNode.removeChild(fs);
-        console.warn('카카오맵 로드 타임아웃 — 재시도');
-        _initKakaoScript(callback);
+        console.warn('카카오맵 로드 실패 — Kakao Developers에서 yongcha.app 도메인 등록 확인 필요');
       }
     },300);
     return;
@@ -8781,6 +8780,7 @@ function _initPostMap(){
   var container=document.getElementById('post-map');
   if(!container){ return; }
   _loadKakaoMap(function(){
+    _kakaoInitPending=false;
     container=document.getElementById('post-map');
     if(!container)return;
     container.style.width='100%';
@@ -8946,7 +8946,10 @@ function _updateMapZones(){
     wrap.style.display = window._zones.length ? 'block' : 'none';
     if(window._zones.length && !_map){
       // setTimeout(0): wrap가 display:block으로 렌더링된 후 지도 초기화
-      setTimeout(function(){ _initPostMap(); }, 0);
+      if(!_kakaoInitPending){
+        _kakaoInitPending=true;
+        setTimeout(function(){ _initPostMap(); }, 0);
+      }
       return;
     }
   }
