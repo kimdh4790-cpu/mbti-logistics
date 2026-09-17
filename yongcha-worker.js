@@ -11033,11 +11033,121 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
           await fetch(`${FS}/yongcha_users/${agencyId}?${Object.keys(uf).map(k => `updateMask.fieldPaths=${k}`).join('&')}`, { method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: uf }) });
         }
       }
+
+      // ── 미정산 리마인더 (완료 후 48h → 소장 알림, 72h → 기사 알림) ──
+      await ycUnsettledReminder(FS, fsToken, env);
+
     } catch (e) {
       console.error('overdue-cron error:', e.message);
     }
   }
 };
+
+async function ycUnsettledReminder(FS, fsToken, env) {
+  const now = Date.now();
+  const H48 = now - 48 * 3600 * 1000;
+  const H72 = now - 72 * 3600 * 1000;
+
+  // yongcha_applies: status='done', settlePaid 없거나 false, completedAt < 72h 전
+  const q = { structuredQuery: {
+    from: [{ collectionId: 'yongcha_applies' }],
+    where: { compositeFilter: { op: 'AND', filters: [
+      { fieldFilter: { field: { fieldPath: 'status' }, op: 'EQUAL', value: { stringValue: 'done' } } },
+      { fieldFilter: { field: { fieldPath: 'completedAt' }, op: 'LESS_THAN', value: { timestampValue: new Date(H48).toISOString() } } }
+    ]}},
+    limit: 200
+  }};
+  const res = await fetch(`${FS}:runQuery`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(q)
+  });
+  const docs = await res.json();
+  if (!Array.isArray(docs)) return;
+
+  // 소장별 미정산 건 집계
+  const agencyMap = {};   // agencyId → { name, fcmToken, count, totalAmt }
+  const driverNotify72 = []; // 72h 초과 → 기사 알림 대상
+
+  for (const d of docs) {
+    if (!d.document) continue;
+    const f = d.document.fields || {};
+    const settlePaid = f.settlePaid?.booleanValue;
+    if (settlePaid) continue; // 이미 정산된 건 스킵
+
+    const agencyId  = f.agencyId?.stringValue;
+    const driverId  = f.driverId?.stringValue;
+    const driverName= f.driverName?.stringValue || '기사';
+    const agencyName= f.agencyName?.stringValue || '대리점';
+    const unitPrice = Number(f.unitPrice?.integerValue || f.unitPrice?.doubleValue || 0);
+    const volume    = Number(f.volume?.integerValue || f.volume?.doubleValue || 1);
+    const amt       = unitPrice * volume;
+    const completedTs = f.completedAt?.timestampValue ? new Date(f.completedAt.timestampValue).getTime() : 0;
+    const remindedAt48 = f.reminded48h?.booleanValue;
+    const remindedAt72 = f.reminded72h?.booleanValue;
+    const applyId   = d.document.name.split('/').pop();
+
+    // 소장 FCM 집계 (48h~, 아직 reminded48h 안 된 것)
+    if (agencyId && !remindedAt48) {
+      if (!agencyMap[agencyId]) agencyMap[agencyId] = { name: agencyName, count: 0, totalAmt: 0, ids: [] };
+      agencyMap[agencyId].count++;
+      agencyMap[agencyId].totalAmt += amt;
+      agencyMap[agencyId].ids.push(applyId);
+    }
+
+    // 기사 알림 (72h 초과, 아직 reminded72h 안 된 것)
+    if (driverId && completedTs < H72 && !remindedAt72) {
+      driverNotify72.push({ driverId, driverName, agencyName, amt, applyId });
+    }
+  }
+
+  const fcmHeaders = { 'Authorization': 'key=' + env.FCM_SERVER_KEY, 'Content-Type': 'application/json' };
+
+  // 소장에게 미정산 리마인더 발송
+  for (const [agencyId, info] of Object.entries(agencyMap)) {
+    try {
+      const agDoc = await (await fetch(`${FS}/yongcha_users/${agencyId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+      const fcmToken = agDoc.fields?.fcmToken?.stringValue;
+      if (fcmToken && env.FCM_SERVER_KEY) {
+        await fetch('https://fcm.googleapis.com/fcm/send', {
+          method: 'POST', headers: fcmHeaders,
+          body: JSON.stringify({ to: fcmToken, notification: {
+            title: '미정산 건 알림',
+            body: `완료 후 48시간이 지난 미정산 건이 ${info.count}건 있어요. (총 ${(info.totalAmt).toLocaleString('ko-KR')}원)`
+          }, data: { type: 'unsettled_reminder', page: 'dashboard' } })
+        });
+      }
+      // reminded48h 플래그 일괄 업데이트
+      for (const id of info.ids) {
+        await fetch(`${FS}/yongcha_applies/${id}?updateMask.fieldPaths=reminded48h`, {
+          method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields: { reminded48h: { booleanValue: true } } })
+        }).catch(() => {});
+      }
+    } catch (e) { console.error('unsettled-agency-notify error:', e.message); }
+  }
+
+  // 기사에게 72h 리마인더 발송
+  for (const item of driverNotify72) {
+    try {
+      const drDoc = await (await fetch(`${FS}/yongcha_users/${item.driverId}`, { headers: { 'Authorization': `Bearer ${fsToken}` } })).json();
+      const fcmToken = drDoc.fields?.fcmToken?.stringValue;
+      if (fcmToken && env.FCM_SERVER_KEY) {
+        await fetch('https://fcm.googleapis.com/fcm/send', {
+          method: 'POST', headers: fcmHeaders,
+          body: JSON.stringify({ to: fcmToken, notification: {
+            title: '정산 미처리 알림',
+            body: `${item.agencyName}의 정산이 아직 처리되지 않았어요. 소장에게 문의해 보세요.`
+          }, data: { type: 'unsettled_driver', page: 'dashboard' } })
+        });
+      }
+      await fetch(`${FS}/yongcha_applies/${item.applyId}?updateMask.fieldPaths=reminded72h`, {
+        method: 'PATCH', headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { reminded72h: { booleanValue: true } } })
+      }).catch(() => {});
+    } catch (e) { console.error('unsettled-driver-notify error:', e.message); }
+  }
+}
 
 // ── Firestore 서비스 계정 토큰 ─────────────────────────────────────────────
 async function ycGetFsToken(env) {
