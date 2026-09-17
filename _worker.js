@@ -1359,7 +1359,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
             const dName = _sd('driverName'); const dPhone = _sd('driverPhone'); const dBiz = _sd('driverBizNum');
             const dBirth = _sd('driverBirth'); const dAddr = _sd('driverAddr');
             const aName = _sd('adminName','엠비티아이(유)'); const aBiz = _sd('adminBizNum','373-86-02536');
-            const aAddr = _sd('adminAddr','부산광역시 남구 황령산로 274, 111동 1305호');
+            const aAddr = _sd('companyAddr','부산광역시 수영구 수영로668, 607호');
             const startDate = _sd('startDate'); const endDate = _sd('endDate');
             const route = _sd('route'); const camp = _sd('camp');
             const unitPrice = _sd('unitPrice'); const collectPrice = _sd('collectPrice');
@@ -1399,22 +1399,18 @@ ${archiveUrl
 </div>
 <h1>${typeName}</h1>
 <div class="subtitle">아래 계약서를 저장 또는 인쇄하세요</div>
-${customContractUrl
-  ?`<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#334155;margin-bottom:6px">📄 계약서 원본</div><iframe src="/contract/file/${_cToken}" style="width:100%;height:55vh;border:1px solid #e2e8f0;border-radius:10px;display:block" title="계약서 원본"></iframe></div>`
-  :``}
 <table>
 <tr><td class="th">위탁자(갑)</td><td>${aName} · 사업자등록번호: ${aBiz}<br><span style="font-size:11px;color:#64748b">${aAddr}</span></td></tr>
 <tr><td class="th">수탁자(을)</td><td>${dName} · ${dPhone}${dBiz?' · 사업자번호: '+dBiz:''}<br><span style="font-size:11px;color:#64748b">${dBirth?'생년월일: '+dBirth+' ':''} ${dAddr||''}</span>${_cf['driverIdNum']?.stringValue?`<br><span style="font-size:11px;color:#334155">주민등록번호: ${_cf['driverIdNum'].stringValue}</span>`:''}</td></tr>
 </table>
-${!customContractUrl?`<table>
+<table>
 <tr><td class="th">계약기간</td><td colspan="3">${startDate} ~ ${endDate}</td></tr>
 ${route?`<tr><td class="th">담당구역</td><td colspan="3">${route}</td></tr>`:''}
 ${camp?`<tr><td class="th">캠프명</td><td colspan="3">${camp}</td></tr>`:''}
-<tr><td class="th" rowspan="3">수수료</td><td class="th">집화수수료</td><td colspan="2">1건당 ${collectPrice?pAmt(collectPrice):'0원'}</td></tr>
-<tr><td class="th">배송수수료</td><td colspan="2">1건당 ${unitPrice?pAmt(unitPrice):'　　원'}</td></tr>
-<tr><td class="th">지급일</td><td colspan="2">${cycle}</td></tr>
+${(collectPrice||unitPrice)?`<tr><td class="th" rowspan="3">수수료</td><td class="th">집화수수료</td><td colspan="2">1건당 ${collectPrice?pAmt(collectPrice):'0원'}</td></tr><tr><td class="th">배송수수료</td><td colspan="2">1건당 ${unitPrice?pAmt(unitPrice):'　　원'}</td></tr><tr><td class="th">지급일</td><td colspan="2">${cycle}</td></tr>`:''}
 ${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td colspan="3">시간당 ${pAmt(sortPrice)}</td></tr>`:''}
-</table>`:''}
+</table>
+${customContractUrl?`<div style="margin-top:6px;text-align:right"><a href="${customContractUrl}" download style="font-size:11px;color:#64748b;text-decoration:underline">📎 원본 업로드 파일 다운로드</a></div>`:''}
 <div style="font-size:12px;font-weight:700;color:#334155;margin:16px 0 8px">✍️ 전자서명</div>
 <div class="sign-area">
 <div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
@@ -1477,7 +1473,7 @@ function tryPrint(){
           const _sc_cname = '엠비티아이(유)'; // 위탁자명 고정
           const _sc_cbiz = '373-86-02536';
           const customContractUrl = _cg('customContractUrl');
-          const _sc_caddr = '부산광역시 남구 황령산로 274, 111동 1305호';
+          const _sc_caddr = _cg('companyAddr')||'부산광역시 수영구 수영로668, 607호';
           const _sc_ceo = '김 형 우';
           const _sc_pAmt = v => v ? Number(v).toLocaleString('ko-KR')+'원' : '　　원';
           const _sc_months = (_sc_start && _sc_end) ? Math.round((new Date(_sc_end)-new Date(_sc_start))/(1000*60*60*24*30))+'개월' : '';
@@ -1541,9 +1537,7 @@ ${(_sc_area||_sc_route)?`<p class="cl2"><b>담당구역</b> ${_sc_area||_sc_rout
 ${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
 </div>`;
           }
-          const _contractViewHtml = customContractUrl
-            ? `<div style="margin-bottom:8px;font-size:12px;color:#334155;font-weight:700">📄 계약서 원본</div><iframe src="/contract/file/${_cToken}" style="width:100%;height:65vh;border:1px solid #e2e8f0;border-radius:10px;display:block" title="계약서 원본"></iframe>`
-            : `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b"><style>.cl2{margin-bottom:10px}</style><table class="ctable" style="margin-bottom:14px"><tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr><tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr></table>${_fullContractHtml}</div>`;
+          const _contractViewHtml = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b"><style>.cl2{margin-bottom:10px}</style><table class="ctable" style="margin-bottom:14px"><tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}<br><span style="font-size:11px;color:#64748b">${_sc_caddr}</span></td></tr><tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr></table>${_fullContractHtml}</div>`+(customContractUrl?`<div style="margin-top:8px;text-align:right"><a href="${customContractUrl}" download style="font-size:11px;color:#64748b;text-decoration:underline">📎 원본 업로드 파일 다운로드</a></div>`:'');
           const contractSummaryRows = '';
           const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>계약서 서명</title>
