@@ -1834,16 +1834,32 @@ function _pgHomeDriver(el){
         }
       },{enableHighAccuracy:true,timeout:10000,maximumAge:5000});
     }
-    // 공고 존 마커 — allPosts(이미 로딩된 경우) 또는 Firestore 재조회
+    // 공고 존 마커 + 기초구역 폴리곤 — allPosts(이미 로딩된 경우) 또는 Firestore 재조회
     function _drawZoneMarkers(posts){
       posts.forEach(function(p){
-        var lat=null,lng=null,lbl=p.area||p.region||'';
-        if(typeof p.loadingLat==='number'){lat=p.loadingLat;lng=p.loadingLng;}
-        else if(p.zones&&p.zones.length&&typeof p.zones[0].lat==='number'){lat=p.zones[0].lat;lng=p.zones[0].lng;lbl=p.zones[0].name||lbl;}
-        if(lat==null)return;
-        var ovHtml='<div style="background:#1e3a8a;color:#fff;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer;transform:translateX(-50%)" onclick="_showPostDetail(\''+p.id+'\')">'+_esc(lbl)+'</div>';
+        // 각 공고의 모든 구역 폴리곤/원 + 라벨 그리기
+        var drawnZones=p.zones&&p.zones.length?p.zones:[];
+        var firstLat=null,firstLng=null,firstLbl=p.area||p.region||'';
+        drawnZones.forEach(function(z,zi){
+          var zLat=typeof z.lat==='number'?z.lat:parseFloat(z.lat);
+          var zLng=typeof z.lng==='number'?z.lng:parseFloat(z.lng);
+          if(isNaN(zLat)||isNaN(zLng))return;
+          if(firstLat===null){firstLat=zLat;firstLng=zLng;firstLbl=z.name&&z.name!==z.zipcode?z.zipcode+' '+z.name:(z.zipcode||z.name||firstLbl);}
+          if(z.coords&&z.coords.length>=3){
+            var path=z.coords.map(function(c){return[c.lat,c.lng];});
+            L.polygon(path,{color:'#00d4aa',weight:1.5,opacity:0.85,fillColor:'#00d4aa',fillOpacity:0.12,interactive:false}).addTo(m);
+          } else {
+            L.circle([zLat,zLng],{radius:400,color:'#00d4aa',weight:1.5,opacity:0.7,fillColor:'#00d4aa',fillOpacity:0.08,interactive:false}).addTo(m);
+          }
+        });
+        // 대표 라벨 마커 (첫 번째 구역 또는 loadingLat 기준)
+        var markerLat=null,markerLng=null;
+        if(typeof p.loadingLat==='number'){markerLat=p.loadingLat;markerLng=p.loadingLng;}
+        else if(firstLat!==null){markerLat=firstLat;markerLng=firstLng;}
+        if(markerLat===null)return;
+        var ovHtml='<div style="background:#1e3a8a;color:#fff;border-radius:999px;padding:3px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.4);cursor:pointer;transform:translateX(-50%)" onclick="_showPostDetail(\''+p.id+'\')">'+_esc(firstLbl)+'</div>';
         var icon=L.divIcon({html:ovHtml,className:'',iconSize:null,iconAnchor:[0,0]});
-        L.marker([lat,lng],{icon:icon}).addTo(m);
+        L.marker([markerLat,markerLng],{icon:icon}).addTo(m);
       });
     }
     if(_allPosts&&_allPosts.length){
