@@ -3596,12 +3596,15 @@ function _yTaxApprove(settleId){
     if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
     return;
   }
-  fetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/popbill-approve',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
+    });
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'승인 실패');
     _yToast('세금계산서가 홈택스에 자동 등록됐어요!');
-    _pgTaxApprove(document.getElementById('content'),settleId); // 화면 갱신
+    _pgTaxApprove(document.getElementById('content'),settleId);
   }).catch(function(e){
     _yToast('오류: '+e.message);
     if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
@@ -3614,8 +3617,11 @@ function _yTaxReject(settleId){
   if(!corpNum){_yToast('사업자번호가 없어요. 프로필에서 먼저 입력하세요.');return;}
   var btn=document.getElementById('tax-reject-btn');
   if(btn){btn.disabled=true;btn.textContent='처리중...';}
-  fetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/popbill-reject',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
+    });
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'거부 처리 실패');
     _yToast('거부했어요. 소장에게 사유를 전달하세요.');
@@ -9628,6 +9634,8 @@ function _showZoneOnMap(i){
 `;
 // Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
 const YC_FB_KEY = 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
+// 택배사별 건당 시세 기준 (원) — ai-coach, smart-match, price-suggest 공용
+const YC_MKT_BASE = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
 
 function _ycCarNorm(v) {
   if (!v) return '';
@@ -9993,7 +10001,7 @@ self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim())
         const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
         if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: acH });
 
-        const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
+        const MKT = YC_MKT_BASE;
         const postSummary = (posts || []).slice(0, 8).map(p => {
           const avg = MKT[p.courier] || 880;
           const rp = Math.round((p.unitPrice - avg) / avg * 100);
@@ -10086,6 +10094,8 @@ ${postSummary || '공고 없음'}
     // ── Recommend: rank drivers for a post ────────────────────
     if (path === '/api/yongcha/recommend' && method === 'POST') {
       const recH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const recUser = await ycVerifyToken(request, env);
+      if (!recUser) return ycAuthReq(recH);
       try {
         const { post, drivers, topN = 5 } = await request.json();
         if (!drivers?.length) return new Response(JSON.stringify({ ok: true, picks: [] }), { headers: recH });
@@ -10135,7 +10145,7 @@ ${postSummary || '공고 없음'}
         const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
         if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: smH });
 
-        const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
+        const MKT = YC_MKT_BASE;
         const postList = (posts || []).slice(0, 10).map(p => {
           const avg = MKT[p.courier] || 880;
           const rp = Math.round((p.unitPrice - avg) / avg * 100);
@@ -10177,6 +10187,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── Quick Post NL Parser: 자연어 → 공고 필드 ────────────────
     if (path === '/api/yongcha/quick-post' && method === 'POST') {
       const qpH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const qpUser = await ycVerifyToken(request, env);
+      if (!qpUser) return ycAuthReq(qpH);
       const rlParse = (t) => {
         const f={};
         if(/쿠팡/.test(t))f.courier='쿠팡로지스틱스';
@@ -10247,7 +10259,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
         const apiKey = env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY;
         if (!apiKey) return new Response(JSON.stringify({ ok: false, error: 'no key' }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
 
-        const MKT = { 'CJ대한통운': 880, '한진택배': 855, '롯데택배': 860, '우체국': 900, '쿠팡로지스틱스': 960, '로젠택배': 840 };
+        const MKT = YC_MKT_BASE;
         const mktBase = MKT[courier] || 880;
         const prompt = `한국 택배 용차 단가 전문가입니다. 다음 조건의 적정 단가를 분석하세요.
 
@@ -10405,7 +10417,7 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     if (path === '/api/yongcha/popbill-webhook' && method === 'POST') {
       const whSecret = request.headers.get('X-Popbill-Webhook-Secret') || url.searchParams.get('secret') || '';
       const whCorsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
-      if (env.POPBILL_WEBHOOK_SECRET && whSecret !== env.POPBILL_WEBHOOK_SECRET) {
+      if (!env.POPBILL_WEBHOOK_SECRET || whSecret !== env.POPBILL_WEBHOOK_SECRET) {
         return new Response(JSON.stringify({ok:false,error:'unauthorized'}),{status:401,headers:whCorsH});
       }
       try {
@@ -10432,6 +10444,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 팝빌 상태 조회 ────────────────────────────────────────────────
     if (path === '/api/yongcha/popbill-status' && method === 'GET') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const psUser = await ycVerifyToken(request, env);
+      if (!psUser) return ycAuthReq(corsH);
       try {
         const mgtKey  = url.searchParams.get('mgtKey');
         const corpNum = url.searchParams.get('corpNum');
@@ -10694,6 +10708,8 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
     // ── 공동현관 비밀번호 DB — 조회 ─────────────────────────────────────────
     if (path === '/api/yongcha/entrance-codes' && method === 'GET') {
       const corsH = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+      const ecUser = await ycVerifyToken(request, env);
+      if (!ecUser) return ycAuthReq(corsH);
       try {
         const fsToken = await ycGetFsToken(env);
         const FS = `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID||'mbti-logistics'}/databases/(default)/documents`;
