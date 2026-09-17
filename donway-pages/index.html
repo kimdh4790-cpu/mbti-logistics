@@ -7935,13 +7935,7 @@ function _ctrRenderWrite(){
 
   _ctrLoadDrivers();
   _ctrLoadStamp();
-  // 이전에 업로드한 계약서 파일 URL 복원 (페이지 재렌더 후에도 유지)
-  if(window._ctrCustomPdfUrl){
-    var _pu=document.getElementById('ctr-pdf-url');
-    var _ps=document.getElementById('ctr-pdf-status');
-    if(_pu)_pu.value=window._ctrCustomPdfUrl;
-    if(_ps)_ps.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ 업로드됨</span><a href="'+window._ctrCustomPdfUrl+'" target="_blank" style="font-size:12px;color:#0066ff">📄 확인</a><button onclick="window._ctrCustomPdfUrl=null;var s=document.getElementById(\'ctr-pdf-status\');if(s)s.innerHTML=\'<label for=ctr-pdf-file style=flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)>📁 계약서 파일 선택 (PDF·이미지·Word)</label>\'" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text3)">삭제</button>';
-  }
+  _ctrLoadContractTemplate(t);
   _ctrRenderConditions(t);
   setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
@@ -8291,6 +8285,43 @@ function _ctrLoadStamp(){
     }
   });
 }
+function _ctrSetPdfStatus(url,saved){
+  var urlEl=document.getElementById('ctr-pdf-url');
+  var statusEl=document.getElementById('ctr-pdf-status');
+  if(urlEl)urlEl.value=url;
+  window._ctrCustomPdfUrl=url;
+  if(!statusEl)return;
+  statusEl.innerHTML=
+    '<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+(saved?'저장된 파일':'업로드 완료')+'</span>'
+    +'<a href="'+url+'" target="_blank" style="font-size:12px;color:#0066ff;margin-left:6px">📄 확인</a>'
+    +'<button onclick="_ctrRemoveContractTemplate()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text3);margin-left:6px">× 삭제</button>';
+}
+function _ctrRemoveContractTemplate(){
+  window._ctrCustomPdfUrl=null;
+  var urlEl=document.getElementById('ctr-pdf-url');
+  if(urlEl)urlEl.value='';
+  var statusEl=document.getElementById('ctr-pdf-status');
+  if(statusEl)statusEl.innerHTML='<label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 파일 선택 (PDF·이미지·Word)</label>';
+  // Firestore에서도 삭제
+  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  var t=window._ctrType||'wisu';
+  if(_db&&cid){
+    var patch={};patch['contractTemplates.'+t]=firebase.firestore.FieldValue.delete();
+    _db.collection('companies').doc(cid).update(patch).catch(function(){});
+  }
+  toast('계약서 파일이 삭제되었습니다');
+}
+function _ctrLoadContractTemplate(t){
+  // 메모리에 같은 유형 URL이 있으면 즉시 복원
+  if(window._ctrCustomPdfUrl){_ctrSetPdfStatus(window._ctrCustomPdfUrl,true);return;}
+  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  if(!_db||!cid)return;
+  _db.collection('companies').doc(cid).get().then(function(doc){
+    var templates=doc.exists&&doc.data()&&doc.data().contractTemplates;
+    var url=templates&&templates[t||'wisu'];
+    if(url){_ctrSetPdfStatus(url,true);}
+  }).catch(function(){});
+}
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
   var allowed=['pdf','image/','msword','wordprocessingml','doc'];
@@ -8303,14 +8334,12 @@ async function _ctrUploadPdf(inp){
     var storageRef=firebase.storage().ref('contracts/'+cid+'/'+Date.now()+'-'+safeName);
     var snap=await storageRef.put(file);
     var url=await snap.ref.getDownloadURL();
-    var urlEl=document.getElementById('ctr-pdf-url');
-    if(urlEl)urlEl.value=url;
-    window._ctrCustomPdfUrl=url; // 페이지 재렌더 후에도 유지
-    if(statusEl)statusEl.innerHTML=
-      '<span style="font-size:12px;color:#10b981;font-weight:700">✅ 업로드 완료</span>'
-      +'<a href="'+url+'" target="_blank" style="font-size:12px;color:#0066ff">📄 확인</a>'
-      +'<button onclick="var u=document.getElementById(\'ctr-pdf-url\');if(u)u.value=\'\';var s=document.getElementById(\'ctr-pdf-status\');if(s)s.innerHTML=\'<label for=ctr-pdf-file style=flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)>📁 PDF 파일 선택</label>\';" style="padding:4px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">× 취소</button>';
-    toast('✅ PDF 업로드 완료');
+    _ctrSetPdfStatus(url,false);
+    // Firestore에 유형별로 저장 → 다음에 자동 복원
+    var t=window._ctrType||'wisu';
+    var patch={};patch['contractTemplates.'+t]=url;
+    _db&&_db.collection('companies').doc(cid).set(patch,{merge:true}).catch(function(){});
+    toast('✅ PDF 업로드 완료 — 다음에 자동으로 불러옵니다');
   }catch(e){
     if(statusEl)statusEl.innerHTML='<label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 PDF 파일 선택</label>';
     toast('❌ 업로드 실패: '+e.message);
