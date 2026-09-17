@@ -8440,7 +8440,7 @@ function _riqMatch(el){
       if(mb)mb.innerHTML=_emptyHtml('📭','공개 공고 없음','새 공고가 등록되면 AI 추천이 시작됩니다');
       return;
     }
-    var _riqTok=await _yGetToken().catch(function(){return '';});
+    return _yGetToken().catch(function(){return '';}).then(function(_riqTok){
     return fetch('/api/routeiq-match',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+_riqTok},
@@ -8491,6 +8491,7 @@ function _riqMatch(el){
           '</div></div>';
       });
       mb2.innerHTML=html;
+    });
     });
   }).catch(function(e){
     var mb=document.getElementById('riq-match-body');
@@ -8545,7 +8546,7 @@ function _yAiRecommend(postId){
         _emptyHtml('🚗','등록된 기사가 없어요','기사 회원이 가입하면 추천이 시작돼요');
       return;
     }
-    var _recTok=await _yGetToken().catch(function(){return '';});
+    return _yGetToken().catch(function(){return '';}).then(function(_recTok){
     return fetch('/api/yongcha/recommend',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_recTok},
       body:JSON.stringify({
@@ -8564,6 +8565,7 @@ function _yAiRecommend(postId){
       })
     }).then(function(r){return r.json();}).then(function(data){
       _yAiRenderPicks(data,p,postId);
+    });
     });
   }).catch(function(e){
     var body=document.getElementById('modal-body');
