@@ -100,7 +100,7 @@ git push -u origin claude/브랜치명
 | 1순위 | business.juso.go.kr WFS (apikey: `3B63BE88F1A06653075E0C88883B157E`) |
 | 2순위 | vWorld WFS (key: `DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A` / env.VWORLD_API_KEY) |
 | 3순위 | KV `basidco:{zip}` 캐시 |
-| 클라이언트 | `_doUpdateMapZones()` → fetch 후 `kakao.maps.Polygon` 그리기 |
+| 클라이언트 | `_doUpdateMapZones()` → fetch 후 `L.polygon()` 그리기 (Leaflet.js) |
 
 ---
 
@@ -134,7 +134,10 @@ git push -u origin claude/브랜치명
 
 ### 위치/지도
 - `_yLoadGeo()` — GPS 취득 (Promise) — 주의: _CU.lat/lng로 먼저 채움
-- `_loadKakaoMap(cb)` — 카카오맵 SDK 동적 로드
+- `_loadKakaoMap(cb)` — (deprecated, no-op 래퍼로 유지) 카카오맵 SDK 로드 → Leaflet로 마이그레이션 완료
+- `_lTiles(m)` — Leaflet 지도에 OpenStreetMap 타일 레이어 추가 헬퍼
+- `/api/geocode?q=` — Nominatim 프록시 (주소→{x,y} 좌표), yongcha-worker.js 핸들러
+- `/api/reverse-geocode?lat=&lng=` — Nominatim 역지오코딩 (좌표→행정구역명)
 - 홈 지도: watchPosition으로 실시간 파란 점 갱신 (_homeWatchFirst 플래그)
 
 ### AI
@@ -340,4 +343,5 @@ git push -u origin claude/브랜치명
 | 2026-09-17 | YONGCHA_MEMO.md | 국토부 유권해석 결과 기록: 제24조 주선사업 해당 없음, 제24조의2 현행법 직접 해당 없음. 법 개정안(의안번호 15469) 모니터링 필요. 담당자: 김승현 044-201-4026. |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | 배송구역 지도 미표시 버그 수정: _updateMapZones setTimeout(0) 지연 + _initPostMap 150ms relayout 추가 (kakao SDK 이미 로드된 경우 동기 Map 생성으로 0×0 컨테이너 읽히던 문제 해결) |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | 카카오맵 다중 polling interval 방지: _kakaoInitPending 전역 플래그 추가, _updateMapZones 가드 (zone 추가/삭제마다 새 setInterval 생성 → 타임아웃 7번 반복 버그 수정). timeout handler retry 제거(_kakaoKey=null 상태 재시도 무한루프 버그). 근본 해결은 Kakao Developers에서 yongcha.app 도메인 등록 필요. |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **카카오맵 → Leaflet.js + OpenStreetMap 전면 마이그레이션**: Kakao Developers 유료 API 활성화 불가(카드 등록 필요)로 카카오맵 완전 제거. Leaflet.js v1.9.4 (cdnjs, API 키/도메인 등록/과금 없음)로 교체. 지오코딩: /api/geocode (Nominatim 프록시), 역지오코딩: /api/reverse-geocode (Nominatim 프록시), 우편번호→좌표: 기존 /api/yongcha/basidco 재사용. yongcha-worker.js const YONGCHA_HTML 구조 복원(이전 파일 구조 파손 함께 수정). |
 | 2026-09-01 | — | 국토교통부 물류산업과 유권해석 질의 접수 완료. 신청번호: 1AA-2609-0025376. 질의내용: 소장-기사 위수탁 연결(화주 개입 없음, 월구독 수익) 구조가 화물자동차운수사업법 제24조의2 화물정보망사업자 등록 대상 및 제24조 주선사업 허가 대상 해당 여부. 답변 예상: 2~3주 내 (2026-09-15~22경). |
