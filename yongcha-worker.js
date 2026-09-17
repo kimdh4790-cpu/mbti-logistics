@@ -1,4 +1,4 @@
-const YONGCHA_HTML = String.raw`<!DOCTYPE html>
+const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -1683,7 +1683,7 @@ function _pgHomeDriver(el){
       '<span class="hero-v2-name">'+_esc(_CU.name)+'님 안녕하세요!</span>'+
       '<span class="hero-v2-badge" id="drv-active-badge">공고 확인 중...</span>'+
     '</div>'+
-    '<div class="hero-v2-earn-lbl">오늘 예상 운임</div>'+
+    '<div class="hero-v2-earn-lbl">오늘 예상 수입</div>'+
     '<div class="hero-v2-earn-amt" id="earn-today">—</div>'+
     '<div class="hero-v2-earn-sub" id="earn-sub-lbl">'+_esc(_CU.region||'지역')+'  운행 기록 집계 중...</div>'+
     '<div class="hero-v2-chips" id="earn-chips"></div>'+
@@ -6612,7 +6612,7 @@ function _showJobWriteModal(){
   '<div style="font-size:20px;font-weight:900;margin-bottom:16px"> 공고 등록</div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">공고 제목 <span style="color:var(--rd)">*</span></label>'+
-  '<input class="inp" id="jw-title" placeholder="예: CJ대한통운 정규기사 모집"></div>'+
+  '<input class="inp" id="jw-title" placeholder="예: CJ대한통운 기사 모집"></div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">계약유형 <span style="color:var(--rd)">*</span></label>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="jw-type-group">'+
@@ -7534,7 +7534,7 @@ function _pgDashboardAgency(el){
         '<div class="kpi-card"><div class="kpi-val" style="color:var(--gn)">'+_won(Math.round(cur.net/10000))+'<span style="font-size:13px">만</span></div>'+
           '<div class="kpi-lbl">이번 달 순수입</div></div>'+
         '<div class="kpi-card"><div class="kpi-val" style="color:var(--br)">'+_won(Math.round(cur.amt/10000))+'<span style="font-size:13px">만</span></div>'+
-          '<div class="kpi-lbl">이번 달 운임 합계</div></div>'+
+          '<div class="kpi-lbl">이번 달 수입 합계</div></div>'+
         '<div class="kpi-card"><div class="kpi-val" style="color:'+(deltaNet>=0?'var(--gn)':'var(--rd)')+'">'+
           (deltaNet>=0?'▲':'▼')+' '+_won(Math.abs(Math.round(deltaNet/10000)))+'<span style="font-size:13px">만</span></div>'+
           '<div class="kpi-lbl">전월 대비</div></div>'+
@@ -9114,7 +9114,7 @@ function _yShowSettlementDone(a){
     '</div>'+
     '<div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">'+
       '<div style="padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center">'+
-        '<span style="font-size:13px;color:var(--t2);font-weight:600">운임 ('+_won(unitPrice)+'원 × '+volume+'건)</span>'+
+        '<span style="font-size:13px;color:var(--t2);font-weight:600">금액 ('+_won(unitPrice)+'원 × '+volume+'건)</span>'+
         '<span style="font-size:14.5px;font-weight:800">'+_won(gross)+'원</span>'+
       '</div>'+
       '<div style="padding:16px;background:var(--acl);display:flex;justify-content:space-between;align-items:center">'+
@@ -9305,6 +9305,7 @@ function _showZoneOnMap(i){
 <script src="/filo-memo.js?v=1"></script>
 </body>
 </html>
+
 
 `;
 // Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
