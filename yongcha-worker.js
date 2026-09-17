@@ -3607,7 +3607,7 @@ function _showPostDetail(d){
       return '<button onclick="_showZoneOnMap('+i+')" id="ztab-'+i+'" style="padding:5px 14px;border-radius:20px;border:2px solid var(--ac);'+
         'background:'+(i===0?'var(--ac)':'transparent')+';color:'+(i===0?'#fff':'var(--ac)')+';'+
         'font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+
-        _esc(z.zipcode?z.zipcode+' ':'')+_esc(z.name||'')+'</button>';
+        _esc(z.zipcode+(z.name&&z.name!==z.zipcode?' '+z.name:''))+'</button>';
     }).join('')+
     '</div>':'')+
   '<div class="zone-map-wrap">'+
@@ -3759,8 +3759,10 @@ function _showPostDetail(d){
   // 지도 표시
   window._detailZones = d.zones||[];
   var _firstZone=d.zones&&d.zones.length&&d.zones[0];
-  if(_firstZone&&typeof _firstZone.lat==='number'&&typeof _firstZone.lng==='number'){
-    setTimeout(function(){_showDetailMap(_firstZone.lat,_firstZone.lng,_firstZone.name);},400);
+  var _fzLat=_firstZone?parseFloat(_firstZone.lat):NaN;
+  var _fzLng=_firstZone?parseFloat(_firstZone.lng):NaN;
+  if(_firstZone&&!isNaN(_fzLat)&&!isNaN(_fzLng)){
+    setTimeout(function(){_showDetailMap(_fzLat,_fzLng,_firstZone.name);},400);
   } else if(typeof d.lat==='number'&&typeof d.lng==='number'){
     setTimeout(function(){_showDetailMap(d.lat,d.lng,d.area);},400);
   } else {
@@ -8951,18 +8953,21 @@ function _showDetailMap(lat,lng,name){
   // 기초구역 폴리곤 + 우편번호 라벨 (소장 지도와 동일 방식)
   if(window._detailZones&&window._detailZones.length>0){
     var bounds=[];
-    var detailPolygons=[];
     window._detailZones.forEach(function(z){
-      if(typeof z.lat!=='number')return;
-      var lbl=z.name&&z.name!==z.zipcode ? z.zipcode+' '+z.name : z.zipcode;
+      var zLat=typeof z.lat==='number'?z.lat:parseFloat(z.lat);
+      var zLng=typeof z.lng==='number'?z.lng:parseFloat(z.lng);
+      if(isNaN(zLat)||isNaN(zLng))return;
+      var lbl=z.name&&z.name!==z.zipcode ? z.zipcode+' '+z.name : (z.zipcode||z.name||'');
       var lblHtml='<div style="background:rgba(0,212,170,.92);color:#000;padding:4px 10px;border-radius:8px;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35);transform:translate(-50%,-100%)">'+lbl+'</div>';
       var lblIcon=L.divIcon({html:lblHtml,className:'',iconSize:null,iconAnchor:[0,0]});
-      L.marker([z.lat,z.lng],{icon:lblIcon}).addTo(window._detailMap);
-      bounds.push([z.lat,z.lng]);
+      L.marker([zLat,zLng],{icon:lblIcon}).addTo(window._detailMap);
+      bounds.push([zLat,zLng]);
       if(z.coords&&z.coords.length>=3){
         var path=z.coords.map(function(c){return[c.lat,c.lng];});
-        var poly=L.polygon(path,{color:'#00d4aa',weight:2,opacity:0.9,fillColor:'#00d4aa',fillOpacity:0.15}).addTo(window._detailMap);
-        detailPolygons.push(poly);
+        L.polygon(path,{color:'#00d4aa',weight:2,opacity:0.9,fillColor:'#00d4aa',fillOpacity:0.15}).addTo(window._detailMap);
+      } else {
+        // coords 없는 구역은 원형 폴백
+        L.circle([zLat,zLng],{radius:400,color:'#00d4aa',weight:1.5,opacity:0.8,fillColor:'#00d4aa',fillOpacity:0.1}).addTo(window._detailMap);
       }
     });
     if(bounds.length===1){window._detailMap.setView(bounds[0],13);}
@@ -9182,7 +9187,7 @@ function _yOpenNaviModal(){
       var zoneLabels=zones.length
         ?zones.map(function(z,i){return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd)">'+
           '<span style="width:20px;height:20px;border-radius:50%;background:var(--ac);color:#fff;font-size:10px;font-weight:900;display:grid;place-items:center;flex-shrink:0">'+(i+1)+'</span>'+
-          '<span style="font-size:12.5px;font-weight:700">'+(z.zipcode?z.zipcode+' ':'')+_esc(z.name||'')+'</span>'+
+          '<span style="font-size:12.5px;font-weight:700">'+_esc(z.zipcode+(z.name&&z.name!==z.zipcode?' '+z.name:''))+'</span>'+
           (typeof z.lat==='number'?'<span style="font-size:10px;color:var(--gn);margin-left:auto">GPS</span>':'')+'</div>';}).join('')
         :'<div style="font-size:12.5px;color:var(--t2);padding:8px 0">'+_esc(a.area||a.region||'구역 미지정')+'</div>';
       var sec=document.createElement('div');sec.className='card';sec.style.marginBottom='10px';
