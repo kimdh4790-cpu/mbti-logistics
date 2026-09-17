@@ -1057,7 +1057,11 @@ select.inp option{background:#24243d;color:#f0f1f8}
     var s=document.createElement('script');
     s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+key+'&libraries=services&autoload=false';
     s.onload=function(){kakao.maps.load(function(){window._kakaoReady=true;console.log('[용차] 카카오맵 로드 완료');});};
-    s.onerror=function(){console.warn('[용차] 카카오맵 스크립트 로드 실패');};
+    s.onerror=function(){
+      console.warn('[용차] 카카오맵 스크립트 로드 실패 — script 태그 제거');
+      if(s.parentNode)s.parentNode.removeChild(s);
+      window._kakaoKey=null;
+    };
     document.head.appendChild(s);
   }
   fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
@@ -8741,7 +8745,14 @@ function _loadKakaoMap(callback){
       if(window.kakao&&window.kakao.maps&&window.kakao.maps.Map){
         clearInterval(check);if(callback)callback();
       }
-      if(t>20){clearInterval(check);console.warn('카카오맵 로드 타임아웃');}
+      if(t>20){
+        clearInterval(check);
+        // 스크립트 태그 있지만 로드 실패한 경우 → 실패 태그 제거 후 재시도
+        var fs=document.querySelector('script[src*="dapi.kakao.com"]');
+        if(fs&&fs.parentNode)fs.parentNode.removeChild(fs);
+        console.warn('카카오맵 로드 타임아웃 — 재시도');
+        _initKakaoScript(callback);
+      }
     },300);
     return;
   }
