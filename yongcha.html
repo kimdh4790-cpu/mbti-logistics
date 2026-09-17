@@ -1065,9 +1065,9 @@ select.inp option{background:#24243d;color:#f0f1f8}
     document.head.appendChild(s);
   }
   fetch('/api/kakao-config').then(function(r){return r.json();}).then(function(d){
-    _doLoad(d.key||'3d5a58a3e1099aa2b6b221c3db2b0d13');
+    _doLoad(d.key||'e52ec615218ef0c9929498b185aa0955');
   }).catch(function(){
-    _doLoad('3d5a58a3e1099aa2b6b221c3db2b0d13');
+    _doLoad('e52ec615218ef0c9929498b185aa0955');
   });
 })();
 </script>
@@ -8756,7 +8756,7 @@ function _loadKakaoMap(callback){
     return;
   }
   // 직접 로드
-  var key=window._kakaoKey||'3d5a58a3e1099aa2b6b221c3db2b0d13';
+  var key=window._kakaoKey||'e52ec615218ef0c9929498b185aa0955';
   _kakaoKey=key;
   _initKakaoScript(callback);
 }
