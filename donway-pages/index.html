@@ -13416,111 +13416,153 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
   var res=document.getElementById('dw-settle-results');
   if(!res)return;
   var TAX_INC=0.033,TAX_WORK=0.0088,TAX_EMP=0.008;
+  var CARD_COLORS=['#1d4ed8','#7c3aed','#059669','#d97706','#0891b2','#dc2626','#9333ea','#0d9488'];
 
-  // 기사별 합계 (세금 계산용)
+  // 기사별 집계
   var results=drivers.map(function(d){
     var preTax=Math.round(d.amount||0);
     var tax33=Math.round(preTax*TAX_INC);
     var taxWork=Math.round(preTax*TAX_WORK);
     var taxEmp=Math.round(preTax*TAX_EMP);
     var deduct=tax33+taxWork+taxEmp;
-    var dailyList=Object.entries(d.dailyRecords||{}).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){return{date:e[0],orders:e[1].orders,amount:e[1].amount,rejected:e[1].rejected||0,cancelled:e[1].cancelled||0};});
-    return{name:d.name,orders:Math.round(d.orders||0),preTax:preTax,tax33:tax33,taxWork:taxWork,taxEmp:taxEmp,deduct:deduct,net:preTax-deduct,days:dailyList};
+    var dailyList=Object.entries(d.dailyRecords||{}).sort(function(a,b){return a[0].localeCompare(b[0]);}).map(function(e){
+      return{date:e[0],orders:Math.round(e[1].orders||0),amount:Math.round(e[1].amount||0),rejected:Math.round(e[1].rejected||0),cancelled:Math.round(e[1].cancelled||0)};
+    });
+    var totalRej=dailyList.reduce(function(s,d){return s+d.rejected;},0);
+    var totalCan=dailyList.reduce(function(s,d){return s+d.cancelled;},0);
+    return{name:d.name,orders:Math.round(d.orders||0),preTax:preTax,tax33:tax33,taxWork:taxWork,taxEmp:taxEmp,deduct:deduct,net:preTax-deduct,days:dailyList,totalRej:totalRej,totalCan:totalCan};
   }).sort(function(a,b){return b.orders-a.orders;});
   window._dwDeliveryResults=results;
-
-  // 날짜별 집계 빌드
-  var byDate={};
-  results.forEach(function(r){
-    (r.days||[]).forEach(function(d){
-      if(!byDate[d.date]) byDate[d.date]={date:d.date,rows:[],totalOrders:0,totalAmount:0,totalRej:0,totalCan:0};
-      var rej=Math.round(d.rejected||0);
-      var can=Math.round(d.cancelled||0);
-      byDate[d.date].rows.push({name:r.name,orders:Math.round(d.orders||0),amount:Math.round(d.amount||0),rej:rej,can:can});
-      byDate[d.date].totalOrders+=Math.round(d.orders||0);
-      byDate[d.date].totalAmount+=Math.round(d.amount||0);
-      byDate[d.date].totalRej+=rej;
-      byDate[d.date].totalCan+=can;
-    });
-  });
-  var dateKeys=Object.keys(byDate).sort();
 
   var tOrders=results.reduce(function(s,r){return s+r.orders;},0);
   var tPreTax=results.reduce(function(s,r){return s+r.preTax;},0);
   var tNet=results.reduce(function(s,r){return s+r.net;},0);
+  var tRej=results.reduce(function(s,r){return s+r.totalRej;},0);
+  var tCan=results.reduce(function(s,r){return s+r.totalCan;},0);
   var savedStr=savedAt?('최종저장: '+new Date(savedAt).toLocaleDateString('ko-KR')):'';
 
+  // ── 전체 요약 헤더
   var html=
-    '<div style="background:linear-gradient(135deg,#1e3a5f,#7c3aed);border-radius:14px;padding:16px 20px;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">'
-      +'<div>'
-        +'<div style="font-size:11px;opacity:.6;margin-bottom:4px">'+esc(ym)+(savedStr?' · '+savedStr:'')+'</div>'
-        +'<div style="font-size:18px;font-weight:900">'+results.length+'명 · '+tOrders.toLocaleString()+'건</div>'
+    '<div style="background:linear-gradient(135deg,#1e3a5f,#7c3aed);border-radius:14px;padding:16px 20px;color:#fff;margin-bottom:14px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">'
+        +'<div>'
+          +'<div style="font-size:11px;opacity:.6;margin-bottom:3px">'+esc(ym)+(savedStr?' · '+savedStr:'')+'</div>'
+          +'<div style="font-size:18px;font-weight:900">'+results.length+'명 · '+tOrders.toLocaleString()+'건</div>'
+        +'</div>'
+        +'<div style="text-align:right">'
+          +'<div style="font-size:10px;opacity:.6">총 실지급액</div>'
+          +'<div style="font-size:22px;font-weight:900">₩'+tNet.toLocaleString()+'</div>'
+        +'</div>'
       +'</div>'
-      +'<div style="text-align:right">'
-        +'<div style="font-size:10px;opacity:.6">총 실지급액</div>'
-        +'<div style="font-size:22px;font-weight:900">₩'+tNet.toLocaleString()+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">'
+        +'<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:7px;text-align:center">'
+          +'<div style="font-size:9px;opacity:.7">세전금액</div>'
+          +'<div style="font-size:13px;font-weight:800">₩'+tPreTax.toLocaleString()+'</div>'
+        +'</div>'
+        +'<div style="background:rgba(255,100,100,.2);border-radius:8px;padding:7px;text-align:center">'
+          +'<div style="font-size:9px;opacity:.7">총 거절</div>'
+          +'<div style="font-size:13px;font-weight:800;color:#fca5a5">'+tRej.toLocaleString()+'건</div>'
+        +'</div>'
+        +'<div style="background:rgba(255,200,80,.2);border-radius:8px;padding:7px;text-align:center">'
+          +'<div style="font-size:9px;opacity:.7">총 취소</div>'
+          +'<div style="font-size:13px;font-weight:800;color:#fcd34d">'+tCan.toLocaleString()+'건</div>'
+        +'</div>'
       +'</div>'
     +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
+    +'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'
       +'<button onclick="_dwDeliveryExport()" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'
-      +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">👤 기사별 세금정산</button>'
+      +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💳 세금정산 보기</button>'
       +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
       +'<button onclick="_dwDeliveryDelete(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ 초기화</button>'
     +'</div>';
 
-  // ── 날짜별 섹션 ──
-  if(dateKeys.length===0){
-    html+='<div style="text-align:center;padding:32px;color:var(--text3)">날짜별 데이터 없음</div>';
-  } else {
-    dateKeys.forEach(function(dt){
-      var dg=byDate[dt];
-      dg.rows.sort(function(a,b){return b.orders-a.orders;});
-      html+=
-        '<div style="margin-bottom:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden">'
-          +'<div style="background:var(--bg2);padding:8px 12px;display:flex;justify-content:space-between;align-items:center">'
-            +'<span style="font-weight:800;font-size:13px">📅 '+esc(dt)+'</span>'
-            +'<span style="font-size:11px;color:var(--text3)">'+dg.rows.length+'명 · '+dg.totalOrders.toLocaleString()+'건 · ₩'+dg.totalAmount.toLocaleString()+'</span>'
-          +'</div>'
-          +'<table style="width:100%;border-collapse:collapse;font-size:12px">'
-            +'<thead><tr style="background:var(--bg3)">'
-              +'<th style="padding:6px 10px;text-align:left;font-weight:700">기사명</th>'
-              +'<th style="padding:6px 10px;text-align:right;font-weight:700">건수</th>'
-              +'<th style="padding:6px 10px;text-align:center;font-weight:700;color:#dc2626">거절</th>'
-              +'<th style="padding:6px 10px;text-align:center;font-weight:700;color:#f59e0b">취소</th>'
-              +'<th style="padding:6px 10px;text-align:right;font-weight:700;color:#10b981">정산금액</th>'
-            +'</tr></thead><tbody>';
-      dg.rows.forEach(function(r){
-        var safeId=dt.replace(/-/g,'')+'_'+r.name.replace(/[^a-zA-Z0-9가-힣]/g,'_');
-        html+='<tr style="border-top:1px solid var(--border)">'
-          +'<td style="padding:6px 10px">'+esc(r.name)+'</td>'
-          +'<td style="padding:6px 10px;text-align:right">'+r.orders.toLocaleString()+'건</td>'
-          +'<td style="padding:4px 6px;text-align:center">'
-            +'<input type="number" min="0" value="'+(r.rej||0)+'" id="rej_'+safeId+'" data-date="'+esc(dt)+'" data-name="'+esc(r.name)+'" data-type="rej" style="width:52px;padding:3px 4px;border:1px solid #fca5a5;border-radius:5px;background:var(--bg);color:#dc2626;font-size:12px;font-weight:700;text-align:center">'
-          +'</td>'
-          +'<td style="padding:4px 6px;text-align:center">'
-            +'<input type="number" min="0" value="'+(r.can||0)+'" id="can_'+safeId+'" data-date="'+esc(dt)+'" data-name="'+esc(r.name)+'" data-type="can" style="width:52px;padding:3px 4px;border:1px solid #fcd34d;border-radius:5px;background:var(--bg);color:#f59e0b;font-size:12px;font-weight:700;text-align:center">'
-          +'</td>'
-          +'<td style="padding:6px 10px;text-align:right;color:#10b981">₩'+r.amount.toLocaleString()+'</td>'
-          +'</tr>';
-      });
-      var totalRejStr=dg.totalRej?('<span style="color:#dc2626">−'+dg.totalRej+'건</span>'):'−';
-      var totalCanStr=dg.totalCan?('<span style="color:#f59e0b">−'+dg.totalCan+'건</span>'):'−';
-      html+='<tr style="background:var(--bg3);font-weight:700;border-top:1px solid var(--border)">'
-        +'<td style="padding:6px 10px">일계</td>'
-        +'<td style="padding:6px 10px;text-align:right">'+dg.totalOrders.toLocaleString()+'건</td>'
-        +'<td style="padding:6px 10px;text-align:center">'+totalRejStr+'</td>'
-        +'<td style="padding:6px 10px;text-align:center">'+totalCanStr+'</td>'
-        +'<td style="padding:6px 10px;text-align:right;color:#10b981">₩'+dg.totalAmount.toLocaleString()+'</td>'
-        +'</tr>';
-      html+='</tbody></table></div>';
-    });
-    // 총합계
-    html+=
-      '<div style="background:linear-gradient(135deg,#0f2027,#2c5364);border-radius:10px;padding:12px 16px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
-        +'<span style="font-weight:800">'+dateKeys.length+'일 합계</span>'
-        +'<span style="font-size:15px;font-weight:900">'+tOrders.toLocaleString()+'건 · ₩'+tPreTax.toLocaleString()+' → 실지급 ₩'+tNet.toLocaleString()+'</span>'
-      +'</div>';
+  if(!results.length){
+    html+='<div style="text-align:center;padding:32px;color:var(--text3)">기사 데이터 없음</div>';
+    res.innerHTML=html;
+    return;
   }
+
+  // ── 기사별 카드 그리드
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px">';
+  results.forEach(function(r,ci){
+    var color=CARD_COLORS[ci%CARD_COLORS.length];
+    var safeName=r.name.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+
+    // 일별 테이블 행
+    var rows='';
+    r.days.forEach(function(d){
+      var safeId=d.date.replace(/-/g,'')+'_'+safeName;
+      rows+=
+        '<tr style="border-top:1px solid var(--border)">'
+          +'<td style="padding:5px 8px;font-size:11px;color:var(--text3)">'+esc(d.date.slice(5))+'</td>'
+          +'<td style="padding:5px 8px;text-align:right;font-size:11px">'+d.orders+'건</td>'
+          +'<td style="padding:3px 5px;text-align:center">'
+            +'<input type="number" min="0" value="'+d.rejected+'" id="rej_'+safeId+'" data-date="'+esc(d.date)+'" data-name="'+esc(r.name)+'" data-type="rej"'
+            +' style="width:44px;padding:2px 3px;border:1px solid #fca5a5;border-radius:4px;background:var(--bg);color:#dc2626;font-size:11px;font-weight:700;text-align:center">'
+          +'</td>'
+          +'<td style="padding:3px 5px;text-align:center">'
+            +'<input type="number" min="0" value="'+d.cancelled+'" id="can_'+safeId+'" data-date="'+esc(d.date)+'" data-name="'+esc(r.name)+'" data-type="can"'
+            +' style="width:44px;padding:2px 3px;border:1px solid #fcd34d;border-radius:4px;background:var(--bg);color:#f59e0b;font-size:11px;font-weight:700;text-align:center">'
+          +'</td>'
+          +'<td style="padding:5px 8px;text-align:right;font-size:11px;color:#10b981">₩'+d.amount.toLocaleString()+'</td>'
+        +'</tr>';
+    });
+
+    html+=
+      '<div style="background:var(--bg2);border-radius:14px;border:1.5px solid var(--border);overflow:hidden">'
+        // 카드 헤더
+        +'<div style="background:'+color+';color:#fff;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">'
+          +'<div>'
+            +'<div style="font-size:14px;font-weight:900">'+esc(r.name)+'</div>'
+            +'<div style="font-size:10px;opacity:.75">'+r.days.length+'일 근무</div>'
+          +'</div>'
+          +'<div style="text-align:right">'
+            +'<div style="font-size:10px;opacity:.7">실지급액</div>'
+            +'<div style="font-size:16px;font-weight:900">₩'+r.net.toLocaleString()+'</div>'
+          +'</div>'
+        +'</div>'
+        // 통계 타일 4개
+        +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--border)">'
+          +'<div style="padding:8px 6px;text-align:center;border-right:1px solid var(--border)">'
+            +'<div style="font-size:9px;color:var(--text3)">건수</div>'
+            +'<div style="font-size:15px;font-weight:900">'+r.orders+'</div>'
+          +'</div>'
+          +'<div style="padding:8px 6px;text-align:center;border-right:1px solid var(--border)">'
+            +'<div style="font-size:9px;color:var(--text3)">세전</div>'
+            +'<div style="font-size:11px;font-weight:800">₩'+Math.round(r.preTax/1000)+'K</div>'
+          +'</div>'
+          +'<div style="padding:8px 6px;text-align:center;border-right:1px solid var(--border)">'
+            +'<div style="font-size:9px;color:#dc2626">거절</div>'
+            +'<div style="font-size:13px;font-weight:800;color:#dc2626">'+r.totalRej+'건</div>'
+          +'</div>'
+          +'<div style="padding:8px 6px;text-align:center">'
+            +'<div style="font-size:9px;color:#f59e0b">취소</div>'
+            +'<div style="font-size:13px;font-weight:800;color:#f59e0b">'+r.totalCan+'건</div>'
+          +'</div>'
+        +'</div>'
+        // 세금 요약 한 줄
+        +'<div style="padding:7px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">'
+          +'<span>세전 ₩'+r.preTax.toLocaleString()+'</span>'
+          +'<span style="color:#dc2626">원천세 −₩'+r.tax33.toLocaleString()+'</span>'
+          +'<span style="color:#f59e0b">산재 −₩'+r.taxWork.toLocaleString()+'</span>'
+          +'<span style="color:#f59e0b">고용 −₩'+r.taxEmp.toLocaleString()+'</span>'
+        +'</div>'
+        // 일별 상세 테이블
+        +'<div style="overflow-x:auto">'
+          +'<table style="width:100%;border-collapse:collapse">'
+            +'<thead><tr style="background:var(--bg3)">'
+              +'<th style="padding:5px 8px;text-align:left;font-size:10px;font-weight:700;color:var(--text3)">날짜</th>'
+              +'<th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:700">건수</th>'
+              +'<th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#dc2626">거절</th>'
+              +'<th style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:#f59e0b">취소</th>'
+              +'<th style="padding:5px 8px;text-align:right;font-size:10px;font-weight:700;color:#10b981">정산액</th>'
+            +'</tr></thead>'
+            +'<tbody>'+rows+'</tbody>'
+          +'</table>'
+        +'</div>'
+      +'</div>';
+  });
+  html+='</div>';
 
   res.innerHTML=html;
 }
