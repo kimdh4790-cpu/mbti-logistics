@@ -14,6 +14,13 @@
  * @param {object} env          Cloudflare env (KV, secrets)
  * @returns {{ text: string, pageCount: number, method: string, scanned: boolean }}
  */
+// AbortSignal.timeout()은 CF Workers에서 불안정 → AbortController + setTimeout 사용
+function _fetchT(url, opts, ms = 15000) {
+  const ac = new AbortController();
+  const t = setTimeout(() => ac.abort(new DOMException('timeout', 'TimeoutError')), ms);
+  return fetch(url, { ...opts, signal: ac.signal }).finally(() => clearTimeout(t));
+}
+
 export async function parseFile(buffer, filename, mimeType, env) {
   const ext = filename.split('.').pop().toLowerCase();
 
@@ -66,11 +73,7 @@ async function parseHwp(buffer, filename, env) {
   const form = new FormData();
   form.append('file', new Blob([buffer], { type: 'application/x-hwp' }), filename);
 
-  const res = await fetch(`${oracleBase}/api/hwp-convert`, {
-    method: 'POST',
-    body: form,
-    signal: AbortSignal.timeout(60000)
-  });
+  const res = await _fetchT(`${oracleBase}/api/hwp-convert`, { method: 'POST', body: form }, 60000);
 
   if (!res.ok) {
     const err = await res.text().catch(() => '');
@@ -188,8 +191,14 @@ function xmlToPlainText(xml) {
  */
 async function parsePdf(buffer, env) {
   // 1차: 순수 JS 텍스트 추출 (비압축 + FlateDecode 자동 해제)
+  // CIDFont 폰트 쓰레기 텍스트 필터링 — 한국어 비율 5% 미만이면 Oracle 폴백
   const extracted = await extractPdfText(buffer);
-  if (extracted && extracted.length > 50) {
+  const _hasKorean = t => {
+    if (!t || t.length < 50) return false;
+    const korean = [...t].filter(c => c >= '가' && c <= '힣').length;
+    return korean / [...t].length > 0.05;
+  };
+  if (_hasKorean(extracted)) {
     return {
       text: extracted,
       pageCount: countPdfPages(buffer),
@@ -233,12 +242,9 @@ async function parsePdf(buffer, env) {
 async function tryOraclePdfImages(buffer, env) {
   try {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
-    const res = await fetch(`${oracleBase}/api/pdf-to-images?maxPages=15`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/pdf' },
-      body: buffer,
-      signal: AbortSignal.timeout(15000)
-    });
+    const res = await _fetchT(`${oracleBase}/api/pdf-to-images?maxPages=15`, {
+      method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: buffer
+    }, 15000);
     if (!res.ok) {
       console.error('[tryOraclePdfImages] HTTP 오류:', res.status, await res.text().catch(() => ''));
       return null;
@@ -258,12 +264,9 @@ async function tryOraclePdfImages(buffer, env) {
 async function tryOraclePdfText(buffer, env) {
   try {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
-    const res = await fetch(`${oracleBase}/api/pdf-text`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/pdf' },
-      body: buffer,
-      signal: AbortSignal.timeout(10000)
-    });
+    const res = await _fetchT(`${oracleBase}/api/pdf-text`, {
+      method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: buffer
+    }, 10000);
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
       return null;
@@ -283,12 +286,9 @@ async function tryOraclePdfText(buffer, env) {
 async function tryOraclePdfOcr(buffer, env) {
   try {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
-    const res = await fetch(`${oracleBase}/api/pdf-ocr?maxPages=30`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/pdf' },
-      body: buffer,
-      signal: AbortSignal.timeout(15000)
-    });
+    const res = await _fetchT(`${oracleBase}/api/pdf-ocr?maxPages=30`, {
+      method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: buffer
+    }, 15000);
     if (!res.ok) {
       console.error('[tryOraclePdfOcr] HTTP 오류:', res.status);
       return '';
