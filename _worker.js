@@ -1377,7 +1377,7 @@ ${archiveUrl
 <div class="subtitle">아래 계약서를 저장 또는 인쇄하세요</div>
 <table>
 <tr><td class="th">위탁자(갑)</td><td>${aName} · 사업자등록번호: ${aBiz}<br><span style="font-size:11px;color:#64748b">${aAddr}</span></td></tr>
-<tr><td class="th">수탁자(을)</td><td>${dName} · ${dPhone}${dBiz?' · 사업자번호: '+dBiz:''}<br><span style="font-size:11px;color:#64748b">${dBirth?'생년월일: '+dBirth+' ':''} ${dAddr||''}</span></td></tr>
+<tr><td class="th">수탁자(을)</td><td>${dName} · ${dPhone}${dBiz?' · 사업자번호: '+dBiz:''}<br><span style="font-size:11px;color:#64748b">${dBirth?'생년월일: '+dBirth+' ':''} ${dAddr||''}</span>${_cf['driverIdNum']?.stringValue?`<br><span style="font-size:11px;color:#334155">주민등록번호: ${_cf['driverIdNum'].stringValue}</span>`:''}</td></tr>
 </table>
 <table>
 <tr><td class="th">계약기간</td><td colspan="3">${startDate} ~ ${endDate}</td></tr>
@@ -1391,6 +1391,13 @@ ${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td col
 <div class="sign-area">
 <div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
 <div class="sign-box"><h4>수탁자 (을) ${dName}</h4>${driverSig?`<img src="${driverSig}" alt="기사서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
+</div>
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:18px;font-size:12px;line-height:1.8;color:#334155">
+<b>개인정보 수집·이용 동의 확인</b><br>
+<span style="color:#10b981;font-weight:700">☑</span> 개인정보 수집·이용에 동의합니다. (수집항목: 성명·연락처·사업자번호·주민등록번호·주소·서명정보 / 보유기간: 계약 종료 후 5년)<br>
+<span style="color:#10b981;font-weight:700">☑</span> 수집된 개인정보가 계약 체결 및 이행 목적으로 사용됨에 동의합니다.<br>
+<span style="color:#10b981;font-weight:700">☑</span> 위의 개인정보 수집 및 이용을 거부할 권리가 있으며, 거부 시 서비스 이용이 제한될 수 있음을 확인합니다.<br>
+<div style="margin-top:8px;text-align:right;color:#64748b">작성일: ${signedAt}</div>
 </div>
 <div id="kakao-notice" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.6">
 📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>
@@ -1506,9 +1513,7 @@ ${(_sc_area||_sc_route)?`<p class="cl2"><b>담당구역</b> ${_sc_area||_sc_rout
 ${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
 </div>`;
           }
-          const _contractViewHtml = customContractUrl
-            ? `<div style="margin-bottom:10px"><a href="${customContractUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:11px 16px;background:#0066ff;color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">📎 계약서 원본 파일 보기</a></div><iframe src="${customContractUrl}#toolbar=0" style="width:100%;height:60vh;border:1px solid #e2e8f0;border-radius:10px" title="계약서 원본"></iframe>`
-            : `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b"><style>.cl2{margin-bottom:10px}</style><table class="ctable" style="margin-bottom:14px"><tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr><tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr></table>${_fullContractHtml}</div>`;
+          const _contractViewHtml = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b"><style>.cl2{margin-bottom:10px}</style><table class="ctable" style="margin-bottom:14px"><tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}</td></tr><tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr></table>${_fullContractHtml}</div>${customContractUrl?`<div style="margin-top:10px"><a href="${customContractUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:#64748b;color:#fff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">📎 원본 계약서 파일 보기</a></div>`:''}`;
           const contractSummaryRows = '';
           const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>계약서 서명</title>
@@ -1622,7 +1627,7 @@ ${_contractViewHtml}
 <div class="sub">${driverName}님, 아래에 서명해 주세요.</div>
 <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:14px;font-size:12px">
   <div style="margin-bottom:8px"><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">사업자등록번호 (있으면 입력)</label><input id="drv-biz-input" type="text" value="${_sc_dbiz}" placeholder="예: 123-45-67890" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
-  <div><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">주민등록번호 <span style="font-weight:400;color:#64748b">(앞 7자리만 · 필수)</span></label><input id="drv-id-input" type="text" placeholder="예: 850101-1" maxlength="9" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
+  <div><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">주민등록번호 <span style="font-weight:400;color:#64748b">(전체 입력 · 필수)</span></label><input id="drv-id-input" type="text" placeholder="예: 850101-1234567" maxlength="14" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
 </div>
 <div id="kakao-step">
   ${_kakaoKey
