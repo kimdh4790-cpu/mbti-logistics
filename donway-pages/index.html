@@ -8365,7 +8365,15 @@ async function _ctrUploadPdf(inp){
     // Firestore에 유형별로 저장 → 다음에 자동 복원
     var t=window._ctrType||'wisu';
     var patch={};patch['contractTemplates.'+t]=url;
-    _db&&_db.collection('companies').doc(cid).set(patch,{merge:true}).catch(function(){});
+    // update()만 점표기법을 중첩 필드로 해석함. set({merge:true})는 리터럴 키로 저장해 읽기 실패
+    _db&&_db.collection('companies').doc(cid).update(patch).catch(function(e2){
+      // 문서가 없을 때만 set으로 폴백
+      if(e2.code==='not-found')_db.collection('companies').doc(cid).set({contractTemplates:{[t]:url}},{merge:true}).catch(function(){});
+    });
+    // 인메모리 캐시에도 반영
+    window._ctrCompany=window._ctrCompany||{};
+    window._ctrCompany.contractTemplates=window._ctrCompany.contractTemplates||{};
+    window._ctrCompany.contractTemplates[t]=url;
     toast('✅ PDF 업로드 완료 — 다음에 자동으로 불러옵니다');
   }catch(e){
     if(statusEl)statusEl.innerHTML='<label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 PDF 파일 선택</label>';
