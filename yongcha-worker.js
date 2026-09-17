@@ -1013,6 +1013,57 @@ select.inp option{background:#24243d;color:#f0f1f8}
       <label class="inp-lbl">비밀번호 (6자 이상)</label>
       <input class="inp" id="r-pw" type="password" placeholder="비밀번호">
     </div>
+    <!-- 약관 동의 -->
+    <div style="margin:16px 0 4px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:800;color:var(--t2);margin-bottom:2px">약관 동의</div>
+
+      <!-- 이용약관 -->
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" id="r-agree-terms" style="width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--ac);cursor:pointer">
+        <span style="font-size:12.5px;color:var(--t2);line-height:1.5">
+          <span style="color:var(--rd);font-weight:800">[필수] </span>서비스 이용약관에 동의합니다
+          <button type="button" onclick="event.preventDefault();event.stopPropagation();_yToggleTerms('terms-body')"
+            style="margin-left:6px;font-size:11px;color:var(--ac);background:none;border:none;cursor:pointer;padding:0;font-weight:700;text-decoration:underline">내용보기</button>
+        </span>
+      </label>
+      <div id="terms-body" style="display:none;margin:0 0 4px 30px;padding:12px;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;font-size:11px;color:var(--t3);line-height:1.7;max-height:160px;overflow-y:auto">
+        <strong style="color:var(--tx);display:block;margin-bottom:6px">용차앱 서비스 이용약관 (v1.0 · 2026-09-17)</strong>
+        <p>1. <strong>서비스 성격</strong> — 용차앱(이하 "플랫폼")은 화물자동차 운수사업법상 화물자동차 운송주선사업자가 아닌 부가통신사업자로서, 택배 대리점(소장)과 용차 기사 간 거래 정보를 제공하는 정보제공 서비스입니다.</p>
+        <p>2. <strong>직접 거래 원칙</strong> — 공고 등록·지원·계약·정산은 소장과 기사 간 직접 이루어지며, 플랫폼은 해당 거래의 당사자가 아닙니다. 플랫폼은 계약 체결·이행·정산에 관한 법적 책임을 부담하지 않습니다.</p>
+        <p>3. <strong>정보의 정확성</strong> — 공고에 기재된 단가·물량·운행조건은 소장이 직접 입력한 정보이며, 플랫폼은 그 정확성을 보증하지 않습니다.</p>
+        <p>4. <strong>최저 지급 조건</strong> — 공고에 표시된 최저 지급 조건은 소장이 직접 제시한 거래 조건이며, 플랫폼이 보장하는 금액이 아닙니다.</p>
+        <p>5. <strong>분쟁 해결</strong> — 소장·기사 간 분쟁은 당사자 간 직접 해결을 원칙으로 합니다. 플랫폼은 중재 의무가 없습니다.</p>
+        <p>6. <strong>구독 요금</strong> — 구독 서비스는 계좌이체(하나은행 270-910019-24204 (유)엠비티아이) 방식으로 운영됩니다. 환불은 미사용 잔여 기간에 대해 협의 후 처리합니다.</p>
+        <p>7. <strong>서비스 변경·중단</strong> — 플랫폼은 사전 고지 후 서비스를 변경하거나 중단할 수 있습니다.</p>
+      </div>
+
+      <!-- 개인정보 처리방침 -->
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" id="r-agree-privacy" style="width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--ac);cursor:pointer">
+        <span style="font-size:12.5px;color:var(--t2);line-height:1.5">
+          <span style="color:var(--rd);font-weight:800">[필수] </span>개인정보 수집·이용에 동의합니다
+          <button type="button" onclick="event.preventDefault();event.stopPropagation();_yToggleTerms('privacy-body')"
+            style="margin-left:6px;font-size:11px;color:var(--ac);background:none;border:none;cursor:pointer;padding:0;font-weight:700;text-decoration:underline">내용보기</button>
+        </span>
+      </label>
+      <div id="privacy-body" style="display:none;margin:0 0 4px 30px;padding:12px;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;font-size:11px;color:var(--t3);line-height:1.7;max-height:160px;overflow-y:auto">
+        <strong style="color:var(--tx);display:block;margin-bottom:6px">개인정보 수집·이용 안내</strong>
+        <p><strong>수집 항목</strong> — 이름(상호명), 이메일, 연락처, 지역, 차종(기사), 담당 택배업체(소장)</p>
+        <p><strong>수집 목적</strong> — 회원 식별, 서비스 제공, 공고 매칭, 정산 처리, 서비스 안내</p>
+        <p><strong>보유 기간</strong> — 회원 탈퇴 후 30일 내 파기 (법령에 따라 보존이 필요한 경우 해당 기간)</p>
+        <p><strong>제3자 제공</strong> — 거래 상대방(소장↔기사)에게 공고·지원 정보 범위 내에서 제공됩니다.</p>
+        <p>위 항목에 동의하지 않으면 서비스 이용이 제한됩니다.</p>
+      </div>
+
+      <!-- 마케팅 (선택) -->
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" id="r-agree-marketing" style="width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--ac);cursor:pointer">
+        <span style="font-size:12.5px;color:var(--t3);line-height:1.5">
+          <span style="font-weight:700">[선택] </span>공고 알림·프로모션 정보 수신에 동의합니다 (FCM 푸시)
+        </span>
+      </label>
+    </div>
+
     <div class="err" id="r-err"></div>
     <button class="btn-main" id="r-btn" onclick="_yRegister()">가입하기</button>
   </div>
@@ -1343,6 +1394,10 @@ function _yLogin(){
   });
 }
 
+function _yToggleTerms(id){
+  var el=document.getElementById(id);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
 function _yRegister(){
   var n=(document.getElementById('r-name').value||'').trim();
   var e=(document.getElementById('r-email').value||'').trim();
@@ -1353,6 +1408,10 @@ function _yRegister(){
   var btn=document.getElementById('r-btn');
   if(!n||!e||!ph||!rg||!p){err.textContent='모든 항목을 입력하세요';err.style.display='block';return;}
   if(p.length<6){err.textContent='비밀번호는 6자 이상';err.style.display='block';return;}
+  // 필수 약관 동의 확인
+  var agreeTerms=(document.getElementById('r-agree-terms')||{}).checked;
+  var agreePrivacy=(document.getElementById('r-agree-privacy')||{}).checked;
+  if(!agreeTerms||!agreePrivacy){err.textContent='필수 약관에 모두 동의해주세요';err.style.display='block';return;}
   // 소장은 택배업체 1개 이상 선택 필수
   var selCouriers=[];
   document.querySelectorAll('#r-courier-chips input[type=checkbox]:checked').forEach(function(cb){selCouriers.push(cb.value);});
@@ -1369,6 +1428,9 @@ function _yRegister(){
       workTypes:selWorkTypes,
       rating:0,reviewCount:0,status:'active',
       trialEndsAt:new Date(Date.now()+30*24*60*60*1000),
+      agreedTermsAt:firebase.firestore.FieldValue.serverTimestamp(),
+      agreedTermsVersion:'v1.0-2026-09-17',
+      agreedMarketing:!!(document.getElementById('r-agree-marketing')||{}).checked,
       createdAt:firebase.firestore.FieldValue.serverTimestamp()
     };
     return _db.collection('yongcha_users').doc(c.user.uid).set(_doc).then(function(){
