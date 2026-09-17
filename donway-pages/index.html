@@ -25707,6 +25707,12 @@ function openTaxInvoice(id){
   if(!_db||!_CU){toast('❌ 로그인 필요');return;}
   var x=(_settleCache||[]).find(function(s){return s.id===id||s.fbId===id;});
   if(!x){toast('❌ 정산서를 찾을 수 없습니다');return;}
+  // 대리점(공급받는자) 정보
+  var _agCo=window._ctrCompany||window._COMPANY_CFG||{};
+  var agencyBizNum=_agCo.bizNum||'';
+  var agencyName=_agCo.companyName||_agCo.name||(_CU&&_CU.companyName)||'대리점';
+  var agencyCeo=_agCo.ceoName||_agCo.repName||'대표';
+  var agencyAddr=_agCo.bizAddr||_agCo.address||_agCo.addr||'';
   var r=calcNet(x);
   var total=r.income||0;
   var supply=Math.round(total/1.1);
@@ -25752,19 +25758,19 @@ function openTaxInvoice(id){
     +'<td colspan="2" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:3px;font-size:13px">'+bizNum+'</td>'
     +'<td rowspan="4" style="border:1px solid #000;text-align:center;writing-mode:vertical-rl;width:18px;font-weight:700;padding:3px;background:#f0f0f0">공<br>급<br>받<br>는<br>자</td>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px;width:55px">등 록 번 호</td>'
-    +'<td colspan="2" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:3px;font-size:13px">373-86-02536</td>'
+    +'<td colspan="2" style="border:1px solid #000;padding:3px 6px;font-weight:700;letter-spacing:3px;font-size:13px">'+esc(agencyBizNum)+'</td>'
     +'</tr><tr>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>'
     +'<td style="border:1px solid #000;padding:3px 6px;font-weight:700">'+esc(bizName)+'</td>'
     +'<td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>'+esc(bizRep)+'</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">상&nbsp;&nbsp;&nbsp;호<br><span style="font-size:9px">(법 인 명)</span></td>'
-    +'<td style="border:1px solid #000;padding:3px 6px;font-weight:700">엠비티아이유한회사</td>'
-    +'<td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>관리자</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>'
+    +'<td style="border:1px solid #000;padding:3px 6px;font-weight:700">'+esc(agencyName)+'</td>'
+    +'<td style="border:1px solid #000;padding:3px 6px;font-size:10px">성명 <strong>'+esc(agencyCeo)+'</strong> <span style="border:1px solid #555;padding:0 4px;font-size:8px">인</span></td>'
     +'</tr><tr>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사 업 장<br>주&nbsp;&nbsp;&nbsp;소</td>'
     +'<td colspan="2" style="border:1px solid #000;padding:3px 6px">'+esc(drvAddr)+'</td>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">사 업 장<br>주&nbsp;&nbsp;&nbsp;소</td>'
-    +'<td colspan="2" style="border:1px solid #000;padding:3px 6px">부산시 수영구 수영로 668, 607호</td>'
+    +'<td colspan="2" style="border:1px solid #000;padding:3px 6px">'+esc(agencyAddr)+'</td>'
     +'</tr><tr>'
     +'<td style="border:1px solid #000;background:#f0f0f0;padding:3px 6px">업&nbsp;&nbsp;&nbsp;&nbsp;태</td>'
     +'<td style="border:1px solid #000;padding:3px 6px">'+bizType+'</td>'
@@ -25825,6 +25831,7 @@ function openTaxInvoice(id){
     +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px">'
     +'<button onclick="window.print()" style="padding:8px 18px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'
+    +'<button id="pbIssueBtn" onclick="_dwPopbillIssue(\''+id+'\',\''+esc(bizNum)+'\',\''+esc(bizName)+'\',\''+esc(agencyBizNum)+'\',\''+esc(agencyName)+'\','+supply+','+vat+','+total+',\''+yr+mo2+issDay+'\')" style="padding:8px 18px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧾 팝빌 발행</button>'
     +'<button onclick="var m=document.getElementById(\'tax-mo-s\');if(m)m.remove();" style="padding:8px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">닫기</button>'
     +'</div>'
     +'</div>';
@@ -25834,6 +25841,38 @@ function openTaxInvoice(id){
   mo2El.onclick=function(e){if(e.target===mo2El)mo2El.remove();};
   mo2El.innerHTML=html;
   document.body.appendChild(mo2El);
+}
+
+async function _dwPopbillIssue(settleId,senderBiz,senderName,receiverBiz,receiverName,supply,vat,total,writeDate){
+  if(!senderBiz){toast('❌ 기사 사업자번호 미입력 — 정산서 수정에서 입력하세요');return;}
+  if(!receiverBiz){toast('❌ 대리점 사업자번호 미입력 — 계약 > 위탁자 정보에서 입력하세요');return;}
+  var btn=document.getElementById('pbIssueBtn');
+  if(btn){btn.disabled=true;btn.textContent='처리중...';}
+  try{
+    var tok=await firebase.auth().currentUser.getIdToken();
+    var res=await fetch('/api/popbill-issue',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({
+        settleId:settleId,
+        senderCorpNum:senderBiz,senderName:senderName,
+        receiverCorpNum:receiverBiz,receiverName:receiverName,
+        supplyAmt:supply,taxAmt:vat,totalAmt:total,
+        writeDate:writeDate
+      })
+    });
+    var d=await res.json();
+    if(d.ok){
+      toast('✅ 팝빌 역발행 요청 완료 (MgtKey: '+d.mgtKey+')');
+      if(btn){btn.textContent='✅ 발행완료';btn.style.background='#64748b';}
+    } else {
+      toast('❌ 팝빌 오류: '+(d.error||JSON.stringify(d.result||{})));
+      if(btn){btn.disabled=false;btn.textContent='🧾 팝빌 발행';}
+    }
+  }catch(e){
+    toast('❌ '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='🧾 팝빌 발행';}
+  }
 }
 
 function openSE(id){

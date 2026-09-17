@@ -13697,6 +13697,16 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
       }
     }
 
+    // ── 팝빌 연동 상태 확인 (/api/popbill-status) ──
+    if (path === '/api/popbill-status' && method === 'GET') {
+      const _pbSAdmin = await requireAdmin(request, env);
+      if (!_pbSAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      return new Response(JSON.stringify({
+        configured: !!(env.POPBILL_LINK_ID && env.POPBILL_SECRET_KEY),
+        testMode:   (env.POPBILL_TEST_MODE !== 'false')
+      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+    }
+
     // ── 기사 /stmt 페이지에서 세금계산서 역발행 신청 (/api/stmt-tax-issue) ──
     if (path === '/api/stmt-tax-issue' && method === 'POST') {
       try {
@@ -13726,7 +13736,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
           return new Response(JSON.stringify({ok:false,needBizNum:true}), {headers:{'Content-Type':'application/json'}});
         }
 
-        const receiverCorpNum = gs2('bizNum') || '373-86-02536';
+        const receiverCorpNum = gs2('bizNum')||'';
         const settleDocId     = gs2('settleDocId');
         const vatInc = gn2('vatIncome') || gn2('net');
         const supplyAmt = Math.round(vatInc / 1.1);
