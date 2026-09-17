@@ -10,9 +10,9 @@ var YONGCHA_THEMES = [
   { bg: '#140000', mid: '#7f1d1d', accent: '#dc2626', accent2: '#f87171' }, // D: 빨강 (충격)
 ];
 var YONGCHA_VARIANTS = [
-  { hook: ['화물기사들이', '이걸 몰랐다고?'],         punchline: '주선사 없이도 화물 받는 방법이 있어요' },
-  { hook: ['주선 수수료', '왜 아직 내고 있어요?'],     punchline: '직접 연결하면 수수료가 0원이에요' },
-  { hook: ['기사 구하는데', '하루가 다 가죠?'],        punchline: 'AI가 3초 만에 딱 맞는 기사 추천해요' },
+  { hook: ['화물기사들이', '이걸 몰랐다고?'],         punchline: '주선사 없이도 공고 바로 지원하는 방법 있어요' },
+  { hook: ['주선 수수료', '왜 아직 내고 있어요?'],     punchline: '직접 거래하면 수수료가 0원이에요' },
+  { hook: ['기사 구하는데', '하루가 다 가죠?'],        punchline: 'AI가 3초 만에 딱 맞는 기사 정보 추천해요' },
   { hook: ['연간 3천만원이', '어디서 새는지 알아요?'], punchline: '주선사 수수료에서 다 새고 있어요' },
 ];
 var WEEK_VARIANT = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 4;
@@ -128,8 +128,8 @@ function SceneMatching() {
 
         {/* 타이틀 */}
         <div style={{ textAlign: 'center', opacity: fadeIn(frame, 8, 20), transform: 'translateY(' + slideUp(frame, 8, 22) + 'px)', width: '100%' }}>
-          <div style={{ fontSize: 50, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>주선사<span style={{ color: LTGLD, textShadow: '0 0 22px ' + GOLD + '44' }}> 없이</span><br/>직접 매칭</div>
-          <div style={{ fontSize: 17, color: WHITE + '55', lineHeight: 1.75, marginTop: 12 }}>수수료 0% · 건당 수익 극대화</div>
+          <div style={{ fontSize: 50, fontWeight: 900, color: WHITE, lineHeight: 1.15 }}>주선사<span style={{ color: LTGLD, textShadow: '0 0 22px ' + GOLD + '44' }}> 없이</span><br/>직접 거래</div>
+          <div style={{ fontSize: 17, color: WHITE + '55', lineHeight: 1.75, marginTop: 12 }}>수수료 0% · 건당 수입 극대화</div>
         </div>
 
         {/* 실시간 배지 + 화물 목록 */}
@@ -394,9 +394,9 @@ var SUBTITLES_ALL = [
   // A: 파랑 — 기사 타겟 (화물기사들이 이걸 몰랐다고?)
   [
     { from: 0,    to: 150,  text: "화물기사들이 이걸 몰랐다고?" },
-    { from: 150,  to: 300,  text: "주선사 없이도 화물 받을 수 있어요" },
-    { from: 300,  to: 480,  text: "앱에서 화물 공고 바로 확인하고" },
-    { from: 480,  to: 660,  text: "직접 수락하면 바로 연결됩니다" },
+    { from: 150,  to: 300,  text: "주선사 없이도 공고에 직접 지원할 수 있어요" },
+    { from: 300,  to: 480,  text: "앱에서 공고 바로 확인하고" },
+    { from: 480,  to: 660,  text: "직접 지원하면 바로 운행 시작" },
     { from: 660,  to: 840,  text: "AI 루트코치가 최적 경로 알려줘요" },
     { from: 840,  to: 1020, text: "주유소 최저가까지 같이 안내해요" },
     { from: 1020, to: 1200, text: "기사님은 월 15만 원" },
@@ -406,10 +406,10 @@ var SUBTITLES_ALL = [
   // B: 초록 — 수수료 타겟 (주선 수수료 왜 아직 내고 있어요?)
   [
     { from: 0,    to: 150,  text: "주선 수수료 왜 아직 내고 있어요?" },
-    { from: 150,  to: 300,  text: "직접 연결하면 수수료가 0원이에요" },
-    { from: 300,  to: 480,  text: "소장과 기사가 앱에서 직접 연결" },
-    { from: 480,  to: 660,  text: "중간 수수료 없이 100% 내 수익" },
-    { from: 660,  to: 840,  text: "AI가 루트까지 최적화해줘요" },
+    { from: 150,  to: 300,  text: "직접 거래하면 수수료가 0원이에요" },
+    { from: 300,  to: 480,  text: "소장과 기사가 앱에서 직접 거래" },
+    { from: 480,  to: 660,  text: "중간 수수료 없이 100% 내 수입" },
+    { from: 660,  to: 840,  text: "AI가 최적 운행 루트까지 알려줘요" },
     { from: 840,  to: 1020, text: "주유비도 아끼는 스마트한 운행" },
     { from: 1020, to: 1200, text: "기사님은 월 15만 원" },
     { from: 1200, to: 1380, text: "소장님은 월 5만 원이에요" },
@@ -418,9 +418,9 @@ var SUBTITLES_ALL = [
   // C: 주황 — 소장 타겟 (기사 구하는데 하루가 다 가죠?)
   [
     { from: 0,    to: 150,  text: "기사 구하는데 하루가 다 가죠?" },
-    { from: 150,  to: 300,  text: "AI가 3초 만에 딱 맞는 기사 추천해요" },
-    { from: 300,  to: 480,  text: "거리·경력·평점 분석해서 자동 추천" },
-    { from: 480,  to: 660,  text: "채용 시간이 하루 → 3분으로 줄어요" },
+    { from: 150,  to: 300,  text: "AI가 3초 만에 딱 맞는 기사 정보 추천해요" },
+    { from: 300,  to: 480,  text: "운행 이력·경력·평점 분석해서 자동 추천" },
+    { from: 480,  to: 660,  text: "기사 찾는 시간이 하루 → 3분으로 줄어요" },
     { from: 660,  to: 840,  text: "AI 루트코치로 운행 효율도 올리고" },
     { from: 840,  to: 1020, text: "세금계산서도 자동으로 발행돼요" },
     { from: 1020, to: 1200, text: "기사님은 월 15만 원" },
@@ -431,7 +431,7 @@ var SUBTITLES_ALL = [
   [
     { from: 0,    to: 150,  text: "연간 3천만원이 어디서 새는지 알아요?" },
     { from: 150,  to: 300,  text: "주선사 수수료에서 다 새고 있어요" },
-    { from: 300,  to: 480,  text: "주선사 없이 직접 연결하면" },
+    { from: 300,  to: 480,  text: "주선사 없이 직접 거래하면" },
     { from: 480,  to: 660,  text: "그 돈이 전부 내 통장으로 들어와요" },
     { from: 660,  to: 840,  text: "AI 루트코치로 주유비까지 아끼고" },
     { from: 840,  to: 1020, text: "팝빌 연동 세금계산서 자동 발행" },

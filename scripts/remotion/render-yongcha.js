@@ -17,6 +17,11 @@ const ROOT  = path.join(__dirname, '../..');
 const ENTRY = path.join(__dirname, 'index.jsx');
 const OUT_DIR = path.join(ROOT, 'output');
 
+const VARIANT_KEYS = ['A', 'B', 'C', 'D'];
+const weekVariant = VARIANT_KEYS[Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 4];
+const manualVariant = (args.find(a => a.startsWith('--variant=')) || '').replace('--variant=', '').toUpperCase();
+const activeVariant = (manualVariant && VARIANT_KEYS.includes(manualVariant)) ? manualVariant : weekVariant;
+
 function findChromium() {
   const candidates = [
     process.env.CHROMIUM_PATH,
@@ -58,15 +63,18 @@ async function main() {
   const pubDir = path.join(ROOT, 'public');
   fs.mkdirSync(pubDir, { recursive: true });
 
-  const narFile = path.join(OUT_DIR, 'yongcha-narration.mp3');
+  // 변형별 나레이션 파일 우선 탐색 (yongcha-narration-A.mp3 등), 없으면 공통 파일
+  const narVariantFile = path.join(OUT_DIR, `yongcha-narration-${activeVariant}.mp3`);
+  const narFile = fs.existsSync(narVariantFile) ? narVariantFile : path.join(OUT_DIR, 'yongcha-narration.mp3');
   let hasNarration = false;
   if (fs.existsSync(narFile)) {
     fs.copyFileSync(narFile, path.join(pubDir, 'yongcha-narration.mp3'));
     hasNarration = true;
-    console.log('[Remotion] 나레이션 파일 복사 완료');
+    console.log(`[Remotion] 나레이션 파일 복사 완료 (변형 ${activeVariant})`);
   } else {
     console.log('[Remotion] 나레이션 파일 없음 — 무음으로 렌더링');
   }
+  console.log(`[Remotion] 활성 변형: ${activeVariant}`);
 
   const bgmFile = path.join(ROOT, 'assets/bgm/background.mp3');
   let hasBgm = false;
