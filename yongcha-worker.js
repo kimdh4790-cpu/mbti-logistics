@@ -8710,12 +8710,14 @@ function _initPostMap(){
   container.style.width='100%';
   container.style.height='240px';
   container.style.display='block';
+  void container.offsetWidth; // force browser reflow so Leaflet reads correct dimensions
   try {
     if(_map){_map.remove();_map=null;}
     _map=L.map(container,{zoomControl:true}).setView([35.1796,129.0756],13);
     _lTiles(_map);
     _doUpdateMapZones();
-    setTimeout(function(){if(_map){_map.invalidateSize();_doUpdateMapZones();}},150);
+    setTimeout(function(){if(_map){_map.invalidateSize();_doUpdateMapZones();}},200);
+    setTimeout(function(){if(_map){_map.invalidateSize();}},600);
     // 지도 클릭 → 구역 자동 추가
     _map.on('click',function(e){
       var lat=e.latlng.lat, lng=e.latlng.lng;
@@ -8858,7 +8860,7 @@ function _updateMapZones(){
     if(window._zones.length && !_map){
       if(!_mapInitPending){
         _mapInitPending=true;
-        setTimeout(function(){ _initPostMap(); }, 0);
+        setTimeout(function(){ _initPostMap(); }, 30);
       }
       return;
     }
