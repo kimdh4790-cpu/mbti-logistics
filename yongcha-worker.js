@@ -18,7 +18,7 @@ const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
       "name":"용차앱",
       "applicationCategory":"BusinessApplication",
       "operatingSystem":"Web, Android, iOS",
-      "description":"택배 노선 소장과 기사를 연결하는 직접 거래 정보 서비스. AI 기사 추천, 실시간 노선 공고, 단가 정보 제공. 부가통신사업자로 운영되며 플랫폼은 계약 당사자가 아닙니다.",
+      "description":"소장과 기사가 직접 거래하는 택배 노선 정보 서비스. AI 기사 추천, 실시간 노선 공고, 단가 정보 제공. 부가통신사업자로 운영되며 플랫폼은 계약 당사자가 아닙니다.",
       "url":"https://yongcha.app",
       "inLanguage":"ko",
       "featureList":["노선 공고 등록·조회","AI 기사 추천","실시간 공고 알림","기사 프로필 관리","노선 단가 정보 제공","소장·기사 직접 거래 지원","음성 공고 등록"],
@@ -39,7 +39,7 @@ const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
         {
           "@type":"Question",
           "name":"용차앱은 무엇인가요?",
-          "acceptedAnswer":{"@type":"Answer","text":"용차앱은 택배 노선 소장과 기사를 연결하는 직접 거래 정보 서비스입니다. 플랫폼은 계약 당사자가 아니며, 소장과 기사가 직접 거래합니다. 부가통신사업자로 운영됩니다."}
+          "acceptedAnswer":{"@type":"Answer","text":"용차앱은 소장과 기사가 직접 거래하는 택배 노선 정보 서비스입니다. 플랫폼은 계약 당사자가 아니며, 소장과 기사가 직접 거래합니다. 부가통신사업자로 운영됩니다."}
         },
         {
           "@type":"Question",
