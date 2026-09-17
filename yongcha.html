@@ -54,7 +54,7 @@
         {
           "@type":"Question",
           "name":"노선 공고는 어떻게 등록하나요?",
-          "acceptedAnswer":{"@type":"Answer","text":"소장은 앱에서 담당 구역, 단가, 근무 조건을 입력해 공고를 등록할 수 있습니다. 음성으로도 공고 등록이 가능하며, 등록 즉시 조건에 맞는 기사에게 알림이 발송됩니다."}
+          "acceptedAnswer":{"@type":"Answer","text":"소장은 앱에서 담당 구역, 단가, 운행 조건을 입력해 공고를 등록할 수 있습니다. 음성으로도 공고 등록이 가능하며, 등록 즉시 조건에 맞는 기사에게 알림이 발송됩니다."}
         }
       ]
     }
@@ -1004,9 +1004,9 @@ select.inp option{background:#24243d;color:#f0f1f8}
         <option value="전기">전기</option>
       </select>
     </div>
-    <!-- 기사 — 선호 근무타입 (AI 추천에 반영) -->
+    <!-- 기사 — 선호 운행형태 (AI 추천에 반영) -->
     <div class="inp-wrap" id="r-worktype-wrap" style="display:none">
-      <label class="inp-lbl">선호 근무타입 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 · AI 추천에 반영)</span></label>
+      <label class="inp-lbl">선호 운행형태 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 · AI 추천에 반영)</span></label>
       <div id="r-worktype-chips" style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0"></div>
     </div>
     <div class="inp-wrap">
@@ -3027,7 +3027,7 @@ function _yMatchScore(p){
   if(_prefs.minPrice&&(p.unitPrice||0)<_prefs.minPrice)return -1;
   // 희망 시간대 매칭 — pref-time 선택값과 공고 workShift 직접 비교
   if(_prefs.workShift&&p.workShift&&_prefs.workShift===p.workShift)score++;
-  // 선호 근무타입 매칭 — workTypes 배열(기사)과 공고 workHours/workType 필드 비교
+  // 선호 운행형태 매칭 — workTypes 배열(기사)과 공고 workHours/workType 필드 비교
   var driverWt=(_prefs.workTypes&&_prefs.workTypes.length)?_prefs.workTypes:(_CU&&_CU.workTypes)||[];
   if(driverWt.length){
     var postWt=(p.workType||'')+(p.workHours||'');
@@ -3194,7 +3194,7 @@ function _makePostCard(d,mini){
       '<div class="pc-guard"><span>일 최소보장 '+minG+'만원</span>'+
         (dayEst>0?'<small>예상 '+dayEst+'만원/일</small>':'')+'</div>'+
       (d.volume?'<div class="pc-stats"><span>일 물량 <b>'+_won(d.volume)+'건</b></span>'+
-        (d.workDays?'<span>근무 <b>'+_esc(d.workDays)+'</b></span>':'')+'</div>':'')+
+        (d.workDays?'<span>운행 <b>'+_esc(d.workDays)+'</b></span>':'')+'</div>':'')+
     '</div>'+
     // ── 푸터
     '<div class="pc-foot">'+
@@ -3653,11 +3653,11 @@ function _showPostDetail(d){
     ['단가',Number(d.unitPrice).toLocaleString()+'원/'+(d.priceType||'건'),'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>','var(--br)'],
     ['차량',d.vehicleType||'무관','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>','var(--ac)'],
     ['번호판',d.plateType||'무관','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>','var(--t2)'],
-    ['근무시간',d.workHours||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>','var(--br)'],
+    ['운행시간',d.workHours||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>','var(--br)'],
     ['시작일',d.startDate||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>','var(--gn)'],
     ['구역형태',d.areaType||'혼합','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>','var(--ac)'],
     ['아파트 비율',(d.areaAptRatio||'-')+'%','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="18"/><line x1="9" y1="3" x2="9" y2="21"/><path d="M13 8h2"/><path d="M13 12h2"/><path d="M13 16h2"/></svg>','var(--t2)'],
-    ['근무요일',d.workDays||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>','var(--br)'],
+    ['운행요일',d.workDays||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>','var(--br)'],
     ['정산일',d.settleDay||'협의','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>','var(--gn)']
   ].map(function(r){
     return '<div class="detail-item">'+
@@ -4415,8 +4415,8 @@ function _showContract(contractId){
       '<div><span style="color:var(--t3)">구역</span> <strong>'+_esc(t.area||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">건당 금액</span> <strong>'+(t.unitPrice?(t.unitPrice).toLocaleString()+'원':'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">최소보장</span> <strong>'+(t.minGuarantee?(t.minGuarantee/10000)+'만원/일':'—')+'</strong></div>'+
-      '<div><span style="color:var(--t3)">근무 시간대</span> <strong>'+(t.workShift||'—')+'</strong></div>'+
-      '<div><span style="color:var(--t3)">근무 요일</span> <strong>'+(t.workDays||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">운행 시간대</span> <strong>'+(t.workShift||'—')+'</strong></div>'+
+      '<div><span style="color:var(--t3)">운행 요일</span> <strong>'+(t.workDays||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">정산 주기</span> <strong>'+(t.settleFreq||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">정산일</span> <strong>'+(t.settleDay||'—')+'</strong></div>'+
       '<div><span style="color:var(--t3)">시작일</span> <strong>'+(t.startDate||'—')+'</strong></div>'+
@@ -4498,22 +4498,22 @@ function _pgPostWrite(el){
   '</div></div>'+
   '<input type="hidden" id="pw-type">'+
 
-  // 근무 시간대
+  // 운행 시간대
   '<div class="form-section">'+
-  '<div class="form-section-title">근무 시간대</div>'+
+  '<div class="form-section-title">운행 시간대</div>'+
   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" id="pw-shift-group">'+
   ['주간','야간','협의'].map(function(s){
     return '<button onclick="_selType(this,\''+s+'\',\'pw-shift\')" style="padding:10px;border-radius:10px;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:13px;font-weight:700;cursor:pointer">'+s+'</button>';
   }).join('')+
   '</div>'+
   '<input type="hidden" id="pw-shift">'+
-  '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">근무 시간 (직접 입력)</label>'+
+  '<div class="inp-wrap" style="margin-top:10px"><label class="inp-lbl">운행 시간 (직접 입력)</label>'+
   '<input class="inp" id="pw-hours" placeholder="예: 06:00 ~ 14:00"></div>'+
   '</div>'+
 
-  // 근무 요일
+  // 운행 요일
   '<div class="form-section">'+
-  '<div class="form-section-title">근무 요일</div>'+
+  '<div class="form-section-title">운행 요일</div>'+
   '<div style="display:flex;gap:6px;flex-wrap:wrap" id="pw-days-group">'+
   ['월','화','수','목','금','토','일'].map(function(d){
     return '<button onclick="_toggleDay(this,\''+d+'\')" type="button" style="width:48px;height:48px;border-radius:50%;border:1.5px solid var(--border);background:transparent;color:var(--t2);font-size:14px;font-weight:800">'+d+'</button>';
@@ -5329,7 +5329,7 @@ function _yOpenCalc(prefill){
       '<div class="inp-wrap" style="margin-bottom:0"><label class="inp-lbl">일 물량(건)</label>'+
       '<input class="inp" id="cal-vol" type="number" inputmode="numeric" value="'+_esc(v('vol',150))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
-    '<div class="inp-wrap" style="margin-top:12px;margin-bottom:0"><label class="inp-lbl">월 근무일수</label>'+
+    '<div class="inp-wrap" style="margin-top:12px;margin-bottom:0"><label class="inp-lbl">월 운행일수</label>'+
     '<input class="inp" id="cal-days" type="number" inputmode="numeric" value="'+_esc(v('days',26))+'" oninput="_yCalcRun()"></div>'+
     '</div>'+
 
@@ -5492,7 +5492,7 @@ function _pgProfile(el){
             '<input type="checkbox" name="pref-worktype" value="'+wt+'"'+(on?' checked':'')+' style="display:none" onchange="var l=this.parentElement;l.style.background=this.checked?\'#1e6efb\':\'var(--b2)\';l.style.color=this.checked?\'#fff\':\'var(--tx)\';l.style.borderColor=this.checked?\'#1e6efb\':\'var(--bd2)\'">'+
             wt+'</label>';
         }).join('');
-        return '<div class="inp-wrap"><label class="inp-lbl">선호 근무타입 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 · AI 추천 반영)</span></label>'+
+        return '<div class="inp-wrap"><label class="inp-lbl">선호 운행형태 <span style="font-size:10px;font-weight:500;color:var(--t3)">(복수 선택 · AI 추천 반영)</span></label>'+
           '<div id="pref-worktype-chips" style="display:flex;flex-wrap:wrap;gap:8px;padding:6px 0">'+chips+'</div></div>';
       })()+
       '<div class="inp-wrap"><label class="inp-lbl">차량번호</label>'+
@@ -6455,8 +6455,8 @@ function _showJobDetail(d){
     ['🚗 차량',d.vehicleType||'무관'],
     ['📜 경력',_careerLabel(d.careerReq)],
     ['👥 모집인원',(d.headcount||1)+'명'],
-    ['📅 근무요일',d.workDays||'협의'],
-    ['근무시간',d.workHours||'협의'],
+    ['📅 운행요일',d.workDays||'협의'],
+    ['운행시간',d.workHours||'협의'],
     ['💳 정산일',d.settleDay||'협의']
   ].map(function(r){
     return '<div class="detail-item"><div class="detail-lbl">'+r[0]+'</div><div class="detail-val">'+r[1]+'</div></div>';
@@ -6649,7 +6649,7 @@ function _showJobWriteModal(){
   '<div class="inp-wrap"><label class="inp-lbl">정산일</label>'+
   '<input class="inp" id="jw-settle" placeholder="예: 매월 25일"></div>'+
 
-  '<div class="inp-wrap"><label class="inp-lbl">근무 요일</label>'+
+  '<div class="inp-wrap"><label class="inp-lbl">운행 요일</label>'+
   '<input class="inp" id="jw-days" placeholder="예: 월~금, 주 5일"></div>'+
 
   '<div class="inp-wrap"><label class="inp-lbl">모집 인원</label>'+
@@ -6941,7 +6941,7 @@ function _showReviewModal(targetId,targetName,targetType,applyId){
     (!isDriver?
     '<div style="margin-bottom:16px;padding:14px;background:var(--bg3);border-radius:12px">'+
     '<div style="font-size:12px;font-weight:700;margin-bottom:10px"> 공고 정확도 평가</div>'+
-    '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">실제 근무 내용이 공고 내용과 일치했나요?</div>'+
+    '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">실제 운행 내용이 공고 내용과 일치했나요?</div>'+
     '<div style="display:flex;gap:8px">'+
     '<button id="acc-yes" onclick="_setAccuracy(true)" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">일치했어요</button>'+
     '<button id="acc-no" onclick="_setAccuracy(false)" style="flex:1;padding:8px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg3);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">달랐어요</button>'+
@@ -7417,7 +7417,7 @@ function _pgDashboard(el){
           var m=months[k];
           return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--bd)">'+
             '<div style="font-size:13.5px;font-weight:800;min-width:62px">'+k.slice(5)+'월</div>'+
-            '<div style="flex:1;font-size:12px;color:var(--t2)">'+_won(m.cnt)+'건 · '+m.days+'일 근무</div>'+
+            '<div style="flex:1;font-size:12px;color:var(--t2)">'+_won(m.cnt)+'건 · '+m.days+'일 운행</div>'+
             '<div style="font-size:14px;font-weight:900;color:var(--br);font-variant-numeric:tabular-nums">'+_won(Math.round(m.amt/10000))+'만</div>'+
           '</div>';
         }).join('')+
