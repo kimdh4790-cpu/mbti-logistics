@@ -565,9 +565,14 @@ async function runErrorMonitorJob(env) {
     if (errors.length === 0) return;
     // 소스별 카운트
     const bySource = {};
-    errors.forEach(e => { bySource[e.source || 'unknown'] = (bySource[e.source || 'unknown'] || 0) + 1; });
+    errors.forEach(e => { bySource[e.source || 'worker'] = (bySource[e.source || 'worker'] || 0) + 1; });
     const summary = Object.entries(bySource).map(([s, c]) => `${s}:${c}건`).join(', ');
     const lastErr = errors[0];
+    // 중복 알림 방지: 동일 summary는 2시간 내 재알림 없음
+    const notifFp = 'errmon:' + summary.replace(/[^a-zA-Z0-9가-힣]/g,'').slice(0,60);
+    const already = await env.DONWAY_ASSETS.get(notifFp).catch(()=>null);
+    if (already) { console.log('[ErrorMonitor] 중복 — 스킵:', summary); return; }
+    await env.DONWAY_ASSETS.put(notifFp, '1', {expirationTtl: 7200}).catch(()=>{});
     const msg = `[MBTICO 오류경보]\n최근1시간 ${errors.length}건\n${summary}\n최신: ${lastErr.message || lastErr.path}`;
     await notifyAdmins(env, token, { title: `오류 ${errors.length}건 감지`, body: summary, type: 'error_monitor' });
     console.log('[ErrorMonitor]', msg);
@@ -15134,6 +15139,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
           }
           await fsAdd(_et,'filo_errors',{
             ts:{stringValue:new Date().toISOString()},
+            source:{stringValue:'worker'},
             path:{stringValue:_eu.pathname.slice(0,200)},
             method:{stringValue:request.method},
             hostname:{stringValue:_eu.hostname},
