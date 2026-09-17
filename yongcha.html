@@ -3596,12 +3596,15 @@ function _yTaxApprove(settleId){
     if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
     return;
   }
-  fetch('/api/yongcha/popbill-approve',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/popbill-approve',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum})
+    });
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'승인 실패');
     _yToast('세금계산서가 홈택스에 자동 등록됐어요!');
-    _pgTaxApprove(document.getElementById('content'),settleId); // 화면 갱신
+    _pgTaxApprove(document.getElementById('content'),settleId);
   }).catch(function(e){
     _yToast('오류: '+e.message);
     if(btn){btn.disabled=false;btn.textContent='세금계산서 등록 승인';}
@@ -3614,8 +3617,11 @@ function _yTaxReject(settleId){
   if(!corpNum){_yToast('사업자번호가 없어요. 프로필에서 먼저 입력하세요.');return;}
   var btn=document.getElementById('tax-reject-btn');
   if(btn){btn.disabled=true;btn.textContent='처리중...';}
-  fetch('/api/yongcha/popbill-reject',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
+  _yGetToken().then(function(tok){
+    return fetch('/api/yongcha/popbill-reject',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({settleId:settleId,senderCorpNum:corpNum,rejectReason:'기사 앱에서 거부'})
+    });
   }).then(function(r){return r.json();}).then(function(d){
     if(d.ok===false)throw new Error(d.error||'거부 처리 실패');
     _yToast('거부했어요. 소장에게 사유를 전달하세요.');
