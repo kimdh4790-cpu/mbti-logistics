@@ -1844,12 +1844,10 @@ function _pgHomeDriver(el){
           var zLng=typeof z.lng==='number'?z.lng:parseFloat(z.lng);
           if(isNaN(zLat)||isNaN(zLng))return;
           hasAnyZone=true;
-          // 폴리곤 or 원형
+          // 기초구역 폴리곤 (coords 없는 구역은 라벨만 표시)
           if(z.coords&&z.coords.length>=3){
             var path=z.coords.map(function(c){return[c.lat,c.lng];});
             L.polygon(path,{color:'#00d4aa',weight:1.5,opacity:0.85,fillColor:'#00d4aa',fillOpacity:0.12,interactive:false}).addTo(m);
-          } else {
-            L.circle([zLat,zLng],{radius:400,color:'#00d4aa',weight:1.5,opacity:0.7,fillColor:'#00d4aa',fillOpacity:0.08,interactive:false}).addTo(m);
           }
           // 구역마다 라벨 마커
           var lbl=z.name&&z.name!==z.zipcode?z.zipcode+' '+z.name:(z.zipcode||z.name||'');
@@ -8986,9 +8984,6 @@ function _showDetailMap(lat,lng,name){
       if(z.coords&&z.coords.length>=3){
         var path=z.coords.map(function(c){return[c.lat,c.lng];});
         L.polygon(path,{color:'#00d4aa',weight:2,opacity:0.9,fillColor:'#00d4aa',fillOpacity:0.15}).addTo(window._detailMap);
-      } else {
-        // coords 없는 구역은 원형 폴백
-        L.circle([zLat,zLng],{radius:400,color:'#00d4aa',weight:1.5,opacity:0.8,fillColor:'#00d4aa',fillOpacity:0.1}).addTo(window._detailMap);
       }
     });
     if(bounds.length===1){window._detailMap.setView(bounds[0],13);}
