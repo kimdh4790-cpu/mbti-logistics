@@ -1,5 +1,5 @@
 name: 용차앱 홍보영상 업로드 (소장·기사)
-# v2
+# v3
 
 on:
   workflow_dispatch:
@@ -15,12 +15,25 @@ on:
         required: false
         default: false
         type: boolean
+  push:
+    branches: [main]
+    paths:
+      - 'assets/promo/.upload-trigger'
 
 jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: 입력값 초기화 (push 트리거 기본값 설정)
+        run: |
+          VIDEO="${{ inputs.video }}"
+          DRY="${{ inputs.dry_run }}"
+          [ -z "$VIDEO" ] && VIDEO="both"
+          [ -z "$DRY" ] && DRY="false"
+          echo "VIDEO=$VIDEO" >> $GITHUB_ENV
+          echo "DRY_RUN=$DRY" >> $GITHUB_ENV
 
       - name: Node.js 설치
         uses: actions/setup-node@v4
@@ -49,13 +62,14 @@ jobs:
           ls -lh output/yongcha-*.mp4 2>/dev/null || echo "영상 없음"
 
       - name: YouTube 업로드 — 소장 영상
-        if: ${{ inputs.video == 'owner' || inputs.video == 'both' }}
+        if: ${{ env.VIDEO == 'owner' || env.VIDEO == 'both' }}
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
-          DRY="${{ inputs.dry_run == true && '--dry-run' || '' }}"
+          DRY=""
+          [ "$DRY_RUN" = "true" ] && DRY="--dry-run"
           # owner용: promo.mp4 위치를 owner 파일로 임시 설정
           cp output/yongcha-owner-promo.mp4 output/yongcha-promo.mp4 2>/dev/null || \
           cp output/yongcha-owner-promo-ig.mp4 output/yongcha-promo.mp4
@@ -85,13 +99,13 @@ jobs:
             || echo "YouTube 소장 업로드 실패"
 
       - name: YouTube 업로드 — 기사 영상
-        if: ${{ inputs.video == 'driver' || inputs.video == 'both' }}
+        if: ${{ env.VIDEO == 'driver' || env.VIDEO == 'both' }}
         env:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
-          DRY="${{ inputs.dry_run == true && '--dry-run' || '' }}"
+          DRY=""; [ "$DRY_RUN" = "true" ] && DRY="--dry-run"
           cp output/yongcha-driver-promo.mp4 output/yongcha-promo.mp4 2>/dev/null || \
           cp output/yongcha-driver-promo-ig.mp4 output/yongcha-promo.mp4
           TITLE="기사 관점에서 본 용차앱 — 공고 탐색부터 운행 완료까지 | 용차앱"
@@ -120,12 +134,12 @@ AI가 기사님 조건에 맞는 공고를 자동으로 추천해드립니다.
             || echo "YouTube 기사 업로드 실패"
 
       - name: Instagram 업로드 — 소장 영상 (47초)
-        if: ${{ inputs.video == 'owner' || inputs.video == 'both' }}
+        if: ${{ env.VIDEO == 'owner' || env.VIDEO == 'both' }}
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
         run: |
-          DRY="${{ inputs.dry_run == true && '--dry-run' || '' }}"
+          DRY=""; [ "$DRY_RUN" = "true" ] && DRY="--dry-run"
           cp output/yongcha-owner-promo-ig.mp4 output/yongcha-reels.mp4
           # Instagram 캡션 업데이트
           node -e "
@@ -138,12 +152,12 @@ AI가 기사님 조건에 맞는 공고를 자동으로 추천해드립니다.
             || echo "Instagram 소장 업로드 실패"
 
       - name: Instagram 업로드 — 기사 영상 (47초)
-        if: ${{ inputs.video == 'driver' || inputs.video == 'both' }}
+        if: ${{ env.VIDEO == 'driver' || env.VIDEO == 'both' }}
         env:
           INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
           INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
         run: |
-          DRY="${{ inputs.dry_run == true && '--dry-run' || '' }}"
+          DRY=""; [ "$DRY_RUN" = "true" ] && DRY="--dry-run"
           cp output/yongcha-driver-promo-ig.mp4 output/yongcha-reels.mp4
           node -e "
             const fs=require('fs');
