@@ -13915,13 +13915,20 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
             taxInvoiceUpdatedAt: { stringValue: StateDate || now },
             taxInvoiceMgtKey:    { stringValue: MgtKey }
           };
-          await fetch(`${FS_BASE}/settlements/${settleId}?${
-            Object.keys(patchFields).map(k => `updateMask.fieldPaths=${k}`).join('&')
-          }`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields: patchFields })
-          });
+          const maskQs = Object.keys(patchFields).map(k => `updateMask.fieldPaths=${k}`).join('&');
+          await Promise.allSettled([
+            fetch(`${FS_BASE}/settlements/${settleId}?${maskQs}`, {
+              method: 'PATCH',
+              headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fields: patchFields })
+            }),
+            // statement_share 도 동기화 (기사 명세서 페이지 상태 반영)
+            fetch(`${FS_BASE}/statement_share/${settleId}?${maskQs}`, {
+              method: 'PATCH',
+              headers: { 'Authorization': `Bearer ${fsToken}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fields: patchFields })
+            })
+          ]);
           if (State === '3' || State === '역발행승인') {
             const settleDoc = await fsGet(fsToken, 'settlements', settleId);
             const fields = settleDoc.fields || {};
@@ -26093,7 +26100,8 @@ async function popbillIssueReverseDonway(env, params) {
   if (!settleId) throw new Error('settleId 필수');
 
   const mgtKey = `DW${settleId}`.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
-  const BASE = 'https://serviceapi.popbill.com'; // 운영 모드
+  const isTest = env.POPBILL_TEST_MODE !== 'false';
+  const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
 
   const pbToken = await popbillGetToken(env, receiverCorpNum);
   const wDate = writeDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -26151,7 +26159,7 @@ async function popbillIssueReverseDonway(env, params) {
     const patchFields = {
       taxInvoiceState:    { stringValue: '역발행요청' },
       taxInvoiceMgtKey:   { stringValue: mgtKey },
-      taxInvoiceIsTest:   { booleanValue: false },
+      taxInvoiceIsTest:   { booleanValue: isTest },
       taxInvoiceRequestAt:{ stringValue: new Date().toISOString() },
       ...(driverFcmToken ? { driverFcmToken: { stringValue: driverFcmToken } } : {}),
       ...(agencyFcmToken ? { agencyFcmToken: { stringValue: agencyFcmToken } } : {}),
@@ -26182,7 +26190,7 @@ async function popbillIssueReverseDonway(env, params) {
 
 // ── 팝빌 기사 자동 연동회원 등록 (CheckIsMember → JoinMember) ─────────────
 async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum) {
-  const BASE = 'https://serviceapi.popbill.com';
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
   const linkId = env.POPBILL_LINK_ID;
   // 대리점 토큰으로 기사 회원 여부 확인
   const agencyToken = await popbillGetToken(env, agencyCorpNum);
@@ -26192,10 +26200,20 @@ async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpN
   const checkData = await checkRes.json();
   if (checkData.code === 1) return { alreadyMember: true };
   if (checkData.code === 0) {
+    // ID 중복 확인 (CheckID API) — 팝빌 공식 프로세스
+    let candidateId = `DW${driverCorpNum}`;
+    const checkIdRes = await fetch(`${BASE}/Member/CheckID/${encodeURIComponent(candidateId)}`, {
+      headers: { 'Authorization': `Bearer ${agencyToken}` }
+    }).catch(() => null);
+    if (checkIdRes) {
+      const checkIdData = await checkIdRes.json().catch(() => ({}));
+      // code 1 = 이미 사용중 → suffix 추가
+      if (checkIdData.code === 1) candidateId = `DW${driverCorpNum}A`;
+    }
     const joinBody = {
       LinkID: linkId,
       CorpNum: driverCorpNum,
-      ID: `DW${driverCorpNum}`,
+      ID: candidateId,
       PWD: driverCorpNum.slice(-4) + 'Mb0!',
       Ceoname: driverName || '',
       CorpName: driverName || '',
@@ -26220,7 +26238,7 @@ async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpN
 
 // ── 팝빌 공인인증서 등록 URL 발급 ─────────────────────────────────────────
 async function popbillGetDriverCertUrl(env, driverCorpNum) {
-  const BASE = 'https://serviceapi.popbill.com';
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
   const pbToken = await popbillGetToken(env, driverCorpNum);
   const resp = await fetch(`${BASE}/Member/GetURL?CorpNum=${driverCorpNum}&TOGO=CERT`, {
     headers: { 'Authorization': `Bearer ${pbToken}` }
