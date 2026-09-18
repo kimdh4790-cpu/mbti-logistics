@@ -803,6 +803,56 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
+## 🧾 팝빌(Popbill) 연동 정보 (DONWAY 세금계산서 자동발행)
+
+### 계약 정보
+- 견적서 No. 202607-712 (2026-07-31)
+- 요금: 전자세금계산서 발행 **100원/건** (종량제, 연동비용 무료)
+- 담당: **박주선 팀장** / 010-5330-0078 / jooseon@linkhubcorp.com
+- 팝빌 키 발급 후 아래 Cloudflare Secrets 등록 필요
+
+### 환경변수 (Cloudflare Secrets)
+| 변수명 | 설명 |
+|---|---|
+| `POPBILL_LINK_ID` | 팝빌 링크아이디 (연동 계정 ID) |
+| `POPBILL_SECRET_KEY` | 팝빌 비밀키 |
+| `POPBILL_TEST_MODE` | `'false'` = 실환경 / 다른 값 = 테스트환경 |
+
+### API 엔드포인트
+- **테스트**: `https://testserviceapi.popbill.com`
+- **실환경**: `https://serviceapi.popbill.com`
+
+### 역발행 프로세스 (기사 → 대리점)
+```
+1. CheckIsMember(corpNum)      — 팝빌 가입 여부 확인
+2. CheckID("DW{corpNum}")      — ID 중복 확인 (충돌 시 "DW{corpNum}A" 시도)
+3. JoinMember(corpNum, id)     — 미가입 시 자동 가입
+4. GetTaxCertURL(corpNum)      — 공인인증서 등록 링크 반환 → 기사에게 발송
+5. RegistRequest(...)          — 역발행 신청 (기사가 신청, 대리점에게 요청)
+6. Issue(...)                  — 대리점이 최종 발행 (국세청 전송)
+```
+
+### _worker.js 구현 함수
+- `popbillIssueReverseDonway(env, ...)` — 역발행 메인 함수
+- `popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum)` — 기사 자동 가입
+- `popbillGetDriverCertUrl(env, driverCorpNum)` — 공인인증서 등록 URL 반환
+- `/api/stmt-tax-issue` — 명세서 세금계산서 발행 엔드포인트
+- `/api/popbill-webhook` — 팝빌 상태 변경 웹훅 (settlements + statement_share 동기화)
+
+### 기사 Popbill ID 명명 규칙
+- 1차: `DW{사업자번호}` (예: DW3738602536)
+- 충돌 시 2차: `DW{사업자번호}A`
+
+### 대리점(DONWAY) 사업자번호
+- `373-86-02536`
+
+### 현재 상태 (2026-09-18)
+- 코드 구현 완료 (test mode 정상 작동)
+- 팝빌 LINK_ID / SECRET_KEY 발급 대기 중
+- 박주선 팀장에게 연락 후 키 발급 → Cloudflare Secret 등록 → 실환경 테스트 필요
+
+---
+
 ## 🔍 시장조사 원칙 (필독)
 - 시장조사 요청 시 최대한 많고 폭넓게 조사할 것
 - 경쟁사는 직접 언급된 것 외에도 유사 카테고리 업체까지 능동적으로 탐색
