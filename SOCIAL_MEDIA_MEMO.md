@@ -86,6 +86,11 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 | 날짜 | 파일 | 내용 |
 |------|------|------|
+| 2026-09-18 | scripts/audio/generate-narration.js | variants 구조 지원 추가 (yongcha 등 script.variants[activeVariant].lines 폴백) + Google TTS sampleRateHertz:44100 추가 (24kHz→44.1kHz, 웅~버징 제거) |
+| 2026-09-18 | scripts/compose/compose-video.sh | build_audio_filter() 모든 경로에 aresample=44100 필터 추가 (TTS 엔진 무관 샘플레이트 불일치 방지) |
+| 2026-09-18 | assets/promo/yongcha-promo.html | 앱 공고 목록 UI 시뮬레이션 슬라이드(s6) 추가: 3개 공고 카드(서울→인천 ₩85,000·부산→대전 ₩120,000·경기→충청 ₩72,000), 단가 100% 공개 메시지. 총 슬라이드 6→7장 |
+| 2026-09-18 | scripts/content/yongcha-scenario.json | "직접 매칭" → "직접 거래 정보" (화물자동차운수사업법 리스크 제거) |
+| 2026-09-18 | scripts/content/yongcha-subtitles.srt | 7번 자막 항목 추가(공차 없이 운행·yongcha.app), 6번 타이밍 조정 |
 | 2026-09-09 | scripts/content/variants/yongcha-variants.json | 용차앱 A/B/C/D variants 전면 재기획: 포맷 표준화(product·variants 래퍼·angle·narration 문자열 배열·slides 문자열 배열·instagram_caption 추가), 각도 재설계(직접거래 투명성/기사 수입 극대화/소장 기사 직접 연결/기존 주선 방식 비교), 부가통신사업자 포지셔닝 전면 적용 |
 
 ---
