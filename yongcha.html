@@ -926,6 +926,29 @@ select.inp option{background:#24243d;color:#f0f1f8}
 #_ios-hint .ios-steps b{color:#c9a84c}
 #_ios-hint .ios-close{position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.35);font-size:20px;cursor:pointer;line-height:1}
 </style>
+<script>
+// 소스코드 보호
+(function(){
+  // 우클릭 비활성화
+  document.addEventListener('contextmenu',function(e){e.preventDefault();});
+  // F12 / Ctrl+Shift+I/J/U / Cmd+Option+I 차단
+  document.addEventListener('keydown',function(e){
+    if(e.keyCode===123) e.preventDefault(); // F12
+    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74)) e.preventDefault(); // Ctrl+Shift+I/J
+    if(e.ctrlKey&&e.keyCode===85) e.preventDefault(); // Ctrl+U
+    if(e.metaKey&&e.altKey&&e.keyCode===73) e.preventDefault(); // Cmd+Option+I
+  });
+  // devtools 감지 — 열리면 경고 후 홈으로
+  var _dtOpen=false;
+  setInterval(function(){
+    var t=new Date();
+    debugger;
+    if(new Date()-t>100){
+      if(!_dtOpen){_dtOpen=true;console.clear();alert('보안 정책상 개발자 도구 사용이 제한됩니다.');location.reload();}
+    } else {_dtOpen=false;}
+  },2000);
+})();
+</script>
 </head>
 <body style="visibility:hidden"><script>setTimeout(function(){document.body.style.visibility="visible"},50)</script>
 
@@ -2148,6 +2171,13 @@ function _pgHomeAgency(el){
   '<div class="agency-v2-hdr">'+
     '<div class="agency-v2-name">'+_esc(_CU.name)+'</div>'+
     '<div class="agency-v2-sub">안녕하세요, 소장님! · '+_esc(_CU.region||'지역 미설정')+'</div>'+
+  '</div>'+
+
+  // 상생 배너
+  '<div style="background:linear-gradient(135deg,rgba(201,168,76,.12),rgba(26,188,156,.08));border:1.5px solid rgba(201,168,76,.3);border-radius:var(--r);padding:14px 16px;margin-bottom:14px">'+
+  '<div style="font-size:13.5px;font-weight:800;margin-bottom:5px">🤝 상생 플랫폼 · 용차에서 소속까지</div>'+
+  '<div style="font-size:12.5px;color:var(--t2);line-height:1.6">단건 용차로 만난 기사를 <b style="color:var(--ac)">소속 기사</b>로 채용할 수 있어요.<br>공고·이력서 탭에서 고정 지입 채용을 바로 올려보세요.</div>'+
+  '<button type="button" onclick="_goPage(\'jobs\')" style="margin-top:10px;padding:7px 18px;background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">고정 채용 공고 올리기 ›</button>'+
   '</div>'+
 
   // 오늘 운행 현황 — 3컬럼 통계
@@ -5628,6 +5658,32 @@ function _pgProfile(el){
   )+
   '</div>':'')+
 
+  // 자동차등록증
+  (type==='driver'?
+  '<div class="card" style="margin-bottom:10px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+  '<div style="font-size:14px;font-weight:800">자동차등록증</div>'+
+  (_CU.vehicleRegVerified?
+    '<span style="background:var(--gnl);color:var(--gn);padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:800">✓ 확인완료</span>':
+    (_CU.vehicleRegUrl?
+      '<span style="background:#fffbeb;color:#d97706;padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700">검토 중</span>':
+      '<span style="background:var(--bg3);color:var(--t3);padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700">미첨부</span>'
+    )
+  )+
+  '</div>'+
+  (_CU.vehicleRegVerified?
+    '<div style="font-size:13px;color:var(--gn);font-weight:600">✓ 차량 등록 확인 완료</div>':
+    (_CU.vehicleRegUrl?
+      '<img src="'+_CU.vehicleRegUrl+'" alt="자동차등록증" style="width:100%;border-radius:8px;max-height:160px;object-fit:cover;margin-bottom:8px" onerror="this.style.display=\'none\'">'+
+      '<div style="font-size:12px;color:var(--t2)">관리자 확인 중입니다</div>':
+      '<label style="display:block;width:100%;padding:10px;background:var(--bg3);color:var(--t2);border:1px dashed var(--bd);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit">'+
+      '사진 첨부하기 (JPG/PNG)'+
+      '<input type="file" accept="image/*" capture="environment" style="display:none" onchange="_yUploadVehicleReg(this)">'+
+      '</label>'
+    )
+  )+
+  '</div>':'')+
+
   // 휴식 원장 (전 역할)
   '<button type="button" onclick="_goPage(\'rest\')" style="width:100%;min-height:var(--tap);background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">'+
   '<span>휴식 원장</span>'+
@@ -5941,8 +5997,24 @@ function _admLoadMembers(){
           (u.type==='agency'?'대리점':'기사')+'</span>'+
         '<button onclick="_toggleSuspend(\''+u.id+'\','+isSus+')" style="padding:5px 10px;background:'+(isSus?'var(--gnl)':'var(--rdl)')+';color:'+(isSus?'var(--gn)':'var(--rd)')+';border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
           (isSus?'정지 해제':'정지')+'</button>'+
+        (u.type==='driver'&&u.licenseNum?
+          '<button onclick="_toggleLicenseVerify(\''+u.id+'\','+!!u.licenseVerified+')" style="padding:5px 10px;background:'+(u.licenseVerified?'var(--acl)':'var(--bg3)')+';color:'+(u.licenseVerified?'var(--ac)':'var(--t2)')+';border:1px solid '+(u.licenseVerified?'var(--acln)':'var(--bd)')+';border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">'+
+          (u.licenseVerified?'✓ 자격증':'자격증 확인')+'</button>':'')+
+        (u.type==='driver'&&u.vehicleRegUrl&&!u.vehicleRegVerified?
+          '<button onclick="_toggleVehicleRegVerify(\''+u.id+'\',false)" style="padding:5px 10px;background:#fffbeb;color:#d97706;border:1px solid #fde68a;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">등록증 확인</button>':'')+
+        (u.type==='driver'&&u.vehicleRegVerified?
+          '<button onclick="_toggleVehicleRegVerify(\''+u.id+'\',true)" style="padding:5px 10px;background:var(--gnl);color:var(--gn);border:1px solid var(--gnln);border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓ 등록증</button>':'')+
         '</div>'+
-        '</div>';
+        '</div>'+
+        (u.type==='driver'&&u.licenseNum?
+          '<div style="font-size:11px;color:var(--t2);margin-top:6px;padding-top:6px;border-top:1px solid var(--bd)">'+
+          '화물운송자격증: '+_esc(u.licenseNum)+
+          (u.licenseVerified?' <span style="color:var(--ac);font-weight:700">✓ 인증됨</span>':' <span style="color:var(--t3)">미확인</span>')+
+          '</div>':'')+(u.type==='driver'&&u.vehicleRegUrl?
+          '<div style="font-size:11px;color:var(--t2);margin-top:4px">'+
+          '자동차등록증: <a href="'+u.vehicleRegUrl+'" target="_blank" rel="noopener" style="color:var(--ac);text-decoration:underline">이미지 보기</a>'+
+          (u.vehicleRegVerified?' <span style="color:var(--gn);font-weight:700">✓ 확인됨</span>':' <span style="color:#d97706;font-weight:700">검토 중</span>')+
+          '</div>':'');
       list.appendChild(card);
     });
   });
@@ -5952,6 +6024,21 @@ function _toggleSuspend(uid, isSus){
   if(!_CU||_CU.type!=='admin'){_yToast('권한 없음');return;}
   _db.collection('yongcha_users').doc(uid).update({suspended:!isSus}).then(function(){
     _yToast(isSus?'정지가 해제되었습니다':'회원이 정지되었습니다');
+    _admLoadMembers();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+function _toggleLicenseVerify(uid, isVerified){
+  if(!_CU||_CU.type!=='admin'){_yToast('권한 없음');return;}
+  _db.collection('yongcha_users').doc(uid).update({licenseVerified:!isVerified}).then(function(){
+    _yToast(isVerified?'자격증 인증이 취소됐어요':'자격증이 인증됐어요 ✓');
+    _admLoadMembers();
+  }).catch(function(e){_yToast('오류: '+e.message);});
+}
+
+function _toggleVehicleRegVerify(uid, isVerified){
+  if(!_CU||_CU.type!=='admin'){_yToast('권한 없음');return;}
+  _db.collection('yongcha_users').doc(uid).update({vehicleRegVerified:!isVerified}).then(function(){
+    _yToast(isVerified?'등록증 확인이 취소됐어요':'등록증이 확인됐어요 ✓');
     _admLoadMembers();
   }).catch(function(e){_yToast('오류: '+e.message);});
 }
@@ -6169,7 +6256,8 @@ function _pgJobs(el){
 
 // ── 대리점/관리자 구인구직 뷰 ──
 function _pgJobsAgency(el){
-  var activeTab=_jSubTab==='resumes'?'resumes':'myjobs';
+  var validTabs=['myjobs','resumes','fixed'];
+  var activeTab=validTabs.indexOf(_jSubTab)>=0?_jSubTab:'myjobs';
   el.innerHTML=
   '<div class="page-hdr"><div class="page-title">공고/이력서</div>'+
   '<div class="page-sub">소속 기사 모집 · 장기 거래 공고</div></div>'+
@@ -6177,6 +6265,7 @@ function _pgJobsAgency(el){
   '단건 요청·임시 용차와 달리, <b style="color:var(--tx)">소속 기사</b>를 모집하는 공고예요.</div>'+
   '<div class="sub-tab-row">'+
   '<button class="sub-tab '+(activeTab==='myjobs'?'on':'')+'" onclick="_jSwitchAgency(\'myjobs\')">내 공고</button>'+
+  '<button class="sub-tab '+(activeTab==='fixed'?'on':'')+'" onclick="_jSwitchAgency(\'fixed\')">고정 지입 채용</button>'+
   '<button class="sub-tab '+(activeTab==='resumes'?'on':'')+'" onclick="_jSwitchAgency(\'resumes\')">이력서 찾기</button>'+
   '</div>'+
   '<div id="jobs-content"></div>';
@@ -6187,13 +6276,141 @@ function _pgJobsAgency(el){
 function _jSwitchAgency(tab){
   _jSubTab=tab;
   document.querySelectorAll('.sub-tab').forEach(function(b){b.classList.remove('on');});
-  var btns=document.querySelectorAll('.sub-tab');
-  if(tab==='myjobs'&&btns[0])btns[0].classList.add('on');
-  if(tab==='resumes'&&btns[1])btns[1].classList.add('on');
+  // match active tab button by text content
+  document.querySelectorAll('.sub-tab').forEach(function(b){
+    var map={myjobs:'내 공고',fixed:'고정 지입 채용',resumes:'이력서 찾기'};
+    if(b.textContent===map[tab])b.classList.add('on');
+  });
   var el=document.getElementById('jobs-content');
   if(!el)return;
   if(tab==='myjobs') _loadMyJobs(el);
+  else if(tab==='fixed') _loadFixedJobs(el);
   else _loadResumes(el);
+}
+
+function _loadFixedJobs(el){
+  el.innerHTML=
+  '<div style="background:var(--brl);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--br);font-size:12px;color:var(--t2);line-height:1.6">'+
+  '🚚 <b style="color:var(--tx)">고정 지입 채용</b>은 특정 노선에 전담 기사를 정기적으로 배치하는 채용이에요. 단기 용차·건별 배차와 다르게 <b style="color:var(--tx)">월별 고정 수입</b>을 제공해요.</div>'+
+  '<button onclick="_showFixedJobWriteModal()" style="width:100%;padding:13px;background:var(--brl);color:var(--br);border:1.5px dashed var(--br);border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px;font-family:inherit">+ 고정 지입 채용 등록</button>'+
+  '<div id="fixed-jobs-list">'+_skRows(3)+'</div>';
+
+  var q=_CU.type==='admin'
+    ? _db.collection('yongcha_jobs').where('jobType','==','고정지입').orderBy('createdAt','desc').limit(50)
+    : _db.collection('yongcha_jobs').where('agencyId','==',_CU.uid).where('jobType','==','고정지입');
+
+  q.get().then(function(snap){
+    var list=document.getElementById('fixed-jobs-list');if(!list)return;
+    if(snap.empty){
+      list.innerHTML='<div class="empty"><div class="empty-ico">🚚</div><div class="empty-msg">등록된 고정 지입 채용이 없어요</div><div class="empty-sub">위 버튼으로 첫 번째 채용 공고를 등록해보세요</div></div>';
+      return;
+    }
+    list.innerHTML='';
+    snap.docs.forEach(function(doc){
+      var d=Object.assign({id:doc.id},doc.data());
+      var card=document.createElement('div');card.className='job-card';
+      card.style.borderLeft='3px solid var(--br)';
+      card.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+        '<div><span class="job-type-badge" style="background:var(--brl);color:var(--br)">고정 지입</span>'+
+        '<span style="font-size:10px;color:var(--t2);margin-left:4px">🚚 '+(d.courier||'')+'</span></div>'+
+        '<span class="status-badge '+(d.status==='open'?'badge-open':'badge-closed')+'">'+(d.status==='open'?'모집중':'마감')+'</span>'+
+        '</div>'+
+        '<div style="font-size:17px;font-weight:800;letter-spacing:-.4px;margin-bottom:7px">'+_esc(d.jobTitle)+'</div>'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:4px">📍 '+(d.region||'')+(d.area?' · '+d.area:'')+'</div>'+
+        '<div style="font-size:13px;font-weight:700;color:var(--br);margin-bottom:10px">💰 월 '+Number(d.salary||0).toLocaleString()+'원 고정</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<button onclick="event.stopPropagation();_toggleJobStatus(\''+d.id+'\',\''+d.status+'\')" style="padding:9px;background:var(--bg3);border:none;border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;font-family:inherit">'+(d.status==='open'?'마감 처리':'재오픈')+'</button>'+
+        '<button onclick="event.stopPropagation();_loadJobApplicants(\''+d.id+'\')" style="padding:9px;background:var(--brl);border:none;border-radius:10px;color:var(--br);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">👥 지원자 '+((d.applicantCount||0)+'명')+'</button>'+
+        '</div>';
+      list.appendChild(card);
+    });
+  }).catch(function(e){
+    var list=document.getElementById('fixed-jobs-list');
+    if(list)list.innerHTML='<div class="empty"><div class="empty-msg">불러오기 실패: '+_esc(e.message)+'</div></div>';
+  });
+}
+
+function _showFixedJobWriteModal(){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+    '<div style="font-size:20px;font-weight:900;margin-bottom:4px">🚚 고정 지입 채용 등록</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">장기 전담 기사를 모집해요</div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">공고 제목 <span style="color:var(--rd)">*</span></label>'+
+    '<input type="text" id="fjob-title" class="inp" placeholder="예) CJ대한통운 부산 사상구 고정 지입 기사 모집"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">택배사</label>'+
+    '<select id="fjob-courier" class="inp">'+
+    '<option value="">선택 안함</option>'+
+    '<option>CJ대한통운</option><option>롯데택배</option><option>한진택배</option>'+
+    '<option>쿠팡로지스틱스</option><option>우체국택배</option><option>로젠택배</option>'+
+    '<option>CVS넷</option><option>기타</option>'+
+    '</select></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div class="inp-wrap"><label class="inp-lbl">지역 <span style="color:var(--rd)">*</span></label>'+
+    '<input type="text" id="fjob-region" class="inp" placeholder="부산"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">세부 구역</label>'+
+    '<input type="text" id="fjob-area" class="inp" placeholder="사상구 괘법동"></div>'+
+    '</div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">월 고정 급여 (원) <span style="color:var(--rd)">*</span></label>'+
+    '<input type="number" id="fjob-salary" class="inp" placeholder="3500000" inputmode="numeric"></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div class="inp-wrap"><label class="inp-lbl">일 물량 (건)</label>'+
+    '<input type="number" id="fjob-vol" class="inp" placeholder="100" inputmode="numeric"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">모집 인원</label>'+
+    '<input type="number" id="fjob-headcount" class="inp" placeholder="1" value="1" inputmode="numeric"></div>'+
+    '</div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">운행 시간대</label>'+
+    '<select id="fjob-shift" class="inp">'+
+    '<option value="">선택</option><option>새벽(04-09시)</option><option>오전(09-13시)</option>'+
+    '<option>오후(13-18시)</option><option>저녁(18-22시)</option><option>야간(22-04시)</option><option>풀타임</option>'+
+    '</select></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">차량 조건</label>'+
+    '<input type="text" id="fjob-vehicle" class="inp" placeholder="예) 1톤 이상, 냉동차 등 (없으면 빈칸)"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">상세 내용</label>'+
+    '<textarea id="fjob-desc" class="inp" rows="3" style="resize:none" placeholder="담당 구역·특이사항·복리후생 등"></textarea></div>'+
+    '<button onclick="_saveFixedJob()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--br),var(--br2));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:4px">등록하기</button>';
+  _openModal();
+}
+
+function _saveFixedJob(){
+  var title=((document.getElementById('fjob-title')||{}).value||'').trim();
+  var courier=(document.getElementById('fjob-courier')||{}).value||'';
+  var region=((document.getElementById('fjob-region')||{}).value||'').trim();
+  var area=((document.getElementById('fjob-area')||{}).value||'').trim();
+  var salary=parseInt((document.getElementById('fjob-salary')||{}).value||'0');
+  var vol=parseInt((document.getElementById('fjob-vol')||{}).value||'0');
+  var headcount=parseInt((document.getElementById('fjob-headcount')||{}).value||'1');
+  var shift=(document.getElementById('fjob-shift')||{}).value||'';
+  var vehicle=((document.getElementById('fjob-vehicle')||{}).value||'').trim();
+  var desc=((document.getElementById('fjob-desc')||{}).value||'').trim();
+
+  if(!title){_yToast('공고 제목을 입력해주세요');return;}
+  if(!region){_yToast('지역을 입력해주세요');return;}
+  if(!salary||salary<1){_yToast('월 급여를 입력해주세요');return;}
+
+  _db.collection('yongcha_jobs').add({
+    jobType:'고정지입',
+    jobTitle:title,
+    courier:courier,
+    region:region,
+    area:area,
+    salary:salary,
+    volume:vol,
+    headcount:headcount||1,
+    workShift:shift,
+    vehicleCondition:vehicle,
+    description:desc,
+    agencyId:_CU.uid,
+    agencyName:_CU.name,
+    status:'open',
+    applicantCount:0,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast('고정 지입 채용 공고가 등록됐어요!');
+    _closeModal();
+    _jSubTab='fixed';
+    _pgJobsAgency(document.getElementById('content'));
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
 }
 
 function _loadMyJobs(el){
@@ -7006,6 +7223,8 @@ function _pgChats(el){
 }
 
 function _openChatRoom(otherUid,otherName,otherType){
+  if(!_CU||!_CU.uid){_yToast('로그인이 필요합니다');return;}
+  if(!otherUid){_yToast('상대방 정보가 없습니다');return;}
   _closeModal();
   var ids=[_CU.uid,otherUid].sort();
   var chatId=ids[0]+'__'+ids[1];
@@ -7488,6 +7707,23 @@ function _ySaveLicenseNum(){
     _CU.licenseNum=num;
     _yToast('번호가 등록됐어요. 관리자 확인 후 인증 뱃지가 표시됩니다.');
   }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
+function _yUploadVehicleReg(input){
+  var file=input.files&&input.files[0];
+  if(!file){return;}
+  if(file.size>10*1024*1024){_yToast('파일 크기는 10MB 이하여야 합니다');return;}
+  _yToast('업로드 중...');
+  var storageRef=_storage.ref('yongcha_vehicle_reg/'+_CU.uid+'_'+Date.now());
+  storageRef.put(file).then(function(snap){return snap.ref.getDownloadURL();})
+  .then(function(url){
+    _CU.vehicleRegUrl=url;
+    return _db.collection('yongcha_users').doc(_CU.uid).update({vehicleRegUrl:url,vehicleRegVerified:false})
+    .then(function(){
+      _yToast('자동차등록증이 첨부됐어요. 관리자 확인 후 인증됩니다.');
+      _goPage('profile');
+    });
+  }).catch(function(e){_yToast('업로드 실패: '+e.message);});
 }
 
 /* ══════════════════════════════════════════════════════════
