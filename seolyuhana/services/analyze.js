@@ -959,11 +959,12 @@ export async function analyzeScannedPdf({ pdfBuffer, images, serviceId, extraCon
   };
   if (hasPdfBlock) reqHeaders['anthropic-beta'] = 'pdfs-2024-09-25';
 
-  // 경매 분석은 복잡한 JSON 스키마 → Sonnet으로 격상, 나머지는 Haiku
-  const SCAN_MODELS = serviceId === 'auction_analysis'
+  // 경매·등기부 분석은 복잡한 JSON 스키마 → Sonnet으로 격상, 나머지는 Haiku
+  const _needsSonnet = serviceId === 'auction_analysis' || serviceId === 'registry_analysis';
+  const SCAN_MODELS = _needsSonnet
     ? ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022']
     : ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'];
-  const SCAN_MAX_TOKENS = serviceId === 'auction_analysis' ? 6500 : 4000;
+  const SCAN_MAX_TOKENS = _needsSonnet ? 6500 : 4000;
   // 반드시 JSON만 출력하도록 system 지시 추가
   const SCAN_SYSTEM = '반드시 JSON만 출력. 마크다운 코드블록, 설명 텍스트, 인사말 없이 순수 JSON 객체({...})로만 응답.';
 
