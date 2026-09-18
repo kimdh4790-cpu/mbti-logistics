@@ -324,6 +324,7 @@ git push -u origin claude/브랜치명
 
 | 날짜 | 파일 | 내용 |
 |------|------|------|
+| 2026-09-18 | yongcha.html, yongcha-worker.js | **지원 후 새로고침 시 버튼 초기화 버그 수정**: `_myAppliedPosts{}` 캐시 추가. `_loadFilteredPosts()` 진입 시 `yongcha_applies` 1회 조회해 기사 지원 이력 캐시 로드. `_makePostCard`에서 `_myAppliedPosts[d.id]` 체크 — 이미 지원 시 "지원함"(disabled) 렌더. `_applyPost` 성공 시 캐시에 추가, `_yCancelApply` 성공 시 캐시 삭제. |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | **30일 무료체험 시스템**: 가입 시 trialEndsAt(+30일) 저장, D-7 주황 배너/D-0 빨간 배너+구독 모달 자동 표시 (_yCheckTrial, _yShowTrialBanner, _yShowSubscribeModal) |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | **귀로 매칭**: 배송 완료 모달에 50km 이내 open 공고 자동 검색 패널 추가 (_yAutoFindReturnTrip, _yFindReturnTrip) — 완료 지점 기준 거리순 정렬, 상위 3건 표시 |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | **소득장부 페이지** (_pgIncomeLedger): 기사 yongcha_applies 월별 집계, 단순경비율 61.5% 종합소득세 예상, 월별 운행 목록 펼침. 홈 퀵액션·프로필 진입 버튼 추가 |
