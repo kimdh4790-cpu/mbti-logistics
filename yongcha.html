@@ -5609,7 +5609,24 @@ function _pgProfile(el){
   '<button type="button" onclick="_goPage(\'income_ledger\')" style="width:100%;min-height:var(--tap);background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(217,119,6,.08));color:#d97706;border:1px solid rgba(245,158,11,.25);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px">'+
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>'+
   '<span>소득장부 · 세금 예측</span>'+
-  '</button>':'')+
+  '</button>'+
+  // 화물운송자격증
+  '<div class="card" style="margin-bottom:10px">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+  '<div style="font-size:14px;font-weight:800">화물운송자격증</div>'+
+  (_CU.licenseVerified?
+    '<span style="background:var(--gnl);color:var(--gn);padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:800">✓ 인증완료</span>':
+    '<span style="background:var(--bg3);color:var(--t3);padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700">미인증</span>'
+  )+
+  '</div>'+
+  (_CU.licenseVerified?
+    '<div style="font-size:13px;color:var(--t2)">자격증 번호: '+_esc(_CU.licenseNum||'—')+'</div>':
+    '<div class="inp-wrap" style="margin:0 0 8px">'+
+    '<input id="license-num" class="inp" placeholder="자격증 번호 입력 (예: 123456789)" value="'+(_CU.licenseNum||'')+'">'+
+    '</div>'+
+    '<button onclick="_ySaveLicenseNum()" style="width:100%;padding:10px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">번호 등록 → 관리자 확인 후 인증</button>'
+  )+
+  '</div>':'')+
 
   // 휴식 원장 (전 역할)
   '<button type="button" onclick="_goPage(\'rest\')" style="width:100%;min-height:var(--tap);background:var(--bg2);color:var(--tx);border:1px solid var(--bd);border-radius:var(--r);font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">'+
@@ -5697,6 +5714,7 @@ function _pgProfile(el){
   '</div>':'')+
 
   '<div style="margin-top:16px">'+
+  (type==='driver'?'<div id="praise-keywords" style="margin-bottom:14px"></div>':'')+
   '<div style="font-size:15px;font-weight:800;margin-bottom:10px">💬 받은 후기</div>'+
   '<div id="my-reviews-list">'+_skRows(2)+'</div>'+
   '</div>';
@@ -5729,10 +5747,31 @@ function _pgProfile(el){
     }).catch(function(){});
   }
 
-  _db.collection('yongcha_reviews').where('revieweeId','==',_CU.uid).limit(30).get()
+  _db.collection('yongcha_reviews').where('revieweeId','==',_CU.uid).limit(50).get()
     .then(function(snap){
       var list=document.getElementById('my-reviews-list');if(!list)return;
       if(snap.empty){list.innerHTML='<div class="empty" style="padding:20px"><div class="empty-ico" style="font-size:32px">💬</div><div class="empty-msg">받은 후기가 없어요</div></div>';return;}
+
+      // 칭찬 키워드 집계
+      var kwCount={};
+      snap.forEach(function(doc){
+        var d=doc.data();
+        if(d.criteria&&d.criteria.length){
+          d.criteria.forEach(function(c){kwCount[c]=(kwCount[c]||0)+1;});
+        }
+      });
+      var kwEl=document.getElementById('praise-keywords');
+      if(kwEl&&Object.keys(kwCount).length){
+        var sorted=Object.keys(kwCount).sort(function(a,b){return kwCount[b]-kwCount[a];}).slice(0,8);
+        kwEl.innerHTML=
+          '<div style="font-size:14px;font-weight:800;margin-bottom:8px">👍 칭찬 키워드</div>'+
+          '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+          sorted.map(function(k){
+            return '<span style="background:var(--acl);color:var(--ac);border:1px solid var(--acln);padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700">'+_esc(k)+' ×'+kwCount[k]+'</span>';
+          }).join('')+
+          '</div>';
+      }
+
       list.innerHTML='';
       var _rvDocs=snap.docs.sort(function(a,b){var at=a.data().createdAt;var bt=b.data().createdAt;return (bt&&bt.seconds||0)-(at&&at.seconds||0);}).slice(0,20);
       _rvDocs.forEach(function(doc){
@@ -7441,6 +7480,16 @@ function _ySavePrefs(){
     _renderPostList();
   }).catch(function(e){_yToast('저장 실패: '+e.message);});
 }
+
+function _ySaveLicenseNum(){
+  var num=((document.getElementById('license-num')||{}).value||'').trim();
+  if(!num){_yToast('자격증 번호를 입력해주세요');return;}
+  _db.collection('yongcha_users').doc(_CU.uid).update({licenseNum:num,licenseVerified:false}).then(function(){
+    _CU.licenseNum=num;
+    _yToast('번호가 등록됐어요. 관리자 확인 후 인증 뱃지가 표시됩니다.');
+  }).catch(function(e){_yToast('저장 실패: '+e.message);});
+}
+
 /* ══════════════════════════════════════════════════════════
    과로 방지 (12시간 규정)
    ──────────────────────────────────────────────────────────
@@ -8143,88 +8192,185 @@ var _riqTab='heatmap';
 function _pgIncomeLedger(el){
   if(_CU.type!=='driver'){el.innerHTML='<p style="text-align:center;padding:40px;color:var(--t2)">기사 전용 기능이에요</p>';return;}
   el.innerHTML=
-    '<div class="page-hdr"><h1 class="page-title">소득장부</h1>'+
+    '<div class="page-hdr" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
+    '<div><h1 class="page-title">소득장부</h1>'+
     '<p class="page-sub">월별 수입·예상세금 자동 집계</p></div>'+
+    '<div style="display:flex;gap:6px;flex-shrink:0;margin-top:6px">'+
+    '<button onclick="_ledgerManualModal()" style="min-height:36px;padding:0 12px;background:var(--acl);color:var(--ac);border:1px solid var(--acln);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ 수기</button>'+
+    '<button onclick="_ledgerExportCSV()" style="min-height:36px;padding:0 12px;background:var(--bg3);color:var(--t2);border:1px solid var(--bd);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">CSV</button>'+
+    '</div></div>'+
     '<div id="ledger-body">'+_skRows(4)+'</div>';
-  _db.collection('yongcha_applies')
-    .where('driverId','==',_CU.uid)
-    .where('status','in',['done','approved'])
-    .orderBy('completedAt','desc')
-    .limit(200)
-    .get().then(function(snap){
-      var lb=document.getElementById('ledger-body');if(!lb)return;
-      if(snap.empty){lb.innerHTML=_emptyHtml('','아직 완료된 운행이 없어요','운행 완료 후 수입이 자동으로 기록돼요');return;}
-      // 월별 집계
-      var months={};
-      snap.forEach(function(doc){
-        var a=doc.data();
-        var dt=a.completedAt?new Date(a.completedAt.seconds*1000):new Date();
-        var key=dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월';
-        if(!months[key])months[key]={total:0,count:0,routes:[]};
-        var earned=(a.unitPrice||0)*(a.volume||1);
-        months[key].total+=earned;
-        months[key].count++;
-        months[key].routes.push({area:a.area||a.region||'운행',earned:earned,dt:dt,courier:a.courier||''});
-      });
-      // 올해 연간 합계
-      var thisYear=new Date().getFullYear()+'년';
-      var yearTotal=0;
-      Object.keys(months).forEach(function(k){if(k.startsWith(thisYear))yearTotal+=months[k].total;});
-      // 종합소득세 예상 (단순경비율 61.5%, 소득세율 6~35%)
-      var estIncome=Math.round(yearTotal*(1-0.615));
-      var estTax=estIncome<=12000000?Math.round(estIncome*0.06):
-                 estIncome<=46000000?Math.round(estIncome*0.15-1260000):
-                 Math.round(estIncome*0.24-5220000);
-      lb.innerHTML=
-        // 연간 요약 카드
-        '<div class="card" style="background:linear-gradient(135deg,var(--bg2),#0d1f35);border-color:rgba(0,217,124,.15);margin-bottom:16px">'+
-          '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">'+thisYear+' 누적 수입</div>'+
-          '<div style="font-size:32px;font-weight:900;color:var(--ac);letter-spacing:-1px">'+_won(yearTotal)+'원</div>'+
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'+
-            '<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px">'+
-              '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">추정 소득금액</div>'+
-              '<div style="font-weight:800;color:#fff">'+_won(estIncome)+'원</div>'+
-              '<div style="font-size:10px;color:var(--t3);margin-top:2px">단순경비율 61.5% 적용</div>'+
-            '</div>'+
-            '<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px">'+
-              '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">예상 종합소득세</div>'+
-              '<div style="font-weight:800;color:#f59e0b">'+_won(estTax)+'원</div>'+
-              '<div style="font-size:10px;color:var(--t3);margin-top:2px">실제와 다를 수 있어요</div>'+
-            '</div>'+
+
+  Promise.all([
+    _db.collection('yongcha_applies')
+      .where('driverId','==',_CU.uid)
+      .where('status','in',['done','approved'])
+      .orderBy('completedAt','desc').limit(200).get(),
+    _db.collection('yongcha_income_manual')
+      .where('driverId','==',_CU.uid)
+      .orderBy('workDate','desc').limit(200).get()
+  ]).then(function(results){
+    var lb=document.getElementById('ledger-body');if(!lb)return;
+    var appSnap=results[0];var manSnap=results[1];
+    var months={};
+
+    appSnap.forEach(function(doc){
+      var a=doc.data();
+      var dt=a.completedAt?new Date(a.completedAt.seconds*1000):new Date();
+      var key=dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월';
+      if(!months[key])months[key]={total:0,count:0,manCount:0,routes:[]};
+      var earned=(a.unitPrice||0)*(a.volume||1);
+      months[key].total+=earned;months[key].count++;
+      months[key].routes.push({area:a.area||a.region||'운행',earned:earned,dt:dt,courier:a.courier||'',isManual:false});
+    });
+
+    manSnap.forEach(function(doc){
+      var a=doc.data();
+      var dt=a.workDate?new Date(a.workDate):new Date();
+      var key=dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월';
+      if(!months[key])months[key]={total:0,count:0,manCount:0,routes:[]};
+      var earned=(a.unitPrice||0)*(a.count||1);
+      months[key].total+=earned;months[key].count++;months[key].manCount++;
+      months[key].routes.push({area:a.area||'수기입력',earned:earned,dt:dt,courier:a.courier||'',isManual:true,count:a.count||1,unitPrice:a.unitPrice||0});
+    });
+
+    if(!Object.keys(months).length){
+      lb.innerHTML=_emptyHtml('','아직 기록된 수입이 없어요','운행 완료 후 자동 기록되거나 수기로 추가해요');
+      return;
+    }
+
+    window._ledgerData={months:months};
+    var thisYear=new Date().getFullYear()+'년';
+    var yearTotal=0;
+    Object.keys(months).forEach(function(k){if(k.startsWith(thisYear))yearTotal+=months[k].total;});
+    var estIncome=Math.round(yearTotal*(1-0.615));
+    var estTax=estIncome<=12000000?Math.round(estIncome*0.06):
+               estIncome<=46000000?Math.round(estIncome*0.15-1260000):
+               Math.round(estIncome*0.24-5220000);
+
+    lb.innerHTML=
+      '<div class="card" style="background:linear-gradient(135deg,var(--bg2),#0d1f35);border-color:rgba(0,217,124,.15);margin-bottom:16px">'+
+        '<div style="font-size:12px;color:var(--t2);margin-bottom:8px">'+thisYear+' 누적 수입</div>'+
+        '<div style="font-size:32px;font-weight:900;color:var(--ac);letter-spacing:-1px">'+_won(yearTotal)+'원</div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">'+
+          '<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px">'+
+            '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">추정 소득금액</div>'+
+            '<div style="font-weight:800;color:#fff">'+_won(estIncome)+'원</div>'+
+            '<div style="font-size:10px;color:var(--t3);margin-top:2px">단순경비율 61.5% 적용</div>'+
+          '</div>'+
+          '<div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px">'+
+            '<div style="font-size:11px;color:var(--t3);margin-bottom:4px">예상 종합소득세</div>'+
+            '<div style="font-weight:800;color:#f59e0b">'+_won(estTax)+'원</div>'+
+            '<div style="font-size:10px;color:var(--t3);margin-top:2px">실제와 다를 수 있어요</div>'+
           '</div>'+
         '</div>'+
-        // 월별 카드
-        Object.keys(months).map(function(mon){
-          var m=months[mon];
-          var expanded=false;
-          return '<div class="card" style="margin-bottom:10px">'+
-            '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="var r=this.nextElementSibling;r.style.display=r.style.display===\'none\'?\'block\':\'none\'">'+
-              '<div>'+
-                '<div style="font-size:14px;font-weight:800">'+_esc(mon)+'</div>'+
-                '<div style="font-size:11.5px;color:var(--t2);margin-top:2px">'+m.count+'건 운행</div>'+
-              '</div>'+
-              '<div style="text-align:right">'+
-                '<div style="font-size:16px;font-weight:900;color:var(--ac)">'+_won(m.total)+'원</div>'+
-                '<div style="font-size:10.5px;color:var(--t3)">건당 평균 '+_won(Math.round(m.total/m.count))+'원</div>'+
-              '</div>'+
+      '</div>'+
+      Object.keys(months).map(function(mon){
+        var m=months[mon];
+        return '<div class="card" style="margin-bottom:10px">'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="var r=this.nextElementSibling;r.style.display=r.style.display===\'none\'?\'block\':\'none\'">'+
+            '<div>'+
+              '<div style="font-size:14px;font-weight:800">'+_esc(mon)+'</div>'+
+              '<div style="font-size:11.5px;color:var(--t2);margin-top:2px">'+m.count+'건'+(m.manCount?' (수기 '+m.manCount+'건 포함)':'')+'</div>'+
             '</div>'+
-            '<div style="display:none;margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">'+
-              m.routes.map(function(r){
-                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bd)">'+
-                  '<div>'+
-                    '<div style="font-size:12.5px;font-weight:700">'+_esc(r.area)+'</div>'+
-                    '<div style="font-size:11px;color:var(--t2)">'+_esc(r.courier)+(r.courier?' · ':'')+r.dt.getMonth()+1+'월 '+r.dt.getDate()+'일</div>'+
-                  '</div>'+
-                  '<div style="font-size:13px;font-weight:800;color:var(--tx)">'+_won(r.earned)+'원</div>'+
-                '</div>';
-              }).join('')+
+            '<div style="text-align:right">'+
+              '<div style="font-size:16px;font-weight:900;color:var(--ac)">'+_won(m.total)+'원</div>'+
+              '<div style="font-size:10.5px;color:var(--t3)">건당 평균 '+_won(Math.round(m.total/m.count))+'원</div>'+
             '</div>'+
-          '</div>';
-        }).join('');
-    }).catch(function(e){
-      var lb=document.getElementById('ledger-body');
-      if(lb)lb.innerHTML='<p style="color:var(--rd);text-align:center;padding:32px">오류: '+_esc(e.message)+'</p>';
+          '</div>'+
+          '<div style="display:none;margin-top:12px;border-top:1px solid var(--bd);padding-top:12px">'+
+            m.routes.map(function(r){
+              return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bd)">'+
+                '<div>'+
+                  '<div style="font-size:12.5px;font-weight:700">'+_esc(r.area)+(r.isManual?'<span style="margin-left:5px;font-size:10px;background:var(--brl);color:var(--br);padding:1px 5px;border-radius:4px">수기</span>':'')+'</div>'+
+                  '<div style="font-size:11px;color:var(--t2)">'+_esc(r.courier)+(r.courier?' · ':'')+( r.dt.getMonth()+1)+'월 '+r.dt.getDate()+'일'+(r.isManual&&r.count>1?' · '+r.count+'건×'+_won(r.unitPrice):'')+'</div>'+
+                '</div>'+
+                '<div style="font-size:13px;font-weight:800;color:var(--tx)">'+_won(r.earned)+'원</div>'+
+              '</div>';
+            }).join('')+
+          '</div>'+
+        '</div>';
+      }).join('');
+  }).catch(function(e){
+    var lb=document.getElementById('ledger-body');
+    if(lb)lb.innerHTML='<p style="color:var(--rd);text-align:center;padding:32px">오류: '+_esc(e.message)+'</p>';
+  });
+}
+
+function _ledgerManualModal(){
+  var body=document.getElementById('modal-body');
+  body.innerHTML=
+    '<div style="font-size:20px;font-weight:900;margin-bottom:4px">수기 수입 입력</div>'+
+    '<div style="font-size:13px;color:var(--t2);margin-bottom:16px">앱 외부 운송 건을 직접 추가해요</div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">운행 날짜 <span style="color:var(--rd)">*</span></label>'+
+    '<input type="date" id="man-date" class="inp" value="'+new Date().toISOString().slice(0,10)+'"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">구역/노선 <span style="color:var(--rd)">*</span></label>'+
+    '<input id="man-area" class="inp" placeholder="예: 해운대구 배송"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">택배사</label>'+
+    '<select id="man-courier" class="inp">'+
+    ['선택 안함','CJ대한통운','한진택배','롯데택배','쿠팡로지스틱스','우체국','로젠택배','기타'].map(function(v){return '<option>'+v+'</option>';}).join('')+
+    '</select></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div class="inp-wrap"><label class="inp-lbl">건수 <span style="color:var(--rd)">*</span></label>'+
+    '<input type="number" id="man-count" class="inp" placeholder="예: 120" min="1" value="1"></div>'+
+    '<div class="inp-wrap"><label class="inp-lbl">건당 단가(원) <span style="color:var(--rd)">*</span></label>'+
+    '<input type="number" id="man-price" class="inp" placeholder="예: 700" min="0"></div>'+
+    '</div>'+
+    '<div id="man-total" style="text-align:center;font-size:13px;color:var(--t2);margin:4px 0 14px;padding:10px;background:var(--bg3);border-radius:8px">합계: — 원</div>'+
+    '<button onclick="_ledgerSaveManual()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--ac),var(--gn));color:#000;border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit" id="man-save">저장</button>';
+  setTimeout(function(){
+    function updTotal(){
+      var cnt=parseInt((document.getElementById('man-count')||{}).value)||0;
+      var price=parseInt((document.getElementById('man-price')||{}).value)||0;
+      var tot=document.getElementById('man-total');
+      if(tot)tot.textContent='합계: '+_won(cnt*price)+'원';
+    }
+    var c=document.getElementById('man-count'),p=document.getElementById('man-price');
+    if(c)c.oninput=updTotal;if(p)p.oninput=updTotal;
+  },50);
+  _openModal();
+}
+
+function _ledgerSaveManual(){
+  var date=(document.getElementById('man-date')||{}).value||'';
+  var area=(document.getElementById('man-area')||{}).value||'';
+  var courier=(document.getElementById('man-courier')||{}).value||'';
+  var count=parseInt((document.getElementById('man-count')||{}).value)||0;
+  var price=parseInt((document.getElementById('man-price')||{}).value)||0;
+  if(!date||!area.trim()){_yToast('날짜와 구역은 필수예요');return;}
+  if(count<1||price<1){_yToast('건수와 단가를 입력해주세요');return;}
+  var btn=document.getElementById('man-save');btn.textContent='저장 중...';btn.disabled=true;
+  _db.collection('yongcha_income_manual').add({
+    driverId:_CU.uid,driverName:_CU.name,
+    workDate:date,area:area.trim(),
+    courier:courier==='선택 안함'?'':courier,
+    count:count,unitPrice:price,
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    _yToast('수입이 추가됐어요!');
+    _closeModal();
+    var pg=document.getElementById('main-content');if(pg)_pgIncomeLedger(pg);
+  }).catch(function(e){btn.textContent='저장';btn.disabled=false;_yToast('오류: '+e.message);});
+}
+
+function _ledgerExportCSV(){
+  var data=window._ledgerData;
+  if(!data||!data.months){_yToast('먼저 소득장부를 로드해주세요');return;}
+  var rows=[['날짜','구역','택배사','건수','단가(원)','합계(원)','구분']];
+  Object.keys(data.months).forEach(function(mon){
+    data.months[mon].routes.forEach(function(r){
+      var dateStr=r.dt.getFullYear()+'/'+(r.dt.getMonth()+1)+'/'+r.dt.getDate();
+      var cnt=r.isManual?(r.count||1):1;
+      var price=r.isManual?(r.unitPrice||0):r.earned;
+      rows.push([dateStr,r.area,r.courier||'',cnt,price,r.earned,r.isManual?'수기':'자동']);
     });
+  });
+  var csv=rows.map(function(row){return row.map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='소득장부_'+new Date().getFullYear()+'년.csv';a.click();
+  URL.revokeObjectURL(url);
+  _yToast('CSV 다운로드 시작!');
 }
 
 function _pgRouteIQ(el){
