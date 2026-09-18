@@ -810,24 +810,23 @@ cd mbtico-pages && npx wrangler deploy
 - **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
 - **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
 
-### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-05 기준)
-| 요일 | KST | 제품 | 플랫폼 |
-|---|---|---|---|
-| 일 | 09:00 | 인프런 | YouTube |
-| 일 | 10:30 | 인프런 | Instagram |
-| 월 | 09:00 | 용차앱 | YouTube |
-| 화 | 09:00 | FILO | YouTube |
-| 화 | 10:30 | FILO | Instagram |
-| 수 | 09:00 | 인프런 | YouTube |
-| 수 | 10:30 | 인프런 | Instagram |
-| 목 | 09:00 | DONWAY | YouTube |
-| 목 | 10:30 | DONWAY | Instagram |
-| 금 | 09:00 | DINE | YouTube |
-| 금 | 10:30 | DINE | Instagram |
-| 토 | 09:00 | 인프런 | YouTube |
+### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-18 기준)
+| 요일 | KST | 제품 | 플랫폼 | 상태 |
+|---|---|---|---|---|
+| 일 | 09:00 | 인프런 | YouTube | ✅ 운영 |
+| 일 | 10:30 | 인프런 | Instagram | ✅ 운영 |
+| 월 | 09:00 | 용차앱 | YouTube | ✅ 운영 |
+| 화 | 09:00 | FILO | YouTube | ⏸ 보류 |
+| 화 | 10:30 | FILO | Instagram | ⏸ 보류 |
+| 수 | 09:00 | 인프런 | YouTube | ✅ 운영 |
+| 수 | 10:30 | 인프런 | Instagram | ✅ 운영 |
+| 목 | 09:00 | DONWAY | YouTube | ✅ 운영 |
+| 목 | 10:30 | DONWAY | Instagram | ✅ 운영 |
+| 금 | 09:00 | DINE | YouTube | ⏸ 보류 |
+| 금 | 10:30 | DINE | Instagram | ⏸ 보류 |
+| 토 | 09:00 | 인프런 | YouTube | ✅ 운영 |
 
-> mbtico는 홍보 준비 완료 전까지 스케줄 제외
-> 인프런: 주 4회 (수·토·일 YouTube, 수·일 Instagram) — 6주 순환으로 클립별 집중 홍보
+> 운영 중: 용차앱(월)·인프런(일·수·토)·DONWAY(목) / 보류: FILO(화)·DINE(금)
 
 ### 프로필 이미지 (회사 로고)
 - 파일: `assets/logo.png`
