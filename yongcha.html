@@ -306,6 +306,9 @@ select.inp option{background:#24243d;color:#f0f1f8}
 .pcard.is-matched{--rail:var(--gn)}
 .pcard.is-closed{--rail:var(--bd2);opacity:.46}
 .pcard.is-premium{--rail:var(--pu);border-color:var(--puln)}
+.pcard.is-applied{--rail:var(--gn);border-color:rgba(26,188,156,.28)}
+.pc-applied-chip{display:inline-flex;align-items:center;gap:4px;background:var(--gnl);color:var(--gn);padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+.pc-apply-done{min-height:var(--tap);padding:0 16px;border:1.5px solid var(--gn);border-radius:var(--r);background:var(--gnl);color:var(--gn);font-size:13.5px;font-weight:800;cursor:default}
 
 .pc-ribbon{display:flex;align-items:center;justify-content:center;gap:5px;
   background:linear-gradient(90deg,var(--pu),#7c5cf5);color:#fff;font-size:10.5px;font-weight:800;
@@ -3190,11 +3193,12 @@ function _makePostCard(d,mini){
 
   var state=isClosed?'is-closed':isPremium?'is-premium':isMatched?'is-matched':d.urgent?'is-urgent':'is-open';
   var card=document.createElement('article');
-  card.className='pcard '+state+(mini?' pcard-mini':'');
+  var isApplied=!!(_myAppliedPosts[d.id]);
+  card.className='pcard '+state+(mini?' pcard-mini':'')+(isApplied?' is-applied':'');
 
-  // 택배사별 컬러라인 — 상태 색보다 택배사 색 우선
+  // 택배사별 컬러라인 — 상태 색보다 택배사 색 우선 (지원완료 카드는 초록 유지)
   var rail=_courierRail(d.courier);
-  if(rail)card.style.cssText='--rail:'+rail;
+  if(rail&&!isApplied)card.style.cssText='--rail:'+rail;
 
   var dayBadge=_yDayBadge(d.startDate);
   var urgLabel=_urgencyLabel(d);
@@ -3282,7 +3286,7 @@ function _makePostCard(d,mini){
     '<div class="pc-head">'+
       '<span class="courier-badge">'+_courierIcon(d.courier)+'</span>'+
       '<span class="trust-chip" style="font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:'+grade.bg+';color:'+grade.color+'">'+grade.label+'</span>'+
-      '<span class="st '+stCls+'" style="margin-left:auto">'+stLabel+'</span>'+
+      (isApplied?'<span class="pc-applied-chip" style="margin-left:auto">✓ 지원완료</span>':'<span class="st '+stCls+'" style="margin-left:auto">'+stLabel+'</span>')+
     '</div>'+
     // ── 본문
     '<div class="pc-body">'+
@@ -3322,8 +3326,8 @@ function _makePostCard(d,mini){
         '<button type="button" class="pc-act txt" aria-label="공유" onclick="event.stopPropagation();_sharePost(\''+d.id+'\',\''+_jsq(d.area)+'\')">공유</button>'+
         (mapHref?'<a class="pc-act txt" href="'+_esc(mapHref)+'" target="_blank" rel="noopener" aria-label="지도" onclick="event.stopPropagation()">지도</a>':'')+
         (!isClosed&&isDriver?
-          (_myAppliedPosts[d.id]?
-            '<button type="button" class="pc-apply" disabled style="opacity:.55;cursor:default">지원함</button>':
+          (isApplied?
+            '<button type="button" class="pc-apply-done" disabled>✓ 지원완료</button>':
             '<button type="button" class="pc-apply" onclick="event.stopPropagation();_applyPost(\''+d.id+'\',\''+d.agencyId+'\',\''+_jsq(d.agencyName)+'\',this)">지원</button>'
           ):'')+
       '</span>'+
