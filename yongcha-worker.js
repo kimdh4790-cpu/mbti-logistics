@@ -1632,6 +1632,7 @@ function _goPage(p, _fromPopstate){
   if(!_fromPopstate){
     history.pushState({page:p}, '');
   }
+  var bnav=document.getElementById('bnav');if(bnav)bnav.style.display='';
   var el=document.getElementById('content');
   el.removeAttribute('style');     // 채팅방 인라인 스타일 초기화
   el.scrollTop=0;
@@ -7261,10 +7262,12 @@ function _pgChatRoom(chatId,otherUid,otherName){
   if(_chatUnsub){_chatUnsub();_chatUnsub=null;}
   document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('on');});
   var nb=document.getElementById('bnav-chat');if(nb)nb.classList.add('on');
+  var bnav=document.getElementById('bnav');if(bnav)bnav.style.display='none';
 
   var el=document.getElementById('content');
   el.style.overflowY='hidden';
   el.style.padding='0';
+  el.style.paddingBottom='0';
   el.style.display='flex';
   el.style.flexDirection='column';
   el.innerHTML=
