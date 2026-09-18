@@ -3047,9 +3047,13 @@ async function acceptExchange(){
                       <div id="tax-msg" style="font-size:11px;text-align:center;color:#64748b"></div>
                     </div>
                     <div id="tax-done" style="display:none;padding:16px;text-align:center">
-                      <div style="font-size:20px;margin-bottom:6px">⏳</div>
-                      <div style="font-size:13px;font-weight:700;color:#b45309">역발행 요청 완료</div>
-                      <div style="font-size:11px;color:#64748b;margin-top:4px">팝빌 앱 또는 문자에서 승인해 주세요</div>
+                      <div style="font-size:20px;margin-bottom:6px">✅</div>
+                      <div style="font-size:13px;font-weight:700;color:#059669">세금계산서 등록 신청 완료</div>
+                      <div style="font-size:11px;color:#64748b;margin-top:4px">공인인증서를 등록해야 최종 발행됩니다</div>
+                      <div id="tax-cert-section" style="margin-top:12px;display:none">
+                        <a id="tax-cert-link" href="#" target="_blank" style="display:inline-block;padding:10px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">공인인증서 등록하기</a>
+                        <div style="font-size:10px;color:#94a3b8;margin-top:6px">팝빌 앱 설치 후 서명하거나 위 버튼으로 등록하세요</div>
+                      </div>
                     </div>
                   </div>`;
                 }
@@ -3087,7 +3091,7 @@ async function acceptExchange(){
             if(_autoBiz&&!_autoTaxSt){document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){requestTax(_autoBiz);},900);});}
             async function requestTax(bizNum){
               var msg=document.getElementById("tax-msg");
-              if(msg)msg.textContent="처리 중...";
+              if(msg)msg.textContent="처리 중... (팝빌 연동회원 등록 포함, 잠시 기다려 주세요)";
               try{
                 var res=await fetch("/api/stmt-tax-issue",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:_stmtToken,driverBizNum:bizNum||""})});
                 var d=await res.json();
@@ -3096,6 +3100,12 @@ async function acceptExchange(){
                   var td=document.getElementById("tax-done");
                   if(tf)tf.style.display="none";
                   if(td)td.style.display="block";
+                  if(d.certUrl){
+                    var cs=document.getElementById("tax-cert-section");
+                    var cl=document.getElementById("tax-cert-link");
+                    if(cs)cs.style.display="block";
+                    if(cl)cl.href=d.certUrl;
+                  }
                 } else if(d.alreadyRequested){
                   if(msg){msg.style.color="#b45309";msg.textContent="이미 신청된 세금계산서가 있습니다";}
                 } else {
@@ -13850,6 +13860,15 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         const month        = gs2('month');
         const writeDate    = month ? month.replace('-','') + '01' : '';
 
+        // 기사 팝빌 연동회원 자동 등록
+        if (receiverCorpNum) {
+          try { await popbillAutoJoinDriver(env, senderCorpNum, senderName, receiverCorpNum); } catch(e) { console.error('[stmt-tax-issue] 팝빌 자동가입:', e.message); }
+        }
+
+        // 공인인증서 등록 URL 발급
+        let certUrl = '';
+        try { certUrl = await popbillGetDriverCertUrl(env, senderCorpNum); } catch(e) {}
+
         const issueResult = await popbillIssueReverseDonway(env, {
           settleId:       settleDocId || stmtToken,
           senderCorpNum,
@@ -13876,7 +13895,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
           body: JSON.stringify({ fields: patchFields })
         });
 
-        return new Response(JSON.stringify({ok:true, ...issueResult}), {headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify({ok:true, certUrl, ...issueResult}), {headers:{'Content-Type':'application/json'}});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}});
       }
@@ -26159,5 +26178,54 @@ async function popbillIssueReverseDonway(env, params) {
   }
 
   return { ok: resp.ok, resultCode: resultData?.resultCode, message: resultData?.message, mgtKey };
+}
+
+// ── 팝빌 기사 자동 연동회원 등록 (CheckIsMember → JoinMember) ─────────────
+async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum) {
+  const BASE = 'https://serviceapi.popbill.com';
+  const linkId = env.POPBILL_LINK_ID;
+  // 대리점 토큰으로 기사 회원 여부 확인
+  const agencyToken = await popbillGetToken(env, agencyCorpNum);
+  const checkRes = await fetch(`${BASE}/Join/CheckIsMember?CorpNum=${driverCorpNum}&LinkID=${encodeURIComponent(linkId)}`, {
+    headers: { 'Authorization': `Bearer ${agencyToken}` }
+  });
+  const checkData = await checkRes.json();
+  if (checkData.code === 1) return { alreadyMember: true };
+  if (checkData.code === 0) {
+    const joinBody = {
+      LinkID: linkId,
+      CorpNum: driverCorpNum,
+      ID: `DW${driverCorpNum}`,
+      PWD: driverCorpNum.slice(-4) + 'Mb0!',
+      Ceoname: driverName || '',
+      CorpName: driverName || '',
+      Address: '',
+      BizType: '개인',
+      BizClass: '택배',
+      ContactName: driverName || '',
+      ContactEmail: '',
+      ContactTEL: ''
+    };
+    const joinRes = await fetch(`${BASE}/Join`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${agencyToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(joinBody)
+    });
+    const joinData = await joinRes.json();
+    if (joinData.code < 0) throw new Error(`팝빌 기사 회원등록 실패: ${joinData.message}`);
+    return { joined: true };
+  }
+  throw new Error(`팝빌 회원확인 실패: ${checkData.message} (${checkData.code})`);
+}
+
+// ── 팝빌 공인인증서 등록 URL 발급 ─────────────────────────────────────────
+async function popbillGetDriverCertUrl(env, driverCorpNum) {
+  const BASE = 'https://serviceapi.popbill.com';
+  const pbToken = await popbillGetToken(env, driverCorpNum);
+  const resp = await fetch(`${BASE}/Member/GetURL?CorpNum=${driverCorpNum}&TOGO=CERT`, {
+    headers: { 'Authorization': `Bearer ${pbToken}` }
+  });
+  const data = await resp.json();
+  return data.url || data.URL || '';
 }
 
