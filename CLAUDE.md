@@ -664,11 +664,20 @@ cd mbtico-pages && npx wrangler deploy
 - pip3 + mesa-libGL 설치 완료, 서버 포트 3101 정상 기동
 - setup_ocr.sh mesa-libGL 의존성 추가 완료
 
+### ✅ 완료 (2026-09-18 팝빌 역발행 자동등록 플로우)
+- **정산명세서 세금계산서 버튼 탭 → 팝빌 연동회원 자동등록 + 공인인증서 URL 반환**
+  - `popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum)`: CheckIsMember → 미가입 시 JoinMember 자동 호출
+  - `popbillGetDriverCertUrl(env, driverCorpNum)`: GetTaxCertURL 호출, 등록 링크 반환
+  - `/api/stmt-tax-issue`: 자동가입 후 certUrl 응답에 포함
+  - 명세서 프론트: 신청 완료 시 "공인인증서 등록하기" 링크 버튼 노출 (`#tax-cert-section`)
+- **팝빌 키 발급 필요** (연동 미완료): 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com) 연락 후 POPBILL_LINK_ID / POPBILL_SECRET_KEY Cloudflare Secret 등록
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
+2. 팝빌 키 발급 → Cloudflare Secret 등록 → 역발행 실전 테스트
 
 ### 중간
-2. 관제센터 채팅/공지/결제 탭 실사용 테스트
+3. 관제센터 채팅/공지/결제 탭 실사용 테스트
 
 ### 파일 분리·경량화 (대형 작업)
 8. mbtico-pages/_worker.js 경량화 (515KB)
