@@ -1874,6 +1874,54 @@ async function submitSign(){
         }
       }
 
+      // /api/contract/patch-archive → 기존 보관 계약서 HTML tryPrint 패치 (로그인 필요)
+      if (path === '/api/contract/patch-archive' && method === 'POST') {
+        try {
+          const _paUser = await verifyFirebaseToken(request, env, 'https://donway.ai.kr');
+          if (!_paUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _paBody = await request.json();
+          const _paToken = _paBody.signToken;
+          if (!_paToken) return new Response(JSON.stringify({ok:false,error:'signToken 필요'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _paFs = await getAccessToken(env);
+          const _paQR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_paToken}}},limit:1}})});
+          const _paQD = await _paQR.json();
+          const _paDoc = _paQD?.[0]?.document;
+          if (!_paDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _paDocName = _paDoc.name.startsWith('https://') ? _paDoc.name : `https://firestore.googleapis.com/v1/${_paDoc.name}`;
+          const _paF = _paDoc.fields || {};
+          const _paOwnDId = _paF.dealerId?.stringValue || '';
+          const _paArchiveUrl = _paF.archiveUrl?.stringValue || '';
+          if (!_SUPERADMIN_EMAILS.includes(_paUser.email)) {
+            const _paCompR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_paUser.localId}}},limit:1}})});
+            const _paCompD = await _paCompR.json();
+            const _paUserDId = _paCompD?.[0]?.document?.fields?.dealerId?.stringValue || '';
+            if (!_paUserDId || _paUserDId !== _paOwnDId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+          if (!_paArchiveUrl) return new Response(JSON.stringify({ok:false,error:'보관된 파일이 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _paDlRes = await fetch(_paArchiveUrl);
+          if (!_paDlRes.ok) return new Response(JSON.stringify({ok:false,error:'파일 다운로드 실패'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          let _paHtml = await _paDlRes.text();
+          const _paMark = 'data-ccpatch="v1"';
+          if (_paHtml.includes(_paMark)) return new Response(JSON.stringify({ok:true,newUrl:_paArchiveUrl,patched:false,msg:'이미 수정된 파일입니다'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _paScript = `<script ${_paMark}>(function(){if(typeof window.tryPrint!=='function'){window.tryPrint=function(){var ua=navigator.userAgent;if(/KAKAOTALK/i.test(ua)){alert('카카오톡 브라우저에서는 인쇄가 지원되지 않습니다.\\n우측 상단 ··· → 외부 브라우저로 열기를 선택해 주세요.');return;}if(/android/i.test(ua)){alert('안드로이드에서 인쇄/PDF 저장 방법:\\n\\n크롬 브라우저: 우측 상단 ⋮ → 공유 → 인쇄');return;}if(/iPhone|iPad|iPod/i.test(ua)){alert('iOS에서 인쇄/PDF 저장 방법:\\n\\n하단 공유 아이콘 → 프린트\\nPDF 저장: 프린트 화면에서 두 손가락으로 확대하면 PDF로 저장됩니다.');return;}window.print();};}})();<\/script>`;
+          if (!_paHtml.includes('onclick="tryPrint()"') && !_paHtml.includes("onclick='tryPrint()'")) {
+            const _paBtnHtml = `<div style="display:flex;gap:8px;margin-bottom:16px"><button onclick="tryPrint()" style="flex:1;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄/PDF</button></div>`;
+            if (_paHtml.includes('이 계약서는 전자서명법')) { _paHtml = _paHtml.replace('이 계약서는 전자서명법', _paBtnHtml+'이 계약서는 전자서명법'); }
+            else { _paHtml = _paHtml.replace('<body>', '<body>'+_paBtnHtml); }
+          }
+          _paHtml = _paHtml.includes('</body>') ? _paHtml.replace('</body>', _paScript+'</body>') : _paHtml+_paScript;
+          const _paStoragePath = `contracts/${_paOwnDId}/${_paToken}.html`;
+          const _paUpRes = await fetch(`https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o?name=${encodeURIComponent(_paStoragePath)}&uploadType=media`,{method:'POST',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'text/html; charset=utf-8'},body:_paHtml});
+          if (!_paUpRes.ok) return new Response(JSON.stringify({ok:false,error:'파일 재업로드 실패'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _paUpD = await _paUpRes.json();
+          const _paNewUrl = `https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/${encodeURIComponent(_paStoragePath)}?alt=media&token=${_paUpD.downloadTokens||''}`;
+          await fetch(`${_paDocName}?updateMask.fieldPaths=archiveUrl`,{method:'PATCH',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{archiveUrl:{stringValue:_paNewUrl}}})});
+          return new Response(JSON.stringify({ok:true,newUrl:_paNewUrl,patched:true}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       // /s/{token} → 배달대행 정산명세서 (알림톡 공유 링크)
       if (path.startsWith('/s/') && path.length > 3) {
         const _sToken = path.slice(3).split('/')[0];

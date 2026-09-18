@@ -8762,6 +8762,7 @@ function _ctrRenderList(){
           ?'<a href="'+d.archiveUrl+'" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none">서명완료본 보기</a>'
           +'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="padding:8px 10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer" title="서명전 초안 인쇄">초안</button>'
           +'<a href="'+d.archiveUrl+'" download="'+esc((d.driverName||'계약서')+'-'+(typeLabel[d.type]||d.type)+'.html')+'" target="_blank" style="display:inline-flex;align-items:center;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none" title="서명완료본 저장">저장</a>'
+          +(d.signToken?'<button onclick="_ctrPatchArchive(\''+esc(d.signToken||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer" title="인쇄 버튼 오류 수정">🔧 수정</button>':'')
           :'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">인쇄·PDF</button>'
           +'<button onclick="_ctrDownload(window._ctrDocs[\''+eid+'\'])" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">저장</button>')
         +(d.status==='pending_driver'&&d.signToken&&d.driverPhone
@@ -8784,6 +8785,19 @@ async function _ctrResendSign(docId,phone,token,name,btn){
     body:JSON.stringify({to:phone.replace(/[^0-9]/g,''),text:smsText})
   }).then(function(){toast('📲 서명요청 SMS 재발송 완료');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}})
   .catch(function(){toast('❌ 발송 실패');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}});
+}
+async function _ctrPatchArchive(token,btn){
+  if(!token){toast('⚠️ signToken 없음');return;}
+  if(btn){btn.disabled=true;btn.textContent='수정중...';}
+  var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e){}
+  fetch('/api/contract/patch-archive',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
+    body:JSON.stringify({signToken:token})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){if(d.patched){toast('✅ 인쇄 버튼 수정 완료 — 다시 열어보세요');_ctrRenderList();}else{toast('ℹ️ '+(d.msg||'이미 수정된 파일입니다'));}}
+    else{toast('❌ '+(d.error||'수정 실패'));}
+    if(btn){btn.disabled=false;btn.textContent='🔧 수정';}
+  }).catch(function(){toast('❌ 통신 오류');if(btn){btn.disabled=false;btn.textContent='🔧 수정';}});
 }
 
 function _ctrPrint(jsonStr){
