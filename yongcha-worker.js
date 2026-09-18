@@ -905,6 +905,27 @@ select.inp option{background:#24243d;color:#f0f1f8}
 </style>
 <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#08101f">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+#_pwa-banner{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#111c35 0%,#08101f 100%);border-top:1px solid rgba(201,168,76,0.25);padding:14px 16px 20px;display:none;align-items:center;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,0.5)}
+#_pwa-banner.show{display:flex}
+#_pwa-banner .pwa-icon{width:48px;height:48px;border-radius:12px;flex-shrink:0;background:#c9a84c;display:flex;align-items:center;justify-content:center;font-size:24px}
+#_pwa-banner .pwa-text{flex:1;min-width:0}
+#_pwa-banner .pwa-text strong{display:block;font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}
+#_pwa-banner .pwa-text span{display:block;font-size:12px;color:rgba(255,255,255,0.55)}
+#_pwa-banner .pwa-install{background:#c9a84c;color:#08101f;font-size:13px;font-weight:800;border:none;border-radius:10px;padding:10px 18px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+#_pwa-banner .pwa-close{background:none;border:none;color:rgba(255,255,255,0.35);font-size:20px;cursor:pointer;padding:4px;flex-shrink:0;line-height:1}
+#_ios-hint{position:fixed;bottom:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#111c35 0%,#08101f 100%);border-top:1px solid rgba(201,168,76,0.25);padding:14px 16px 20px;display:none;box-shadow:0 -4px 24px rgba(0,0,0,0.5)}
+#_ios-hint.show{display:block}
+#_ios-hint .ios-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#_ios-hint .ios-row .pwa-icon{width:44px;height:44px;border-radius:11px;background:#c9a84c;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+#_ios-hint .ios-row strong{font-size:14px;font-weight:700;color:#fff}
+#_ios-hint .ios-steps{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.7;padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:10px;border:1px solid rgba(255,255,255,0.08)}
+#_ios-hint .ios-steps b{color:#c9a84c}
+#_ios-hint .ios-close{position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.35);font-size:20px;cursor:pointer;line-height:1}
+</style>
 </head>
 <body style="visibility:hidden"><script>setTimeout(function(){document.body.style.visibility="visible"},50)</script>
 
@@ -9621,6 +9642,82 @@ function _showZoneOnMap(i){
 }
 </script>
 <script src="/filo-memo.js?v=1"></script>
+
+<!-- PWA 홈화면 설치 배너 (Android/Chrome) -->
+<div id="_pwa-banner" role="banner" aria-label="홈화면 추가 안내">
+  <div class="pwa-icon">🚚</div>
+  <div class="pwa-text">
+    <strong>홈화면에 추가</strong>
+    <span>앱처럼 빠르게 실행하세요</span>
+  </div>
+  <button class="pwa-install" id="_pwa-install-btn" onclick="_pwaInstall()">설치</button>
+  <button class="pwa-close" onclick="_pwaDismiss()" aria-label="닫기">✕</button>
+</div>
+
+<!-- iOS Safari 수동 설치 안내 -->
+<div id="_ios-hint" role="banner">
+  <button class="ios-close" onclick="_iosDismiss()" aria-label="닫기">✕</button>
+  <div class="ios-row">
+    <div class="pwa-icon">🚚</div>
+    <strong>용차앱을 홈화면에 추가</strong>
+  </div>
+  <div class="ios-steps">
+    아래 <b>공유</b> 버튼(□↑)을 탭한 뒤<br>
+    <b>"홈 화면에 추가"</b>를 선택하세요
+  </div>
+</div>
+
+<script>
+(function(){
+  var DISMISS_KEY='_yongcha_pwa_dismissed';
+  var _deferredPrompt=null;
+  var _installed=false;
+
+  if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){
+    _installed=true;
+  }
+
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    _deferredPrompt=e;
+    if(_installed)return;
+    try{if(sessionStorage.getItem(DISMISS_KEY))return;}catch(ex){}
+    document.getElementById('_pwa-banner').classList.add('show');
+  });
+
+  window.addEventListener('appinstalled',function(){
+    _installed=true;
+    document.getElementById('_pwa-banner').classList.remove('show');
+  });
+
+  window._pwaInstall=function(){
+    if(!_deferredPrompt)return;
+    _deferredPrompt.prompt();
+    _deferredPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted')_installed=true;
+      document.getElementById('_pwa-banner').classList.remove('show');
+      _deferredPrompt=null;
+    });
+  };
+  window._pwaDismiss=function(){
+    document.getElementById('_pwa-banner').classList.remove('show');
+    try{sessionStorage.setItem(DISMISS_KEY,'1');}catch(ex){}
+  };
+  window._iosDismiss=function(){
+    document.getElementById('_ios-hint').classList.remove('show');
+    try{sessionStorage.setItem(DISMISS_KEY,'1');}catch(ex){}
+  };
+
+  var isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if(isIos&&isSafari&&!_installed){
+    setTimeout(function(){
+      try{if(sessionStorage.getItem(DISMISS_KEY))return;}catch(ex){}
+      document.getElementById('_ios-hint').classList.add('show');
+    },3000);
+  }
+})();
+</script>
 </body>
 </html>
 
