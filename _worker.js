@@ -1240,6 +1240,7 @@ export default {
       // /contract/download/{token} → 서명 완료 계약서 HTML 파일 다운로드
       if (path.startsWith('/contract/download/') && path.length > 19 && method === 'GET') {
         const _dlToken = path.slice(19).split('/')[0];
+        const _dlInline = new URL(request.url).searchParams.get('inline')==='1';
         const _dlFsToken = await getAccessToken(env);
         const _dlQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_dlToken}}},limit:1}});
         const _dlRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_dlFsToken,'Content-Type':'application/json'},body:_dlQ});
@@ -1272,9 +1273,9 @@ export default {
         const _dlPreDays=_dg('preDepositDays')||'';
         const _dlRpJson=_dg('routePricesJson'); let _dlRps=[]; try{if(_dlRpJson)_dlRps=JSON.parse(_dlRpJson);}catch(e){}
         const _dlFeeRows=_dlRps.length?_dlRps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlPAmt(r.price)}</td></tr>`).join(''):`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlUnit?_dlPAmt(_dlUnit):'　　　원'}</td></tr>`;
-        // 1순위: 서명 완료 archiveUrl (내용 보장)
+        // 1순위: 서명 완료 archiveUrl — inline=1 이면 항상 신규 생성 (구 archive는 조항 내용 없음)
         const _dlArchiveUrl = _dg('archiveUrl');
-        if (_dlArchiveUrl) {
+        if (_dlArchiveUrl && !_dlInline) {
           try {
             const _dlArRes = await fetch(_dlArchiveUrl);
             if (_dlArRes.ok) {
@@ -1333,6 +1334,11 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
 </td></tr></table>
 <p style="text-align:center;font-size:11px;color:#64748b;margin-top:16px">이 계약서는 전자서명법에 따라 유효한 전자문서입니다.</p>
 </body></html>`;
+        if(_dlInline){
+          const _dlBtnBar=`<div style="position:fixed;bottom:0;left:0;right:0;background:#1e293b;padding:12px 16px;display:flex;gap:10px;justify-content:center;z-index:9999;box-shadow:0 -2px 12px rgba(0,0,0,.3)"><button onclick="window.print()" style="flex:1;max-width:200px;padding:12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">🖨 인쇄 / PDF 저장</button><a href="/contract/download/${_dlToken}" download style="flex:1;max-width:200px;padding:12px;background:#3b82f6;color:#fff;border-radius:8px;font-size:15px;font-weight:600;text-align:center;text-decoration:none;display:block">💾 HTML 저장</a></div><div style="height:70px"></div>`;
+          const _dlHtmlI=_dlHtml.replace('</body>',_dlBtnBar+'</body>');
+          return new Response(_dlHtmlI,{headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
+        }
         return new Response(_dlHtml,{headers:{'Content-Type':'text/html;charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(_dlTypeName+'-'+_dlDriver+'.html')}`,'Cache-Control':'no-store'}});
       }
 
@@ -1351,107 +1357,9 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
           const _cg = k => _cf[k]?.stringValue || '';
           const _cStatus = _cg('status');
           if (_cStatus === 'signed') {
-            const _sd = (k,fb='') => _cf[k]?.stringValue||fb;
-            const _si = (k,fb=0) => Number(_cf[k]?.integerValue||_cf[k]?.doubleValue||0)||fb;
-            const pAmt = v => Number(v).toLocaleString('ko-KR')+'원';
-            const typeNames = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
-            const typeName = typeNames[_sd('type')] || _sd('title','계약서');
-            const dName = _sd('driverName'); const dPhone = _sd('driverPhone'); const dBiz = _sd('driverBizNum');
-            const dBirth = _sd('driverBirth'); const dAddr = _sd('driverAddr');
-            const aName = _sd('companyName','')||_sd('adminName',''); const aBiz = _sd('companyBiz','')||_sd('adminBizNum','');
-            const aAddr = _sd('companyAddr','부산광역시 수영구 수영로668, 607호');
-            const startDate = _sd('startDate'); const endDate = _sd('endDate');
-            const route = _sd('route'); const camp = _sd('camp');
-            const unitPrice = _sd('unitPrice'); const collectPrice = _sd('collectPrice');
-            const sortPrice = _sd('sortPrice'); const cycle = _sd('cycle','매월 20일');
-            const signedAt = _sd('driverSignedAt','').slice(0,10);
-            let adminSig = _sd('adminSig'); const driverSig = _sd('driverSig');
-            if (!adminSig) { const _svCid=_sd('dealerId'); if(_svCid){try{const _svCR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${_svCid}`,{headers:{Authorization:'Bearer '+_cFsToken}});const _svCD=await _svCR.json();adminSig=_svCD.fields?.stampImage?.stringValue||'';}catch(_e){}} }
-            const kakaoNick = _sd('kakaoNick');
-            const archiveUrl = _sd('archiveUrl');
-            if (archiveUrl) { try { const _arR=await fetch(archiveUrl); if(_arR.ok){let _arHtml=await _arR.text();const _signTk=_sd('signToken');let _inject='';if(!_arHtml.includes('function tryPrint')){_inject+=`<script>(function(){var ua=navigator.userAgent;if(/KAKAOTALK/i.test(ua)){var _e=document.getElementById('kakao-notice');if(_e)_e.style.display='block';}})();function tryPrint(){var ua=navigator.userAgent;if(/KAKAOTALK/i.test(ua)){alert('카카오톡 브라우저에서는 인쇄가 지원되지 않습니다.\\n우측 상단 ··· → 외부 브라우저로 열기를 선택해 주세요.');return;}if(/android/i.test(ua)){alert('안드로이드에서 인쇄/PDF 저장 방법:\\n\\n크롬 브라우저: 우측 상단 ⋮ → 공유 → 인쇄');return;}if(/iPhone|iPad|iPod/i.test(ua)){alert('iOS에서 인쇄/PDF 저장 방법:\\n\\n하단 공유 아이콘 → 프린트\\nPDF 저장: 프린트 화면에서 두 손가락으로 확대하면 PDF로 저장됩니다.');return;}window.print();}<\/script>`;}if(!_arHtml.includes('tryPrint()')){_inject=`<div style="position:fixed;bottom:0;left:0;right:0;background:#1e293b;padding:12px 16px;display:flex;gap:10px;justify-content:center;z-index:9999;box-shadow:0 -2px 12px rgba(0,0,0,.3)"><button onclick="tryPrint()" style="flex:1;max-width:200px;padding:12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">🖨 인쇄 / PDF 저장</button>${_signTk?`<a href="/contract/download/${_signTk}" download style="flex:1;max-width:200px;padding:12px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none">💾 HTML 저장</a>`:''}</div><div style="height:70px"></div>`+_inject;}_arHtml=_arHtml.includes('<\/body>')?_arHtml.replace('<\/body>',_inject+'<\/body>'):_arHtml+_inject;return new Response(_arHtml,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});}}catch(_arE){} }
-            const customContractUrl = _sd('customContractUrl');
-            const signedHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${typeName} - 서명완료</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:#f8fafc;padding:16px}
-.wrap{max-width:700px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-.done-banner{background:#ecfdf5;border:1.5px solid #10b981;border-radius:10px;padding:14px 18px;margin-bottom:20px;text-align:center}
-.done-banner h2{color:#10b981;font-size:16px;margin-bottom:4px}
-.done-banner p{color:#64748b;font-size:12px}
-h1{text-align:center;font-size:17px;font-weight:900;margin-bottom:4px}
-.subtitle{text-align:center;font-size:12px;color:#64748b;margin-bottom:16px}
-table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}
-td{border:1px solid #ccc;padding:6px 8px}
-.th{background:#f1f5f9;font-weight:700}
-.sign-area{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
-.sign-box{border:1px solid #ccc;border-radius:8px;padding:12px;text-align:center}
-.sign-box h4{font-size:12px;color:#64748b;margin-bottom:8px}
-.sign-box img{max-height:180px;max-width:200px}
-.print-btn{display:block;width:100%;padding:14px;background:#0066ff;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px}
-@media print{.print-btn{display:none}.wrap{box-shadow:none;padding:0}.done-banner{border-color:#aaa}}
-</style></head><body>
-<div class="wrap">
-<div class="done-banner"><h2>✓ 서명이 완료되었습니다</h2><p>${dName}님의 전자서명이 완료되었습니다 · 서명일: ${signedAt}${kakaoNick?' · 카카오 본인확인: '+kakaoNick:''}</p></div>
-<div style="display:flex;gap:8px;margin-bottom:16px">
-${archiveUrl
-  ?`<a href="${archiveUrl}" download="${encodeURIComponent(typeName+'-'+dName+'.html')}" style="flex:1;display:block;padding:13px;background:#0066ff;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-align:center;text-decoration:none">📥 계약서 파일 저장</a>`
-  :`<a href="/contract/download/${_cToken}" style="flex:1;display:block;padding:13px;background:#0066ff;color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-align:center;text-decoration:none">📥 계약서 파일 저장</a>`
-}
-<button onclick="tryPrint()" style="flex:1;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄/PDF</button>
-</div>
-<h1>${typeName}</h1>
-<div class="subtitle">아래 계약서를 저장 또는 인쇄하세요</div>
-<table>
-<tr><td class="th">위탁자(갑)</td><td>${aName} · 사업자등록번호: ${aBiz}<br><span style="font-size:11px;color:#64748b">${aAddr}</span></td></tr>
-<tr><td class="th">수탁자(을)</td><td>${dName} · ${dPhone}${dBiz?' · 사업자번호: '+dBiz:''}<br><span style="font-size:11px;color:#64748b">${dBirth?'생년월일: '+dBirth+' ':''} ${dAddr||''}</span>${_cf['driverIdNum']?.stringValue?`<br><span style="font-size:11px;color:#334155">주민등록번호: ${_cf['driverIdNum'].stringValue}</span>`:''}</td></tr>
-</table>
-<table>
-<tr><td class="th">계약기간</td><td colspan="3">${startDate} ~ ${endDate}</td></tr>
-${route?`<tr><td class="th">담당구역</td><td colspan="3">${route}</td></tr>`:''}
-${camp?`<tr><td class="th">캠프명</td><td colspan="3">${camp}</td></tr>`:''}
-${(collectPrice||unitPrice)?`<tr><td class="th" rowspan="3">수수료</td><td class="th">집화수수료</td><td colspan="2">1건당 ${collectPrice?pAmt(collectPrice):'0원'}</td></tr><tr><td class="th">배송수수료</td><td colspan="2">1건당 ${unitPrice?pAmt(unitPrice):'　　원'}</td></tr><tr><td class="th">지급일</td><td colspan="2">${cycle}</td></tr>`:''}
-${sortPrice&&Number(sortPrice)>0?`<tr><td class="th">분류수수료</td><td colspan="3">시간당 ${pAmt(sortPrice)}</td></tr>`:''}
-</table>
-<div style="font-size:12px;font-weight:700;color:#334155;margin:16px 0 8px">✍️ 전자서명</div>
-<div class="sign-area">
-<div class="sign-box"><h4>위탁자 (갑) ${aName}</h4>${adminSig?`<img src="${adminSig}" alt="도장/서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
-<div class="sign-box"><h4>수탁자 (을) ${dName}</h4>${driverSig?`<img src="${driverSig}" alt="기사서명" style="mix-blend-mode:multiply">`:'<p style="color:#94a3b8;font-size:11px">서명 없음</p>'}</div>
-</div>
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:18px;font-size:12px;line-height:1.8;color:#334155">
-<b>개인정보 수집·이용 동의 확인</b><br>
-✅ 개인정보 수집·이용에 동의합니다. (수집항목: 성명·연락처·사업자번호·주민등록번호·주소·서명정보 / 보유기간: 계약 종료 후 5년)<br>
-✅ 수집된 개인정보가 계약 체결 및 이행 목적으로 사용됨에 동의합니다.<br>
-✅ 위의 개인정보 수집 및 이용을 거부할 권리가 있으며, 거부 시 서비스 이용이 제한될 수 있음을 확인합니다.<br>
-<div style="margin-top:8px;text-align:right;color:#64748b">작성일: ${(()=>{const[y,m,d]=(signedAt||'').split('-');return y&&m&&d?y+'년 '+Number(m)+'월 '+Number(d)+'일':signedAt||'';})()}</div>
-</div>
-<div id="kakao-notice" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.6">
-📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>
-우측 상단 <b>···</b> 메뉴 → <b>외부 브라우저로 열기</b>를 탭한 후 인쇄해 주세요.
-</div>
-</div>
-<script>
-(function(){
-  var ua=navigator.userAgent;
-  if(/KAKAOTALK/i.test(ua)){document.getElementById('kakao-notice').style.display='block';}
-})();
-function tryPrint(){
-  var ua=navigator.userAgent;
-  if(/KAKAOTALK/i.test(ua)){
-    alert('카카오톡 브라우저에서는 인쇄가 지원되지 않습니다.\n우측 상단 ··· → 외부 브라우저로 열기를 선택해 주세요.');
-    return;
-  }
-  if(/android/i.test(ua)){
-    alert('안드로이드에서 인쇄/PDF 저장 방법:\n\n크롬 브라우저: 우측 상단 ⋮ → 공유 → 인쇄\n\n또는 위의 [계약서 파일 저장] 버튼을 눌러 HTML 파일로 저장 후 크롬에서 여세요.');
-    return;
-  }
-  if(/iPhone|iPad|iPod/i.test(ua)){
-    alert('iOS에서 인쇄/PDF 저장 방법:\n\n하단 공유 아이콘(□↑) → 프린트\nPDF 저장: 프린트 화면에서 두 손가락으로 확대하면 PDF로 저장됩니다.');
-    return;
-  }
-  window.print();
-}
-</script>
-</body></html>`;
-            return new Response(signedHtml, {status:200, headers:{'Content-Type':'text/html; charset=utf-8'}});
+            // 서명 완료 → download 엔드포인트(inline=1)로 리다이렉트
+            // download 엔드포인트가 Firestore에서 직접 전체 조항 HTML을 새로 생성 (구 archiveUrl 무시)
+            return new Response(null,{status:302,headers:{Location:'/contract/download/'+_cToken+'?inline=1','Cache-Control':'no-store'}});
           }
           const driverName = _cg('driverName');
           const contractTitle = _cg('title') || '계약서';
