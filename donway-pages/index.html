@@ -25822,6 +25822,7 @@ function openTaxInvoice(id){
   var drvAddr=x.bizAddr||(_drvRec&&_drvRec.bizAddr)||'(주소 미입력)';
   var bizType=x.bizType||(_drvRec&&_drvRec.bizType)||'서비스업';
   var bizItem=x.bizItem||(_drvRec&&_drvRec.bizItem)||'기타물품운반원';
+  var driverFcmTok=x.driverFcmToken||(_drvRec&&_drvRec.fcmToken)||'';
   var missing=[];
   if(!x.bizNum&&!(_drvRec&&_drvRec.bizNum))missing.push('사업자번호');
   if(!x.bizName&&!(_drvRec&&_drvRec.bizName))missing.push('상호명');
@@ -25918,7 +25919,7 @@ function openTaxInvoice(id){
     +'</div>'
     +'<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px">'
     +'<button onclick="window.print()" style="padding:8px 18px;background:#1e40af;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🖨️ 인쇄</button>'
-    +'<button id="pbIssueBtn" onclick="_dwPopbillIssue(\''+id+'\',\''+esc(bizNum)+'\',\''+esc(bizName)+'\',\''+esc(agencyBizNum)+'\',\''+esc(agencyName)+'\','+supply+','+vat+','+total+',\''+yr+mo2+issDay+'\')" style="padding:8px 18px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧾 팝빌 발행</button>'
+    +'<button id="pbIssueBtn" onclick="_dwPopbillIssue(\''+id+'\',\''+esc(bizNum)+'\',\''+esc(bizName)+'\',\''+esc(agencyBizNum)+'\',\''+esc(agencyName)+'\','+supply+','+vat+','+total+',\''+yr+mo2+issDay+'\',\''+esc(driverFcmTok)+'\')" style="padding:8px 18px;background:#15803d;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🧾 팝빌 발행</button>'
     +'<button onclick="var m=document.getElementById(\'tax-mo-s\');if(m)m.remove();" style="padding:8px 18px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer">닫기</button>'
     +'</div>'
     +'</div>';
@@ -25930,7 +25931,7 @@ function openTaxInvoice(id){
   document.body.appendChild(mo2El);
 }
 
-async function _dwPopbillIssue(settleId,senderBiz,senderName,receiverBiz,receiverName,supply,vat,total,writeDate){
+async function _dwPopbillIssue(settleId,senderBiz,senderName,receiverBiz,receiverName,supply,vat,total,writeDate,driverFcmToken){
   if(!senderBiz){toast('❌ 기사 사업자번호 미입력 — 정산서 수정에서 입력하세요');return;}
   if(!receiverBiz){toast('❌ 대리점 사업자번호 미입력 — 계약 > 위탁자 정보에서 입력하세요');return;}
   var btn=document.getElementById('pbIssueBtn');
@@ -25945,7 +25946,8 @@ async function _dwPopbillIssue(settleId,senderBiz,senderName,receiverBiz,receive
         senderCorpNum:senderBiz,senderName:senderName,
         receiverCorpNum:receiverBiz,receiverName:receiverName,
         supplyAmt:supply,taxAmt:vat,totalAmt:total,
-        writeDate:writeDate
+        writeDate:writeDate,
+        driverFcmToken:driverFcmToken||''
       })
     });
     var d=await res.json();
