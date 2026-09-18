@@ -304,7 +304,11 @@ async function buildFinalAudio(lines, segments, outFile) {
 
 // ─── Main ─────────────────────────────────────────────────────────
 async function main() {
-  const lines = script.lines;
+  // variants 구조(yongcha 등) 지원: activeVariant 기준으로 lines 선택
+  const activeVariant = script.activeVariant;
+  const lines = script.lines ||
+    (activeVariant && script.variants && script.variants[activeVariant] && script.variants[activeVariant].lines) ||
+    (script.variants && script.variants['A'] && script.variants['A'].lines);
   const voice = script.voice || 'nara';
   const speed = script.speedRate ?? 0;
   const useFishAudio = !!(process.env.FISH_AUDIO_API_KEY && process.env.FISH_AUDIO_VOICE_ID);

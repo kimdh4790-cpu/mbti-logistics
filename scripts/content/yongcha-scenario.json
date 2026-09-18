@@ -1,6 +1,6 @@
 {
   "product": "yongcha",
-  "title": "용차앱 - 수수료 없는 직접 매칭, AI 루트코치",
+  "title": "용차앱 - 수수료 없는 직접 거래 정보, AI 루트코치",
   "outputFile": "output/yongcha-raw.webm",
   "viewport": { "width": 390, "height": 844 },
   "_note": "훅: 경쟁사 수수료 20%+ vs 용차앱 월정액 고정. AI 루트코치 차별화.",
