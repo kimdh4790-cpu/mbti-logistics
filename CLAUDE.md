@@ -666,11 +666,23 @@ cd mbtico-pages && npx wrangler deploy
 
 ### ✅ 완료 (2026-09-18 팝빌 역발행 자동등록 플로우)
 - **정산명세서 세금계산서 버튼 탭 → 팝빌 연동회원 자동등록 + 공인인증서 URL 반환**
-  - `popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum)`: CheckIsMember → 미가입 시 JoinMember 자동 호출
+  - `popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum)`: CheckIsMember → **CheckID(중복확인)** → 미가입 시 JoinMember 자동 호출 (팝빌 공식 프로세스 준수)
   - `popbillGetDriverCertUrl(env, driverCorpNum)`: GetTaxCertURL 호출, 등록 링크 반환
   - `/api/stmt-tax-issue`: 자동가입 후 certUrl 응답에 포함
   - 명세서 프론트: 신청 완료 시 "공인인증서 등록하기" 링크 버튼 노출 (`#tax-cert-section`)
 - **팝빌 키 발급 필요** (연동 미완료): 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com) 연락 후 POPBILL_LINK_ID / POPBILL_SECRET_KEY Cloudflare Secret 등록
+- **팝빌 견적서 수신** (2026-07-31): 전자세금계산서 발행 100원/건 (종량제, 연동비용 무료), No. 202607-712
+
+### ✅ 완료 (2026-09-18 DONWAY 계약서 카카오톡 인쇄 버튼 수정)
+- **_worker.js `_dlBtnBar`**: `onclick="window.print()"` → `_dlPrint()` 함수로 교체
+  - KakaoTalk 감지 시: 노란 안내 배너("우측 상단 ··· → 외부 브라우저로 열기") 표시
+  - 일반 브라우저: 기존대로 `window.print()` 정상 동작
+
+### ✅ 완료 (2026-09-18 팝빌 버그 수정)
+- **DONWAY 팝빌 함수 3개 test mode 하드코딩 수정** (`_worker.js`):
+  - `popbillIssueReverseDonway` / `popbillAutoJoinDriver` / `popbillGetDriverCertUrl` 모두 `POPBILL_TEST_MODE` 환경변수 반영
+  - `taxInvoiceIsTest` Firestore 필드도 `isTest` 값으로 정확히 저장
+- **`/api/popbill-webhook` 동기화 버그 수정**: `settlements` 컬렉션만 업데이트하던 것을 `statement_share`도 동시 업데이트 (기사 명세서 페이지 상태 반영)
 
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
