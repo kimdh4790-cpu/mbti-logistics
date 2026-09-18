@@ -324,7 +324,7 @@ git push -u origin claude/브랜치명
 
 | 날짜 | 파일 | 내용 |
 |------|------|------|
-| 2026-09-18 | .github/workflows/yongcha-upload.yml | **신규 업로드 워크플로우 추가**: GitHub Actions 캐시 버그(upload-yongcha-promo.yml 0-job 즉시 실패)를 새 파일명으로 우회. job-level env: VIDEO/DRY_FLAG, bare if: 조건, push 트리거(assets/promo/.upload-trigger). 소장·기사 YouTube+Instagram 4개 영상 업로드 지원. |
+| 2026-09-18 | .github/workflows/yongcha-upload.yml | **용차앱 소장/기사 홍보영상 업로드 완료 (2026-09-18)**: YouTube 소장 https://www.youtube.com/watch?v=lc34LE8Qg4s / YouTube 기사 https://www.youtube.com/watch?v=TzN80kOr--s / Instagram 기사 Media ID: 18134007631645445 / Instagram 소장: ffmpeg H.264 baseline 재인코딩 후 업로드 성공. Instagram 소장 오류(ProcessingFailedError 400) 원인: 원본 파일 코덱 비호환 → `libx264 -profile:v baseline -level 3.1 -pix_fmt yuv420p -r 30 -c:a aac -b:a 128k -ar 44100 -movflags +faststart` 재인코딩으로 해결. **신규 업로드 워크플로우**: GitHub Actions 캐시 버그(upload-yongcha-promo.yml 0-job 즉시 실패)를 새 파일명으로 우회. |
 | 2026-09-18 | yongcha.html, yongcha-worker.js | **채팅방 입력창 하단 네비게이션에 가려지는 버그 수정**: `_pgChatRoom` 진입 시 `#bnav` hide(`display:none`), `_goPage` 복귀 시 `#bnav` 복원(`display:''`). |
 | 2026-09-18 | yongcha.html, yongcha-worker.js | **지원 후 새로고침 시 버튼 초기화 버그 수정**: `_myAppliedPosts{}` 캐시 추가. `_loadFilteredPosts()` 진입 시 `yongcha_applies` 1회 조회해 기사 지원 이력 캐시 로드. `_makePostCard`에서 `_myAppliedPosts[d.id]` 체크 — 이미 지원 시 "지원함"(disabled) 렌더. `_applyPost` 성공 시 캐시에 추가, `_yCancelApply` 성공 시 캐시 삭제. |
 | 2026-09-17 | yongcha.html, yongcha-worker.js | **30일 무료체험 시스템**: 가입 시 trialEndsAt(+30일) 저장, D-7 주황 배너/D-0 빨간 배너+구독 모달 자동 표시 (_yCheckTrial, _yShowTrialBanner, _yShowSubscribeModal) |
