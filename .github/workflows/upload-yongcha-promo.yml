@@ -1,4 +1,5 @@
 name: 용차앱 홍보영상 업로드 (소장·기사)
+# v2
 
 on:
   workflow_dispatch:
