@@ -199,7 +199,7 @@ git push -u origin claude/브랜치명
 - `/api/yongcha/popbill-issue` POST — 서버 핸들러 정상 (yongcha_work + yongcha_users Firestore 조회 후 호출)
 - **수정 완료**: `_ySendSettleNotify` 클라이언트 호출에 `Authorization: Bearer <token>` 헤더 추가 (`_yGetToken()` 사용)
   - `yongcha.html` line 3204, `_worker.js` line 15342 (YONGCHA_HTML_YONGCHA 내부) 동시 수정
-- `yongcha-worker.js`에 팝빌 라우트 추가 필요 (현재 `_worker.js`에만 있음) — 미완료
+- `yongcha-worker.js` 팝빌 라우트 완료 (line 10848~11090, helpers: ycPopbillHmacSign/ycPopbillGetToken/ycPopbillIssueReverse)
 
 ---
 

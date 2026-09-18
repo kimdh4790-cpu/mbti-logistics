@@ -13786,8 +13786,8 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
 
     // ── DONWAY 팝빌 전자세금계산서 역발행 (/api/popbill-issue) ──
     if (path === '/api/popbill-issue' && method === 'POST') {
-      const _pbAdmin = await requireAdmin(request, env);
-      if (!_pbAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      const _pbUser = await verifyFirebaseToken(request, env);
+      if (!_pbUser) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       try {
         const body = await request.json();
         const result = await popbillIssueReverseDonway(env, body);
@@ -13803,8 +13803,8 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
 
     // ── 팝빌 연동 상태 확인 (/api/popbill-status) ──
     if (path === '/api/popbill-status' && method === 'GET') {
-      const _pbSAdmin = await requireAdmin(request, env);
-      if (!_pbSAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      const _pbSUser = await verifyFirebaseToken(request, env);
+      if (!_pbSUser) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       return new Response(JSON.stringify({
         configured: !!(env.POPBILL_LINK_ID && env.POPBILL_SECRET_KEY),
         testMode:   (env.POPBILL_TEST_MODE !== 'false')
@@ -26097,6 +26097,7 @@ async function popbillIssueReverseDonway(env, params) {
     SenderCEOName:    senderCEO  || senderName || '',
     SenderEmail:      senderEmail || '',
     SenderBizType:    '개인',
+    SenderBizClass:   '택배',
     ReceiverCorpNum:  receiverCorpNum,
     ReceiverCorpName: receiverName || '',
     ReceiverEmail:    receiverEmail || '',
