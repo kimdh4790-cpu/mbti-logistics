@@ -7832,12 +7832,85 @@ function _ctrRender(){
     +'</div>'
     +'<div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:16px">'
     +'<div onclick="window._ctrTab=\'write\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='write'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">✏️ 계약 작성</div>'
-    +'<div onclick="window._ctrTab=\'list\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='list'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">🗂 계약 목록</div>'
+    +'<div onclick="window._ctrTab=\'quick\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='quick'?'border-bottom:2px solid #f59e0b;color:#f59e0b;margin-bottom:-2px':'color:var(--text3)')+'">⚡ 간편 서명</div>'+'<div onclick="window._ctrTab=\'list\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='list'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">🗂 계약 목록</div>'
     +'</div>'
     +'<div id="ctr-body"></div>'
     +'</div>';
   if(tab==='write') _ctrRenderWrite();
+  else if(tab==='quick') _ctrRenderQuick();
   else _ctrRenderList();
+}
+
+function _ctrRenderQuick(){
+  var body=document.getElementById('ctr-body');
+  body.innerHTML=
+    '<div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:1.5px solid #f59e0b;border-radius:12px;padding:14px 16px;margin-bottom:16px">'
+    +'<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px">⚡ 간편 업로드 서명</div>'
+    +'<div style="font-size:11.5px;color:#78350f;line-height:1.6">이미 작성된 계약서 파일(한글�워드�PDF�이미지)을 업로드하면 복잡한 양식 입력 없이 바로 전자서명 링크를 생성하여 기사에게 발솔하세요.</div>'
+    +'</div>'
+    +'<div style="margin-bottom:14px">'
+    +'<label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">계약서 파일 <span style="color:#ef4444">*</span></label>'
+    +'<input type="file" id="qk-file" accept="application/pdf,image/*,.doc,.docx,.hwp,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrQkUpload(this)" style="display:none">'
+    +'<label for="qk-file" style="display:block;padding:16px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)" id="qk-label">📁 파일 선택 (PDF�워드�한글�이미지)</label>'
+    +'<input type="hidden" id="qk-url" value="">'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
+    +'<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">기사 성명 <span style="color:#ef4444">*</span></label><input id="qk-name" type="text" placeholder="홍길동" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">전화번호 <span style="color:#ef4444">*</span></label><input id="qk-phone" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div id="qk-result" style="display:none"></div>'
+    +'<button onclick="_ctrQkSave()" style="width:100%;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">⚡ 전자서명 링크 생성</button>';
+}
+
+async function _ctrQkUpload(inp){
+  var file=inp.files[0];if(!file)return;
+  var lbl=document.getElementById('qk-label');
+  if(lbl)lbl.textContent='⏳ 업로드 중...';
+  var cid=_CU.uid;
+  var url='';
+  try{
+    var ref=firebase.storage().ref('contracts/'+cid+'/'+Date.now()+'-'+file.name);
+    await ref.put(file);
+    url=await ref.getDownloadURL();
+    document.getElementById('qk-url').value=url;
+    if(lbl)lbl.innerHTML='✅ '+file.name+'<br><span style="font-size:11px;color:var(--text3)">업로드 완료</span>';
+  }catch(e){
+    if(lbl)lbl.textContent='❌ 업로드 실패: '+e.message;
+  }
+}
+
+async function _ctrQkSave(){
+  var url=document.getElementById('qk-url').value;
+  var name=(document.getElementById('qk-name').value||'').trim();
+  var phone=(document.getElementById('qk-phone').value||'').trim();
+  if(!url){toast('❌ 파일을 먼저 업로드하세요');return;}
+  if(!name){toast('❌ 기사 성명을 입력하세요');return;}
+  if(!phone){toast('❌ 전화번호를 입력하세요');return;}
+  if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
+  var tok=Math.random().toString(36).slice(2)+Date.now().toString(36);
+  var adminSig='';
+  try{var cs=await _db.collection('companies').doc(_CU.uid).get();adminSig=cs.data()?.stampImage||'';}
+  catch(_e){}
+  var doc={type:'upload',dealerId:_CU.uid,driverName:name,driverPhone:phone,customContractUrl:url,signToken:tok,adminSig:adminSig,createdAt:new Date().toISOString(),signed:false};
+  try{
+    await _db.collection('contracts').add(doc);
+    var link='https://donway.ai.kr/contract/sign/'+tok;
+    var res=document.getElementById('qk-result');
+    if(res){res.style.display='block';res.innerHTML='<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-top:14px"><div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:8px">✅ 서명 링크 생성 완료</div><div style="font-size:11.5px;color:#166534;margin-bottom:10px">기사에게 카카오톡 또는 문자로 아래 링크를 전달하세요.</div><div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px;word-break:break-all;margin-bottom:10px;color:#1e293b">'+link+'</div><div style="display:flex;gap:8px"><button onclick="navigator.clipboard.writeText(\"'+link+'\")" style="flex:1;padding:9px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 링크 복사</button><button onclick="_ctrQkSendSms(\"'+phone+'\",\"'+link+'\")" style="flex:1;padding:9px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📱 SMS 발송</button></div></div>';}
+    toast('✅ 서명 링크 생성 완료');
+  }catch(e){
+    toast('❌ 실패: '+e.message);
+  }
+}
+
+async function _ctrQkSendSms(phone,link){
+  try{
+    var r=await fetch('/api/sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:phone,msg:'서명 요�청 | 아래 링크에서 계약서를 확인하고 서명하세요: '+link})});
+    if(r.ok)toast('✅ SMS 발송 완료');
+    else toast('❌ SMS 실패 (링크�복사한후 직접 전달하세요)');
+  }catch(_e){
+    toast('❌ SMS 실패');
+  }
 }
 
 function _ctrRenderWrite(){
@@ -7921,7 +7994,7 @@ function _ctrRenderWrite(){
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">📎 계약서 원본 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
     +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">계약서 파일(PDF·이미지·Word 등)을 업로드하면 기사 서명 시 이 파일을 그대로 표시합니다. 미업로드 시 자동생성 계약서가 사용됩니다.<br><span style="color:#f59e0b">⚠️ 업로드 파일은 이 계약 유형의 기본 템플릿으로 저장되어 다음 계약에도 자동 적용됩니다. 일회성으로만 쓰려면 저장 후 삭제하세요.</span></div>'
-    +'<input type="file" id="ctr-pdf-file" accept="application/pdf,image/*,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrUploadPdf(this)" style="display:none">'
+    +'<input type="file" id="ctr-pdf-file" accept="application/pdf,image/*,.doc,.docx,.hwp,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onchange="_ctrUploadPdf(this)" style="display:none">'
     +'<div id="ctr-pdf-status" style="display:flex;align-items:center;gap:10px"><label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 파일 선택 (PDF·이미지·Word)</label></div>'
     +'<input type="hidden" id="ctr-pdf-url">'
     +'</div>'
@@ -8369,8 +8442,8 @@ function _ctrLoadContractTemplate(t){
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
-  var allowed=['pdf','image/','msword','wordprocessingml','doc'];
-  if(!allowed.some(function(t){return file.type.includes(t)||file.name.toLowerCase().includes('.doc');})){toast('❌ PDF·이미지·Word 파일만 업로드 가능합니다');inp.value='';return;}
+  var allowed=['pdf','image/','msword','wordprocessingml','doc','hwp','excel','spreadsheet','xls'];
+  if(!allowed.some(function(t){return file.type.includes(t)||file.name.toLowerCase().match(/\.(doc|hwp|xls)/);})){toast('❌ PDF·이미지·Word 파일만 업로드 가능합니다');inp.value='';return;}
   var statusEl=document.getElementById('ctr-pdf-status');
   if(statusEl)statusEl.innerHTML='<span style="font-size:12px;color:var(--text3)">⏳ 업로드 중...</span>';
   try{
