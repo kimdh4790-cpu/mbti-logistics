@@ -7846,12 +7846,12 @@ function _ctrRenderQuick(){
   body.innerHTML=
     '<div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:1.5px solid #f59e0b;border-radius:12px;padding:14px 16px;margin-bottom:16px">'
     +'<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px">⚡ 간편 업로드 서명</div>'
-    +'<div style="font-size:11.5px;color:#78350f;line-height:1.6">이미 작성된 계약서 파일(한글�워드�PDF�이미지)을 업로드하면 복잡한 양식 입력 없이 바로 전자서명 링크를 생성하여 기사에게 발솔하세요.</div>'
+    +'<div style="font-size:11.5px;color:#78350f;line-height:1.6">이미 작성된 계약서 파일(한글�워드�PDF�이미지)을 업로드하면 복잡한 양식 입력 없이 바로 전자서명 링크를 생성하여 기사에게 발솔하세요.</div>'
     +'</div>'
     +'<div style="margin-bottom:14px">'
     +'<label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">계약서 파일 <span style="color:#ef4444">*</span></label>'
     +'<input type="file" id="qk-file" accept="application/pdf,image/*,.doc,.docx,.hwp,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrQkUpload(this)" style="display:none">'
-    +'<label for="qk-file" style="display:block;padding:16px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)" id="qk-label">📁 파일 선택 (PDF�워드�한글�이미지)</label>'
+    +'<label for="qk-file" style="display:block;padding:16px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)" id="qk-label">📁 파일 선택 (PDF�워드�한글�이미지)</label>'
     +'<input type="hidden" id="qk-url" value="">'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
@@ -7905,9 +7905,9 @@ async function _ctrQkSave(){
 
 async function _ctrQkSendSms(phone,link){
   try{
-    var r=await fetch('/api/sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:phone,msg:'서명 요�청 | 아래 링크에서 계약서를 확인하고 서명하세요: '+link})});
+    var r=await fetch('/api/sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:phone,msg:'서명 요�청 | 아래 링크에서 계약서를 확인하고 서명하세요: '+link})});
     if(r.ok)toast('✅ SMS 발송 완료');
-    else toast('❌ SMS 실패 (링크�복사한후 직접 전달하세요)');
+    else toast('❌ SMS 실패 (링크�복사한후 직접 전달하세요)');
   }catch(_e){
     toast('❌ SMS 실패');
   }
@@ -8071,7 +8071,7 @@ function _ctrSelectDriver(id){
   if(!drv)return;
   window._ctrDriver=drv;
   var _s=function(id2,v){var el=document.getElementById(id2);if(el)el.value=v||'';};
-  _s('ctr-name',drv.name);_s('ctr-phone',drv.phone);_s('ctr-biznum',drv.bizNum);_s('ctr-idnum',drv.ssn||drv.idNum||'');_s('ctr-addr',drv.address);
+  _s('ctr-name',drv.name);_s('ctr-phone',drv.phone);_s('ctr-biznum',drv.bizNum);_s('ctr-idnum',drv.ssn||drv.idNum||'');_s('ctr-addr',drv.address||drv.bizAddr||'');
 }
 
 function _ctrRenderConditions(t){
@@ -27934,6 +27934,7 @@ function openAddDriver(){
     +'<div class="fg"><label>상태</label><select id="adr-active"><option value="true">재직</option><option value="false">퇴직</option></select></div></div>'
     +'<div class="fg"><label>연락처</label><input id="adr-phone" placeholder="010-0000-0000"></div>'
     +'<div class="fg"><label>이메일</label><input id="adr-email" type="email" placeholder="driver@email.com"></div>'
+    +'<div class="fg"><label>주소 <span style="font-size:10px;color:var(--text3)">(계약서 별지에 표시)</span></label><input id="adr-address" placeholder="시/군/구 상세주소" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
     +'<div class="gr"><div class="fg"><label>고용형태</label><select id="adr-emptype"><option value="DAILY_INDIRECT">일용직</option><option value="FREELANCER_3.3">프리랜서 3.3%</option><option value="PARTTIME">알바</option><option value="REGULAR">정규직</option></select></div>'
     +'<div class="fg"><label>역할</label><select id="adr-role"><option value="member">팀원</option><option value="leader">팀장</option><option value="freelancer">프리랜서</option></select></div></div>'
     +'<div class="fg"><label>별명/닉네임 <span style="font-size:10px;color:var(--text3)">(쉼표로 구분)</span></label><input id="adr-aliases" placeholder="강팀장, 강씨, 강길동"></div>'
@@ -27974,6 +27975,7 @@ function saveNewDriver(){
     commissionRate:parseInt((document.getElementById('adr-commission')||{value:'0'}).value||'0')||0,
     basePay:parseInt((document.getElementById('adr-basepay')||{value:'0'}).value||'0')||0,
     bankAccount:(document.getElementById('adr-bank')||{value:''}).value.trim()||'',
+    address:(document.getElementById('adr-address')||{value:''}).value.trim()||'',
     jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
     status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
