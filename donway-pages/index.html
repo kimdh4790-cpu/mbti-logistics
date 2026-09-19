@@ -8355,6 +8355,13 @@ function _ctrAutoFillDocx(){
   if(!dc)return;
   var drv=window._ctrDriver||{};
   var cp=window._ctrCompany||{};
+  // 선택된 라우트에서 캠프명 계산
+  var _campSet=[];
+  Object.keys(window.RPRICE||{}).forEach(function(rk){
+    var cb=document.getElementById('ctr-rc-'+rk);
+    if(cb&&cb.checked){var c=(_routeCampMap&&_routeCampMap[rk])||'';if(c&&_campSet.indexOf(c)<0)_campSet.push(c);}
+  });
+  var campVal=_campSet.join(', ');
   var tmp=document.createElement('div');
   tmp.innerHTML=dc.innerHTML;
   var uTags=tmp.querySelectorAll('u');
@@ -8376,6 +8383,7 @@ function _ctrAutoFillDocx(){
     var isCompany=/위탁자|대리점|갑\)/.test(prev);
     var val='';
     if(/택배종사자인|수탁자인|을\s*\)/.test(prev)) val=drv.name;
+    else if(/캠프명/.test(prev)) val=campVal;
     else if(/성\s*명/.test(prev)&&!isCompany) val=drv.name;
     else if(/전화|연락처|휴대/.test(prev)&&!isCompany) val=drv.phone;
     else if(/사업자\s*등록/.test(prev)&&!isCompany) val=drv.bizNum;
@@ -8422,6 +8430,7 @@ function _ctrRouteCheck(rk){
   if(!cb||!inp)return;
   inp.disabled=!cb.checked;
   if(cb.checked)inp.focus();
+  _ctrAutoFillDocx(); // 라우트 변경 시 캠프명 재계산
 }
 
 function _ctrCollect(){
@@ -8440,10 +8449,12 @@ function _ctrCollect(){
   }
   var routeStr=routePrices.map(function(r){return r.route;}).join(', ');
   var firstPrice=routePrices.length?String(routePrices[0].price):'';
-  // 캠프명·담당구역 라우트에서 자동 계산
-  var firstRoute=routePrices.length?(routePrices[0].route||''):'';
-  var campAuto=(window._routeCampMap&&firstRoute&&window._routeCampMap[firstRoute])||'';
-  var areaAuto=campAuto?'전구역관할('+campAuto+')':'';
+  // 캠프명: 선택된 모든 라우트에서 캠프 추출 (중복 제거)
+  var campSet=[];
+  routePrices.forEach(function(r){var c=(_routeCampMap&&_routeCampMap[r.route])||'';if(c&&campSet.indexOf(c)<0)campSet.push(c);});
+  var campAuto=campSet.join(', ');
+  // 담당구역: 캠프명 없이 고정 문구 (회사 전 노선 커버 표현)
+  var areaAuto='전구역관할';
   var drv=window._ctrDriver||{};
   return {
     type:t,
@@ -8742,7 +8753,7 @@ function _ctrShowOverlay(data){
   inner.innerHTML='<div class="ctr-np" style="display:flex;gap:8px;margin-bottom:20px;position:sticky;top:0;background:#fff;padding:12px 0;border-bottom:1px solid #e2e8f0;z-index:1">'
     +'<button onclick="window.print()" style="flex:1;padding:12px;background:#0066ff;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄 / PDF 저장</button>'
     +'<button onclick="'+closeJs+'" style="padding:12px 16px;background:#f1f5f9;color:#333;border:none;border-radius:8px;font-size:14px;cursor:pointer">✕ 닫기</button>'
-    +'</div>'+_ctrGenHTML(data);
+    +'</div>'+(data.docxHtml?'<div style="font-family:\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif;font-size:13px;color:#111;line-height:1.8;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-top:4px">'+data.docxHtml+'</div>':_ctrGenHTML(data));
   overlay.appendChild(inner);
   document.body.appendChild(overlay);
   window.onafterprint=function(){var s=document.getElementById('_ctrPrintStyle');if(s)s.remove();window.onafterprint=null;};
