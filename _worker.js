@@ -1909,6 +1909,60 @@ async function submitSign(){
         }
       }
 
+      // /api/contract-extract → 간편업로드 DOCX에서 라우트·단가·날짜·담당구역 자동 추출 → Firestore 업데이트
+      if (path === '/api/contract-extract' && method === 'POST') {
+        try {
+          const _ceUser = await verifyFirebaseToken(request, env, 'https://donway.ai.kr');
+          if (!_ceUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const {signToken:_ceToken} = await request.json();
+          if (!_ceToken) return new Response(JSON.stringify({ok:false,error:'signToken 필요'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ceFs = await getAccessToken(env);
+          const _ceQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_ceToken}}},limit:1}});
+          const _ceQR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_ceFs,'Content-Type':'application/json'},body:_ceQ});
+          const _ceQD = await _ceQR.json();
+          const _ceDoc = _ceQD?.[0]?.document;
+          if (!_ceDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ceDN = _ceDoc.name.startsWith('https://') ? _ceDoc.name : `https://firestore.googleapis.com/v1/${_ceDoc.name}`;
+          const _ceF = _ceDoc.fields || {};
+          const _ceDId = _ceF.dealerId?.stringValue || '';
+          if (_ceDId && _ceUser.uid !== _ceDId) {
+            const _ceMyQ = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_ceUser.uid}}},limit:1}});
+            const _ceMyR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_ceFs,'Content-Type':'application/json'},body:_ceMyQ});
+            const _ceMD = await _ceMyR.json();
+            const _ceMyDId = _ceMD?.[0]?.document?.fields?.dealerId?.stringValue || '';
+            if (_ceMyDId !== _ceDId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          }
+          const _ceUrl = _ceF.customContractUrl?.stringValue || '';
+          if (!_ceUrl) return new Response(JSON.stringify({ok:false,error:'원본 파일 없음'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          if (/\.pdf$/i.test(_ceUrl.split('?')[0])) return new Response(JSON.stringify({ok:false,error:'PDF 자동 추출 미지원'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ceParas = await _xDocxParagraphs(_ceUrl);
+          if (!_ceParas || !_ceParas.length) return new Response(JSON.stringify({ok:false,error:'DOCX 파싱 실패'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ceExt = {};
+          const _ceRps = [];
+          let _ceLastRoute = '';
+          for (let _ci = 0; _ci < _ceParas.length; _ci++) {
+            const _cp = _ceParas[_ci];
+            if (/담당\s*구역/.test(_cp) && !_ceExt.area) { const _cm = _cp.match(/담당\s*구역[:\s：　]*([\S].+)/); if (_cm && _cm[1].trim()) _ceExt.area = _cm[1].trim(); }
+            if (!_ceExt.startDate) { const _cs = _cp.match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일\s*부터/); if (_cs) _ceExt.startDate = `${_cs[1]}-${String(_cs[2]).padStart(2,'0')}-${String(_cs[3]).padStart(2,'0')}`; }
+            if (!_ceExt.endDate) { const _ce2 = _cp.match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일\s*까지/); if (_ce2) _ceExt.endDate = `${_ce2[1]}-${String(_ce2[2]).padStart(2,'0')}-${String(_ce2[3]).padStart(2,'0')}`; }
+            const _cfm = _cp.match(/배송수수료\s*[(\（]([^)\）]+)[)\）]/);
+            const _cam = _cp.match(/1건당\s*([\d,]+)\s*원/)||_cp.match(/^([\d,]{3,})\s*원$/);
+            if (_cfm) { const _cr=_cfm[1].trim(); if(_cam){const _pv=parseInt(_cam[1].replace(/,/g,''));if(_pv>0)_ceRps.push({route:_cr,price:String(_pv)});}else _ceLastRoute=_cr; }
+            else if (_ceLastRoute && _cam) { const _pv=parseInt(_cam[1].replace(/,/g,''));if(_pv>0)_ceRps.push({route:_ceLastRoute,price:String(_pv)});_ceLastRoute=''; }
+            if (/집화수수료/.test(_cp) && _cam && !_ceExt.collectPrice) { const _pv=parseInt(_cam[1].replace(/,/g,''));if(_pv>0)_ceExt.collectPrice=String(_pv); }
+          }
+          if (_ceRps.length) _ceExt.routePricesJson = JSON.stringify(_ceRps);
+          const _ceKeys = Object.keys(_ceExt);
+          if (!_ceKeys.length) return new Response(JSON.stringify({ok:true,extracted:{},msg:'추출 데이터 없음'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+          const _ceMask = _ceKeys.map(k=>`updateMask.fieldPaths=${k}`).join('&');
+          const _ceFields = {}; _ceKeys.forEach(k=>{_ceFields[k]={stringValue:_ceExt[k]};});
+          await fetch(`${_ceDN}?${_ceMask}`,{method:'PATCH',headers:{Authorization:'Bearer '+_ceFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_ceFields})});
+          return new Response(JSON.stringify({ok:true,extracted:_ceExt}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        } catch(e) {
+          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
+      }
+
       // /s/{token} → 배달대행 정산명세서 (알림톡 공유 링크)
       if (path.startsWith('/s/') && path.length > 3) {
         const _sToken = path.slice(3).split('/')[0];
