@@ -4050,27 +4050,29 @@ function renderResult(data, downloadUrls) {
       // 유효 채권 합계: totalActiveDebt 우선, 없으면 totalDebt 폴백 (하위 호환)
       const activeDebt = rsObj.totalActiveDebt || rsObj.totalDebt;
       const historicalDebt = rsObj.totalHistoricalDebt;
+      const activeKeyRisks = (rsObj.keyRisks||[]).filter(k=>k&&k.trim());
+      const scoreLabel = rsObj.score != null ? ` (위험점수 ${rsObj.score}/100)` : '';
       html += `<div class="rpt-section">
         <div class="rpt-section-label">📋 위험 요약</div>
         <div class="rpt-summary-banner" style="border-left:4px solid ${rsColor}">
-          ${rsObj.level ? `<div class="rpt-summary-level" style="color:${rsColor}">${rsObj.level}</div>` : ''}
-          ${rsObj.summary||rs ? `<div class="rpt-summary-text">${rsObj.summary||rs}</div>` : ''}
-          ${rsObj.keyRisks?.length ? `<div class="rpt-diag-card red" style="margin-top:10px"><div class="rpt-diag-title">핵심 위험</div>${rsObj.keyRisks.map(k=>`<div class="rpt-diag-item">${k}</div>`).join('')}</div>` : ''}
-          ${activeDebt ? `<div class="rpt-reason-box" style="margin-top:8px">유효 채권 합계: <strong>${activeDebt}</strong>${historicalDebt?` <span style="font-size:11px;color:#64748b;margin-left:8px">(이력 전체: <s>${historicalDebt}</s>)</span>`:''}</div>` : ''}
+          ${rsObj.level ? `<div class="rpt-summary-level" style="color:${rsColor}">${rsObj.level}${scoreLabel}</div>` : ''}
+          ${rsObj.summary ? `<div class="rpt-summary-text">${rsObj.summary}</div>` : ''}
+          ${activeKeyRisks.length ? `<div class="rpt-diag-card red" style="margin-top:10px"><div class="rpt-diag-title">핵심 위험</div>${activeKeyRisks.map(k=>`<div class="rpt-diag-item">⚠️ ${k}</div>`).join('')}</div>` : ''}
+          ${activeDebt ? `<div class="rpt-reason-box" style="margin-top:8px">유효 채권 합계: <strong>${typeof activeDebt==='number'?activeDebt.toLocaleString()+'원':activeDebt}</strong>${historicalDebt?` <span style="font-size:11px;color:#64748b;margin-left:8px">(이력 전체: <s>${historicalDebt}</s>)</span>`:''}</div>` : ''}
         </div>
       </div>`;
     }
     // recommendations + safetyVerification (등기부 분석 전용)
-    const recs = data.recommendations;
-    const sv = data.jeonseRiskAnalysis?.safetyVerification;
-    if (recs?.length || sv?.length) {
+    const recs = (data.recommendations||[]).filter(r=>r&&r.trim());
+    const sv = (data.jeonseRiskAnalysis?.safetyVerification||[]).filter(s=>s&&s.trim());
+    if (recs.length || sv.length) {
       html += `<div class="rpt-section"><div class="rpt-section-label">✅ 계약 전 필수 확인 사항</div>`;
-      if (recs?.length) {
+      if (recs.length) {
         html += `<div class="rpt-diag-card" style="background:var(--pink-light);border:1.5px solid rgba(255,107,157,.25)"><div class="rpt-diag-title" style="color:var(--pink)">권장 조치</div>`;
         recs.forEach((r,i)=>{ html += `<div class="rpt-diag-item"><span style="font-weight:700;margin-right:6px">${i+1}.</span>${r}</div>`; });
         html += `</div>`;
       }
-      if (sv?.length) {
+      if (sv.length) {
         html += `<div class="rpt-diag-card green" style="margin-top:8px"><div class="rpt-diag-title">안전 확인 체크리스트</div>`;
         sv.forEach(s=>{ html += `<div class="rpt-diag-item">☐ ${s}</div>`; });
         html += `</div>`;
