@@ -1238,7 +1238,7 @@ export default {
                   const idM = match.match(/data-id="BLANK_(\d+)"/);
                   if (!idM) return match;
                   const blankIdx = parseInt(idM[1]);
-                  const field = _dlWtFields.find(f => f.id === blankIdx);
+                  const field = _dlWtFields.find(f => f.id === blankIdx || f.id === 'BLANK_'+blankIdx);
                   const label = field && field.label ? field.label : '';
                   const val = label ? (_dlWtFieldMap[label] || '') : '';
                   return val ? `<span style="font-weight:700;border-bottom:1px solid #333">${val}</span>` : '<span style="display:inline-block;min-width:60px;border-bottom:1px solid #666">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
@@ -1394,7 +1394,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
                     const idM = match.match(/data-id="BLANK_(\d+)"/);
                     if (!idM) return match;
                     const blankIdx = parseInt(idM[1]);
-                    const field = _wtFields.find(f => f.id === blankIdx);
+                    const field = _wtFields.find(f => f.id === blankIdx || f.id === 'BLANK_'+blankIdx);
                     const label = field && field.label ? field.label : '';
                     const val = label ? (_wtFieldMap[label] || '') : '';
                     return val ? `<span style="font-weight:700;border-bottom:1px solid #333">${val}</span>` : '<span style="display:inline-block;min-width:60px;border-bottom:1px solid #666">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
