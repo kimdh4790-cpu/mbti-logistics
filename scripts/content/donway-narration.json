@@ -5,27 +5,27 @@
   "lines": [
     {
       "startSec": 0,
-      "text": "정산하고 기사 한 명씩 연락하고 계시나요?"
+      "text": "기사 수십 명 정산, 아직 손으로 하고 계세요?"
     },
     {
-      "startSec": 11,
-      "text": "DONWAY는 정산 완료 즉시 카카오 알림톡 자동 발송."
+      "startSec": 9,
+      "text": "엑셀 파일 하나만 올리면"
     },
     {
-      "startSec": 22,
-      "text": "기사별 금액·공제내역 명세서가 카톡으로 바로 가요."
+      "startSec": 16,
+      "text": "쿠팡, 배달의민족 포함 수백 명 정산이 오 분 안에 끝납니다."
     },
     {
-      "startSec": 34,
-      "text": "문의 전화도 줄고, 분쟁도 줄어요."
+      "startSec": 27,
+      "text": "정산 완료 즉시 기사 카카오톡으로 명세서가 자동 발송돼요."
     },
     {
-      "startSec": 43,
-      "text": "기사 오십 명 정산이 오 분 만에 끝나요."
+      "startSec": 38,
+      "text": "세금계산서 자동 발행, 전자계약서도 한 번에."
     },
     {
-      "startSec": 52,
-      "text": "7일 무료체험. donway.ai.kr"
+      "startSec": 48,
+      "text": "DONWAY. 정산의 모든 것. donway.ai.kr"
     }
   ]
 }
