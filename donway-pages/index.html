@@ -8278,10 +8278,11 @@ function _ctrRenderWrite(){
     +'</div>'
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:8px">📎 계약서 원본 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.6">계약서 파일(PDF · DOCX)을 업로드하면 기사 서명 시 이 파일을 그대로 표시합니다. 미업로드 시 자동생성 계약서가 사용됩니다.<br><span style="color:#f59e0b">⚠️ 업로드 파일은 이 계약 유형의 기본 템플릿으로 저장되어 다음 계약에도 자동 적용됩니다. 일회성으로만 쓰려면 저장 후 삭제하세요.</span><br><span style="color:#ef4444">※ PDF · DOCX(워드)만 지원합니다. 한글(HWP)·이미지·엑셀은 업로드 불가합니다.</span></div>'
-    +'<input type="file" id="ctr-pdf-file" accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrUploadPdf(this)" style="display:none">'
-    +'<div id="ctr-pdf-status" style="display:flex;align-items:center;gap:10px"><label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 파일 선택 (PDF · DOCX만)</label></div>'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">📎 계약서 파일 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
+    +'<div style="font-size:11px;color:#6d28d9;background:#f5f3ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7">💡 DOCX 업로드 시 빈칸(_____)이 자동 감지됩니다. 보라색 밑줄을 <b>클릭해서 직접 입력</b>하고 저장하면 기사에게 채워진 계약서가 전달됩니다.</div>'
+    +'<input type="file" id="ctr-docx-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrDocxLoad(this)" style="display:none">'
+    +'<div id="ctr-docx-status"><label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label></div>'
+    +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
     +'<input type="hidden" id="ctr-pdf-url">'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
@@ -8545,6 +8546,7 @@ function _ctrCollect(){
     laborType:_g('ctr-labortype'),
     special:_g('ctr-special'),
     customContractUrl:_g('ctr-pdf-url'),
+    docxHtml:(function(){var c=document.getElementById('ctr-docx-content');return c?c.innerHTML:'';})(),
     createdAt:new Date().toISOString()
   };
 }
@@ -8725,6 +8727,49 @@ function _ctrLoadContractTemplate(t){
     var resolvedCid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid)||u.uid;
     _doLoad(resolvedCid);
   });
+}
+async function _ctrDocxLoad(inp){
+  var file=inp.files[0];if(!file)return;
+  var status=document.getElementById('ctr-docx-status');
+  if(status)status.innerHTML='<span style="font-size:12px;color:var(--text3)">⏳ 변환 중...</span>';
+  try{
+    if(typeof mammoth==='undefined')throw new Error('mammoth.js 미로드');
+    var buf=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
+    var result=await mammoth.convertToHtml({arrayBuffer:buf});
+    var html=result.value;
+    var blankCount=0;
+    html=html.replace(/_{3,}/g,function(){
+      blankCount++;
+      return '<span class="ctr-blank-field" contenteditable="true" style="display:inline-block;min-width:60px;border-bottom:2px solid #8b5cf6;outline:none;padding:2px 6px;cursor:text;color:#1e293b;background:rgba(139,92,246,0.06)" onclick="this.focus()"></span>';
+    });
+    html=html.replace(/　{2,}/g,function(m){
+      blankCount++;
+      return '<span class="ctr-blank-field" contenteditable="true" style="display:inline-block;min-width:'+(m.length*14)+'px;border-bottom:2px solid #8b5cf6;outline:none;padding:2px 6px;cursor:text;color:#1e293b;background:rgba(139,92,246,0.06)" onclick="this.focus()"></span>';
+    });
+    var editor=document.getElementById('ctr-docx-editor');
+    if(editor){
+      editor.style.display='block';
+      editor.innerHTML=
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        +'<div style="font-size:12px;font-weight:700;color:#8b5cf6">✏️ 보라색 밑줄을 클릭해서 직접 입력하세요 (빈칸 '+blankCount+'개)</div>'
+        +'<button onclick="_ctrDocxClear()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text3)">× 삭제</button>'
+        +'</div>'
+        +'<div id="ctr-docx-content" style="border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-size:12px;line-height:1.9;max-height:420px;overflow-y:auto;background:#fff;color:#111">'
+        +html
+        +'</div>';
+    }
+    if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
+  }catch(e){
+    if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
+    toast('❌ DOCX 변환 실패: '+e.message);
+  }
+}
+function _ctrDocxClear(){
+  var editor=document.getElementById('ctr-docx-editor');
+  if(editor){editor.style.display='none';editor.innerHTML='';}
+  var status=document.getElementById('ctr-docx-status');
+  if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
+  var fi=document.getElementById('ctr-docx-file');if(fi)fi.value='';
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
@@ -9052,7 +9097,8 @@ async function _ctrSave(){
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       adminSignedAt:adminSig?new Date().toISOString():'',
       adminUid:_CU.uid||'',
-      appSource:'donway'
+      appSource:'donway',
+      docxHtml:data.docxHtml||''
     }));
     toast('✅ 저장 완료');
     window._adminSigPad=null;
