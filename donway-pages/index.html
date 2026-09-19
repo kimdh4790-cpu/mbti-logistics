@@ -6522,8 +6522,6 @@ function switchTab(tab){
 
 var _verifiedPhone="";
 var _verifiedName="";
-var _kakaoId="";
-
 function checkBizNum(){
   var biz=document.getElementById('r-biznum').value.replace(/-/g,'').trim();
   var msg=document.getElementById('r-biznum-msg');
@@ -6751,9 +6749,8 @@ function _checkSlugDuplicate(val) {
       }).catch(function() { statusEl.innerHTML = ''; });
   }, 500);
 }
-// ── 소셜 로그인 (구글·카카오) ──────────────────────────────
-var _socialAuthType=null; // 'google' | 'kakao'
-var _socialAuthToken=null; // kakao custom token
+// ── 소셜 로그인 (구글) ──────────────────────────────
+var _socialAuthType=null; // 'google'
 
 
 function doGoogleAuth(){
@@ -6845,8 +6842,6 @@ function doRegister(){
   var _authPromise;
   if(_socialAuthType==='google'&&_auth.currentUser){
     _authPromise=Promise.resolve({user:_auth.currentUser});
-  }else if(_socialAuthType==='kakao'&&_socialAuthToken){
-    _authPromise=_auth.signInWithCustomToken(_socialAuthToken);
   }else{
     _authPromise=_auth.createUserWithEmailAndPassword(email,pw);
   }
@@ -6882,7 +6877,6 @@ function doRegister(){
       isOwner:isOwner,
       phone:_verifiedPhone||'',
       certName:_verifiedName||'',
-      kakaoId:_kakaoId||'',
         shortLabel:shortLabel,
         settlementContact:contactName,
         settlementPhone:contactPhone,
