@@ -8233,7 +8233,7 @@ function _ctrRenderWrite(){
     +'<b>'+esc(cp.companyName||cp.name||(_CU&&_CU.companyName)||'—')+'</b>'
     +(cp.bizNum?' · '+esc(cp.bizNum):'')+'<br>'
     +'대표 '+esc(cp.ceoName||cp.repName||'—')
-    +(cp.phone||cp.tel?' · '+esc(cp.phone||cp.tel):'')+'<br>'
+    +(cp.settlementPhone||cp.phone||cp.tel?' · '+esc(cp.settlementPhone||cp.phone||cp.tel):'')+'<br>'
     +'<span style="color:var(--text3);font-size:11px">'+esc(cp.bizAddr||cp.address||cp.addr||'주소 미등록')+'</span>'
     +'</div>'
     +'</div>'
@@ -8452,7 +8452,7 @@ function _ctrCollect(){
     companyBiz:cp.bizNum||'',
     companyCeo:cp.ceoName||cp.repName||'',
     companyAddr:cp.bizAddr||cp.address||cp.addr||'',
-    companyPhone:cp.phone||cp.tel||'',
+    companyPhone:cp.settlementPhone||cp.phone||cp.tel||'',
     driverName:drv.name||'',
     driverPhone:drv.phone||'',
     driverBizNum:drv.bizNum||'',
