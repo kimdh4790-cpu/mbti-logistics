@@ -5765,6 +5765,9 @@ if(window.location.hash==='#join'){
       _CU=null; window._CU=null; window._mySlug=null;
       document.getElementById('login-screen').style.display='flex';
       document.getElementById('app').style.display='none';
+      // ★ 로그인 버튼 항상 활성 상태로 복원
+      var _lb=document.getElementById('btn-login-submit');
+      if(_lb){_lb.disabled=false;_lb.textContent='로그인';}
     }else{
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
@@ -7500,6 +7503,7 @@ function doLogin(){
     }).then(function(){
       // 로그인 성공 — 실패 카운터 초기화
       sessionStorage.removeItem(_failKey);
+      if(btn){btn.disabled=false;btn.textContent='로그인';}
       // ★ 세션 타임아웃 30분 설정
       _resetSessionTimeout();
     }).catch(function(e){
