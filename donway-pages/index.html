@@ -8376,16 +8376,16 @@ function _ctrSelectDriver(id){
       if(inp){inp.disabled=false;if(rp!=null)inp.value=rp;}
     });
   }
-  // 캠프명 자동등록: _routeCampMap[첫번째 라우트] 우선, 없으면 drv.camp
-  var campEl=document.getElementById('ctr-camp');
-  if(campEl){
-    var _campVal='';
-    if(drv.routes&&drv.routes.length){
-      var _fr=drv.routes[0].route||drv.routes[0].name||'';
-      _campVal=(_routeCampMap&&_routeCampMap[_fr])||'';
-    }
-    if(!_campVal)_campVal=drv.camp||'';
-    if(_campVal)campEl.value=_campVal;
+  // 캠프명 + 담당구역 자동등록
+  var _campVal='';
+  if(drv.routes&&drv.routes.length){
+    var _fr=drv.routes[0].route||drv.routes[0].name||'';
+    _campVal=(_routeCampMap&&_routeCampMap[_fr])||'';
+  }
+  if(!_campVal)_campVal=drv.camp||'';
+  if(_campVal){
+    var campEl=document.getElementById('ctr-camp');if(campEl)campEl.value=_campVal;
+    var areaEl=document.getElementById('ctr-area');if(areaEl)areaEl.value='전구역관할('+_campVal+')';
   }
 }
 
@@ -8475,7 +8475,10 @@ function _ctrRouteCheck(rk){
     inp.focus();
     // 라우트→캠프명 자동입력 (_routeCampMap 우선)
     var camp=(_routeCampMap&&_routeCampMap[rk])||'';
-    if(camp){var campEl=document.getElementById('ctr-camp');if(campEl)campEl.value=camp;}
+    if(camp){
+      var campEl=document.getElementById('ctr-camp');if(campEl)campEl.value=camp;
+      var areaEl=document.getElementById('ctr-area');if(areaEl)areaEl.value='전구역관할('+camp+')';
+    }
   }
 }
 
