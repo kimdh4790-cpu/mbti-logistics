@@ -8350,7 +8350,7 @@ function _ctrLoadDrivers(){
     snap.forEach(function(doc){
       var d=doc.data();
       if(d.is_active===false||d.status==='pending')return;
-      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||d.bizNumber||'',ssn:d.ssn||d.idNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||'',routes:d.routes||[]});
+      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||d.bizNumber||'',ssn:d.ssn||d.idNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||'',routes:d.routes||[],camp:d.camp||''});
       sel.innerHTML+='<option value="'+doc.id+'">'+esc(d.name||doc.id)+'</option>';
     });
   }).catch(function(){});
@@ -8364,18 +8364,20 @@ function _ctrSelectDriver(id){
   _s('ctr-name',drv.name);_s('ctr-phone',drv.phone);_s('ctr-biznum',drv.bizNum);_s('ctr-idnum',drv.ssn||'');_s('ctr-addr',drv.address||'');
   // 라우트 단가 자동 선택
   if(drv.routes&&drv.routes.length){
-    // 먼저 전체 체크박스 해제
+    // 전체 체크박스 해제 먼저
     Object.keys(window.RPRICE||{}).forEach(function(rk){
       var cb=document.getElementById('ctr-rc-'+rk);var inp=document.getElementById('ctr-rp-'+rk);
-      if(cb){cb.checked=false;}if(inp){inp.disabled=true;}
+      if(cb)cb.checked=false;if(inp)inp.disabled=true;
     });
     drv.routes.forEach(function(r){
       var rk=r.route||r.name;var rp=r.price;
       var cb=document.getElementById('ctr-rc-'+rk);var inp=document.getElementById('ctr-rp-'+rk);
-      if(cb){cb.checked=true;}
+      if(cb)cb.checked=true;
       if(inp){inp.disabled=false;if(rp!=null)inp.value=rp;}
     });
   }
+  // 캠프명 자동등록
+  if(drv.camp){var campEl=document.getElementById('ctr-camp');if(campEl)campEl.value=drv.camp;}
 }
 
 function _ctrRenderConditions(t){
@@ -9061,12 +9063,16 @@ async function _ctrSave(){
     }));
     toast('✅ 저장 완료');
     // 기사 문서에 라우트 단가 저장 (다음 계약 시 자동 불러오기용)
-    if(window._ctrDriver&&window._ctrDriver.id&&data.routePricesJson){
-      try{var parsedRoutes=JSON.parse(data.routePricesJson);
-        _db.collection('drivers').doc(window._ctrDriver.id).update({routes:parsedRoutes}).catch(function(){});
-        window._ctrDriver.routes=parsedRoutes;
-        var drvObj=( window._ctrDrivers||[]).find(function(d){return d.id===window._ctrDriver.id;});
-        if(drvObj)drvObj.routes=parsedRoutes;
+    if(window._ctrDriver&&window._ctrDriver.id){
+      try{
+        var _drvUpdate={};
+        if(data.routePricesJson){var parsedRoutes=JSON.parse(data.routePricesJson);_drvUpdate.routes=parsedRoutes;window._ctrDriver.routes=parsedRoutes;}
+        if(data.camp){_drvUpdate.camp=data.camp;window._ctrDriver.camp=data.camp;}
+        if(Object.keys(_drvUpdate).length){
+          _db.collection('drivers').doc(window._ctrDriver.id).update(_drvUpdate).catch(function(){});
+          var drvObj=(window._ctrDrivers||[]).find(function(d){return d.id===window._ctrDriver.id;});
+          if(drvObj)Object.assign(drvObj,_drvUpdate);
+        }
       }catch(e2){}
     }
     window._adminSigPad=null;
