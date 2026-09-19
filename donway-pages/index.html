@@ -8228,61 +8228,26 @@ function _ctrRenderWrite(){
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'+typeHtml+'</div>'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:12px">— ② 위탁자(대리점) 정보</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">대리점 상호 *</div>'
-    +'<input id="ctr-comp-name" type="text" value="'+esc(cp.companyName||cp.name||(_CU&&_CU.companyName)||'')+'" placeholder="예) 엠비티아이(유)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">사업자등록번호</div>'
-    +'<input id="ctr-comp-biz" type="text" value="'+esc(cp.bizNum||'')+'" placeholder="000-00-00000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ② 위탁자(대리점) 정보</div>'
+    +'<div style="background:var(--bg2);border-radius:8px;padding:12px;font-size:13px;line-height:1.9">'
+    +'<b>'+esc(cp.companyName||cp.name||(_CU&&_CU.companyName)||'—')+'</b>'
+    +(cp.bizNum?' · '+esc(cp.bizNum):'')+'<br>'
+    +'대표 '+esc(cp.ceoName||cp.repName||'—')
+    +(cp.phone||cp.tel?' · '+esc(cp.phone||cp.tel):'')+'<br>'
+    +'<span style="color:var(--text3);font-size:11px">'+esc(cp.bizAddr||cp.address||cp.addr||'주소 미등록')+'</span>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">대표자명</div>'
-    +'<input id="ctr-comp-ceo" type="text" value="'+esc(cp.ceoName||cp.repName||'')+'" placeholder="홍 길 동" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">대리점 전화번호</div>'
-    +'<input id="ctr-comp-phone" type="tel" value="'+esc(cp.phone||cp.tel||cp.contact||'')+'" placeholder="051-000-0000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">사업장 주소</div>'
-    +'<input id="ctr-comp-addr" type="text" value="'+esc(cp.bizAddr||cp.address||cp.addr||'')+'" placeholder="예) 부산시 수영구 수영로 668" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:12px">— ③ 기사 정보</div>'
-    +'<div style="margin-bottom:10px">'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">등록된 기사 선택 (자동 입력)</div>'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ③ 기사 정보</div>'
     +'<select id="ctr-drv-sel" onchange="_ctrSelectDriver(this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<option value="">— 기사 선택 —</option>'
+    +'<option value="">— 등록 기사 선택 (미등록 시 계약서에 직접 입력) —</option>'
     +'</select>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">성명 *</div>'
-    +'<input id="ctr-name" type="text" placeholder="홍길동" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
-    +'</div>'
-    +'<div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">전화번호 *</div>'
-    +'<input id="ctr-phone" type="text" placeholder="010-0000-0000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
-    +'</div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">사업자번호</div>'
-    +'<input id="ctr-biznum" type="text" placeholder="000-00-00000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
-    +'</div>'
-    +'<div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">주민등록번호 <span style="color:#ef4444">*</span></div>'
-    +'<input id="ctr-idnum" type="text" placeholder="000000-0000000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box;font-family:monospace">'
-    +'</div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr;gap:8px">'
-    +'<div>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">주소</div>'
-    +'<input id="ctr-addr" type="text" placeholder="시/군/구" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box">'
-    +'</div>'
-    +'</div>'
+    +'<div id="ctr-drv-info" style="display:none;margin-top:8px;background:var(--bg2);border-radius:8px;padding:10px;font-size:12px;line-height:1.8"></div>'
     +'</div>'
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">📎 계약서 파일 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
-    +'<div style="font-size:11px;color:#6d28d9;background:#f5f3ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7">💡 DOCX 업로드 시 빈칸(_____)이 자동 감지됩니다. 보라색 밑줄을 <b>클릭해서 직접 입력</b>하고 저장하면 기사에게 채워진 계약서가 전달됩니다.</div>'
+    +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7">💡 DOCX 업로드 시 빈칸(_____)이 자동 감지됩니다. 문서를 <b>직접 클릭해서 입력·수정</b>한 뒤 저장하면 기사에게 전달됩니다.</div>'
     +'<input type="file" id="ctr-docx-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrDocxLoad(this)" style="display:none">'
     +'<div id="ctr-docx-status"><label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label></div>'
     +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
@@ -8360,8 +8325,13 @@ function _ctrSelectDriver(id){
   var drv=(window._ctrDrivers||[]).find(function(d){return d.id===id;});
   if(!drv)return;
   window._ctrDriver=drv;
-  var _s=function(id2,v){var el=document.getElementById(id2);if(el)el.value=v||'';};
-  _s('ctr-name',drv.name);_s('ctr-phone',drv.phone);_s('ctr-biznum',drv.bizNum);_s('ctr-idnum',drv.ssn||'');_s('ctr-addr',drv.address||'');
+  // 기사 정보 요약 표시
+  var infoEl=document.getElementById('ctr-drv-info');
+  if(infoEl){
+    var _esc2=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');};
+    infoEl.style.display='';
+    infoEl.innerHTML='<b>'+_esc2(drv.name)+'</b>'+(drv.phone?' · '+_esc2(drv.phone):'')+(drv.bizNum?'<br>사업자 '+_esc2(drv.bizNum):'');
+  }
   // 라우트 단가 자동 선택
   if(drv.routes&&drv.routes.length){
     // 전체 체크박스 해제 먼저
@@ -8501,16 +8471,16 @@ function _ctrCollect(){
   return {
     type:t,
     dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
-    companyName:_g('ctr-comp-name')||cp.companyName||cp.name||(_CU&&_CU.companyName)||'',
-    companyBiz:_g('ctr-comp-biz')||cp.bizNum||'',
-    companyCeo:_g('ctr-comp-ceo')||cp.ceoName||cp.repName||'',
-    companyAddr:_g('ctr-comp-addr')||cp.bizAddr||cp.address||cp.addr||'',
-    companyPhone:_g('ctr-comp-phone')||cp.phone||cp.tel||'',
-    driverName:_g('ctr-name'),
-    driverPhone:_g('ctr-phone'),
-    driverBizNum:_g('ctr-biznum'),
-    driverIdNum:_g('ctr-idnum'),
-    driverAddr:_g('ctr-addr'),
+    companyName:cp.companyName||cp.name||(_CU&&_CU.companyName)||'',
+    companyBiz:cp.bizNum||'',
+    companyCeo:cp.ceoName||cp.repName||'',
+    companyAddr:cp.bizAddr||cp.address||cp.addr||'',
+    companyPhone:cp.phone||cp.tel||'',
+    driverName:(window._ctrDriver&&window._ctrDriver.name)||'',
+    driverPhone:(window._ctrDriver&&window._ctrDriver.phone)||'',
+    driverBizNum:(window._ctrDriver&&window._ctrDriver.bizNum)||'',
+    driverIdNum:(window._ctrDriver&&window._ctrDriver.ssn)||'',
+    driverAddr:(window._ctrDriver&&window._ctrDriver.address)||'',
     startDate:_g('ctr-start'),
     endDate:_g('ctr-end'),
     camp:_g('ctr-camp'),
@@ -8727,18 +8697,19 @@ async function _ctrDocxLoad(inp){
     var blankCount=0;
     html=html.replace(/_{3,}/g,function(){
       blankCount++;
-      return '<span class="ctr-blank-field" style="display:inline-block;min-width:60px;border-bottom:2px solid #8b5cf6;padding:2px 6px;color:#1e293b;background:rgba(139,92,246,0.06)"></span>';
+      return '<u>'+'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'+'</u>';
     });
     html=html.replace(/　{2,}/g,function(m){
       blankCount++;
-      return '<span class="ctr-blank-field" style="display:inline-block;min-width:'+(m.length*14)+'px;border-bottom:2px solid #8b5cf6;padding:2px 6px;color:#1e293b;background:rgba(139,92,246,0.06)"></span>';
+      var sp='';for(var i=0;i<m.length*2;i++)sp+='&nbsp;';
+      return '<u>'+sp+'</u>';
     });
     var editor=document.getElementById('ctr-docx-editor');
     if(editor){
       editor.style.display='block';
       editor.innerHTML=
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-        +'<div style="font-size:12px;font-weight:700;color:#8b5cf6">✏️ 문서 어디든 클릭해서 수정 가능'+(blankCount?' · 보라색 밑줄: 주요 빈칸 '+blankCount+'개':'')+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:var(--text2)">✏️ 문서 어디든 클릭해서 수정 가능'+(blankCount?' · 빈칸 '+blankCount+'개 자동감지':'')+'</div>'
         +'<button onclick="_ctrDocxClear()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text3)">× 삭제</button>'
         +'</div>'
         +'<div id="ctr-docx-content" contenteditable="true" style="border:1px solid #8b5cf6;border-radius:8px;padding:16px 20px;font-size:12px;line-height:1.9;max-height:420px;overflow-y:auto;background:#fff;color:#111;outline:none;cursor:text">'
@@ -9101,7 +9072,8 @@ async function _ctrSave(){
       if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 빈칸 '+(window._ctrDocxBlankCount||0)+'개 · 다음 기사 정보 입력 후 저장하세요</span>';
     }
     // 기사 선택 및 정보 필드 초기화
-    ['ctr-drv-sel','ctr-name','ctr-phone','ctr-biznum','ctr-idnum','ctr-addr'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    var _drvSel=document.getElementById('ctr-drv-sel');if(_drvSel)_drvSel.value='';
+    var _drvInfo=document.getElementById('ctr-drv-info');if(_drvInfo){_drvInfo.style.display='none';_drvInfo.innerHTML='';}
     window._ctrDriver=null;
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
     // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송
