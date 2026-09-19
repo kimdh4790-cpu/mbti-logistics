@@ -8689,11 +8689,11 @@ async function _ctrDocxLoad(inp){
     var blankCount=0;
     html=html.replace(/_{3,}/g,function(){
       blankCount++;
-      return '<span class="ctr-blank-field" contenteditable="true" style="display:inline-block;min-width:60px;border-bottom:2px solid #8b5cf6;outline:none;padding:2px 6px;cursor:text;color:#1e293b;background:rgba(139,92,246,0.06)" onclick="this.focus()"></span>';
+      return '<span class="ctr-blank-field" style="display:inline-block;min-width:60px;border-bottom:2px solid #8b5cf6;padding:2px 6px;color:#1e293b;background:rgba(139,92,246,0.06)"></span>';
     });
     html=html.replace(/　{2,}/g,function(m){
       blankCount++;
-      return '<span class="ctr-blank-field" contenteditable="true" style="display:inline-block;min-width:'+(m.length*14)+'px;border-bottom:2px solid #8b5cf6;outline:none;padding:2px 6px;cursor:text;color:#1e293b;background:rgba(139,92,246,0.06)" onclick="this.focus()"></span>';
+      return '<span class="ctr-blank-field" style="display:inline-block;min-width:'+(m.length*14)+'px;border-bottom:2px solid #8b5cf6;padding:2px 6px;color:#1e293b;background:rgba(139,92,246,0.06)"></span>';
     });
     var editor=document.getElementById('ctr-docx-editor');
     if(editor){
