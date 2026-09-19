@@ -3714,14 +3714,30 @@ function renderResult(data, downloadUrls) {
   // ══════════════════════════════════════════════
   const plainText = data.beginnerNote || data.plainFeedback || data.beginnerExplanation || data.plainNote || data.plainSummary;
   if (plainText) {
-    html += `
-    <div class="rpt-section">
-      <div class="rpt-section-label">💬 알기 쉬운 설명</div>
-      <div class="rpt-plain-box">
-        <div class="rpt-plain-label">쉽게 풀어보면</div>
-        ${plainText}
-      </div>
-    </div>`;
+    const isRegistry = svcType === 'registry_analysis';
+    // 등기부 분析은 beginnerNote를 더 크고 상세하게 표시
+    if (isRegistry) {
+      html += `
+      <div class="rpt-section">
+        <div class="rpt-section-label">💬 AI가 쉽게 설명해 드립니다</div>
+        <div style="background:linear-gradient(135deg,rgba(201,168,76,.06),rgba(99,102,241,.06));border:1.5px solid rgba(201,168,76,.25);border-radius:12px;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <div style="width:32px;height:32px;background:rgba(201,168,76,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🤖</div>
+            <div style="font-size:12px;font-weight:700;color:var(--gold,#c9a84c)">SCAN AI 종합 의견</div>
+          </div>
+          <div style="font-size:13px;color:var(--text-primary);line-height:1.85;white-space:pre-wrap">${plainText}</div>
+        </div>
+      </div>`;
+    } else {
+      html += `
+      <div class="rpt-section">
+        <div class="rpt-section-label">💬 알기 쉬운 설명</div>
+        <div class="rpt-plain-box">
+          <div class="rpt-plain-label">쉽게 풀어보면</div>
+          ${plainText}
+        </div>
+      </div>`;
+    }
   }
 
   // ══════════════════════════════════════════════
@@ -3950,6 +3966,10 @@ function renderResult(data, downloadUrls) {
           </div>` : ''}
         ${jr.kkangtongReason ? `<div class="rpt-reason-box" style="border-color:#ef444440;background:#ef444410;color:#fca5a5">🚨 <strong>깡통전세 경보:</strong> ${jr.kkangtongReason}</div>` : ''}
         ${jr.hugEligibility ? `<div class="rpt-reason-box" style="margin-top:8px">${jr.hugEligibility.includes('불가')||jr.hugEligibility.includes('어려')? '⛔':'✅'} <strong>HUG 전세보증보험:</strong> ${jr.hugEligibility}</div>` : ''}
+        ${jr.worstCaseScenario ? `<div style="background:rgba(239,68,68,.1);border:2px solid rgba(239,68,68,.4);border-radius:10px;padding:12px 14px;margin-top:10px">
+          <div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:6px">💥 최악의 시나리오 (경매 진행 시)</div>
+          <div style="font-size:12px;color:#fca5a5;line-height:1.7">${jr.worstCaseScenario}</div>
+        </div>` : ''}
       </div>`;
     }
     if (data.encumbrances?.length) {
@@ -3971,6 +3991,7 @@ function renderResult(data, downloadUrls) {
             <div class="rpt-enc-type">${e.type||''} <span style="font-size:11px;color:${col};font-weight:600">${e.rank?`[${e.rank}번]`:''}</span> ${isCancelled?'<span class="rpt-enc-done">말소</span>':''}</div>
             ${e.amount ? `<div class="rpt-enc-amount" style="${isCancelled?'text-decoration:line-through;color:#94a3b8':''}">${typeof e.amount==='number'?e.amount.toLocaleString()+'원':e.amount}</div>` : ''}
             <div class="rpt-enc-meta">${[e.creditor,e.date].filter(Boolean).join(' · ')}${e.cancelDate?` → 말소 ${e.cancelDate}`:''}</div>
+            ${e.plainExplain&&!isCancelled ? `<div style="font-size:11px;color:#fbbf24;background:rgba(251,191,36,.08);border-left:2px solid #fbbf24;padding:5px 8px;margin-top:5px;border-radius:0 4px 4px 0;line-height:1.6">💡 ${e.plainExplain}</div>` : ''}
           </div>`;
         }).join('')}
       </div>`;
@@ -4019,6 +4040,15 @@ function renderResult(data, downloadUrls) {
           ${lp.riskFlag ? '⚠️' : '📊'} <strong>대출 패턴:</strong> ${lp.repeatLender||lp.summary||`총 ${lp.totalCycles||0}회 반복`}
           ${lp.riskFlag ? `<div style="font-size:12px;color:#ef4444;margin-top:4px">${lp.riskReason||''}</div>` : ''}
         </div>`;
+      }
+      if (ma.debtCalculationDetail) {
+        html += `<div style="background:rgba(99,102,241,.08);border:1.5px solid rgba(99,102,241,.25);border-radius:10px;padding:12px 14px;margin-top:8px">
+          <div style="font-size:11px;color:#818cf8;font-weight:700;margin-bottom:6px">📐 채권 계산 과정</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap">${ma.debtCalculationDetail}</div>
+        </div>`;
+      }
+      if (ma.repeatLenderRisk) {
+        html += `<div class="rpt-reason-box" style="margin-top:8px;border-color:#f59e0b40">⚠️ ${ma.repeatLenderRisk}</div>`;
       }
       html += `</div>`;
     }
@@ -4091,7 +4121,7 @@ function renderResult(data, downloadUrls) {
         <div class="rpt-section-label">📋 위험 요약</div>
         <div class="rpt-summary-banner" style="border-left:4px solid ${rsColor}">
           ${rsObj.level ? `<div class="rpt-summary-level" style="color:${rsColor}">${rsObj.level}${scoreLabel}</div>` : ''}
-          ${rsObj.summary ? `<div class="rpt-summary-text">${rsObj.summary}</div>` : ''}
+          ${rsObj.summary ? `<div class="rpt-summary-text" style="white-space:pre-wrap;line-height:1.75;font-size:13px">${rsObj.summary}</div>` : ''}
           ${activeKeyRisks.length ? `<div class="rpt-diag-card red" style="margin-top:10px"><div class="rpt-diag-title">핵심 위험</div>${activeKeyRisks.map(k=>`<div class="rpt-diag-item">⚠️ ${k}</div>`).join('')}</div>` : ''}
           ${activeDebt ? `<div class="rpt-reason-box" style="margin-top:8px">유효 채권 합계: <strong>${typeof activeDebt==='number'?activeDebt.toLocaleString()+'원':activeDebt}</strong>${historicalDebt?` <span style="font-size:11px;color:#64748b;margin-left:8px">(이력 전체: <s>${historicalDebt}</s>)</span>`:''}</div>` : ''}
         </div>
