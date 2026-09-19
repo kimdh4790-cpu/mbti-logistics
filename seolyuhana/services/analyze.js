@@ -1024,7 +1024,9 @@ const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기
 
 ★ 말소된 권리(말소됨, 취소선)는 합계에서 절대 제외. 유효 항목만 합산.
 ★ 전세가율 = 보증금 ÷ 시세. 80%↑ 고위험. (유효선순위채무+보증금) > 시세 → 깡통전세.
-★ fraudCheckpoints는 아래 10가지 항목을 빠짐없이 검토. 근거가 없으면 "해당없음/확인불가"로.
+★ fraudCheckpoints 10가지 항목 빠짐없이 검토. detail은 3~4문장으로 구체적으로. 근거 없으면 "해당없음/확인불가".
+★ encumbrances 각 항목의 plainExplain은 "이 권리가 임차인에게 미치는 영향"을 2문장으로 알기 쉽게.
+★ beginnerNote는 전세 처음 알아보는 사람에게 카톡으로 설명하듯 7~10문장. 구체적 금액과 위험 이유 포함.
 
 출력 스키마:
 {
@@ -1042,13 +1044,18 @@ const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기
     "alerts": "신탁등기·법인·6개월내소유권변동 등 경고 (없으면 빈문자열)"
   },
   "encumbrances": [
-    {"rank":"","type":"근저당|전세권|가압류|경매개시|가처분|임차권 등","amount":0,"creditor":"","date":"","cancelDate":"","status":"유효|말소됨"}
+    {
+      "rank":"","type":"근저당|전세권|가압류|경매개시|가처분|임차권 등",
+      "amount":0,"creditor":"","date":"","cancelDate":"","status":"유효|말소됨",
+      "plainExplain":"이 권리가 임차인에게 미치는 영향을 2문장으로. 예: 이 근저당은 X원으로 경매 시 은행이 먼저 가져갑니다. 내 보증금은 그 다음 순위입니다."
+    }
   ],
   "mortgageAnalysis": {
     "totalActiveMortgageDebt": 0,
     "activeMortgages": [{"rank":"","creditor":"","amount":0,"date":"","loanRatio":"채권최고액/시세 추정 비율"}],
     "cancelledMortgages": [{"rank":"","creditor":"","amount":0,"setDate":"","cancelDate":""}],
     "repeatLenderRisk": "동일 금융기관 반복 설정·해지 여부 및 횟수 (없으면 빈문자열)",
+    "debtCalculationDetail": "선순위채권 계산: 1순위 채권자 X원 + 2순위 채권자 Y원 = 합계 Z원. 예정 보증금 W원 합산 시 총 부담 V원. 시세 추정 T원 대비 N%.",
     "hasAuction": false,
     "hasGaChobun": false
   },
@@ -1061,19 +1068,20 @@ const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기
     "estimatedJeonseDeposit": 0,
     "safetyMarginAmount": 0,
     "safetyVerdict": "안전|주의|위험",
+    "worstCaseScenario": "경매 진행 시 시나리오: 낙찰가 추정 X원(시세의 70~80%). 1순위 근저당 Y원 배당 후 잔액 Z원. 임차인 보증금 W원 중 회수 가능 추정액 V원(N%). 구체적 손실 예상액 포함 3문장.",
     "fraudCheckpoints": [
-      {"id":"trust","name":"신탁등기 여부","status":"위험|주의|안전|해당없음","detail":"신탁원부 확인 필요 여부 및 수탁자명","action":""},
-      {"id":"corp","name":"법인 임대인","status":"위험|주의|안전|해당없음","detail":"법인명·설립일·부도 위험 여부","action":""},
-      {"id":"kkangtong","name":"깡통전세 위험","status":"위험|주의|안전|해당없음","detail":"선순위채권+보증금 vs 시세 계산 근거","action":""},
-      {"id":"auction","name":"경매·가처분 등기","status":"위험|주의|안전|해당없음","detail":"경매개시결정·처분금지 가처분 존재 여부","action":""},
-      {"id":"transfer","name":"단기 소유권 변동","status":"위험|주의|안전|해당없음","detail":"최근 1년 내 소유권 이전 횟수와 날짜","action":""},
-      {"id":"multiunit","name":"다가구/다세대 선순위 임차인","status":"위험|주의|안전|해당없음","detail":"임차권 등기 여부, 다가구 특성상 선순위 세입자 파악 불가 경고","action":""},
-      {"id":"mortgage_ratio","name":"근저당 채권최고액 비율","status":"위험|주의|안전|해당없음","detail":"채권최고액 합계가 시세 추정액 대비 몇 %인지","action":""},
-      {"id":"lender_pattern","name":"대출 반복 패턴","status":"위험|주의|안전|해당없음","detail":"동일 금융사 반복 설정·해지 또는 단기 대출 교체 여부","action":""},
-      {"id":"building_land","name":"건물·토지 소유자 일치","status":"위험|주의|안전|해당없음","detail":"건물과 토지 소유자 동일 여부 (법정지상권 위험)","action":""},
-      {"id":"old_building","name":"노후 건물 재건축 위험","status":"위험|주의|안전|해당없음","detail":"준공일 기준 경과연수, 30년 이상 시 재건축 가능성","action":""}
+      {"id":"trust","name":"신탁등기 여부","status":"위험|주의|안전|해당없음","detail":"신탁 여부, 수탁자명, 2026.03 대법원 판결에 따른 임차인 대항력 상실 위험, 신탁원부 확인 필요성을 3~4문장으로.","action":""},
+      {"id":"corp","name":"법인 임대인","status":"위험|주의|안전|해당없음","detail":"법인명, 설립일, 부동산 임대 외 사업 여부, 폐업·파산 시 보증금 회수 어려움을 3~4문장으로.","action":""},
+      {"id":"kkangtong","name":"깡통전세 위험","status":"위험|주의|안전|해당없음","detail":"선순위채권 합계 X원 + 예정 보증금 Y원 = Z원. 시세 추정 W원 대비 N%. 경매 시 보증금 손실 가능 금액을 3~4문장으로.","action":""},
+      {"id":"auction","name":"경매·가처분 등기","status":"위험|주의|안전|해당없음","detail":"경매개시결정 또는 처분금지 가처분 존재 여부, 해당 사건번호, 임차인이 즉시 취해야 할 행동을 3~4문장으로.","action":""},
+      {"id":"transfer","name":"단기 소유권 변동","status":"위험|주의|안전|해당없음","detail":"최근 1년 내 소유권 이전 횟수와 날짜, 갭투자·전세사기 의심 패턴 해당 여부를 3~4문장으로.","action":""},
+      {"id":"multiunit","name":"다가구/다세대 선순위 임차인","status":"위험|주의|안전|해당없음","detail":"다가구 특성상 선순위 세입자 현황 파악 불가 이유, 소액임차인 최우선변제 범위, 임차인이 받을 수 있는 실제 배당 추정을 3~4문장으로.","action":""},
+      {"id":"mortgage_ratio","name":"근저당 채권최고액 비율","status":"위험|주의|안전|해당없음","detail":"채권최고액 합계 X원이 시세 추정 Y원 대비 N%. 60%↑ 주의, 80%↑ 위험인 이유와 내 보증금이 안전한지를 3~4문장으로.","action":""},
+      {"id":"lender_pattern","name":"대출 반복 패턴","status":"위험|주의|안전|해당없음","detail":"동일 금융사 반복 설정·해지 횟수, 단기 대출 교체 여부, 이것이 전세사기에 어떻게 활용되는지를 3~4문장으로.","action":""},
+      {"id":"building_land","name":"건물·토지 소유자 일치","status":"위험|주의|안전|해당없음","detail":"건물과 토지 소유자 일치 여부, 불일치 시 법정지상권 문제로 임차인이 받는 피해를 3~4문장으로.","action":""},
+      {"id":"old_building","name":"노후 건물 재건축 위험","status":"위험|주의|안전|해당없음","detail":"준공일 기준 경과연수, 30년 이상 시 재건축 추진 가능성, 재건축 시 임차인 계약 만료 전 퇴거 위험을 3~4문장으로.","action":""}
     ],
-    "hugEligibility": "HUG 전세보증보험 가입 가능 여부 판단 (채권최고액 기준, 불가 시 이유)",
+    "hugEligibility": "HUG 전세보증보험 가입 가능 여부. 채권최고액 기준 판단, 불가 시 구체적 이유와 대안(SGI서울보증 등) 안내.",
     "trustRegistryNeeded": false,
     "safetyVerification": ["잔금 당일 등기부 재열람","전입신고+확정일자 당일 처리"]
   },
@@ -1090,10 +1098,10 @@ const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기
     "score": 0,
     "totalActiveDebt": 0,
     "keyRisks": [],
-    "summary": ""
+    "summary": "전체 위험 요약 3~5문장. 주요 위험 금액·이유·결론 포함."
   },
   "recommendations": [],
-  "beginnerNote": "이 집의 빚 현황과 전세 계약 가능 여부를 초보자도 이해하도록 5문장 이내로 설명."
+  "beginnerNote": "전세 처음 알아보는 사람에게 카톡하듯 7~10문장. 이 집의 빚이 얼마인지, 내가 전세 들어가면 어떤 위험이 있는지, 계약해도 되는지 결론까지. 구체적 금액과 퍼센트 반드시 포함."
 }
 `
 
@@ -1108,7 +1116,7 @@ export async function analyzeRegistry({ text, jeonseDeposit = null, env }) {
       { type: 'text', text: enrichment }
     ],
     env,
-    maxTokens: 3500
+    maxTokens: 4500
   });
 }
 
