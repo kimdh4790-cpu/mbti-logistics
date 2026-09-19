@@ -207,8 +207,8 @@ async function parsePdf(buffer, env) {
     };
   }
 
-  // 2차: Oracle pdftotext — 3초 제한 (CF Worker 30초 한도 내 처리 위해)
-  // Oracle이 3초 내 응답하면 CIDFont/FlateDecode 텍스트 획득, 아니면 즉시 폴백
+  // 2차: Oracle pdftotext — 6초 제한 (스키마 축소로 분석시간 확보됨)
+  // Oracle이 6초 내 응답하면 CIDFont 텍스트 획득 → 빠른 텍스트 분석 경로, 아니면 Vision 폴백
   const oracleText = await tryOraclePdfText(buffer, env);
   if (oracleText && oracleText.text && oracleText.text.length > 50) {
     return {
@@ -255,7 +255,7 @@ async function tryOraclePdfText(buffer, env) {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
     const res = await _fetchT(`${oracleBase}/api/pdf-text`, {
       method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: buffer
-    }, 3000);
+    }, 6000);
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
       return null;
