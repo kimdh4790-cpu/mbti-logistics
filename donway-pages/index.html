@@ -7838,8 +7838,13 @@ async function _wtUpload(inp){
     var doc=document.getElementById('wt-doc');
     if(doc){
       doc.innerHTML=result.value;
+      // 테이블 셀 등 모든 하위 요소 user-select 강제 활성화
+      doc.querySelectorAll('*').forEach(function(el){el.style.userSelect='text';el.style.webkitUserSelect='text';});
       doc.removeEventListener('mouseup',_wtDocMouseUp);
       doc.addEventListener('mouseup',_wtDocMouseUp);
+      // selectionchange 폴백 — mouseup이 도달 못하는 테이블 셀 등 대비
+      document.removeEventListener('selectionchange',_wtOnSelChange);
+      document.addEventListener('selectionchange',_wtOnSelChange);
     }
     _wtUpdateFieldList();
     var prev=document.getElementById('wt-prev');
@@ -7858,7 +7863,24 @@ function _wtDocMouseUp(e){
   var doc=document.getElementById('wt-doc');
   if(!doc||!doc.contains(sel.anchorNode))return;
   window._wtSavedRange=sel.getRangeAt(0).cloneRange();
+  window._wtSelChangeHandled=true;
   _wtShowPopup(e.clientX,e.clientY);
+}
+
+var _wtSelTimer=null;
+function _wtOnSelChange(){
+  clearTimeout(_wtSelTimer);
+  _wtSelTimer=setTimeout(function(){
+    if(window._wtSelChangeHandled){window._wtSelChangeHandled=false;return;}
+    var sel=window.getSelection();
+    if(!sel||sel.toString().trim().length===0)return;
+    var doc=document.getElementById('wt-doc');
+    if(!doc||!doc.contains(sel.anchorNode))return;
+    try{window._wtSavedRange=sel.getRangeAt(0).cloneRange();}catch(e){return;}
+    // 팝업 위치: 선택 영역 rect 기준
+    var rect=sel.getRangeAt(0).getBoundingClientRect();
+    _wtShowPopup(rect.left+(rect.width/2),rect.bottom+8);
+  },400);
 }
 
 function _wtShowPopup(x,y){
