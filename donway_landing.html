@@ -272,7 +272,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
   <div class="g" style="width:260px;height:260px;background:radial-gradient(var(--purple),transparent);bottom:-60px;right:-40px;opacity:.35"></div>
   <div class="inner chip">🚀 전 업종 정산 자동화 플랫폼</div>
   <div class="inner ttl">택배·배달·외식업<br>급여 정산 <span class="gr-blue">5분으로 끝</span></div>
-  <div class="inner sub">카카오 명세서 자동 발송 · 세무사 자동 연동<br>업종 무관 — 어떤 사업도 즉시 시작</div>
+  <div class="inner sub">카카오 명세서 자동 발송 · 팝빌 세금계산서 자동 발행<br>업종 무관 — 어떤 사업도 즉시 시작</div>
   <div class="inner btns">
     <button class="btn-p pulse" onclick="location.href='https://donway.ai.kr/join'">🎁 첫달 무료체험 🎁</button>
     <button class="btn-g" onclick="document.getElementById('s6').scrollIntoView({behavior:'smooth'})">📩 상담 문의</button>
@@ -301,10 +301,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     <div class="card" onclick="_dwProblemModal('kakao')">
       <div class="card-ico">📱</div>
       <div><div class="card-ttl" style="color:#f87171">명세서 개별 전송 → 문의 폭주</div><div class="card-desc">직원·기사 한 명씩 카카오 메시지 보내다 지침 · 계산 오류로 항의 전화</div></div>
-    </div>
-    <div class="card" onclick="_dwProblemModal('tax')">
-      <div class="card-ico">🧾</div>
-      <div><div class="card-ttl" style="color:#f87171">세무사 자료 매달 수동 전달</div><div class="card-desc">엑셀 취합 → 이메일 전송 → 오류 수정 반복 · 4대보험 계산도 수작업</div></div>
     </div>
   </div>
 </div>
@@ -401,7 +397,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
   <div class="g" style="width:260px;height:260px;background:radial-gradient(var(--teal),transparent);bottom:-60px;right:-40px;opacity:.28"></div>
   <div class="inner chip">🧾 팝빌 세금계산서 자동화</div>
   <div class="inner ttl">정산 확정 즉시<br><span class="gr-teal">세금계산서 자동 발행</span></div>
-  <div class="inner sub">팝빌 연동 · 역발행 지원 · 발행 현황 실시간 확인<br>세무사 자료도 원클릭</div>
+  <div class="inner sub">팝빌 연동 · 역발행 지원 · 발행 현황 실시간 확인</div>
   <div class="cards inner" style="gap:8px">
     <div class="card" onclick="_dwCardDetail('s4b',0)" style="cursor:pointer;align-items:center">
       <div class="card-ico" style="font-size:22px">⚡</div>
@@ -531,7 +527,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
     </div>
     <div class="review">
       <div class="rv-stars">★★★★★</div>
-      <div class="rv-txt">"배달대행 하는데 라이더별 건수 계산이 너무 복잡했어요. DONWAY 쓰고 나서 정산이 자동으로 되고 세무사 자료도 바로 나와서 진짜 편합니다."</div>
+      <div class="rv-txt">"배달대행 하는데 라이더별 건수 계산이 너무 복잡했어요. DONWAY 쓰고 나서 정산이 자동으로 되고 세금계산서도 자동 발행돼서 진짜 편합니다."</div>
       <div class="rv-who">🛵 대구 배달대행 · 라이더 28명</div>
     </div>
     <div class="review">
@@ -575,7 +571,6 @@ var INDUSTRY = [
     {ico:'💬',ttl:'카카오 명세서 발송',desc:'기사별 실지급 명세서 카카오 알림톡 자동 발송'},
     {ico:'📈',ttl:'캠프별 마진 분석',desc:'캠프별 마진율·건수 실시간 비교 · 이탈 기사 감지'},
     {ico:'🧾',ttl:'세금계산서 자동',desc:'정산 확정 즉시 사업자별 세금계산서 자동 발행'},
-    {ico:'👨‍💼',ttl:'세무사 자동 연동',desc:'더존 CSV 자동 생성 · 90일 공유 링크'},
     {ico:'🔗',ttl:'FILO 출퇴근 연동',desc:'QR 출퇴근 → 급여 → 정산 원스톱 자동화'},
   ],
   [ // 배달
@@ -592,7 +587,6 @@ var INDUSTRY = [
     {ico:'🔗',ttl:'FILO QR 출퇴근',desc:'동적 QR 출퇴근 → 급여 자동 계산 연동'},
     {ico:'📊',ttl:'DINE 매출 연동',desc:'매출·인건비 통합 분석 · 마진율 자동 계산'},
     {ico:'🧾',ttl:'4대보험 자동',desc:'고용·산재·건강·국민연금 자동 계산'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달 · 더존 CSV 지원'},
   ],
   [ // 뷰티
     {ico:'💄',ttl:'매출 커미션',desc:'매출 기반 커미션 자동 계산'},
@@ -600,7 +594,6 @@ var INDUSTRY = [
     {ico:'📋',ttl:'QR 근태 관리',desc:'QR 출퇴근 연동 자동 급여 계산'},
     {ico:'📈',ttl:'매장별 실적',desc:'직원별·매장별 매출 실시간 비교'},
     {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산·신고 자료'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
   ],
   [ // 요양
     {ico:'🏥',ttl:'요양보호사 급여',desc:'방문시간·거리 기반 급여 자동 계산'},
@@ -608,7 +601,6 @@ var INDUSTRY = [
     {ico:'📋',ttl:'방문 기록',desc:'어르신별 방문 일정·시간 자동 집계'},
     {ico:'📈',ttl:'센터별 실적',desc:'센터별 방문건수·매출 통계'},
     {ico:'🧾',ttl:'4대보험 자동',desc:'4대보험 자동 계산'},
-    {ico:'👨‍💼',ttl:'세무사 연동',desc:'월 급여 자료 자동 전달'},
   ],
 ];
 
@@ -636,15 +628,8 @@ var DW_DETAILS = {
     {ic:'⚡',ttl:'정산 확정 즉시 발행',desc:'정산 버튼 클릭 → 사업자별 세금계산서 자동 생성'},
     {ic:'📧',ttl:'이메일 자동 발송',desc:'거래처별 이메일 자동 발송 — 수동 전달 불필요'},
     {ic:'📁',ttl:'월별 자동 보관',desc:'발행 내역 월별 자동 분류·보관'},
-    {ic:'🔗',ttl:'세무사 자동 전달',desc:'더존 CSV 자동 생성 → 세무사 직접 전달'},
   ]},
-  '0-4':{ic:'👨‍💼',color:'rgba(16,185,129,.15)',ttl:'세무사 자동 연동',sub:'더존 CSV 자동 생성 · 90일 공유 링크',feats:[
-    {ic:'📊',ttl:'더존 CSV 자동 생성',desc:'매월 급여·정산 데이터 더존 형식 자동 변환'},
-    {ic:'🔗',ttl:'90일 공유 링크',desc:'세무사에게 링크 하나로 데이터 공유 — 이메일 불필요'},
-    {ic:'📱',ttl:'카카오로 전달',desc:'링크를 카카오로 전송 — 세무사 접근 즉시 가능'},
-    {ic:'🔄',ttl:'자동 업데이트',desc:'정산 수정 시 링크 데이터 자동 반영'},
-  ]},
-  '0-5':{ic:'🔗',color:'rgba(8,145,178,.15)',ttl:'FILO 출퇴근 연동',sub:'QR 출퇴근 → 급여 → 정산 원스톱 자동화',feats:[
+  '0-4':{ic:'🔗',color:'rgba(8,145,178,.15)',ttl:'FILO 출퇴근 연동',sub:'QR 출퇴근 → 급여 → 정산 원스톱 자동화',feats:[
     {ic:'📱',ttl:'QR 출퇴근 자동 기록',desc:'기사·직원 QR 스캔 → 출퇴근 자동 기록'},
     {ic:'💰',ttl:'근무 시간 → 급여 자동',desc:'출퇴근 기록 → 시급·수당 자동 계산'},
     {ic:'📊',ttl:'DONWAY 정산 통합',desc:'FILO 근태 데이터 → DONWAY 정산 자동 반영'},
@@ -676,7 +661,6 @@ var DW_DETAILS = {
   '1-4':{ic:'🧾',color:'rgba(139,92,246,.15)',ttl:'세금계산서',sub:'정산 확정 즉시 자동 발행',feats:[
     {ic:'⚡',ttl:'정산 확정 즉시 발행',desc:'정산 버튼 클릭 → 세금계산서 자동 생성'},
     {ic:'📧',ttl:'이메일 자동 발송',desc:'거래처별 이메일 자동 발송'},
-    {ic:'🔗',ttl:'세무사 자동 전달',desc:'더존 CSV 자동 생성 → 세무사 전달'},
   ]},
   '1-5':{ic:'🔗',color:'rgba(8,145,178,.15)',ttl:'DINE 배달 연동',sub:'자체 배달 주문 → 정산 자동 통합',feats:[
     {ic:'📱',ttl:'자체 배달앱 주문',desc:'DINE 자체 배달앱 주문 실시간 수신'},
@@ -697,12 +681,6 @@ var DW_PROBLEMS = {
     {ic:'🧾',ttl:'상세 명세서 자동 생성',desc:'공제·가산 내역 포함 — 계산 오류 문의 급감'},
     {ic:'✅',ttl:'수신 확인 실시간',desc:'누가 확인했는지 실시간 추적 · 미확인자 재발송'},
     {ic:'📞',ttl:'항의 전화 차단',desc:'명확한 명세서로 오류 문의 · 항의 전화 80% 감소'},
-  ]},
-  tax:{ic:'📋',color:'rgba(248,113,113,.15)',ttl:'세무사 자료 매달 수동 전달',sub:'자동 생성으로 매달 수작업 0',feats:[
-    {ic:'📊',ttl:'더존 CSV 자동 생성',desc:'매월 급여·정산 데이터 더존 형식 자동 변환'},
-    {ic:'🔗',ttl:'90일 공유 링크',desc:'세무사에게 링크 하나로 공유 — 이메일 불필요'},
-    {ic:'📱',ttl:'카카오로 전달',desc:'링크를 카카오로 전송 — 세무사 즉시 접근'},
-    {ic:'🔄',ttl:'자동 업데이트',desc:'정산 수정 시 링크 데이터 자동 반영'},
   ]},
 };
 
@@ -754,9 +732,9 @@ var _S4A_DETAILS = [
 ];
 var _S4B_DETAILS = [
   {ico:'⚡', ttl:'정산 → 세금계산서 자동', items:['정산 확정 버튼 클릭 즉시 발행','팝빌 API 자동 호출','사업자별 세금계산서 동시 발행','수백 명도 한 번에 처리','오류 발생 시 자동 알림']},
-  {ico:'🔄', ttl:'역발행 지원', items:['기사(수급인) → 대리점(위탁인) 역발행','건설·배달·택배 업종 표준 방식','기사가 국세청에 직접 제출 불필요','전자세금계산서 법적 효력 완전 보장','세무사 자료 원클릭 출력']},
+  {ico:'🔄', ttl:'역발행 지원', items:['기사(수급인) → 대리점(위탁인) 역발행','건설·배달·택배 업종 표준 방식','기사가 국세청에 직접 제출 불필요','전자세금계산서 법적 효력 완전 보장']},
   {ico:'🆔', ttl:'팝빌 자동 가입', items:['기사 최초 발행 시 자동 회원 가입','ID 중복 자동 확인 후 처리','공인인증서 등록 링크 자동 발송','기사가 별도 설치·가입 불필요','DONWAY 가입만으로 자동 연동']},
-  {ico:'📊', ttl:'발행 현황 대시보드', items:['발행완료·대기·취소 상태 실시간 조회','국세청 전송 여부 즉시 확인','미발행·오류 건 자동 감지·알림','기간별 발행 통계','세무사 공유용 리포트 출력']}
+  {ico:'📊', ttl:'발행 현황 대시보드', items:['발행완료·대기·취소 상태 실시간 조회','국세청 전송 여부 즉시 확인','미발행·오류 건 자동 감지·알림','기간별 발행 통계']}
 ];
 function _dwCardDetail(type, idx) {
   var d = type==='s4a' ? _S4A_DETAILS[idx] : _S4B_DETAILS[idx];
