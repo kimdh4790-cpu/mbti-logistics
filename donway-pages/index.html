@@ -7478,13 +7478,15 @@ function doLogin(){
     return;
   }
 
-  // ★ 로그인 실패 횟수 체크 (5회 잠금)
+  // ★ 로그인 실패 횟수 체크 (5회 잠금) — 슈퍼어드민 예외
   var _failKey='dw_login_fail_'+input;
   var _failData=JSON.parse(sessionStorage.getItem(_failKey)||'{"cnt":0,"until":0}');
-  if(_failData.until>Date.now()){
+  var _isSALogin=['kimdh4790@gmail.com','soungkyekim@naver.com'].indexOf(input)>=0;
+  if(!_isSALogin&&_failData.until>Date.now()){
     var _remain=Math.ceil((_failData.until-Date.now())/60000);
     err.textContent='로그인 시도 횟수 초과. '+_remain+'분 후 다시 시도하세요';err.style.display='block';return;
   }
+  if(_isSALogin)sessionStorage.removeItem(_failKey);
 
   var btn=document.querySelector('.login-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
