@@ -1345,6 +1345,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
           const _sc_cname = _cg('companyName')||'　　　　　　';
           const _sc_cbiz = _cg('companyBiz')||'';
           const customContractUrl = _cg('customContractUrl');
+          const _adminDocxHtml = _cg('docxHtml')||'';
           const _sc_caddr = _cg('companyAddr')||'';
           const _sc_ceo = _cg('companyCeo')||'';
           const _sc_pAmt = v => v ? Number(v).toLocaleString('ko-KR')+'원' : '　　원';
@@ -1403,9 +1404,12 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
               }
             } catch(_wtE) { _wtCustomHtml = null; }
           }
-          // 계약서 전문 HTML (위수탁)
+          // 계약서 전문 HTML
           let _fullContractHtml = '';
-          if (_cType === 'wisu' && _wtCustomHtml) {
+          if (_adminDocxHtml) {
+            // 관리자가 DOCX 업로드 후 직접 입력한 HTML — 바로 사용
+            _fullContractHtml = _adminDocxHtml;
+          } else if (_cType === 'wisu' && _wtCustomHtml) {
             _fullContractHtml = _wtCustomHtml;
           } else if (_cType === 'wisu') {
             _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2>
