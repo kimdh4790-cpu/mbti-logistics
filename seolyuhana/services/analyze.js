@@ -1092,6 +1092,34 @@ const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기
     "summary": ""
   },
   "urgentRedFlags": [],
+  "auctionRiskDetail": {
+    "_note": "경매개시결정 또는 강제경매 등기가 있을 때만 채워라. 없으면 null.",
+    "caseNumber": "경매 사건번호 (예: 2024타경12345)",
+    "applicantCreditor": "경매 신청 채권자명",
+    "applicantAmount": 0,
+    "auctionType": "임의경매|강제경매|공매",
+    "registeredDate": "경매개시결정 등기일",
+    "estimatedAuctionPrice": 0,
+    "estimatedBasis": "시세 추정 X원의 70~80% = 낙찰가 추정 Y원 (최저입찰가 N%, 법원 기준)",
+    "distributionPlan": [
+      {"rank": 1, "creditor": "1순위 권리자", "claimAmount": 0, "expectedRecovery": 0, "note": "근저당 → 은행 우선 배당"},
+      {"rank": 2, "creditor": "소액임차인 최우선변제 (해당 시)", "claimAmount": 0, "expectedRecovery": 0, "note": "지역별 최우선변제액 기준"},
+      {"rank": 3, "creditor": "임차인 (확정일자 기준 순위)", "claimAmount": 0, "expectedRecovery": 0, "note": "전입신고+확정일자 날짜 기준"}
+    ],
+    "tenantRecoveryAmount": 0,
+    "tenantRecoveryRatio": "",
+    "tenantLossAmount": 0,
+    "isPriorityTenant": false,
+    "isSmallAmountTenant": false,
+    "smallAmountProtectionLimit": "지역별 소액임차인 최우선변제액 (서울 5500만원, 수도권 4800만원 등)",
+    "urgentActions": [
+      "배당요구 신청: 법원 경매계에 배당요구 종기일 이전 반드시 신청 (미신청 시 배당 제외)",
+      "전입신고+확정일자 즉시 확인: 경매 신청일 이전 대항력 성립 여부 확인",
+      "임차권 등기 여부 확인: 등기부에 임차권 등기가 없으면 즉시 법원에 임차권 등기 명령 신청"
+    ],
+    "courtAuctionUrl": "https://www.courtauction.go.kr 에서 사건번호로 검색",
+    "tenantAdvice": "임차인이 지금 당장 해야 할 일을 시간순으로 4~6문장. 배당요구 종기일, 전입신고 대항력, 소액임차인 여부 판단 포함."
+  },
   "contractSpecialClauses": ["계약서 특약에 반드시 넣을 조항 (구체적 문구로)"],
   "riskSummary": {
     "level": "고위험|주의|안전",
