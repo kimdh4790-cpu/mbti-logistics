@@ -207,7 +207,8 @@ async function parsePdf(buffer, env) {
     };
   }
 
-  // 2차: Oracle pdftotext — FlateDecode 압축 포함, CIDFont HEX 폴백 내장
+  // 2차: Oracle pdftotext — 3초 제한 (CF Worker 30초 한도 내 처리 위해)
+  // Oracle이 3초 내 응답하면 CIDFont/FlateDecode 텍스트 획득, 아니면 즉시 폴백
   const oracleText = await tryOraclePdfText(buffer, env);
   if (oracleText && oracleText.text && oracleText.text.length > 50) {
     return {
@@ -218,21 +219,9 @@ async function parsePdf(buffer, env) {
     };
   }
 
-  // 3차: Oracle 이미지 변환 (스캔 PDF 또는 pdftotext 실패)
-  const oracleImages = await tryOraclePdfImages(buffer, env);
-  if (oracleImages && oracleImages.length > 0) {
-    return {
-      text: '',
-      pageCount: oracleImages.length,
-      method: 'pdf_oracle_images',
-      scanned: true,
-      images: oracleImages,
-      rawBuffer: buffer
-    };
-  }
-
-  // 4차: Claude PDF document 타입 직접 전송 (폴백)
-  return { text: '', pageCount: 1, method: 'pdf_vision', scanned: true, rawBuffer: buffer };
+  // 3차: Oracle 이미지 건너뜀 → Claude Vision으로 직접 폴백
+  // (Oracle 이미지 변환 15초 대기 제거 — 총 처리시간 30초 이내 유지)
+  return { text: '', pageCount: countPdfPages(buffer), method: 'pdf_vision', scanned: true, rawBuffer: buffer };
 }
 
 /**
@@ -266,7 +255,7 @@ async function tryOraclePdfText(buffer, env) {
     const oracleBase = env.ORACLE_CONVERTER_URL || 'https://oracle.mbtico.kr';
     const res = await _fetchT(`${oracleBase}/api/pdf-text`, {
       method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: buffer
-    }, 10000);
+    }, 3000);
     if (!res.ok) {
       console.error('[tryOraclePdfText] HTTP 오류:', res.status);
       return null;
