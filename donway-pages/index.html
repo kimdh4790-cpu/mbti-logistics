@@ -7721,6 +7721,11 @@ function _renderContractPage(){
   window._ctrTab=window._ctrTab||'write';
   window._ctrDriver=window._ctrDriver||null;
   var cid=_CU&&(_CU.dealerId||_CU.companyId);
+  if(_db&&cid&&!Object.keys(_routeCampMap||{}).length){
+    _db.collection('settings').doc(cid+'_routeCampMap').get().then(function(snap){
+      if(snap.exists)Object.assign(_routeCampMap,snap.data());
+    }).catch(function(){});
+  }
   if(_db&&cid&&!window._ctrCompany){
     if(window._cachedCompanyDoc){
       window._ctrCompany=window._cachedCompanyDoc;
