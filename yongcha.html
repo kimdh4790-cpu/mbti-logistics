@@ -2483,8 +2483,8 @@ function _pgPosts(el){
   el.innerHTML=
   '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
-      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 모집':'단건 요청')+'</h1>'+
-      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'임시 차용 가능 기사 목록 · 며칠~몇주 단위':'대리점이 올린 단건 배달 업무 공고예요')+'</p></div>'+
+      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'장기':'단기')+'</h1>'+
+      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'며칠~몇주 단위 임시 용차 · 기사 모집':'대리점이 올린 단건 배달 업무 공고예요')+'</p></div>'+
       '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_postsMainTab===\'yongcha\'?_loadDriverOfferList():_loadFilteredPosts()">↻</button>'+
     '</div>'+
   '</div>'+
@@ -2494,11 +2494,11 @@ function _pgPosts(el){
     '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\'route\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '단건 요청</button>'+
+      '단기</button>'+
     '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\'yongcha\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '용차 모집</button>'+
+      '장기</button>'+
     '<button type="button" id="pmtab-jobs" onclick="_pfSwitchMainTab(\'jobs\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
@@ -2638,8 +2638,8 @@ function _pfSwitchMainTab(tab){
   if(btnJ){btnJ.style.background='var(--bg2)';btnJ.style.color='var(--t2)';btnJ.style.borderColor='var(--bd)';}
   if(tab==='yongcha'){
     yongchaSec.style.display='block';
-    if(title)title.textContent='용차 모집';
-    if(sub)sub.textContent='임시 차용 가능 기사 목록 · 며칠~몇주 단위';
+    if(title)title.textContent='장기';
+    if(sub)sub.textContent='며칠~몇주 단위 임시 용차 · 기사 모집';
     if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
     _loadDriverOfferList();
   } else if(tab==='jobs'){
@@ -2651,7 +2651,7 @@ function _pfSwitchMainTab(tab){
     if(inner)_loadJobsSection(inner);
   } else {
     routeSec.style.display='block';
-    if(title)title.textContent='단건 요청';
+    if(title)title.textContent='단기';
     if(sub)sub.textContent='대리점이 올린 단건 배달 업무 공고예요';
     if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
     _loadFilteredPosts();
