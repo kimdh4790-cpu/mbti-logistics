@@ -1210,9 +1210,9 @@ export default {
         const _dlPreDays=_dg('preDepositDays')||'';
         const _dlRpJson=_dg('routePricesJson'); let _dlRps=[]; try{if(_dlRpJson)_dlRps=JSON.parse(_dlRpJson);}catch(e){}
         const _dlFeeRows=_dlRps.length?_dlRps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlPAmt(r.price)}</td></tr>`).join(''):`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlUnit?_dlPAmt(_dlUnit):'　　　원'}</td></tr>`;
-        // 1순위: 서명 완료 archiveUrl — inline=1 이면 항상 신규 생성 (구 archive는 조항 내용 없음)
+        // 1순위: 서명 완료 archiveUrl — inline=1 또는 routePricesJson 있으면 항상 신규 생성 (라우트별 단가 최신 반영)
         const _dlArchiveUrl = _dg('archiveUrl');
-        if (_dlArchiveUrl && !_dlInline) {
+        if (_dlArchiveUrl && !_dlInline && !_dlRpJson) {
           try {
             const _dlArRes = await fetch(_dlArchiveUrl);
             if (_dlArRes.ok) {
