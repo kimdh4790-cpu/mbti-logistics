@@ -7793,12 +7793,30 @@ function _wtRender(){
     +'<input type="file" id="wt-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_wtUpload(this)" style="display:none">'
     +'<label for="wt-file" id="wt-lbl" style="display:block;padding:20px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)">📁 DOCX 파일 선택<br><span style="font-size:11px">워드(.docx) 파일만 지원</span></label>'
     +'</div></div>'
-    +'<div id="wt-prev" style="display:none"><div class="card">'
-    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">🔍 빈칸 감지 결과</div>'
-    +'<div id="wt-fedit"></div>'
-    +'<button onclick="_wtSave()" style="width:100%;padding:12px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-top:10px">✅ 템플릿 저장</button>'
-    +'</div></div>';
+    +'<div id="wt-popup" style="display:none;position:fixed;z-index:9999;background:#fff;border:1.5px solid #8b5cf6;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);padding:12px;min-width:260px">'
+      +'<div style="font-size:11px;font-weight:700;color:#8b5cf6;margin-bottom:8px">📌 어떤 필드로 지정할까요?</div>'
+      +'<div id="wt-popup-btns" style="display:flex;flex-wrap:wrap;gap:5px"></div>'
+      +'<button onclick="_wtHidePopup()" style="margin-top:8px;width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);cursor:pointer;color:var(--text3)">취소</button>'
+    +'</div>'
+    +'<div id="wt-prev" style="display:none">'
+    +'<div class="card" style="margin-bottom:14px">'
+      +'<div style="font-size:13px;font-weight:800;margin-bottom:6px">📝 계약서 편집</div>'
+      +'<div style="font-size:11.5px;color:#6d28d9;background:#f5f3ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.6">'
+        +'💡 빈칸으로 만들 부분을 <b>마우스로 드래그해 선택</b>하면 필드를 지정할 수 있습니다'
+      +'</div>'
+      +'<div id="wt-doc" style="border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-size:12px;line-height:1.9;max-height:520px;overflow-y:auto;background:#fff;color:#111;user-select:text;cursor:text"></div>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:14px">'
+      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">배치된 필드 <span id="wt-fcnt" style="color:#8b5cf6;font-size:13px">0개</span></div>'
+      +'<div id="wt-fieldlist"><div style="font-size:11px;color:var(--text3);text-align:center;padding:12px">아직 배치된 필드가 없습니다</div></div>'
+    +'</div>'
+    +'<button onclick="_wtSave()" style="width:100%;padding:12px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">✅ 템플릿 저장</button>'
+    +'</div>';
   body.innerHTML=html;
+  document.addEventListener('mousedown',function(e){
+    var p=document.getElementById('wt-popup');
+    if(p&&p.style.display!=='none'&&!p.contains(e.target))_wtHidePopup();
+  });
 }
 
 async function _wtUpload(inp){
@@ -7809,30 +7827,96 @@ async function _wtUpload(inp){
     if(typeof mammoth==='undefined')throw new Error('mammoth.js 미로드');
     var buf=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
     var result=await mammoth.convertToHtml({arrayBuffer:buf});
-    var det=_wtDetectBlanks(result.value);
-    window._wtHtml=det.html;
-    window._wtFields=det.fields;
-    var prev=document.getElementById('wt-prev');
-    var fedit=document.getElementById('wt-fedit');
-    if(prev)prev.style.display='block';
-    if(fedit){
-      if(!det.fields.length){
-        fedit.innerHTML='<div style="background:#fef3c7;border-radius:8px;padding:12px;font-size:12px;color:#92400e">⚠️ 빈칸이 감지되지 않았습니다.<br>DOCX 빈칸 자리에 <b>___</b>(밑줄 3개+) 또는 <b>　　</b>(전각공백 2개+)을 사용해 주세요.</div>';
-      } else {
-        var fh='<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+det.fields.length+'개 빈칸 감지 — 라벨을 확인·수정하세요</div>';
-        det.fields.forEach(function(f,i){
-          fh+='<div style="margin-bottom:8px;padding:10px;background:var(--bg2);border-radius:8px">'
-            +'<div style="font-size:10px;color:var(--text3);margin-bottom:4px">빈칸'+(i+1)+' 주변: <i>'+esc(f.hint)+'</i></div>'
-            +'<input type="text" id="wt-fl-'+i+'" value="'+esc(f.label)+'" placeholder="예: 기사명, 계약시작일..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);box-sizing:border-box">'
-            +'</div>';
-        });
-        fedit.innerHTML=fh;
-      }
+    window._wtFields=[];
+    window._wtFieldIdx=0;
+    var doc=document.getElementById('wt-doc');
+    if(doc){
+      doc.innerHTML=result.value;
+      doc.removeEventListener('mouseup',_wtDocMouseUp);
+      doc.addEventListener('mouseup',_wtDocMouseUp);
     }
-    if(lbl)lbl.innerHTML='✅ '+file.name+' 변환 완료';
+    _wtUpdateFieldList();
+    var prev=document.getElementById('wt-prev');
+    if(prev)prev.style.display='block';
+    if(lbl)lbl.innerHTML='✅ '+file.name+' 변환 완료 — 아래 계약서에서 빈칸 부분을 드래그해 선택하세요';
   }catch(e){
     if(lbl)lbl.innerHTML='❌ 실패: '+(e.message||e);
   }
+}
+
+var _WT_PRESET=['기사명','차량번호','계약시작일','계약종료일','담당구역','주소','자격증번호','사업자번호','전화번호','대리점명','배송단가','집화단가','분류수수료'];
+
+function _wtDocMouseUp(e){
+  var sel=window.getSelection();
+  if(!sel||sel.toString().trim().length===0){return;}
+  var doc=document.getElementById('wt-doc');
+  if(!doc||!doc.contains(sel.anchorNode))return;
+  window._wtSavedRange=sel.getRangeAt(0).cloneRange();
+  _wtShowPopup(e.clientX,e.clientY);
+}
+
+function _wtShowPopup(x,y){
+  var p=document.getElementById('wt-popup');if(!p)return;
+  var btns=document.getElementById('wt-popup-btns');
+  if(btns){
+    btns.innerHTML=_WT_PRESET.map(function(f){
+      return '<button onclick="_wtPickField(\''+f+'\')" style="padding:5px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+f+'</button>';
+    }).join('')
+    +'<button onclick="_wtPickCustom()" style="padding:5px 10px;background:var(--bg2);border:1px solid #8b5cf6;border-radius:6px;font-size:11px;cursor:pointer;color:#8b5cf6;font-weight:700">기타 직접입력</button>';
+  }
+  var vw=window.innerWidth,vh=window.innerHeight;
+  p.style.left=Math.min(x,vw-280)+'px';
+  p.style.top=Math.min(y+8,vh-220)+'px';
+  p.style.display='block';
+}
+
+function _wtHidePopup(){
+  var p=document.getElementById('wt-popup');if(p)p.style.display='none';
+}
+
+function _wtPickField(name){
+  _wtHidePopup();
+  var range=window._wtSavedRange;if(!range)return;
+  var idx=++(window._wtFieldIdx||0);window._wtFieldIdx=idx;
+  var span=document.createElement('span');
+  span.className='wt-blank';
+  span.setAttribute('data-id','BLANK_'+idx);
+  span.setAttribute('data-field',name);
+  span.style.cssText='display:inline-block;background:#8b5cf6;color:#fff;padding:1px 10px;border-radius:6px;font-size:11px;font-weight:700;margin:0 2px;white-space:nowrap;cursor:default';
+  span.innerHTML=name+'<span onclick="_wtRemoveField('+idx+')" style="opacity:.7;font-size:10px;cursor:pointer;margin-left:4px">✕</span>';
+  try{range.deleteContents();range.insertNode(span);window.getSelection().removeAllRanges();}catch(er){}
+  if(!window._wtFields)window._wtFields=[];
+  window._wtFields.push({id:idx,label:name,hint:name});
+  _wtUpdateFieldList();
+}
+
+function _wtPickCustom(){
+  _wtHidePopup();
+  var name=(prompt('필드 이름을 입력하세요\n예: 기사명, 차량번호, 계약시작일 ...')||'').trim();
+  if(!name)return;
+  _wtPickField(name);
+}
+
+function _wtRemoveField(id){
+  var doc=document.getElementById('wt-doc');
+  if(doc){var s=doc.querySelector('[data-id="BLANK_'+id+'"]');if(s)s.parentNode.removeChild(s);}
+  if(window._wtFields)window._wtFields=window._wtFields.filter(function(f){return f.id!==id;});
+  _wtUpdateFieldList();
+}
+
+function _wtUpdateFieldList(){
+  var cnt=document.getElementById('wt-fcnt');
+  var list=document.getElementById('wt-fieldlist');
+  var fields=window._wtFields||[];
+  if(cnt)cnt.textContent=fields.length+'개';
+  if(!list)return;
+  if(!fields.length){list.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px">아직 배치된 필드가 없습니다</div>';return;}
+  list.innerHTML=fields.map(function(f){
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f5f3ff;border-radius:6px;margin-bottom:4px">'
+      +'<span style="font-size:12px;font-weight:700;color:#6d28d9">'+esc(f.label)+'</span>'
+      +'<button onclick="_wtRemoveField('+f.id+')" style="padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;color:var(--text3)">삭제</button>'
+      +'</div>';
+  }).join('');
 }
 
 function _wtDetectBlanks(html){
@@ -7928,12 +8012,12 @@ function _wtSuggestLabel(before,after){
 async function _wtSave(){
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(!_db||!cid){toast('❌ 로그인 필요');return;}
-  if(!window._wtHtml){toast('❌ 파일을 먼저 업로드하세요');return;}
-  var fields=(window._wtFields||[]).map(function(f,i){
-    var inp=document.getElementById('wt-fl-'+i);
-    return {id:f.id,hint:f.hint,label:inp?inp.value.trim():f.label};
-  });
-  var tpl={html:window._wtHtml,fields:fields,updatedAt:new Date().toISOString()};
+  var doc=document.getElementById('wt-doc');
+  var html=doc&&doc.innerHTML;
+  if(!html){toast('❌ 파일을 먼저 업로드하세요');return;}
+  var fields=window._wtFields||[];
+  if(!fields.length){toast('⚠️ 필드를 1개 이상 배치한 후 저장하세요');return;}
+  var tpl={html:html,fields:fields,updatedAt:new Date().toISOString()};
   try{
     await _db.collection('wisu_templates').doc(cid).set(tpl);
     await _db.collection('companies').doc(cid).set({wisuTemplate:{fields:fields,updatedAt:tpl.updatedAt}},{merge:true});
