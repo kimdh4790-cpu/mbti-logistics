@@ -1171,7 +1171,7 @@ export default {
           if (!_pfFile.ok) return new Response('파일 로드 실패',{status:502});
           const _pfCt = _pfFile.headers.get('Content-Type')||'application/octet-stream';
           const _pfBody = await _pfFile.arrayBuffer();
-          return new Response(_pfBody, {headers:{'Content-Type':_pfCt,'Cache-Control':'private, max-age=3600','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET'}});
+          return new Response(_pfBody, {headers:{'Content-Type':_pfCt,'Cache-Control':'private, max-age=3600','Access-Control-Allow-Origin':'https://donway.ai.kr','Access-Control-Allow-Methods':'GET','Vary':'Origin'}});
         } catch(_pfe) {return new Response('프록시 오류',{status:502});}
       }
       // /contract/download/{token} → 서명 완료 계약서 HTML 파일 다운로드
