@@ -8435,6 +8435,7 @@ function _ctrGenHTML(data){
       +(function(){
         var rps=[];
         try{if(data.routePricesJson)rps=JSON.parse(data.routePricesJson);}catch(e){}
+        if(rps.length){var _rx=[];rps.forEach(function(r){var rts=(r.route||'').split(/\s*,\s*/).filter(Boolean);if(rts.length>1){rts.forEach(function(rt){_rx.push({route:rt,price:r.price});});}else{_rx.push(r);}});rps=_rx;}
         var rowspan=2+rps.length+(rps.length>1?rps.length-1:0);
         // 집화+배송(노선별)+지급일
         var feeRows='<tr><td style="border:1px solid #999;padding:6px 8px;background:#f5f5f5;font-weight:700" rowspan="'+(1+Math.max(rps.length,1)+1)+'">수수료</td><td style="border:1px solid #999;padding:6px 8px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:6px 8px" colspan="2">1건당 '+(data.collectPrice?pAmt(data.collectPrice):'0원')+'<br><span style="font-size:11px;color:#666">또는 택배사업자–영업점 간 수수료 기준 금액의 　　　　%</span></td></tr>';
