@@ -7837,6 +7837,9 @@ async function _wtUpload(inp){
 
 function _wtDetectBlanks(html){
   var fields=[];var idx=0;
+  var SPAN=function(n){return '<span class="wt-blank" data-id="BLANK_'+n+'" style="display:inline-block;min-width:80px;border-bottom:1.5px solid #111;margin:0 2px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';};
+
+  // 1. 밑줄 패턴 (___/ 　)
   var processed=html.replace(/_{3,}|　{2,}/g,function(match,offset,str){
     idx++;
     var rawBefore=str.slice(Math.max(0,offset-60),offset);
@@ -7846,9 +7849,49 @@ function _wtDetectBlanks(html){
     var hint=(before?'...'+before:'')+'[빈칸]'+(after?after+'...':'');
     var label=_wtSuggestLabel(before,after);
     fields.push({id:idx,hint:hint.slice(0,80),label:label});
-    return '<span class="wt-blank" data-id="BLANK_'+idx+'" style="display:inline-block;min-width:80px;border-bottom:1.5px solid #111;margin:0 2px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
+    return SPAN(idx);
   });
+
+  // 2. 날짜 공백 패턴: "년   월   일" (3개 이상 공백이 빈칸)
+  processed=processed.replace(/년(\s{3,}| {3,})월(\s{3,}| {3,})일/g,function(match,s1,s2,offset,str){
+    idx++;
+    var ctxBefore=str.slice(Math.max(0,offset-150),offset).replace(/<[^>]+>/g,'');
+    var ctxAfter=str.slice(offset+match.length,Math.min(str.length,offset+match.length+50)).replace(/<[^>]+>/g,'');
+    var label='날짜';
+    if(/계약|기간/.test(ctxBefore)){
+      if(/부터/.test(ctxAfter)||!/까지/.test(ctxBefore.slice(-30)))label='계약시작일';
+      else label='계약종료일';
+    }
+    fields.push({id:idx,hint:'[날짜공백] '+label,label:label});
+    return SPAN(idx)+'년 &nbsp;&nbsp;월 &nbsp;&nbsp;일';
+  });
+
+  // 3. 콜론 빈칸 패턴: "필드명:" 뒤에 값이 없고 태그가 닫히는 경우
+  processed=processed.replace(/([가-힣a-zA-Z\s\(\)·‧\.]+):\s*(<\/(?:td|th|p|li|div|span)>)/g,function(match,raw_label,close_tag,offset,str){
+    var label_clean=raw_label.replace(/<[^>]+>/g,'').trim();
+    if(label_clean.length<2||label_clean.length>25)return match;
+    // 이미 앞에서 BLANK_span으로 처리된 경우 제외
+    if(/data-id="BLANK_/.test(str.slice(Math.max(0,offset-50),offset+20)))return match;
+    idx++;
+    var suggested=_wtSuggestColonLabel(label_clean);
+    fields.push({id:idx,hint:'[콜론빈칸] '+label_clean+':',label:suggested});
+    return raw_label+':<span class="wt-blank" data-id="BLANK_'+idx+'" style="display:inline-block;min-width:120px;border-bottom:1.5px solid #111;margin:0 4px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'+close_tag;
+  });
+
   return {html:processed,fields:fields};
+}
+
+function _wtSuggestColonLabel(label){
+  if(/자동차.*등록|차량.*등록|차번/.test(label))return '차량번호';
+  if(/종사자격|자격증/.test(label))return '자격증번호';
+  if(/수탁자.*주소|주 소|주소/.test(label))return '주소';
+  if(/수탁자.*성명|성\s*명/.test(label))return '기사명';
+  if(/사업자.*등록|사업자번호/.test(label))return '사업자번호';
+  if(/주민등록|주민번호/.test(label))return '주민등록번호';
+  if(/전화|연락처/.test(label))return '전화번호';
+  if(/상\s*호|회사명|대리점/.test(label))return '대리점명';
+  if(/대표자|성명/.test(label))return '대표자명';
+  return '';
 }
 
 function _wtSuggestLabel(before,after){
