@@ -148,6 +148,29 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-19)
+
+### 등기부 분析 "분析 中..." 무한 대기 — REGISTRY_SYSTEM 과부하 제거
+
+- **증상**: 인터넷등기소 RIS PDF 업로드 후 "분析 中..." 버튼이 무한 대기. 4분 후 프론트 타임아웃. 다음날도 동일.
+- **근본 원인**: CF Workers `waitUntil` 컨텍스트가 ~30초(Bundled 플랜 wall-clock 한도) 후 강제 종료. Claude Sonnet이 192줄짜리 `REGISTRY_SYSTEM` 스키마(~3,000 input token + 6,500 output token)를 생성하는 데 45~90초 소요. JS 예외 없이 컨텍스트가 죽으므로 `catch` 블록 미실행 → status='failed' 미기록 → 프론트엔드 영원히 대기.
+- **수정** (커밋 이번 세션):
+  1. `seolyuhana/services/analyze.js` `REGISTRY_SYSTEM` 192줄 → ~65줄로 축소 (~65% 절감):
+     - 전세사기 통계 서문 전체 제거 (Claude가 이미 알고 있는 정보)
+     - `mortgageTimeline` 섹션 제거 (encumbrances 중복)
+     - `lienHistory` 별도 섹션 제거 (encumbrances 통합)
+     - `lenderPattern` 축소 → `repeatLenderRisk` 단일 문자열
+     - `ownershipHistory` 필드 수 6→4로 감소
+     - `safetyMargin` 하위 3필드 → `safetyMarginAmount` 단일 값
+     - `fraudCheckpoints` 하위 필드 5→3으로 감소
+  2. `maxTokens` 6500 → 4000 (scanned path), 5500 → 3500 (text path)
+  3. `analyzeRegistry` 사용자 프롬프트 9줄 → 1줄로 압축 (스키마 자체가 안내 역할)
+  4. `parser.js` Oracle pdftotext 타임아웃 3s → 6s (스키마 축소로 확보된 시간으로 Oracle 성공률 향상)
+- **예상 효과**: Claude 응답시간 45-90s → 10-20s. CF Workers 30s 한도 내 완료 가능.
+- **파일**: `seolyuhana/services/analyze.js`, `seolyuhana/utils/parser.js`
+
+---
+
 ## 장애 이력 및 해결 (2026-09-12~13)
 
 ### Claude API 연결 오류 — 완전 해결
