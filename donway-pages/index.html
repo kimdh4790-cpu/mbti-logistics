@@ -8707,6 +8707,9 @@ async function _ctrDocxLoad(inp){
         +html
         +'</div>';
     }
+    window._ctrDocxOrigHtml=html;
+    window._ctrDocxFileName=file.name;
+    window._ctrDocxBlankCount=blankCount;
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
   }catch(e){
     if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
@@ -9039,6 +9042,16 @@ async function _ctrSave(){
     }));
     toast('✅ 저장 완료');
     window._adminSigPad=null;
+    // DOCX 원본 템플릿으로 리셋 (파일은 유지, 빈칸만 초기화)
+    if(window._ctrDocxOrigHtml){
+      var _dc=document.getElementById('ctr-docx-content');
+      if(_dc)_dc.innerHTML=window._ctrDocxOrigHtml;
+      var _ds=document.getElementById('ctr-docx-status');
+      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 빈칸 '+(window._ctrDocxBlankCount||0)+'개 · 다음 기사 정보 입력 후 저장하세요</span>';
+    }
+    // 기사 선택 및 정보 필드 초기화
+    ['ctr-drv-sel','ctr-name','ctr-phone','ctr-biznum','ctr-idnum','ctr-addr'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+    window._ctrDriver=null;
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
     // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송
     if(adminSig&&data.driverPhone){
