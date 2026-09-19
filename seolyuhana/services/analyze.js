@@ -1022,28 +1022,35 @@ function getScannedPrompt(serviceId, ctx) {
 // ────────────────────────────────────────────────────────────
 const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기부등본을 분석하여 아래 JSON만 출력. 마크다운 없이 순수 JSON.
 
-★ 말소된 권리(말소됨, 취소선)는 totalActiveMortgageDebt/totalActiveDebt 합계에서 절대 제외. 유효 항목만 합산.
+★ 말소된 권리(말소됨, 취소선)는 합계에서 절대 제외. 유효 항목만 합산.
 ★ 전세가율 = 보증금 ÷ 시세. 80%↑ 고위험. (유효선순위채무+보증금) > 시세 → 깡통전세.
+★ fraudCheckpoints는 아래 10가지 항목을 빠짐없이 검토. 근거가 없으면 "해당없음/확인불가"로.
 
 출력 스키마:
 {
-  "property": {"address":"","type":"","area":"","buildYear":""},
+  "property": {"address":"","type":"아파트|빌라|다가구|다세대|오피스텔|단독주택","area":"","buildYear":"","floors":"층수"},
   "ownership": {
-    "owner": "현재 소유자",
+    "owner": "현재 소유자명",
+    "ownerType": "개인|법인|신탁",
     "acquiredDate": "취득일",
     "holdingPeriod": "보유기간",
     "acquisitionType": "매매|상속|증여|신탁",
+    "isCorporate": false,
+    "isTrust": false,
+    "recentTransferCount": 0,
     "ownershipHistory": [{"rank":"","event":"","date":"","owner":"","status":"유효|말소됨"}],
     "alerts": "신탁등기·법인·6개월내소유권변동 등 경고 (없으면 빈문자열)"
   },
   "encumbrances": [
-    {"rank":"","type":"근저당|전세권|가압류|경매개시 등","amount":0,"creditor":"","date":"","cancelDate":"","status":"유효|말소됨"}
+    {"rank":"","type":"근저당|전세권|가압류|경매개시|가처분|임차권 등","amount":0,"creditor":"","date":"","cancelDate":"","status":"유효|말소됨"}
   ],
   "mortgageAnalysis": {
     "totalActiveMortgageDebt": 0,
-    "activeMortgages": [{"rank":"","creditor":"","amount":0,"date":""}],
+    "activeMortgages": [{"rank":"","creditor":"","amount":0,"date":"","loanRatio":"채권최고액/시세 추정 비율"}],
     "cancelledMortgages": [{"rank":"","creditor":"","amount":0,"setDate":"","cancelDate":""}],
-    "repeatLenderRisk": "동일 금융기관 반복 설정·해지 여부 및 횟수 (없으면 빈문자열)"
+    "repeatLenderRisk": "동일 금융기관 반복 설정·해지 여부 및 횟수 (없으면 빈문자열)",
+    "hasAuction": false,
+    "hasGaChobun": false
   },
   "jeonseRiskAnalysis": {
     "riskScore": 0,
@@ -1055,25 +1062,37 @@ const REGISTRY_SYSTEM = `부동산 등기·전세사기 예방 전문 AI. 등기
     "safetyMarginAmount": 0,
     "safetyVerdict": "안전|주의|위험",
     "fraudCheckpoints": [
-      {"checkpoint":"","status":"위험|주의|안전","detail":"","action":""}
+      {"id":"trust","name":"신탁등기 여부","status":"위험|주의|안전|해당없음","detail":"신탁원부 확인 필요 여부 및 수탁자명","action":""},
+      {"id":"corp","name":"법인 임대인","status":"위험|주의|안전|해당없음","detail":"법인명·설립일·부도 위험 여부","action":""},
+      {"id":"kkangtong","name":"깡통전세 위험","status":"위험|주의|안전|해당없음","detail":"선순위채권+보증금 vs 시세 계산 근거","action":""},
+      {"id":"auction","name":"경매·가처분 등기","status":"위험|주의|안전|해당없음","detail":"경매개시결정·처분금지 가처분 존재 여부","action":""},
+      {"id":"transfer","name":"단기 소유권 변동","status":"위험|주의|안전|해당없음","detail":"최근 1년 내 소유권 이전 횟수와 날짜","action":""},
+      {"id":"multiunit","name":"다가구/다세대 선순위 임차인","status":"위험|주의|안전|해당없음","detail":"임차권 등기 여부, 다가구 특성상 선순위 세입자 파악 불가 경고","action":""},
+      {"id":"mortgage_ratio","name":"근저당 채권최고액 비율","status":"위험|주의|안전|해당없음","detail":"채권최고액 합계가 시세 추정액 대비 몇 %인지","action":""},
+      {"id":"lender_pattern","name":"대출 반복 패턴","status":"위험|주의|안전|해당없음","detail":"동일 금융사 반복 설정·해지 또는 단기 대출 교체 여부","action":""},
+      {"id":"building_land","name":"건물·토지 소유자 일치","status":"위험|주의|안전|해당없음","detail":"건물과 토지 소유자 동일 여부 (법정지상권 위험)","action":""},
+      {"id":"old_building","name":"노후 건물 재건축 위험","status":"위험|주의|안전|해당없음","detail":"준공일 기준 경과연수, 30년 이상 시 재건축 가능성","action":""}
     ],
-    "hugEligibility": "",
+    "hugEligibility": "HUG 전세보증보험 가입 가능 여부 판단 (채권최고액 기준, 불가 시 이유)",
     "trustRegistryNeeded": false,
-    "safetyVerification": [""]
+    "safetyVerification": ["잔금 당일 등기부 재열람","전입신고+확정일자 당일 처리"]
   },
   "badLandlordCheck": {
     "score": 0,
     "verdict": "정상|주의|고위험",
+    "flags": [{"pattern":"","detected":false,"detail":""}],
     "summary": ""
   },
+  "urgentRedFlags": [],
+  "contractSpecialClauses": ["계약서 특약에 반드시 넣을 조항 (구체적 문구로)"],
   "riskSummary": {
     "level": "고위험|주의|안전",
     "score": 0,
     "totalActiveDebt": 0,
-    "keyRisks": [""],
+    "keyRisks": [],
     "summary": ""
   },
-  "recommendations": [""],
+  "recommendations": [],
   "beginnerNote": "이 집의 빚 현황과 전세 계약 가능 여부를 초보자도 이해하도록 5문장 이내로 설명."
 }
 `
