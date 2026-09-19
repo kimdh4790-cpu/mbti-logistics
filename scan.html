@@ -3868,24 +3868,56 @@ function renderResult(data, downloadUrls) {
   // 7. 등기부 / 전세사기 분석 — 위험 게이지
   // ══════════════════════════════════════════════
   if (data.property || data.jeonseRiskAnalysis || data.riskSummary) {
+    // ── 긴급 경보 배너 (urgentRedFlags 있을 시 최상단 표시)
+    const urgentFlags = (data.urgentRedFlags||[]).filter(f=>f&&f.trim());
+    if (urgentFlags.length) {
+      html += `<div style="background:#7f1d1d;border:2px solid #ef4444;border-radius:12px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:800;color:#fca5a5;margin-bottom:8px">🚨 계약 즉시 중단 — 긴급 위험 발견</div>
+        ${urgentFlags.map(f=>`<div style="font-size:13px;color:#fecaca;margin-bottom:4px;padding-left:10px;border-left:3px solid #ef4444">⛔ ${f}</div>`).join('')}
+        <div style="font-size:11px;color:#f87171;margin-top:8px">위 사항 해소 전 계약금·잔금 절대 지급 금지</div>
+      </div>`;
+    }
+
     if (data.property) {
       const p = data.property;
+      const buildYearNum = parseInt(p.buildYear);
+      const age = buildYearNum ? (new Date().getFullYear() - buildYearNum) : null;
+      const ageWarn = age && age >= 30 ? `<span style="color:#f59e0b;font-size:11px;margin-left:6px">⚠️ ${age}년 경과 — 재건축 위험</span>` : '';
       html += `<div class="rpt-section"><div class="rpt-section-label">🏠 부동산 정보</div>
         <div class="rpt-info-grid">
-          ${p.address ? `<div class="rpt-info-item"><div class="rpt-info-label">주소</div><div class="rpt-info-val">${p.address}</div></div>` : ''}
+          ${p.address ? `<div class="rpt-info-item" style="grid-column:1/-1"><div class="rpt-info-label">주소</div><div class="rpt-info-val">${p.address}</div></div>` : ''}
           ${p.type ? `<div class="rpt-info-item"><div class="rpt-info-label">유형</div><div class="rpt-info-val">${p.type}</div></div>` : ''}
           ${p.area ? `<div class="rpt-info-item"><div class="rpt-info-label">면적</div><div class="rpt-info-val">${p.area}</div></div>` : ''}
-          ${p.buildYear ? `<div class="rpt-info-item"><div class="rpt-info-label">건축연도</div><div class="rpt-info-val">${p.buildYear}</div></div>` : ''}
+          ${p.buildYear ? `<div class="rpt-info-item"><div class="rpt-info-label">건축연도</div><div class="rpt-info-val">${p.buildYear}${ageWarn}</div></div>` : ''}
+          ${p.floors ? `<div class="rpt-info-item"><div class="rpt-info-label">층수</div><div class="rpt-info-val">${p.floors}</div></div>` : ''}
         </div>
+        ${(p.type==='다가구'||p.type==='다세대') ? `<div class="rpt-reason-box" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.4);color:#92400e;margin-top:8px">⚠️ <strong>다가구/다세대 주의</strong>: 선순위 임차인이 있을 수 있어 경매 시 배당 순서에서 밀릴 수 있습니다. 임대인에게 선순위 임차인 확정일자 현황 서면 확인 필수.</div>` : ''}
       </div>`;
+    }
+    if (data.ownership && (data.ownership.isCorporate || data.ownership.isTrust)) {
+      const ow = data.ownership;
+      if (ow.isTrust) {
+        html += `<div style="background:#1e1b4b;border:2px solid #7c3aed;border-radius:10px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:800;color:#c4b5fd">⛔ 신탁등기 감지 — 반드시 확인 필요</div>
+          <div style="font-size:12px;color:#ddd6fe;margin-top:6px;line-height:1.6">신탁 물건은 수탁자(신탁사)가 실소유권을 가집니다. 위탁자(임대인)가 신탁사 동의 없이 체결한 전세계약은 <strong>무효</strong>가 될 수 있습니다.<br>→ 신탁원부 발급(인터넷등기소) 후 신탁사 임대 동의 서면 확인 필수</div>
+        </div>`;
+      }
+      if (ow.isCorporate) {
+        html += `<div style="background:rgba(239,68,68,.08);border:2px solid rgba(239,68,68,.4);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:800;color:#ef4444">⚠️ 법인 임대인 — 고위험</div>
+          <div style="font-size:12px;color:#fca5a5;margin-top:4px;line-height:1.6">법인이 부도·청산되면 임차인 보증금보다 법인세·부가세 등 세금이 먼저 배당됩니다.<br>→ 법인 등기부 확인, 재무상태 확인, HUG 전세보증보험 가입 필수</div>
+        </div>`;
+      }
     }
     if (data.jeonseRiskAnalysis) {
       const jr = data.jeonseRiskAnalysis;
       const riskScore = jr.riskScore || (jr.kkangtongAlert ? 85 : 40);
       const riskColor = riskScore >= 70 ? '#ef4444' : riskScore >= 40 ? '#f59e0b' : '#10b981';
       const riskLabel = riskScore >= 70 ? '고위험' : riskScore >= 40 ? '주의' : '안전';
+      const checkpointStatusOrder = {'위험':0,'주의':1,'안전':2,'해당없음':3};
+      const sortedCPs = (jr.fraudCheckpoints||[]).filter(cp=>cp.name||cp.checkpoint).sort((a,b)=>(checkpointStatusOrder[a.status]??4)-(checkpointStatusOrder[b.status]??4));
       html += `<div class="rpt-section">
-        <div class="rpt-section-label">⚠️ 전세사기 위험 분석</div>
+        <div class="rpt-section-label">⚠️ 전세사기 10대 체크포인트</div>
         <div class="rpt-risk-gauge-wrap">
           <div class="rpt-risk-meter">
             <div class="rpt-risk-track">
@@ -3898,23 +3930,26 @@ function renderResult(data, downloadUrls) {
             <div class="rpt-risk-lv">${riskLabel}</div>
           </div>
         </div>
-        ${jr.fraudCheckpoints?.length ? `
+        ${sortedCPs.length ? `
           <div class="rpt-checkpoint-list">
-            ${jr.fraudCheckpoints.map(cp=>{
+            ${sortedCPs.map(cp=>{
               const s = cp.status||'';
-              const col = s==='위험'?'#ef4444':s==='주의'?'#f59e0b':'#10b981';
-              const icon = s==='위험'?'🔴':s==='주의'?'🟡':'🟢';
-              return `<div class="rpt-checkpoint">
+              const col = s==='위험'?'#ef4444':s==='주의'?'#f59e0b':s==='안전'?'#10b981':'#64748b';
+              const icon = s==='위험'?'🔴':s==='주의'?'🟡':s==='안전'?'🟢':'⚪';
+              const name = cp.name || cp.checkpoint || '';
+              return `<div class="rpt-checkpoint" style="${s==='위험'?'background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.25)':''}">
                 <div class="rpt-cp-icon">${icon}</div>
                 <div class="rpt-cp-content">
-                  <div class="rpt-cp-title">${cp.checkpoint}</div>
+                  <div class="rpt-cp-title" style="${s==='위험'?'color:#ef4444;font-weight:700':''}">${name}</div>
                   <div class="rpt-cp-detail">${cp.detail||''}</div>
+                  ${cp.action&&s!=='해당없음'&&s!=='안전' ? `<div style="font-size:11px;color:#c084fc;margin-top:3px">→ ${cp.action}</div>` : ''}
                 </div>
                 <div class="rpt-cp-badge" style="color:${col};background:${col}15;border:1px solid ${col}30">${s}</div>
               </div>`;
             }).join('')}
           </div>` : ''}
-        ${jr.kkangtongReason ? `<div class="rpt-reason-box" style="border-color:#ef444440;background:#ef444410">🚨 ${jr.kkangtongReason}</div>` : ''}
+        ${jr.kkangtongReason ? `<div class="rpt-reason-box" style="border-color:#ef444440;background:#ef444410;color:#fca5a5">🚨 <strong>깡통전세 경보:</strong> ${jr.kkangtongReason}</div>` : ''}
+        ${jr.hugEligibility ? `<div class="rpt-reason-box" style="margin-top:8px">${jr.hugEligibility.includes('불가')||jr.hugEligibility.includes('어려')? '⛔':'✅'} <strong>HUG 전세보증보험:</strong> ${jr.hugEligibility}</div>` : ''}
       </div>`;
     }
     if (data.encumbrances?.length) {
@@ -4080,6 +4115,23 @@ function renderResult(data, downloadUrls) {
       html += `</div>`;
     }
   }
+
+  // 계약서 특약 조항 자동 생성
+  if (svcType === 'registry_analysis' && data.contractSpecialClauses) {
+    const clauses = (data.contractSpecialClauses||[]).filter(c=>c&&c.trim());
+    if (clauses.length) {
+      const clauseText = clauses.map((c,i)=>`${i+1}. ${c}`).join('\n');
+      html += `<div class="rpt-section">
+        <div class="rpt-section-label">📝 계약서 특약 조항 (자동 생성)</div>
+        <div style="background:rgba(201,168,76,.08);border:1.5px solid rgba(201,168,76,.3);border-radius:10px;padding:12px 14px">
+          <div style="font-size:11px;color:var(--gold,#c9a84c);font-weight:700;margin-bottom:8px">아래 조항을 계약서 특약란에 직접 기재하세요</div>
+          ${clauses.map((c,i)=>`<div style="font-size:12px;color:var(--text-secondary);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06);line-height:1.6"><span style="font-weight:700;color:var(--gold,#c9a84c);margin-right:6px">${i+1}.</span>${c}</div>`).join('')}
+          <button onclick="navigator.clipboard.writeText(clauseText).then(()=>_slyToast('📋 복사 완료'))" style="margin-top:10px;width:100%;padding:9px;background:var(--gold,#c9a84c);color:#08101f;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📋 전체 복사</button>
+        </div>
+      </div>`;
+    }
+  }
+
 
   // ══════════════════════════════════════════════
   // 8. 경매 분석
