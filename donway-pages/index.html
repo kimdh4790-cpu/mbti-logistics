@@ -269,26 +269,29 @@ _checkSlugDuplicate(this.value);
           </select>
         </div>
         <div class="fg">
-          <label>소속 회사 *</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-            <label id="ind-coupang" onclick="_setIndustry('coupang')" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:rgba(0,200,248,.1);border:2px solid var(--brand);border-radius:8px;padding:8px 10px;font-weight:600;color:var(--brand)">
-              <input type="radio" name="r-industry-radio" value="coupang" checked style="accent-color:var(--brand)"> 🟡 쿠팡
-            </label>
-            <label id="ind-cj" onclick="_setIndustry('cj')" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:transparent;border:2px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2)">
-              <input type="radio" name="r-industry-radio" value="cj" style="accent-color:var(--brand)"> 🔴 CJ대한통운
-            </label>
-            <label id="ind-lotte" onclick="_setIndustry('lotte')" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:transparent;border:2px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2)">
-              <input type="radio" name="r-industry-radio" value="lotte" style="accent-color:var(--brand)"> 🔵 롯데글로벌
-            </label>
-            <label id="ind-hanjin" onclick="_setIndustry('hanjin')" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:transparent;border:2px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2)">
-              <input type="radio" name="r-industry-radio" value="hanjin" style="accent-color:var(--brand)"> 🟠 한진택배
-            </label>
-            <label id="ind-delivery" onclick="_setIndustry('delivery')" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:transparent;border:2px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2)">
-              <input type="radio" name="r-industry-radio" value="delivery" style="accent-color:var(--brand)"> 🛵 배달대행
-            </label>
-            <label id="ind-other" onclick="_setIndustry('other')" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:transparent;border:2px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text2)">
-              <input type="radio" name="r-industry-radio" value="other" style="accent-color:var(--brand)"> 📦 기타
-            </label>
+          <label>서비스 유형 *</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div id="svc-card-settle" onclick="_setSvcType('settle')" style="border:2px solid var(--brand);border-radius:10px;padding:14px 12px;cursor:pointer;background:rgba(0,200,248,.08);text-align:center">
+              <div style="font-size:22px;margin-bottom:4px">🤖</div>
+              <div style="font-size:12px;font-weight:700;color:var(--brand)">AI 정산</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">택배사 기사 정산</div>
+            </div>
+            <div id="svc-card-delivery" onclick="_setSvcType('delivery')" style="border:2px solid var(--border);border-radius:10px;padding:14px 12px;cursor:pointer;background:transparent;text-align:center">
+              <div style="font-size:22px;margin-bottom:4px">🛵</div>
+              <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">배달대행 기사 정산</div>
+            </div>
+          </div>
+          <!-- AI 정산 선택 시: 택배사 선택 -->
+          <div id="svc-company-area">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px">택배사 선택</div>
+            <select id="r-company-select" onchange="_setIndustry(this.value)" style="width:100%;padding:9px 8px;background:var(--bg3,#111420);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer">
+              <option value="coupang">🟡 쿠팡</option>
+              <option value="cj">🔴 CJ대한통운</option>
+              <option value="lotte">🔵 롯데글로벌</option>
+              <option value="hanjin">🟠 한진택배</option>
+              <option value="other">📦 기타</option>
+            </select>
           </div>
         </div>
         <div class="fg"><label>연락처 *</label><input id="r-contact-phone" type="tel" placeholder="010-1234-5678" oninput="this.value=this.value.replace(/[^0-9\-]/g,'')"></div>
@@ -6616,25 +6619,23 @@ function _regNext(n){
   });
 }
 
-// 소속 회사 선택
+// 서비스 유형 선택 (AI정산 vs 배달대행)
+function _setSvcType(type){
+  var isCargo=type==='settle';
+  document.getElementById('r-services').value=type;
+  document.getElementById('r-service').value=type;
+  var sc=document.getElementById('svc-card-settle');
+  var dc=document.getElementById('svc-card-delivery');
+  var ca=document.getElementById('svc-company-area');
+  if(sc){sc.style.borderColor=isCargo?'var(--brand)':'var(--border)';sc.style.background=isCargo?'rgba(0,200,248,.08)':'transparent';sc.querySelector('div:nth-child(2)').style.color=isCargo?'var(--brand)':'var(--text2)';}
+  if(dc){dc.style.borderColor=isCargo?'var(--border)':'var(--brand)';dc.style.background=isCargo?'transparent':'rgba(0,200,248,.08)';dc.querySelector('div:nth-child(2)').style.color=isCargo?'var(--text2)':'var(--brand)';}
+  if(ca)ca.style.display=isCargo?'block':'none';
+  if(!isCargo)document.getElementById('r-settle-industry').value='delivery';
+  else{var sel=document.getElementById('r-company-select');if(sel)document.getElementById('r-settle-industry').value=sel.value;}
+}
+// 택배사 선택
 function _setIndustry(val){
   document.getElementById('r-settle-industry').value=val;
-  var ids=['coupang','cj','lotte','hanjin','delivery','other'];
-  ids.forEach(function(id){
-    var el=document.getElementById('ind-'+id);
-    if(!el)return;
-    if(id===val){
-      el.style.background='rgba(0,200,248,.1)';
-      el.style.borderColor='var(--brand)';
-      el.style.color='var(--brand)';
-      el.style.fontWeight='600';
-    }else{
-      el.style.background='transparent';
-      el.style.borderColor='var(--border)';
-      el.style.color='var(--text2)';
-      el.style.fontWeight='400';
-    }
-  });
 }
 
 // 회사명 → 슬러그 자동 제안
