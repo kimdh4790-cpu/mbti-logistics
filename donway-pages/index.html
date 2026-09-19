@@ -7797,6 +7797,8 @@ async function _ctrQkSave(){
   var doc={type:'upload',dealerId:_CU.uid,driverName:name,driverPhone:phone,customContractUrl:url,signToken:tok,adminSig:adminSig,createdAt:new Date().toISOString(),signed:false};
   try{
     await _db.collection('contracts').add(doc);
+    // 원본 DOCX에서 라우트·단가·날짜·담당구역 자동 추출 (백그라운드, 비차단)
+    try{var _xtkn='';try{_xtkn=await _auth.currentUser.getIdToken();}catch(_e){}fetch('/api/contract-extract',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_xtkn},body:JSON.stringify({signToken:tok})}).catch(()=>{});}catch(_e){}
     var link='https://donway.ai.kr/contract/sign/'+tok;
     var res=document.getElementById('qk-result');
     if(res){res.style.display='block';res.innerHTML='<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-top:14px"><div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:8px">✅ 서명 링크 생성 완료</div><div style="font-size:11.5px;color:#166534;margin-bottom:10px">기사에게 카카오톡 또는 문자로 아래 링크를 전달하세요.</div><div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px;word-break:break-all;margin-bottom:10px;color:#1e293b">'+link+'</div><div style="display:flex;gap:8px"><button onclick="navigator.clipboard.writeText(\"'+link+'\")" style="flex:1;padding:9px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 링크 복사</button><button onclick="_ctrQkSendSms(\"'+phone+'\",\"'+link+'\")" style="flex:1;padding:9px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📱 SMS 발송</button></div></div>';}
