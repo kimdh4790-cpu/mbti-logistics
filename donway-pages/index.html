@@ -6721,7 +6721,7 @@ function doRegister(){
   var err=document.getElementById('r-err');
   err.style.display='none';
 
-  var bizDocUrl=document.getElementById('r-bizdoc-input').dataset.url||'';
+  var bizDocUrl=(document.getElementById('r-bizdoc-input')||{dataset:{url:''}}).dataset.url||'';
   var termsEl=document.getElementById('r-terms');
   if(!termsEl||!termsEl.checked){err.textContent='이용약관 및 개인정보처리방침에 동의해 주세요';err.style.display='block';return;}
   if(!company||!email){err.textContent='회사명과 이메일을 입력하세요';err.style.display='block';return;}
@@ -7808,9 +7808,10 @@ async function _ctrQkSave(){
 
 async function _ctrQkSendSms(phone,link){
   try{
-    var r=await fetch('/api/sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:phone,msg:'서명 요�청 | 아래 링크에서 계약서를 확인하고 서명하세요: '+link})});
+    var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e2){}
+    var r=await fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tkn},body:JSON.stringify({messages:[{to:phone,text:'서명 요청 | 아래 링크에서 계약서를 확인하고 서명하세요: '+link}]})});
     if(r.ok)toast('✅ SMS 발송 완료');
-    else toast('❌ SMS 실패 (링크�복사한후 직접 전달하세요)');
+    else toast('❌ SMS 실패 (링크 복사 후 직접 전달하세요)');
   }catch(_e){
     toast('❌ SMS 실패');
   }

@@ -1763,9 +1763,11 @@ async function submitSign(){
             if (_aUpRes.ok) {
               const _aUpData = await _aUpRes.json();
               const _aDlToken = _aUpData.downloadTokens||'';
-              const _aUrl = `https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/${encodeURIComponent(_aPath)}?alt=media&token=${_aDlToken}`;
-              _archiveResultUrl = _aUrl;
-              await fetch(`${_dsDocName}?updateMask.fieldPaths=archiveUrl`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{archiveUrl:{stringValue:_aUrl}}})});
+              if (_aDlToken) {
+                const _aUrl = `https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/${encodeURIComponent(_aPath)}?alt=media&token=${_aDlToken}`;
+                _archiveResultUrl = _aUrl;
+                await fetch(`${_dsDocName}?updateMask.fieldPaths=archiveUrl`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{archiveUrl:{stringValue:_aUrl}}})});
+              }
             }
           } catch(_ae){}
           // 기사에게 서명 완료 SMS 발송 (법적 인지 증거)
@@ -3024,7 +3026,7 @@ async function acceptExchange(){
             </div>
             <script>
             var _stmtToken="${token}", _stmtDealer="${gs('dealerId')}", _stmtName="${name}";
-            var _autoBiz="${driverBizNum}", _autoTaxSt="${taxState}";
+            var _autoBiz="${driverBizNum}", _autoTaxSt="${taxState||''}";
             if(_autoBiz&&!_autoTaxSt){document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){requestTax(_autoBiz);},900);});}
             async function requestTax(bizNum){
               var msg=document.getElementById("tax-msg");
