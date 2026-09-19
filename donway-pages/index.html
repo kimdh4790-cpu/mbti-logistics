@@ -8346,42 +8346,18 @@ function _ctrSelectDriver(id){
       if(inp){inp.disabled=false;if(rp!=null)inp.value=rp;}
     });
   }
-  // 캠프명 + 담당구역 자동등록
-  var _campVal='';
-  if(drv.routes&&drv.routes.length){
-    var _fr=drv.routes[0].route||drv.routes[0].name||'';
-    _campVal=(_routeCampMap&&_routeCampMap[_fr])||'';
-  }
-  if(!_campVal)_campVal=drv.camp||'';
-  if(_campVal){
-    var campEl=document.getElementById('ctr-camp');if(campEl)campEl.value=_campVal;
-    var areaEl=document.getElementById('ctr-area');if(areaEl)areaEl.value='전구역관할('+_campVal+')';
-  }
 }
 
 function _ctrRenderConditions(t){
   var el=document.getElementById('ctr-conditions');
   if(!el)return;
-  var today=new Date().toISOString().slice(0,10);
-  var nextyear=new Date(new Date().setFullYear(new Date().getFullYear()+1)).toISOString().slice(0,10);
-  var common='<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:12px">— ④ 계약 조건</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">계약 시작일 *</div>'
-    +'<input id="ctr-start" type="date" value="'+today+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">계약 종료일 *</div>'
-    +'<input id="ctr-end" type="date" value="'+nextyear+'" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'</div>';
-
-  if(t==='subok'){
-    el.innerHTML=common;
-  } else if(t==='wisu'){
-    // RPRICE에서 라우트 목록 수집
+  if(t==='wisu'){
     var rpRoutes=Object.keys(window.RPRICE||{}).filter(function(k){return k&&k.length<=8;}).sort();
     var routeRowsHtml='';
     if(rpRoutes.length){
       rpRoutes.forEach(function(rk){
         var rp=window.RPRICE[rk]||0;
-        routeRowsHtml+='<div id="ctr-rrow-'+rk+'" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);margin-bottom:4px">'
+        routeRowsHtml+='<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);margin-bottom:4px">'
           +'<input type="checkbox" id="ctr-rc-'+rk+'" onchange="_ctrRouteCheck(\''+rk+'\')" style="accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">'
           +'<label for="ctr-rc-'+rk+'" style="font-size:12px;font-weight:700;color:var(--text);min-width:48px;cursor:pointer">'+rk+'</label>'
           +'<input type="number" id="ctr-rp-'+rk+'" value="'+rp+'" placeholder="단가(원)" disabled style="width:90px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg2);color:var(--text)">'
@@ -8389,67 +8365,22 @@ function _ctrRenderConditions(t){
           +'</div>';
       });
     } else {
-      routeRowsHtml='<div style="font-size:12px;color:var(--text3);padding:8px">라우트 단가표를 먼저 등록해주세요 (설정 → 단가표)</div>';
+      routeRowsHtml='<div style="font-size:12px;color:var(--text3);padding:8px">설정 → 단가표에서 라우트를 먼저 등록해주세요</div>';
     }
-    el.innerHTML=common
-      +'<div style="margin-bottom:8px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-      +'<div style="font-size:11px;color:var(--text3)">노선별 배송수수료 (라우트 단가표에서 선택)</div>'
-      +'<span style="font-size:10px;color:var(--text3)">체크 → 단가 직접 수정 가능</span>'
-      +'</div>'
-      +'<div id="ctr-route-list" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2)">'
-      +routeRowsHtml
-      +'</div>'
-      +'</div>'
-      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">담당구역</div>'
-      +'<input id="ctr-area" type="text" placeholder="예) 부산 수영구, 해운대구" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">집화수수료 (건당, 원)</div>'
-      +'<input id="ctr-collectprice" type="number" placeholder="0" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">캠프명</div>'
-      +'<input id="ctr-camp" type="text" placeholder="예) 쿠팡 서부 서브" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">수수료 지급일</div>'
-      +'<select id="ctr-cycle" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-      +'<option value="매월 20일">매월 20일</option>'
-      +'<option value="매월 25일">매월 25일</option>'
-      +'<option value="매월 10일">매월 10일</option>'
-      +'<option value="매월 말일">매월 말일</option>'
-      +'</select></div>'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">분류수수료 (시간당, 원)</div>'
-      +'<input id="ctr-sortprice" type="number" placeholder="0 (미수행 시 0)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">선착불 입금 기한 (일)</div>'
-      +'<input id="ctr-predays" type="number" placeholder="예) 3" min="1" max="30" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'<div></div>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">차량 등록번호</div>'
-      +'<input id="ctr-carnum" type="text" placeholder="12가 3456" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'<div><div style="font-size:11px;color:var(--text3);margin-bottom:4px">운수종사자 자격증 번호</div>'
-      +'<input id="ctr-licensenum" type="text" placeholder="자격증 번호" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-      +'</div>'
-      +'<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text3);margin-bottom:4px">특약사항</div>'
-      +'<textarea id="ctr-special" rows="3" placeholder="특약 내용 입력 (없으면 비워두세요)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box;resize:vertical"></textarea></div>';
-
-  }}
+    el.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ④ 라우트 선택 (체크 후 단가 수정 가능)</div>'
+      +'<div id="ctr-route-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2)">'
+      +routeRowsHtml+'</div>';
+  } else {
+    el.innerHTML='';
+  }
+}
 
 function _ctrRouteCheck(rk){
   var cb=document.getElementById('ctr-rc-'+rk);
   var inp=document.getElementById('ctr-rp-'+rk);
   if(!cb||!inp)return;
   inp.disabled=!cb.checked;
-  if(cb.checked){
-    inp.focus();
-    // 라우트→캠프명 자동입력 (_routeCampMap 우선)
-    var camp=(_routeCampMap&&_routeCampMap[rk])||'';
-    if(camp){
-      var campEl=document.getElementById('ctr-camp');if(campEl)campEl.value=camp;
-      var areaEl=document.getElementById('ctr-area');if(areaEl)areaEl.value='전구역관할('+camp+')';
-    }
-  }
+  if(cb.checked)inp.focus();
 }
 
 function _ctrCollect(){
@@ -8468,6 +8399,11 @@ function _ctrCollect(){
   }
   var routeStr=routePrices.map(function(r){return r.route;}).join(', ');
   var firstPrice=routePrices.length?String(routePrices[0].price):'';
+  // 캠프명·담당구역 라우트에서 자동 계산
+  var firstRoute=routePrices.length?(routePrices[0].route||''):'';
+  var campAuto=(window._routeCampMap&&firstRoute&&window._routeCampMap[firstRoute])||'';
+  var areaAuto=campAuto?'전구역관할('+campAuto+')':'';
+  var drv=window._ctrDriver||{};
   return {
     type:t,
     dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
@@ -8476,32 +8412,16 @@ function _ctrCollect(){
     companyCeo:cp.ceoName||cp.repName||'',
     companyAddr:cp.bizAddr||cp.address||cp.addr||'',
     companyPhone:cp.phone||cp.tel||'',
-    driverName:(window._ctrDriver&&window._ctrDriver.name)||'',
-    driverPhone:(window._ctrDriver&&window._ctrDriver.phone)||'',
-    driverBizNum:(window._ctrDriver&&window._ctrDriver.bizNum)||'',
-    driverIdNum:(window._ctrDriver&&window._ctrDriver.ssn)||'',
-    driverAddr:(window._ctrDriver&&window._ctrDriver.address)||'',
-    startDate:_g('ctr-start'),
-    endDate:_g('ctr-end'),
-    camp:_g('ctr-camp'),
-    area:_g('ctr-area'),
-    route:routeStr||_g('ctr-route'),
-    unitPrice:firstPrice||_g('ctr-unitprice'),
+    driverName:drv.name||'',
+    driverPhone:drv.phone||'',
+    driverBizNum:drv.bizNum||'',
+    driverIdNum:drv.ssn||'',
+    driverAddr:drv.address||'',
+    camp:campAuto,
+    area:areaAuto,
+    route:routeStr,
+    unitPrice:firstPrice,
     routePricesJson:routePrices.length?JSON.stringify(routePrices):'',
-    collectPrice:_g('ctr-collectprice'),
-    sortPrice:_g('ctr-sortprice'),
-    cycle:_g('ctr-cycle'),
-    carNum:_g('ctr-carnum'),
-    licenseNum:_g('ctr-licensenum'),
-    preDepositDays:_g('ctr-predays'),
-    rate:_g('ctr-rate'),
-    workplace:_g('ctr-workplace'),
-    job:_g('ctr-job'),
-    hours:_g('ctr-hours'),
-    rest:_g('ctr-rest'),
-    salary:_g('ctr-salary'),
-    payday:_g('ctr-payday'),
-    special:_g('ctr-special'),
     customContractUrl:_g('ctr-pdf-url'),
     docxHtml:(function(){var c=document.getElementById('ctr-docx-content');return c?c.innerHTML:'';})(),
     createdAt:new Date().toISOString()
@@ -9026,8 +8946,7 @@ function _ctrGenHTML(data){
 
 async function _ctrSave(){
   var data=_ctrCollect();
-  if(!data.driverName){toast('❌ 기사 성명을 입력하세요');return;}
-  if(!data.startDate){toast('❌ 계약 시작일을 입력하세요');return;}
+  if(!data.driverName){toast('❌ 기사를 선택하거나 DOCX에 기사 성명을 입력하세요');return;}
   if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
   var adminSig='';
   if(window._adminStampImg){
@@ -9036,7 +8955,8 @@ async function _ctrSave(){
     adminSig=window._adminSigPad.toDataURL('image/png');
   }
   var typeLabel={wisu:'위수탁',subok:'부속합의서'}[data.type]||'계약';
-  data.title=data.driverName+' '+typeLabel+' ('+data.startDate+')';
+  var todayStr=new Date().toISOString().slice(0,10);
+  data.title=data.driverName+' '+typeLabel+' ('+todayStr+')';
   var signToken=_db.collection('contract_signs').doc().id;
   var dealerId=_CU.dealerId||_CU.uid;
   try{
