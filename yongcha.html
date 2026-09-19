@@ -2502,7 +2502,7 @@ function _pgPosts(el){
     '<button type="button" id="pmtab-jobs" onclick="_pfSwitchMainTab(\'jobs\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      (_CU&&_CU.type==='driver'?'구직':'구인')+'</button>'+
+      '구인/구직</button>'+
   '</div>'+
 
   '<div id="posts-route-section">'+
@@ -2644,9 +2644,8 @@ function _pfSwitchMainTab(tab){
     _loadDriverOfferList();
   } else if(tab==='jobs'){
     if(jobsSec)jobsSec.style.display='block';
-    var isDriver=_CU&&_CU.type==='driver';
-    if(title)title.textContent=isDriver?'구직 게시판':'구인 게시판';
-    if(sub)sub.textContent=isDriver?'대리점 소속 공고 · 이력서 등록':'기사 공고 등록 · 이력서 검색';
+    if(title)title.textContent='구인/구직 게시판';
+    if(sub)sub.textContent='구인공고 — 기사 모집 · 구직공고 — 이력서 등록';
     if(btnJ){btnJ.style.background='var(--br)';btnJ.style.color='#fff';btnJ.style.borderColor='var(--br)';}
     var inner=document.getElementById('posts-jobs-inner');
     if(inner)_loadJobsSection(inner);
@@ -2661,8 +2660,30 @@ function _pfSwitchMainTab(tab){
 
 function _loadJobsSection(el){
   if(!el)return;
-  if(_CU&&_CU.type==='driver') _pgJobsDriver(el);
-  else _pgJobsAgency(el);
+  var isDriver=_CU&&_CU.type==='driver';
+  el.innerHTML=
+    '<div class="sub-tab-row" id="jobs-main-subtabs">'+
+    '<button class="sub-tab on" onclick="_switchJobsMainTab(\'hire\')">구인공고</button>'+
+    '<button class="sub-tab" onclick="_switchJobsMainTab(\'seek\')">구직공고</button>'+
+    '</div>'+
+    '<div id="jobs-main-content">'+_skRows(3)+'</div>';
+  _switchJobsMainTab(isDriver?'hire':'hire');
+}
+
+function _switchJobsMainTab(tab){
+  var btns=document.querySelectorAll('#jobs-main-subtabs .sub-tab');
+  btns.forEach(function(b,i){b.classList.toggle('on',(tab==='hire'&&i===0)||(tab==='seek'&&i===1));});
+  var el=document.getElementById('jobs-main-content');
+  if(!el)return;
+  if(tab==='hire'){
+    // 구인공고: 기사는 공고목록 조회·지원, 소장은 공고 등록/관리
+    if(_CU&&_CU.type==='driver'){_jSubTab='list';_pgJobsDriver(el);}
+    else{_jSubTab='myjobs';_pgJobsAgency(el);}
+  } else {
+    // 구직공고: 기사는 이력서 등록, 소장은 이력서 검색
+    if(_CU&&_CU.type==='driver'){_jSubTab='resume';_pgJobsDriver(el);}
+    else{_jSubTab='resumes';_pgJobsAgency(el);}
+  }
 }
 
 var _pfQTimer=null;
