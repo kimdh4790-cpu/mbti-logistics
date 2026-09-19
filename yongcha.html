@@ -2502,7 +2502,7 @@ function _pgPosts(el){
     '<button type="button" id="pmtab-jobs" onclick="_pfSwitchMainTab(\'jobs\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '구인/구직</button>'+
+      '기인연 (機人緣)</button>'+
   '</div>'+
 
   '<div id="posts-route-section">'+
@@ -2644,8 +2644,8 @@ function _pfSwitchMainTab(tab){
     _loadDriverOfferList();
   } else if(tab==='jobs'){
     if(jobsSec)jobsSec.style.display='block';
-    if(title)title.textContent='구인/구직 게시판';
-    if(sub)sub.textContent='구인공고 — 기사 모집 · 구직공고 — 이력서 등록';
+    if(title)title.textContent='기인연 (機人緣)';
+    if(sub)sub.textContent='소장 ↔ 기사 장기 파트너십 · 구인공고 · 구직공고';
     if(btnJ){btnJ.style.background='var(--br)';btnJ.style.color='#fff';btnJ.style.borderColor='var(--br)';}
     var inner=document.getElementById('posts-jobs-inner');
     if(inner)_loadJobsSection(inner);
@@ -2662,6 +2662,25 @@ function _loadJobsSection(el){
   if(!el)return;
   var isDriver=_CU&&_CU.type==='driver';
   el.innerHTML=
+    // 기인연 개념 안내 카드
+    '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--br)">'+
+      '<div style="font-size:12.5px;font-weight:800;color:var(--br);margin-bottom:4px">기인연 (機人緣) 이란?</div>'+
+      '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+
+        '기사(機)와 소장 사이에 맺어지는 <b style="color:var(--tx)">장기 인연(緣)</b>이에요. '+
+        '단건 배달·용차와 달리, 소장이 기사를 <b style="color:var(--tx)">고정 소속</b>으로 맺어 '+
+        '안정적으로 일을 맡기고 함께 성장하는 관계예요.'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">'+
+          '<div style="font-size:11px;font-weight:800;color:var(--t2);margin-bottom:2px">구인공고</div>'+
+          '<div style="font-size:11.5px;color:var(--tx)">소장이 함께할 기사 모집</div>'+
+        '</div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">'+
+          '<div style="font-size:11px;font-weight:800;color:var(--t2);margin-bottom:2px">구직공고</div>'+
+          '<div style="font-size:11.5px;color:var(--tx)">기사가 소속 대리점 탐색</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
     '<div class="sub-tab-row" id="jobs-main-subtabs">'+
     '<button class="sub-tab on" onclick="_switchJobsMainTab(\'hire\')">구인공고</button>'+
     '<button class="sub-tab" onclick="_switchJobsMainTab(\'seek\')">구직공고</button>'+
