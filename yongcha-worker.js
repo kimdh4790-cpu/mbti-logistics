@@ -1,4 +1,4 @@
-const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
+const YONGCHA_HTML = ﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -930,20 +930,24 @@ select.inp option{background:#24243d;color:#f0f1f8}
 #_ios-hint .ios-close{position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,0.35);font-size:20px;cursor:pointer;line-height:1}
 </style>
 <script>
+// 소스코드 보호
 (function(){
+  // 우클릭 비활성화
   document.addEventListener('contextmenu',function(e){e.preventDefault();});
+  // F12 / Ctrl+Shift+I/J/U / Cmd+Option+I 차단
   document.addEventListener('keydown',function(e){
-    if(e.keyCode===123) e.preventDefault();
-    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74)) e.preventDefault();
-    if(e.ctrlKey&&e.keyCode===85) e.preventDefault();
-    if(e.metaKey&&e.altKey&&e.keyCode===73) e.preventDefault();
+    if(e.keyCode===123) e.preventDefault(); // F12
+    if(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===74)) e.preventDefault(); // Ctrl+Shift+I/J
+    if(e.ctrlKey&&e.keyCode===85) e.preventDefault(); // Ctrl+U
+    if(e.metaKey&&e.altKey&&e.keyCode===73) e.preventDefault(); // Cmd+Option+I
   });
+  // devtools 감지 — 열리면 경고 후 홈으로
   var _dtOpen=false;
   setInterval(function(){
     var t=new Date();
     debugger;
     if(new Date()-t>100){
-      if(!_dtOpen){_dtOpen=true;console.clear();document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;font-size:16px;color:#888">보안 정책상 개발자 도구 사용이 제한됩니다.</div>';setTimeout(function(){location.reload();},2000);}
+      if(!_dtOpen){_dtOpen=true;console.clear();alert('보안 정책상 개발자 도구 사용이 제한됩니다.');location.reload();}
     } else {_dtOpen=false;}
   },2000);
 })();
@@ -5772,6 +5776,19 @@ function _pgProfile(el){
   '</div>'+
   '<div style="margin-top:10px;font-size:11px;color:var(--t3)">기사 ₩150,000/월 · 소장 ₩50,000/월 · 입금 후 문의: 051-711-3103</div>'+
   '</div>'+
+  '<div style="margin:0 0 8px;padding:14px 16px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r)">'+
+  '<div style="font-size:12px;font-weight:800;color:var(--t2);margin-bottom:10px">고객 문의</div>'+
+  '<div style="display:flex;flex-direction:column;gap:10px">'+
+  '<a href="tel:051-711-3103" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);text-decoration:none;color:var(--tx)">'+
+  '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3b82f6;flex-shrink:0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'+
+  '<div><div style="font-size:13px;font-weight:700">전화 문의</div><div style="font-size:12px;color:var(--t2);margin-top:1px">051-711-3103</div></div>'+
+  '</a>'+
+  '<a href="mailto:filo-dine@donway.ai.kr" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);text-decoration:none;color:var(--tx)">'+
+  '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3b82f6;flex-shrink:0"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>'+
+  '<div><div style="font-size:13px;font-weight:700">이메일 문의</div><div style="font-size:12px;color:var(--t2);margin-top:1px">filo-dine@donway.ai.kr</div></div>'+
+  '</a>'+
+  '</div>'+
+  '</div>'+
   '<div style="margin:0 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
   '용차앱은 소장과 기사 간 직접 거래를 위한 정보 서비스를 제공합니다. 플랫폼은 계약의 당사자가 아니며, 소장과 기사 간에 직접 체결된 계약에 대해 책임을 지지 않습니다.'+
   '</div>'+
@@ -6291,6 +6308,7 @@ function _pgJobsAgency(el){
 function _jSwitchAgency(tab){
   _jSubTab=tab;
   document.querySelectorAll('.sub-tab').forEach(function(b){b.classList.remove('on');});
+  // match active tab button by text content
   document.querySelectorAll('.sub-tab').forEach(function(b){
     var map={myjobs:'내 공고',fixed:'고정 지입 채용',resumes:'이력서 찾기'};
     if(b.textContent===map[tab])b.classList.add('on');
@@ -10071,10 +10089,12 @@ function _showZoneOnMap(i){
   var _deferredPrompt=null;
   var _installed=false;
 
+  // 이미 standalone(설치됨) 상태면 배너 표시 안 함
   if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){
     _installed=true;
   }
 
+  // Android/Chrome: beforeinstallprompt 이벤트 캐치
   window.addEventListener('beforeinstallprompt',function(e){
     e.preventDefault();
     _deferredPrompt=e;
@@ -10083,6 +10103,7 @@ function _showZoneOnMap(i){
     document.getElementById('_pwa-banner').classList.add('show');
   });
 
+  // 설치 완료 이벤트
   window.addEventListener('appinstalled',function(){
     _installed=true;
     document.getElementById('_pwa-banner').classList.remove('show');
@@ -10106,18 +10127,20 @@ function _showZoneOnMap(i){
     try{sessionStorage.setItem(DISMISS_KEY,'1');}catch(ex){}
   };
 
+  // iOS Safari: beforeinstallprompt 없음 → 직접 안내
   var isIos=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
   var isSafari=/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   if(isIos&&isSafari&&!_installed){
     setTimeout(function(){
       try{if(sessionStorage.getItem(DISMISS_KEY))return;}catch(ex){}
       document.getElementById('_ios-hint').classList.add('show');
-    },3000);
+    },3000); // 3초 후 표시
   }
 })();
 </script>
 </body>
 </html>
+
 
 `;
 // Firebase web API key (클라이언트에 이미 공개된 값 — 서버 토큰 검증용)
