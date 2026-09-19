@@ -148,6 +148,36 @@
 
 ---
 
+## 기능 강화 (2026-09-19) — 경매 위험 분析 + 등기부 상세 설명
+
+### 변경 내용 (이번 커밋)
+- **`seolyuhana/services/analyze.js`**: REGISTRY_SYSTEM 등기부 분析 2차 강화
+  - `encumbrances[].plainExplain`: 각 권리사항 쉬운 말 설명 (비전문가 눈높이)
+  - `mortgageAnalysis.debtCalculationDetail`: 채권최고액→실잔액 역산 계산 단계 명시
+  - `jeonseRiskAnalysis.worstCaseScenario`: 경매 진행 시 임차인 최악 시나리오 수치 포함
+  - `fraudCheckpoints[].detail`: 2~3문장 상세 설명으로 확장
+  - `beginnerNote`: 7~10문장 이야기체 초보자 설명으로 확장
+  - maxTokens 3500→4500 (상세 설명 충당)
+  - **`auctionRiskDetail`** 신규 필드: 경매개시결정 등기 발견 시 자동 생성
+    - 사건번호·신청채권자·경매유형·개시결정일
+    - 예상 낙찰가 + 추정 근거 문자열
+    - `distributionPlan[]` 배당 순서 테이블 (rank/creditor/claimAmount/expectedRecovery/note)
+    - 임차인 예상 회수액·손실액·소액임차인 여부·대항력 여부
+    - `urgentActions[]` 지금 당장 해야 할 행동 목록 (배당요구 신청 기한 등)
+    - `tenantAdvice` 이야기체 임차인 조언 (4~6문장)
+    - `courtauction.go.kr` 링크
+- **`scan.html`**: 경매 위험 분析 섹션 신규 렌더링
+  - 경매 진행 중일 때 긴급 주황 배너로 우선 표시 (`urgentRedFlags` 바로 아래)
+  - 사건정보 2×2 그리드 카드 (사건번호/유형/채권자/개시결정일)
+  - 예상 낙찰가 + 추정 근거 표시
+  - 배당 순서 테이블 (5컬럼: 순위/권리자/채권액/예상배당/비고)
+  - 임차인 예상 회수/손실 금액 색상 구분 (초록/빨강)
+  - 소액임차인/대항력 여부 배지
+  - 즉각 행동 목록 (번호 순서)
+  - AI 조언 박스 (이야기체 pre-wrap)
+  - 대법원경매정보 외부 링크
+
+
 ## 기능 강화 (2026-09-19) — 전세사기 10대 체크포인트
 
 ### 변경 내용 (커밋 53a1e5ff)

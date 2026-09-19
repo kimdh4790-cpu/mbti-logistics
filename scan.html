@@ -3894,6 +3894,71 @@ function renderResult(data, downloadUrls) {
       </div>`;
     }
 
+
+    // ── 경매 위험 분析 (auctionRiskDetail 있을 시 긴급 표시)
+    if (data.auctionRiskDetail && data.auctionRiskDetail.caseNumber) {
+      const ard = data.auctionRiskDetail;
+      const recovRatio = ard.tenantRecoveryRatio || '';
+      const recovAmt = ard.tenantRecoveryAmount || 0;
+      const lossAmt = ard.tenantLossAmount || 0;
+      const fmtW = v => v ? v.toLocaleString('ko-KR') + '원' : '-';
+      html += `<div style="background:#431407;border:2px solid #ea580c;border-radius:12px;padding:16px;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:800;color:#fed7aa;margin-bottom:10px">🔨 경매 진행 중 — 즉각 대응 필요</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          ${ard.caseNumber ? `<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px"><div style="font-size:10px;color:#fdba74">사건번호</div><div style="font-size:13px;color:#fff;font-weight:700">${ard.caseNumber}</div></div>` : ''}
+          ${ard.auctionType ? `<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px"><div style="font-size:10px;color:#fdba74">경매 유형</div><div style="font-size:13px;color:#fff;font-weight:700">${ard.auctionType}</div></div>` : ''}
+          ${ard.applicantCreditor ? `<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px"><div style="font-size:10px;color:#fdba74">신청 채권자</div><div style="font-size:13px;color:#fff;font-weight:700">${ard.applicantCreditor}</div></div>` : ''}
+          ${ard.registeredDate ? `<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px"><div style="font-size:10px;color:#fdba74">개시결정일</div><div style="font-size:13px;color:#fff;font-weight:700">${ard.registeredDate}</div></div>` : ''}
+        </div>
+        ${ard.estimatedAuctionPrice ? `<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;margin-bottom:10px">
+          <div style="font-size:10px;color:#fdba74;margin-bottom:4px">예상 낙찰가</div>
+          <div style="font-size:18px;color:#fb923c;font-weight:800">${fmtW(ard.estimatedAuctionPrice)}</div>
+          ${ard.estimatedBasis ? `<div style="font-size:11px;color:#fca5a5;margin-top:4px">${ard.estimatedBasis}</div>` : ''}
+        </div>` : ''}
+        ${(ard.distributionPlan && ard.distributionPlan.length) ? `<div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#fdba74;font-weight:700;margin-bottom:6px">📊 배당 순서 (경매 낙찰금 배분 계획)</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:11px;color:#fde8d8">
+              <thead><tr style="border-bottom:1px solid #ea580c">
+                <th style="text-align:left;padding:4px 6px;color:#fdba74">순위</th>
+                <th style="text-align:left;padding:4px 6px;color:#fdba74">권리자</th>
+                <th style="text-align:right;padding:4px 6px;color:#fdba74">채권액</th>
+                <th style="text-align:right;padding:4px 6px;color:#fdba74">예상 배당</th>
+                <th style="text-align:left;padding:4px 6px;color:#fdba74">비고</th>
+              </tr></thead>
+              <tbody>
+                ${ard.distributionPlan.map(row => `<tr style="border-bottom:1px solid rgba(234,88,12,.3)">
+                  <td style="padding:4px 6px">${row.rank}</td>
+                  <td style="padding:4px 6px">${row.creditor||'-'}</td>
+                  <td style="text-align:right;padding:4px 6px">${row.claimAmount ? row.claimAmount.toLocaleString('ko-KR')+'원' : '-'}</td>
+                  <td style="text-align:right;padding:4px 6px;color:${row.expectedRecovery>0?'#86efac':'#f87171'}">${row.expectedRecovery ? row.expectedRecovery.toLocaleString('ko-KR')+'원' : '-'}</td>
+                  <td style="padding:4px 6px;font-size:10px;color:#fdba74">${row.note||''}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>` : ''}
+        <div style="background:${lossAmt>0?'rgba(127,29,29,.6)':'rgba(20,83,45,.6)'};border-radius:8px;padding:10px;margin-bottom:10px">
+          <div style="font-size:11px;color:#fdba74;margin-bottom:6px">💰 임차인 예상 회수 금액</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div><div style="font-size:10px;color:#fdba74">예상 회수액</div><div style="font-size:16px;font-weight:800;color:${recovAmt>0?'#86efac':'#f87171'}">${fmtW(recovAmt)} ${recovRatio ? '('+recovRatio+')' : ''}</div></div>
+            ${lossAmt>0 ? `<div><div style="font-size:10px;color:#fdba74">예상 손실액</div><div style="font-size:16px;font-weight:800;color:#f87171">-${fmtW(lossAmt)}</div></div>` : ''}
+          </div>
+          ${ard.isSmallAmountTenant ? `<div style="font-size:11px;color:#86efac;margin-top:6px">✅ 소액임차인 해당: ${ard.smallAmountProtectionLimit||''} 최우선변제 가능</div>` : ''}
+          ${ard.isPriorityTenant ? `<div style="font-size:11px;color:#86efac;margin-top:4px">✅ 대항력 있는 임차인: 낙찰자에게 보증금 인수 청구 가능</div>` : ''}
+        </div>
+        ${(ard.urgentActions && ard.urgentActions.length) ? `<div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#fdba74;font-weight:700;margin-bottom:6px">⚡ 지금 당장 해야 할 일</div>
+          ${ard.urgentActions.map((a,i) => `<div style="font-size:12px;color:#fecaca;padding:5px 0;border-bottom:1px solid rgba(234,88,12,.2)"><span style="color:#fb923c;font-weight:700">${i+1}.</span> ${a}</div>`).join('')}
+        </div>` : ''}
+        ${ard.tenantAdvice ? `<div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px;margin-bottom:10px">
+          <div style="font-size:11px;color:#fdba74;font-weight:700;margin-bottom:6px">🤖 AI 조언 — 임차인이 지금 해야 할 일</div>
+          <div style="font-size:12px;color:#fed7aa;white-space:pre-wrap;line-height:1.7">${ard.tenantAdvice}</div>
+        </div>` : ''}
+        <a href="https://www.courtauction.go.kr" target="_blank" rel="noopener" style="display:inline-block;font-size:11px;color:#fb923c;text-decoration:underline;margin-top:2px">🔗 대한민국 법원 경매정보 → 사건번호로 검색</a>
+      </div>`;
+    }
+
     if (data.property) {
       const p = data.property;
       const buildYearNum = parseInt(p.buildYear);
