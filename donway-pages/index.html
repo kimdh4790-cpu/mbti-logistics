@@ -7883,7 +7883,7 @@ function _wtHidePopup(){
 function _wtPickField(name){
   _wtHidePopup();
   var range=window._wtSavedRange;if(!range)return;
-  var idx=++(window._wtFieldIdx||0);window._wtFieldIdx=idx;
+  window._wtFieldIdx=(window._wtFieldIdx||0)+1;var idx=window._wtFieldIdx;
   var span=document.createElement('span');
   span.className='wt-blank';
   span.setAttribute('data-id','BLANK_'+idx);
