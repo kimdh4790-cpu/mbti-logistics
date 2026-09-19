@@ -7748,460 +7748,141 @@ function _ctrRender(){
     +'<div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:16px">'
     +'<div onclick="window._ctrTab=\'write\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='write'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">✏️ 계약 작성</div>'
     +'<div onclick="window._ctrTab=\'quick\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='quick'?'border-bottom:2px solid #f59e0b;color:#f59e0b;margin-bottom:-2px':'color:var(--text3)')+'">⚡ 간편 서명</div>'+'<div onclick="window._ctrTab=\'list\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='list'?'border-bottom:2px solid var(--brand);color:var(--brand);margin-bottom:-2px':'color:var(--text3)')+'">🗂 계약 목록</div>'
-    +'<div onclick="window._ctrTab=\'template\';_ctrRender();" style="padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;'+(tab==='template'?'border-bottom:2px solid #8b5cf6;color:#8b5cf6;margin-bottom:-2px':'color:var(--text3)')+'">📁 내 템플릿</div>'
     +'</div>'
     +'<div id="ctr-body"></div>'
     +'</div>';
   if(tab==='write') _ctrRenderWrite();
   else if(tab==='quick') _ctrRenderQuick();
-  else if(tab==='template') _ctrRenderTemplate();
   else _ctrRenderList();
-}
-
-// ══ 위수탁 템플릿 관리 ══
-function _ctrRenderTemplate(){
-  var body=document.getElementById('ctr-body');
-  if(!body)return;
-  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
-  body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">⏳ 로딩 중...</div>';
-  if(!_db||!cid){body.innerHTML='<div style="color:red;padding:16px">로그인 필요</div>';return;}
-  _db.collection('companies').doc(cid).get().then(function(snap){
-    window._wtTemplate=(snap.exists&&snap.data().wisuTemplate)||null;
-    _wtRender();
-  }).catch(function(){window._wtTemplate=null;_wtRender();});
-}
-
-function _wtRender(){
-  var body=document.getElementById('ctr-body');
-  if(!body)return;
-  var tpl=window._wtTemplate;
-  var html='<div style="margin-bottom:16px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:12px;padding:14px 16px">'
-    +'<div style="font-size:13px;font-weight:800;color:#5b21b6;margin-bottom:4px">📁 위수탁 계약서 템플릿</div>'
-    +'<div style="font-size:11.5px;color:#6d28d9;line-height:1.6">대리점의 DOCX 계약서를 업로드하면 빈칸(___·　　)이 자동 감지됩니다. 각 빈칸에 라벨을 지정하면 계약서 작성 시 자동으로 채워집니다.</div>'
-    +'</div>';
-  if(tpl&&tpl.fields){
-    var upd=tpl.updatedAt?new Date(tpl.updatedAt).toLocaleDateString('ko-KR'):'';
-    html+='<div class="card" style="margin-bottom:14px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
-      +'<div><div style="font-size:13px;font-weight:800">✅ 템플릿 등록됨</div>'+(upd?'<div style="font-size:11px;color:var(--text3)">업로드: '+upd+'</div>':'')+'</div>'
-      +'<button onclick="_wtDelete()" style="padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text3)">삭제</button>'
-      +'</div>'
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">감지된 빈칸 ('+tpl.fields.length+'개) — 라벨 확인·수정 후 저장</div>';
-    window._wtFields=JSON.parse(JSON.stringify(tpl.fields));
-    tpl.fields.forEach(function(f,i){
-      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;background:var(--bg2);padding:8px 10px;border-radius:8px">'
-        +'<div style="flex:0 0 50px;font-size:11px;color:var(--text3)">빈칸'+(i+1)+'</div>'
-        +'<div style="flex:1;font-size:10px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(f.hint||'')+'</div>'
-        +'<input type="text" value="'+esc(f.label||'')+'" onchange="window._wtFields['+i+'].label=this.value" placeholder="라벨 입력" style="flex:0 0 130px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg);color:var(--text)">'
-        +'</div>';
-    });
-    html+='<button onclick="_wtSaveLabels()" style="width:100%;margin-top:8px;padding:10px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">💾 라벨 저장</button>'
-      +'</div>'
-      +'<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:11.5px;color:#166534;line-height:1.7">'
-      +'<b>📌 기사에게 전달하는 방법</b><br>'
-      +'① <b>계약 만들기</b> 버튼 클릭 → ② 기사 선택·계약 조건 입력 → ③ <b>저장 + 서명요청</b> 버튼 클릭<br>'
-      +'→ 기사 휴대폰으로 <b>카카오 알림톡</b>이 자동 발송됩니다. 기사가 링크에서 서명하면 완료됩니다.'
-      +'</div>'
-      +'<div style="display:flex;gap:8px;margin-bottom:14px">'
-      +'<button onclick="_wtPreview()" style="flex:1;padding:10px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">👁 미리보기</button>'
-      +'<button onclick="window._ctrTab=\'write\';_ctrRender();" style="flex:2;padding:10px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📝 계약 만들기</button>'
-      +'</div>'
-      +'<button onclick="document.getElementById(\'wt-up\').style.display=\'block\'" style="width:100%;padding:10px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;color:var(--text);margin-bottom:14px">🔄 새 파일로 교체</button>';
-  }
-  html+='<div id="wt-up" style="'+(tpl?'display:none':'')+'"><div class="card" style="margin-bottom:14px">'
-    +'<div style="font-size:13px;font-weight:800;margin-bottom:10px">📤 DOCX 업로드</div>'
-    +'<input type="file" id="wt-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_wtUpload(this)" style="display:none">'
-    +'<label for="wt-file" id="wt-lbl" style="display:block;padding:20px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)">📁 DOCX 파일 선택<br><span style="font-size:11px">워드(.docx) 파일만 지원</span></label>'
-    +'</div></div>'
-    +'<div id="wt-popup" style="display:none;position:fixed;z-index:9999;background:#fff;border:1.5px solid #8b5cf6;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);padding:12px;min-width:260px">'
-      +'<div style="font-size:11px;font-weight:700;color:#8b5cf6;margin-bottom:8px">📌 어떤 필드로 지정할까요?</div>'
-      +'<div id="wt-popup-btns" style="display:flex;flex-wrap:wrap;gap:5px"></div>'
-      +'<button onclick="_wtHidePopup()" style="margin-top:8px;width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:11px;background:var(--bg2);cursor:pointer;color:var(--text3)">취소</button>'
-    +'</div>'
-    +'<div id="wt-prev" style="display:none">'
-    +'<div class="card" style="margin-bottom:14px">'
-      +'<div style="font-size:13px;font-weight:800;margin-bottom:6px">📝 계약서 편집</div>'
-      +'<div style="font-size:11.5px;color:#6d28d9;background:#f5f3ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.6">'
-        +'💡 빈칸으로 만들 부분을 <b>마우스로 드래그해 선택</b>하면 필드를 지정할 수 있습니다'
-      +'</div>'
-      +'<div id="wt-doc" style="border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-size:12px;line-height:1.9;max-height:520px;overflow-y:auto;background:#fff;color:#111;user-select:text;cursor:text"></div>'
-    +'</div>'
-    +'<div class="card" style="margin-bottom:14px">'
-      +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">배치된 필드 <span id="wt-fcnt" style="color:#8b5cf6;font-size:13px">0개</span></div>'
-      +'<div id="wt-fieldlist"><div style="font-size:11px;color:var(--text3);text-align:center;padding:12px">아직 배치된 필드가 없습니다</div></div>'
-    +'</div>'
-    +'<button onclick="_wtSave()" style="width:100%;padding:12px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">✅ 템플릿 저장</button>'
-    +'</div>';
-  body.innerHTML=html;
-  document.addEventListener('mousedown',function(e){
-    var p=document.getElementById('wt-popup');
-    if(p&&p.style.display!=='none'&&!p.contains(e.target))_wtHidePopup();
-  });
-}
-
-async function _wtUpload(inp){
-  var file=inp.files[0];if(!file)return;
-  var lbl=document.getElementById('wt-lbl');
-  if(lbl)lbl.innerHTML='⏳ 변환 중...';
-  try{
-    if(typeof mammoth==='undefined')throw new Error('mammoth.js 미로드');
-    var buf=await new Promise(function(res,rej){var r=new FileReader();r.onload=function(e){res(e.target.result);};r.onerror=rej;r.readAsArrayBuffer(file);});
-    var result=await mammoth.convertToHtml({arrayBuffer:buf});
-    window._wtFields=[];
-    window._wtFieldIdx=0;
-    var doc=document.getElementById('wt-doc');
-    if(doc){
-      doc.innerHTML=result.value;
-      // 테이블 셀 등 모든 하위 요소 user-select 강제 활성화
-      doc.querySelectorAll('*').forEach(function(el){el.style.userSelect='text';el.style.webkitUserSelect='text';});
-      doc.removeEventListener('mouseup',_wtDocMouseUp);
-      doc.addEventListener('mouseup',_wtDocMouseUp);
-      // selectionchange 폴백 — mouseup이 도달 못하는 테이블 셀 등 대비
-      document.removeEventListener('selectionchange',_wtOnSelChange);
-      document.addEventListener('selectionchange',_wtOnSelChange);
-    }
-    _wtUpdateFieldList();
-    var prev=document.getElementById('wt-prev');
-    if(prev)prev.style.display='block';
-    if(lbl)lbl.innerHTML='✅ '+file.name+' 변환 완료 — 아래 계약서에서 빈칸 부분을 드래그해 선택하세요';
-  }catch(e){
-    if(lbl)lbl.innerHTML='❌ 실패: '+(e.message||e);
-  }
-}
-
-var _WT_PRESET=['기사명','차량번호','계약시작일','계약종료일','담당구역','주소','자격증번호','사업자번호','전화번호','대리점명','배송단가','집화단가','분류수수료'];
-
-function _wtDocMouseUp(e){
-  var sel=window.getSelection();
-  if(!sel||sel.toString().trim().length===0){return;}
-  var doc=document.getElementById('wt-doc');
-  if(!doc||!doc.contains(sel.anchorNode))return;
-  window._wtSavedRange=sel.getRangeAt(0).cloneRange();
-  window._wtSelChangeHandled=true;
-  _wtShowPopup(e.clientX,e.clientY);
-}
-
-var _wtSelTimer=null;
-function _wtOnSelChange(){
-  clearTimeout(_wtSelTimer);
-  _wtSelTimer=setTimeout(function(){
-    if(window._wtSelChangeHandled){window._wtSelChangeHandled=false;return;}
-    var sel=window.getSelection();
-    if(!sel||sel.toString().trim().length===0)return;
-    var doc=document.getElementById('wt-doc');
-    if(!doc||!doc.contains(sel.anchorNode))return;
-    try{window._wtSavedRange=sel.getRangeAt(0).cloneRange();}catch(e){return;}
-    // 팝업 위치: 선택 영역 rect 기준
-    var rect=sel.getRangeAt(0).getBoundingClientRect();
-    _wtShowPopup(rect.left+(rect.width/2),rect.bottom+8);
-  },400);
-}
-
-function _wtShowPopup(x,y){
-  var p=document.getElementById('wt-popup');if(!p)return;
-  var btns=document.getElementById('wt-popup-btns');
-  if(btns){
-    btns.innerHTML=_WT_PRESET.map(function(f){
-      return '<button onclick="_wtPickField(\''+f+'\')" style="padding:5px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">'+f+'</button>';
-    }).join('')
-    +'<button onclick="_wtPickCustom()" style="padding:5px 10px;background:var(--bg2);border:1px solid #8b5cf6;border-radius:6px;font-size:11px;cursor:pointer;color:#8b5cf6;font-weight:700">기타 직접입력</button>';
-  }
-  var vw=window.innerWidth,vh=window.innerHeight;
-  p.style.left=Math.min(x,vw-280)+'px';
-  p.style.top=Math.min(y+8,vh-220)+'px';
-  p.style.display='block';
-}
-
-function _wtHidePopup(){
-  var p=document.getElementById('wt-popup');if(p)p.style.display='none';
-}
-
-function _wtPickField(name){
-  _wtHidePopup();
-  var range=window._wtSavedRange;if(!range)return;
-  window._wtFieldIdx=(window._wtFieldIdx||0)+1;var idx=window._wtFieldIdx;
-  var span=document.createElement('span');
-  span.className='wt-blank';
-  span.setAttribute('data-id','BLANK_'+idx);
-  span.setAttribute('data-field',name);
-  span.style.cssText='display:inline-block;background:#8b5cf6;color:#fff;padding:1px 10px;border-radius:6px;font-size:11px;font-weight:700;margin:0 2px;white-space:nowrap;cursor:default';
-  span.innerHTML=name+'<span onclick="_wtRemoveField('+idx+')" style="opacity:.7;font-size:10px;cursor:pointer;margin-left:4px">✕</span>';
-  try{range.deleteContents();range.insertNode(span);window.getSelection().removeAllRanges();}catch(er){}
-  if(!window._wtFields)window._wtFields=[];
-  window._wtFields.push({id:idx,label:name,hint:name});
-  _wtUpdateFieldList();
-}
-
-function _wtPickCustom(){
-  _wtHidePopup();
-  var name=(prompt('필드 이름을 입력하세요\n예: 기사명, 차량번호, 계약시작일 ...')||'').trim();
-  if(!name)return;
-  _wtPickField(name);
-}
-
-function _wtRemoveField(id){
-  var doc=document.getElementById('wt-doc');
-  if(doc){var s=doc.querySelector('[data-id="BLANK_'+id+'"]');if(s)s.parentNode.removeChild(s);}
-  if(window._wtFields)window._wtFields=window._wtFields.filter(function(f){return f.id!==id;});
-  _wtUpdateFieldList();
-}
-
-function _wtUpdateFieldList(){
-  var cnt=document.getElementById('wt-fcnt');
-  var list=document.getElementById('wt-fieldlist');
-  var fields=window._wtFields||[];
-  if(cnt)cnt.textContent=fields.length+'개';
-  if(!list)return;
-  if(!fields.length){list.innerHTML='<div style="font-size:11px;color:var(--text3);text-align:center;padding:12px">아직 배치된 필드가 없습니다</div>';return;}
-  list.innerHTML=fields.map(function(f){
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f5f3ff;border-radius:6px;margin-bottom:4px">'
-      +'<span style="font-size:12px;font-weight:700;color:#6d28d9">'+esc(f.label)+'</span>'
-      +'<button onclick="_wtRemoveField('+f.id+')" style="padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer;color:var(--text3)">삭제</button>'
-      +'</div>';
-  }).join('');
-}
-
-function _wtDetectBlanks(html){
-  var fields=[];var idx=0;
-  var SPAN=function(n){return '<span class="wt-blank" data-id="BLANK_'+n+'" style="display:inline-block;min-width:80px;border-bottom:1.5px solid #111;margin:0 2px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';};
-
-  // 1. 밑줄 패턴 (___/ 　)
-  var processed=html.replace(/_{3,}|　{2,}/g,function(match,offset,str){
-    idx++;
-    var rawBefore=str.slice(Math.max(0,offset-60),offset);
-    var rawAfter=str.slice(offset+match.length,Math.min(str.length,offset+match.length+60));
-    var before=rawBefore.replace(/<[^>]+>/g,'').trim().slice(-30);
-    var after=rawAfter.replace(/<[^>]+>/g,'').trim().slice(0,30);
-    var hint=(before?'...'+before:'')+'[빈칸]'+(after?after+'...':'');
-    var label=_wtSuggestLabel(before,after);
-    fields.push({id:idx,hint:hint.slice(0,80),label:label});
-    return SPAN(idx);
-  });
-
-  // 2. 날짜 공백 패턴: "년   월   일" (3개 이상 공백이 빈칸)
-  processed=processed.replace(/년(\s{3,}| {3,})월(\s{3,}| {3,})일/g,function(match,s1,s2,offset,str){
-    idx++;
-    var ctxBefore=str.slice(Math.max(0,offset-150),offset).replace(/<[^>]+>/g,'');
-    var ctxAfter=str.slice(offset+match.length,Math.min(str.length,offset+match.length+50)).replace(/<[^>]+>/g,'');
-    var label='날짜';
-    if(/계약|기간/.test(ctxBefore)){
-      if(/부터/.test(ctxAfter)||!/까지/.test(ctxBefore.slice(-30)))label='계약시작일';
-      else label='계약종료일';
-    }
-    fields.push({id:idx,hint:'[날짜공백] '+label,label:label});
-    return SPAN(idx)+'년 &nbsp;&nbsp;월 &nbsp;&nbsp;일';
-  });
-
-  // 3. 콜론 빈칸 패턴: "필드명:" 뒤에 값이 없고 태그가 닫히는 경우
-  processed=processed.replace(/([가-힣a-zA-Z\s\(\)·‧\.]+):\s*(<\/(?:td|th|p|li|div|span)>)/g,function(match,raw_label,close_tag,offset,str){
-    var label_clean=raw_label.replace(/<[^>]+>/g,'').trim();
-    if(label_clean.length<2||label_clean.length>25)return match;
-    // 이미 앞에서 BLANK_span으로 처리된 경우 제외
-    if(/data-id="BLANK_/.test(str.slice(Math.max(0,offset-50),offset+20)))return match;
-    idx++;
-    var suggested=_wtSuggestColonLabel(label_clean);
-    fields.push({id:idx,hint:'[콜론빈칸] '+label_clean+':',label:suggested});
-    return raw_label+':<span class="wt-blank" data-id="BLANK_'+idx+'" style="display:inline-block;min-width:120px;border-bottom:1.5px solid #111;margin:0 4px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'+close_tag;
-  });
-
-  return {html:processed,fields:fields};
-}
-
-function _wtSuggestColonLabel(label){
-  if(/자동차.*등록|차량.*등록|차번/.test(label))return '차량번호';
-  if(/종사자격|자격증/.test(label))return '자격증번호';
-  if(/수탁자.*주소|주 소|주소/.test(label))return '주소';
-  if(/수탁자.*성명|성\s*명/.test(label))return '기사명';
-  if(/사업자.*등록|사업자번호/.test(label))return '사업자번호';
-  if(/주민등록|주민번호/.test(label))return '주민등록번호';
-  if(/전화|연락처/.test(label))return '전화번호';
-  if(/상\s*호|회사명|대리점/.test(label))return '대리점명';
-  if(/대표자|성명/.test(label))return '대표자명';
-  return '';
-}
-
-function _wtSuggestLabel(before,after){
-  var b=before||'', a=after||'';
-  // after 패턴 우선 (빈칸 뒤 단서가 더 명확한 경우)
-  if(/일\s*이내/.test(a)||/날로부터/.test(b))return '선입금일수';
-  if(/%/.test(a)&&/수수료|금액/.test(b))return '수수료율';
-  if(/까지/.test(a)&&/부터/.test(b))return '계약종료일';
-  if(/까지/.test(a)&&!/부터/.test(b))return '계약종료일';
-  if(/개월/.test(a))return '계약기간(개월)';
-  if(/시간\)/.test(a)||/시간은/.test(a))return '분류시간';
-  if(/원으로/.test(a)&&/시간당/.test(b))return '분류수수료';
-  // before 패턴
-  if(/수탁자|기사\b/.test(b)&&!/위탁|대리/.test(b))return '기사명';
-  if(/위탁자|대리점/.test(b))return '대리점명';
-  if(/부터$/.test(b.trim())||/계약기간.*부터/.test(b))return '계약시작일';
-  if(/담당구역|구역/.test(b))return '담당구역';
-  if(/사업자등록/.test(b))return '사업자번호';
-  if(/대표자|성명/.test(b)&&!/수탁|기사/.test(b))return '대표자명';
-  if(/주소/.test(b))return '주소';
-  if(/배송수수료|배송단가/.test(b))return '배송단가';
-  if(/집화수수료|집화단가/.test(b))return '집화단가';
-  if(/분류수수료/.test(b))return '분류수수료';
-  if(/캠프/.test(b))return '캠프명';
-  if(/노선|라우트/.test(b))return '담당노선';
-  if(/지급일|정산일/.test(b))return '정산지급일';
-  if(/선입금|예치금/.test(b))return '선입금일수';
-  if(/시간당/.test(b))return '시간당단가';
-  if(/전화|연락처/.test(b))return '전화번호';
-  if(/차량|차번/.test(b))return '차량번호';
-  return '';
-}
-
-async function _wtSave(){
-  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
-  if(!_db||!cid){toast('❌ 로그인 필요');return;}
-  var doc=document.getElementById('wt-doc');
-  var html=doc&&doc.innerHTML;
-  if(!html){toast('❌ 파일을 먼저 업로드하세요');return;}
-  var fields=window._wtFields||[];
-  if(!fields.length){toast('⚠️ 필드를 1개 이상 배치한 후 저장하세요');return;}
-  var tpl={html:html,fields:fields,updatedAt:new Date().toISOString()};
-  try{
-    await _db.collection('wisu_templates').doc(cid).set(tpl);
-    await _db.collection('companies').doc(cid).set({wisuTemplate:{fields:fields,updatedAt:tpl.updatedAt}},{merge:true});
-    window._wtTemplate={fields:fields,updatedAt:tpl.updatedAt};
-    if(window._ctrCompany)window._ctrCompany.wisuTemplate=window._wtTemplate;
-    toast('✅ 템플릿 저장 완료!');
-    _wtRender();
-  }catch(e){toast('❌ 저장 실패: '+(e.message||e));}
-}
-
-async function _wtSaveLabels(){
-  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
-  if(!_db||!cid||!window._wtFields)return;
-  var updatedAt=new Date().toISOString();
-  try{
-    await _db.collection('companies').doc(cid).update({'wisuTemplate.fields':window._wtFields,'wisuTemplate.updatedAt':updatedAt});
-    await _db.collection('wisu_templates').doc(cid).update({fields:window._wtFields,updatedAt:updatedAt});
-    toast('✅ 라벨 저장 완료');
-  }catch(e){toast('❌ 저장 실패');}
-}
-
-async function _wtDelete(){
-  if(!confirm('템플릿을 삭제하시겠습니까?\n삭제 후에는 기본 표준계약서 양식이 사용됩니다.'))return;
-  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
-  if(!_db||!cid)return;
-  try{
-    await _db.collection('companies').doc(cid).update({wisuTemplate:firebase.firestore.FieldValue.delete()});
-    await _db.collection('wisu_templates').doc(cid).delete();
-    window._wtTemplate=null;
-    toast('✅ 템플릿 삭제 완료');
-    _wtRender();
-  }catch(e){toast('❌ 삭제 실패');}
-}
-
-function _wtPreview(){
-  var tpl=window._wtTemplate;
-  if(!tpl||!tpl.html){toast('❌ 저장된 템플릿이 없습니다');return;}
-  var html=tpl.html;
-  // wt-blank 마커를 시각적으로 강조 표시 (빈칸 밑줄 + 라벨)
-  var fields=tpl.fields||[];
-  html=html.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<\/span>/g,function(match){
-    var idM=match.match(/data-id="BLANK_(\d+)"/);
-    var blankIdx=idM?parseInt(idM[1]):-1;
-    var field=fields.find(function(f){return f.id===blankIdx;});
-    var label=field&&field.label?'['+field.label+']':'[빈칸]';
-    return '<span style="display:inline-block;min-width:60px;border-bottom:2px solid #8b5cf6;color:#8b5cf6;font-weight:700;padding:0 4px">'+label+'</span>';
-  });
-  var w=window.open('','_blank','width=800,height=900,scrollbars=yes');
-  if(!w){toast('⚠️ 팝업이 차단되었습니다. 브라우저 팝업 허용 후 다시 시도하세요');return;}
-  w.document.open();
-  w.document.write('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">'
-    +'<title>템플릿 미리보기</title>'
-    +'<style>body{font-family:"Pretendard",sans-serif;max-width:760px;margin:0 auto;padding:30px 20px;color:#111;font-size:13px;line-height:1.9}'
-    +'table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:6px 10px}'
-    +'@media print{.no-print{display:none}}'
-    +'</style>'
-    +'</head><body>'
-    +'<div class="no-print" style="background:#f5f3ff;border:1px solid #c4b5fd;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:#6d28d9;line-height:1.7">'
-    +'<b>📌 미리보기 안내</b> — <span style="color:#8b5cf6;font-weight:700">[라벨]</span> 표시 위치에 실제 계약 시 기사 정보가 자동으로 채워집니다.<br>'
-    +'계약 작성 탭에서 기사 선택 후 "저장 + 서명요청"을 누르면 기사에게 채워진 계약서가 전달됩니다.'
-    +'</div>'
-    +html
-    +'<div class="no-print" style="text-align:center;margin-top:30px">'
-    +'<button onclick="window.print()" style="padding:10px 28px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄</button>'
-    +'</div>'
-    +'</body></html>');
-  w.document.close();
 }
 
 function _ctrRenderQuick(){
   var body=document.getElementById('ctr-body');
   body.innerHTML=
     '<div style="background:linear-gradient(135deg,#fef3c7,#fffbeb);border:1.5px solid #f59e0b;border-radius:12px;padding:14px 16px;margin-bottom:16px">'
-    +'<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px">⚡ 간편 업로드 서명</div>'
-    +'<div style="font-size:11.5px;color:#78350f;line-height:1.6">이미 작성된 계약서 파일(한글�워드�PDF�이미지)을 업로드하면 복잡한 양식 입력 없이 바로 전자서명 링크를 생성하여 기사에게 발솔하세요.</div>'
+    +'<div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px">⚡ 간편 서명</div>'
+    +'<div style="font-size:11.5px;color:#78350f;line-height:1.6">작성 완료된 계약서를 업로드하고 기사를 선택하면 전자서명 알림톡이 자동 발송됩니다.</div>'
     +'</div>'
-    +'<div style="margin-bottom:14px">'
-    +'<label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">계약서 파일 <span style="color:#ef4444">*</span></label>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">① 계약서 파일 <span style="color:#ef4444">*</span></div>'
     +'<input type="file" id="qk-file" accept="application/pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrQkUpload(this)" style="display:none">'
-    +'<label for="qk-file" style="display:block;padding:16px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)" id="qk-label">📁 파일 선택<br><span style="font-size:11px;color:var(--text3)">PDF · DOCX(워드)만 지원 — 한글(HWP)·이미지·엑셀 불가</span></label>'
+    +'<label for="qk-file" style="display:block;padding:16px;background:var(--bg2);border:2px dashed var(--border);border-radius:10px;text-align:center;cursor:pointer;font-size:13px;color:var(--text3)" id="qk-label">📁 파일 선택 (PDF · DOCX)</label>'
     +'<input type="hidden" id="qk-url" value="">'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">'
-    +'<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">기사 성명 <span style="color:#ef4444">*</span></label><input id="qk-name" type="text" placeholder="홍길동" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">전화번호 <span style="color:#ef4444">*</span></label><input id="qk-phone" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:12px;font-weight:700;margin-bottom:8px">② 기사 선택 <span style="color:#ef4444">*</span></div>'
+    +'<select id="qk-drv-sel" onchange="_ctrQkSelectDriver(this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<option value="">— 기사 선택 —</option>'
+    +'</select>'
+    +'<div id="qk-drv-info" style="display:none;margin-top:8px;background:var(--bg2);border-radius:8px;padding:10px;font-size:12px;line-height:1.8"></div>'
     +'</div>'
     +'<div id="qk-result" style="display:none"></div>'
-    +'<button onclick="_ctrQkSave()" style="width:100%;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">⚡ 전자서명 링크 생성</button>';
+    +'<button onclick="_ctrQkSave()" style="width:100%;padding:13px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">📲 전자서명 알림톡 발송</button>';
+  _ctrQkLoadDrivers();
+}
+
+async function _ctrQkLoadDrivers(){
+  var sel=document.getElementById('qk-drv-sel');if(!sel)return;
+  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  if(!_db||!cid)return;
+  try{
+    var snap=await _db.collection('drivers').where('dealerId','==',cid).orderBy('name').get();
+    snap.docs.forEach(function(d){
+      var opt=document.createElement('option');
+      opt.value=d.id;
+      opt.textContent=(d.data().name||'?')+' '+(d.data().phone||'');
+      opt.dataset.name=d.data().name||'';
+      opt.dataset.phone=d.data().phone||'';
+      sel.appendChild(opt);
+    });
+  }catch(e){}
+}
+
+function _ctrQkSelectDriver(id){
+  var sel=document.getElementById('qk-drv-sel');
+  var info=document.getElementById('qk-drv-info');
+  if(!sel||!info)return;
+  var opt=sel.querySelector('option[value="'+id+'"]');
+  if(!id||!opt){info.style.display='none';return;}
+  var name=opt.dataset.name||'';
+  var phone=opt.dataset.phone||'';
+  info.style.display='block';
+  info.innerHTML='<b>'+esc(name)+'</b> · '+esc(phone);
+  window._qkDriverName=name;
+  window._qkDriverPhone=phone;
 }
 
 async function _ctrQkUpload(inp){
   var file=inp.files[0];if(!file)return;
   var lbl=document.getElementById('qk-label');
   if(lbl)lbl.textContent='⏳ 업로드 중...';
-  var cid=_CU.uid;
-  var url='';
+  var cid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'unknown';
   try{
     var ref=firebase.storage().ref('contracts/'+cid+'/'+Date.now()+'-'+file.name);
     await ref.put(file);
-    url=await ref.getDownloadURL();
+    var url=await ref.getDownloadURL();
     document.getElementById('qk-url').value=url;
-    if(lbl)lbl.innerHTML='✅ '+file.name+'<br><span style="font-size:11px;color:var(--text3)">업로드 완료</span>';
+    if(lbl)lbl.innerHTML='✅ '+esc(file.name)+'<br><span style="font-size:11px;color:#10b981">업로드 완료</span>';
   }catch(e){
     if(lbl)lbl.textContent='❌ 업로드 실패: '+e.message;
   }
 }
 
 async function _ctrQkSave(){
-  var url=document.getElementById('qk-url').value;
-  var name=(document.getElementById('qk-name').value||'').trim();
-  var phone=(document.getElementById('qk-phone').value||'').trim();
-  if(!url){toast('❌ 파일을 먼저 업로드하세요');return;}
-  if(!name){toast('❌ 기사 성명을 입력하세요');return;}
-  if(!phone){toast('❌ 전화번호를 입력하세요');return;}
+  var url=(document.getElementById('qk-url')||{}).value||'';
+  var name=(window._qkDriverName||'').trim();
+  var phone=(window._qkDriverPhone||'').trim();
+  if(!url){toast('❌ 계약서 파일을 먼저 업로드하세요');return;}
+  if(!name||!phone){toast('❌ 기사를 선택하세요');return;}
   if(!_db||!_CU){toast('❌ 로그인 후 이용하세요');return;}
+  var btn=document.querySelector('[onclick="_ctrQkSave()"]');
+  if(btn){btn.disabled=true;btn.textContent='처리 중...';}
   var tok=Math.random().toString(36).slice(2)+Date.now().toString(36);
   var adminSig='';
-  try{var cs=await _db.collection('companies').doc(_CU.uid).get();adminSig=cs.data()?.stampImage||'';}
-  catch(_e){}
-  var doc={type:'upload',dealerId:_CU.uid,driverName:name,driverPhone:phone,customContractUrl:url,signToken:tok,adminSig:adminSig,createdAt:new Date().toISOString(),signed:false};
+  try{var cs=await _db.collection('companies').doc(_CU.uid).get();adminSig=(cs.exists&&cs.data().stampImage)||'';}catch(_e){}
+  var docData={type:'upload',dealerId:_CU&&(_CU.dealerId||_CU.companyId||_CU.uid),driverName:name,driverPhone:phone,customContractUrl:url,signToken:tok,adminSig:adminSig,createdAt:new Date().toISOString(),signed:false};
   try{
-    await _db.collection('contracts').add(doc);
-    // 원본 DOCX에서 라우트·단가·날짜·담당구역 자동 추출 (백그라운드, 비차단)
-    try{var _xtkn='';try{_xtkn=await _auth.currentUser.getIdToken();}catch(_e){}fetch('/api/contract-extract',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+_xtkn},body:JSON.stringify({signToken:tok})}).catch(()=>{});}catch(_e){}
+    await _db.collection('contracts').add(docData);
     var link='https://donway.ai.kr/contract/sign/'+tok;
+    // 알림톡 발송 (계약서서명 템플릿)
+    var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(_e){}
+    var alimRes=await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tkn},body:JSON.stringify({
+      phone:phone,
+      templateCode:'KA01TP260914215829605ddx2vWo50Iy',
+      variables:{'#{기사명}':name,'#{링크}':link}
+    })}).catch(function(){return{ok:false};});
     var res=document.getElementById('qk-result');
-    if(res){res.style.display='block';res.innerHTML='<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-top:14px"><div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:8px">✅ 서명 링크 생성 완료</div><div style="font-size:11.5px;color:#166534;margin-bottom:10px">기사에게 카카오톡 또는 문자로 아래 링크를 전달하세요.</div><div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px;word-break:break-all;margin-bottom:10px;color:#1e293b">'+link+'</div><div style="display:flex;gap:8px"><button onclick="navigator.clipboard.writeText(\"'+link+'\")" style="flex:1;padding:9px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 링크 복사</button><button onclick="_ctrQkSendSms(\"'+phone+'\",\"'+link+'\")" style="flex:1;padding:9px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📱 SMS 발송</button></div></div>';}
-    toast('✅ 서명 링크 생성 완료');
+    var alimOk=alimRes&&alimRes.ok;
+    if(res){
+      res.style.display='block';
+      res.innerHTML='<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px;margin-top:14px">'
+        +'<div style="font-size:13px;font-weight:800;color:#166534;margin-bottom:6px">'+(alimOk?'✅ 알림톡 발송 완료':'⚠️ 링크 생성 완료 (알림톡 실패)')+'</div>'
+        +'<div style="font-size:11.5px;color:#166534;margin-bottom:10px">'+esc(name)+' · '+esc(phone)+'</div>'
+        +'<div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px;word-break:break-all;margin-bottom:10px;color:#1e293b">'+link+'</div>'
+        +'<div style="display:flex;gap:8px">'
+        +'<button onclick="navigator.clipboard.writeText(\''+link+'\').then(function(){toast(\'📋 복사됨\')})" style="flex:1;padding:9px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📋 링크 복사</button>'
+        +(alimOk?'':'<button onclick="_ctrQkResendAlimtalk(\''+phone.replace(/'/g,"\\'")+'\')" style="flex:1;padding:9px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📲 알림톡 재발송</button>')
+        +'</div></div>';
+      window._qkLastLink=link;window._qkLastToken=tok;
+    }
+    toast(alimOk?'✅ 전자서명 알림톡 발송 완료':'⚠️ 링크 생성됨 — 알림톡 재발송 필요');
   }catch(e){
     toast('❌ 실패: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='📲 전자서명 알림톡 발송';}
   }
 }
 
-async function _ctrQkSendSms(phone,link){
-  try{
-    var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e2){}
-    var r=await fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tkn},body:JSON.stringify({messages:[{to:phone,text:'서명 요청 | 아래 링크에서 계약서를 확인하고 서명하세요: '+link}]})});
-    if(r.ok)toast('✅ SMS 발송 완료');
-    else toast('❌ SMS 실패 (링크 복사 후 직접 전달하세요)');
-  }catch(_e){
-    toast('❌ SMS 실패');
-  }
+async function _ctrQkResendAlimtalk(phone){
+  var link=window._qkLastLink;
+  var name=window._qkDriverName||'';
+  if(!link||!phone)return;
+  var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(_e){}
+  var r=await fetch('/api/send-alimtalk',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tkn},body:JSON.stringify({
+    phone:phone,templateCode:'KA01TP260914215829605ddx2vWo50Iy',
+    variables:{'#{기사명}':name,'#{링크}':link}
+  })}).catch(function(){return{ok:false};});
+  toast(r&&r.ok?'✅ 알림톡 발송 완료':'❌ 알림톡 실패 — 링크 직접 전달하세요');
 }
 
 function _ctrRenderWrite(){
@@ -8283,6 +7964,7 @@ function _ctrRenderWrite(){
   _ctrLoadStamp();
   _ctrLoadContractTemplate(t);
   _ctrRenderConditions(t);
+  setTimeout(_ctrRestoreDocx,100);
   setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
     if(!canvas||!window.SignaturePad)return;
@@ -8350,11 +8032,18 @@ function _ctrSelectDriver(id){
   _ctrAutoFillDocx();
 }
 
-function _ctrAutoFillDocx(){
+async function _ctrAutoFillDocx(){
   var dc=document.getElementById('ctr-docx-content');
   if(!dc)return;
   var drv=window._ctrDriver||{};
   var cp=window._ctrCompany||{};
+  // _routeCampMap 비어있으면 Firestore에서 fetch
+  if(_db&&Object.keys(_routeCampMap).length===0){
+    var _cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+    if(_cid){
+      try{var _s=await _db.collection('settings').doc(_cid+'_routeCampMap').get();if(_s.exists)Object.assign(_routeCampMap,_s.data());}catch(_e){}
+    }
+  }
   // 선택된 라우트에서 캠프명 계산
   var _campSet=[];
   Object.keys(window.RPRICE||{}).forEach(function(rk){
@@ -8691,6 +8380,8 @@ async function _ctrDocxLoad(inp){
     window._ctrDocxOrigHtml=html;
     window._ctrDocxFileName=file.name;
     window._ctrDocxBlankCount=blankCount;
+    // localStorage에 DOCX 저장 (새로고침 후에도 유지)
+    try{var _sk='ctr_docx_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
     // 기사 이미 선택된 경우 자동 채우기
     if(window._ctrDriver)_ctrAutoFillDocx();
@@ -8700,11 +8391,34 @@ async function _ctrDocxLoad(inp){
   }
 }
 function _ctrDocxClear(){
+  // localStorage에서 DOCX 삭제
+  try{var _sk='ctr_docx_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.removeItem(_sk);}catch(_e){}
+  window._ctrDocxOrigHtml=null;window._ctrDocxFileName=null;window._ctrDocxBlankCount=0;
   var editor=document.getElementById('ctr-docx-editor');
   if(editor){editor.style.display='none';editor.innerHTML='';}
   var status=document.getElementById('ctr-docx-status');
   if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
   var fi=document.getElementById('ctr-docx-file');if(fi)fi.value='';
+}
+function _ctrRestoreDocx(){
+  var _sk='ctr_docx_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
+  var saved=null;
+  try{var sd=localStorage.getItem(_sk);if(sd)saved=JSON.parse(sd);}catch(_e){}
+  if(!saved)return;
+  var editor=document.getElementById('ctr-docx-editor');
+  var status=document.getElementById('ctr-docx-status');
+  if(!editor)return;
+  editor.style.display='block';
+  editor.innerHTML=
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-size:12px;font-weight:700;color:var(--text2)">✏️ 문서 어디든 클릭해서 수정 가능'+(saved.blankCount?' · 빈칸 '+saved.blankCount+'개 자동감지':'')+'</div>'
+    +'<button onclick="_ctrDocxClear()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--text3)">× 삭제</button>'
+    +'</div>'
+    +'<div id="ctr-docx-content" contenteditable="true" style="border:1px solid #8b5cf6;border-radius:8px;padding:16px 20px;font-size:12px;line-height:1.9;max-height:420px;overflow-y:auto;background:#fff;color:#111;outline:none;cursor:text">'+saved.html+'</div>';
+  window._ctrDocxOrigHtml=saved.html;
+  window._ctrDocxFileName=saved.fileName;
+  window._ctrDocxBlankCount=saved.blankCount||0;
+  if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(saved.fileName)+' · 빈칸 '+saved.blankCount+'개</span>';
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
