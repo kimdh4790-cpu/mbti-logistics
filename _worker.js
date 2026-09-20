@@ -1702,8 +1702,6 @@ async function submitSign(){
   var _idVal=_idEl?_idEl.value.trim():'';
   try{
     var _docxHtml=window._docxRenderedHtml||'';
-    if(_docxHtml&&_idVal){_docxHtml=_docxHtml.replace(/(주민등록번호\s*(?::\s*)?(?:<[^>]*>)*)\s*<u>(?:_+|&nbsp;|&#160;|\s)*<\/u>/g,function(m,pre){return pre+_idVal;});_docxHtml=_docxHtml.replace(/(\(?주민등록번호\)?\s*:)\s*(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{6}/.test(m)?m:pre+' '+_idVal+tag;});}
-    if(_docxHtml){_docxHtml=_docxHtml.replace(/동의함(?:\s|&nbsp;|&#160;|<[^>]+>)*[□☐☑▢⬜□☐☑◻◻]/g,'동의함 ✅');_docxHtml=_docxHtml.replace(/동의함[ \t]*□/g,'동의함 ✅');}
     var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig,kakaoId:_kakaoId,kakaoNick:_kakaoNick,driverBizNum:_bizVal,driverIdNum:_idVal,docxHtml:_docxHtml})});
     var data=await res.json();
     if(data.ok){location.href='/contract/download/${_cToken}?inline=1';}
