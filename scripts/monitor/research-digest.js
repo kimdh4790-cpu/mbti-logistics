@@ -85,24 +85,6 @@ JSON 배열로 응답: [{"idx":1,"category":"강의소재","reason":"한줄이�
   });
 }
 
-async function sendSMS(message) {
-  const { SOLAPI_KEY, SOLAPI_SECRET, SOLAPI_SENDER, ADMIN_PHONE } = process.env;
-  if (!SOLAPI_KEY || !SOLAPI_SECRET || !ADMIN_PHONE) return;
-  const sender = SOLAPI_SENDER || '05171133103';
-  const dt = new Date().toISOString();
-  const sl = Math.random().toString(36).slice(2, 12);
-  const enc = new TextEncoder();
-  const { createHmac } = await import('crypto');
-  const sig = createHmac('sha256', SOLAPI_SECRET).update(dt + sl).digest('hex');
-  const auth = `HMAC-SHA256 apiKey=${SOLAPI_KEY}, date=${dt}, salt=${sl}, signature=${sig}`;
-  try {
-    await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: auth },
-      body: JSON.stringify({ messages: [{ to: ADMIN_PHONE, from: sender, text: message }] }),
-    });
-  } catch {}
-}
 
 async function main() {
   const today = new Date().toISOString().slice(0, 10);
@@ -166,13 +148,6 @@ async function main() {
       if (i.reason) console.log(`    → ${i.reason}`);
     });
   }
-
-  // 8. SMS 발송
-  const smsLines = allClassified.slice(0, 5).map(
-    i => `[${i.category}][${i.source}] ${(i.title || i.name || '').slice(0, 25)}`
-  );
-  const smsMsg = `[MBTICO 주간리서치] ${today}\n총${allClassified.length}건\n${smsLines.join('\n')}`;
-  await sendSMS(smsMsg);
 
   console.log(`\n저장: ${outPath}`);
   return digest;
