@@ -70,7 +70,8 @@ npm run smoke:filo     # FILO만
 ### 파일 수정 시 영향 범위 (꼭 확인)
 | 수정 파일 | 테스트 대상 |
 |---|---|
-| `_worker.js` | DONWAY + mbtico.kr (공통 API) |
+| `_worker.js` | DONWAY (donway.ai.kr 전용) |
+| `mbtico-worker.js` | mbtico.kr 관제센터 |
 | `filo-worker.js` | filo.ai.kr 배송앱 |
 | `dine-worker.js` | dine.ne.kr SCAN 서비스 |
 | `emergency.html` | 배송앱(filo.ai.kr) 핵심 |
@@ -150,6 +151,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 ---
 
 ### ⚪ MBTICO 관제센터 (mbtico.kr)
+- **mbtico-worker.js** ← 전용 Worker (wrangler.mbtico.toml, 2026-09-20 _worker.js에서 분리)
 - mbtico-pages/ ← 별도 wrangler (cd mbtico-pages && npx wrangler deploy)
 - mbtico-ctrl.js — 슈퍼어드민용 (채팅·공지·결제·매장 관리)
 
@@ -159,8 +161,18 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 
 ---
 
-### ⚫ 공유 Worker (_worker.js) — 전체 앱 API 라우터
-- filo.ai.kr·dine.ne.kr·donway.ai.kr·mbtico.kr·yongcha.app 모두 이 파일 거침
+### ⚫ _worker.js — donway.ai.kr 전용 Worker
+> 2026-09-20: mbtico.kr 블록 분리 완료. 현재 donway.ai.kr 전용.
+
+**도메인별 Worker 파일 현황**
+| 도메인 | Worker 파일 | wrangler config |
+|---|---|---|
+| filo.ai.kr | filo-worker.js | wrangler.filo.toml |
+| dine.ne.kr | dine-worker.js | wrangler.dine.toml |
+| donway.ai.kr | _worker.js | wrangler.toml |
+| mbtico.kr | mbtico-worker.js | wrangler.mbtico.toml |
+| yongcha.app | yongcha-worker.js | wrangler.yongcha.toml |
+
 - KV(DONWAY_ASSETS)에서 HTML·JS 파일 서빙
 - Firestore SA 키로 서버사이드 Firestore 직접 접근
 
@@ -634,6 +646,15 @@ cd mbtico-pages && npx wrangler deploy
 - 수정 후: 타이핑한 내용이 서명 완료 아카이브 HTML에 정확히 반영됨
 - **_worker.js archive DOCX 케이스 _aDetailTable 제거**: DOCX 업로드 케이스에서 빈 "📋 계약 주요 내용" 요약 박스 표시 안 함 → DOCX 원본 HTML + 서명 블록만 표시 (구조화 필드 삭제 후 빈 표만 나오던 문제 해결)
 - **donway-pages/index.html 범용 빈칸 감지 시스템**: MBTICO 전용 하드코딩 카드 제거 → `_ctrRenderBlankInputs()` / `_ctrFillBlanks()` 신규 구현 (어떤 대리점 DOCX든 `<u>` 빈칸 자동감지 → 동적 입력폼)
+
+### ✅ 완료 (2026-09-20 mbtico.kr Worker 분리)
+- **mbtico-worker.js 신규**: mbtico.kr 전용 Worker (wrangler.mbtico.toml)
+  - `_worker.js`에서 mbtico.kr 블록(~307라인) 제거 → donway.ai.kr 전용으로 슬림화
+  - 공통 헬퍼 + mbtico.kr 라우팅 + 전체 공통 API 포함
+  - mbtico-ctrl.js KV 서빙, Firebase `/__/auth/` 프록시, 관제센터 전체 기능 포함
+- **wrangler.toml**: mbtico.kr/* 라우트 제거 → donway.ai.kr/* 만 남음
+- **deploy.yml**: "Deploy Mbtico Worker" 스텝 추가 (wrangler.mbtico.toml 사용)
+- 5개 도메인 전부 전용 Worker로 분리 완료 (filo/dine/donway/_worker/mbtico/yongcha)
 
 ### ✅ 완료 (2026-09-20 filo·dine Worker 분리)
 - **filo-worker.js 신규**: filo.ai.kr 전용 Worker (wrangler.filo.toml)
