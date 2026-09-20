@@ -1,13 +1,14 @@
 # SCAN AI — 전용 메모
-> dine.ne.kr 서비스 (메인 도메인). 세션 시작 시 SCAN 관련 작업이면 이 파일 읽을 것.
+> dine.ne.kr 서비스 (메인 도메인 — 2026-09-20 dine.ne.kr 단일 운영 확정). 세션 시작 시 SCAN 관련 작업이면 이 파일 읽을 것.
 
 ---
 
 ## 서비스 개요
 - **위치**: dine.ne.kr (이전: mbtico.kr/scan → 2026-09-20 이전 / filo.ai.kr/seolyuhana → 2026-09-06 이전)
 - **포지셔닝**: 소상공인·직장인 대상 AI 문서 분석 SaaS (1P=1원 포인트제)
-- **파일**: scan.html, seolyuhana/services/analyze.js, _worker.js (일반 라우팅 블록 — mbtico.kr + dine.ne.kr 공통)
+- **파일**: scan.html (authDomain: dine.ne.kr), dine-worker.js (라우터+API), seolyuhana/services/analyze.js
 - **PWA**: /scan-manifest.json, scan-icon-192/512.png (KV 업로드됨, dine.ne.kr에서 서빙)
+- **2026-09-20 변경**: dine.ne.kr이 SCAN 전용 도메인으로 확정. scan.html authDomain mbtico.kr→dine.ne.kr 수정 완료. Firebase storageBucket·messagingSenderId·appId 추가.
 
 ---
 
