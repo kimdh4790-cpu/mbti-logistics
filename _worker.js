@@ -7845,6 +7845,7 @@ service cloud.firestore {
         mH.set('Cache-Control', 'no-cache');
         return new Response(mResp.body, {status: mResp.status, headers: mH});
       }
+    }
     if (path === '/manifest_donway.json' || path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
