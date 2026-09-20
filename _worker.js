@@ -5262,7 +5262,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
       return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
     }
-    if (!['mbtico.kr','www.mbtico.kr'].includes(hostname)) {
+    if (!['mbtico.kr','www.mbtico.kr','filo.ai.kr','www.filo.ai.kr','dine.ne.kr','www.dine.ne.kr'].includes(hostname)) {
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
       const companySlug = slugMatch[1];
