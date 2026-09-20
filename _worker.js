@@ -5376,15 +5376,11 @@ function doRegister(){
       if (hostname === 'yongcha.app' || hostname === 'www.yongcha.app') {
         return handleYongcha(request, env);
       }
-      // mbetco.kr → universal_settle.html
+      // mbetco.kr / mbtico.kr → 관제센터
       if (hostname.includes('mbetco') || hostname.includes('mbtico')) {
-        // mbtico.kr 루트 → 허브 페이지
+        // mbtico.kr 루트 → /control 리다이렉트
         if (url.pathname === '/' || url.pathname === '' || url.pathname === '/index.html') {
-          const hubResp = await fetchAsset('/mbtico_hub.html', request, env);
-          const h = new Headers();
-          h.set('Content-Type', 'text/html; charset=utf-8');
-          h.set('Cache-Control', 'no-cache');
-          return new Response(hubResp.body, {status: hubResp.status, headers: h});
+          return Response.redirect('https://mbtico.kr/control', 302);
         }
         // /admin_sub → 구독 어드민
         if (url.pathname === '/admin_sub' || url.pathname === '/admin_sub.html') {
@@ -5441,6 +5437,24 @@ function doRegister(){
         mbH.set('Cache-Control', 'no-cache');
         Object.entries(SECURITY_HEADERS).forEach(([k,v]) => mbH.set(k,v));
         return new Response(mbResp.body, { status: mbResp.status, headers: mbH });
+      }
+      // filo.ai.kr → 배송앱 랜딩
+      if (hostname.includes('filo.ai')) {
+        const filoLandResp = await fetchAsset('/mbti_landing.html', request, env);
+        const filoLandH = new Headers();
+        filoLandH.set('Content-Type', 'text/html; charset=utf-8');
+        filoLandH.set('Cache-Control', 'no-cache');
+        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => filoLandH.set(k,v));
+        return new Response(filoLandResp.body, {status: filoLandResp.status, headers: filoLandH});
+      }
+      // dine.ne.kr → SCAN 앱 서빙
+      if (hostname.includes('dine.ne')) {
+        const scanResp = await fetchAsset('/scan.html', request, env);
+        const scanH = new Headers();
+        scanH.set('Content-Type', 'text/html; charset=utf-8');
+        scanH.set('Cache-Control', 'no-cache');
+        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => scanH.set(k,v));
+        return new Response(scanResp.body, {status: scanResp.status, headers: scanH});
       }
       // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
