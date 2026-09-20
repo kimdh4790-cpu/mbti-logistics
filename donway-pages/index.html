@@ -7822,6 +7822,8 @@ function _ctrRenderWrite(){
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">✍️ 기사 서명 <span style="font-size:11px;font-weight:400;color:var(--text3)">(현장 직접 서명 시 — 선택)</span></div>'
+    +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">👤 기사 성명 <span style="color:#ef4444">(동의서·보관함 표시)</span></label>'
+    +'<input id="ctr-driver-name-input" type="text" placeholder="홍길동" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
     +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">📱 기사 전화번호 <span style="color:#ef4444">(알림톡 발송 필수)</span></label>'
     +'<input id="ctr-driver-phone-input" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
     +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:6px 10px;margin-bottom:8px">현장 서명 없이 저장하면 기사에게 알림톡으로 서명 링크를 발송합니다.</div>'
@@ -7879,7 +7881,7 @@ function _ctrCollect(){
     companyCeo:cp.ceoName||cp.repName||'',
     companyAddr:cp.bizAddr||cp.address||cp.addr||'',
     companyPhone:cp.settlementPhone||cp.phone||cp.tel||'',
-    driverName:drv.name||'',
+    driverName:_g('ctr-driver-name-input')||drv.name||'',
     driverPhone:_g('ctr-driver-phone-input')||drv.phone||'',
     driverBizNum:drv.bizNum||'',
     driverIdNum:drv.ssn||'',
