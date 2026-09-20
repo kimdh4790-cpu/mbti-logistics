@@ -3476,7 +3476,7 @@ async function acceptExchange(){
       }
       if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
       if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
-        const _mbtManifest = {name:'MBTICO 배송앱',short_name:'MBTICO',start_url:'/',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+        const _mbtManifest = {name:'MBTICO 관제센터',short_name:'MBTICO',start_url:'/control',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
         return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
       }
       if (path === '/' || path === '') return new Response(_MBTICO_LANDING_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
