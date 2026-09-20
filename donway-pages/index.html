@@ -7798,7 +7798,7 @@ function _ctrRenderWrite(){
     +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
     +'<input type="hidden" id="ctr-pdf-url">'
     +'</div>'
-    +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
+    +''
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🖊 대리점 서명 / 도장</div>'
     +'<div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">'
@@ -7833,7 +7833,6 @@ function _ctrRenderWrite(){
 
   _ctrLoadStamp();
   _ctrLoadContractTemplate(t);
-  _ctrRenderConditions(t);
   setTimeout(_ctrRestoreDocx,100);
   setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
@@ -7865,63 +7864,10 @@ function _ctrSelectType(t){
   _ctrRenderWrite();
 }
 
-function _ctrRenderConditions(t){
-  var el=document.getElementById('ctr-conditions');
-  if(!el)return;
-  if(t==='wisu'){
-    var rpRoutes=Object.keys(window.RPRICE||{}).filter(function(k){return k&&k.length<=8;}).sort();
-    var routeRowsHtml='';
-    if(rpRoutes.length){
-      rpRoutes.forEach(function(rk){
-        var rp=window.RPRICE[rk]||0;
-        routeRowsHtml+='<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);margin-bottom:4px">'
-          +'<input type="checkbox" id="ctr-rc-'+rk+'" onchange="_ctrRouteCheck(\''+rk+'\')" style="accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">'
-          +'<label for="ctr-rc-'+rk+'" style="font-size:12px;font-weight:700;color:var(--text);min-width:48px;cursor:pointer">'+rk+'</label>'
-          +'<input type="number" id="ctr-rp-'+rk+'" value="'+rp+'" placeholder="단가(원)" disabled style="width:90px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg2);color:var(--text)">'
-          +'<span style="font-size:11px;color:var(--text3)">원/건</span>'
-          +'</div>';
-      });
-    } else {
-      routeRowsHtml='<div style="font-size:12px;color:var(--text3);padding:8px">설정 → 단가표에서 라우트를 먼저 등록해주세요</div>';
-    }
-    el.innerHTML='<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ④ 라우트 선택 (체크 후 단가 수정 가능)</div>'
-      +'<div id="ctr-route-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2)">'
-      +routeRowsHtml+'</div>';
-  } else {
-    el.innerHTML='';
-  }
-}
-
-function _ctrRouteCheck(rk){
-  var cb=document.getElementById('ctr-rc-'+rk);
-  var inp=document.getElementById('ctr-rp-'+rk);
-  if(!cb||!inp)return;
-  inp.disabled=!cb.checked;
-  if(cb.checked)inp.focus();
-}
-
 function _ctrCollect(){
   var _g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var cp=window._ctrCompany||{};
-  // 노선별 단가 수집
-  var routePrices=[];
-  var t=window._ctrType||'wisu';
-  if(t==='wisu'){
-    var rpKeys=Object.keys(window.RPRICE||{}).filter(function(k){return k&&k.length<=8;});
-    rpKeys.forEach(function(rk){
-      var cb=document.getElementById('ctr-rc-'+rk);
-      var inp=document.getElementById('ctr-rp-'+rk);
-      if(cb&&cb.checked&&inp) routePrices.push({route:rk,price:parseInt(inp.value,10)||0});
-    });
-  }
-  var routeStr=routePrices.map(function(r){return r.route;}).join(', ');
-  var firstPrice=routePrices.length?String(routePrices[0].price):'';
-  // 캠프명: 선택된 모든 라우트에서 캠프 추출 (중복 제거)
-  var campSet=[];
-  routePrices.forEach(function(r){var c=(_routeCampMap&&_routeCampMap[r.route])||'';if(c&&campSet.indexOf(c)<0)campSet.push(c);});
-  var campAuto=campSet.join(', ');
-  // 담당구역: 캠프명 없이 고정 문구 (회사 전 노선 커버 표현)
-  var areaAuto='전구역관할';
+  var routePrices=[];var routeStr='';var firstPrice='';var campAuto='';var areaAuto='전구역관할';
   var drv=window._ctrDriver||{};
   return {
     type:t,
@@ -8251,7 +8197,6 @@ function _ctrShowOverlay(data){
 }
 function _ctrPreview(){
   var data=_ctrCollect();
-  if(!data.driverName){toast('❌ 기사 성명을 입력하세요');return;}
   _ctrShowOverlay(data);
 }
 
@@ -8498,7 +8443,6 @@ async function _ctrSave(){
     if(_rcSnap.exists){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});Object.assign(_routeCampMap,_rcSnap.data());}
   }catch(e){}
   var data=_ctrCollect();
-  if(!data.driverName){toast('❌ 기사를 선택하거나 DOCX에 기사 성명을 입력하세요');return;}
   var adminSig='';
   if(window._adminStampImg){
     adminSig=window._adminStampImg;
@@ -8511,7 +8455,7 @@ async function _ctrSave(){
   }
   var typeLabel={wisu:'위수탁',subok:'부속합의서'}[data.type]||'계약';
   var todayStr=new Date().toISOString().slice(0,10);
-  data.title=data.driverName+' '+typeLabel+' ('+todayStr+')';
+  data.title=(data.driverName?data.driverName+' ':'')+typeLabel+' ('+todayStr+')';
   var signToken=_db.collection('contract_signs').doc().id;
   var dealerId=_CU.dealerId||_CU.uid;
   try{
