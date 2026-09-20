@@ -148,6 +148,7 @@ claude/* 브랜치 push
 - mbtico.kr Worker 분리 완료 (PR #128 수동 머지)
 - CLAUDE.md 메모 업데이트 (PR #129 수동 머지)
 - TASKS.md 신규 생성 — 앱별 배포방식·기능 정리
+- 배송앱 도메인 주석 수정 (PR #131 자동 머지): filo-worker.js·배송앱_변경내역.md mbtico.kr → filo.ai.kr
 
 ---
 
