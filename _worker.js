@@ -3485,9 +3485,9 @@ async function acceptExchange(){
         const _mbtManifest = {name:'MBTICO 관제센터',short_name:'MBTICO',start_url:'/control',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
         return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
       }
-      if (path === '/' || path === '') return new Response(_MBTICO_LANDING_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      if (path === '/' || path === '') { const _lResp = await fetchAsset('/mbti_landing.html', request, env); return new Response(await _lResp.text(), {status:_lResp.status,headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}}); }
       // /app 경로 제거됨 (레거시 물류앱v9 삭제)
-      if (path === '/hub') return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+      if (path === '/hub') { const _hResp = await fetchAsset('/mbtico_hub.html', request, env); return new Response(await _hResp.text(), {status:_hResp.status,headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}}); }
       if (path === '/control' || path === '/control/') {
         const ctrlHtml = `<!DOCTYPE html>
 <html lang="ko">
@@ -4452,7 +4452,8 @@ function doRegister(){
 
       if (hostname.includes('workers.dev') || hostname.includes('kimdh4790')) {
         // ★ workers.dev → 배송앱 허브
-        return new Response(_MBTICO_HUB_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
+        const _hwResp = await fetchAsset('/mbtico_hub.html', request, env);
+        return new Response(await _hwResp.text(), {status:_hwResp.status,headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
       } else {
         const landingResp = await fetchAsset('/donway_landing.html', request, env);
         const landingHeaders = new Headers();
