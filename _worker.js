@@ -1218,9 +1218,9 @@ export default {
             if (_dlArRes.ok) {
               let _dlArHtml = await _dlArRes.text();
               // 서명 완료 아카이브에 기사 입력 정보 + 도장/서명 주입 (구 아카이브 포함)
-              if(_dlIdNum) _dlArHtml = _dlArHtml.replace(/(주민등록번호[^<]{0,25})(<[\/])/g,function(m,pre,tag){return /\d{6}/.test(pre)?m:pre+_dlIdNum+' '+tag;});
-              if(_dlBiz) _dlArHtml = _dlArHtml.replace(/(사업자등록번호[^<]{0,25})(<[\/])/g,function(m,pre,tag){return /\d{10}/.test(pre.replace(/-/g,''))?m:pre+_dlBiz+' '+tag;});
-              _dlArHtml = _dlArHtml.replace(/동의함\s*[□☐☑▢⬜□☐☑◻]/g,'동의함 ✅');
+              if(_dlIdNum){_dlArHtml=_dlArHtml.replace(/(\(?주민등록번호\)?\s*:)\s*(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{6}/.test(m)?m:pre+' '+_dlIdNum+tag;});_dlArHtml=_dlArHtml.replace(/(주민등록번호[^<]{0,30})(<[\/])/g,function(m,pre,tag){return /\d{6}/.test(pre)?m:pre+_dlIdNum+' '+tag;});}
+              if(_dlBiz){_dlArHtml=_dlArHtml.replace(/(사업자등록번호\s*:)\s*(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{10}/.test(m.replace(/-/g,''))?m:pre+' '+_dlBiz+tag;});_dlArHtml=_dlArHtml.replace(/(사업자등록번호[^<]{0,30})(<[\/])/g,function(m,pre,tag){return /\d{10}/.test(pre.replace(/-/g,''))?m:pre+_dlBiz+' '+tag;});}
+              _dlArHtml=_dlArHtml.replace(/동의함(\s|<[^>]+>)*[□☐☑▢⬜□☐☑◻◻]/g,'동의함 ✅');_dlArHtml=_dlArHtml.replace(/동의함[ \t]*□/g,'동의함 ✅');
               let _arInCnt=0;
               _dlArHtml = _dlArHtml.replace(/\(인\)(?!<br><img)/g,function(m){_arInCnt++;if(_arInCnt===1&&_dlAdSig)return '(인)<br><img src="'+_dlAdSig+'" style="max-height:80px;max-width:100px;display:block;mix-blend-mode:multiply">';if(_arInCnt===2&&_dlDrSig)return '(인)<br><img src="'+_dlDrSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">';return m;});
               if(_dlDrSig) _dlArHtml = _dlArHtml.replace(/\(서명\)(?!<img)/g,'<img src="'+_dlDrSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">');
