@@ -7820,23 +7820,7 @@ function _ctrRenderWrite(){
     +'<button onclick="_ctrStampClear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
     +'</div>'
     +'</div>'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ④ 계약 내용 입력</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계약 시작일</label><input id="ctr-start-date" type="date" value="'+_sy+'-'+String(_sm).padStart(2,'0')+'-'+String(_sd).padStart(2,'0')+'" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계약 종료일</label><input id="ctr-end-date" type="date" value="'+_ey+'-'+String(_em).padStart(2,'0')+'-'+String(_ed).padStart(2,'0')+'" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">집화수수료 (원)</label><input id="ctr-collect-price" type="number" placeholder="예: 200" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">배송수수료 (원)</label><input id="ctr-unit-price" type="number" placeholder="예: 800" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">차량번호</label><input id="ctr-car-num" type="text" placeholder="예: 12가3456" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">자격증번호</label><input id="ctr-lic-num" type="text" placeholder="선택입력" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">지급일</label><input id="ctr-pay-day" type="text" placeholder="매월 20일" value="매월 20일" style="width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
-    +'<button onclick="_ctrApplyTyped()" style="width:100%;padding:10px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:4px">📝 DOCX에 입력하기</button>'
-    +'</div>'
+    +'<div id="ctr-blank-inputs-card" style="display:none;margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">✍️ 기사 서명 <span style="font-size:11px;font-weight:400;color:var(--text3)">(현장 직접 서명 시 — 선택)</span></div>'
     +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">👤 기사 성명 <span style="color:#ef4444">(동의서·보관함 표시)</span></label>'
@@ -7885,58 +7869,53 @@ function _ctrSelectType(t){
   _ctrRenderWrite();
 }
 
-function _ctrApplyTyped(){
-  var _g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
-  var startDate=_g('ctr-start-date');
-  var endDate=_g('ctr-end-date');
-  var collectPrice=_g('ctr-collect-price');
-  var unitPrice=_g('ctr-unit-price');
-  var carNum=_g('ctr-car-num');
-  var licNum=_g('ctr-lic-num');
-  var payDay=_g('ctr-pay-day');
-  var driverName=_g('ctr-driver-name-input');
-  var driverPhone=_g('ctr-driver-phone-input');
-
+function _ctrRenderBlankInputs(){
+  var card=document.getElementById('ctr-blank-inputs-card');
+  if(!card)return;
   var content=document.getElementById('ctr-docx-content');
-  if(!content){toast('⚠️ DOCX를 먼저 업로드하세요');return;}
-
-  var fills=[
-    {hint:'계약기간',val:startDate&&endDate?(startDate.replace(/-/g,'.')+'~'+endDate.replace(/-/g,'.')):null},
-    {hint:'시작일',val:startDate?startDate.replace(/-/g,'.'):null},
-    {hint:'종료일',val:endDate?endDate.replace(/-/g,'.'):null},
-    {hint:'집화',val:collectPrice?(Number(collectPrice).toLocaleString()+'원'):null},
-    {hint:'배송수수료',val:unitPrice?(Number(unitPrice).toLocaleString()+'원'):null},
-    {hint:'단가',val:unitPrice?(Number(unitPrice).toLocaleString()+'원'):null},
-    {hint:'차량',val:carNum||null},
-    {hint:'자격증',val:licNum||null},
-    {hint:'지급일',val:payDay||null},
-    {hint:'성명',val:driverName||null},
-    {hint:'수탁자',val:driverName||null},
-    {hint:'전화',val:driverPhone||null}
-  ];
-
-  // contenteditable 내 <u> blank 요소들을 순서대로 채우기
-  var blanks=content.querySelectorAll('u');
-  var filled=0;
+  if(!content){card.style.display='none';return;}
+  var blanks=Array.from(content.querySelectorAll('u'));
+  if(!blanks.length){card.style.display='none';return;}
+  var html='<div class="card" style="margin-bottom:0">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">✏️ 빈칸 입력 ('+blanks.length+'개 감지) — 또는 문서를 직접 클릭해서 타이핑</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">';
   blanks.forEach(function(u,idx){
-    var prev=u.previousSibling;
-    var prevText=prev&&prev.nodeType===3?prev.textContent.trim():'';
-    var parentText=u.parentElement?u.parentElement.textContent:'';
-    var hint='';
-    fills.forEach(function(f){if(f.val&&(parentText.includes(f.hint)||prevText.includes(f.hint)))hint=f.val;});
-    if(hint){u.textContent=hint;u.style.color='#0066ff';filled++;}
+    var label='';
+    var node=u.previousSibling;
+    while(node){
+      if(node.nodeType===3&&node.textContent.trim()){label=node.textContent.trim().replace(/[：:·\-\s]+$/,'').slice(-20);break;}
+      else if(node.nodeType===1&&node.tagName!=='U'){var t=node.textContent.trim();if(t){label=t.replace(/[：:·\-\s]+$/,'').slice(-20);break;}}
+      node=node.previousSibling;
+    }
+    if(!label){
+      var par=u.parentElement;
+      if(par){var tmp=document.createElement('div');tmp.innerHTML=par.innerHTML.split(u.outerHTML)[0];var pt=tmp.textContent.trim().replace(/[：:·\-\s]+$/,'').slice(-15);if(pt)label=pt;}
+    }
+    if(!label)label='빈칸'+(idx+1);
+    html+='<div style="display:flex;flex-direction:column;gap:4px">'
+      +'<label style="font-size:11px;color:var(--text3)">'+esc(label)+'</label>'
+      +'<input id="ctr-blank-'+idx+'" data-blank-idx="'+idx+'" type="text" placeholder="입력..." style="border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;background:var(--bg2);color:var(--text1)">'
+      +'</div>';
   });
-
-  // 날짜/기간 키워드 없는 남은 빈칸에 순서대로 채우기 (이름→전화→차량 순)
-  var remaining=Array.from(content.querySelectorAll('u')).filter(function(u){return u.textContent.replace(/ /g,'').trim()==='';});
-  var autoFills=[driverName,driverPhone,carNum,collectPrice&&(Number(collectPrice).toLocaleString()+'원'),unitPrice&&(Number(unitPrice).toLocaleString()+'원'),startDate&&startDate.replace(/-/g,'.'),endDate&&endDate.replace(/-/g,'.')].filter(Boolean);
-  remaining.forEach(function(u,i){if(autoFills[i]){u.textContent=autoFills[i];u.style.color='#0066ff';filled++;}});
-
-  // 편집된 HTML을 localStorage에 저장
-  _ctrSaveEdited();
-  toast('✅ '+filled+'개 입력 적용 완료');
+  html+='</div>'
+    +'<button onclick="_ctrFillBlanks()" style="width:100%;padding:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">✏️ 빈칸에 채우기</button>'
+    +'</div>';
+  card.innerHTML=html;
+  card.style.display='block';
 }
 
+function _ctrFillBlanks(){
+  var content=document.getElementById('ctr-docx-content');
+  if(!content){toast('⚠️ DOCX를 먼저 업로드하세요');return;}
+  var blanks=Array.from(content.querySelectorAll('u'));
+  var filled=0;
+  blanks.forEach(function(u,idx){
+    var inp=document.getElementById('ctr-blank-'+idx);
+    if(inp&&inp.value.trim()){u.textContent=inp.value.trim();u.style.color='#0066ff';filled++;}
+  });
+  _ctrSaveEdited();
+  if(filled)toast('✅ '+filled+'개 빈칸 채우기 완료');
+}
 function _ctrSaveEdited(){
   var content=document.getElementById('ctr-docx-content');
   if(!content)return;
@@ -8198,6 +8177,7 @@ async function _ctrDocxLoad(inp){
     // localStorage에 DOCX 저장 (새로고침 후에도 유지)
     try{var _sk='ctr_docx_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
+    setTimeout(_ctrRenderBlankInputs,50);
     // 기사 이미 선택된 경우 자동 채우기
   }catch(e){
     if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
@@ -8214,6 +8194,7 @@ function _ctrDocxClear(){
   var status=document.getElementById('ctr-docx-status');
   if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
   var fi=document.getElementById('ctr-docx-file');if(fi)fi.value='';
+  var bc=document.getElementById('ctr-blank-inputs-card');if(bc){bc.style.display='none';bc.innerHTML='';}
 }
 function _ctrRestoreDocx(){
   var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
@@ -8238,6 +8219,7 @@ function _ctrRestoreDocx(){
   window._ctrDocxFileName=saved.fileName;
   window._ctrDocxBlankCount=saved.blankCount||0;
   if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(saved.fileName)+' · 빈칸 '+saved.blankCount+'개</span>';
+  setTimeout(_ctrRenderBlankInputs,50);
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
@@ -8538,7 +8520,7 @@ async function _ctrSave(){
     var _rcSnap=await _db.collection('settings').doc(_cid+'_routeCampMap').get();
     if(_rcSnap.exists){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});Object.assign(_routeCampMap,_rcSnap.data());}
   }catch(e){}
-  _ctrApplyTyped();
+  _ctrFillBlanks();
   var data=_ctrCollect();
   var adminSig='';
   if(window._adminStampImg){
