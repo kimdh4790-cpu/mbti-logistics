@@ -2215,6 +2215,15 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
       return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
+    // ★ 슬러그 단독 접속: filo.ai.kr/{slug} → 배송앱 직접 진입 (뒤에 /emergency 불필요)
+    const _slugOnlyMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{2,30})\/?$/);
+    if (_slugOnlyMatch && method === 'GET' && !knownPaths.has('/'+_slugOnlyMatch[1])) {
+      const _eSlug = _slugOnlyMatch[1];
+      const resp = await fetchAsset('/emergency.html', request);
+      let html = await resp.text();
+      html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
 
     // ★ 직원 셀프 체크인
     if (path === '/checkin' || path === '/checkin/') {
