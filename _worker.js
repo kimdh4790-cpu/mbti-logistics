@@ -1698,6 +1698,12 @@ async function submitSign(){
   var _idEl=document.getElementById('drv-id-input');
   var _bizVal=_bizEl?_bizEl.value.trim():'';
   var _idVal=_idEl?_idEl.value.trim():'';
+  var _idDigits=_idVal.replace(/-/g,'');
+  if(!_idDigits||_idDigits.length!==13||!/^\d{13}$/.test(_idDigits)){
+    alert('주민등록번호를 전체 13자리 입력해 주세요.\n예: 850101-1234567');
+    btn.disabled=false;btn.textContent='서명 완료 및 제출';return;
+  }
+  if(_bizVal){var _bizDigits=_bizVal.replace(/-/g,'');if(!/^\d{10}$/.test(_bizDigits)){alert('사업자등록번호 형식이 올바르지 않습니다.\n예: 123-45-67890 (10자리)');btn.disabled=false;btn.textContent='서명 완료 및 제출';return;}}
   try{
     var _docxHtml=window._docxRenderedHtml||'';
     var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig,kakaoId:_kakaoId,kakaoNick:_kakaoNick,driverBizNum:_bizVal,driverIdNum:_idVal,docxHtml:_docxHtml})});
