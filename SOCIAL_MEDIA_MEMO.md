@@ -92,6 +92,12 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | 2026-09-18 | assets/promo/yongcha-promo.html | 앱 공고 목록 UI 시뮬레이션 슬라이드(s6) 추가: 3개 공고 카드(서울→인천 ₩85,000·부산→대전 ₩120,000·경기→충청 ₩72,000), 단가 100% 공개 메시지. 총 슬라이드 6→7장 |
 | 2026-09-18 | scripts/content/yongcha-scenario.json | "직접 매칭" → "직접 거래 정보" (화물자동차운수사업법 리스크 제거) |
 | 2026-09-18 | scripts/content/yongcha-subtitles.srt | 7번 자막 항목 추가(공차 없이 운행·yongcha.app), 6번 타이밍 조정 |
+| 2026-09-20 | scripts/content/variants/yongcha-variants.json | 용차앱 전 변형(A/B/C/D) 「상생 앱」 테마 전환: angle명 재설계(소장·기사 상생 플랫폼/기사 상생 혜택/소장 상생 혜택/기존 방식 vs 상생 비교), 나레이션 전 줄 상생 메시지로 통일 (startSec 0/12/24/37/50), 첫 줄 "소장님과 기사님이 서로 상생하는 물류, 가능할까요?", 마지막 줄 "소장·기사 상생 앱, 용차앱. yongcha.app" |
+| 2026-09-20 | scripts/content/variants/donway-variants.json | DONWAY 전 변형(A/B/C/D) 전자서명·세금계산서 강조 업데이트: startSec 0/9/20/31/44 타이밍 통일, startSec 31 라인 "위수탁·근로 계약서 전자서명, 세금계산서 자동 등록까지 한 번에 처리됩니다." 전 변형 공통 적용, 마지막 줄 "정산부터 전자서명, 세금까지. DONWAY. donway.ai.kr" |
+| 2026-09-20 | scripts/content/yongcha-narration.json | 상생 앱 테마 5구간 나레이션 확정 (0/12/24/37/50) |
+| 2026-09-20 | scripts/content/yongcha-subtitles.srt | yongcha-narration.json 타이밍에 맞춰 자막 동기화 |
+| 2026-09-20 | scripts/content/donway-narration.json | 전자서명·세금 강조 5구간 나레이션 확정 (0/9/20/31/44) |
+| 2026-09-20 | scripts/content/donway-subtitles.srt | donway-narration.json 타이밍에 맞춰 자막 동기화 |
 | 2026-09-09 | scripts/content/variants/yongcha-variants.json | 용차앱 A/B/C/D variants 전면 재기획: 포맷 표준화(product·variants 래퍼·angle·narration 문자열 배열·slides 문자열 배열·instagram_caption 추가), 각도 재설계(직접거래 투명성/기사 수입 극대화/소장 기사 직접 연결/기존 주선 방식 비교), 부가통신사업자 포지셔닝 전면 적용 |
 
 ---
