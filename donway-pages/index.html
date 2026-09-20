@@ -7894,7 +7894,74 @@ function _ctrSelectType(t){
   _ctrRenderWrite();
 }
 
-function _ctrRenderBlankInputs(){}
+function _ctrRenderBlankInputs(){
+  var bc=document.getElementById('ctr-blank-inputs-card');
+  if(!bc)return;
+  var html=window._ctrDocxOrigHtml||'';
+  if(!html){bc.style.display='none';bc.innerHTML='';return;}
+  // <u> 태그를 빈칸으로 인식 — 연속된 밑줄(___)도 포함
+  var matches=[];
+  var tmp=document.createElement('div');tmp.innerHTML=html;
+  var uEls=tmp.querySelectorAll('u');
+  uEls.forEach(function(u,i){
+    var txt=(u.textContent||'').replace(/\s|_/g,'');
+    if(txt.length<3){matches.push({idx:i,label:_ctrGuessLabel(u,tmp),id:'ctr-blank-'+i});}
+  });
+  if(!matches.length){bc.style.display='none';bc.innerHTML='';return;}
+  var rows=matches.map(function(m){
+    return '<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">빈칸 '+(m.idx+1)+(m.label?' · '+m.label:'')+' </label>'
+      +'<input id="'+m.id+'" type="text" placeholder="내용 입력" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>';
+  }).join('');
+  bc.style.display='block';
+  bc.innerHTML='<div class="card" style="margin-bottom:0">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">✍️ DOCX 빈칸 자동입력</div>'
+    +rows
+    +'<button onclick="_ctrFillBlanks()" style="width:100%;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px">📝 DOCX에 입력하기</button>'
+    +'</div>';
+  window._ctrBlankMatches=matches;
+}
+function _ctrGuessLabel(uEl,root){
+  // 앞 텍스트 노드에서 레이블 추정
+  var prev=uEl.previousSibling;
+  while(prev){
+    var t=(prev.textContent||'').trim().replace(/[:：\s]+$/,'');
+    if(t.length>0&&t.length<20)return t;
+    prev=prev.previousSibling;
+  }
+  return '';
+}
+function _ctrFillBlanks(){
+  var matches=window._ctrBlankMatches||[];
+  if(!matches.length){toast('빈칸 목록이 없습니다. DOCX를 다시 업로드해 주세요.');return;}
+  var html=window._ctrDocxOrigHtml||'';
+  if(!html){toast('DOCX 원문이 없습니다.');return;}
+  var tmp=document.createElement('div');tmp.innerHTML=html;
+  var uEls=tmp.querySelectorAll('u');
+  matches.forEach(function(m){
+    var inp=document.getElementById(m.id);
+    var val=inp?inp.value.trim():'';
+    if(!val)return;
+    var u=uEls[m.idx];
+    if(u){var span=document.createElement('span');span.style.fontWeight='700';span.style.color='#0066ff';span.textContent=val;u.parentNode.replaceChild(span,u);}
+  });
+  var filled=tmp.innerHTML;
+  window._ctrDocxOrigHtml=filled;
+  // 편집기에 반영
+  var editor=document.getElementById('ctr-docx-editor');
+  var content=editor?editor.querySelector('[contenteditable]')||editor.querySelector('#ctr-docx-content'):null;
+  if(content)content.innerHTML=filled;
+  // localStorage 업데이트
+  try{
+    var _sk='ctr_docx_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
+    var stored=JSON.parse(localStorage.getItem(_sk)||'{}');
+    stored.html=filled;
+    localStorage.setItem(_sk,JSON.stringify(stored));
+  }catch(_e){}
+  // 빈칸 카드 숨김
+  var bc=document.getElementById('ctr-blank-inputs-card');if(bc){bc.style.display='none';bc.innerHTML='';}
+  window._ctrBlankMatches=[];
+  toast('✅ DOCX 빈칸 입력 완료');
+}
 function _ctrSaveEdited(){
   var content=document.getElementById('ctr-docx-content');
   if(!content)return;
