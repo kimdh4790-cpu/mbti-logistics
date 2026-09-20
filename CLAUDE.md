@@ -658,6 +658,12 @@ cd mbtico-pages && npx wrangler deploy
   - `_ctrRestoreDocx()`: 계약 작성 탭 렌더 시 100ms 후 자동 복원
 - **`_ctrAutoFillDocx()` async화**: `_routeCampMap` 비어있을 때 Firestore(`settings/{cid}_routeCampMap`)에서 자동 fetch → 캠프명 자동입력 정확도 향상
 
+### ✅ 완료 (2026-09-20 DONWAY 계약서 아카이브 버그 수정)
+- **_worker.js sign page GET**: `_adminDocxHtml` 경로에서 `window._docxRenderedHtml` 미설정 수정 → 인라인 `<script>` 주입으로 설정
+- **_worker.js archive POST**: `if(_aCustomUrl)` 조건에 `||_aDocxHtmlSaved` 추가 → 로컬 DOCX 업로드+타이핑 케이스에서도 아카이브 정상 생성
+- 수정 전: contenteditable에서 타이핑 후 저장해도 전자서명 완료 시 빈 wisu 템플릿 표시
+- 수정 후: 타이핑한 내용이 서명 완료 아카이브 HTML에 정확히 반영됨
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
