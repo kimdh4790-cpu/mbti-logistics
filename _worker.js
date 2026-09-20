@@ -1234,7 +1234,7 @@ export default {
               const _dlWtFields = (() => { try { return JSON.parse(_dlWtData?.fields?.fields?.stringValue||'[]'); } catch(e){return [];} })();
               if (_dlWtHtmlRaw) {
                 const _dlWtFieldMap = {'기사명':_dlDriver||'','수탁자명':_dlDriver||'','계약시작일':_dlStart||'','시작일':_dlStart||'','계약종료일':_dlEnd||'','종료일':_dlEnd||'','담당구역':_dlArea||_dlRoute||'','담당노선':_dlRoute||_dlArea||'','대리점명':_dlCname||'','위탁자명':_dlCname||'','사업자번호':_dlBiz||_dlCbiz||'','기사사업자번호':_dlBiz||'','대리점사업자번호':_dlCbiz||'','대표자명':_dlCompanyCeo||'','주소':_dlAddr||_dlCompanyAddr||'','기사주소':_dlAddr||'','대리점주소':_dlCompanyAddr||'','배송단가':_dlUnit?_dlPAmt(_dlUnit):'','집화단가':_dlCollect?_dlPAmt(_dlCollect):'','캠프명':_dlCamp||'','정산지급일':_dlCycle||'','선입금일수':_dlPreDays||'','전화번호':_dlPhone||'','차량번호':_dlCarnum||'','자격증번호':_dlLicnum||''};
-                _dlWtCustomHtml = _dlWtHtmlRaw.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<\/span>/g, (match) => {
+                _dlWtCustomHtml = _dlWtHtmlRaw.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<[\/]span>/g, (match) => {
                   const idM = match.match(/data-id="BLANK_(\d+)"/);
                   if (!idM) return match;
                   const blankIdx = parseInt(idM[1]);
@@ -1391,7 +1391,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
                     '자격증번호':_sc_licnum||'',
                   };
                   // wt-blank 마커 → 필드값 치환
-                  _wtCustomHtml = _wtHtmlRaw.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<\/span>/g, (match) => {
+                  _wtCustomHtml = _wtHtmlRaw.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<[\/]span>/g, (match) => {
                     const idM = match.match(/data-id="BLANK_(\d+)"/);
                     if (!idM) return match;
                     const blankIdx = parseInt(idM[1]);
@@ -1474,7 +1474,7 @@ ${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g
           const _cDetailTable = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#1e293b"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f">📋 계약 주요 내용 (대리점 입력)</div><table style="width:100%;border-collapse:collapse;font-size:11px"><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700;width:28%">위탁자(갑)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_cname}${_sc_cbiz?' · '+_sc_cbiz:''}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수탁자(을)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${driverName||''}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>${(_sc_start||_sc_end)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">계약기간</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_start||''}${_sc_end?' ~ '+_sc_end:''}${_sc_months?' ('+_sc_months+')':''}</td></tr>`:''} ${(_sc_area||_sc_route)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">담당구역</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_area||_sc_route}</td></tr>`:''} ${_sc_camp?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">캠프</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_camp}</td></tr>`:''} <tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수수료</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_rps.length?_sc_rps.map(r=>r.route+': 1건당 '+_sc_pAmt(r.price)).join(' / '):'배송 1건당 '+_sc_pAmt(_sc_unit)} / 집화 1건당 ${_sc_pAmt(_sc_collect)}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">지급일</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_cycle}</td></tr>${_sc_carnum?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">차량번호</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_carnum}</td></tr>`:''} ${_sc_special?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">특약사항</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_special.replace(/\n/g,'<br>')}</td></tr>`:''}</table></div>`;
           // _adminDocxHtml(타이핑된 내용)이 있으면 customContractUrl 유무 무관하게 우선 사용
           const _contractViewHtml = _adminDocxHtml
-            ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">${_adminDocxHtml}</div><script>window._docxRenderedHtml=${JSON.stringify(_adminDocxHtml).replace(/<\/script>/gi,'<\\/script>')};window._contractLoaded=true;<\/script>`
+            ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">${_adminDocxHtml}</div><script>window._docxRenderedHtml=${JSON.stringify(_adminDocxHtml).replace(/<[\/]script>/gi,'<\\/script>')};window._contractLoaded=true;<\/script>`
             : customContractUrl
             ? (_cIsPdf
               ? `<div style="font-size:12px;color:#1e293b"><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px"><div style="font-size:13px;font-weight:700;color:#0066ff;margin-bottom:8px">📄 계약서 원문</div><iframe src="${_cProxyUrl}" style="width:100%;height:50vh;border:1px solid #e2e8f0;border-radius:8px" allowfullscreen></iframe><div style="margin-top:8px;font-size:11px;color:#94a3b8;text-align:center">열리지 않으면 <a href="${_cProxyUrl}" target="_blank" style="color:#0066ff">여기를 탭</a>하세요.</div></div></div>`
@@ -5157,9 +5157,9 @@ function doRegister(){
                 if (od.ok && od.registryText) {
                   const _slyRawHtml = od.registryHtml || '';
                   const _slySafeHtml = _slyRawHtml
-                    .replace(/<script[\s\S]*?<\/script>/gi, '')
-                    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-                    .replace(/<object[\s\S]*?<\/object>/gi, '')
+                    .replace(/<script[\s\S]*?<[\/]script>/gi, '')
+                    .replace(/<iframe[\s\S]*?<[\/]iframe>/gi, '')
+                    .replace(/<object[\s\S]*?<[\/]object>/gi, '')
                     .replace(/<embed[^>]*>/gi, '')
                     .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
                     .replace(/\s+on\w+\s*=\s*[^\s>]*/gi, '')

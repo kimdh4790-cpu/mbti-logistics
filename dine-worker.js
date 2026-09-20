@@ -1969,9 +1969,9 @@ export default {
                 if (od.ok && od.registryText) {
                   const _slyRawHtml = od.registryHtml || '';
                   const _slySafeHtml = _slyRawHtml
-                    .replace(/<script[\s\S]*?<\/script>/gi, '')
-                    .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-                    .replace(/<object[\s\S]*?<\/object>/gi, '')
+                    .replace(/<script[\s\S]*?<[\/]script>/gi, '')
+                    .replace(/<iframe[\s\S]*?<[\/]iframe>/gi, '')
+                    .replace(/<object[\s\S]*?<[\/]object>/gi, '')
                     .replace(/<embed[^>]*>/gi, '')
                     .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
                     .replace(/\s+on\w+\s*=\s*[^\s>]*/gi, '')
