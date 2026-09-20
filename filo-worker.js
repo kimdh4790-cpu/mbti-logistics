@@ -4645,6 +4645,7 @@ service cloud.firestore {
           ]
         }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
       }
+    }
     if (path === '/manifest_donway.json' || path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',
