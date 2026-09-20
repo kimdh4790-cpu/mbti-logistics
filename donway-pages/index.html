@@ -7873,7 +7873,7 @@ function _ctrRenderBlankInputs(){}
 function _ctrSaveEdited(){
   var content=document.getElementById('ctr-docx-content');
   if(!content)return;
-  var _sk='ctr_docx_edit_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
+  var _sk='ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
   try{localStorage.setItem(_sk,content.innerHTML);}catch(_e){}
 }
 
@@ -7912,7 +7912,7 @@ function _ctrCollect(){
     licenseNum:licNum,
     routePricesJson:routePrices.length?JSON.stringify(routePrices):'',
     customContractUrl:_g('ctr-pdf-url'),
-    docxHtml:(function(){var c=document.getElementById('ctr-docx-content');if(c&&c.innerHTML)return c.innerHTML;try{var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';var ed=localStorage.getItem('ctr_docx_edit_'+_uid);if(ed)return ed;var sd=localStorage.getItem('ctr_docx_'+_uid);if(sd){var p=JSON.parse(sd);return p.html||'';}}catch(_e){}return '';})(),
+    docxHtml:(function(){var c=document.getElementById('ctr-docx-content');if(c&&c.innerHTML)return c.innerHTML;try{var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';var _ct=window._ctrType||'wisu';var ed=localStorage.getItem('ctr_docx_edit_'+_ct+'_'+_uid);if(ed)return ed;var sd=localStorage.getItem('ctr_docx_'+_ct+'_'+_uid);if(sd){var p=JSON.parse(sd);return p.html||'';}}catch(_e){}return '';})(),
     createdAt:new Date().toISOString()
   };
 }
@@ -8129,7 +8129,7 @@ async function _ctrDocxLoad(inp){
     window._ctrDocxFileName=file.name;
     window._ctrDocxBlankCount=blankCount;
     // localStorage에 DOCX 저장 (새로고침 후에도 유지)
-    try{var _sk='ctr_docx_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
+    try{var _sk='ctr_docx_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
     setTimeout(_ctrRenderBlankInputs,50);
     // 기사 이미 선택된 경우 자동 채우기
@@ -8141,7 +8141,8 @@ async function _ctrDocxLoad(inp){
 function _ctrDocxClear(){
   // localStorage에서 DOCX 및 편집 내용 삭제
   var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
-  try{localStorage.removeItem('ctr_docx_'+_uid);localStorage.removeItem('ctr_docx_edit_'+_uid);}catch(_e){}
+  var _ct=window._ctrType||'wisu';
+  try{localStorage.removeItem('ctr_docx_'+_ct+'_'+_uid);localStorage.removeItem('ctr_docx_edit_'+_ct+'_'+_uid);}catch(_e){}
   window._ctrDocxOrigHtml=null;window._ctrDocxFileName=null;window._ctrDocxBlankCount=0;
   var editor=document.getElementById('ctr-docx-editor');
   if(editor){editor.style.display='none';editor.innerHTML='';}
@@ -8152,8 +8153,9 @@ function _ctrDocxClear(){
 }
 function _ctrRestoreDocx(){
   var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
-  var _sk='ctr_docx_'+_uid;
-  var _ek='ctr_docx_edit_'+_uid;
+  var _ct2=window._ctrType||'wisu';
+  var _sk='ctr_docx_'+_ct2+'_'+_uid;
+  var _ek='ctr_docx_edit_'+_ct2+'_'+_uid;
   var saved=null;var editedHtml=null;
   try{var sd=localStorage.getItem(_sk);if(sd)saved=JSON.parse(sd);}catch(_e){}
   try{var ed=localStorage.getItem(_ek);if(ed)editedHtml=ed;}catch(_e){}
@@ -8517,7 +8519,7 @@ async function _ctrSave(){
     window._adminSigPad=null;
     // DOCX 원본 템플릿으로 리셋 (파일은 유지, 빈칸만 초기화)
     var _uid2=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
-    try{localStorage.removeItem('ctr_docx_edit_'+_uid2);}catch(_e){}
+    try{localStorage.removeItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid2);}catch(_e){}
     if(window._ctrDocxOrigHtml){
       var _dc=document.getElementById('ctr-docx-content');
       if(_dc)_dc.innerHTML=window._ctrDocxOrigHtml;
