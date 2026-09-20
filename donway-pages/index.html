@@ -8522,7 +8522,7 @@ async function _ctrSave(){
       var _dc=document.getElementById('ctr-docx-content');
       if(_dc)_dc.innerHTML=window._ctrDocxOrigHtml;
       var _ds=document.getElementById('ctr-docx-status');
-      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 빈칸 '+( window._ctrDocxBlankCount||0)+'개 · 빈칸을 직접 클릭하여 입력 후 저장하세요</span>';
+      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 다음 계약서 작성 준비됨</span>';
     }
     window._ctrDriver=null;
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
