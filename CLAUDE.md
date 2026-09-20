@@ -638,6 +638,16 @@ cd mbtico-pages && npx wrangler deploy
   - isVisiting 슈퍼어드민 고객 방문 시 고객 services 기준 표시로 변경
 - **Firestore 읽기/쓰기 체크**: contracts·cal_memos·drivers 컬렉션 보안 규칙 정상 확인 (canRead/canWrite/canOwn 패턴)
 
+### ✅ 완료 (2026-09-20 DONWAY 계약서 탭 단일화 + 코드 경량화)
+- **내 템플릿 탭 완전 삭제** (donway-pages/index.html): `_ctrRenderTemplate()` + `_wt*` 함수 전체(~370라인) 제거
+- **간편서명 탭 완전 삭제** (donway-pages/index.html): `_ctrRenderQuick()` + `_ctrQk*` 함수 전체(~131라인) 제거
+- **2탭으로 단일화**: 계약 작성 / 계약 목록 (기존 4탭 → 2탭)
+- **DOCX localStorage 영속화**: 업로드한 계약서 파일을 새로고침 후에도 유지 (`ctr_docx_{dealerId}` 키)
+  - `_ctrDocxLoad()`: 변환 후 localStorage 저장
+  - `_ctrDocxClear()`: × 삭제 버튼 클릭 시 localStorage 삭제 + 화면 초기화
+  - `_ctrRestoreDocx()`: 계약 작성 탭 렌더 시 100ms 후 자동 복원
+- **`_ctrAutoFillDocx()` async화**: `_routeCampMap` 비어있을 때 Firestore(`settings/{cid}_routeCampMap`)에서 자동 fetch → 캠프명 자동입력 정확도 향상
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
