@@ -1827,7 +1827,8 @@ async function submitSign(){
           let _dsPatchUrl=`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa&updateMask.fieldPaths=kakaoId&updateMask.fieldPaths=kakaoNick&updateMask.fieldPaths=driverBizNum&updateMask.fieldPaths=driverIdNum`;
           const _dsPatchFields={driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa},kakaoId:{stringValue:kakaoId||''},kakaoNick:{stringValue:kakaoNick||''},driverBizNum:{stringValue:driverBizNum||''},driverIdNum:{stringValue:driverIdNum||''}};
           if(body.docxHtml){_dsPatchUrl+='&updateMask.fieldPaths=docxHtml';_dsPatchFields.docxHtml={stringValue:body.docxHtml};}
-          await fetch(_dsPatchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_dsPatchFields})});
+          const _dsPatchRes=await fetch(_dsPatchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_dsPatchFields})});
+          if(!_dsPatchRes.ok){const _dsPatchErr=await _dsPatchRes.text().catch(()=>'');return new Response(JSON.stringify({ok:false,error:'서명 저장 실패 ('+_dsPatchRes.status+')'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
           // 서명 완료된 계약서 HTML → Firebase Storage 보관
           let _archiveResultUrl = '';
           try {
