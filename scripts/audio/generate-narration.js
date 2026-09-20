@@ -275,7 +275,7 @@ async function buildFinalAudio(lines, segments, outFile) {
       // silence 생성
       const silFile = path.join(tmpDir, `silence_${i}.mp3`);
       execSync(
-        `${ffmpeg} -y -f lavfi -i anullsrc=r=24000:cl=mono -t ${gap.toFixed(3)} -q:a 9 -acodec libmp3lame "${silFile}"`,
+        `${ffmpeg} -y -f lavfi -i anullsrc=r=44100:cl=mono -t ${gap.toFixed(3)} -q:a 9 -acodec libmp3lame "${silFile}"`,
         { stdio: 'pipe' }
       );
       concatList.push(silFile);
@@ -293,7 +293,7 @@ async function buildFinalAudio(lines, segments, outFile) {
   fs.writeFileSync(listFile, concatList.map(f => `file '${f}'`).join('\n'));
 
   execSync(
-    `${ffmpeg} -y -f concat -safe 0 -i "${listFile}" -c copy "${outFile}"`,
+    `${ffmpeg} -y -f concat -safe 0 -i "${listFile}" -c:a libmp3lame -b:a 128k -ar 44100 "${outFile}"`,
     { stdio: 'pipe' }
   );
 

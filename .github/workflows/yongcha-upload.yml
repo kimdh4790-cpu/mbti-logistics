@@ -1,0 +1,141 @@
+name: 용차앱 홍보영상 업로드
+# v1
+
+on:
+  workflow_dispatch:
+    inputs:
+      video:
+        description: '업로드할 영상 선택'
+        required: true
+        default: 'both'
+        type: choice
+        options: [both, owner, driver]
+      dry_run:
+        description: '테스트 실행 (실제 업로드 안 함)'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - 'assets/promo/.upload-trigger'
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    env:
+      VIDEO: ${{ inputs.video || 'both' }}
+      DRY_FLAG: ${{ inputs.dry_run == true && '--dry-run' || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node.js 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 의존성 설치
+        run: npm ci --prefix scripts || npm install --prefix scripts || true
+
+      - name: googleapis 설치
+        run: npm install googleapis 2>/dev/null || true
+
+      - name: FFmpeg 설치
+        uses: AnimMouse/setup-ffmpeg@v1
+
+      - name: 영상 준비 (output/ 폴더 복원)
+        run: |
+          mkdir -p output
+          for f in yongcha-owner-promo.mp4 yongcha-owner-promo-ig.mp4 \
+                   yongcha-driver-promo.mp4 yongcha-driver-promo-ig.mp4; do
+            [ -f "assets/promo/$f" ] && cp "assets/promo/$f" output/ || true
+          done
+          ls -lh output/yongcha-*.mp4 2>/dev/null || echo "영상 없음"
+
+      - name: YouTube 업로드 — 소장 영상
+        if: env.VIDEO == 'owner' || env.VIDEO == 'both'
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          cp output/yongcha-owner-promo.mp4 output/yongcha-promo.mp4 2>/dev/null || \
+          cp output/yongcha-owner-promo-ig.mp4 output/yongcha-promo.mp4
+          node -e "
+            const fs=require('fs');
+            const meta=JSON.parse(fs.readFileSync('scripts/content/yongcha-meta.json','utf8'));
+            meta.youtube.title='소장 관점에서 본 용차앱 — 기사 찾기부터 채팅 소통까지 | 용차앱';
+            meta.youtube.description='용차앱 소장 사용 가이드: 공고 등록 → AI 기사 추천 → 조건 설정 → 채팅 협의까지 전 과정을 담았습니다.\n\n소장님이 직접 조건을 설정하고, AI가 맞는 기사를 추천해드립니다.\n전화 없이 채팅으로 바로 협의. 용차앱.\n\n✅ 공고 등록 후 AI 기사 자동 추천\n✅ 단가·운행일·구역 소장님이 직접 설정\n✅ 지원 기사와 1:1 채팅\n✅ 소장 ₩50,000/월 (DONWAY 구독 시 무료)\n\n📌 https://yongcha.app\n\n#용차앱 #택배소장 #기사구하기 #AI기사추천 #직접거래 #택배대리점 #소장앱';
+            fs.writeFileSync('scripts/content/yongcha-meta.json',JSON.stringify(meta,null,2));
+          " 2>/dev/null || true
+          node scripts/upload/upload-youtube-api.js --product yongcha $DRY_FLAG \
+            || echo "YouTube 소장 업로드 실패"
+
+      - name: YouTube 업로드 — 기사 영상
+        if: env.VIDEO == 'driver' || env.VIDEO == 'both'
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          cp output/yongcha-driver-promo.mp4 output/yongcha-promo.mp4 2>/dev/null || \
+          cp output/yongcha-driver-promo-ig.mp4 output/yongcha-promo.mp4
+          node -e "
+            const fs=require('fs');
+            const meta=JSON.parse(fs.readFileSync('scripts/content/yongcha-meta.json','utf8'));
+            meta.youtube.title='기사 관점에서 본 용차앱 — 공고 탐색부터 운행 완료까지 | 용차앱';
+            meta.youtube.description='용차앱 기사 사용 가이드: 홈 대시보드 → AI 맞춤 공고 추천 → 지원 → 운행 완료까지 전 과정입니다.\n\nAI가 기사님 조건에 맞는 공고를 자동으로 추천해드립니다.\n예상 수입·날씨를 한눈에 보고, 마음에 드는 공고에 바로 지원.\n\n✅ 오늘 예상 수입·날씨 한눈에 확인\n✅ AI 맞춤 공고 추천 (조건 한 번 입력)\n✅ 원탭 지원 → 지원 현황 즉시 확인\n✅ 수락→도착→완료 전 과정 한 화면\n✅ 기사 ₩150,000/월\n\n📌 https://yongcha.app\n\n#용차앱 #택배기사 #공차없이 #AI공고추천 #직접거래 #배송기사 #기사앱';
+            fs.writeFileSync('scripts/content/yongcha-meta.json',JSON.stringify(meta,null,2));
+          " 2>/dev/null || true
+          node scripts/upload/upload-youtube-api.js --product yongcha $DRY_FLAG \
+            || echo "YouTube 기사 업로드 실패"
+
+      - name: Instagram 업로드 — 소장 영상
+        if: env.VIDEO == 'owner' || env.VIDEO == 'both'
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+        run: |
+          # Instagram Reels 요구사항 준수: H.264 baseline, AAC, 9:16, 최대 60fps
+          ffmpeg -i output/yongcha-owner-promo-ig.mp4 \
+            -c:v libx264 -profile:v baseline -level 3.1 \
+            -pix_fmt yuv420p -r 30 \
+            -c:a aac -b:a 128k -ar 44100 \
+            -movflags +faststart \
+            -y output/yongcha-reels.mp4 2>/dev/null \
+          || cp output/yongcha-owner-promo-ig.mp4 output/yongcha-reels.mp4
+          node -e "
+            const fs=require('fs');
+            const meta=JSON.parse(fs.readFileSync('scripts/content/yongcha-meta.json','utf8'));
+            meta.instagram.caption='기사 구하기 어려우셨나요?\n용차앱에서 소장 관점 가이드\n\n✅ 공고 등록 즉시 AI 기사 추천\n✅ 단가·운행일·구역 직접 설정\n✅ 지원 기사와 채팅으로 바로 협의\n✅ 소장 ₩50,000/월\n\nyongcha.app\n\n#용차앱 #택배소장 #기사구하기 #AI기사추천 #직접거래 #택배대리점 #소장앱 #공차없이 #쿠팡물류 #택배대리점';
+            fs.writeFileSync('scripts/content/yongcha-meta.json',JSON.stringify(meta,null,2));
+          " 2>/dev/null || true
+          node scripts/upload/upload-instagram-api.js --product yongcha $DRY_FLAG \
+            || echo "Instagram 소장 업로드 실패"
+
+      - name: Instagram 업로드 — 기사 영상
+        if: env.VIDEO == 'driver' || env.VIDEO == 'both'
+        env:
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
+        run: |
+          cp output/yongcha-driver-promo-ig.mp4 output/yongcha-reels.mp4
+          node -e "
+            const fs=require('fs');
+            const meta=JSON.parse(fs.readFileSync('scripts/content/yongcha-meta.json','utf8'));
+            meta.instagram.caption='공차 없이 더 많이 버는 법\n용차앱 기사 가이드\n\n✅ 오늘 예상 수입·날씨 한눈에\n✅ AI 맞춤 공고 추천 (조건 1회 입력)\n✅ 원탭 지원 → 지원 현황 즉시 확인\n✅ 수락→도착→완료 전 과정 한 화면\n✅ 기사 ₩150,000/월\n\nyongcha.app\n\n#용차앱 #택배기사 #공차없이 #AI공고추천 #직접거래 #배송기사 #기사앱 #쿠팡물류 #CJ대한통운 #택배알바';
+            fs.writeFileSync('scripts/content/yongcha-meta.json',JSON.stringify(meta,null,2));
+          " 2>/dev/null || true
+          node scripts/upload/upload-instagram-api.js --product yongcha $DRY_FLAG \
+            || echo "Instagram 기사 업로드 실패"
+
+      - name: 업로드 결과 아티팩트 저장
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yongcha-promo-videos
+          path: |
+            output/yongcha-owner-promo*.mp4
+            output/yongcha-driver-promo*.mp4
+          retention-days: 7

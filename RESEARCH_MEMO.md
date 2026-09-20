@@ -25,11 +25,10 @@
 
 | 카테고리 | 설명 |
 |---|---|
-| AI트렌드 | 신규 AI 모델·AI 도구·에이전트·MCP·RAG·LLM·생성AI 등 AI 최신 동향 (최우선) |
-| 강의소재 | AI·자동화·노코드·개발·SaaS·마케팅·수익화 강의 주제 |
-| 앱기능 | FILO(매장POS)/DONWAY(정산)/용차앱 기능·UX 아이디어 |
-| 수익성 | 새로운 사업 아이템·수익 모델·트렌드·부업 기회 |
-| 패스 | 무관한 것 (결과에서 제외됨) |
+| 수익창출 | 부업·창업·매출·수익화·사이드프로젝트·투자·사업 아이디어 (최우선, MONEY TOUCH 등) |
+| AI기능업그레이드 | AI 신모델·도구·에이전트·MCP·자동화·n8n·프롬프트 — 앱 AI기능 업그레이드 참고용 |
+| 앱기능 | FILO(매장POS)/DONWAY(정산)/용차앱에 추가할 UI·기능·UX 아이디어 |
+| 패스 | 강아지·먹방·여행·스포츠 등 위 세 카테고리와 완전 무관한 것 |
 
 ---
 
@@ -180,3 +179,9 @@ node scripts/monitor/content-monitor.js  # YouTube (일별)
 | 2026-09-12 | youtube-monitor.yml 신규: 매일 09:00 KST GitHub Actions에서 content-monitor.js 자동 실행 (Oracle Cloud cron 의존 제거) |
 | 2026-09-12 | research-digest.yml: 주간 다이제스트 전 content-monitor.js 선행 실행 추가, monitor-digest.json 아티팩트에 포함 |
 | 2026-09-14 | content-monitor.js classify(): "AI트렌드" 카테고리 추가 (최우선) — 신규 AI 모델·도구·에이전트·MCP·RAG·LLM·생성AI 등 AI 최신 동향 전용 분류 |
+| 2026-09-19 | channels.json: MONEY TOUCH @handle → channelId 직접 등록 (UCId55ph0gspBax7VQKBqTYg) |
+| 2026-09-19 | content-monitor.js classify(): https.request → fetch 교체 (GitHub Actions 프록시 오류 수정), 카테고리 개편 (수익창출·AI기능업그레이드 최우선) + 키워드 기반 폴백 분류 추가 |
+| 2026-09-20 | research-digest.js: sendSMS() 함수 삭제 (Solapi SMS 발송 제거), output JSON 커밋 스텝 추가 |
+| 2026-09-20 | research-digest.yml: SOLAPI_API_KEY·SOLAPI_API_SECRET·ADMIN_PHONE env 제거, output JSON git commit+push 스텝 추가 |
+| 2026-09-20 | _worker.js: `<script>` 템플릿 리터럴 esbuild 파싱 오류 수정 (`${'<script>'}` / `${'</script>'}` 분리) |
+| 2026-09-20 | auto-merge.yml: Deploy Worker 스텝 wrangler → wrangler@4, continue-on-error: true 추가 |

@@ -1,13 +1,14 @@
 # SCAN AI — 전용 메모
-> mbtico.kr/scan 서비스. 세션 시작 시 SCAN 관련 작업이면 이 파일 읽을 것.
+> dine.ne.kr 서비스 (메인 도메인 — 2026-09-20 dine.ne.kr 단일 운영 확정). 세션 시작 시 SCAN 관련 작업이면 이 파일 읽을 것.
 
 ---
 
 ## 서비스 개요
-- **위치**: mbtico.kr/scan (이전: filo.ai.kr/seolyuhana → 2026-09-06 이전)
+- **위치**: dine.ne.kr (이전: mbtico.kr/scan → 2026-09-20 이전 / filo.ai.kr/seolyuhana → 2026-09-06 이전)
 - **포지셔닝**: 소상공인·직장인 대상 AI 문서 분석 SaaS (1P=1원 포인트제)
-- **파일**: scan.html, seolyuhana/services/analyze.js, _worker.js (mbtico.kr 블록)
-- **PWA**: /scan-manifest.json, scan-icon-192/512.png (KV 업로드됨)
+- **파일**: scan.html (authDomain: dine.ne.kr), dine-worker.js (라우터+API), seolyuhana/services/analyze.js
+- **PWA**: /scan-manifest.json, scan-icon-192/512.png (KV 업로드됨, dine.ne.kr에서 서빙)
+- **2026-09-20 변경**: dine.ne.kr이 SCAN 전용 도메인으로 확정. scan.html authDomain mbtico.kr→dine.ne.kr 수정 완료. Firebase storageBucket·messagingSenderId·appId 추가.
 
 ---
 
@@ -148,6 +149,87 @@
 
 ---
 
+## 기능 강화 (2026-09-19) — 경매 위험 분析 + 등기부 상세 설명
+
+### 변경 내용 (이번 커밋)
+- **`seolyuhana/services/analyze.js`**: REGISTRY_SYSTEM 등기부 분析 2차 강화
+  - `encumbrances[].plainExplain`: 각 권리사항 쉬운 말 설명 (비전문가 눈높이)
+  - `mortgageAnalysis.debtCalculationDetail`: 채권최고액→실잔액 역산 계산 단계 명시
+  - `jeonseRiskAnalysis.worstCaseScenario`: 경매 진행 시 임차인 최악 시나리오 수치 포함
+  - `fraudCheckpoints[].detail`: 2~3문장 상세 설명으로 확장
+  - `beginnerNote`: 7~10문장 이야기체 초보자 설명으로 확장
+  - maxTokens 3500→4500 (상세 설명 충당)
+  - **`auctionRiskDetail`** 신규 필드: 경매개시결정 등기 발견 시 자동 생성
+    - 사건번호·신청채권자·경매유형·개시결정일
+    - 예상 낙찰가 + 추정 근거 문자열
+    - `distributionPlan[]` 배당 순서 테이블 (rank/creditor/claimAmount/expectedRecovery/note)
+    - 임차인 예상 회수액·손실액·소액임차인 여부·대항력 여부
+    - `urgentActions[]` 지금 당장 해야 할 행동 목록 (배당요구 신청 기한 등)
+    - `tenantAdvice` 이야기체 임차인 조언 (4~6문장)
+    - `courtauction.go.kr` 링크
+- **`scan.html`**: 경매 위험 분析 섹션 신규 렌더링
+  - 경매 진행 중일 때 긴급 주황 배너로 우선 표시 (`urgentRedFlags` 바로 아래)
+  - 사건정보 2×2 그리드 카드 (사건번호/유형/채권자/개시결정일)
+  - 예상 낙찰가 + 추정 근거 표시
+  - 배당 순서 테이블 (5컬럼: 순위/권리자/채권액/예상배당/비고)
+  - 임차인 예상 회수/손실 금액 색상 구분 (초록/빨강)
+  - 소액임차인/대항력 여부 배지
+  - 즉각 행동 목록 (번호 순서)
+  - AI 조언 박스 (이야기체 pre-wrap)
+  - 대법원경매정보 외부 링크
+
+
+## 기능 강화 (2026-09-19) — 전세사기 10대 체크포인트
+
+### 변경 내용 (커밋 53a1e5ff)
+- **`seolyuhana/services/analyze.js`**: REGISTRY_SYSTEM 프롬프트 재설계
+  - 10대 사기 체크포인트 필수 항목 추가 (소유권 잦은 변경/신탁/법인/가처분/선순위 임차인 등)
+  - `isCorporate` / `isTrust` / `recentTransferCount` / `urgentRedFlags` 신규 필드
+  - `contractSpecialClauses` 계약서 특약 자동 생성 필드
+  - `fraudCheckpoints[].action` 위험별 대응 안내 포함
+  - `riskSummary.keyRisks` / `recommendations` 기본값 `[]` (빈 문자열 배열 렌더링 버그 방지)
+- **`seolyuhana/services/enrich.js`**: FRAUD_CASE_DB 확장
+  - 사건 6: 부산 북구 다가구 선순위 임차인 피해 (2025)
+  - 사건 7: 서울 노원구 신탁수탁자 분쟁 (2026.03 대법원)
+  - 사건 8: 경기 안양 세금체납 경매 (2025)
+  - 사건 9: 전국 전세보증보험 사기 (2026 경찰청)
+  - 2026 신규 패턴 3개 (미등록 중개사/전입신고 방해/월세 전환 유도)
+  - 전세계약 체결 전 필수 확인 절차 8단계 추가
+- **`scan.html`**: 사기예방 UI 강화
+  - 긴급 위험 배너 (`urgentRedFlags`) 최상단 표시
+  - 건물 노후도 경고 (30년+ 대수선 위험)
+  - 신탁등기 경고 카드 (2026.03 대법원 판례 명시)
+  - 법인 임대인 경고 카드
+  - 체크포인트 위험→주의→안전→해당없음 정렬
+  - 위험/주의 항목에 `action` 대응 안내 보라색으로 표시
+  - 계약서 특약 조항 자동 생성 + 전체 복사 버튼 (골드 카드)
+  - HUG 전세보증 가능 여부 표시
+
+---
+
+## 장애 이력 및 해결 (2026-09-19)
+
+### 등기부 분析 "분析 中..." 무한 대기 — REGISTRY_SYSTEM 과부하 제거
+
+- **증상**: 인터넷등기소 RIS PDF 업로드 후 "분析 中..." 버튼이 무한 대기. 4분 후 프론트 타임아웃. 다음날도 동일.
+- **근본 원인**: CF Workers `waitUntil` 컨텍스트가 ~30초(Bundled 플랜 wall-clock 한도) 후 강제 종료. Claude Sonnet이 192줄짜리 `REGISTRY_SYSTEM` 스키마(~3,000 input token + 6,500 output token)를 생성하는 데 45~90초 소요. JS 예외 없이 컨텍스트가 죽으므로 `catch` 블록 미실행 → status='failed' 미기록 → 프론트엔드 영원히 대기.
+- **수정** (커밋 이번 세션):
+  1. `seolyuhana/services/analyze.js` `REGISTRY_SYSTEM` 192줄 → ~65줄로 축소 (~65% 절감):
+     - 전세사기 통계 서문 전체 제거 (Claude가 이미 알고 있는 정보)
+     - `mortgageTimeline` 섹션 제거 (encumbrances 중복)
+     - `lienHistory` 별도 섹션 제거 (encumbrances 통합)
+     - `lenderPattern` 축소 → `repeatLenderRisk` 단일 문자열
+     - `ownershipHistory` 필드 수 6→4로 감소
+     - `safetyMargin` 하위 3필드 → `safetyMarginAmount` 단일 값
+     - `fraudCheckpoints` 하위 필드 5→3으로 감소
+  2. `maxTokens` 6500 → 4000 (scanned path), 5500 → 3500 (text path)
+  3. `analyzeRegistry` 사용자 프롬프트 9줄 → 1줄로 압축 (스키마 자체가 안내 역할)
+  4. `parser.js` Oracle pdftotext 타임아웃 3s → 6s (스키마 축소로 확보된 시간으로 Oracle 성공률 향상)
+- **예상 효과**: Claude 응답시간 45-90s → 10-20s. CF Workers 30s 한도 내 완료 가능.
+- **파일**: `seolyuhana/services/analyze.js`, `seolyuhana/utils/parser.js`
+
+---
+
 ## 장애 이력 및 해결 (2026-09-12~13)
 
 ### Claude API 연결 오류 — 완전 해결
@@ -240,7 +322,7 @@
 | 보험분쟁 거부 패턴 DB (5종) | 임베딩 데이터 | analyzeInsurance |
 | 정부지원사업 매칭 DB (2026년 기준) | 임베딩 데이터 | analyzeBizPlan |
 
-### Worker 엔드포인트 (mbtico.kr 블록)
+### Worker 엔드포인트 (일반 라우팅 — mbtico.kr + dine.ne.kr 공통)
 | 경로 | 역할 |
 |---|---|
 | POST `/api/seolyuhana/analyze` | 문서 분석 (파일 업로드+포인트 차감) |
@@ -539,3 +621,17 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 - **변호사법**: 2026-03 대법원 로폼 판결은 "이용자 입력을 검토·수정 없이 그대로 채워 넣는 표준화 서비스"를 적법으로 본 것. SCAN처럼 AI가 내용을 판단·수정하면 동일 결론이 보장되지 않음 → 법률 자문 필요.
 - **의료법**: 진단서·의무기록 해석은 "쉬운 말 풀이 + 용어 설명"까지만. 진단·치료 판단 금지 문구 필수.
 - ~~**가격 구조 충돌**: 최저 충전 30,000원 구조에서 2,900P 미끼 상품 판매 불가~~ → ✅ **해결**: 5,000P/₩5,000, 10,000P/₩10,000 소액 충전 플랜 신설 완료 (2026-09-07)
+
+---
+
+## 도메인 이전 이력
+
+| 날짜 | 이전 전 | 이전 후 | 내용 |
+|---|---|---|---|
+| 2026-09-06 | filo.ai.kr/seolyuhana | mbtico.kr/scan | scan.html KV 이전, API mbtico.kr 블록으로 이동 |
+| 2026-09-20 | mbtico.kr/scan | **dine.ne.kr** | dine.ne.kr 루트(/)에서 scan.html 서빙. API를 mbtico.kr 블록 밖 일반 라우팅으로 추출 → mbtico.kr + dine.ne.kr 공통 접근. mbtico.kr/scan 라우트 삭제. |
+
+### 2026-09-20 이전 기술 상세
+- `_worker.js` dine.ne.kr 블록: `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채지지 않도록 수정
+- `_worker.js` SCAN API 블록: mbtico.kr 블록 외부로 이동, `if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr' || hostname.includes('dine.ne'))` 공통 조건 래핑
+- `_worker.js` mbtico.kr 블록: `/scan`, `/scan-manifest.json`, `/scan-icon-192.png`, `/scan-icon-512.png` 라우트 삭제 (PR #116 → main 머지)

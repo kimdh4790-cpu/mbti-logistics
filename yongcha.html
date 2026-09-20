@@ -2483,8 +2483,8 @@ function _pgPosts(el){
   el.innerHTML=
   '<div class="page-hdr" style="margin-bottom:10px">'+
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">'+
-      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'용차 모집':'단건 요청')+'</h1>'+
-      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'임시 차용 가능 기사 목록 · 며칠~몇주 단위':'대리점이 올린 단건 배달 업무 공고예요')+'</p></div>'+
+      '<div><h1 class="page-title" id="posts-main-title">'+(_postsMainTab==='yongcha'?'장기':'단기')+'</h1>'+
+      '<p class="page-sub" id="posts-main-sub">'+(_postsMainTab==='yongcha'?'1주일 이상 임시 용차 · 기사 모집':'1주일 이하 단건 배달 업무 공고예요')+'</p></div>'+
       '<button type="button" class="icon-btn" aria-label="새로고침" onclick="_postsMainTab===\'yongcha\'?_loadDriverOfferList():_loadFilteredPosts()">↻</button>'+
     '</div>'+
   '</div>'+
@@ -2494,15 +2494,15 @@ function _pgPosts(el){
     '<button type="button" id="pmtab-route" onclick="_pfSwitchMainTab(\'route\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='route'?'var(--ac)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='route'?'var(--ac)':'var(--bg2)')+';color:'+(_postsMainTab==='route'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '단건 요청</button>'+
+      '단기</button>'+
     '<button type="button" id="pmtab-yongcha" onclick="_pfSwitchMainTab(\'yongcha\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='yongcha'?'var(--gn)':'var(--bg2)')+';color:'+(_postsMainTab==='yongcha'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      '용차 모집</button>'+
+      '장기</button>'+
     '<button type="button" id="pmtab-jobs" onclick="_pfSwitchMainTab(\'jobs\')" '+
       'style="min-height:44px;border-radius:var(--r);border:2px solid '+(_postsMainTab==='jobs'?'var(--br)':'var(--bd)')+';'+
       'background:'+(_postsMainTab==='jobs'?'var(--br)':'var(--bg2)')+';color:'+(_postsMainTab==='jobs'?'#fff':'var(--t2)')+';font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">'+
-      (_CU&&_CU.type==='driver'?'구직':'구인')+'</button>'+
+      '기인연 (機人緣)</button>'+
   '</div>'+
 
   '<div id="posts-route-section">'+
@@ -2638,22 +2638,21 @@ function _pfSwitchMainTab(tab){
   if(btnJ){btnJ.style.background='var(--bg2)';btnJ.style.color='var(--t2)';btnJ.style.borderColor='var(--bd)';}
   if(tab==='yongcha'){
     yongchaSec.style.display='block';
-    if(title)title.textContent='용차 모집';
-    if(sub)sub.textContent='임시 차용 가능 기사 목록 · 며칠~몇주 단위';
+    if(title)title.textContent='장기';
+    if(sub)sub.textContent='1주일 이상 임시 용차 · 기사 모집';
     if(btnY){btnY.style.background='var(--gn)';btnY.style.color='#fff';btnY.style.borderColor='var(--gn)';}
     _loadDriverOfferList();
   } else if(tab==='jobs'){
     if(jobsSec)jobsSec.style.display='block';
-    var isDriver=_CU&&_CU.type==='driver';
-    if(title)title.textContent=isDriver?'구직 게시판':'구인 게시판';
-    if(sub)sub.textContent=isDriver?'대리점 소속 공고 · 이력서 등록':'기사 공고 등록 · 이력서 검색';
+    if(title)title.textContent='기인연 (機人緣)';
+    if(sub)sub.textContent='소장 ↔ 기사 장기 파트너십 · 구인공고 · 구직공고';
     if(btnJ){btnJ.style.background='var(--br)';btnJ.style.color='#fff';btnJ.style.borderColor='var(--br)';}
     var inner=document.getElementById('posts-jobs-inner');
     if(inner)_loadJobsSection(inner);
   } else {
     routeSec.style.display='block';
-    if(title)title.textContent='단건 요청';
-    if(sub)sub.textContent='대리점이 올린 단건 배달 업무 공고예요';
+    if(title)title.textContent='단기';
+    if(sub)sub.textContent='1주일 이하 단건 배달 업무 공고예요';
     if(btnR){btnR.style.background='var(--ac)';btnR.style.color='#fff';btnR.style.borderColor='var(--ac)';}
     _loadFilteredPosts();
   }
@@ -2661,8 +2660,49 @@ function _pfSwitchMainTab(tab){
 
 function _loadJobsSection(el){
   if(!el)return;
-  if(_CU&&_CU.type==='driver') _pgJobsDriver(el);
-  else _pgJobsAgency(el);
+  var isDriver=_CU&&_CU.type==='driver';
+  el.innerHTML=
+    // 기인연 개념 안내 카드
+    '<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border-left:3px solid var(--br)">'+
+      '<div style="font-size:12.5px;font-weight:800;color:var(--br);margin-bottom:4px">기인연 (機人緣) 이란?</div>'+
+      '<div style="font-size:12px;color:var(--t2);line-height:1.6">'+
+        '기사(機)와 소장 사이에 맺어지는 <b style="color:var(--tx)">장기 인연(緣)</b>이에요. '+
+        '단건 배달·용차와 달리, 소장이 기사를 <b style="color:var(--tx)">고정 소속</b>으로 맺어 '+
+        '안정적으로 일을 맡기고 함께 성장하는 관계예요.'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">'+
+          '<div style="font-size:11px;font-weight:800;color:var(--t2);margin-bottom:2px">구인공고</div>'+
+          '<div style="font-size:11.5px;color:var(--tx)">소장이 함께할 기사 모집</div>'+
+        '</div>'+
+        '<div style="background:var(--bg2);border-radius:8px;padding:8px 10px;border:1px solid var(--bd)">'+
+          '<div style="font-size:11px;font-weight:800;color:var(--t2);margin-bottom:2px">구직공고</div>'+
+          '<div style="font-size:11.5px;color:var(--tx)">기사가 소속 대리점 탐색</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sub-tab-row" id="jobs-main-subtabs">'+
+    '<button class="sub-tab on" onclick="_switchJobsMainTab(\'hire\')">구인공고</button>'+
+    '<button class="sub-tab" onclick="_switchJobsMainTab(\'seek\')">구직공고</button>'+
+    '</div>'+
+    '<div id="jobs-main-content">'+_skRows(3)+'</div>';
+  _switchJobsMainTab(isDriver?'hire':'hire');
+}
+
+function _switchJobsMainTab(tab){
+  var btns=document.querySelectorAll('#jobs-main-subtabs .sub-tab');
+  btns.forEach(function(b,i){b.classList.toggle('on',(tab==='hire'&&i===0)||(tab==='seek'&&i===1));});
+  var el=document.getElementById('jobs-main-content');
+  if(!el)return;
+  if(tab==='hire'){
+    // 구인공고: 기사는 공고목록 조회·지원, 소장은 공고 등록/관리
+    if(_CU&&_CU.type==='driver'){_jSubTab='list';_pgJobsDriver(el);}
+    else{_jSubTab='myjobs';_pgJobsAgency(el);}
+  } else {
+    // 구직공고: 기사는 이력서 등록, 소장은 이력서 검색
+    if(_CU&&_CU.type==='driver'){_jSubTab='resume';_pgJobsDriver(el);}
+    else{_jSubTab='resumes';_pgJobsAgency(el);}
+  }
 }
 
 var _pfQTimer=null;
@@ -5775,6 +5815,19 @@ function _pgProfile(el){
   '<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:var(--t2)">예금주</span><span style="font-weight:700;color:var(--tx)">(유)엠비티아이</span></div>'+
   '</div>'+
   '<div style="margin-top:10px;font-size:11px;color:var(--t3)">기사 ₩150,000/월 · 소장 ₩50,000/월 · 입금 후 문의: 051-711-3103</div>'+
+  '</div>'+
+  '<div style="margin:0 0 8px;padding:14px 16px;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r)">'+
+  '<div style="font-size:12px;font-weight:800;color:var(--t2);margin-bottom:10px">고객 문의</div>'+
+  '<div style="display:flex;flex-direction:column;gap:10px">'+
+  '<a href="tel:051-711-3103" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);text-decoration:none;color:var(--tx)">'+
+  '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3b82f6;flex-shrink:0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.37 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'+
+  '<div><div style="font-size:13px;font-weight:700">전화 문의</div><div style="font-size:12px;color:var(--t2);margin-top:1px">051-711-3103</div></div>'+
+  '</a>'+
+  '<a href="mailto:filo-dine@donway.ai.kr" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);text-decoration:none;color:var(--tx)">'+
+  '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#3b82f6;flex-shrink:0"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>'+
+  '<div><div style="font-size:13px;font-weight:700">이메일 문의</div><div style="font-size:12px;color:var(--t2);margin-top:1px">filo-dine@donway.ai.kr</div></div>'+
+  '</a>'+
+  '</div>'+
   '</div>'+
   '<div style="margin:0 0 8px;padding:12px 14px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);font-size:11.5px;color:var(--t3);line-height:1.6">'+
   '용차앱은 소장과 기사 간 직접 거래를 위한 정보 서비스를 제공합니다. 플랫폼은 계약의 당사자가 아니며, 소장과 기사 간에 직접 체결된 계약에 대해 책임을 지지 않습니다.'+

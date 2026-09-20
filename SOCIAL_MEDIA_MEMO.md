@@ -86,6 +86,7 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 
 | 날짜 | 파일 | 내용 |
 |------|------|------|
+| 2026-09-18 | .github/workflows/yongcha-upload.yml | **용차앱 홍보영상 업로드 완료**: 소장·기사 YouTube+Instagram 4개 영상 전체 업로드. YouTube 소장: https://www.youtube.com/watch?v=lc34LE8Qg4s / YouTube 기사: https://www.youtube.com/watch?v=TzN80kOr--s / Instagram 기사 Media ID: 18134007631645445 / Instagram 소장: ffmpeg H.264 baseline 재인코딩 후 성공. Instagram 소장 오류(ProcessingFailedError 400) → ffmpeg 재인코딩 워크플로우 추가로 해결. |
 | 2026-09-18 | scripts/audio/generate-narration.js | variants 구조 지원 추가 (yongcha 등 script.variants[activeVariant].lines 폴백) + Google TTS sampleRateHertz:44100 추가 (24kHz→44.1kHz, 웅~버징 제거) |
 | 2026-09-18 | scripts/compose/compose-video.sh | build_audio_filter() 모든 경로에 aresample=44100 필터 추가 (TTS 엔진 무관 샘플레이트 불일치 방지) |
 | 2026-09-18 | assets/promo/yongcha-promo.html | 앱 공고 목록 UI 시뮬레이션 슬라이드(s6) 추가: 3개 공고 카드(서울→인천 ₩85,000·부산→대전 ₩120,000·경기→충청 ₩72,000), 단가 100% 공개 메시지. 총 슬라이드 6→7장 |
