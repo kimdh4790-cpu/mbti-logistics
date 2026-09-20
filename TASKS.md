@@ -129,6 +129,7 @@ claude/* 브랜치 push
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-20 | DONWAY 계약서 주요내용 입력 필드 추가 (_ctrRenderWrite + _ctrCollect 수정) — 타이핑 내용 아카이브 반영 버그 수정, 기사 주민번호 부분 입력 차단 |
 | 2026-09-20 | mbtico.kr Worker 분리 (mbtico-worker.js + wrangler.mbtico.toml) — PR #128 |
 | 2026-09-20 | filo.ai.kr / dine.ne.kr Worker 분리 (filo-worker.js, dine-worker.js) |
 | 2026-09-20 | DONWAY 계약서 타이핑 방식 전환 + 탭 단일화 + 아카이브 버그 수정 |
