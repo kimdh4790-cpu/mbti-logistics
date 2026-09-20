@@ -7792,7 +7792,37 @@ function _ctrRenderWrite(){
     +'</div>'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">③ 계약서 DOCX 업로드</div>'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ③ 계약 주요 내용</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">계약기간 시작</label>'
+    +'<input id="ctr-start-date" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">계약기간 종료</label>'
+    +'<input id="ctr-end-date" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">담당구역</label>'
+    +'<input id="ctr-area" type="text" placeholder="전구역관할" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">지급일</label>'
+    +'<input id="ctr-cycle" type="text" placeholder="매월 20일" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">배송수수료 (원/건)</label>'
+    +'<input id="ctr-unit-price" type="number" placeholder="예: 700" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">집화수수료 (원/건)</label>'
+    +'<input id="ctr-collect-price" type="number" placeholder="예: 200" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">차량번호</label>'
+    +'<input id="ctr-car-num" type="text" placeholder="예: 00가0000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">종사자격증번호 (선택)</label>'
+    +'<input id="ctr-lic-num" type="text" placeholder="(선택)" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">특약사항 (선택)</label>'
+    +'<textarea id="ctr-special" rows="3" placeholder="특약사항이 있다면 입력하세요" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box;resize:vertical"></textarea>'
+    +'</div>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">④ 계약서 DOCX 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택 — 없으면 기본 16조 위수탁 사용)</span></div>'
     +'<input type="file" id="ctr-docx-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrDocxLoad(this)" style="display:none">'
     +'<div id="ctr-docx-status"><label for="ctr-docx-file" style="display:block;padding:12px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 DOCX 파일 선택 (워드 파일만)</label></div>'
     +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
@@ -7938,7 +7968,7 @@ function _ctrCollect(){
     driverIdNum:_g('ctr-driver-id-input')||drv.ssn||'',
     driverAddr:_g('ctr-driver-addr-input')||drv.address||'',
     camp:campAuto,
-    area:areaAuto,
+    area:_g('ctr-area')||areaAuto,
     route:routeStr,
     startDate:startDate,
     endDate:endDate,
@@ -7946,6 +7976,8 @@ function _ctrCollect(){
     unitPrice:unitPrice,
     carNum:carNum,
     licenseNum:licNum,
+    cycle:_g('ctr-cycle')||'매월 20일',
+    special:_g('ctr-special')||'',
     routePricesJson:routePrices.length?JSON.stringify(routePrices):'',
     customContractUrl:_g('ctr-pdf-url'),
     docxHtml:(function(){var c=document.getElementById('ctr-docx-content');if(c&&c.innerHTML)return c.innerHTML;try{var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';var _ct=window._ctrType||'wisu';var ed=localStorage.getItem('ctr_docx_edit_'+_ct+'_'+_uid);if(ed)return ed;var sd=localStorage.getItem('ctr_docx_'+_ct+'_'+_uid);if(sd){var p=JSON.parse(sd);return p.html||'';}}catch(_e){}return '';})(),
