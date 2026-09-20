@@ -7870,7 +7870,7 @@ function _ctrCollect(){
   var routePrices=[];var routeStr='';var firstPrice='';var campAuto='';var areaAuto='전구역관할';
   var drv=window._ctrDriver||{};
   return {
-    type:t,
+    type:window._ctrType||'wisu',
     dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
     companyName:cp.companyName||cp.name||(_CU&&_CU.companyName)||'',
     companyBiz:cp.bizNum||'',
