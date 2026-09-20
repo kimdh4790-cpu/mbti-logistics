@@ -2203,6 +2203,15 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       const resp = await fetchAsset('/emergency.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
+    // ★ 슬러그 기반 배송앱 접속: filo.ai.kr/{slug}/emergency
+    const _slugEmMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/emergency\/?$/);
+    if (_slugEmMatch && method === 'GET') {
+      const _eSlug = _slugEmMatch[1];
+      const resp = await fetchAsset('/emergency.html', request);
+      let html = await resp.text();
+      html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
 
     // ★ 직원 셀프 체크인
     if (path === '/checkin' || path === '/checkin/') {
