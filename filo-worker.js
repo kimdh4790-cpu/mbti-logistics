@@ -2075,9 +2075,16 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
       return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
     }
-    // filo.ai.kr에서 mbtico.kr 전용 경로 → mbtico.kr로 리다이렉트
-    if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
-    if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://mbtico.kr/register', 301);
+    // 배송앱 허브 (mbtico_hub.html from KV)
+    if (path === '/mbtico_hub' || path === '/mbtico-hub' || path === '/mbtico_hub.html') {
+      const resp = await fetchAsset('/mbtico_hub.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+    // 회사/직원 가입 (join.html from KV)
+    if (path === '/mbtico-join' || path === '/company-join') {
+      const resp = await fetchAsset('/join.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
 
     // 슬러그 기반 회사별 URL은 DONWAY(donway.ai.kr) 전용 — filo.ai.kr에서는 사용 안 함
 
