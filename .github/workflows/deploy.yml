@@ -152,7 +152,7 @@ jobs:
               echo "❌ $SFILE: $RESULT"
             fi
           done
-          for FILE in donway_landing.js yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html contract.html contract-sign.html emergency.html drivers.html scan.html label.html mbtico_hub.html seolyuhana.html; do
+          for FILE in donway_landing.js yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html contract.html contract-sign.html emergency.html drivers.html scan.html label.html mbtico_hub.html seolyuhana.html mbti_landing.html mbtico-manifest.json; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
               -H "X-Auth-Email: kimdh4790@gmail.com" \
