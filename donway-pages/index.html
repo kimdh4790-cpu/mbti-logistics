@@ -7839,6 +7839,12 @@ function _ctrRenderWrite(){
   _ctrLoadContractTemplate(t);
   setTimeout(_ctrRestoreDocx,100);
   setTimeout(function(){
+    var _td3=new Date();var _ed4=new Date(_td3.getFullYear()+1,_td3.getMonth(),_td3.getDate()-1);
+    var _fmtD=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+    var _si=document.getElementById('ctr-start-date');if(_si&&!_si.value)_si.value=_fmtD(_td3);
+    var _ei=document.getElementById('ctr-end-date');if(_ei&&!_ei.value)_ei.value=_fmtD(_ed4);
+  },80);
+  setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
     if(!canvas||!window.SignaturePad)return;
     window._adminSigPad=null;
@@ -7878,6 +7884,35 @@ function _ctrSaveEdited(){
   try{localStorage.setItem(_sk,content.innerHTML);}catch(_e){}
 }
 
+function _ctrApplyTyped(silent){
+  var c=document.getElementById('ctr-docx-content');
+  if(!c){if(!silent)toast('⚠️ DOCX 파일을 먼저 업로드하세요');return;}
+  var _g2=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
+  var fills=[
+    _g2('ctr-driver-name-input'),
+    _g2('ctr-driver-biz-input'),
+    _g2('ctr-driver-id-input'),
+    _g2('ctr-driver-addr-input'),
+    _g2('ctr-car-num'),
+    _g2('ctr-lic-num'),
+    _g2('ctr-driver-phone-input'),
+    _g2('ctr-start-date'),
+    _g2('ctr-end-date')
+  ];
+  var html=c.innerHTML;
+  var idx=0,filled=0;
+  html=html.replace(/<u>((?:&nbsp;|&#xa0;|\s)*)<\/u>/gi,function(match,inner){
+    if(inner.replace(/&nbsp;|&#xa0;|\s/g,'').length>0)return match;
+    while(idx<fills.length&&!fills[idx])idx++;
+    if(idx<fills.length){filled++;return '<u><b>'+fills[idx++]+'</b></u>';}
+    return match;
+  });
+  c.innerHTML=html;
+  var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
+  try{localStorage.setItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid,html);}catch(_e){}
+  if(!silent)toast(filled?'✅ 빈칸 '+filled+'개 채우기 완료':'ℹ️ 채울 수 있는 빈칸이 없습니다');
+}
+
 function _ctrCollect(){
   var _g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var cp=window._ctrCompany||{};
@@ -7899,9 +7934,9 @@ function _ctrCollect(){
     companyPhone:cp.settlementPhone||cp.phone||cp.tel||'',
     driverName:_g('ctr-driver-name-input')||drv.name||'',
     driverPhone:_g('ctr-driver-phone-input')||drv.phone||'',
-    driverBizNum:drv.bizNum||'',
-    driverIdNum:drv.ssn||'',
-    driverAddr:drv.address||'',
+    driverBizNum:_g('ctr-driver-biz-input')||drv.bizNum||'',
+    driverIdNum:_g('ctr-driver-id-input')||drv.ssn||'',
+    driverAddr:_g('ctr-driver-addr-input')||drv.address||'',
     camp:campAuto,
     area:areaAuto,
     route:routeStr,
@@ -8474,6 +8509,7 @@ async function _ctrSave(){
     var _rcSnap=await _db.collection('settings').doc(_cid+'_routeCampMap').get();
     if(_rcSnap.exists){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});Object.assign(_routeCampMap,_rcSnap.data());}
   }catch(e){}
+  _ctrApplyTyped(true);
   var data=_ctrCollect();
   var adminSig='';
   if(window._adminStampImg){
