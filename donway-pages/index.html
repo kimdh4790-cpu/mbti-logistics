@@ -7938,37 +7938,37 @@ async function _ctrAutoFillDocx(){
   var endDate=new Date(today.getFullYear()+1,today.getMonth(),today.getDate()-1);
   var tmp=document.createElement('div');
   tmp.innerHTML=dc.innerHTML;
+  function _blankU(u){return !u.textContent.replace(/[ \s]/g,'');}
 
-  // ① 셀 단위 직접 채우기 (계약기간·차량번호·자격증번호)
-  tmp.querySelectorAll('td,th').forEach(function(cell){
-    var ct=cell.textContent||'';
-    // 계약기간 셀: 빈 <u> 태그를 순서대로 년/월/일/년/월/일 채우기
-    if(/부터/.test(ct)&&/까지/.test(ct)){
-      var us=cell.querySelectorAll('u');
+  // ① 행(TR) 단위 채우기 — 레이블 셀과 데이터 셀이 분리된 경우도 대응
+  tmp.querySelectorAll('tr').forEach(function(row){
+    var rt=row.textContent||'';
+    // 계약기간 행: 행 전체에 "부터"와 "까지" 포함 시 순서대로 년/월/일 × 2 채우기
+    if(/부터/.test(rt)&&/까지/.test(rt)){
+      var us=row.querySelectorAll('u');
       var fi=0;
       var dates=[today.getFullYear(),today.getMonth()+1,today.getDate(),endDate.getFullYear(),endDate.getMonth()+1,endDate.getDate()];
-      us.forEach(function(u){if(fi<6&&!u.textContent.trim()){u.textContent=dates[fi++];}});
+      us.forEach(function(u){if(fi<6&&_blankU(u)){u.textContent=dates[fi++];}});
+      if(fi===0){var h=row.innerHTML;var c2=0;row.innerHTML=h.replace(/_{3,}/g,function(m){return c2<dates.length?dates[c2++]:m;});}
     }
-    // 자동차 등록번호 셀
-    if(/자동차.*등록번호|등록번호/.test(ct)&&drv.carNum){
-      var us2=cell.querySelectorAll('u');
-      var filled2=false;
-      us2.forEach(function(u){if(!filled2&&!u.textContent.trim()){u.textContent=drv.carNum;filled2=true;}});
-      if(!filled2)cell.innerHTML=cell.innerHTML.replace(/_{3,}/,drv.carNum);
+    // 차량번호 행
+    if(/자동차.*등록번호|등록번호|차량내역/.test(rt)&&drv.carNum){
+      var us2=row.querySelectorAll('u');var f2=false;
+      us2.forEach(function(u){if(!f2&&_blankU(u)){u.textContent=drv.carNum;f2=true;}});
+      if(!f2){row.innerHTML=row.innerHTML.replace(/_{3,}/,drv.carNum);}
     }
-    // 종사자격증 번호 셀
-    if(/종사자격/.test(ct)&&drv.licenseNum){
-      var us3=cell.querySelectorAll('u');
-      var filled3=false;
-      us3.forEach(function(u){if(!filled3&&!u.textContent.trim()){u.textContent=drv.licenseNum;filled3=true;}});
-      if(!filled3)cell.innerHTML=cell.innerHTML.replace(/_{3,}/,drv.licenseNum);
+    // 종사자격 행
+    if(/종사자격/.test(rt)&&drv.licenseNum){
+      var us3=row.querySelectorAll('u');var f3=false;
+      us3.forEach(function(u){if(!f3&&_blankU(u)){u.textContent=drv.licenseNum;f3=true;}});
+      if(!f3){row.innerHTML=row.innerHTML.replace(/_{3,}/,drv.licenseNum);}
     }
   });
 
   // ② <u> 태그 기반 자동완성 (이름·연락처·사업자번호·주소·캠프명 등)
   var uTags=tmp.querySelectorAll('u');
   uTags.forEach(function(u){
-    if(u.textContent.trim())return;
+    if(!_blankU(u))return;
     var prev='';
     var n=u;
     while(n&&prev.length<200){n=n.previousSibling;if(!n)break;prev=(n.textContent||'')+prev;}
