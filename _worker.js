@@ -10053,6 +10053,19 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         mH.set('Cache-Control', 'no-cache');
         return new Response(mResp.body, {status: mResp.status, headers: mH});
       }
+      // filo.ai.kr → 배송앱 manifest 서빙
+      if (hostname.includes('filo.ai')) {
+        return new Response(JSON.stringify({
+          name:'FILO 배송앱', short_name:'FILO',
+          description:'긴급배송 · QR 출퇴근 · 배달대행 통합 플랫폼',
+          start_url:'/', scope:'/', display:'standalone',
+          orientation:'portrait', background_color:'#080010', theme_color:'#e060a0', lang:'ko',
+          icons:[
+            {src:'/filo-icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+            {src:'/filo-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+          ]
+        }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
+      }
       // dine.ne.kr → SCAN manifest 서빙
       if (hostname.includes('dine.ne')) {
         return new Response(JSON.stringify({
