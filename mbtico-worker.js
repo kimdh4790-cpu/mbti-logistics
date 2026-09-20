@@ -1,5 +1,5 @@
 ﻿// ================================================================
-// _worker.js — Cloudflare Worker (mbti-logistics)
+// mbtico-worker.js — Cloudflare Worker (mbtico.kr 전용)
 // 최종수정: 2026-07-17 | 담당: 엠비티아이 김형우
 // ================================================================
 //
@@ -1145,2340 +1145,313 @@ export default {
       return new Response(js, { headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=86400' } });
     }
 
-    // ★ donway.ai.kr 라우팅 (명시적)
-    if (hostname === 'donway.ai.kr' || hostname === 'www.donway.ai.kr') {
-      // /admin → settle.html 서빙 (DONWAY 통합 어드민)
-      if (path === '/admin' || path === '/admin.html' || path === '/admin/') {
-        return serveKVFile(env, 'settle.html', 'text/html');
+        // ★ mbtico.kr → 엠비티아이 관제센터
+    if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
+      // Firebase Auth 핸들러 프록시 (signInWithRedirect 크로스도메인 쿠키 이슈 해결)
+      if (path.startsWith('/__/auth/')) {
+        const firebaseUrl = 'https://mbti-logistics.firebaseapp.com' + path + (url.search || '');
+        return fetch(firebaseUrl, { method: request.method, headers: request.headers, body: request.body });
       }
-      // /contract/file/{token} → 업로드된 계약서 원본 파일 프록시 (iframe 임베딩용)
-      if (path.startsWith('/contract/file/') && path.length > 15 && method === 'GET') {
-        const _pfToken = path.slice(15).split('/')[0];
-        const _pfFsToken = await getAccessToken(env);
-        const _pfQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_pfToken}}},limit:1}});
-        const _pfRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_pfFsToken,'Content-Type':'application/json'},body:_pfQ});
-        const _pfData = await _pfRes.json();
-        const _pfDoc = Array.isArray(_pfData) && _pfData[0]?.document;
-        const _pfUrl = _pfDoc?.fields?.customContractUrl?.stringValue;
-        if (!_pfUrl) return new Response('파일 없음',{status:404});
-        try {
-          const _pfFile = await fetch(_pfUrl);
-          if (!_pfFile.ok) return new Response('파일 로드 실패',{status:502});
-          const _pfCt = _pfFile.headers.get('Content-Type')||'application/octet-stream';
-          const _pfBody = await _pfFile.arrayBuffer();
-          return new Response(_pfBody, {headers:{'Content-Type':_pfCt,'Cache-Control':'private, max-age=3600','Access-Control-Allow-Origin':'https://donway.ai.kr','Access-Control-Allow-Methods':'GET','Vary':'Origin'}});
-        } catch(_pfe) {return new Response('프록시 오류',{status:502});}
-      }
-      // /contract/download/{token} → 서명 완료 계약서 HTML 파일 다운로드
-      if (path.startsWith('/contract/download/') && path.length > 19 && method === 'GET') {
-        const _dlToken = path.slice(19).split('/')[0];
-        const _dlInline = new URL(request.url).searchParams.get('inline')==='1';
-        const _dlFsToken = await getAccessToken(env);
-        const _dlQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_dlToken}}},limit:1}});
-        const _dlRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_dlFsToken,'Content-Type':'application/json'},body:_dlQ});
-        const _dlData = await _dlRes.json();
-        const _dlDoc = Array.isArray(_dlData) && _dlData[0]?.document;
-        if (!_dlDoc) return new Response('계약서를 찾을 수 없습니다.',{status:404});
-        const _df = _dlDoc.fields||{};
-        const _dg = k => _df[k]?.stringValue||'';
-        const _dd = k => _df[k]?.stringValue||'미기재';
-        const _dlType = _dg('type')||'wisu';
-        const _dlTypeNames = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
-        const _dlTypeName = _dlTypeNames[_dlType]||_dg('title')||'계약서';
-        const _dlDriver = _dg('driverName')||'기사';
-        const _dlPhone = _dg('driverPhone');
-        const _dlBiz = _dg('driverBizNum')||_dg('driverBiz');
-        const _dlAddr = _dg('driverAddr');
-        const _dlDrSig = _dg('driverSig');
-        const _dlIdNum = _dg('driverIdNum');
-        let _dlAdSig = _dg('adminSig');
-        if (!_dlAdSig) { const _dlCid=_dg('dealerId'); if(_dlCid){try{const _dlCR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${_dlCid}`,{headers:{Authorization:'Bearer '+_dlFsToken}});const _dlCD=await _dlCR.json();_dlAdSig=_dlCD.fields?.stampImage?.stringValue||'';}catch(_e){}} }
-        const _dlSignedAt = _dg('signedAt')||_dg('createdAt')||'';
-        const _dlDateStr = _dlSignedAt ? new Date(_dlSignedAt).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
-        const _dlPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
-        const _dlStart=_dg('startDate'),_dlEnd=_dg('endDate'),_dlMonths=(()=>{if(!_dlStart||!_dlEnd)return'';const _pd=s=>{let d=new Date(s);if(!isNaN(d))return d;const m=s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date(NaN);};const _s=_pd(_dlStart),_e=_pd(_dlEnd);if(isNaN(_s)||isNaN(_e))return'';const _m=Math.round((_e-_s)/(1000*60*60*24*30));return _m>0?_m+'개월':'';})()
-        const _dlRoute=_dg('route'),_dlArea=_dg('area'),_dlCamp=_dg('camp'),_dlUnit=_dg('unitPrice'),_dlCollect=_dg('collectPrice'),_dlCycle=_dg('cycle')||'매월 20일',_dlSort=_dg('sortPrice'),_dlCarnum=_dg('carNum'),_dlLicnum=_dg('licenseNum'),_dlSpecial=_dg('special');
-        const _dlCompanyCeo=_dg('companyCeo')||'';
-        const _dlCompanyAddr=_dg('companyAddr')||'';
-        const _dlCname=_dg('companyName')||'';
-        const _dlCbiz=_dg('companyBiz')||'';
-        const _dlPreDays=_dg('preDepositDays')||'';
-        const _dlRpJson=_dg('routePricesJson'); let _dlRps=[]; try{if(_dlRpJson)_dlRps=JSON.parse(_dlRpJson);}catch(e){} if(_dlRps.length){const _dlRx=[];_dlRps.forEach(r=>{const _rts=(r.route||'').split(/\s*,\s*/).filter(Boolean);_rts.length>1?_rts.forEach(rt=>_dlRx.push({route:rt,price:r.price})):_dlRx.push(r);});_dlRps=_dlRx;}
-        const _dlFeeRows=_dlRps.length?_dlRps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlPAmt(r.price)}</td></tr>`).join(''):`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlUnit?_dlPAmt(_dlUnit):'　　　원'}</td></tr>`;
-        // 1순위: 서명 완료 archiveUrl — inline=1 또는 routePricesJson 있으면 항상 신규 생성 (라우트별 단가 최신 반영)
-        const _dlArchiveUrl = _dg('archiveUrl');
-        if (_dlArchiveUrl && !_dlInline && !_dlRpJson) {
-          try {
-            const _dlArRes = await fetch(_dlArchiveUrl);
-            if (_dlArRes.ok) {
-              let _dlArHtml = await _dlArRes.text();
-              // 서명 완료 아카이브에 기사 입력 정보 + 도장/서명 주입 (구 아카이브 포함)
-              if(_dlIdNum){_dlArHtml=_dlArHtml.replace(/(\(?주민등록번호\)?\s*:)\s*(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{6}/.test(m)?m:pre+' '+_dlIdNum+tag;});_dlArHtml=_dlArHtml.replace(/(주민등록번호[^<]{0,30})(<[\/])/g,function(m,pre,tag){return /\d{6}/.test(pre)?m:pre+_dlIdNum+' '+tag;});}
-              if(_dlBiz){_dlArHtml=_dlArHtml.replace(/(사업자등록번호\s*:)\s*(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{10}/.test(m.replace(/-/g,''))?m:pre+' '+_dlBiz+tag;});_dlArHtml=_dlArHtml.replace(/(사업자등록번호[^<]{0,30})(<[\/])/g,function(m,pre,tag){return /\d{10}/.test(pre.replace(/-/g,''))?m:pre+_dlBiz+' '+tag;});}
-              _dlArHtml=_dlArHtml.replace(/동의함(\s|<[^>]+>)*[□☐☑▢⬜□☐☑◻◻]/g,'동의함 ✅');_dlArHtml=_dlArHtml.replace(/동의함[ \t]*□/g,'동의함 ✅');
-              let _arInCnt=0;
-              _dlArHtml = _dlArHtml.replace(/\(인\)(?!<br><img)/g,function(m){_arInCnt++;if(_arInCnt===1&&_dlAdSig)return '(인)<br><img src="'+_dlAdSig+'" style="max-height:80px;max-width:100px;display:block;mix-blend-mode:multiply">';if(_arInCnt===2&&_dlDrSig)return '(인)<br><img src="'+_dlDrSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">';return m;});
-              if(_dlDrSig) _dlArHtml = _dlArHtml.replace(/\(서명\)(?!<img)/g,'<img src="'+_dlDrSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">');
-              return new Response(_dlArHtml, {headers:{'Content-Type':'text/html;charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(_dlTypeName+'-'+_dlDriver+'.html')}`,'Cache-Control':'no-store'}});
-            }
-          } catch(_ae){}
-        }
-        // 2순위: 코드 생성 (미서명 또는 archiveUrl 없는 경우 — 필드 채워진 HTML 제공)
-        // customContractUrl(빈 템플릿)은 기사 다운로드에서 제외
-        const _dl_dealerId = _dg('dealerId');
-        let _dlWtCustomHtml = null;
-        if (_dlType === 'wisu' && _dl_dealerId) {
-          try {
-            const _dlWtRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/wisu_templates/${_dl_dealerId}`,{headers:{Authorization:'Bearer '+_dlFsToken}});
-            if (_dlWtRes.ok) {
-              const _dlWtData = await _dlWtRes.json();
-              const _dlWtHtmlRaw = _dlWtData?.fields?.html?.stringValue;
-              const _dlWtFields = (() => { try { return JSON.parse(_dlWtData?.fields?.fields?.stringValue||'[]'); } catch(e){return [];} })();
-              if (_dlWtHtmlRaw) {
-                const _dlWtFieldMap = {'기사명':_dlDriver||'','수탁자명':_dlDriver||'','계약시작일':_dlStart||'','시작일':_dlStart||'','계약종료일':_dlEnd||'','종료일':_dlEnd||'','담당구역':_dlArea||_dlRoute||'','담당노선':_dlRoute||_dlArea||'','대리점명':_dlCname||'','위탁자명':_dlCname||'','사업자번호':_dlBiz||_dlCbiz||'','기사사업자번호':_dlBiz||'','대리점사업자번호':_dlCbiz||'','대표자명':_dlCompanyCeo||'','주소':_dlAddr||_dlCompanyAddr||'','기사주소':_dlAddr||'','대리점주소':_dlCompanyAddr||'','배송단가':_dlUnit?_dlPAmt(_dlUnit):'','집화단가':_dlCollect?_dlPAmt(_dlCollect):'','캠프명':_dlCamp||'','정산지급일':_dlCycle||'','선입금일수':_dlPreDays||'','전화번호':_dlPhone||'','차량번호':_dlCarnum||'','자격증번호':_dlLicnum||''};
-                _dlWtCustomHtml = _dlWtHtmlRaw.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<[\/]span>/g, (match) => {
-                  const idM = match.match(/data-id="BLANK_(\d+)"/);
-                  if (!idM) return match;
-                  const blankIdx = parseInt(idM[1]);
-                  const field = _dlWtFields.find(f => f.id === blankIdx || f.id === 'BLANK_'+blankIdx);
-                  const label = field && field.label ? field.label : '';
-                  const val = label ? (_dlWtFieldMap[label] || '') : '';
-                  return val ? `<span style="font-weight:700;border-bottom:1px solid #333">${val}</span>` : '<span style="display:inline-block;min-width:60px;border-bottom:1px solid #666">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
-                });
-              }
-            }
-          } catch(_dlWtE) { _dlWtCustomHtml = null; }
-        }
-        let _dlBody='';
-        if(_dlType==='wisu'&&_dlWtCustomHtml){_dlBody=_dlWtCustomHtml;}
-        else if(_dlType==='wisu'){_dlBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2><p style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_dlCname||'위탁자'}</b> (이하 "위탁자"라 한다)와 택배종사자인 <b>${_dlDriver||'　　　　'}</b> (이하 "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위‧수탁계약을 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(목적)</b> 이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</p><p style="margin-bottom:10px"><b>제2조(기본원칙)</b> ① "위탁자"와 "수탁자"는 이 계약에 따라 택배 운송 업무를 수행함에 있어 상호 대등한 입장에서 신의성실의 원칙에 따라 자신의 권리를 행사하며 의무를 이행한다.<br>② "위탁자"와 "수탁자"는 이 계약의 이행과 관련하여 「생활물류서비스산업발전법」, 「독점규제 및 공정거래에 관한 법률」등 관련 법령의 규정을 준수한다.</p><p style="margin-bottom:10px"><b>제3조(용어의 정의)</b> ① "택배"라 함은 고객의 요청에 따라 운송을 위탁받은 화물을 집화, 분류, 배송 등의 과정을 거쳐 수화인의 주택, 사무실 또는 기타의 장소에서 인도하는 것을 말한다.<br>② "집화"라 함은 고객으로부터 수령한 화물을 "위탁자"가 지정한 장소까지 운송하여 하차, 적재하는 작업을 말한다.<br>③ "분류"라 함은 서브터미널 등 택배화물의 분류시설‧장소에서 다수의 화물을 담당구역별로 구분하는 작업을 말한다.<br>④ "배송"이라 함은 분류된 화물을 택배 운송차량에 상차하여 차량운행을 통해 운송장에 기재된 장소에서 고객에게 인도하는 것을 말한다.<br>⑤ 택배의 집화, 배송에 수반되는 전산입력 및 택배운임 수취, 고객응대, 스캔 등 부수적인 업무는 집화, 배송업무로 본다.</p><p style="margin-bottom:10px"><b>제4조(계약의 주요내용)</b> ① "위탁자"와 "수탁자" 간 계약의 주요내용은 다음과 같다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_dlStart||'　　년　　월　　일'}부터 ${_dlEnd||'　　년　　월　　일'}까지${_dlMonths?' ('+_dlMonths+')':''}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_dlArea||_dlRoute||'관할전구역'}</td></tr>${_dlCamp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_dlCamp}</td></tr>`:''}<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="${1+Math.max(_dlRps.length,1)+1}">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_dlPAmt(_dlCollect)}</td></tr>${_dlFeeRows}<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_dlCycle}</td></tr>${_dlCarnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_dlCarnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_dlLicnum||'　　　　　'}</td></tr>`:''}</table>② "수탁자"는 분류작업을 ${(_dlSort&&Number(_dlSort)>0)?'수행':'미수행'}한다.${(_dlSort&&Number(_dlSort)>0)?`<br>③ 분류수수료는 시간당 ${_dlPAmt(_dlSort)}로 한다.<br>④ 제3항에 따른 분류수수료는 "수탁자"가 수행한 분류작업 시간에 따라 산정되며, 최저임금법에 따른 최저임금 이상으로 지급하여야 한다.`:''}</p><p style="margin-bottom:10px"><b>제5조(수수료의 지급)</b> ① "수탁자"는 택배업무 수행 내역을 매월 26일 ~ 익월 25일을 기준으로 마감하고, 익월 20일까지 "위탁자"에게 수수료를 청구하여야 한다. 다만, 청구일이 휴무일인 경우에는 휴무일 익일에 수수료를 청구한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"가 고객으로부터 수취한 선착불 금액이 있는 경우 수취한 날로부터 ${_dlPreDays||'　　　'}일 이내에 "위탁자"에게 입금하여야 한다.<br>⑤ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</p><p style="margin-bottom:10px"><b>제6조(택배 배송업무의 수행)</b> ① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서「생활물류서비스산업발전법」, 「도로교통법」, 「자동차관리법」 등 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 정부기관 및 택배사의 요청에 따른 "위탁자"의 실태조사, 자료요청 등에 적극 협조한다.<br>⑤ "수탁자"는 이 계약의 이행에 필요한 택배용품, 전산장비, 차량 등을 구비하여야 하며, "위탁자"는 필요시 계약기간동안 이를 지원 또는 대여할 수 있다.<br>⑥ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공‧공개하여서는 아니 된다.<br>⑦ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.<br>⑧ "수탁자"가 동승인력을 사용할 경우에, "위탁자"는 그에 대한 책임을 지지 않는다.<br>⑨ "수탁자"가 "위탁자"에게 사전에 통지를 하지 않았거나, "수탁자"가 정당하지 않은 사유로 수탁업무를 해태하여 택배서비스 이행에 차질이 발생한 경우, "위탁자"는 제3자에게 수탁업무를 대신하도록 할 수 있으며, 이 경우 해당 수수료는 업무를 수행한 자에게 지급한다.</p><p style="margin-bottom:10px"><b>제7조(위탁자의 준수사항)</b> "위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. "수탁자"가 부담하여야 할 정당한 사유가 없음에도 불구하고 "위탁자"가 수취하기로 사전에 약정한 수수료, 관리비 등과 별도의 비용을 징수하는 행위<br>4. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위("위탁자"와 "수탁자"의 합의하에 타 업무를 수행할 경우 타 업무에 수반되는 비용을 일방적으로 "수탁자"에게 부담시키지 않는다.)<br>5. 정당한 사유 없이 "수탁자"의 업무 수행에 필요한 시스템 접근을 차단하는 행위<br>6. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위<br>7. 계약 종료 시 "수탁자"에게 후임자를 구할 책임을 부담시키는 행위<br>8. 계약 종료 이후 정당한 사유 없이 동종 업종의 타 사업자와의 계약을 방해하는 행위<br>9. 천재지변, 전쟁, 내란 기타 불가항력적인 사유 시에 배송지연 책임을 전가시키는 행위</p><p style="margin-bottom:10px"><b>제8조(안전보건 조치 등)</b> ① "위탁자"는 「산업안전보건법」 제77조에 따른 안전‧보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」, 「산업재해보상보험법」 및 「고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률」에 따라 고용보험과 산업재해보상보험에 가입하여야 하며, "위탁자"는 "수탁자"의 수수료에서 원천공제하여 보험료를 납부할 수 있다.<br>③ "위탁자"는 "수탁자"의 일 평균 작업시간이 일 8시간을 지속적으로 초과할 경우 "위탁자"는 연 1회 이상 심혈관질환 등 건강검진 및 추가 프로그램을 실시하고, 그 결과에 따라 적정한 휴식시간 보장 등 별도의 건강관리 조치를 취하여야 한다.<br>④ "위탁자"는 "수탁자"가 작업시간 중 건강이상을 호소할 경우 긴급진료를 받을 수 있도록 하고, "수탁자"는 그 진료내역서를 "위탁자"와 공유한다.</p><p style="margin-bottom:10px"><b>제9조(작업시간 조정 등)</b> ① 계약 당사자는 "수탁자"의 최대 작업시간이 일 12시간, 주 60시간을 초과하지 않도록 노력한다.<br>② 제1항에도 불구하고, 설 · 추석 등의 경우 설 · 추석 등이 속한 2주 이내의 기간에는 불가피한 예외를 인정할 수 있다. 단, 그러한 경우에도 22시를 초과하여 작업하여서는 아니된다.<br>③ "수탁자"의 작업시간이 4주 동안 1주 평균 64시간을 초과할 경우, 계약 당사자는 물량 · 배송구역 조정 협의를 통해 최대 작업시간 내로 감축할 수 있도록 노력하여야 한다. 단, 물량 · 배송구역 조정에 대한 협의가 되지 않을 경우에는 영업점을 대표하는 자, 택배기사를 대표하는 자가 추천하는 자를 포함하여 국토교통부가 구성한 조정위원회에서 조정할 수 있다.<br>④ 제3항에 따라 물량 · 배송구역조정을 할 경우에는 서면으로 계약을 변경하여야 한다.</p><p style="margin-bottom:10px"><b>제10조(손해배상)</b> ① 택배화물의 훼손, 멸실, 분실, 운송지연 등으로 고객에게 손해가 발생한 경우에 "위탁자"와 "수탁자"는 귀책사유에 따라 그 손해배상 책임을 부담하며, "위탁자"가 "수탁자"를 대신해 우선 배상하는 경우에는 "수탁자"에게 구상권을 행사할 수 있다.<br>② "위탁자"는 손해배상에 대한 기준(금액, 비율 등)을 일방적으로 정하여 "수탁자"가 따르도록 거래조건을 설정하지 않으며, "수탁자"의 고의 또는 과실에 의하지 않은 손해배상책임은 "수탁자"에게만 일방적으로 부담시키지 않는다.</p><p style="margin-bottom:10px"><b>제11조(계약의 갱신 및 해지)</b> ① “위탁자”와 “수탁자”는 상호 합의하는 경우에는 계약을 해지할 수 있다.<br>② “위탁자”는 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”가 계약의 갱신을 요구하는 경우로서 총 계약기간(“위탁자”와 “수탁자”가 최초 위탁계약을 체결한 날부터 이 계약의 종료일까지의 기간을 말한다)이 6년 이하인 때에는「생활물류서비스산업발전법 시행령」제5조(택배서비스 운송 위탁계약의 갱신거절사유 등)에서 규정한 경우를 제외하고는 이를 거절할 수 없다.<br>③ “위탁자”는 제2항에 따른 갱신 요구를 거절하는 경우에는 그 요구를 받은 날부터 15일 이내에 “수탁자”에게 거절의 사유를 적어 서면으로 통지하여야 한다.<br>④ “위탁자”가 제3항에 따른 거절의 통지를 하지 않거나, 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”에게 계약변경, 계약갱신 등에 대해 서면으로 통지하지 않는 경우에는 이 계약과 같은 조건으로 1년간 다시 계약을 체결한 것으로 본다.<br>⑤ “위탁자”는 계약을 해지하려는 경우에는 “수탁자”에게 60일 이상의 유예기간을 두고 계약의 위반 사실을 구체적으로 밝히고 이를 시정하지 아니하면 그 계약을 해지한다는 사실을 서면으로 2회 이상 통지하여야 한다.<br>⑥ 제5항에도 불구하고 「생활물류서비스산업발전법 시행령」제6조(택배서비스 운송 위탁계약 해지 통지의 생략사유)에서 규정한 경우에 해당 시 즉시 계약을 해지할 수 있다.<br>⑦ “수탁자”의 사정으로 계약을 해지할 경우, “수탁자”는 계약해지 60일 전에 “위탁자”에게 통지하고 업무가 원활하게 이전되도록 협조한다.<b>제12조(개인정보 수집)</b> ① "위탁자"는 계약체결을 위해 필요한 "수탁자"의 개인정보를 "수탁자"의 동의(별지 제1호 서식)를 받아 수집‧이용할 수 있다.<br>② "위탁자"는 「화물자동차 운수사업법」제9조의 2에 따른 범죄경력 조회를 위해 국토교통부장관 또는 시‧도지사가 "수탁자"의 개인정보를 요청할 경우 요청자에게 이를 제공할 수 있다.<br>③ "위탁자"는 제1항 및 제2항의 목적 외 다른 용도로 "수탁자"의 개인정보를 사용할 수 없으며, 제3자에게 제공하여서는 아니 된다.</p><p style="margin-bottom:10px"><b>제13조(분쟁 해결)</b> ① "위탁자"와 "수탁자"는 이 계약에 명시되지 아니한 사항 또는 계약의 해석에 관한 사항에 다툼이 있는 경우에는 쌍방의 합의에 의해 해결한다.<br>② 제1항에 따라 해결되지 않는 경우에는 민사소송법에 따라 법원에서의 소송을 통해 분쟁을 해결한다.</p><p style="margin-bottom:10px"><b>제14조(소의 관할)</b> 본 계약에 관한 소송은 민사소송법에 따르거나, 양 당사자의 합의에 의해 정한 곳을 관할 법원으로 한다.</p><p style="margin-bottom:10px"><b>제15조(부속합의)</b> ① "위탁자"와 "수탁자"는 이 계약의 내용을 보충하거나, 이 계약에서 정하지 아니한 사항을 규정하기 위하여 부속 합의서를 작성할 수 있다.<br>② 전항의 부속합의는 이 계약의 내용에 배치 또는 위반되지 않는 범위 내에서 이 계약의 내용으로 인정된다.</p><p style="margin-bottom:10px"><b>제16조(계약의 효력)</b> ① "위탁자"와 "수탁자"는 이 계약을 체결하기 전에 충분한 협의를 거쳤고, 계약 내용을 모두 숙지하였으며, 이 계약을 증명하기 위하여 "위탁자"와 "수탁자"는 쌍방이 기명날인한 계약서 원본 2부를 작성하여 각 1부씩 보관한다.<br>② 이 계약서의 내용은 "위탁자"와 "수탁자"사이의 서면 합의에 의해서만 변경되거나 수정될 수 있으며, 그 변경 및 수정은 "위탁자"와 "수탁자"가 해당 서면에 서명함과 동시에 그 효력을 발생한다.</p>${_dlSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_dlSpecial.replace(/\n/g,'<br>')}</p>`:''}<p style="margin-bottom:4px;margin-top:20px">위 계약 내용을 확인하고 이에 동의하여 본 계약서에 서명한다.</p><p style="margin-bottom:16px">${_dlDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_dlCompanyAddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_dlCname}<br>사업자등록번호 : ${_dlCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_dlCompanyCeo}${_dlAdSig?`<br><img src="${_dlAdSig}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_dlAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_dlDriver}<br>주민등록번호 : ${_dlIdNum||'　　　　　　'}<br>사업자등록번호 : ${_dlBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_dlPhone||'　　　　　　　'}${_dlDrSig?`<br><img src="${_dlDrSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:''}<br><br>(서명)</td></tr></table></div>`;}
-        else if(_dlType==='subok'){_dlBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">계약해지에 관한 부속합의서</h2><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_dlCname||'위탁자'}</b>(이하 "위탁자"라 한다)와 택배종사자인 <b>${_dlDriver||'　　　　'}</b>(이하 "수탁자"라 한다)은 위·수탁계약 해지에 관하여 다음과 같이 부속합의서를 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(해지의 합의)</b> "위탁자"와 "수탁자"는 양 당사자의 합의에 의하여 아래와 같이 위·수탁 계약을 해지하기로 한다.</p><p style="margin-bottom:10px"><b>제2조(해지 사유 및 조건)</b> ① 양 당사자는 다음 각 호의 사항에 합의하였음을 확인한다.<br>1. 계약해지일 : ${_dlEnd||'　　년　　월　　일'}<br>2. 정산 기준일 : 계약해지일 기준 최종 정산<br>3. 미지급 수수료는 정산 기준일로부터 14일 이내에 지급<br>② "수탁자"는 계약 해지일까지 담당 구역의 업무를 성실히 수행하며, 후임자 인수인계에 협조한다.<br>③ "위탁자"는 계약 해지 이후 "수탁자"의 업무 수행 관련 개인정보를 파기한다.</p><p style="margin-bottom:10px"><b>제3조(업무 수행 기준)</b> 계약 해지 전까지의 업무 수행 기준은 다음 표와 같다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">구분</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">기준</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">비고</th></tr><tr><td style="border:1px solid #999;padding:5px 7px">배송완료율</td><td style="border:1px solid #999;padding:5px 7px">95% 이상</td><td style="border:1px solid #999;padding:5px 7px">일일 기준</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">고객 클레임</td><td style="border:1px solid #999;padding:5px 7px">월 3건 이하</td><td style="border:1px solid #999;padding:5px 7px">파손·분실 합산</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">업무 인수인계</td><td style="border:1px solid #999;padding:5px 7px">해지일 7일 전까지</td><td style="border:1px solid #999;padding:5px 7px">구역·고객 정보</td></tr></table></p><p style="margin-bottom:10px"><b>제4조(서비스 수준)</b> 해지 전까지 다음의 서비스 수준을 유지하여야 한다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">항목</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">수준</th></tr><tr><td style="border:1px solid #999;padding:5px 7px">배송 시간 준수</td><td style="border:1px solid #999;padding:5px 7px">09:00 ~ 20:00 이내 완료</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">물품 안전 관리</td><td style="border:1px solid #999;padding:5px 7px">파손·분실 방지 성실 이행</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">고객 응대</td><td style="border:1px solid #999;padding:5px 7px">친절·신속 응대 유지</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">시스템 보고</td><td style="border:1px solid #999;padding:5px 7px">배송 완료 즉시 등록</td></tr></table></p><p style="margin-bottom:10px"><b>제5조(손해배상)</b> 계약 해지 이후에도 해지 전 발생한 화물 훼손·분실·지연 등에 대한 손해배상 책임은 귀책사유에 따라 계속 부담한다.</p><p style="margin-bottom:10px"><b>제6조(비밀유지)</b> "수탁자"는 계약 해지 이후에도 업무 수행 중 취득한 "위탁자" 및 고객의 정보를 제3자에게 제공하거나 외부에 공개하지 아니한다.</p>${_dlSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_dlSpecial.replace(/\n/g,'<br>')}</p>`:''}<p style="margin-bottom:10px">위 합의 내용을 확인하고 이에 동의하여 본 부속합의서에 서명한다.</p><p style="margin-bottom:4px">${_dlDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:16px"><tr><td style="border:1px solid #999;padding:8px 12px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_dlCompanyAddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_dlCname}<br>사업자등록번호 : ${_dlCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_dlCompanyCeo}${_dlAdSig?`<br><img src="${_dlAdSig}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:8px 12px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_dlAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_dlDriver}<br>주민등록번호 : ${_dlIdNum||'　　　　　　'}<br>사업자등록번호 : ${_dlBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_dlPhone||'　　　　　　　'}${_dlDrSig?`<br><img src="${_dlDrSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:''}<br><br>(서명)</td></tr></table></div>`;}
-        else{_dlBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">${_dlTypeName}</h2><div style="border-top:2px solid #111;padding-top:12px">${_dlStart?`<p style="margin-bottom:10px"><b>계약기간</b> ${_dlStart} ~ ${_dlEnd}</p>`:''}<p style="margin-bottom:10px"><b>수수료</b> 배송 1건당 ${_dlPAmt(_dlUnit)} / 집화 1건당 ${_dlPAmt(_dlCollect)} / 지급일 ${_dlCycle}</p>${_dlRoute?`<p style="margin-bottom:10px"><b>담당구역</b> ${_dlRoute}</p>`:''}${_dlSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_dlSpecial.replace(/\n/g,'<br>')}</p>`:''}</div>`;}
-        const _dlCustomUrl=_dg('customContractUrl');const _dlDocxHtml=_dg('docxHtml')||'';let _dlDocxHtmlInj=_dlDocxHtml;if(_dlDocxHtml){if(_dlIdNum)_dlDocxHtmlInj=_dlDocxHtmlInj.replace(/(주민등록번호\s*:?)\s*(<[\/])/g,'$1 '+_dlIdNum+'$2');if(_dlBiz)_dlDocxHtmlInj=_dlDocxHtmlInj.replace(/(사업자등록번호\s*:?)\s*(<[\/])/g,'$1 '+_dlBiz+'$2');let _dInCnt=0;_dlDocxHtmlInj=_dlDocxHtmlInj.replace(/\(인\)/g,function(m){_dInCnt++;if(_dInCnt===1&&_dlAdSig)return '(인)<br><img src="'+_dlAdSig+'" style="max-height:80px;max-width:100px;display:block;mix-blend-mode:multiply">';if(_dInCnt===2&&_dlDrSig)return '(인)<br><img src="'+_dlDrSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">';return m;});if(_dlDrSig)_dlDocxHtmlInj=_dlDocxHtmlInj.replace(/\(서명\)/g,'<img src="'+_dlDrSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">');_dlDocxHtmlInj=_dlDocxHtmlInj.replace(/동의함(?:\s|&nbsp;|&#160;|<[^>]+>)*[□☐☑▢⬜◻]/g,'동의함 ✅');_dlDocxHtmlInj=_dlDocxHtmlInj.replace(/동의함[ \t]*□/g,'동의함 ✅');}
-        if(_dlCustomUrl){const _dlProxyUrl=`https://donway.ai.kr/contract/file/${_dlToken}`;const _dlIsPdf=/\.pdf$/i.test(_dlCustomUrl.split('?')[0]);const _dlDetailTable=`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#1e293b"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f">📋 계약 주요 내용 (대리점 입력)</div><table style="width:100%;border-collapse:collapse;font-size:11px"><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700;width:28%">위탁자(갑)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlCname}${_dlCbiz?' · '+_dlCbiz:''}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수탁자(을)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlDriver||''}${_dlPhone?' · '+_dlPhone:''}</td></tr>${(_dlStart||_dlEnd)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">계약기간</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlStart||''}${_dlEnd?' ~ '+_dlEnd:''}${_dlMonths?' ('+_dlMonths+')':''}</td></tr>`:''} ${(_dlArea||_dlRoute)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">담당구역</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlArea||_dlRoute}</td></tr>`:''} ${_dlCamp?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">캠프</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlCamp}</td></tr>`:''} <tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수수료</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlRps.length?_dlRps.map(r=>r.route+': 1건당 '+_dlPAmt(r.price)).join(' / '):'배송 1건당 '+_dlPAmt(_dlUnit)} / 집화 1건당 ${_dlPAmt(_dlCollect)}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">지급일</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlCycle}</td></tr>${_dlCarnum?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">차량번호</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlCarnum}</td></tr>`:''} ${_dlSpecial?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">특약사항</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_dlSpecial.replace(/\n/g,'<br>')}</td></tr>`:''}</table></div>`;_dlBody=`${_dlDocxHtmlInj?`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:12px;font-size:13px;line-height:2;color:#1e293b;word-break:break-word">${_dlDocxHtmlInj}</div>`:_dlDetailTable}<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">${_dlTypeName}</h2><p style="text-align:center;margin-bottom:12px"><a href="https://donway.ai.kr/contract/download/${_dlToken}" style="color:#0066ff;font-size:12px;font-weight:700">📥 서명 완료 계약서 저장</a></p><p style="margin-bottom:4px;margin-top:20px">위 계약 내용을 확인하고 이에 동의하여 본 계약서에 서명한다.</p><p style="margin-bottom:16px">${_dlDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_dlCompanyAddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_dlCname}<br>사업자등록번호 : ${_dlCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_dlCompanyCeo}${_dlAdSig?`<br><img src="${_dlAdSig}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_dlAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_dlDriver}<br>주민등록번호 : ${_dlIdNum||'　　　　　　'}<br>사업자등록번호 : ${_dlBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_dlPhone||'　　　　　　　'}${_dlDrSig?`<br><img src="${_dlDrSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:''}<br><br>(서명)</td></tr></table>`;}
-        if(_dlCustomUrl&&_dlInline&&!_dlDocxHtml){const _dlIsP=/\.pdf$/i.test(_dlCustomUrl.split('?')[0]);const _dlIsImg=/\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(_dlCustomUrl.split('?')[0]);const _dlIsHwp=/\.hwp$/i.test(_dlCustomUrl.split('?')[0]);const _dlIsXls=/\.(xls|xlsx)$/i.test(_dlCustomUrl.split('?')[0]);const _dlProxyFile=`https://donway.ai.kr/contract/file/${_dlToken}`;const _dlFeeStr=_dlRps.length?_dlRps.map(r=>r.route+' 1건당 '+_dlPAmt(r.price)).join(' / '):'배송 1건당 '+_dlPAmt(_dlUnit);const _dlFillData=JSON.stringify({driver:_dlDriver||'',addr:_dlAddr||'',phone:_dlPhone||'',biz:_dlBiz||'',idnum:_dlIdNum||'',start:_dlStart||'',end:_dlEnd||'',months:_dlMonths||'',collect:_dlCollect&&Number(_dlCollect)>0?_dlPAmt(_dlCollect):'',unit:_dlUnit&&Number(_dlUnit)>0?_dlPAmt(_dlUnit):'',preDays:_dlPreDays||'',feeStr:_dlFeeStr,cycle:_dlCycle||'',area:_dlArea||_dlRoute||'',route:_dlRoute||'',dealerSig:_dlAdSig||'',driverSig:_dlDrSig||'',carNum:_dlCarnum||'',licenseNum:_dlLicnum||'',camp:_dlCamp||''});const _dlHwpXlsCard=`<div style='text-align:center;padding:36px 20px;border:2px dashed #e2e8f0;border-radius:10px;margin-bottom:8px;background:#f8fafc'><p style='font-size:15px;margin:0 0 6px;color:#0f172a;font-weight:700'>${_dlIsHwp?'한글(HWP)':'엑션'} 파일</p><p style='font-size:12px;color:#64748b;margin:0 0 18px'>브라우저에서 바로 볼 수 없습니다. 아래 버튼으로 다운로드 후 해당 앱으로 열어보세요.</p><a href='${_dlProxyFile}' download style='display:inline-block;background:#0f172a;color:#fff;padding:11px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px'>📥 파일 다운로드</a></div>`;const _dlEmbed=_dlIsP?`<iframe src="${_dlProxyFile}" style="width:100%;height:80vh;border:1px solid #e2e8f0;border-radius:8px;display:block;margin-bottom:8px" title="계약서 원본"></iframe>`:_dlIsImg?`<img src="${_dlProxyFile}" style="max-width:100%;border:1px solid #e2e8f0;border-radius:8px;display:block;margin-bottom:8px" alt="계약서">`:(_dlIsHwp||_dlIsXls)?_dlHwpXlsCard:`<div id="_dwDocx" style="min-height:300px;border:1px solid #e2e8f0;border-radius:8px;padding:20px;background:#fff;margin-bottom:8px;font-size:13px;line-height:2;color:#1e293b;word-break:break-word"><p style="color:#64748b;text-align:center">계약서 불러오는 중...</p></div><p style="font-size:11px;color:#64748b;text-align:center;margin-bottom:4px">내용이 안 보이면 <a href="${_dlProxyFile}" download style="color:#2563eb">원본 파일 다운로드</a></p>${'<script>'}(function(){var D=${_dlFillData};var u='${_dlProxyFile}';function ld(ss,i,cb){if(i>=ss.length){cb();return;}var t=document.createElement('script');t.src=ss[i];t.onload=function(){ld(ss,i+1,cb);};t.onerror=function(){document.getElementById('_dwDocx').innerHTML='<p>로드실패</p>';};document.head.appendChild(t);}ld(['https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js','https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js'],0,async function(){try{var r=await fetch(u);var ab=await r.arrayBuffer();var z=await JSZip.loadAsync(ab);var xf=z.file('word/document.xml');if(xf){var xml=await xf.async('string');var _lc='';xml=xml.replace(/<w:p[ >][\\s\\S]*?<\\/w:p>/g,function(p){var tx='';p.replace(/<w:t[^>]*>([^<]*)<\\/w:t>/g,function(m,t){tx+=t;});if(!tx.trim()){return p;}if(D.start&&D.end&&/[_\uff3f]{5,}/.test(tx)&&tx.indexOf('\ub144')>=0&&tx.indexOf('\ubd80\ud130')>=0){var pp=(p.match(/<w:pPr>[\\s\\S]*?<\\/w:pPr>/)||[''])[0];var rp=(p.match(/<w:rPr>[\\s\\S]*?<\\/w:rPr>/)||[''])[0];var nd=D.start+'\ubd80\ud130 '+D.end+'\uae4c\uc9c0'+(D.months?' ('+D.months+')':'');_lc=tx;return '<w:p>'+pp+'<w:r>'+rp+'<w:t xml:space="preserve">'+nd+'</w:t></w:r></w:p>';}if(!/[_＿]{5,}/.test(tx)){_lc=tx;return p;}var fbSafe=function(x,v){var done=false;return x.replace(/(<w:t[^>]*>)([^<]*)([_＿]{5,})([^<]*)(<\\/w:t>)/g,function(m,a,b,und,d,e){if(done||(b+d).indexOf('%')>=0)return m;done=true;b=b.replace(/[_＿]+$/,'');if(v&&v.slice(-1)==='원'&&d&&d[0]==='원')d=d.slice(1);if(v&&v.slice(-2)==='개월'&&d&&d.slice(0,2)==='개월')d=d.slice(2);return a+b+v+d+e;});};var ctx=tx+' '+_lc;var rv=p;if(ctx.indexOf('\ud0dd\ubc30\uc885\uc0ac\uc790\uc778')>=0&&D.driver)rv=fbSafe(p,D.driver);else if(ctx.indexOf('\ubc30\uc1a1\uc218\uc218\ub8cc')>=0){if(tx.indexOf('(')>=0&&D.route&&tx.indexOf('\ub9e4\uc6d4')<0)rv=fbSafe(p,D.route);else if(D.unit)rv=fbSafe(p,D.unit);}else if(ctx.indexOf('\uc9d1\ud654\uc218\uc218\ub8cc')>=0&&D.collect)rv=fbSafe(p,D.collect);else if(ctx.indexOf('\uc120\ucc29\ubd88')>=0&&D.preDays)rv=fbSafe(p,D.preDays);else if(ctx.indexOf('\uc8fc\ubbfc\ub4f1\ub85d\ubc88\ud638')>=0&&D.idnum)rv=fbSafe(p,D.idnum);else if(ctx.indexOf('\uc0ac\uc5c5\uc790\ub4f1\ub85d\ubc88\ud638')>=0&&D.biz)rv=fbSafe(p,D.biz);else if(ctx.indexOf('\uc8fc\uc18c')>=0&&D.addr)rv=fbSafe(p,D.addr);else if((ctx.indexOf('\uc5f0\ub77d\ucc98')>=0||ctx.indexOf('\uc804\ud654\ubc88\ud638')>=0)&&D.phone)rv=fbSafe(p,D.phone);else if(ctx.indexOf('\ucea0\ud504')>=0&&D.camp)rv=fbSafe(p,D.camp);else if(ctx.indexOf('\uc131\uba85')>=0&&D.driver)rv=fbSafe(p,D.driver);else if(tx.indexOf('\uac1c\uc6d4')>=0&&D.months)rv=fbSafe(p,D.months);_lc=tx;return rv;});z.file('word/document.xml',xml);ab=await z.generateAsync({type:'arraybuffer'});}var rs=await mammoth.convertToHtml({arrayBuffer:ab});var html=rs.value||'<p>변환실패</p>';if(D.driver){html=html.replace(/(성\\s*명\\s*[:]\\s*)\\(인\\)/g,'$1'+D.driver+' (인)');}if(D.addr){html=html.replace(/(수탁자\\s*주소\\s*[:])\\s*(<\\/p>)/g,'$1 '+D.addr+'$2');}if(D.biz){html=html.replace(/(사업자등록번호\\s*:)\\s*(<\\/(?:p|td|div)>)/g,'$1 '+D.biz+'$2');}if(D.idnum){html=html.replace(/(\\(?주민등록번호\\)?\\s*:)\\s*(<\\/(?:p|td|div)>)/g,'$1 '+D.idnum+'$2');}if(D.phone){html=html.replace(/(연락처\\s*:)\\s*(<\\/(?:p|td|div)>)/g,'$1 '+D.phone+'$2');if(D.dealerSig||D.driverSig){var _iCnt=0;html=html.replace(/\\(인\\)/g,function(m){_iCnt++;if(_iCnt===1&&D.dealerSig)return '(인)<br><img src="'+D.dealerSig+'" style="max-height:80px;max-width:100px;display:block;mix-blend-mode:multiply">';if(_iCnt===2&&D.driverSig)return '(인)<br><img src="'+D.driverSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">';return m;});}if(D.start){var dm=(D.start||'').match(/(\\d{4})\\D?\\s*0?(\\d+)\\D?\\s*0?(\\d+)/);var dem=D.end?(D.end||'').match(/(\\d{4})\\D?\\s*0?(\\d+)\\D?\\s*0?(\\d+)/):null;if(dm){var _dcnt=0;html=html.replace(/\\s*년\\s+월\\s+일/g,function(){_dcnt++;if(_dcnt===1)return ' '+dm[1]+'년 '+dm[2]+'월 '+dm[3]+'일';if(_dcnt===2&&dem)return ' '+dem[1]+'년 '+dem[2]+'월 '+dem[3]+'일';return '';});}}if(D.start&&dm){html=html.replace(/(<p[^>]*>)[ \t]*[0-9]{4}[ \t]*년[ \t]+[0-9]{1,2}[ \t]*월[ \t]+[0-9]{1,2}[ \t]*일[ \t]*(<[/]p>)/g,'$1'+dm[1]+'년 '+dm[2]+'월 '+dm[3]+'일$2');}if(D.carNum){html=html.replace(/(자동차[ \t]*등록번호[ \t]*:)[^<]*(<[/](?:p|td|div)>)/g,'$1 '+D.carNum+'$2');}if(D.licenseNum){html=html.replace(/(종사자격증[ \t]*번호[ \t]*:)[^<]*(<[/](?:p|td|div)>)/g,'$1 '+D.licenseNum+'$2');}if(D.months){var _mo=(D.months||'').replace(/개월/g,'').trim();html=html.replace(/[(][ \t]*개월[ \t]*[)]/g,'('+_mo+'개월)');};if(D.route){html=html.replace(/(배송수수료[^(<]*)[(][^)]*[)]/g,'$1('+D.route+')');}if(D.camp){html=html.replace(/(캠프[ \t]*명<[/](?:strong|b)><[/]p><[/]td><td[^>]*><p>)[^<]*(<[/]p><[/]td>)/g,'$1'+D.camp+'$2');html=html.replace(/(캠프[ \t]*명<[/](?:strong|b)><[/]p><[/]td><td[^>]*>)[^<]*(<[/]td>)/g,'$1'+D.camp+'$2');html=html.replace(/(캠프[ \t]*명<[/](?:p|td)><[/]td><td[^>]*>)[^<]*(<[/]td>)/g,'$1'+D.camp+'$2');html=html.replace(/(캠프[ \t]*명<[/]p><[/]td><td[^>]*><p>)[^<]*(<[/]p><[/]td>)/g,'$1'+D.camp+'$2');html=html.replace(/(캠프[ \t]*명[ \t]*:)[^<]*(<[/](?:p|td|div)>)/g,'$1 '+D.camp+'$2');}if(D.driver){html=html.replace(/(성[ \t]*명[ \t]*:)[^<]*(<[/](?:p|td|div)>)/g,function(m,g1,g2){return g1+' '+D.driver+(D.driverSig?'<br><img src="'+D.driverSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">':'')+g2;});}html=html.replace(/동의함[ \t]*□/g,'동의함 ✅');html=html.replace(/[_\uff3f]{1,}(?=\\d)/g,'');html=html.replace(/[_\uff3f]{2,}/g,'');html=html.replace(/\uc6d0(<[^>]*>|\\s)*\uc6d0/g,'\uc6d0');}document.getElementById('_dwDocx').innerHTML=html;if(D.camp){try{var _cTds=document.querySelectorAll('#_dwDocx td,#_dwDocx th');for(var _ci=0;_ci<_cTds.length;_ci++){var _ct=_cTds[_ci].textContent.replace(/[ \t]+/g,'').trim();if(_ct==='캠프명'||_ct==='캠프 명'){var _cn=_cTds[_ci].nextElementSibling;if(!_cn&&_ci+1<_cTds.length)_cn=_cTds[_ci+1];if(_cn){var _cp=_cn.querySelector('p');if(_cp)_cp.textContent=D.camp;else _cn.textContent=D.camp;}break;}}}catch(_ce){}}if(D.route){try{var _rTds=document.querySelectorAll('#_dwDocx td,#_dwDocx th');for(var _ri=0;_ri<_rTds.length;_ri++){var _rt=_rTds[_ri].textContent.trim();if(_rt.indexOf('배송수수료')>=0&&_rt.indexOf(D.route)<0){var _rpEl=_rTds[_ri].querySelector('p')||_rTds[_ri];_rpEl.textContent=_rpEl.textContent.replace(/[(][^)]*[)]/,'('+D.route+')');if(_rpEl.textContent.indexOf('(')<0&&D.route)_rpEl.textContent=_rpEl.textContent.trim()+' ('+D.route+')';break;}}}catch(_re){}}}catch(e){document.getElementById('_dwDocx').innerHTML='<p>오류: '+e.message+'</p>';}});})()${'</script>'}`;_dlBody=`<div style="margin-bottom:20px"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f;padding-bottom:8px;border-bottom:2px solid #0f172a">📄 대리점 업로드 계약서 원본 (전체 내용)</div>${_dlEmbed}<div style="background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:11px;color:#92400e">⚠️ 위 내용은 대리점이 업로드한 원본 파일입니다. 계약기간·수수료 등 주요 내용의 법적 효력은 아래 계약 주요 내용을 기준으로 합니다.</div></div>`+_dlBody;}
-        const _dlHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>${_dlTypeName} - 서명완료</title>
-<style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;line-height:1.8;color:#1e293b;max-width:800px;margin:0 auto;padding:24px}
-h1{font-size:18px;text-align:center;margin-bottom:4px}
-table{width:100%;border-collapse:collapse;margin-bottom:16px}
-td{border:1px solid #cbd5e1;padding:6px 10px;font-size:12px}
-td:first-child{background:#f8fafc;font-weight:600}
-.sig-box{display:inline-block;border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:#fff}
-.sig-box img{display:block;max-width:200px;max-height:180px}
-@media print{body{padding:0}}</style></head><body>
-<h1>${_dlTypeName}</h1>
-<p style="text-align:center;color:#64748b;font-size:12px;margin-bottom:20px">서명 완료 · ${_dlDateStr}</p>
-<table><tr><td style="width:120px">위탁자(갑)</td><td>${_dlCname}${_dlCbiz?' · '+_dlCbiz:''}</td></tr>
-<tr><td>수탁자(을)</td><td>${_dlDriver}${_dlPhone?' · '+_dlPhone:''}</td></tr>
-${_dlBiz?`<tr><td>사업자번호</td><td>${_dlBiz}</td></tr>`:''}
-${_dlAddr?`<tr><td>주소</td><td>${_dlAddr}</td></tr>`:''}</table>
-<hr style="margin:20px 0">
-<div style="border:1px solid #d1fae5;border-radius:10px;padding:16px;margin-bottom:16px;background:#f0fdf4">
-<div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;border-bottom:1.5px solid #6ee7b7;padding-bottom:8px">개인정보 수집·이용 동의서</div>
-<div style="font-size:11px;color:#1e293b;line-height:2"><b>가. 개인정보 수집·이용 목적</b><br>&nbsp;&nbsp;◦ 택배 운송 위·수탁계약 체결 및 그 이행<br>&nbsp;&nbsp;◦ 「화물자동차 운수사업법」등 관련 법령에 따른 자격보유 여부 확인<br><br><b>나. 개인정보 수집 항목</b><br>&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br><b>다. 개인정보의 보유·이용 기간</b><br>&nbsp;&nbsp;◦ 개인정보 수집·이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.</div>
-<div style="margin-top:12px;padding:10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534;font-weight:700;text-align:center">✅ 동의 완료 (전자서명)</div>
-<div style="margin-top:8px;font-size:11px;color:#334155;line-height:2">${_dlDateStr}<br>사업자등록번호 : ${_dlBiz||'　　　　　　　'}<br>주민등록번호 : ${_dlIdNum||'　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_dlDriver}${_dlDrSig?`<br><img src="${_dlDrSig}" style="max-height:55px;max-width:180px;margin:2px 0;display:block;mix-blend-mode:multiply">`:''}<br>쿠팡로지스틱스 대리점 ${_dlCname} 대표 귀하</div>
-</div>
-<div style="border:1px solid #d1fae5;border-radius:10px;padding:16px;margin-bottom:16px;background:#f0fdf4">
-<div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;border-bottom:1.5px solid #6ee7b7;padding-bottom:8px">개인정보 제3자 제공 동의서</div>
-<div style="font-size:11px;color:#1e293b;line-height:2"><b>가. 개인정보를 제공받는 자</b><br>&nbsp;&nbsp;◦ 국토교통부장관, 한국교통안전공단, 시·도지사, 경찰청장<br><br><b>나. 제공 목적</b><br>&nbsp;&nbsp;◦ 「화물자동차 운수사업법」 제8조(화물자동차 운수사업의 운전업무 종사자격 등)<br><br><b>다. 제공 항목</b><br>&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호</div>
-<div style="margin-top:12px;padding:10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534;font-weight:700;text-align:center">✅ 동의 완료 (전자서명)</div>
-<div style="margin-top:8px;font-size:11px;color:#334155;line-height:2">${_dlDateStr}<br>사업자등록번호 : ${_dlBiz||'　　　　　　　'}<br>주민등록번호 : ${_dlIdNum||'　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_dlDriver}${_dlDrSig?`<br><img src="${_dlDrSig}" style="max-height:55px;max-width:180px;margin:2px 0;display:block;mix-blend-mode:multiply">`:''}<br>쿠팡로지스틱스 대리점 ${_dlCname} 대표 귀하</div>
-</div>
-<hr style="margin:20px 0">
-${_dlBody}
-<hr style="margin:20px 0">
-<table><tr><td style="text-align:center;padding:16px">
-<div style="font-size:11px;margin-bottom:6px">위탁자(갑) 서명</div>
-${_dlAdSig?`<div class="sig-box"><img src="${_dlAdSig}"></div>`:'<div style="color:#94a3b8">미서명</div>'}
-<div style="font-size:11px;margin-top:6px">${_dlCname}</div>
-</td><td style="text-align:center;padding:16px">
-<div style="font-size:11px;margin-bottom:6px">수탁자(을) 서명</div>
-${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="color:#94a3b8">미서명</div>'}
-<div style="font-size:11px;margin-top:6px">${_dlDriver}</div>
-</td></tr></table>
-<p style="text-align:center;font-size:11px;color:#64748b;margin-top:16px">이 계약서는 전자서명법에 따라 유효한 전자문서입니다.</p>
-</body></html>`;
-        if(_dlInline){
-          const _dlBtnBar=`<div id="_dlKN" style="display:none;margin:16px;padding:12px 16px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;font-size:13px;line-height:1.8;color:#92400E">📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>우측 상단 <b>···</b> 메뉴 → <b>외부 브라우저로 열기</b>를 탭한 후 인쇄해 주세요.</div><script>(function(){if(/KAKAOTALK/i.test(navigator.userAgent)){document.getElementById('_dlKN').style.display='block';}})();function _dlPrint(){if(/KAKAOTALK/i.test(navigator.userAgent)){var n=document.getElementById('_dlKN');n.style.display='block';n.scrollIntoView({behavior:'smooth'});return;}window.print();}<\/script><div style="position:fixed;bottom:0;left:0;right:0;background:#1e293b;padding:12px 16px;display:flex;gap:10px;justify-content:center;z-index:9999;box-shadow:0 -2px 12px rgba(0,0,0,.3)"><button onclick="_dlPrint()" style="flex:1;max-width:200px;padding:12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer">🖨 인쇄 / PDF 저장</button><a href="/contract/download/${_dlToken}" download style="flex:1;max-width:200px;padding:12px;background:#3b82f6;color:#fff;border-radius:8px;font-size:15px;font-weight:600;text-align:center;text-decoration:none;display:block">💾 HTML 저장</a></div><div style="height:70px"></div>`;
-          const _dlHtmlI=_dlHtml.replace('</body>',_dlBtnBar+'</body>');
-          return new Response(_dlHtmlI,{headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
-        }
-        return new Response(_dlHtml,{headers:{'Content-Type':'text/html;charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(_dlTypeName+'-'+_dlDriver+'.html')}`,'Cache-Control':'no-store'}});
-      }
-
-      // /contract/sign/{token} → 기사 전자서명 페이지 (GET) / 서명 저장 (POST)
-      if (path.startsWith('/contract/sign/') && path.length > 15) {
-        const _cToken = path.slice(15).split('/')[0];
-        const _cFsToken = await getAccessToken(env);
-        if (method === 'GET') {
-          // 계약서 signToken으로 조회
-          const _cQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_cToken}}},limit:1}});
-          const _cRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_cFsToken,'Content-Type':'application/json'},body:_cQ});
-          const _cData = await _cRes.json();
-          const _cDoc = _cData?.[0]?.document;
-          if (!_cDoc) return new Response('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>오류</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#64748b">계약서를 찾을 수 없습니다.</h2><p style="color:#94a3b8">링크가 만료되었거나 잘못된 접근입니다.</p></body></html>',{status:404,headers:{'Content-Type':'text/html; charset=utf-8'}});
-          const _cf = _cDoc.fields || {};
-          const _cg = k => _cf[k]?.stringValue || '';
-          const _cStatus = _cg('status');
-          if (_cStatus === 'signed') {
-            // 서명 완료 → download 엔드포인트(inline=1)로 리다이렉트
-            // download 엔드포인트가 Firestore에서 직접 전체 조항 HTML을 새로 생성 (구 archiveUrl 무시)
-            return new Response(null,{status:302,headers:{Location:'/contract/download/'+_cToken+'?inline=1','Cache-Control':'no-store'}});
-          }
-          const driverName = _cg('driverName');
-          const contractTitle = _cg('title') || '계약서';
-          const _cType = _cg('type');
-          const typeMap = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'};
-          const typeName = typeMap[_cType] || contractTitle;
-          const _kakaoKey = env.KAKAO_JS_KEY || '';
-          // 계약서 전문 생성용 필드
-          const _sc_start = _cg('startDate'); const _sc_end = _cg('endDate');
-          const _sc_route = _cg('route'); const _sc_area = _cg('area'); const _sc_camp = _cg('camp');
-          const _sc_unit = _cg('unitPrice'); const _sc_collect = _cg('collectPrice');
-          const _sc_rpJson = _cg('routePricesJson');
-          let _sc_rps = []; try{ if(_sc_rpJson) _sc_rps = JSON.parse(_sc_rpJson); }catch(e){};
-          const _sc_sort = _cg('sortPrice'); const _sc_cycle = _cg('cycle') || '매월 20일';
-          const _sc_dphone = _cg('driverPhone'); const _sc_daddr = _cg('driverAddr');
-          const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth');
-          const _sc_carnum = _cg('carNum'); const _sc_licnum = _cg('licenseNum');
-          const _sc_special = _cg('special');
-          const _sc_preDays = _cg('preDepositDays')||'';
-          const _sc_cname = _cg('companyName')||'　　　　　　';
-          const _sc_cbiz = _cg('companyBiz')||'';
-          const customContractUrl = _cg('customContractUrl');
-          const _adminDocxHtml = _cg('docxHtml')||'';
-          const _sc_caddr = _cg('companyAddr')||'';
-          const _sc_ceo = _cg('companyCeo')||'';
-          const _sc_pAmt = v => v ? Number(v).toLocaleString('ko-KR')+'원' : '　　원';
-          const _sc_months = (_sc_start && _sc_end) ? Math.round((new Date(_sc_end)-new Date(_sc_start))/(1000*60*60*24*30))+'개월' : '';
-          // 딜러 커스텀 위수탁 템플릿 조회
-          const _sc_dealerId = _cg('dealerId');
-          let _wtCustomHtml = null;
-          if (_cType === 'wisu' && _sc_dealerId) {
-            try {
-              const _wtRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/wisu_templates/${_sc_dealerId}`,{headers:{Authorization:'Bearer '+_cFsToken}});
-              if (_wtRes.ok) {
-                const _wtData = await _wtRes.json();
-                const _wtHtmlRaw = _wtData?.fields?.html?.stringValue;
-                const _wtFields = (() => { try { return JSON.parse(_wtData?.fields?.fields?.stringValue||'[]'); } catch(e){return [];} })();
-                if (_wtHtmlRaw) {
-                  // 라벨→필드값 매핑
-                  const _wtFieldMap = {
-                    '기사명':driverName||'',
-                    '수탁자명':driverName||'',
-                    '계약시작일':_sc_start||'',
-                    '시작일':_sc_start||'',
-                    '계약종료일':_sc_end||'',
-                    '종료일':_sc_end||'',
-                    '담당구역':_sc_area||_sc_route||'',
-                    '담당노선':_sc_route||_sc_area||'',
-                    '대리점명':_sc_cname||'',
-                    '위탁자명':_sc_cname||'',
-                    '사업자번호':_sc_dbiz||_sc_cbiz||'',
-                    '기사사업자번호':_sc_dbiz||'',
-                    '대리점사업자번호':_sc_cbiz||'',
-                    '대표자명':_sc_ceo||'',
-                    '주소':_sc_daddr||_sc_caddr||'',
-                    '기사주소':_sc_daddr||'',
-                    '대리점주소':_sc_caddr||'',
-                    '배송단가':_sc_unit?_sc_pAmt(_sc_unit):'',
-                    '집화단가':_sc_collect?_sc_pAmt(_sc_collect):'',
-                    '캠프명':_sc_camp||'',
-                    '정산지급일':_sc_cycle||'',
-                    '선입금일수':_sc_preDays||'',
-                    '전화번호':_sc_dphone||'',
-                    '생년월일':_sc_dbirth||'',
-                    '차량번호':_sc_carnum||'',
-                    '자격증번호':_sc_licnum||'',
-                  };
-                  // wt-blank 마커 → 필드값 치환
-                  _wtCustomHtml = _wtHtmlRaw.replace(/<span[^>]*class="wt-blank"[^>]*data-id="BLANK_(\d+)"[^>]*>.*?<[\/]span>/g, (match) => {
-                    const idM = match.match(/data-id="BLANK_(\d+)"/);
-                    if (!idM) return match;
-                    const blankIdx = parseInt(idM[1]);
-                    const field = _wtFields.find(f => f.id === blankIdx || f.id === 'BLANK_'+blankIdx);
-                    const label = field && field.label ? field.label : '';
-                    const val = label ? (_wtFieldMap[label] || '') : '';
-                    return val ? `<span style="font-weight:700;border-bottom:1px solid #333">${val}</span>` : '<span style="display:inline-block;min-width:60px;border-bottom:1px solid #666">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>';
-                  });
-                }
-              }
-            } catch(_wtE) { _wtCustomHtml = null; }
-          }
-          // 계약서 전문 HTML
-          let _fullContractHtml = '';
-          if (_adminDocxHtml) {
-            // 관리자가 DOCX 업로드 후 직접 입력한 HTML — 바로 사용
-            _fullContractHtml = _adminDocxHtml;
-          } else if (_cType === 'wisu' && _wtCustomHtml) {
-            _fullContractHtml = _wtCustomHtml;
-          } else if (_cType === 'wisu') {
-            _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2>
-<p style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p>
-<p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_sc_cname}</b> (이하 "위탁자"라 한다)와 택배종사자인 <b>${driverName||'　　　　'}</b> (이하 "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위‧수탁계약을 체결한다.</p>
-<div style="border-top:2px solid #111;padding-top:12px">
-<p class="cl2"><b>제1조(목적)</b> 이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</p>
-<p class="cl2"><b>제2조(기본원칙)</b> ① "위탁자"와 "수탁자"는 이 계약에 따라 택배 운송 업무를 수행함에 있어 상호 대등한 입장에서 신의성실의 원칙에 따라 자신의 권리를 행사하며 의무를 이행한다.<br>② "위탁자"와 "수탁자"는 이 계약의 이행과 관련하여 「생활물류서비스산업발전법」, 「독점규제 및 공정거래에 관한 법률」등 관련 법령의 규정을 준수한다.</p>
-<p class="cl2"><b>제3조(용어의 정의)</b> ① "택배"라 함은 고객의 요청에 따라 운송을 위탁받은 화물을 집화, 분류, 배송 등의 과정을 거쳐 수화인의 주택, 사무실 또는 기타의 장소에서 인도하는 것을 말한다.<br>② "집화"라 함은 고객으로부터 수령한 화물을 "위탁자"가 지정한 장소까지 운송하여 하차, 적재하는 작업을 말한다.<br>③ "분류"라 함은 서브터미널 등 택배화물의 분류시설‧장소에서 다수의 화물을 담당구역별로 구분하는 작업을 말한다.<br>④ "배송"이라 함은 분류된 화물을 택배 운송차량에 상차하여 차량운행을 통해 운송장에 기재된 장소에서 고객에게 인도하는 것을 말한다.<br>⑤ 택배의 집화, 배송에 수반되는 전산입력 및 택배운임 수취, 고객응대, 스캔 등 부수적인 업무는 집화, 배송업무로 본다.</p>
-<p class="cl2"><b>제4조(계약의 주요내용)</b> ① "위탁자"와 "수탁자" 간 계약의 주요내용은 다음과 같다.<br>
-<table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0">
-<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_start||'　　년　　월　　일'}부터 ${_sc_end||'　　년　　월　　일'}까지${_sc_months?' ('+_sc_months+')':''}</td></tr>
-<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_area||_sc_route||'　　　　　　　　'}</td></tr>
-${_sc_camp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_sc_camp}</td></tr>`:''}
-<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="${1+Math.max(_sc_rps.length,1)+1}">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_collect?_sc_pAmt(_sc_collect):'0원'}</td></tr>
-${_sc_rps.length ? _sc_rps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_pAmt(r.price)}</td></tr>`).join('') : `<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_sc_unit?_sc_pAmt(_sc_unit):'　　　원'}</td></tr>`}
-<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_sc_cycle}</td></tr>
-${_sc_carnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_sc_carnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_sc_licnum||'　　　　　'}</td></tr>`:''}
-</table>
-② "수탁자"는 집화, 배송 외에 분류작업을 ${(_sc_sort&&Number(_sc_sort)>0)?'수행':'미수행'}한다.${(_sc_sort&&Number(_sc_sort)>0)?`<br>③ 분류수수료는 시간당 ${_sc_pAmt(_sc_sort)}로 한다.`:''}
-</p>
-<p class="cl2"><b>제5조(수수료의 지급)</b> ① "수탁자"는 택배업무 수행 내역을 매월 26일 ~ 익월 25일을 기준으로 마감하고, 익월 20일까지 "위탁자"에게 수수료를 청구하여야 한다. 다만, 청구일이 휴무일인 경우에는 휴무일 익일에 수수료를 청구한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"가 고객으로부터 수취한 선착불 금액이 있는 경우 수취한 날로부터 ${_sc_preDays||'　　　'}일 이내에 "위탁자"에게 입금하여야 한다.<br>⑤ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</p>
-<p class="cl2"><b>제6조(택배 배송업무의 수행)</b> ① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서「생활물류서비스산업발전법」, 「도로교통법」, 「자동차관리법」 등 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 정부기관 및 택배사의 요청에 따른 "위탁자"의 실태조사, 자료요청 등에 적극 협조한다.<br>⑤ "수탁자"는 이 계약의 이행에 필요한 택배용품, 전산장비, 차량 등을 구비하여야 하며, "위탁자"는 필요시 계약기간동안 이를 지원 또는 대여할 수 있다.<br>⑥ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공‧공개하여서는 아니 된다.<br>⑦ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.<br>⑧ "수탁자"가 동승인력을 사용할 경우에, "위탁자"는 그에 대한 책임을 지지 않는다.<br>⑨ "수탁자"가 "위탁자"에게 사전에 통지를 하지 않았거나, "수탁자"가 정당하지 않은 사유로 수탁업무를 해태하여 택배서비스 이행에 차질이 발생한 경우, "위탁자"는 제3자에게 수탁업무를 대신하도록 할 수 있으며, 이 경우 해당 수수료는 업무를 수행한 자에게 지급한다.</p>
-<p class="cl2"><b>제7조(위탁자의 준수사항)</b> "위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. "수탁자"가 부담하여야 할 정당한 사유가 없음에도 불구하고 "위탁자"가 수취하기로 사전에 약정한 수수료, 관리비 등과 별도의 비용을 징수하는 행위<br>4. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위("위탁자"와 "수탁자"의 합의하에 타 업무를 수행할 경우 타 업무에 수반되는 비용을 일방적으로 "수탁자"에게 부담시키지 않는다.)<br>5. 정당한 사유 없이 "수탁자"의 업무 수행에 필요한 시스템 접근을 차단하는 행위<br>6. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위<br>7. 계약 종료 시 "수탁자"에게 후임자를 구할 책임을 부담시키는 행위<br>8. 계약 종료 이후 정당한 사유 없이 동종 업종의 타 사업자와의 계약을 방해하는 행위<br>9. 천재지변, 전쟁, 내란 기타 불가항력적인 사유 시에 배송지연 책임을 전가시키는 행위</p>
-<p class="cl2"><b>제8조(안전보건 조치 등)</b> ① "위탁자"는 「산업안전보건법」 제77조에 따른 안전‧보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」, 「산업재해보상보험법」 및 「고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률」에 따라 고용보험과 산업재해보상보험에 가입하여야 하며, "위탁자"는 "수탁자"의 수수료에서 원천공제하여 보험료를 납부할 수 있다.<br>③ "위탁자"는 "수탁자"의 일 평균 작업시간이 일 8시간을 지속적으로 초과할 경우 "위탁자"는 연 1회 이상 심혈관질환 등 건강검진 및 추가 프로그램을 실시하고, 그 결과에 따라 적정한 휴식시간 보장 등 별도의 건강관리 조치를 취하여야 한다.<br>④ "위탁자"는 "수탁자"가 작업시간 중 건강이상을 호소할 경우 긴급진료를 받을 수 있도록 하고, "수탁자"는 그 진료내역서를 "위탁자"와 공유한다.</p>
-<p class="cl2"><b>제9조(작업시간 조정 등)</b> ① 계약 당사자는 "수탁자"의 최대 작업시간이 일 12시간, 주 60시간을 초과하지 않도록 노력한다.<br>② 제1항에도 불구하고, 설 · 추석 등의 경우 설 · 추석 등이 속한 2주 이내의 기간에는 불가피한 예외를 인정할 수 있다. 단, 그러한 경우에도 22시를 초과하여 작업하여서는 아니된다.<br>③ "수탁자"의 작업시간이 4주 동안 1주 평균 64시간을 초과할 경우, 계약 당사자는 물량 · 배송구역 조정 협의를 통해 최대 작업시간 내로 감축할 수 있도록 노력하여야 한다. 단, 물량 · 배송구역 조정에 대한 협의가 되지 않을 경우에는 영업점을 대표하는 자, 택배기사를 대표하는 자가 추천하는 자를 포함하여 국토교통부가 구성한 조정위원회에서 조정할 수 있다.<br>④ 제3항에 따라 물량 · 배송구역조정을 할 경우에는 서면으로 계약을 변경하여야 한다.</p>
-<p class="cl2"><b>제10조(손해배상)</b> ① 택배화물의 훼손, 멸실, 분실, 운송지연 등으로 고객에게 손해가 발생한 경우에 "위탁자"와 "수탁자"는 귀책사유에 따라 그 손해배상 책임을 부담하며, "위탁자"가 "수탁자"를 대신해 우선 배상하는 경우에는 "수탁자"에게 구상권을 행사할 수 있다.<br>② "위탁자"는 손해배상에 대한 기준(금액, 비율 등)을 일방적으로 정하여 "수탁자"가 따르도록 거래조건을 설정하지 않으며, "수탁자"의 고의 또는 과실에 의하지 않은 손해배상책임은 "수탁자"에게만 일방적으로 부담시키지 않는다.</p>
-<p class="cl2"><b>제11조(계약의 갱신 및 해지)</b> ① “위탁자”와 “수탁자”는 상호 합의하는 경우에는 계약을 해지할 수 있다.<br>② “위탁자”는 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”가 계약의 갱신을 요구하는 경우로서 총 계약기간(“위탁자”와 “수탁자”가 최초 위탁계약을 체결한 날부터 이 계약의 종료일까지의 기간을 말한다)이 6년 이하인 때에는「생활물류서비스산업발전법 시행령」제5조(택배서비스 운송 위탁계약의 갱신거절사유 등)에서 규정한 경우를 제외하고는 이를 거절할 수 없다.<br>③ “위탁자”는 제2항에 따른 갱신 요구를 거절하는 경우에는 그 요구를 받은 날부터 15일 이내에 “수탁자”에게 거절의 사유를 적어 서면으로 통지하여야 한다.<br>④ “위탁자”가 제3항에 따른 거절의 통지를 하지 않거나, 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”에게 계약변경, 계약갱신 등에 대해 서면으로 통지하지 않는 경우에는 이 계약과 같은 조건으로 1년간 다시 계약을 체결한 것으로 본다.<br>⑤ “위탁자”는 계약을 해지하려는 경우에는 “수탁자”에게 60일 이상의 유예기간을 두고 계약의 위반 사실을 구체적으로 밝히고 이를 시정하지 아니하면 그 계약을 해지한다는 사실을 서면으로 2회 이상 통지하여야 한다.<br>⑥ 제5항에도 불구하고 「생활물류서비스산업발전법 시행령」제6조(택배서비스 운송 위탁계약 해지 통지의 생략사유)에서 규정한 경우에 해당 시 즉시 계약을 해지할 수 있다.<br>⑦ “수탁자”의 사정으로 계약을 해지할 경우, “수탁자”는 계약해지 60일 전에 “위탁자”에게 통지하고 업무가 원활하게 이전되도록 협조한다.</p>
-<p class="cl2"><b>제12조(개인정보 수집)</b> ① "위탁자"는 계약체결을 위해 필요한 "수탁자"의 개인정보를 "수탁자"의 동의(별지 제1호 서식)를 받아 수집‧이용할 수 있다.<br>② "위탁자"는 「화물자동차 운수사업법」제9조의 2에 따른 범죄경력 조회를 위해 국토교통부장관 또는 시‧도지사가 "수탁자"의 개인정보를 요청할 경우 요청자에게 이를 제공할 수 있다.<br>③ "위탁자"는 제1항 및 제2항의 목적 외 다른 용도로 "수탁자"의 개인정보를 사용할 수 없으며, 제3자에게 제공하여서는 아니 된다.</p>
-<p class="cl2"><b>제13조(분쟁 해결)</b> ① "위탁자"와 "수탁자"는 이 계약에 명시되지 아니한 사항 또는 계약의 해석에 관한 사항에 다툼이 있는 경우에는 쌍방의 합의에 의해 해결한다.<br>② 제1항에 따라 해결되지 않는 경우에는 민사소송법에 따라 법원에서의 소송을 통해 분쟁을 해결한다.</p>
-<p class="cl2"><b>제14조(소의 관할)</b> 본 계약에 관한 소송은 민사소송법에 따르거나, 양 당사자의 합의에 의해 정한 곳을 관할 법원으로 한다.</p>
-<p class="cl2"><b>제15조(부속합의)</b> ① "위탁자"와 "수탁자"는 이 계약의 내용을 보충하거나, 이 계약에서 정하지 아니한 사항을 규정하기 위하여 부속 합의서를 작성할 수 있다.<br>② 전항의 부속합의는 이 계약의 내용에 배치 또는 위반되지 않는 범위 내에서 이 계약의 내용으로 인정된다.</p>
-<p class="cl2"><b>제16조(계약의 효력)</b> ① "위탁자"와 "수탁자"는 이 계약을 체결하기 전에 충분한 협의를 거쳤고, 계약 내용을 모두 숙지하였으며, 이 계약을 증명하기 위하여 "위탁자"와 "수탁자"는 쌍방이 기명날인한 계약서 원본 2부를 작성하여 각 1부씩 보관한다.<br>② 이 계약서의 내용은 "위탁자"와 "수탁자"사이의 서면 합의에 의해서만 변경되거나 수정될 수 있으며, 그 변경 및 수정은 "위탁자"와 "수탁자"가 해당 서면에 서명함과 동시에 그 효력을 발생한다.</p>
-${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
-</div>`;
-          } else if (_cType === 'subok') {
-            _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">계약해지에 관한 부속합의서</h2>
-<p style="font-size:12px;margin-bottom:12px"><b>${_sc_cname}</b> (이하"위탁자")와 택배종사자인 <b>${driverName}</b> (이하 "수탁자")은 계약해지에 관하여 다음과 같이 부속합의서를 체결한다.</p>
-<div style="border-top:2px solid #111;padding-top:12px">
-<p class="cl2"><b>계약의 즉시 해지 (영업점 → 수탁자)</b><br>영업점은 수탁자에게 다음 각 호의 어느 하나에 해당하는 사유가 발생하는 경우 서면 통지로서 원 계약을 즉시 해지하거나 입차 제한 및 노선변경 또는 물량을 조정할 수 있다.<br>① 수탁자 외 원 계약에 의해 수행해야 할 업무를 이유 없이 거부하였을 경우<br>② 수탁자의 계약불이행으로 계약해지가 이뤄진 경우<br>③ 확정된 일정에 결근하여 발생하는 제반 비용은 수탁자가 전액 부담한다<br>④ 수탁자가 비밀유지의무, 개인정보보호의무 또는 정보보안의무를 위반한 경우</p>
-<p class="cl2"><b>성과 기준 및 페널티</b><br>수탁자가 다음의 기준을 충족시키지 못한 경우 페널티가 적용된다.<br>
-<table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0">
-<tr style="background:#f5f5f5"><th style="border:1px solid #999;padding:5px 7px">구분</th><th style="border:1px solid #999;padding:5px 7px">적용</th></tr>
-<tr><td style="border:1px solid #999;padding:5px 7px">불가피한 사고가 아닌 당일 노쇼 (건당 주간 1,000원 / 야간 1,200원)</td><td style="border:1px solid #999;padding:5px 7px;text-align:center">페널티 적용 (용차비 청구)</td></tr>
-<tr><td style="border:1px solid #999;padding:5px 7px">프레시백 회수율 75%이하 및 반품회수율 80%이하 1개월내 2회 적발</td><td style="border:1px solid #999;padding:5px 7px;text-align:center">페널티 적용 (20원 삭감)</td></tr>
-<tr><td style="border:1px solid #999;padding:5px 7px">크리티컬 인입 동일내용 3회지적시</td><td style="border:1px solid #999;padding:5px 7px;text-align:center">계약해지 사유</td></tr>
-</table></p>
-<p class="cl2"><b>유효기간</b> 본 합의서는 합의서 체결일로부터 유효하며, 양 당사자의 별도 서면 합의가 없는 한 원 계약서의 해제, 해지 또는 기간 만료에 따른 종료 시까지 유효하다.</p>
-${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
-</div>`;
-          } else {
-            _fullContractHtml = `<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">${typeName}</h2>
-<div style="border-top:2px solid #111;padding-top:12px">
-<p class="cl2"><b>계약기간</b> ${_sc_start||'　　'} ~ ${_sc_end||'　　'}</p>
-<p class="cl2"><b>수수료</b> ${_sc_rps.length ? _sc_rps.map(r=>`${r.route}: 1건당 ${_sc_pAmt(r.price)}`).join(' | ') : `배송 1건당 ${_sc_pAmt(_sc_unit)}`} / 집화 1건당 ${_sc_pAmt(_sc_collect)} / 지급일 ${_sc_cycle}</p>
-${(_sc_area||_sc_route)?`<p class="cl2"><b>담당구역</b> ${_sc_area||_sc_route}</p>`:''}
-${_sc_special?`<p class="cl2"><b>특약사항</b><br>${_sc_special.replace(/\n/g,'<br>')}</p>`:''}
-</div>`;
-          }
-          const _cProxyUrl = `https://donway.ai.kr/contract/file/${_cToken}`;
-          const _cIsPdf = customContractUrl && /\.pdf$/i.test(customContractUrl.split('?')[0]);
-          const _cDetailTable = `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#1e293b"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f">📋 계약 주요 내용 (대리점 입력)</div><table style="width:100%;border-collapse:collapse;font-size:11px"><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700;width:28%">위탁자(갑)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_cname}${_sc_cbiz?' · '+_sc_cbiz:''}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수탁자(을)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${driverName||''}${_sc_dphone?' · '+_sc_dphone:''}</td></tr>${(_sc_start||_sc_end)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">계약기간</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_start||''}${_sc_end?' ~ '+_sc_end:''}${_sc_months?' ('+_sc_months+')':''}</td></tr>`:''} ${(_sc_area||_sc_route)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">담당구역</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_area||_sc_route}</td></tr>`:''} ${_sc_camp?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">캠프</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_camp}</td></tr>`:''} <tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수수료</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_rps.length?_sc_rps.map(r=>r.route+': 1건당 '+_sc_pAmt(r.price)).join(' / '):'배송 1건당 '+_sc_pAmt(_sc_unit)} / 집화 1건당 ${_sc_pAmt(_sc_collect)}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">지급일</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_cycle}</td></tr>${_sc_carnum?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">차량번호</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_carnum}</td></tr>`:''} ${_sc_special?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">특약사항</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_sc_special.replace(/\n/g,'<br>')}</td></tr>`:''}</table></div>`;
-          // _adminDocxHtml(타이핑된 내용)이 있으면 customContractUrl 유무 무관하게 우선 사용
-          const _contractViewHtml = _adminDocxHtml
-            ? `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b">${_adminDocxHtml}</div><script>window._docxRenderedHtml=${JSON.stringify(_adminDocxHtml).replace(/<[\/]script>/gi,'<\\/script>')};window._contractLoaded=true;<\/script>`
-            : customContractUrl
-            ? (_cIsPdf
-              ? `<div style="font-size:12px;color:#1e293b"><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px"><div style="font-size:13px;font-weight:700;color:#0066ff;margin-bottom:8px">📄 계약서 원문</div><iframe src="${_cProxyUrl}" style="width:100%;height:50vh;border:1px solid #e2e8f0;border-radius:8px" allowfullscreen></iframe><div style="margin-top:8px;font-size:11px;color:#94a3b8;text-align:center">열리지 않으면 <a href="${_cProxyUrl}" target="_blank" style="color:#0066ff">여기를 탭</a>하세요.</div></div></div>`
-              : `<div style="font-size:12px;color:#1e293b"><div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px"><div style="font-size:13px;font-weight:700;color:#0066ff;margin-bottom:8px">📄 계약서 원문 (대리점 업로드)</div><div id="_cDocDiv" style="width:100%;height:50vh;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;background:#fff;padding:16px;box-sizing:border-box;font-size:12px;line-height:1.8">계약서 불러오는 중...</div><script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"><\/script><script>window._contractLoaded=false;fetch('${_cProxyUrl}').then(r=>r.arrayBuffer()).then(b=>mammoth.convertToHtml({arrayBuffer:b})).then(r=>{var _h=r.value||'(내용 없음)';var _d=${JSON.stringify({n:driverName||null,s:_sc_start||null,e:_sc_end||null,m:_sc_months||null,c:_sc_collect||null,u:_sc_unit||null,car:_sc_carnum||null})};_h=_h.replace(/(택배종사자인)_{3,}/g,'$1<strong style="color:#0066ff">'+(_d.n||'')+'</strong>');if(_d.s||_d.e)_h=_h.replace(/년\s*월\s*일부터\s*년\s*월\s*일까지\s*\(\s*개월\)/g,'<strong style="color:#0066ff">'+(_d.s||'')+'부터 '+(_d.e||'')+'까지 ('+(_d.m||'')+')</strong>');if(_d.c)_h=_h.replace(/1건당\s*0\s*원/g,'1건당 <strong style="color:#0066ff">'+Number(_d.c).toLocaleString()+'원</strong>');if(_d.u)_h=_h.replace(/1건당\s*_{3,}원/g,'1건당 <strong style="color:#0066ff">'+Number(_d.u).toLocaleString()+'원</strong>');if(_d.car)_h=_h.replace(/(자동차 등록번호:)\s*/g,'$1 <strong style="color:#0066ff">'+_d.car+'</strong> ');window._docxRenderedHtml=_h;window._contractLoaded=true;document.getElementById('_cDocDiv').innerHTML=_h;}).catch(function(){window._docxRenderedHtml=window._adminDocxHtml||'';window._contractLoaded=true;document.getElementById('_cDocDiv').innerHTML=window._adminDocxHtml?('<div style="font-size:12px;line-height:1.8;color:#1e293b">'+window._adminDocxHtml+'</div>'):'<p style="color:#64748b;font-size:12px;padding:16px">미리보기를 불러올 수 없습니다. 위 계약 주요 내용 표를 확인하세요.</p>';});<\/script></div></div>`)
-
-            : `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;max-height:60vh;overflow-y:auto;font-size:12px;line-height:1.8;color:#1e293b"><style>.cl2{margin-bottom:10px}</style><table class="ctable" style="margin-bottom:14px"><tr><td class="ct">위탁자(갑)</td><td>${_sc_cname} · ${_sc_cbiz}<br><span style="font-size:11px;color:#64748b">${_sc_caddr}</span></td></tr><tr><td class="ct">수탁자(을)</td><td>${driverName}${_sc_dphone?' · '+_sc_dphone:''}</td></tr></table>${_fullContractHtml}</div><script>window._docxRenderedHtml=${JSON.stringify(_fullContractHtml).replace(/<[\/]script>/gi,'<\\/script>')};window._contractLoaded=true;<\/script>`;
-          const contractSummaryRows = '';
-          const signPage = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>계약서 서명</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
-${_kakaoKey ? `<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js" crossorigin="anonymous"></script>` : ''}
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"Pretendard","Apple SD Gothic Neo",sans-serif;background:#f8fafc;min-height:100vh;padding:20px}
-.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-h1{font-size:16px;font-weight:800;color:#08101f;margin-bottom:4px}
-.sub{font-size:12px;color:#64748b;margin-bottom:16px}
-canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;background:#fff;display:block;touch-action:none}
-.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
-.btn-clear{background:#f1f5f9;color:#64748b}
-.btn-submit{background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff}
-.btn-submit:disabled{background:#94a3b8;cursor:not-allowed}
-.notice{font-size:11px;color:#94a3b8;text-align:center;margin-top:12px;line-height:1.6}
-#kakao-step{text-align:center;padding:20px 0}
-#sign-step{display:none}
-.kakao-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#FEE500;color:#000;border:none;border-radius:10px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
-.kakao-verified{font-size:13px;color:#10b981;font-weight:700;margin-bottom:12px;text-align:center}
-.ctable{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
-.ctable td{border:1px solid #e2e8f0;padding:8px 10px;vertical-align:middle}
-.ctable td.ct{background:#f1f5f9;font-weight:700;width:28%;white-space:nowrap}
-.cl{display:inline-block;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px}
-.agree-box{display:flex;align-items:flex-start;gap:10px;padding:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;margin-top:0;cursor:pointer}
-.agree-box input[type=checkbox]{width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:#0066ff;cursor:pointer}
-.agree-box label{font-size:13px;color:#334155;line-height:1.5;cursor:pointer}
-</style></head>
-<body>
-<div class="card" style="background:#eff6ff;border:1.5px solid #93c5fd">
-<div style="font-size:13px;font-weight:900;margin-bottom:8px;color:#1d4ed8">아래 동의 항목을 모두 확인하고 서명해 주세요.</div>
-<p style="font-size:12px;color:#334155;margin-bottom:12px">개인정보 수집·이용 동의와 계약서 내용 동의가 모두 필요합니다. 아래 "모두 동의" 버튼을 누르거나 각 항목을 직접 체크하세요.</p>
-<button onclick="agreePrivacy()" style="width:100%;padding:13px;background:#0066ff;color:#fff;font-size:14px;font-weight:800;border:none;border-radius:10px;cursor:pointer">개인정보 및 계약 동의 모두 체크</button>
-</div>
-<div class="card">
-<div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:14px;border-bottom:2px solid #111;padding-bottom:10px">개인정보 수집·이용 동의서</div>
-<div style="font-size:11px;color:#1e293b;line-height:2">
-<b>가. 개인정보 수집·이용 목적</b><br>
-&nbsp;&nbsp;◦ 택배 운송 위·수탁계약 체결 및 그 이행<br>
-&nbsp;&nbsp;◦ 「화물자동차 운수사업법」등 관련 법령에 따른 자격보유 여부 확인<br><br>
-<b>나. 개인정보 수집 항목</b><br>
-&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br>
-<b>다. 개인정보의 보유·이용 기간</b><br>
-&nbsp;&nbsp;◦ 개인정보 수집·이용목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.<br><br>
-<b>라. 고유식별정보(주민등록번호) 처리 근거</b><br>
-&nbsp;&nbsp;◦ 「고용보험법 시행령」 제145조의 2, 「근로기준법」 제48조, 동법 시행령 제27조, 「소득세법」 제145조, 「국세기본법 시행령」 제68조<br><br>
-<b>마. 동의를 거부할 권리</b><br>
-&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용의 동의를 거부할 권리가 있습니다.<br>
-&nbsp;&nbsp;◦ 단, 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.
-</div>
-<div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px;font-size:11px;color:#1e293b;line-height:2.2">
-<div class="agree-box" onclick="toggleAgree2()">
-  <input type="checkbox" id="agree-chk2" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk2">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>개인정보</b>를 수집·이용하는데 <b>동의합니다.</b></label>
-</div>
-<div class="agree-box" style="margin-top:8px" onclick="toggleAgree2b()">
-  <input type="checkbox" id="agree-chk2b" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk2b">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>고유식별정보(주민등록번호)</b>를 수집·이용하는데 <b>동의합니다.</b></label>
-</div>
-<div style="margin-top:14px;font-size:11px;color:#334155;line-height:2">
-  <span id="priv-date-1"></span><br>
-  사업자등록번호 : ${_sc_dbiz||'　　　　　　　'}<br>
-  성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${driverName} (전자서명)<br>
-  쿠팡로지스틱스 대리점 ${_sc_cname} 대표 귀하
-</div>
-</div>
-</div>
-<div class="card">
-<div style="text-align:center;font-size:14px;font-weight:900;margin-bottom:14px;border-bottom:2px solid #111;padding-bottom:10px">개인정보 제3자 제공 동의서</div>
-<div style="font-size:11px;color:#1e293b;line-height:2">
-<b>가. 개인정보를 제공받는 자</b><br>
-&nbsp;&nbsp;◦ 국토교통부장관, 한국교통안전공단, 시·도지사, 경찰청장<br><br>
-<b>나. 제공 목적</b><br>
-&nbsp;&nbsp;◦ 「화물자동차 운수사업법」 제8조(화물자동차 운수사업의 운전업무 종사자격 등)<br>
-&nbsp;&nbsp;◦ 「화물자동차 운수사업법」 제9조의2(화물자동차 운수사업의 운전업무 종사의 제한)<br>
-&nbsp;&nbsp;◦ 「화물자동차 운수사업법 시행령」 제15조의2(민감정보 및 고유식별정보의 처리)<br><br>
-<b>다. 제공 항목</b><br>
-&nbsp;&nbsp;◦ 이름, 주소, 전화번호, 통장계좌번호, 생년월일, 주민등록번호, 사업자등록번호(사업자등록을 한 경우), 운수종사자 자격증 등록번호<br><br>
-<b>라. 보유기간</b><br>
-&nbsp;&nbsp;◦ 개인정보 제공 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.<br><br>
-<b>마. 동의를 거부할 권리</b><br>
-&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 대한 동의를 거부할 권리가 있습니다.<br>
-&nbsp;&nbsp;◦ 단, 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.
-</div>
-<div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px">
-<div class="agree-box" onclick="toggleAgree3()">
-  <input type="checkbox" id="agree-chk3" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk3">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>개인정보</b>를 제3자에게 제공하는데 <b>동의합니다.</b></label>
-</div>
-<div class="agree-box" style="margin-top:8px" onclick="toggleAgree3b()">
-  <input type="checkbox" id="agree-chk3b" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk3b">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>고유식별정보(주민등록번호)</b>를 제3자에게 제공하는데 <b>동의합니다.</b></label>
-</div>
-<div style="margin-top:14px;font-size:11px;color:#334155;line-height:2">
-  <span id="priv-date-2"></span><br>
-  사업자등록번호 : ${_sc_dbiz||'　　　　　　　'}<br>
-  성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${driverName} (전자서명)<br>
-  쿠팡로지스틱스 대리점 ${_sc_cname} 대표 귀하
-</div>
-</div>
-</div>
-<div class="card">
-<h1>📄 계약서 전문 확인</h1>
-<div class="sub">${typeName} · 아래 내용을 끝까지 읽어주세요</div>
-${_contractViewHtml}
-</div>
-<div class="card">
-<div class="agree-box" onclick="toggleAgree1()">
-  <input type="checkbox" id="agree-chk" onclick="event.stopPropagation();updateAgree()">
-  <label for="agree-chk">위 계약 내용을 충분히 확인하였으며, 계약 내용에 <b>동의합니다.</b> (필수)</label>
-</div>
-</div>
-<div class="card">
-<h1>📝 기사 정보 입력</h1>
-<div class="sub">동의 체크 전에 아래 정보를 먼저 입력해 주세요.</div>
-<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;font-size:12px">
-  <div style="margin-bottom:8px"><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">사업자등록번호 (있으면 입력)</label><input id="drv-biz-input" type="text" value="${_sc_dbiz}" placeholder="예: 123-45-67890" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
-  <div><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">주민등록번호 <span style="font-weight:400;color:#64748b">(전체 입력 · 필수)</span></label><input id="drv-id-input" type="text" placeholder="예: 850101-1234567" maxlength="14" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
-</div>
-</div>
-<div class="card" id="sign-card" style="opacity:0.4;pointer-events:none">
-<h1>✍️ 전자서명</h1>
-<div class="sub">${driverName}님, 아래에 서명해 주세요.</div>
-<div id="kakao-step">
-  ${_kakaoKey
-    ? `<button class="kakao-btn" onclick="kakaoLogin()">
-        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.8c0 2.76 1.74 5.19 4.36 6.6L5.4 21l4.2-2.1c.78.12 1.58.18 2.4.18 5.52 0 10-3.48 10-7.8S17.52 3 12 3z"/></svg>
-        카카오로 본인확인 후 서명
-      </button>
-      <div style="margin-top:14px;text-align:center">
-        <span onclick="showSignStep(null,'')" style="font-size:12px;color:#94a3b8;text-decoration:underline;cursor:pointer">카카오 없이 서명만 진행</span>
-      </div>`
-    : `<button class="btn btn-submit" onclick="showSignStep(null,'')">서명하러 가기</button>`
-  }
-</div>
-<div id="sign-step" style="display:none">
-  <div class="kakao-verified" id="kakao-name-badge"></div>
-  <div style="font-size:13px;color:#334155;margin-bottom:12px">아래 서명란에 서명해 주세요.</div>
-  <canvas id="sig-pad"></canvas>
-  <button class="btn btn-clear" onclick="pad.clear()">지우기</button>
-  <button class="btn btn-submit" id="submit-btn" onclick="submitSign()">서명 완료 및 제출</button>
-  <p class="notice">서명 후 제출하면 전자적 동의 효력이 발생합니다.</p>
-</div>
-</div>
-<script>
-var pad, _kakaoId='', _kakaoNick='';
-function agreePrivacy(){['agree-chk','agree-chk2','agree-chk2b','agree-chk3','agree-chk3b'].forEach(function(id){var el=document.getElementById(id);if(el)el.checked=true;});updateAgree();}
-function toggleAgree1(){var c=document.getElementById('agree-chk');c.checked=!c.checked;updateAgree();}
-function toggleAgree2(){var c=document.getElementById('agree-chk2');c.checked=!c.checked;updateAgree();}
-function toggleAgree2b(){var c=document.getElementById('agree-chk2b');c.checked=!c.checked;updateAgree();}
-function toggleAgree3(){var c=document.getElementById('agree-chk3');c.checked=!c.checked;updateAgree();}
-function toggleAgree3b(){var c=document.getElementById('agree-chk3b');c.checked=!c.checked;updateAgree();}
-function updateAgree(){
-  var c1=document.getElementById('agree-chk');
-  var c2=document.getElementById('agree-chk2');
-  var c2b=document.getElementById('agree-chk2b');
-  var c3=document.getElementById('agree-chk3');
-  var c3b=document.getElementById('agree-chk3b');
-  var ok=c1&&c1.checked&&c2&&c2.checked&&c2b&&c2b.checked&&c3&&c3.checked&&c3b&&c3b.checked;
-  var card=document.getElementById('sign-card');
-  card.style.opacity=ok?'1':'0.4';
-  card.style.pointerEvents=ok?'auto':'none';
-}
-(function(){
-  var d=new Date();
-  var ds=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
-  var p1=document.getElementById('priv-date-1');
-  var p2=document.getElementById('priv-date-2');
-  if(p1) p1.textContent=ds;
-  if(p2) p2.textContent=ds;
-})();
-function initPad(){
-  var canvas=document.getElementById('sig-pad');
-  var ratio=Math.max(window.devicePixelRatio||1,1);
-  canvas.width=canvas.offsetWidth*ratio;
-  canvas.height=canvas.offsetHeight*ratio;
-  canvas.getContext('2d').scale(ratio,ratio);
-  pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
-}
-function showSignStep(id, nick){
-  _kakaoId=id||''; _kakaoNick=nick||'';
-  document.getElementById('kakao-step').style.display='none';
-  document.getElementById('sign-step').style.display='block';
-  document.getElementById('kakao-name-badge').textContent= id ? '✓ '+nick+'님 본인확인 완료' : '';
-  initPad();
-}
-${_kakaoKey ? `
-window.onload=function(){
-  if(window.Kakao&&!Kakao.isInitialized()) Kakao.init('${_kakaoKey}');
-  var params=new URLSearchParams(location.search);
-  var kc=params.get('kakaoCode');
-  if(kc){
-    fetch('/api/contract/kakao-identify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:kc})})
-      .then(function(r){return r.json();})
-      .then(function(d){if(d.ok)showSignStep(d.kakaoId,d.kakaoNick);else showSignStep(null,'');})
-      .catch(function(){showSignStep(null,'');});
-  }
-};
-function kakaoLogin(){
-  Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'sign:${_cToken}',scope:'profile_nickname'});
-}` : ''}
-async function submitSign(){
-  if(window._contractLoaded===false){alert('계약서 내용을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');return;}
-  if(!pad||pad.isEmpty()){alert('서명을 해주세요.');return;}
-  var btn=document.getElementById('submit-btn');
-  btn.disabled=true;btn.textContent='제출 중...';
-  var sig=pad.toDataURL('image/png');
-  var _bizEl=document.getElementById('drv-biz-input');
-  var _idEl=document.getElementById('drv-id-input');
-  var _bizVal=_bizEl?_bizEl.value.trim():'';
-  var _idVal=_idEl?_idEl.value.trim():'';
-  try{
-    var _docxHtml=window._docxRenderedHtml||'';
-    var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig,kakaoId:_kakaoId,kakaoNick:_kakaoNick,driverBizNum:_bizVal,driverIdNum:_idVal,docxHtml:_docxHtml})});
-    var data=await res.json();
-    if(data.ok){location.href='/contract/download/${_cToken}?inline=1';}
-    else{alert('오류: '+(data.error||'서명 저장 실패'));btn.disabled=false;btn.textContent='서명 완료 및 제출';}
-  }catch(e){alert('네트워크 오류: '+e.message);btn.disabled=false;btn.textContent='서명 완료 및 제출';}
-}
-</script></body></html>`;
-          return new Response(signPage, {headers:{'Content-Type':'text/html; charset=utf-8'}});
-        }
-      }
-
-      // /api/contract/kakao-identify → 카카오 코드 → 사용자 정보 반환 (서명 페이지용)
-      if (path === '/api/contract/kakao-identify' && method === 'POST') {
-        try {
-          const { code } = await request.json();
-          const kakaoKey = env.KAKAO_REST_KEY;
-          if (!kakaoKey || !code) return new Response(JSON.stringify({ok:false,error:'파라미터 누락'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const tokenRes = await fetch('https://kauth.kakao.com/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=authorization_code&client_id=${kakaoKey}&redirect_uri=https://donway.ai.kr&code=${encodeURIComponent(code)}`});
-          const tokenData = await tokenRes.json();
-          if (!tokenData.access_token) return new Response(JSON.stringify({ok:false,error:'토큰 발급 실패'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const userRes = await fetch('https://kapi.kakao.com/v2/user/me',{headers:{Authorization:'Bearer '+tokenData.access_token}});
-          const userData = await userRes.json();
-          const kakaoId = String(userData.id||'');
-          const nick = (userData.kakao_account&&userData.kakao_account.profile&&userData.kakao_account.profile.nickname)||(userData.properties&&userData.properties.nickname)||kakaoId;
-          return new Response(JSON.stringify({ok:true,kakaoId,kakaoNick:nick}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-      }
-      // Helper: DOCX(ZIP) → paragraph text array (CF Workers DecompressionStream)
-      async function _xDocxParagraphs(docxUrl) {
-        try {
-          const _xRes = await fetch(docxUrl);
-          if (!_xRes.ok) return null;
-          const _xAb = await _xRes.arrayBuffer();
-          const _xBytes = new Uint8Array(_xAb);
-          const _xDv = new DataView(_xAb);
-          let _xEocd = -1;
-          for (let i = _xBytes.length - 22; i >= Math.max(0, _xBytes.length - 65580); i--) {
-            if (_xDv.getUint32(i, true) === 0x06054b50) { _xEocd = i; break; }
-          }
-          if (_xEocd < 0) return null;
-          const _xCdOff = _xDv.getUint32(_xEocd + 16, true);
-          const _xCdSz = _xDv.getUint32(_xEocd + 12, true);
-          let _xPos = _xCdOff, _xLocOff = -1, _xMeth = -1, _xCmpSz = -1, _xNLen = -1;
-          while (_xPos < _xCdOff + _xCdSz && _xPos + 46 <= _xBytes.length) {
-            if (_xDv.getUint32(_xPos, true) !== 0x02014b50) break;
-            const _xM = _xDv.getUint16(_xPos + 10, true);
-            const _xC = _xDv.getUint32(_xPos + 20, true);
-            const _xNL = _xDv.getUint16(_xPos + 28, true);
-            const _xEL = _xDv.getUint16(_xPos + 30, true);
-            const _xCL = _xDv.getUint16(_xPos + 32, true);
-            const _xLO = _xDv.getUint32(_xPos + 42, true);
-            const _xNm = new TextDecoder().decode(_xBytes.slice(_xPos + 46, _xPos + 46 + _xNL));
-            if (_xNm === 'word/document.xml') { _xLocOff = _xLO; _xMeth = _xM; _xCmpSz = _xC; _xNLen = _xNL; break; }
-            _xPos += 46 + _xNL + _xEL + _xCL;
-          }
-          if (_xLocOff < 0) return null;
-          const _xLhExt = _xDv.getUint16(_xLocOff + 28, true);
-          const _xDataSt = _xLocOff + 30 + _xNLen + _xLhExt;
-          const _xComp = _xBytes.slice(_xDataSt, _xDataSt + _xCmpSz);
-          let _xXmlBytes;
-          if (_xMeth === 0) { _xXmlBytes = _xComp; }
-          else if (_xMeth === 8) {
-            const _xDStream = new DecompressionStream('deflate-raw');
-            const _xWriter = _xDStream.writable.getWriter();
-            const _xReader = _xDStream.readable.getReader();
-            _xWriter.write(_xComp); _xWriter.close();
-            const _xChunks = []; let _xDone = false;
-            while (!_xDone) { const {value:_xVal,done:_xD} = await _xReader.read(); if (_xVal) _xChunks.push(_xVal); _xDone = _xD; }
-            const _xTot = _xChunks.reduce((n,c)=>n+c.length,0); _xXmlBytes = new Uint8Array(_xTot);
-            let _xOff = 0; for (const c of _xChunks) { _xXmlBytes.set(c,_xOff); _xOff+=c.length; }
-          } else { return null; }
-          const _xXml = new TextDecoder('utf-8').decode(_xXmlBytes);
-          const _xParas = []; let _xI = 0;
-          while (true) {
-            const _xPA = _xXml.indexOf('<w:p', _xI); if (_xPA < 0) break;
-            const _xPZ = _xXml.indexOf('</w:p>', _xPA); if (_xPZ < 0) break;
-            const _xPara = _xXml.slice(_xPA, _xPZ + 6);
-            const _xTxts = []; let _xTI = 0;
-            while (true) {
-              const _xTS = _xPara.indexOf('<w:t', _xTI); if (_xTS < 0) break;
-              const _xTE = _xPara.indexOf('>', _xTS); if (_xTE < 0) break;
-              const _xTC = _xPara.indexOf('</w:t>', _xTE); if (_xTC < 0) break;
-              const _xT = _xPara.slice(_xTE+1, _xTC); if (_xT) _xTxts.push(_xT); _xTI = _xTC+6;
-            }
-            if (_xTxts.length) _xParas.push(_xTxts.join(''));
-            _xI = _xPZ + 6;
-          }
-          return _xParas;
-        } catch (_xE) { return null; }
-      }
-
-      // /api/contract/sign-driver → 기사 서명 저장 (POST, 비로그인 공개)
-      if (path === '/api/contract/sign-driver' && method === 'POST') {
-        try {
-          const body = await request.json();
-          const { signToken, driverSig, kakaoId, kakaoNick, driverBizNum='', driverIdNum='' } = body;
-          if (!signToken || !driverSig) return new Response(JSON.stringify({ok:false,error:'필수값 누락'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _dsFs = await getAccessToken(env);
-          // signToken으로 계약서 문서 ID 조회
-          const _dsQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:signToken}}},limit:1}});
-          const _dsQRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:_dsQ});
-          const _dsQData = await _dsQRes.json();
-          const _dsDoc = _dsQData?.[0]?.document;
-          if (!_dsDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _dsDocName = _dsDoc.name.startsWith('https://') ? _dsDoc.name : `https://firestore.googleapis.com/v1/${_dsDoc.name}`;
-          const _dsF = _dsDoc.fields || {};
-          const dealerId = _dsF.dealerId?.stringValue || '';
-          const driverName = _dsF.driverName?.stringValue || '';
-          const driverPhone = _dsF.driverPhone?.stringValue || '';
-          const contractType = _dsF.type?.stringValue || 'wisu';
-          const typeLabel = {wisu:'위수탁',subok:'부속합의서',qflex:'퀵플렉스',labor:'근로계약'}[contractType]||'계약';
-          const now = new Date().toISOString();
-          const signIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
-          const signUa = request.headers.get('User-Agent') || '';
-          // 서명 저장 + 메타데이터 + 카카오 본인확인
-          // docxHtml이 비어있으면 updateMask에서 제외 (대리점 타이핑 내용 덮어쓰기 방지)
-          let _dsPatchUrl=`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa&updateMask.fieldPaths=kakaoId&updateMask.fieldPaths=kakaoNick&updateMask.fieldPaths=driverBizNum&updateMask.fieldPaths=driverIdNum`;
-          const _dsPatchFields={driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa},kakaoId:{stringValue:kakaoId||''},kakaoNick:{stringValue:kakaoNick||''},driverBizNum:{stringValue:driverBizNum||''},driverIdNum:{stringValue:driverIdNum||''}};
-          if(body.docxHtml){_dsPatchUrl+='&updateMask.fieldPaths=docxHtml';_dsPatchFields.docxHtml={stringValue:body.docxHtml};}
-          await fetch(_dsPatchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_dsPatchFields})});
-          // 서명 완료된 계약서 HTML → Firebase Storage 보관
-          let _archiveResultUrl = '';
-          try {
-            const _af = _dsF;
-            const _ag = k => _af[k]?.stringValue||'';
-            const _aPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
-            const _aType = _ag('type'), _aTypeName = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'}[_aType]||_ag('title')||'계약서';
-            const _aDriver=_ag('driverName'),_aPhone=_ag('driverPhone'),_aBiz=driverBizNum||_ag('driverBizNum'),_aAddr=_ag('driverAddr');
-            const _aIdNum=driverIdNum||_ag('driverIdNum');
-            let _aAdSig=_ag('adminSig');
-            if (!_aAdSig && dealerId) {try{const _aCompR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${dealerId}`,{headers:{Authorization:'Bearer '+_dsFs}});const _aCompD=await _aCompR.json();_aAdSig=_aCompD.fields?.stampImage?.stringValue||'';}catch(_e){}}
-            const _aStart=_ag('startDate'),_aEnd=_ag('endDate');
-            const _aMonths=(_aStart&&_aEnd)?Math.round((new Date(_aEnd)-new Date(_aStart))/(1000*60*60*24*30))+'개월':'';
-            const _aRoute=_ag('route'),_aArea=_ag('area'),_aCamp=_ag('camp'),_aUnit=_ag('unitPrice'),_aCollect=_ag('collectPrice'),_aCycle=_ag('cycle')||'매월 20일',_aSort=_ag('sortPrice'),_aCarnum=_ag('carNum'),_aLicnum=_ag('licenseNum'),_aSpecial=_ag('special');
-            const _aCompanyCeo=_ag('companyCeo')||'';
-            const _aCompanyAddr=_ag('companyAddr')||'';
-            const _aCname=_ag('companyName')||'';
-            const _aCbiz=_ag('companyBiz')||'';
-            const _aPreDays=_ag('preDepositDays')||'';
-            const _aRpJson=_ag('routePricesJson'); let _aRps=[]; try{if(_aRpJson)_aRps=JSON.parse(_aRpJson);}catch(e){}
-            const _aFeeRows=_aRps.length?_aRps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료 (${r.route})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_aPAmt(r.price)}</td></tr>`).join(''):`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_aUnit?_aPAmt(_aUnit):'　　　원'}</td></tr>`;
-            const _aDateStr=(()=>{const _s=(_ag('createdAt')||_dsF.createdAt?.timestampValue||_dsDoc.createTime||now).slice(0,10);const[y,m,d]=_s.split('-');return y&&m&&d?y+'년 '+Number(m)+'월 '+Number(d)+'일':_s;})();
-            const _aSignDate=(()=>{const _d=new Date(Date.now()+9*3600000);return _d.getUTCFullYear()+'년 '+(_d.getUTCMonth()+1)+'월 '+_d.getUTCDate()+'일';})();
-            const _aCustomUrl=_ag('customContractUrl');
-            let _aBody='';
-            if(_aType==='wisu'){_aBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2><p style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_aCname||'위탁자'}</b> (이하 "위탁자"라 한다)와 택배종사자인 <b>${_aDriver||'　　　　'}</b> (이하 "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위‧수탁계약을 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(목적)</b> 이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</p><p style="margin-bottom:10px"><b>제2조(기본원칙)</b> ① "위탁자"와 "수탁자"는 이 계약에 따라 택배 운송 업무를 수행함에 있어 상호 대등한 입장에서 신의성실의 원칙에 따라 자신의 권리를 행사하며 의무를 이행한다.<br>② "위탁자"와 "수탁자"는 이 계약의 이행과 관련하여 「생활물류서비스산업발전법」, 「독점규제 및 공정거래에 관한 법률」등 관련 법령의 규정을 준수한다.</p><p style="margin-bottom:10px"><b>제3조(용어의 정의)</b> ① "택배"라 함은 고객의 요청에 따라 운송을 위탁받은 화물을 집화, 분류, 배송 등의 과정을 거쳐 수화인의 주택, 사무실 또는 기타의 장소에서 인도하는 것을 말한다.<br>② "집화"라 함은 고객으로부터 수령한 화물을 "위탁자"가 지정한 장소까지 운송하여 하차, 적재하는 작업을 말한다.<br>③ "분류"라 함은 서브터미널 등 택배화물의 분류시설‧장소에서 다수의 화물을 담당구역별로 구분하는 작업을 말한다.<br>④ "배송"이라 함은 분류된 화물을 택배 운송차량에 상차하여 차량운행을 통해 운송장에 기재된 장소에서 고객에게 인도하는 것을 말한다.<br>⑤ 택배의 집화, 배송에 수반되는 전산입력 및 택배운임 수취, 고객응대, 스캔 등 부수적인 업무는 집화, 배송업무로 본다.</p><p style="margin-bottom:10px"><b>제4조(계약의 주요내용)</b> ① "위탁자"와 "수탁자" 간 계약의 주요내용은 다음과 같다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_aStart||'　　년　　월　　일'}부터 ${_aEnd||'　　년　　월　　일'}까지${_aMonths?' ('+_aMonths+')':''}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_aArea||_aRoute||'관할전구역'}</td></tr>${_aCamp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_aCamp}</td></tr>`:''}<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="${1+Math.max(_aRps.length,1)+1}">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_aPAmt(_aCollect)}</td></tr>${_aFeeRows}<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_aCycle}</td></tr>${_aCarnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_aCarnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_aLicnum||'　　　　　'}</td></tr>`:''}</table>② "수탁자"는 분류작업을 ${(_aSort&&Number(_aSort)>0)?'수행':'미수행'}한다.${(_aSort&&Number(_aSort)>0)?`<br>③ 분류수수료는 시간당 ${_aPAmt(_aSort)}로 한다.`:''}</p><p style="margin-bottom:10px"><b>제5조(수수료의 지급)</b> ① "수탁자"는 택배업무 수행 내역을 매월 26일 ~ 익월 25일을 기준으로 마감하고, 익월 20일까지 "위탁자"에게 수수료를 청구하여야 한다. 다만, 청구일이 휴무일인 경우에는 휴무일 익일에 수수료를 청구한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"가 고객으로부터 수취한 선착불 금액이 있는 경우 수취한 날로부터 ${_aPreDays||'　　　'}일 이내에 "위탁자"에게 입금하여야 한다.<br>⑤ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</p><p style="margin-bottom:10px"><b>제6조(택배 배송업무의 수행)</b> ① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서「생활물류서비스산업발전법」, 「도로교통법」, 「자동차관리법」 등 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 정부기관 및 택배사의 요청에 따른 "위탁자"의 실태조사, 자료요청 등에 적극 협조한다.<br>⑤ "수탁자"는 이 계약의 이행에 필요한 택배용품, 전산장비, 차량 등을 구비하여야 하며, "위탁자"는 필요시 계약기간동안 이를 지원 또는 대여할 수 있다.<br>⑥ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공‧공개하여서는 아니 된다.<br>⑦ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.<br>⑧ "수탁자"가 동승인력을 사용할 경우에, "위탁자"는 그에 대한 책임을 지지 않는다.<br>⑨ "수탁자"가 "위탁자"에게 사전에 통지를 하지 않았거나, "수탁자"가 정당하지 않은 사유로 수탁업무를 해태하여 택배서비스 이행에 차질이 발생한 경우, "위탁자"는 제3자에게 수탁업무를 대신하도록 할 수 있으며, 이 경우 해당 수수료는 업무를 수행한 자에게 지급한다.</p><p style="margin-bottom:10px"><b>제7조(위탁자의 준수사항)</b> "위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. "수탁자"가 부담하여야 할 정당한 사유가 없음에도 불구하고 "위탁자"가 수취하기로 사전에 약정한 수수료, 관리비 등과 별도의 비용을 징수하는 행위<br>4. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위("위탁자"와 "수탁자"의 합의하에 타 업무를 수행할 경우 타 업무에 수반되는 비용을 일방적으로 "수탁자"에게 부담시키지 않는다.)<br>5. 정당한 사유 없이 "수탁자"의 업무 수행에 필요한 시스템 접근을 차단하는 행위<br>6. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위<br>7. 계약 종료 시 "수탁자"에게 후임자를 구할 책임을 부담시키는 행위<br>8. 계약 종료 이후 정당한 사유 없이 동종 업종의 타 사업자와의 계약을 방해하는 행위<br>9. 천재지변, 전쟁, 내란 기타 불가항력적인 사유 시에 배송지연 책임을 전가시키는 행위</p><p style="margin-bottom:10px"><b>제8조(안전보건 조치 등)</b> ① "위탁자"는 「산업안전보건법」 제77조에 따른 안전‧보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」, 「산업재해보상보험법」 및 「고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률」에 따라 고용보험과 산업재해보상보험에 가입하여야 하며, "위탁자"는 "수탁자"의 수수료에서 원천공제하여 보험료를 납부할 수 있다.<br>③ "위탁자"는 "수탁자"의 일 평균 작업시간이 일 8시간을 지속적으로 초과할 경우 "위탁자"는 연 1회 이상 심혈관질환 등 건강검진 및 추가 프로그램을 실시하고, 그 결과에 따라 적정한 휴식시간 보장 등 별도의 건강관리 조치를 취하여야 한다.<br>④ "위탁자"는 "수탁자"가 작업시간 중 건강이상을 호소할 경우 긴급진료를 받을 수 있도록 하고, "수탁자"는 그 진료내역서를 "위탁자"와 공유한다.</p><p style="margin-bottom:10px"><b>제9조(작업시간 조정 등)</b> ① 계약 당사자는 "수탁자"의 최대 작업시간이 일 12시간, 주 60시간을 초과하지 않도록 노력한다.<br>② 제1항에도 불구하고, 설 · 추석 등의 경우 설 · 추석 등이 속한 2주 이내의 기간에는 불가피한 예외를 인정할 수 있다. 단, 그러한 경우에도 22시를 초과하여 작업하여서는 아니된다.<br>③ "수탁자"의 작업시간이 4주 동안 1주 평균 64시간을 초과할 경우, 계약 당사자는 물량 · 배송구역 조정 협의를 통해 최대 작업시간 내로 감축할 수 있도록 노력하여야 한다. 단, 물량 · 배송구역 조정에 대한 협의가 되지 않을 경우에는 영업점을 대표하는 자, 택배기사를 대표하는 자가 추천하는 자를 포함하여 국토교통부가 구성한 조정위원회에서 조정할 수 있다.<br>④ 제3항에 따라 물량 · 배송구역조정을 할 경우에는 서면으로 계약을 변경하여야 한다.</p><p style="margin-bottom:10px"><b>제10조(손해배상)</b> ① 택배화물의 훼손, 멸실, 분실, 운송지연 등으로 고객에게 손해가 발생한 경우에 "위탁자"와 "수탁자"는 귀책사유에 따라 그 손해배상 책임을 부담하며, "위탁자"가 "수탁자"를 대신해 우선 배상하는 경우에는 "수탁자"에게 구상권을 행사할 수 있다.<br>② "위탁자"는 손해배상에 대한 기준(금액, 비율 등)을 일방적으로 정하여 "수탁자"가 따르도록 거래조건을 설정하지 않으며, "수탁자"의 고의 또는 과실에 의하지 않은 손해배상책임은 "수탁자"에게만 일방적으로 부담시키지 않는다.</p><p style="margin-bottom:10px"><b>제11조(계약의 갱신 및 해지)</b> ① “위탁자”와 “수탁자”는 상호 합의하는 경우에는 계약을 해지할 수 있다.<br>② “위탁자”는 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”가 계약의 갱신을 요구하는 경우로서 총 계약기간(“위탁자”와 “수탁자”가 최초 위탁계약을 체결한 날부터 이 계약의 종료일까지의 기간을 말한다)이 6년 이하인 때에는「생활물류서비스산업발전법 시행령」제5조(택배서비스 운송 위탁계약의 갱신거절사유 등)에서 규정한 경우를 제외하고는 이를 거절할 수 없다.<br>③ “위탁자”는 제2항에 따른 갱신 요구를 거절하는 경우에는 그 요구를 받은 날부터 15일 이내에 “수탁자”에게 거절의 사유를 적어 서면으로 통지하여야 한다.<br>④ “위탁자”가 제3항에 따른 거절의 통지를 하지 않거나, 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”에게 계약변경, 계약갱신 등에 대해 서면으로 통지하지 않는 경우에는 이 계약과 같은 조건으로 1년간 다시 계약을 체결한 것으로 본다.<br>⑤ “위탁자”는 계약을 해지하려는 경우에는 “수탁자”에게 60일 이상의 유예기간을 두고 계약의 위반 사실을 구체적으로 밝히고 이를 시정하지 아니하면 그 계약을 해지한다는 사실을 서면으로 2회 이상 통지하여야 한다.<br>⑥ 제5항에도 불구하고 「생활물류서비스산업발전법 시행령」제6조(택배서비스 운송 위탁계약 해지 통지의 생략사유)에서 규정한 경우에 해당 시 즉시 계약을 해지할 수 있다.<br>⑦ “수탁자”의 사정으로 계약을 해지할 경우, “수탁자”는 계약해지 60일 전에 “위탁자”에게 통지하고 업무가 원활하게 이전되도록 협조한다.<b>제12조(개인정보 수집)</b> ① "위탁자"는 계약체결을 위해 필요한 "수탁자"의 개인정보를 "수탁자"의 동의(별지 제1호 서식)를 받아 수집‧이용할 수 있다.<br>② "위탁자"는 「화물자동차 운수사업법」제9조의 2에 따른 범죄경력 조회를 위해 국토교통부장관 또는 시‧도지사가 "수탁자"의 개인정보를 요청할 경우 요청자에게 이를 제공할 수 있다.<br>③ "위탁자"는 제1항 및 제2항의 목적 외 다른 용도로 "수탁자"의 개인정보를 사용할 수 없으며, 제3자에게 제공하여서는 아니 된다.</p><p style="margin-bottom:10px"><b>제13조(분쟁 해결)</b> ① "위탁자"와 "수탁자"는 이 계약에 명시되지 아니한 사항 또는 계약의 해석에 관한 사항에 다툼이 있는 경우에는 쌍방의 합의에 의해 해결한다.<br>② 제1항에 따라 해결되지 않는 경우에는 민사소송법에 따라 법원에서의 소송을 통해 분쟁을 해결한다.</p><p style="margin-bottom:10px"><b>제14조(소의 관할)</b> 본 계약에 관한 소송은 민사소송법에 따르거나, 양 당사자의 합의에 의해 정한 곳을 관할 법원으로 한다.</p><p style="margin-bottom:10px"><b>제15조(부속합의)</b> ① "위탁자"와 "수탁자"는 이 계약의 내용을 보충하거나, 이 계약에서 정하지 아니한 사항을 규정하기 위하여 부속 합의서를 작성할 수 있다.<br>② 전항의 부속합의는 이 계약의 내용에 배치 또는 위반되지 않는 범위 내에서 이 계약의 내용으로 인정된다.</p><p style="margin-bottom:10px"><b>제16조(계약의 효력)</b> ① "위탁자"와 "수탁자"는 이 계약을 체결하기 전에 충분한 협의를 거쳤고, 계약 내용을 모두 숙지하였으며, 이 계약을 증명하기 위하여 "위탁자"와 "수탁자"는 쌍방이 기명날인한 계약서 원본 2부를 작성하여 각 1부씩 보관한다.<br>② 이 계약서의 내용은 "위탁자"와 "수탁자"사이의 서면 합의에 의해서만 변경되거나 수정될 수 있으며, 그 변경 및 수정은 "위탁자"와 "수탁자"가 해당 서면에 서명함과 동시에 그 효력을 발생한다.</p>${_aSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_aSpecial.replace(/\n/g,'<br>')}</p>`:''}<p style="margin-bottom:4px;margin-top:20px">위 계약 내용을 확인하고 이에 동의하여 본 계약서에 서명한다.</p><p style="margin-bottom:16px">${_aDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_aCompanyAddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_aCname}<br>사업자등록번호 : ${_aCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_aCompanyCeo}${_aAdSig?`<br><img src="${_aAdSig}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_aAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_aDriver}<br>주민등록번호 : ${_aIdNum||'　　　　　　'}<br>사업자등록번호 : ${_aBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_aPhone||'　　　　　　　'}${driverSig?`<br><img src="${driverSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(서명)</td></tr></table></div>`;}
-            else if(_aType==='subok'){_aBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">계약해지에 관한 부속합의서</h2><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_aCname||'위탁자'}</b>(이하 "위탁자"라 한다)와 택배종사자인 <b>${_aDriver||'　　　　'}</b>(이하 "수탁자"라 한다)은 위·수탁계약 해지에 관하여 다음과 같이 부속합의서를 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(해지의 합의)</b> "위탁자"와 "수탁자"는 양 당사자의 합의에 의하여 아래와 같이 위·수탁 계약을 해지하기로 한다.</p><p style="margin-bottom:10px"><b>제2조(해지 사유 및 조건)</b> ① 양 당사자는 다음 각 호의 사항에 합의하였음을 확인한다.<br>1. 계약해지일 : ${_aEnd||'　　년　　월　　일'}<br>2. 정산 기준일 : 계약해지일 기준 최종 정산<br>3. 미지급 수수료는 정산 기준일로부터 14일 이내에 지급<br>② "수탁자"는 계약 해지일까지 담당 구역의 업무를 성실히 수행하며, 후임자 인수인계에 협조한다.<br>③ "위탁자"는 계약 해지 이후 "수탁자"의 업무 수행 관련 개인정보를 파기한다.</p><p style="margin-bottom:10px"><b>제3조(업무 수행 기준)</b> 계약 해지 전까지의 업무 수행 기준은 다음 표와 같다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">구분</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">기준</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">비고</th></tr><tr><td style="border:1px solid #999;padding:5px 7px">배송완료율</td><td style="border:1px solid #999;padding:5px 7px">95% 이상</td><td style="border:1px solid #999;padding:5px 7px">일일 기준</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">고객 클레임</td><td style="border:1px solid #999;padding:5px 7px">월 3건 이하</td><td style="border:1px solid #999;padding:5px 7px">파손·분실 합산</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">업무 인수인계</td><td style="border:1px solid #999;padding:5px 7px">해지일 7일 전까지</td><td style="border:1px solid #999;padding:5px 7px">구역·고객 정보</td></tr></table></p><p style="margin-bottom:10px"><b>제4조(서비스 수준)</b> 해지 전까지 다음의 서비스 수준을 유지하여야 한다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">항목</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">수준</th></tr><tr><td style="border:1px solid #999;padding:5px 7px">배송 시간 준수</td><td style="border:1px solid #999;padding:5px 7px">09:00 ~ 20:00 이내 완료</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">물품 안전 관리</td><td style="border:1px solid #999;padding:5px 7px">파손·분실 방지 성실 이행</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">고객 응대</td><td style="border:1px solid #999;padding:5px 7px">친절·신속 응대 유지</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">시스템 보고</td><td style="border:1px solid #999;padding:5px 7px">배송 완료 즉시 등록</td></tr></table></p><p style="margin-bottom:10px"><b>제5조(손해배상)</b> 계약 해지 이후에도 해지 전 발생한 화물 훼손·분실·지연 등에 대한 손해배상 책임은 귀책사유에 따라 계속 부담한다.</p><p style="margin-bottom:10px"><b>제6조(비밀유지)</b> "수탁자"는 계약 해지 이후에도 업무 수행 중 취득한 "위탁자" 및 고객의 정보를 제3자에게 제공하거나 외부에 공개하지 아니한다.</p>${_aSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_aSpecial.replace(/\n/g,'<br>')}</p>`:''}<p style="margin-bottom:4px">위 합의 내용을 확인하고 이에 동의하여 본 부속합의서에 서명한다.</p><p style="margin-bottom:16px">${_aDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:16px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_aCompanyAddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_aCname}<br>사업자등록번호 : ${_aCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_aCompanyCeo}${_aAdSig?`<br><img src="${_aAdSig}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_aAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_aDriver}<br>주민등록번호 : ${_aIdNum||'　　　　　　'}<br>사업자등록번호 : ${_aBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_aPhone||'　　　　　　　'}${driverSig?`<br><img src="${driverSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(서명)</td></tr></table></div>`;}
-            else{_aBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">${_aTypeName}</h2><div style="border-top:2px solid #111;padding-top:12px">${_aStart?`<p style="margin-bottom:10px"><b>계약기간</b> ${_aStart} ~ ${_aEnd}</p>`:''}<p style="margin-bottom:10px"><b>수수료</b> 배송 1건당 ${_aPAmt(_aUnit)} / 집화 1건당 ${_aPAmt(_aCollect)} / 지급일 ${_aCycle}</p>${_aRoute?`<p style="margin-bottom:10px"><b>담당구역</b> ${_aRoute}</p>`:''}${_aSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_aSpecial.replace(/\n/g,'<br>')}</p>`:''}</div>`;}
-            const _aDocxHtmlSaved=body.docxHtml||_ag('docxHtml')||'';
-            if(_aCustomUrl||_aDocxHtmlSaved){const _aProxyUrl=`https://donway.ai.kr/contract/file/${signToken}`;const _aIsPdf=_aCustomUrl?/\.pdf$/i.test(_aCustomUrl.split('?')[0]):false;
-            // body.docxHtml가 비어있으면 Firestore 저장값(타이핑된 내용) → DOCX 파싱 순으로 복원
-            let _aDocxHtml=_aDocxHtmlSaved;
-            if(!_aDocxHtml&&!_aIsPdf&&_aCustomUrl){
-              const _aParas=await _xDocxParagraphs(_aCustomUrl);
-              if(_aParas&&_aParas.length>0){
-                _aDocxHtml='<div style="font-size:12px;line-height:1.8;color:#1e293b">'+_aParas.map(p=>`<p style="margin-bottom:8px">${p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('')+'</div>';
-              }
-            }
-            const _aDetailTable=`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#1e293b"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f">📋 계약 주요 내용 (대리점 입력)</div><table style="width:100%;border-collapse:collapse;font-size:11px"><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700;width:28%">위탁자(갑)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aCname}${_aCbiz?' · '+_aCbiz:''}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수탁자(을)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aDriver||''}${_aPhone?' · '+_aPhone:''}</td></tr>${(_aStart||_aEnd)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">계약기간</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aStart||''}${_aEnd?' ~ '+_aEnd:''}${_aMonths?' ('+_aMonths+')':''}</td></tr>`:''} ${(_aArea||_aRoute)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">담당구역</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aArea||_aRoute}</td></tr>`:''} ${_aCamp?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">캠프</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aCamp}</td></tr>`:''} <tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수수료</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aRps.length?_aRps.map(r=>r.route+': 1건당 '+_aPAmt(r.price)).join(' / '):'배송 1건당 '+_aPAmt(_aUnit)} / 집화 1건당 ${_aPAmt(_aCollect)}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">지급일</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aCycle}</td></tr>${_aCarnum?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">차량번호</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aCarnum}</td></tr>`:''} ${_aSpecial?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">특약사항</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_aSpecial.replace(/\n/g,'<br>')}</td></tr>`:''}</table></div>`;const _aSignBlock=`<p style="margin-bottom:4px;margin-top:20px">위 계약 내용을 확인하고 이에 동의하여 본 계약서에 서명한다.</p><p style="margin-bottom:16px">${_aDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_aCompanyAddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_aCname}<br>사업자등록번호 : ${_aCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_aCompanyCeo}${_aAdSig?`<br><img src="${_aAdSig}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_aAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_aDriver}<br>주민등록번호 : ${_aIdNum||'　　　　　　'}<br>사업자등록번호 : ${_aBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_aPhone||'　　　　　　　'}${driverSig?`<br><img src="${driverSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(서명)</td></tr></table>`;if(_aDocxHtml){if(_aIdNum){_aDocxHtml=_aDocxHtml.replace(/(주민등록번호\s*(?::\s*)?(?:<[^>]*>)*)\s*<u>(?:_+|&nbsp;|&#160;|\s)*<\/u>/g,function(m,pre){return pre+_aIdNum;});_aDocxHtml=_aDocxHtml.replace(/(주민등록번호[^<]{0,80}:?\s*)(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{6}/.test(pre)?m:pre+_aIdNum+tag;});}if(_aBiz){_aDocxHtml=_aDocxHtml.replace(/(사업자등록번호\s*(?::\s*)?(?:<[^>]*>)*)\s*<u>(?:_+|&nbsp;|&#160;|\s)*<\/u>/g,function(m,pre){return pre+_aBiz;});_aDocxHtml=_aDocxHtml.replace(/(사업자등록번호[^<]{0,80}:?\s*)(<\/(?:p|td|div|span|li)>)/g,function(m,pre,tag){return /\d{10}/.test(pre.replace(/-/g,''))?m:pre+_aBiz+tag;});}
-_aDocxHtml=_aDocxHtml.replace(/동의함(?:\s|&nbsp;|&#160;|<[^>]+>)*[□☐☑▢⬜□☐☑◻◻]/g,'동의함 ✅');_aDocxHtml=_aDocxHtml.replace(/동의함[ \t]*□/g,'동의함 ✅');let _aInCnt=0;_aDocxHtml=_aDocxHtml.replace(/\(인\)/g,function(m){_aInCnt++;if(_aInCnt===1&&_aAdSig)return '(인)<br><img src="'+_aAdSig+'" style="max-height:80px;max-width:100px;display:block;mix-blend-mode:multiply">';if(_aInCnt===2&&driverSig)return '(인)<br><img src="'+driverSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">';return m;});if(driverSig)_aDocxHtml=_aDocxHtml.replace(/\(서명\)/g,'<img src="'+driverSig+'" style="max-height:90px;max-width:150px;display:block;mix-blend-mode:multiply">');_aBody=`<div style="font-size:12px;line-height:1.8;color:#1e293b">${_aDocxHtml}</div>${_aSignBlock}`;}else if(_aType==='wisu'){_aBody=`${_aDetailTable}${_aBody}`;}else{_aBody=`${_aDetailTable}<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">${_aTypeName}</h2>${_aSignBlock}`;}}
-            const _aHtml=`<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>${_aTypeName} - 서명완료</title><style>body{font-family:'Malgun Gothic',sans-serif;font-size:12px;line-height:1.8;color:#1e293b;max-width:800px;margin:0 auto;padding:24px}h1{font-size:18px;text-align:center;margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-bottom:16px}td{border:1px solid #cbd5e1;padding:6px 10px;font-size:12px}td:first-child{background:#f8fafc;font-weight:600}.sig-box{display:inline-block;border:1px solid #cbd5e1;border-radius:8px;padding:6px;background:#fff}.sig-box img{display:block;max-width:200px;max-height:180px}@media print{body{padding:0}}</style></head><body><h1>${_aTypeName}</h1><p style="text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">서명 완료 · ${_aDateStr}</p><div style="display:flex;gap:8px;margin-bottom:16px"><button onclick="tryPrint()" style="flex:1;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄/PDF</button><a href="/contract/download/${signToken}" style="flex:1;padding:13px;background:#0f766e;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:block;box-sizing:border-box">💾 저장</a></div><table><tr><td style="width:120px">위탁자(갑)</td><td>${_aCname}${_aCbiz?' · '+_aCbiz:''}</td></tr><tr><td>수탁자(을)</td><td>${_aDriver}${_aPhone?' · '+_aPhone:''}</td></tr>${_aBiz?`<tr><td>사업자번호</td><td>${_aBiz}</td></tr>`:''}${_aAddr?`<tr><td>주소</td><td>${_aAddr}</td></tr>`:''}</table><hr style="margin:20px 0"><div style="border:1px solid #d1fae5;border-radius:10px;padding:16px;margin-bottom:16px;background:#f0fdf4"><div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;border-bottom:1.5px solid #6ee7b7;padding-bottom:8px">개인정보 수집·이용 동의서</div><div style="margin-top:12px;padding:10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534;font-weight:700;text-align:center">✅ 동의 완료 (전자서명)</div><div style="font-size:11px;color:#334155;margin-top:10px;line-height:2">${_aSignDate}<br>사업자등록번호: ${_aBiz||'　　　　　　　'}<br>주민등록번호: ${_aIdNum||'　　　　　　　'}<br>성 명: ${_aDriver}${driverSig?`<br><img src="${driverSig}" style="max-height:55px;max-width:180px;margin:2px 0;display:block;mix-blend-mode:multiply">`:' (전자서명)'}<br>쿠팡로지스틱스 대리점 ${_aCname} 대표 귀하</div></div><div style="border:1px solid #d1fae5;border-radius:10px;padding:16px;margin-bottom:16px;background:#f0fdf4"><div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;border-bottom:1.5px solid #6ee7b7;padding-bottom:8px">개인정보 제3자 제공 동의서</div><div style="margin-top:12px;padding:10px;background:#dcfce7;border-radius:8px;font-size:12px;color:#166534;font-weight:700;text-align:center">✅ 동의 완료 (전자서명)</div><div style="font-size:11px;color:#334155;margin-top:10px;line-height:2">${_aSignDate}<br>사업자등록번호: ${_aBiz||'　　　　　　　'}<br>주민등록번호: ${_aIdNum||'　　　　　　　'}<br>성 명: ${_aDriver}${driverSig?`<br><img src="${driverSig}" style="max-height:55px;max-width:180px;margin:2px 0;display:block;mix-blend-mode:multiply">`:' (전자서명)'}<br>쿠팡로지스틱스 대리점 ${_aCname} 대표 귀하</div></div><hr style="margin:20px 0">${_aBody}<hr style="margin:20px 0"><table><tr><td style="text-align:center;padding:16px"><div style="font-size:11px;margin-bottom:6px">위탁자(갑) 서명</div>${_aAdSig?`<div class="sig-box"><img src="${_aAdSig}"></div>`:'<div style="color:#94a3b8">미서명</div>'}<div style="font-size:11px;margin-top:6px">${_aCname}</div></td><td style="text-align:center;padding:16px"><div style="font-size:11px;margin-bottom:6px">수탁자(을) 서명</div><div class="sig-box"><img src="${driverSig}"></div><div style="font-size:11px;margin-top:6px">${_aDriver}</div></td></tr></table><p style="text-align:center;font-size:11px;color:#64748b;margin-top:16px">이 계약서는 전자서명법에 따라 유효한 전자문서입니다.</p><div id="kakao-notice" style="display:none;background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px;line-height:1.6">📌 카카오톡 브라우저에서는 인쇄가 제한됩니다.<br>우측 상단 <b>···</b> 메뉴 → <b>외부 브라우저로 열기</b>를 탭한 후 인쇄해 주세요.</div><script>(function(){var ua=navigator.userAgent;if(/KAKAOTALK/i.test(ua)){document.getElementById('kakao-notice').style.display='block';}})();function tryPrint(){var ua=navigator.userAgent;if(/KAKAOTALK/i.test(ua)){alert('카카오톡 브라우저에서는 인쇄가 지원되지 않습니다.\n우측 상단 ··· → 외부 브라우저로 열기를 선택해 주세요.');return;}if(/android/i.test(ua)){alert('안드로이드에서 인쇄/PDF 저장 방법:\n\n크롬 브라우저: 우측 상단 ⋮ → 공유 → 인쇄');return;}if(/iPhone|iPad|iPod/i.test(ua)){alert('iOS에서 인쇄/PDF 저장 방법:\n\n하단 공유 아이콘 → 프린트\nPDF 저장: 프린트 화면에서 두 손가락으로 확대하면 PDF로 저장됩니다.');return;}window.print();}<\/script></body></html>`;
-            const _aPath = `contracts/${dealerId}/${signToken}.html`;
-            const _aUpRes = await fetch(`https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o?name=${encodeURIComponent(_aPath)}&uploadType=media`,{method:'POST',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'text/html; charset=utf-8'},body:_aHtml});
-            if (_aUpRes.ok) {
-              const _aUpData = await _aUpRes.json();
-              const _aDlToken = _aUpData.downloadTokens||'';
-              if (_aDlToken) {
-                const _aUrl = `https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/${encodeURIComponent(_aPath)}?alt=media&token=${_aDlToken}`;
-                _archiveResultUrl = _aUrl;
-                await fetch(`${_dsDocName}?updateMask.fieldPaths=archiveUrl`,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{archiveUrl:{stringValue:_aUrl}}})});
-              }
-            }
-          } catch(_ae){}
-          // 기사에게 서명 완료 SMS 발송 (법적 인지 증거)
-          if (driverPhone) {
-            const nowKst = new Date(Date.now()+9*3600000).toISOString().slice(0,16).replace('T',' ');
-            const contractUrl = `https://donway.ai.kr/contract/sign/${signToken}`;
-            const smsText = `[엠비티아이] ${driverName}님의 ${typeLabel} 전자서명이 완료되었습니다.\n서명일시: ${nowKst}\n\n계약서 저장·인쇄:\n${contractUrl}\n\n위 링크로 언제든 계약서를 확인하실 수 있습니다.`;
-            fetch('/api/send-sms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:driverPhone.replace(/[^0-9]/g,''),text:smsText})}).catch(()=>{});
-          }
-          // 관리자에게 FCM 푸시 (admin_tokens/{dealerId} 조회)
-          if (dealerId) {
-            try {
-              const _tkRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/admin_tokens/${dealerId}`,{headers:{Authorization:'Bearer '+_dsFs}});
-              if (_tkRes.ok) {
-                const _tkData = await _tkRes.json();
-                const _tkF = _tkData.fields || {};
-                const _fcmTk = _tkF.token?.stringValue || _tkF.fcmToken?.stringValue || '';
-                if (_fcmTk) await _sendFCMv1(env, _fcmTk, '✍️ 계약서 서명 완료', driverName+'님이 계약서에 서명했습니다. 보관함에서 확인하세요.', {url:'https://donway.ai.kr/settle'}).catch(()=>{});
-              }
-            } catch(_fe){}
-          }
-          return new Response(JSON.stringify({ok:true,archiveUrl:_archiveResultUrl}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-      }
-
-      // /api/contract/patch-archive → 기존 보관 계약서 HTML tryPrint 패치 (로그인 필요)
-      if (path === '/api/contract/patch-archive' && method === 'POST') {
-        try {
-          const _paUser = await verifyFirebaseToken(request, env, 'https://donway.ai.kr');
-          if (!_paUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _paBody = await request.json();
-          const _paToken = _paBody.signToken;
-          if (!_paToken) return new Response(JSON.stringify({ok:false,error:'signToken 필요'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _paFs = await getAccessToken(env);
-          const _paQR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_paToken}}},limit:1}})});
-          const _paQD = await _paQR.json();
-          const _paDoc = _paQD?.[0]?.document;
-          if (!_paDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _paDocName = _paDoc.name.startsWith('https://') ? _paDoc.name : `https://firestore.googleapis.com/v1/${_paDoc.name}`;
-          const _paF = _paDoc.fields || {};
-          const _paOwnDId = _paF.dealerId?.stringValue || '';
-          const _paArchiveUrl = _paF.archiveUrl?.stringValue || '';
-          const _paCustomUrl = _paF.customContractUrl?.stringValue || '';
-          const _paIsPdf = /\.pdf$/i.test((_paCustomUrl||'').split('?')[0]);
-          if (!_SUPERADMIN_EMAILS.includes(_paUser.email)) {
-            const _paCompR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_paUser.localId}}},limit:1}})});
-            const _paCompD = await _paCompR.json();
-            const _paUserDId = _paCompD?.[0]?.document?.fields?.dealerId?.stringValue || '';
-            if (!_paUserDId || _paUserDId !== _paOwnDId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          }
-          if (!_paArchiveUrl) return new Response(JSON.stringify({ok:false,error:'보관된 파일이 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _paDlRes = await fetch(_paArchiveUrl);
-          if (!_paDlRes.ok) return new Response(JSON.stringify({ok:false,error:'파일 다운로드 실패'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          let _paHtml = await _paDlRes.text();
-          const _paMark = 'data-ccpatch="v2"';
-          if (_paHtml.includes(_paMark)) return new Response(JSON.stringify({ok:true,newUrl:_paArchiveUrl,patched:false,msg:'이미 수정된 파일입니다'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          // 1) tryPrint 함수 + 버튼 삽입
-          const _paScript = `<script ${_paMark}>(function(){if(typeof window.tryPrint!=='function'){window.tryPrint=function(){var ua=navigator.userAgent;if(/KAKAOTALK/i.test(ua)){alert('카카오톡 브라우저에서는 인쇄가 지원되지 않습니다.\\n우측 상단 ··· → 외부 브라우저로 열기를 선택해 주세요.');return;}if(/android/i.test(ua)){alert('안드로이드에서 인쇄/PDF 저장 방법:\\n\\n크롬 브라우저: 우측 상단 ⋮ → 공유 → 인쇄');return;}if(/iPhone|iPad|iPod/i.test(ua)){alert('iOS에서 인쇄/PDF 저장 방법:\\n\\n하단 공유 아이콘 → 프린트\\nPDF 저장: 프린트 화면에서 두 손가락으로 확대하면 PDF로 저장됩니다.');return;}window.print();};}})();<\/script>`;
-          if (!_paHtml.includes('onclick="tryPrint()"') && !_paHtml.includes("onclick='tryPrint()'")) {
-            const _paBtnHtml = `<div style="display:flex;gap:8px;margin-bottom:16px"><button onclick="tryPrint()" style="flex:1;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🖨 인쇄/PDF</button><a href="/contract/download/${_paToken}" style="flex:1;padding:13px;background:#0f766e;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none;display:block;box-sizing:border-box">💾 저장</a></div>`;
-            if (_paHtml.includes('이 계약서는 전자서명법')) { _paHtml = _paHtml.replace('이 계약서는 전자서명법', _paBtnHtml+'이 계약서는 전자서명법'); }
-            else { _paHtml = _paHtml.replace('<body>', '<body>'+_paBtnHtml); }
-          }
-          _paHtml = _paHtml.includes('</body>') ? _paHtml.replace('</body>', _paScript+'</body>') : _paHtml+_paScript;
-          // 2) 사용자 업로드 DOCX 내용 복원 — 누락된 경우 서버에서 직접 파싱하여 주입
-          const _paDetailStart = '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#1e293b"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f">📋';
-          const _paSignStart = '<p style="margin-bottom:4px;margin-top:20px">위 계약 내용을 확인하고 이에 동의하여 본 계약서에 서명한다.</p>';
-          if (_paCustomUrl && !_paIsPdf && _paHtml.includes(_paDetailStart) && _paHtml.includes(_paSignStart)) {
-            try {
-              const _paParas = await _xDocxParagraphs(_paCustomUrl);
-              if (_paParas && _paParas.length > 0) {
-                const _paDocxHtml = '<div style="font-size:12px;line-height:1.8;color:#1e293b">'+_paParas.map(p=>`<p style="margin-bottom:8px">${p.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`).join('')+'</div>';
-                const _paDsIdx = _paHtml.indexOf(_paDetailStart);
-                const _paSnIdx = _paHtml.indexOf(_paSignStart);
-                if (_paDsIdx !== -1 && _paSnIdx > _paDsIdx) {
-                  _paHtml = _paHtml.slice(0, _paDsIdx) + _paDocxHtml + _paHtml.slice(_paSnIdx);
-                }
-              }
-            } catch(_pce) {}
-          }
-          // wisu/subok 타입인데 표준 전문(제1조~) 없으면 Firestore 데이터로 재구성
-          if(_paCustomUrl&&!_paIsPdf&&(_paF.type?.stringValue==='wisu'||_paF.type?.stringValue==='subok')&&!_paHtml.includes('제1조')){
-            try{
-              const _pbAllSigs=[..._paHtml.matchAll(/src="(data:image\/png;base64,[A-Za-z0-9+/=]{50,})"/g)].map(m=>m[1]);
-              const _pbAdSig2=_paF.adminSig?.stringValue||'';
-              const _pbDSig=_pbAllSigs.find(s=>s!==_pbAdSig2)||_pbAllSigs.slice(-1)[0]||'';
-              const _pbType=_paF.type?.stringValue;
-              const _pbCname=_paF.companyName?.stringValue||'';
-              const _pbCbiz=_paF.companyBizNum?.stringValue||'';
-              const _pbCeo=_paF.companyCeo?.stringValue||'';
-              const _pbCaddr=_paF.companyAddr?.stringValue||'';
-              const _pbDrv=_paF.driverName?.stringValue||'';
-              const _pbPhone=_paF.driverPhone?.stringValue||'';
-              const _pbAddr=_paF.driverAddr?.stringValue||'';
-              const _pbIdNum=_paF.driverIdNum?.stringValue||'';
-              const _pbBiz=_paF.driverBizNum?.stringValue||'';
-              const _pbStart=_paF.startDate?.stringValue||'';
-              const _pbEnd=_paF.endDate?.stringValue||'';
-              const _pbMonths=_paF.months?.stringValue||'';
-              const _pbArea=_paF.area?.stringValue||'';
-              const _pbRoute=_paF.route?.stringValue||'';
-              const _pbCamp=_paF.camp?.stringValue||'';
-              const _pbUnit=_paF.unitFee?.stringValue||'0';
-              const _pbColl=_paF.collectFee?.stringValue||'0';
-              const _pbCycle=_paF.payCycle?.stringValue||'매월 25일';
-              const _pbCarnum=_paF.carNum?.stringValue||'';
-              const _pbLicnum=_paF.licNum?.stringValue||'';
-              const _pbSort=_paF.sortFee?.stringValue||'0';
-              const _pbPreD=_paF.preDays?.stringValue||'';
-              const _pbSpecial=_paF.specialNote?.stringValue||'';
-              const _pbSignDate=_paF.signDate?.stringValue||_paF.adminSignedAt?.stringValue||'';
-              const _pbRps=(_paF.routePrices?.arrayValue?.values||[]).map(v=>{const m=v.mapValue?.fields||{};return{route:m.route?.stringValue||'',price:m.price?.stringValue||'0'};});
-              const _pbPAmt=v=>{const n=Number(String(v).replace(/[^0-9.]/g,''))||0;return n>=10000?(n/10000).toFixed(n%10000?1:0)+'만원':n.toLocaleString()+'원';};
-              const _pbFeeRows=_pbRps.map(r=>`<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">배송수수료(${r.route||'기본'})</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_pbPAmt(r.price)}</td></tr>`).join('');
-              const _pbDateStr=_pbSignDate?(new Date(_pbSignDate)).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}):new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
-              const _pbDetailTable=`<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:12px;color:#1e293b"><div style="font-size:13px;font-weight:800;margin-bottom:10px;color:#08101f">📋 계약 주요 내용 (대리점 입력)</div><table style="width:100%;border-collapse:collapse;font-size:11px"><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700;width:28%">위탁자(갑)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbCname}${_pbCbiz?' · '+_pbCbiz:''}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수탁자(을)</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbDrv||''}${_pbPhone?' · '+_pbPhone:''}</td></tr>${(_pbStart||_pbEnd)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">계약기간</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbStart||''}${_pbEnd?' ~ '+_pbEnd:''}${_pbMonths?' ('+_pbMonths+')':''}</td></tr>`:''} ${(_pbArea||_pbRoute)?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">담당구역</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbArea||_pbRoute}</td></tr>`:''} ${_pbCamp?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">캠프</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbCamp}</td></tr>`:''} <tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">수수료</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbRps.length?_pbRps.map(r=>r.route+': 1건당 '+_pbPAmt(r.price)).join(' / '):'배송 1건당 '+_pbPAmt(_pbUnit)} / 집화 1건당 ${_pbPAmt(_pbColl)}</td></tr><tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">지급일</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbCycle}</td></tr>${_pbCarnum?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">차량번호</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbCarnum}</td></tr>`:''} ${_pbSpecial?`<tr><td style="border:1px solid #e2e8f0;padding:5px 8px;background:#f8fafc;font-weight:700">특약사항</td><td style="border:1px solid #e2e8f0;padding:5px 8px">${_pbSpecial.replace(/\n/g,'<br>')}</td></tr>`:''}</table></div>`;
-              let _pbNewBody='';
-              if(_pbType==='wisu'){_pbNewBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:6px">택배 운송 위·수탁 표준계약서</h2><p style="text-align:center;font-size:11px;color:#64748b;margin-bottom:10px">「생활물류서비스산업발전법」 제26조 및 「화물자동차 운수사업법」 제40조에 따른 표준계약서</p><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_pbCname||'위탁자'}</b> (이하 "위탁자"라 한다)와 택배종사자인 <b>${_pbDrv||'　　　　'}</b> (이하 "수탁자"라 한다)은 택배 운송 업무에 관하여 다음과 같이 위‧수탁계약을 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(목적)</b> 이 계약은 "위탁자"가 "수탁자"에게 위탁하는 택배 운송 업무에 관하여 "위탁자"와 "수탁자"간의 권리와 의무를 정하는 것을 목적으로 한다.</p><p style="margin-bottom:10px"><b>제2조(기본원칙)</b> ① "위탁자"와 "수탁자"는 이 계약에 따라 택배 운송 업무를 수행함에 있어 상호 대등한 입장에서 신의성실의 원칙에 따라 자신의 권리를 행사하며 의무를 이행한다.<br>② "위탁자"와 "수탁자"는 이 계약의 이행과 관련하여 「생활물류서비스산업발전법」, 「독점규제 및 공정거래에 관한 법률」등 관련 법령의 규정을 준수한다.</p><p style="margin-bottom:10px"><b>제3조(용어의 정의)</b> ① "택배"라 함은 고객의 요청에 따라 운송을 위탁받은 화물을 집화, 분류, 배송 등의 과정을 거쳐 수화인의 주택, 사무실 또는 기타의 장소에서 인도하는 것을 말한다.<br>② "집화"라 함은 고객으로부터 수령한 화물을 "위탁자"가 지정한 장소까지 운송하여 하차, 적재하는 작업을 말한다.<br>③ "분류"라 함은 서브터미널 등 택배화물의 분류시설‧장소에서 다수의 화물을 담당구역별로 구분하는 작업을 말한다.<br>④ "배송"이라 함은 분류된 화물을 택배 운송차량에 상차하여 차량운행을 통해 운송장에 기재된 장소에서 고객에게 인도하는 것을 말한다.<br>⑤ 택배의 집화, 배송에 수반되는 전산입력 및 택배운임 수취, 고객응대, 스캔 등 부수적인 업무는 집화, 배송업무로 본다.</p><p style="margin-bottom:10px"><b>제4조(계약의 주요내용)</b> ① "위탁자"와 "수탁자" 간 계약의 주요내용은 다음과 같다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700;width:20%">계약기간</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_pbStart||'　　년　　월　　일'}부터 ${_pbEnd||'　　년　　월　　일'}까지${_pbMonths?' ('+_pbMonths+')':''}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">담당구역</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_pbArea||_pbRoute||'관할전구역'}</td></tr>${_pbCamp?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700">캠프명</td><td style="border:1px solid #999;padding:5px 7px" colspan="3">${_pbCamp}</td></tr>`:''}<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="${1+Math.max(_pbRps.length,1)+1}">수수료</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa;width:20%">집화수수료</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">1건당 ${_pbPAmt(_pbColl)}</td></tr>${_pbFeeRows}<tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">지급일</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">${_pbCycle}</td></tr>${_pbCarnum?`<tr><td style="border:1px solid #999;padding:5px 7px;background:#f5f5f5;font-weight:700" rowspan="2">기타</td><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">차량내역</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">자동차 등록번호: ${_pbCarnum}</td></tr><tr><td style="border:1px solid #999;padding:5px 7px;background:#fafafa">종사자격</td><td style="border:1px solid #999;padding:5px 7px" colspan="2">종사자격증 번호: ${_pbLicnum||'　　　　　'}</td></tr>`:''}</table>② "수탁자"는 분류작업을 ${(_pbSort&&Number(_pbSort)>0)?'수행':'미수행'}한다.${(_pbSort&&Number(_pbSort)>0)?`<br>③ 분류수수료는 시간당 ${_pbPAmt(_pbSort)}로 한다.`:''}</p><p style="margin-bottom:10px"><b>제5조(수수료의 지급)</b> ① "수탁자"는 택배업무 수행 내역을 매월 26일 ~ 익월 25일을 기준으로 마감하고, 익월 20일까지 "위탁자"에게 수수료를 청구하여야 한다. 다만, 청구일이 휴무일인 경우에는 휴무일 익일에 수수료를 청구한다.<br>② "위탁자"는 "수탁자"가 청구한 날로부터 25일 이내에 위탁수수료를 현금으로 지급하며, 지급일이 휴무일인 경우에는 휴무일 익일에 지급한다.<br>③ "위탁자"는 "수탁자"에게 수수료 지급내역(지급명세서, 전자문서 등)을 교부하고, "수탁자"가 지급내역을 상시 열람할 수 있도록 하여야 한다.<br>④ "수탁자"가 고객으로부터 수취한 선착불 금액이 있는 경우 수취한 날로부터 ${_pbPreD||'　　　'}일 이내에 "위탁자"에게 입금하여야 한다.<br>⑤ "수탁자"는 "위탁자"의 수수료 정산 및 공제 내역에 대하여 서면으로 이의를 제기할 수 있으며, "위탁자"는 이의제기 받은 날로부터 14일 이내에 그에 대한 확인 결과를 서면으로 통지하여야 한다.</p><p style="margin-bottom:10px"><b>제6조(택배 배송업무의 수행)</b> ① 계약 당사자는 고객의 화물을 안전하게 배송하는 등 서비스 품질 제고를 위해 노력해야 한다.<br>② "수탁자"는 「화물자동차 운수사업법」에 따라 허가받은 화물자동차를 이용하여 운송하여야 하며, 위탁업무 수행 과정에서「생활물류서비스산업발전법」, 「도로교통법」, 「자동차관리법」 등 관련 법령을 준수하여야 한다.<br>③ "수탁자"는 원활한 택배서비스 제공을 위해 택배사로부터 위탁받은 "위탁자"의 규정 및 지침을 준수한다.<br>④ "수탁자"는 정부기관 및 택배사의 요청에 따른 "위탁자"의 실태조사, 자료요청 등에 적극 협조한다.<br>⑤ "수탁자"는 이 계약의 이행에 필요한 택배용품, 전산장비, 차량 등을 구비하여야 하며, "위탁자"는 필요시 계약기간동안 이를 지원 또는 대여할 수 있다.<br>⑥ "수탁자"는 고객과 관련된 정보를 본 계약을 이행하는 것 이외의 용도나 목적으로 사용하거나, 제3자에게 제공‧공개하여서는 아니 된다.<br>⑦ "수탁자"는 본 계약에 관한 권리의 일부 또는 전부를 "위탁자"의 사전 서면 동의 없이 제3자에게 양도할 수 없다.<br>⑧ "수탁자"가 동승인력을 사용할 경우에, "위탁자"는 그에 대한 책임을 지지 않는다.<br>⑨ "수탁자"가 "위탁자"에게 사전에 통지를 하지 않았거나, "수탁자"가 정당하지 않은 사유로 수탁업무를 해태하여 택배서비스 이행에 차질이 발생한 경우, "위탁자"는 제3자에게 수탁업무를 대신하도록 할 수 있으며, 이 경우 해당 수수료는 업무를 수행한 자에게 지급한다.</p><p style="margin-bottom:10px"><b>제7조(위탁자의 준수사항)</b> "위탁자"는 다음 각 호의 어느 하나에 해당하는 행위로서 공정한 거래를 저해할 우려가 있는 행위를 하거나 제3자에게 이를 행하도록 하지 않는다.<br>1. 정당한 사유 없이 수수료의 전부 또는 일부의 지급을 지연하거나 거부하는 행위<br>2. 계약 기간 중 사전 합의 없이 담당 구역, 수수료 지급 기준 등 거래조건을 "수탁자"에게 불리하게 변경하는 행위<br>3. "수탁자"가 부담하여야 할 정당한 사유가 없음에도 불구하고 "위탁자"가 수취하기로 사전에 약정한 수수료, 관리비 등과 별도의 비용을 징수하는 행위<br>4. 부당하게 계약 내용의 범위를 벗어나는 업무를 수행하도록 강요하는 행위("위탁자"와 "수탁자"의 합의하에 타 업무를 수행할 경우 타 업무에 수반되는 비용을 일방적으로 "수탁자"에게 부담시키지 않는다.)<br>5. 정당한 사유 없이 "수탁자"의 업무 수행에 필요한 시스템 접근을 차단하는 행위<br>6. 계약 종료 시 정당한 사유 없이 수수료 정산을 거부하거나 지연하는 행위<br>7. 계약 종료 시 "수탁자"에게 후임자를 구할 책임을 부담시키는 행위<br>8. 계약 종료 이후 정당한 사유 없이 동종 업종의 타 사업자와의 계약을 방해하는 행위<br>9. 천재지변, 전쟁, 내란 기타 불가항력적인 사유 시에 배송지연 책임을 전가시키는 행위</p><p style="margin-bottom:10px"><b>제8조(안전보건 조치 등)</b> ① "위탁자"는 「산업안전보건법」 제77조에 따른 안전‧보건조치와 교육을 실시하여야 하며, "수탁자"는 이에 협조하여야 한다.<br>② "수탁자"는 「고용보험법」, 「산업재해보상보험법」 및 「고용보험 및 산업재해보상보험의 보험료징수 등에 관한 법률」에 따라 고용보험과 산업재해보상보험에 가입하여야 하며, "위탁자"는 "수탁자"의 수수료에서 원천공제하여 보험료를 납부할 수 있다.<br>③ "위탁자"는 "수탁자"의 일 평균 작업시간이 일 8시간을 지속적으로 초과할 경우 "위탁자"는 연 1회 이상 심혈관질환 등 건강검진 및 추가 프로그램을 실시하고, 그 결과에 따라 적정한 휴식시간 보장 등 별도의 건강관리 조치를 취하여야 한다.<br>④ "위탁자"는 "수탁자"가 작업시간 중 건강이상을 호소할 경우 긴급진료를 받을 수 있도록 하고, "수탁자"는 그 진료내역서를 "위탁자"와 공유한다.</p><p style="margin-bottom:10px"><b>제9조(작업시간 조정 등)</b> ① 계약 당사자는 "수탁자"의 최대 작업시간이 일 12시간, 주 60시간을 초과하지 않도록 노력한다.<br>② 제1항에도 불구하고, 설 · 추석 등의 경우 설 · 추석 등이 속한 2주 이내의 기간에는 불가피한 예외를 인정할 수 있다. 단, 그러한 경우에도 22시를 초과하여 작업하여서는 아니된다.<br>③ "수탁자"의 작업시간이 4주 동안 1주 평균 64시간을 초과할 경우, 계약 당사자는 물량 · 배송구역 조정 협의를 통해 최대 작업시간 내로 감축할 수 있도록 노력하여야 한다. 단, 물량 · 배송구역 조정에 대한 협의가 되지 않을 경우에는 영업점을 대표하는 자, 택배기사를 대표하는 자가 추천하는 자를 포함하여 국토교통부가 구성한 조정위원회에서 조정할 수 있다.<br>④ 제3항에 따라 물량 · 배송구역조정을 할 경우에는 서면으로 계약을 변경하여야 한다.</p><p style="margin-bottom:10px"><b>제10조(손해배상)</b> ① 택배화물의 훼손, 멸실, 분실, 운송지연 등으로 고객에게 손해가 발생한 경우에 "위탁자"와 "수탁자"는 귀책사유에 따라 그 손해배상 책임을 부담하며, "위탁자"가 "수탁자"를 대신해 우선 배상하는 경우에는 "수탁자"에게 구상권을 행사할 수 있다.<br>② "위탁자"는 손해배상에 대한 기준(금액, 비율 등)을 일방적으로 정하여 "수탁자"가 따르도록 거래조건을 설정하지 않으며, "수탁자"의 고의 또는 과실에 의하지 않은 손해배상책임은 "수탁자"에게만 일방적으로 부담시키지 않는다.</p><p style="margin-bottom:10px"><b>제11조(계약의 갱신 및 해지)</b> ① “위탁자”와 “수탁자”는 상호 합의하는 경우에는 계약을 해지할 수 있다.<br>② “위탁자”는 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”가 계약의 갱신을 요구하는 경우로서 총 계약기간(“위탁자”와 “수탁자”가 최초 위탁계약을 체결한 날부터 이 계약의 종료일까지의 기간을 말한다)이 6년 이하인 때에는「생활물류서비스산업발전법 시행령」제5조(택배서비스 운송 위탁계약의 갱신거절사유 등)에서 규정한 경우를 제외하고는 이를 거절할 수 없다.<br>③ “위탁자”는 제2항에 따른 갱신 요구를 거절하는 경우에는 그 요구를 받은 날부터 15일 이내에 “수탁자”에게 거절의 사유를 적어 서면으로 통지하여야 한다.<br>④ “위탁자”가 제3항에 따른 거절의 통지를 하지 않거나, 계약기간 만료 전 150일부터 60일까지 사이에 “수탁자”에게 계약변경, 계약갱신 등에 대해 서면으로 통지하지 않는 경우에는 이 계약과 같은 조건으로 1년간 다시 계약을 체결한 것으로 본다.<br>⑤ “위탁자”는 계약을 해지하려는 경우에는 “수탁자”에게 60일 이상의 유예기간을 두고 계약의 위반 사실을 구체적으로 밝히고 이를 시정하지 아니하면 그 계약을 해지한다는 사실을 서면으로 2회 이상 통지하여야 한다.<br>⑥ 제5항에도 불구하고 「생활물류서비스산업발전법 시행령」제6조(택배서비스 운송 위탁계약 해지 통지의 생략사유)에서 규정한 경우에 해당 시 즉시 계약을 해지할 수 있다.<br>⑦ “수탁자”의 사정으로 계약을 해지할 경우, “수탁자”는 계약해지 60일 전에 “위탁자”에게 통지하고 업무가 원활하게 이전되도록 협조한다.<b>제12조(개인정보 수집)</b> ① "위탁자"는 계약체결을 위해 필요한 "수탁자"의 개인정보를 "수탁자"의 동의(별지 제1호 서식)를 받아 수집‧이용할 수 있다.<br>② "위탁자"는 「화물자동차 운수사업법」제9조의 2에 따른 범죄경력 조회를 위해 국토교통부장관 또는 시‧도지사가 "수탁자"의 개인정보를 요청할 경우 요청자에게 이를 제공할 수 있다.<br>③ "위탁자"는 제1항 및 제2항의 목적 외 다른 용도로 "수탁자"의 개인정보를 사용할 수 없으며, 제3자에게 제공하여서는 아니 된다.</p><p style="margin-bottom:10px"><b>제13조(분쟁 해결)</b> ① "위탁자"와 "수탁자"는 이 계약에 명시되지 아니한 사항 또는 계약의 해석에 관한 사항에 다툼이 있는 경우에는 쌍방의 합의에 의해 해결한다.<br>② 제1항에 따라 해결되지 않는 경우에는 민사소송법에 따라 법원에서의 소송을 통해 분쟁을 해결한다.</p><p style="margin-bottom:10px"><b>제14조(소의 관할)</b> 본 계약에 관한 소송은 민사소송법에 따르거나, 양 당사자의 합의에 의해 정한 곳을 관할 법원으로 한다.</p><p style="margin-bottom:10px"><b>제15조(부속합의)</b> ① "위탁자"와 "수탁자"는 이 계약의 내용을 보충하거나, 이 계약에서 정하지 아니한 사항을 규정하기 위하여 부속 합의서를 작성할 수 있다.<br>② 전항의 부속합의는 이 계약의 내용에 배치 또는 위반되지 않는 범위 내에서 이 계약의 내용으로 인정된다.</p><p style="margin-bottom:10px"><b>제16조(계약의 효력)</b> ① "위탁자"와 "수탁자"는 이 계약을 체결하기 전에 충분한 협의를 거쳤고, 계약 내용을 모두 숙지하였으며, 이 계약을 증명하기 위하여 "위탁자"와 "수탁자"는 쌍방이 기명날인한 계약서 원본 2부를 작성하여 각 1부씩 보관한다.<br>② 이 계약서의 내용은 "위탁자"와 "수탁자"사이의 서면 합의에 의해서만 변경되거나 수정될 수 있으며, 그 변경 및 수정은 "위탁자"와 "수탁자"가 해당 서면에 서명함과 동시에 그 효력을 발생한다.</p>${_pbSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_pbSpecial.replace(/\n/g,'<br>')}</p>`:''}<p style="margin-bottom:4px;margin-top:20px">위 계약 내용을 확인하고 이에 동의하여 본 계약서에 서명한다.</p><p style="margin-bottom:16px">${_pbDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_pbCaddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_pbCname}<br>사업자등록번호 : ${_pbCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_pbCeo}${_pbAdSig2?`<br><img src="${_pbAdSig2}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_pbAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_pbDrv}<br>주민등록번호 : ${_pbIdNum||'　　　　　　'}<br>사업자등록번호 : ${_pbBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_pbPhone||'　　　　　　　'}${_pbDSig?`<br><img src="${_pbDSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(서명)</td></tr></table></div>`;}
-              else{_pbNewBody=`<h2 style="text-align:center;font-size:15px;font-weight:900;margin-bottom:10px">계약해지에 관한 부속합의서</h2><p style="font-size:12px;margin-bottom:12px">쿠팡로지스틱스 대리점 <b>${_pbCname||'위탁자'}</b>(이하 "위탁자"라 한다)와 택배종사자인 <b>${_pbDrv||'　　　　'}</b>(이하 "수탁자"라 한다)은 위·수탁계약 해지에 관하여 다음과 같이 부속합의서를 체결한다.</p><div style="border-top:2px solid #111;padding-top:12px"><p style="margin-bottom:10px"><b>제1조(해지의 합의)</b> "위탁자"와 "수탁자"는 양 당사자의 합의에 의하여 아래와 같이 위·수탁 계약을 해지하기로 한다.</p><p style="margin-bottom:10px"><b>제2조(해지 사유 및 조건)</b> ① 양 당사자는 다음 각 호의 사항에 합의하였음을 확인한다.<br>1. 계약해지일 : ${_pbEnd||'　　년　　월　　일'}<br>2. 정산 기준일 : 계약해지일 기준 최종 정산<br>3. 미지급 수수료는 정산 기준일로부터 14일 이내에 지급<br>② "수탁자"는 계약 해지일까지 담당 구역의 업무를 성실히 수행하며, 후임자 인수인계에 협조한다.<br>③ "위탁자"는 계약 해지 이후 "수탁자"의 업무 수행 관련 개인정보를 파기한다.</p><p style="margin-bottom:10px"><b>제3조(업무 수행 기준)</b> 계약 해지 전까지의 업무 수행 기준은 다음 표와 같다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">구분</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">기준</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">비고</th></tr><tr><td style="border:1px solid #999;padding:5px 7px">배송완료율</td><td style="border:1px solid #999;padding:5px 7px">95% 이상</td><td style="border:1px solid #999;padding:5px 7px">일일 기준</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">고객 클레임</td><td style="border:1px solid #999;padding:5px 7px">월 3건 이하</td><td style="border:1px solid #999;padding:5px 7px">파손·분실 합산</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">업무 인수인계</td><td style="border:1px solid #999;padding:5px 7px">해지일 7일 전까지</td><td style="border:1px solid #999;padding:5px 7px">구역·고객 정보</td></tr></table></p><p style="margin-bottom:10px"><b>제4조(서비스 수준)</b> 해지 전까지 다음의 서비스 수준을 유지하여야 한다.<br><table style="width:100%;border-collapse:collapse;font-size:11px;margin:6px 0"><tr><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">항목</th><th style="border:1px solid #999;padding:5px 7px;background:#f5f5f5">수준</th></tr><tr><td style="border:1px solid #999;padding:5px 7px">배송 시간 준수</td><td style="border:1px solid #999;padding:5px 7px">09:00 ~ 20:00 이내 완료</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">물품 안전 관리</td><td style="border:1px solid #999;padding:5px 7px">파손·분실 방지 성실 이행</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">고객 응대</td><td style="border:1px solid #999;padding:5px 7px">친절·신속 응대 유지</td></tr><tr><td style="border:1px solid #999;padding:5px 7px">시스템 보고</td><td style="border:1px solid #999;padding:5px 7px">배송 완료 즉시 등록</td></tr></table></p><p style="margin-bottom:10px"><b>제5조(손해배상)</b> 계약 해지 이후에도 해지 전 발생한 화물 훼손·분실·지연 등에 대한 손해배상 책임은 귀책사유에 따라 계속 부담한다.</p><p style="margin-bottom:10px"><b>제6조(비밀유지)</b> "수탁자"는 계약 해지 이후에도 업무 수행 중 취득한 "위탁자" 및 고객의 정보를 제3자에게 제공하거나 외부에 공개하지 아니한다.</p>${_pbSpecial?`<p style="margin-bottom:10px"><b>특약사항</b><br>${_pbSpecial.replace(/\n/g,'<br>')}</p>`:''}<p style="margin-bottom:4px">위 합의 내용을 확인하고 이에 동의하여 본 부속합의서에 서명한다.</p><p style="margin-bottom:16px">${_pbDateStr}</p><table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:16px"><tr><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>위탁자(갑)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_pbCaddr}<br>상&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;호 : ${_pbCname}<br>사업자등록번호 : ${_pbCbiz}<br>대&nbsp;&nbsp;&nbsp;표&nbsp;&nbsp;&nbsp;자 : ${_pbCeo}${_pbAdSig2?`<br><img src="${_pbAdSig2}" style="max-height:90px;max-width:100px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(인)</td><td style="border:1px solid #999;padding:10px 14px;width:50%;vertical-align:top"><b>수탁자(을)</b><br><br>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ${_pbAddr||'　　　　　　　　　　　'}<br>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ${_pbDrv}<br>주민등록번호 : ${_pbIdNum||'　　　　　　'}<br>사업자등록번호 : ${_pbBiz||'　　　　　　　'}<br>연&nbsp;&nbsp;락&nbsp;&nbsp;처 : ${_pbPhone||'　　　　　　　'}${_pbDSig?`<br><img src="${_pbDSig}" style="max-height:110px;max-width:200px;display:block;margin:4px 0;mix-blend-mode:multiply">`:'<br><br>'}<br>(서명)</td></tr></table></div>`;}
-              // 기존 HTML에서 _paDetailStart 이후~다음 <hr> 구간을 새 전문으로 교체
-              const _pbBodyStart=_paHtml.indexOf(_paDetailStart);
-              const _pbHrAfter=_paHtml.indexOf('<hr style="margin:20px 0">',_pbBodyStart+1);
-              if(_pbBodyStart!==-1&&_pbHrAfter!==-1){
-                _paHtml=_paHtml.slice(0,_pbBodyStart)+_pbDetailTable+_pbNewBody+_paHtml.slice(_pbHrAfter);
-              }
-            }catch(_pb){}
-          }
-          const _paStoragePath = `contracts/${_paOwnDId}/${_paToken}.html`;
-          const _paUpRes = await fetch(`https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o?name=${encodeURIComponent(_paStoragePath)}&uploadType=media`,{method:'POST',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'text/html; charset=utf-8'},body:_paHtml});
-          if (!_paUpRes.ok) return new Response(JSON.stringify({ok:false,error:'파일 재업로드 실패'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _paUpD = await _paUpRes.json();
-          const _paNewUrl = `https://firebasestorage.googleapis.com/v0/b/mbti-logistics.appspot.com/o/${encodeURIComponent(_paStoragePath)}?alt=media&token=${_paUpD.downloadTokens||''}`;
-          await fetch(`${_paDocName}?updateMask.fieldPaths=archiveUrl`,{method:'PATCH',headers:{Authorization:'Bearer '+_paFs,'Content-Type':'application/json'},body:JSON.stringify({fields:{archiveUrl:{stringValue:_paNewUrl}}})});
-          return new Response(JSON.stringify({ok:true,newUrl:_paNewUrl,patched:true}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-      }
-
-      // /api/contract-extract → 간편업로드 DOCX에서 라우트·단가·날짜·담당구역 자동 추출 → Firestore 업데이트
-      if (path === '/api/contract-extract' && method === 'POST') {
-        try {
-          const _ceUser = await verifyFirebaseToken(request, env, 'https://donway.ai.kr');
-          if (!_ceUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const {signToken:_ceToken} = await request.json();
-          if (!_ceToken) return new Response(JSON.stringify({ok:false,error:'signToken 필요'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _ceFs = await getAccessToken(env);
-          const _ceQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_ceToken}}},limit:1}});
-          const _ceQR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_ceFs,'Content-Type':'application/json'},body:_ceQ});
-          const _ceQD = await _ceQR.json();
-          const _ceDoc = _ceQD?.[0]?.document;
-          if (!_ceDoc) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _ceDN = _ceDoc.name.startsWith('https://') ? _ceDoc.name : `https://firestore.googleapis.com/v1/${_ceDoc.name}`;
-          const _ceF = _ceDoc.fields || {};
-          const _ceDId = _ceF.dealerId?.stringValue || '';
-          if (_ceDId && _ceUser.uid !== _ceDId) {
-            const _ceMyQ = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_ceUser.uid}}},limit:1}});
-            const _ceMyR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_ceFs,'Content-Type':'application/json'},body:_ceMyQ});
-            const _ceMD = await _ceMyR.json();
-            const _ceMyDId = _ceMD?.[0]?.document?.fields?.dealerId?.stringValue || '';
-            if (_ceMyDId !== _ceDId) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          }
-          const _ceUrl = _ceF.customContractUrl?.stringValue || '';
-          if (!_ceUrl) return new Response(JSON.stringify({ok:false,error:'원본 파일 없음'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          if (/\.pdf$/i.test(_ceUrl.split('?')[0])) return new Response(JSON.stringify({ok:false,error:'PDF 자동 추출 미지원'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _ceParas = await _xDocxParagraphs(_ceUrl);
-          if (!_ceParas || !_ceParas.length) return new Response(JSON.stringify({ok:false,error:'DOCX 파싱 실패'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _ceExt = {};
-          const _ceRps = [];
-          let _ceLastRoute = '';
-          for (let _ci = 0; _ci < _ceParas.length; _ci++) {
-            const _cp = _ceParas[_ci];
-            if (/담당\s*구역/.test(_cp) && !_ceExt.area) { const _cm = _cp.match(/담당\s*구역[:\s：　]*([\S].+)/); if (_cm && _cm[1].trim()) _ceExt.area = _cm[1].trim(); }
-            if (!_ceExt.startDate) { const _cs = _cp.match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일\s*부터/); if (_cs) _ceExt.startDate = `${_cs[1]}-${String(_cs[2]).padStart(2,'0')}-${String(_cs[3]).padStart(2,'0')}`; }
-            if (!_ceExt.endDate) { const _ce2 = _cp.match(/(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일\s*까지/); if (_ce2) _ceExt.endDate = `${_ce2[1]}-${String(_ce2[2]).padStart(2,'0')}-${String(_ce2[3]).padStart(2,'0')}`; }
-            const _cfm = _cp.match(/배송수수료\s*[(\（]([^)\）]+)[)\）]/);
-            const _cam = _cp.match(/1건당\s*([\d,]+)\s*원/)||_cp.match(/^([\d,]{3,})\s*원$/);
-            if (_cfm) { const _cr=_cfm[1].trim(); if(_cam){const _pv=parseInt(_cam[1].replace(/,/g,''));if(_pv>0)_ceRps.push({route:_cr,price:String(_pv)});}else _ceLastRoute=_cr; }
-            else if (_ceLastRoute && _cam) { const _pv=parseInt(_cam[1].replace(/,/g,''));if(_pv>0)_ceRps.push({route:_ceLastRoute,price:String(_pv)});_ceLastRoute=''; }
-            if (/집화수수료/.test(_cp) && _cam && !_ceExt.collectPrice) { const _pv=parseInt(_cam[1].replace(/,/g,''));if(_pv>0)_ceExt.collectPrice=String(_pv); }
-          }
-          if (_ceRps.length) _ceExt.routePricesJson = JSON.stringify(_ceRps);
-          const _ceKeys = Object.keys(_ceExt);
-          if (!_ceKeys.length) return new Response(JSON.stringify({ok:true,extracted:{},msg:'추출 데이터 없음'}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          const _ceMask = _ceKeys.map(k=>`updateMask.fieldPaths=${k}`).join('&');
-          const _ceFields = {}; _ceKeys.forEach(k=>{_ceFields[k]={stringValue:_ceExt[k]};});
-          await fetch(`${_ceDN}?${_ceMask}`,{method:'PATCH',headers:{Authorization:'Bearer '+_ceFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_ceFields})});
-          return new Response(JSON.stringify({ok:true,extracted:_ceExt}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        }
-      }
-
-      // /s/{token} → 배달대행 정산명세서 (알림톡 공유 링크)
-      if (path.startsWith('/s/') && path.length > 3) {
-        const _sToken = path.slice(3).split('/')[0];
-        try {
-          const _sFsToken = await getAccessToken(env);
-          const _sDocRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/statement_share/${_sToken}`, { headers: { Authorization: 'Bearer ' + _sFsToken } });
-          if (!_sDocRes.ok) return new Response('<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>오류</title></head><body style="font-family:sans-serif;text-align:center;padding:60px 20px"><h2 style="color:#64748b">명세서를 찾을 수 없습니다.</h2><p style="color:#94a3b8;margin-top:8px">링크가 만료되었거나 잘못된 접근입니다.</p></body></html>', { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-          const _sFs = await _sDocRes.json();
-          const _sf = _sFs.fields || {};
-          const _sg = k => _sf[k]?.stringValue || '';
-          const _sn = k => parseFloat(_sf[k]?.integerValue || _sf[k]?.doubleValue || 0);
-          const _sName    = _sg('name') || _sg('userId');
-          const _sPeriod  = _sg('month');
-          const _sCoName  = _sg('companyName') || 'DONWAY';
-          const _sDealerId = _sg('dealerId');
-          // 기사 은행 정보 조회 (drivers 컬렉션에서 name 매칭)
-          let _sDrvBank = ''; let _sDrvBankNum = ''; let _sDrvPhone = '';
-          if (_sDealerId && _sName) {
-            try {
-              const _drvQ = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:_sDealerId}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:_sName}}}]}},limit:1}});
-              const _drvRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`, {method:'POST',headers:{Authorization:'Bearer '+_sFsToken,'Content-Type':'application/json'},body:_drvQ});
-              const _drvData = await _drvRes.json();
-              const _drvDoc = _drvData[0]?.document?.fields || {};
-              _sDrvBank    = _drvDoc.bankName?.stringValue || '';
-              _sDrvBankNum = _drvDoc.bankAccount?.stringValue || '';
-              _sDrvPhone   = _drvDoc.phone?.stringValue || '';
-            } catch(_de){}
-          }
-          const _sCnt     = _sn('totalCount');
-          const _sPfSum   = _sn('pfSum');
-          const _sInj     = _sn('injected');
-          const _sExt     = _sn('extracted');
-          const _sPreTax  = _sn('preTax');
-          const _sTax     = _sn('tax');
-          const _sSanjae  = _sn('sanjae');
-          const _sGoyal   = _sn('goyal');
-          const _sNet     = _sn('netPay');
-          const _sTP      = _sn('targetPrice');
-          const _sDeduct  = _sTax + _sSanjae + _sGoyal;
-          // 날짜별 상세 내역
-          const _sDateArr = _sf['dateBreakdown']?.arrayValue?.values || [];
-          let _sDateRows = ''; let _sDtCnt = 0; let _sDtPf = 0; let _sDtFee = 0;
-          _sDateArr.forEach(item => {
-            const fi = item.mapValue?.fields || {};
-            const dt  = fi.date?.stringValue || '';
-            const cnt = parseFloat(fi.cnt?.integerValue || fi.cnt?.doubleValue || 0);
-            const pf  = parseFloat(fi.pfAmt?.integerValue || fi.pfAmt?.doubleValue || 0);
-            const fee = parseFloat(fi.fee?.integerValue || fi.fee?.doubleValue || 0) || pf;
-            _sDtCnt += cnt; _sDtPf += pf; _sDtFee += fee;
-            _sDateRows += `<tr><td class="dt" style="color:#185FA5;font-weight:600">${dt}</td><td class="num">${cnt}건</td><td class="num" style="color:#1e3a5f;font-weight:600">₩${fee.toLocaleString()}</td><td class="num" style="color:#475569">₩${pf.toLocaleString()}</td></tr>`;
-          });
-          // 매장별 실적
-          const _sStoreArr = _sf['storeBreakdown']?.arrayValue?.values || [];
-          let _sStoreRows = '';
-          _sStoreArr.forEach(item => {
-            const fi = item.mapValue?.fields || {};
-            const sn  = fi.store?.stringValue || '';
-            const cnt = parseFloat(fi.cnt?.integerValue || fi.cnt?.doubleValue || 0);
-            const pf  = parseFloat(fi.pfAmt?.integerValue || fi.pfAmt?.doubleValue || 0);
-            const priceArr = fi.prices?.arrayValue?.values || [];
-            let priceLine = '';
-            if (priceArr.length) {
-              priceLine = priceArr.map(p => {
-                const pf2 = p.mapValue?.fields || {};
-                const price = parseFloat(pf2.price?.integerValue || pf2.price?.doubleValue || 0);
-                const c    = parseFloat(pf2.cnt?.integerValue   || pf2.cnt?.doubleValue   || 0);
-                return `₩${price.toLocaleString()}×${c}건`;
-              }).join(', ');
-            }
-            _sStoreRows += `<tr>
-              <td style="padding:8px 16px">
-                <div style="font-weight:700;color:#1e3a5f;font-size:13px">${sn}</div>
-                ${priceLine ? `<div style="font-size:11px;color:#64748b;margin-top:2px">${priceLine}</div>` : ''}
-              </td>
-              <td class="num" style="vertical-align:middle">${cnt}건</td>
-              <td class="num" style="color:#1e3a5f;font-weight:700;vertical-align:middle">₩${pf.toLocaleString()}</td>
-            </tr>`;
-          });
-          const _sHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>배달대행 정산명세서 — ${_sName}</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh;-webkit-font-smoothing:antialiased}
-.page{max-width:480px;margin:0 auto;padding:0 0 40px}
-/* 헤더 */
-.hd{background:#fff;padding:14px 16px 10px;border-bottom:1px solid #e2e8f0}
-.hd-label{font-size:10px;font-weight:700;color:#2563eb;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
-.hd-title{font-size:20px;font-weight:800;color:#1e293b;letter-spacing:-.5px}
-.hd-sub{font-size:13px;color:#64748b;margin-top:2px}
-/* 요약 3칸 */
-.summary{display:grid;grid-template-columns:1fr 1fr 1fr;background:#fff;border-bottom:1px solid #e2e8f0}
-.sum-cell{padding:14px 12px;text-align:center}
-.sum-cell+.sum-cell{border-left:1px solid #f1f5f9}
-.sum-label{font-size:10px;color:#94a3b8;margin-bottom:4px;white-space:nowrap}
-.sum-val{font-size:15px;font-weight:800;letter-spacing:-.5px}
-.sum-val.blue{color:#2563eb}
-.sum-val.red{color:#dc2626}
-.sum-val.green{color:#16a34a}
-/* 기사 정보 행 */
-.info-row{display:grid;grid-template-columns:1fr 1fr;gap:0;background:#fff;border-bottom:1px solid #e2e8f0;padding:12px 16px;gap:12px}
-.info-cell label{font-size:10px;color:#94a3b8;display:block;margin-bottom:4px}
-.info-cell .val{font-size:14px;font-weight:700;color:#1e293b;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;background:#f8fafc}
-/* 섹션 */
-.sec{background:#fff;margin-top:8px}
-.sec-hd{display:flex;align-items:center;gap:6px;padding:12px 16px 8px;border-bottom:1px solid #f1f5f9}
-.sec-hd .ico{font-size:14px}
-.sec-hd .ttl{font-size:12px;font-weight:800;color:#374151}
-/* 항목 행 */
-.item-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid #f8fafc;font-size:13px}
-.item-row .lbl{color:#475569}
-.item-row .val{font-weight:700}
-.item-row .val.plus{color:#16a34a}
-.item-row .val.minus{color:#dc2626}
-.item-row .val.base{color:#1e3a5f}
-.item-row.sub .lbl{padding-left:14px;font-size:11px;color:#94a3b8}
-.item-row.sub .val{font-size:11px;color:#94a3b8}
-.divider{height:1px;background:#e2e8f0;margin:0 16px}
-/* 실지급 박스 */
-.net-box{margin:12px 16px;background:linear-gradient(135deg,#1e3a5f,#1e4080);border-radius:12px;padding:18px;color:#fff;display:flex;justify-content:space-between;align-items:center}
-.net-box .lbl{font-size:12px;opacity:.75}
-.net-box .amt{font-size:26px;font-weight:800;letter-spacing:-1px}
-/* 테이블 */
-table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{padding:8px 16px;border-bottom:1px solid #f1f5f9;text-align:left}
-th{background:#f8fafc;font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:.4px}
-td.num{text-align:right}
-tfoot td{font-weight:800;background:#eff6ff;color:#1e3a5f;border-top:2px solid #dbeafe;border-bottom:none}
-/* 영업점 */
-.co-box{margin:8px 16px;border:1px solid #e2e8f0;border-radius:10px;padding:14px;font-size:12px}
-.co-box .co-name{font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:8px}
-.co-row{display:flex;justify-content:space-between;padding:4px 0;color:#64748b;border-bottom:1px dashed #f1f5f9}
-.co-row .cv{color:#374151;font-weight:600}
-.foot{text-align:center;font-size:10px;color:#cbd5e1;padding:24px 16px 8px}
-</style></head><body>
-<div class="page">
-<div class="hd">
-  <div class="hd-label">OFFICIAL STATEMENT · ${_sCoName}</div>
-  <div class="hd-title">${_sPeriod.replace('-','년 ')}월 정산 명세서</div>
-  <div class="hd-sub">${_sName} · 배달대행</div>
-</div>
-<div class="summary">
-  <div class="sum-cell">
-    <div class="sum-label">세전 합계</div>
-    <div class="sum-val blue">₩${_sPreTax.toLocaleString()}</div>
-    <div style="font-size:9px;color:#cbd5e1;margin-top:2px">플랫폼+보전-환수</div>
-  </div>
-  <div class="sum-cell">
-    <div class="sum-label">공제 합계</div>
-    <div class="sum-val red">-₩${_sDeduct.toLocaleString()}</div>
-    <div style="font-size:9px;color:#cbd5e1;margin-top:2px">원천세+산재+고용</div>
-  </div>
-  <div class="sum-cell">
-    <div class="sum-label">실 지급액</div>
-    <div class="sum-val" style="color:#8b5cf6">₩${_sNet.toLocaleString()}</div>
-    <div style="font-size:9px;color:#cbd5e1;margin-top:2px"> </div>
-  </div>
-</div>
-<div class="info-row">
-  <div class="info-cell"><label>기사명</label><div class="val">${_sName}</div></div>
-  <div class="info-cell"><label>정산 기간</label><div class="val">${_sPeriod}</div></div>
-</div>
-<div class="sec">
-  <div class="sec-hd"><span class="ico">📦</span><span class="ttl">배달 실적 (건수 × 계약단가)</span></div>
-  <div class="item-row">
-    <span class="lbl">① 배달 건수</span>
-    <span class="val base">${_sCnt}건 × ${_sTP ? '₩'+_sTP.toLocaleString() : '기본단가'}</span>
-  </div>
-  <div class="item-row">
-    <span class="lbl">② 플랫폼 수령 합계</span>
-    <span class="val base">+₩${_sPfSum.toLocaleString()}</span>
-  </div>
-  ${_sInj > 0 ? `<div class="item-row"><span class="lbl">③ 보전 (대리점 투입)</span><span class="val plus">+₩${_sInj.toLocaleString()}</span></div>` : ''}
-  ${_sExt > 0 ? `<div class="item-row"><span class="lbl">④ 환수 (대리점 회수)</span><span class="val minus">-₩${_sExt.toLocaleString()}</span></div>` : ''}
-</div>
-<div class="sec" style="margin-top:2px">
-  <div class="sec-hd"><span class="ico">📋</span><span class="ttl">세금계산서 작성금액 합계</span></div>
-  <div class="item-row" style="background:#f8fafc">
-    <span class="lbl" style="font-weight:700;color:#1e3a5f">세전 지급액</span>
-    <span class="val base" style="font-size:15px">₩${_sPreTax.toLocaleString()}</span>
-  </div>
-  <div style="padding:10px 16px 4px"><span style="font-size:10px;color:#94a3b8;font-weight:700">▼ 공제 항목</span></div>
-  <div class="item-row"><span class="lbl">원천세 (3.3%)</span><span class="val minus">-₩${_sTax.toLocaleString()}</span></div>
-  <div class="item-row"><span class="lbl">산재보험 (0.88%)</span><span class="val minus">-₩${_sSanjae.toLocaleString()}</span></div>
-  <div class="item-row"><span class="lbl">고용보험 (0.80%)</span><span class="val minus">-₩${_sGoyal.toLocaleString()}</span></div>
-  <div class="item-row sub"><span class="lbl">공제 합계</span><span class="val minus">-₩${_sDeduct.toLocaleString()}</span></div>
-</div>
-<div class="net-box">
-  <div><div class="lbl">실 지급액</div><div style="font-size:11px;opacity:.6;margin-top:2px">세전 - 공제</div></div>
-  <div class="amt">₩${_sNet.toLocaleString()}</div>
-</div>
-${_sDateRows ? `<div class="sec" style="margin-top:8px">
-  <div class="sec-hd"><span class="ico">📅</span><span class="ttl">일일 상세 내역</span></div>
-  <table>
-    <thead><tr><th>날짜</th><th style="text-align:right">건수</th><th style="text-align:right">배달비</th><th style="text-align:right">플랫폼 수령</th></tr></thead>
-    <tbody>${_sDateRows}</tbody>
-    <tfoot><tr><td>합계</td><td class="num">${_sDtCnt}건</td><td class="num">₩${_sDtFee.toLocaleString()}</td><td class="num">₩${_sDtPf.toLocaleString()}</td></tr></tfoot>
-  </table>
-</div>` : ''}
-${_sStoreRows ? `<div class="sec" style="margin-top:8px">
-  <div class="sec-hd"><span class="ico">🏪</span><span class="ttl">매장별 실적</span></div>
-  <table>
-    <thead><tr><th>매장명</th><th style="text-align:right">건수</th><th style="text-align:right">배달비</th></tr></thead>
-    <tbody>${_sStoreRows}</tbody>
-  </table>
-</div>` : ''}
-<div class="sec" style="margin-top:8px;padding-bottom:4px">
-  <div class="sec-hd"><span class="ico">👤</span><span class="ttl">기사 정보</span></div>
-  <div style="padding:8px 16px 12px">
-    <div class="co-box">
-      <div class="co-name">${_sName}</div>
-      ${_sDrvPhone ? `<div class="co-row"><span>연락처</span><span class="cv">${_sDrvPhone}</span></div>` : ''}
-      <div class="co-row"><span>정산 주체</span><span class="cv">${_sCoName}</span></div>
-      ${_sDrvBank ? `<div class="co-row"><span>수령 은행</span><span class="cv">${_sDrvBank}</span></div>` : ''}
-      ${_sDrvBankNum ? `<div class="co-row" style="border:none"><span>계좌번호</span><span class="cv">${_sDrvBankNum} (${_sName})</span></div>` : (!_sDrvBank ? `<div class="co-row" style="border:none"><span>계좌 정보</span><span class="cv" style="color:#94a3b8">미등록</span></div>` : '')}
-    </div>
-  </div>
-</div>
-<div class="foot">본 명세서는 DONWAY 배달대행 정산 시스템에서 자동 발행되었습니다.</div>
-</div></body></html>`;
-          return new Response(_sHtml, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
-        } catch(_sErr) {
-          return new Response('<h2 style="font-family:sans-serif;padding:40px;color:#64748b">명세서 오류: ' + _sErr.message + '</h2>', { status: 500, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-        }
-      }
-      // /settle/{id} → settle.html 서빙 (공유 명세서 링크)
-      if (path.startsWith('/settle/') || path === '/settle') {
-        return serveKVFile(env, 'settle.html', 'text/html');
-      }
-      // /join → settle.html 서빙 + UI 커스터마이즈 주입
-      if (path === '/join' || path === '/join/') {
-        const joinKv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html', {type:'text'}) : null;
-        if (joinKv) {
-          // 범용정산·재고관리 숨김 (가격은 settle.html에 이미 반영)
-          const joinPatch = '<style>#svc-universal-card,#svc-inventory-card{display:none!important}</style>';
-          const joinHtml = joinKv.replace('</head>', joinPatch + '</head>');
-          return new Response(joinHtml, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
-        }
-        return serveKVFile(env, 'settle.html', 'text/html');
+      if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/settle', 302);
+      if (path === '/mbtico-manifest.json' || path === '/manifest.json') {
+        const _mbtManifest = {name:'MBTICO 관제센터',short_name:'MBTICO',start_url:'/control',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
+        return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
       }
       if (path === '/' || path === '') {
-    // Kakao OAuth callback: code 파라미터 감지 → /join으로 전달 (settle.html이 처리)
-    if (url.searchParams.get('code')) {
-      const code = url.searchParams.get('code');
-      const state = url.searchParams.get('state') || '';
-      if (state.startsWith('sign:')) {
-        const signToken = state.slice(5);
-        return Response.redirect('https://donway.ai.kr/contract/sign/'+encodeURIComponent(signToken)+'?kakaoCode='+encodeURIComponent(code), 302);
+        const _mbtiLand = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MBTICO — 물류·배송 스마트 플랫폼</title><meta name="description" content="FILO·DONWAY·용차앱·SCAN — 물류 현장을 위한 통합 솔루션"><link rel="icon" href="/mbti-icon-192.png"><link rel="manifest" href="/mbtico-manifest.json"><style>*{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08101f;--bg2:#0d1b3e;--gold:#c9a84c;--tx:#f0f4ff;--tx2:#8b949e}body{background:var(--bg);color:var(--tx);font-family:-apple-system,'Pretendard',sans-serif;min-height:100vh}.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(201,168,76,.15)}.logo{font-size:20px;font-weight:900;color:var(--gold);letter-spacing:.5px}.nav-btn{padding:8px 18px;border-radius:8px;background:var(--gold);color:var(--bg);font-size:13px;font-weight:700;text-decoration:none}.hero{text-align:center;padding:72px 24px 48px}.hero-tag{display:inline-block;padding:5px 16px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:999px;font-size:12px;color:var(--gold);font-weight:700;margin-bottom:20px;letter-spacing:.5px}.hero-title{font-size:34px;font-weight:900;line-height:1.25;margin-bottom:16px}.hero-sub{font-size:15px;color:var(--tx2);max-width:460px;margin:0 auto 36px;line-height:1.85}.cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center}.btn-gold{padding:14px 28px;border-radius:10px;background:var(--gold);color:var(--bg);font-weight:800;font-size:15px;text-decoration:none}.btn-outline{padding:14px 28px;border-radius:10px;border:1.5px solid rgba(201,168,76,.4);color:var(--gold);font-size:15px;font-weight:700;text-decoration:none}.products{padding:8px 24px 64px;max-width:900px;margin:0 auto}.sec-title{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:24px;text-align:center;text-transform:uppercase}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}@media(max-width:560px){.grid{grid-template-columns:1fr}}.card{background:var(--bg2);border:1.5px solid rgba(201,168,76,.12);border-radius:16px;padding:24px;text-decoration:none;color:var(--tx);display:block;transition:.2s}.card:hover{border-color:rgba(201,168,76,.4)}.card-icon{font-size:26px;margin-bottom:12px}.card-name{font-size:17px;font-weight:900;margin-bottom:6px}.card-desc{font-size:13px;color:var(--tx2);line-height:1.7}.card-tag{display:inline-block;margin-top:12px;padding:3px 10px;background:rgba(201,168,76,.1);border-radius:6px;font-size:11px;color:var(--gold);font-weight:700}footer{text-align:center;padding:28px 24px;border-top:1px solid rgba(255,255,255,.05);font-size:12px;color:var(--tx2)}</style></head><body><nav class="nav"><div class="logo">MBTICO</div><a href="/control" class="nav-btn">관제센터 로그인</a></nav><section class="hero"><div class="hero-tag">유한회사 엠비티아이</div><h1 class="hero-title">물류·배송 현장을 위한<br>통합 스마트 플랫폼</h1><p class="hero-sub">배송기사 앱부터 정산·매칭·문서분석까지 — MBTICO의 솔루션으로 현장 업무를 자동화하세요.</p><div class="cta"><a href="/control" class="btn-gold">관제센터 로그인</a><a href="https://filo.ai.kr" class="btn-outline">배송앱 FILO</a></div></section><section class="products"><p class="sec-title">Products</p><div class="grid"><a href="https://filo.ai.kr" class="card"><div class="card-icon">🚚</div><div class="card-name">FILO</div><div class="card-desc">배송기사 전용 통합 앱 — 긴급배송·QR스캔·라벨·출퇴근 관리</div><span class="card-tag">filo.ai.kr</span></a><a href="https://donway.ai.kr" class="card"><div class="card-icon">📊</div><div class="card-name">DONWAY</div><div class="card-desc">배달대행·쿠팡 물류사 전용 — 엑셀 업로드 한 번에 수백 명 정산 완료</div><span class="card-tag">donway.ai.kr</span></a><a href="https://yongcha.app" class="card"><div class="card-icon">🚛</div><div class="card-name">용차앱</div><div class="card-desc">소장·기사 직접 거래 정보 서비스 — AI 기사 추천, 단건 요청·연결</div><span class="card-tag">yongcha.app</span></a><a href="https://dine.ne.kr" class="card"><div class="card-icon">📄</div><div class="card-name">SCAN</div><div class="card-desc">AI 공문서·계약서 분석 서비스 — 등기부·사업자·이력서 즉시 분석</div><span class="card-tag">dine.ne.kr</span></a></div></section><footer>ⓒ 2026 유한회사 엠비티아이 · 사업자번호 373-86-02536</footer></body></html>`;
+        return new Response(_mbtiLand, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
       }
-      return Response.redirect('https://donway.ai.kr/join?code='+encodeURIComponent(code)+'&state='+encodeURIComponent(state), 302);
-    }
-    const ghRaw = await fetch('https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/donway_landing.html?t='+Date.now(), {cf:{cacheEverything:false}});
-    let html = await ghRaw.text();
-    html = html.replace('<head>', '<head><meta name="naver-site-verification" content="26f9af7ad9b774a92a8fecad908882c81a64537b" />');
-    return new Response(html, {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
-  }
-      // ── 고객 공개 예약 페이지 ──
-      if (path === '/reserve') {
-        const c = url.searchParams.get('c') || '';
-        if (!c) return new Response('잘못된 접근입니다.', { status: 400 });
-        if (request.method === 'POST') {
-          try {
-            const body = await request.json();
-            const fsToken = await getAccessToken(env);
-            const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-            const qBody = JSON.stringify({ structuredQuery: { from:[{collectionId:'companies'}], where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}}, limit:1 }});
-            const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
-            const qData = await qRes.json();
-            const dealerId = qData[0]?.document?.fields?.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
-            if (!dealerId) return new Response(JSON.stringify({ok:false,error:'업체를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
-            const now = new Date().toISOString();
-            const ym = (body.date||'').slice(0,7);
-            const addUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/beauty_reserves';
-            const addBody = JSON.stringify({fields:{
-              dealerId:{stringValue:dealerId}, date:{stringValue:body.date||''}, time:{stringValue:body.time||''},
-              ym:{stringValue:ym}, customerName:{stringValue:body.customerName||''}, phone:{stringValue:body.phone||''},
-              designer:{stringValue:body.designer||''}, menu:{stringValue:body.menu||''}, memo:{stringValue:body.memo||''},
-              status:{stringValue:'예약'}, source:{stringValue:'customer'}, createdAt:{stringValue:now}
-            }});
-            const addRes = await fetch(addUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:addBody});
-            if (!addRes.ok) throw new Error('저장 실패');
-            return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-          } catch(e) {
-            return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-          }
-        }
-        // GET: 예약 페이지
-        try {
-          const fsToken = await getAccessToken(env);
-          const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}},limit:1}});
-          const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
-          const qData = await qRes.json();
-          const coFields = qData[0]?.document?.fields || {};
-          const coName = coFields.companyName?.stringValue || 'DONWAY 뷰티';
-          const dealerId = coFields.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
-          const wUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const wBody = JSON.stringify({structuredQuery:{from:[{collectionId:'ind_workers'}],where:{compositeFilter:{op:'AND',filters:[
-            {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},
-            {fieldFilter:{field:{fieldPath:'industryType'},op:'EQUAL',value:{stringValue:'beauty'}}}
-          ]}},limit:20}});
-          const wRes = await fetch(wUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:wBody});
-          const wData = await wRes.json();
-          const designers = (wData||[]).filter(r=>r.document).map(r=>r.document.fields?.name?.stringValue||'').filter(Boolean);
-          const todayStr = new Date().toISOString().slice(0,10);
-          const timeOpts = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'].map(t=>`<option value="${t}">${t}</option>`).join('');
-          const designerSel = designers.length ? `<div class="card"><label>담당 디자이너</label><select id="r-designer"><option value="">-- 선택 (상관없음) --</option>${designers.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>` : '';
-          const menus = ['시그니처펌','복구매직','디자인컷','본드케어','발레아쥬','뿌리염색','볼륨매직','남성펌','두피케어','네일'];
-          const html = `<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${coName} 예약</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:16px}.wrap{max-width:480px;margin:0 auto}.header{background:linear-gradient(135deg,#C2185B,#E91E63);border-radius:16px;padding:24px;text-align:center;margin-bottom:20px;color:#fff}.header h1{font-size:22px;font-weight:900;margin-bottom:4px}.header p{font-size:13px;opacity:.85}.card{background:#1e293b;border-radius:14px;padding:16px;margin-bottom:12px}label{font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:#94a3b8}input,select{width:100%;padding:12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none}input:focus,select:focus{border-color:#C2185B}.menus{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.menu-btn{padding:7px 14px;border:1.5px solid #334155;border-radius:20px;background:#0f172a;color:#94a3b8;font-size:12px;cursor:pointer}.menu-btn.active{border-color:#C2185B;background:#C2185B22;color:#C2185B;font-weight:700}.btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,#C2185B,#E91E63);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px}.btn-submit:disabled{opacity:.5}.success{text-align:center;padding:40px 20px;display:none}.success .icon{font-size:64px;margin-bottom:16px}.success h2{font-size:22px;font-weight:900;color:#C2185B;margin-bottom:8px}.success p{font-size:14px;color:#94a3b8;line-height:1.6}</style></head><body>
-<div class="wrap">
-  <div class="header"><div style="font-size:32px;margin-bottom:8px"></div><h1>${coName}</h1><p>온라인 예약</p></div>
-  <div id="form-wrap">
-    <div class="card"><label>날짜</label><input type="date" id="r-date" min="${todayStr}"></div>
-    <div class="card"><label>시간</label><select id="r-time">${timeOpts}</select></div>
-    ${designerSel}
-    <div class="card"><label>시술 메뉴</label><div class="menus">${menus.map(m=>`<button class="menu-btn" onclick="selectMenu(this,'${m}')">${m}</button>`).join('')}</div><input type="text" id="r-menu" placeholder="직접 입력 또는 위에서 선택"></div>
-    <div class="card"><label>고객명 *</label><input type="text" id="r-name" placeholder="이름을 입력하세요"></div>
-    <div class="card"><label>연락처 *</label><input type="tel" id="r-phone" placeholder="010-0000-0000"></div>
-    <div class="card"><label>메모 (선택)</label><input type="text" id="r-memo" placeholder="요청사항 등"></div>
-    <button class="btn-submit" id="r-submit" onclick="submitReserve()">예약 신청</button>
+      // /app 경로 제거됨 (레거시 물류앱v9 삭제)
+      if (path === '/hub') { const _hResp = await fetchAsset('/mbtico_hub.html', request, env); return new Response(await _hResp.text(), {status:_hResp.status,headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}}); }
+      if (path === '/control' || path === '/control/') {
+        const ctrlHtml = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>엠비티아이 관제센터</title>
+<link rel="icon" type="image/png" sizes="192x192" href="/mbti-icon-192.png?v=4">
+<link rel="apple-touch-icon" sizes="192x192" href="/mbti-icon-192.png?v=4">
+<link rel="manifest" href="/mbtico-manifest.json">
+<meta name="theme-color" content="#08101f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MBTICO">
+<style>
+:root{
+  --bg:#07080F;--bg2:#0D1117;--bg3:#161B22;--bd:rgba(255,255,255,.08);
+  --tx:#F0F4FF;--tx2:#8B949E;--tx3:#484F58;
+  --blue:#0066FF;--green:#22c55e;--red:#ef4444;--gold:#f59e0b;--purple:#7C3AED;
+  --radius:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Segoe UI',sans-serif;font-size:14px}
+
+/* ── 로그인 ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999}
+.login-box{background:var(--bg2);border:1px solid var(--bd);border-radius:20px;padding:36px 28px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
+.login-logo{font-size:22px;font-weight:900;text-align:center;margin-bottom:8px;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-sub{font-size:12px;color:var(--tx2);text-align:center;margin-bottom:4px}
+
+/* ── 메인 레이아웃 ── */
+#main-screen{display:none;flex-direction:column;height:100vh;overflow:hidden}
+.top-bar{background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 20px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.top-logo{font-size:16px;font-weight:900;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.top-space{flex:1}
+#ctrl-user{font-size:11px;color:var(--tx2)}
+.top-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--tx2);font-size:12px;cursor:pointer}
+.top-btn:hover{border-color:rgba(255,255,255,.2);color:var(--tx)}
+.main-scroll{flex:1;overflow-y:auto;padding:16px}
+.main-scroll::-webkit-scrollbar{width:4px}
+.main-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+
+/* ── 아코디언 ── */
+.acc-item{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.acc-header{padding:14px 18px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none;transition:.15s}
+.acc-header:hover{background:rgba(255,255,255,.03)}
+.acc-icon{font-size:12px;color:var(--tx2);width:14px;flex-shrink:0}
+.acc-title{font-size:14px;font-weight:700;flex:1}
+.acc-badge{background:var(--red);color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:10px;display:none;align-items:center;justify-content:center;padding:0 6px}
+.acc-body{display:none;padding:0 18px 18px;border-top:1px solid var(--bd)}
+
+/* ── 공통 컴포넌트 ── */
+.ctrl-input{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg3);color:var(--tx);font-size:13px;font-family:inherit;outline:none}
+.ctrl-input:focus{border-color:var(--blue)}
+.ctrl-select{padding:8px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg3);color:var(--tx);font-size:13px;cursor:pointer;outline:none}
+.ctrl-label{font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:6px}
+.ctrl-btn{padding:6px 12px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:.15s;white-space:nowrap}
+.ctrl-btn-ok{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.ctrl-btn-ok:hover{background:rgba(34,197,94,.25)}
+.ctrl-btn-err{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.ctrl-btn-err:hover{background:rgba(239,68,68,.25)}
+.ctrl-btn-sub{background:var(--bg3);color:var(--tx2);border:1px solid var(--bd)}
+.ctrl-btn-sub:hover{border-color:rgba(255,255,255,.2);color:var(--tx)}
+.ctrl-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.ctrl-loading{padding:24px;text-align:center;color:var(--tx2);font-size:13px}
+.ctrl-empty{padding:24px;text-align:center;color:var(--tx3);font-size:13px}
+.ctrl-table-wrap{overflow-x:auto}
+.ctrl-table{width:100%;border-collapse:collapse;font-size:13px}
+.ctrl-table th{padding:8px 12px;text-align:left;background:var(--bg3);color:var(--tx2);font-weight:700;font-size:12px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.ctrl-table td{padding:8px 12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.ctrl-table tr:last-child td{border-bottom:none}
+.ctrl-table td .ctrl-btn{margin:2px}
+.ctrl-hint{font-size:11px;color:var(--tx3);margin-top:12px;text-align:center}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.badge-ok{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-warn{background:rgba(245,158,11,.15);color:var(--gold)}
+.badge-err{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-hold{background:rgba(124,58,237,.15);color:var(--purple)}
+
+/* ── 대시보드 ── */
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px}
+@media(max-width:500px){.dash-grid{grid-template-columns:repeat(2,1fr)}}
+.dash-card{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;text-align:center}
+.dash-val{font-size:28px;font-weight:900;margin-bottom:4px}
+.dash-label{font-size:11px;color:var(--tx2);font-weight:600}
+
+/* ── 고객사 카드 ── */
+.comp-cards{display:flex;flex-direction:column;gap:10px}
+.comp-card{background:var(--bg3);border:1px solid var(--bd);border-radius:10px;padding:14px}
+.comp-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.comp-name{font-size:14px;font-weight:800}
+.comp-email{font-size:11px;color:var(--tx2);margin-top:2px}
+.comp-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--tx2);margin-bottom:10px}
+.comp-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.comp-features{display:flex;flex-wrap:wrap;gap:5px;padding-top:10px;border-top:1px solid var(--bd)}
+.feat-label{font-size:11px;color:var(--tx2);width:100%;margin-bottom:4px}
+.feat-btn{padding:4px 8px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:.1s}
+.feat-on{background:rgba(34,197,94,.15);color:var(--green)}
+.feat-off{background:var(--bg2);color:var(--tx3);border:1px solid var(--bd)}
+
+/* ── 채팅 ── */
+.chat-layout{display:flex;gap:12px;height:400px}
+.chat-list{width:200px;flex-shrink:0;border:1px solid var(--bd);border-radius:8px;overflow-y:auto;background:var(--bg3)}
+.chat-item{padding:10px 12px;border-bottom:1px solid var(--bd);cursor:pointer;transition:.1s}
+.chat-item:hover,.chat-item-active{background:rgba(0,102,255,.1)}
+.chat-item-name{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+.chat-item-last{font-size:11px;color:var(--tx2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-badge{background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;padding:0 4px}
+.chat-room{flex:1;display:flex;flex-direction:column;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.chat-room-hdr{padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--bd);font-size:13px;font-weight:700;flex-shrink:0}
+.chat-room-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:13px}
+.chat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.chat-msgs::-webkit-scrollbar{width:3px}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1)}
+.chat-msg{max-width:75%;display:flex;flex-direction:column;gap:2px}
+.chat-msg-sa{align-self:flex-end;align-items:flex-end}
+.chat-msg-dealer{align-self:flex-start;align-items:flex-start}
+.chat-msg-text{padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word}
+.chat-msg-sa .chat-msg-text{background:var(--blue);color:#fff;border-radius:12px 12px 4px 12px}
+.chat-msg-dealer .chat-msg-text{background:var(--bg3);color:var(--tx);border:1px solid var(--bd);border-radius:12px 12px 12px 4px}
+.chat-msg-time{font-size:10px;color:var(--tx3)}
+.chat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--bd);background:var(--bg2);flex-shrink:0}
+.chat-input-row .ctrl-input{flex:1}
+@media(max-width:540px){.chat-layout{flex-direction:column;height:auto}.chat-list{width:100%;height:150px}.chat-room{height:300px}}
+
+/* ── 공지 ── */
+.notice-form{display:flex;flex-direction:column;gap:4px;max-width:520px}
+.notice-item{background:var(--bg3);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:8px}
+.notice-title{font-size:13px;font-weight:700;margin-bottom:4px}
+.notice-body{font-size:12px;color:var(--tx2);margin-bottom:6px}
+.notice-meta{font-size:11px;color:var(--tx3)}
+
+/* ── 결제 ── */
+.billing-total{padding:10px 0;font-size:14px;margin-bottom:8px}
+
+/* ── 상세 모달 ── */
+#detail-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:800;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#detail-overlay.open{display:flex}
+#detail-box{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;width:100%;max-width:440px;max-height:85vh;overflow-y:auto}
+.modal-hdr{padding:16px 20px;display:flex;align-items:center;border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--bg2);z-index:1}
+.modal-title{font-size:15px;font-weight:900;flex:1}
+.modal-close{background:rgba(255,255,255,.06);border:none;color:var(--tx2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px}
+.modal-body{padding:16px 20px 24px}
+.detail-row{padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px;display:flex;gap:8px}
+.detail-row b{color:var(--tx2);font-size:12px;min-width:80px;flex-shrink:0}
+.detail-section{font-size:12px;font-weight:700;color:var(--tx2);margin:14px 0 8px;text-transform:uppercase}
+.doc-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.doc-label{flex:1;font-size:13px}
+.doc-none{font-size:12px;color:var(--tx3)}
+
+/* ── Toast ── */
+.ctrl-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;animation:fadeIn .2s ease;pointer-events:none}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">엠비티아이 관제센터</div>
+    <div class="login-sub">슈퍼어드민 전용</div>
+    <input id="l-email" class="ctrl-input" type="email" placeholder="이메일" value="kimdh4790@gmail.com">
+    <input id="l-pw"    class="ctrl-input" type="password" placeholder="비밀번호"
+      onkeydown="if(event.key==='Enter')_ctrlLogin()">
+    <button onclick="_ctrlLogin()"
+      style="padding:12px;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
+      로그인
+    </button>
   </div>
-  <div class="success" id="success-wrap"><div class="icon"></div><h2>예약 완료!</h2><p id="success-msg"></p><p style="margin-top:12px;font-size:12px;color:#64748b">예약 확인은 업체로 문의해주세요</p>
-<button onclick="addToHome()" style="margin-top:16px;width:100%;padding:14px;background:#1e293b;border:1.5px solid #C2185B;border-radius:12px;color:#C2185B;font-size:14px;font-weight:700;cursor:pointer">홈 화면에 추가하기</button>
-<p style="margin-top:8px;font-size:11px;color:#475569">다음 예약을 더 편하게!</p></div>
 </div>
-<script>
-function _toast(msg,dur){var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;max-width:80vw;text-align:center;white-space:pre-wrap';document.body.appendChild(t);setTimeout(function(){t.remove();},(dur||2800));}
-function addToHome(){
-  if(window.matchMedia('(display-mode: standalone)').matches){
-    _toast('이미 홈 화면에 추가되어 있어요!');return;
-  }
-  var ua=navigator.userAgent;
-  if(/iPhone|iPad|iPod/.test(ua)){
-    _toast('홈 화면 추가 방법\n\n① 하단 공유 버튼(□↑) 탭\n② "홈 화면에 추가" 선택\n③ 추가 버튼 탭',4000);
-  } else if(/Android/.test(ua)){
-    if(window._deferredPrompt){
-      window._deferredPrompt.prompt();
-      window._deferredPrompt.userChoice.then(function(){window._deferredPrompt=null;});
-    } else {
-      _toast('홈 화면 추가 방법\n\n① 브라우저 우측 상단 메뉴(⋮) 탭\n② "홈 화면에 추가" 선택',4000);
-    }
-  } else {
-    _toast('브라우저 주소창의 설치 버튼을 눌러 홈 화면에 추가하세요.');
-  }
-}
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window._deferredPrompt=e;});
-function selectMenu(btn,name){document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById('r-menu').value=name;}
-async function submitReserve(){
-  var date=document.getElementById('r-date').value;
-  var time=document.getElementById('r-time').value;
-  var name=document.getElementById('r-name').value.trim();
-  var phone=document.getElementById('r-phone').value.trim();
-  var designer=(document.getElementById('r-designer')||{}).value||'';
-  var menu=document.getElementById('r-menu').value.trim();
-  var memo=document.getElementById('r-memo').value.trim();
-  if(!date){_toast('날짜를 선택해주세요');return;}
-  if(!name){_toast('고객명을 입력해주세요');return;}
-  if(!phone){_toast('연락처를 입력해주세요');return;}
-  var btn=document.getElementById('r-submit');
-  btn.disabled=true;btn.textContent='예약 중...';
-  try{
-    var res=await fetch('/reserve?c=${c}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date,time,customerName:name,phone,designer,menu,memo})});
-    var data=await res.json();
-    if(data.ok){document.getElementById('form-wrap').style.display='none';var sw=document.getElementById('success-wrap');sw.style.display='block';document.getElementById('success-msg').textContent=date+' '+time+' '+name+'님 예약이 완료됐습니다.';}
-    else{_toast('오류: '+(data.error||'다시 시도해주세요'));btn.disabled=false;btn.textContent='예약 신청';}
-  }catch(e){_toast('오류가 발생했습니다');btn.disabled=false;btn.textContent='예약 신청';}
-}
-</script></body></html>`;
-          return new Response(html,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
-        } catch(e) {
-          return new Response('오류: '+e.message,{status:500});
-        }
-      }
 
-      if (path === '/roster') {
-        const c = url.searchParams.get('c') || '';
-        const camp = url.searchParams.get('camp') || '';
-        const m = url.searchParams.get('m') || new Date().toISOString().slice(0,10);
-        if (!c) return new Response('잘못된 접근입니다.', { status: 400 });
-        try {
-          const fsToken = await getAccessToken(env);
-          // 회사 정보 조회
-          const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:c}}},limit:1}});
-          const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
-          const qData = await qRes.json();
-          const coFields = qData[0]?.document?.fields || {};
-          const dealerId = coFields.dealerId?.stringValue || qData[0]?.document?.name?.split('/').pop() || '';
-          const coName = coFields.companyName?.stringValue || 'DONWAY';
-          if (!dealerId) return new Response('업체를 찾을 수 없습니다.', { status: 404 });
+<!-- 메인 -->
+<div id="main-screen">
+  <div class="top-bar">
+    <div class="top-logo">관제센터</div>
+    <div class="top-space"></div>
+    <span id="ctrl-user"></span>
+    <button class="top-btn" onclick="_ctrlLogout()">로그아웃</button>
+  </div>
 
-          // 주간 시작일 계산 (m 기준 해당 주 일요일)
-          const baseDate = new Date(m);
-          const day = baseDate.getDay();
-          const sunday = new Date(baseDate);
-          sunday.setDate(baseDate.getDate() - day);
-          const weekStart = sunday.toISOString().slice(0,10);
-          const weekDays = [];
-          for (let i = 0; i < 7; i++) {
-            const d = new Date(sunday);
-            d.setDate(sunday.getDate() + i);
-            weekDays.push(d.toISOString().slice(0,10));
-          }
-          const dayLabels = ['일','월','화','수','목','금','토'];
+  <div class="main-scroll">
 
-          // 기사 목록 조회
-          const dUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const dFilters = [{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}}];
-          const dBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},orderBy:[{field:{fieldPath:'name'},direction:'ASCENDING'}],limit:300}});
-          const dRes = await fetch(dUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:dBody});
-          const dData = await dRes.json();
-          let drivers = (dData||[]).filter(r=>r.document).map(r=>{
-            const f = r.document.fields||{};
-            return {id:r.document.name.split('/').pop(), name:f.name?.stringValue||'', camp:(f.camp?.stringValue||'').replace('캠프','').trim(), userId:f.userId?.stringValue||'', isActive:f.is_active?.booleanValue!==false, status:f.status?.stringValue||''};
-          }).filter(d=>d.isActive && d.status!=='탈퇴' && d.status!=='퇴직');
-          if (camp) drivers = drivers.filter(d=>d.camp===camp);
-
-          // 근무표 데이터 조회
-          const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-          const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:weekStart}}}]}},limit:500}});
-          const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
-          const rData = await rRes.json();
-          const rosterMap = {};
-          (rData||[]).filter(r=>r.document).forEach(r=>{
-            const f = r.document.fields||{};
-            const did = f.driverId?.stringValue||'';
-            const di = parseInt(f.dayIndex?.integerValue||f.dayIndex?.doubleValue||0);
-            if (!rosterMap[did]) rosterMap[did] = {};
-            rosterMap[did][di] = {status:f.status?.stringValue||'work', route:f.route?.stringValue||'', docId:r.document.name.split('/').pop()};
-          });
-
-          const prevSun = new Date(sunday); prevSun.setDate(sunday.getDate()-7);
-          const nextSun = new Date(sunday); nextSun.setDate(sunday.getDate()+7);
-          const prevM = prevSun.toISOString().slice(0,10);
-          const nextM = nextSun.toISOString().slice(0,10);
-          const baseUrl = '/roster?c='+c+(camp?'&camp='+encodeURIComponent(camp):'');
-
-          let rows = '';
-          drivers.forEach(drv => {
-            const rd = rosterMap[drv.userId] || rosterMap[drv.id] || {};
-            let cells = '';
-            for (let i = 0; i < 7; i++) {
-              const e = rd[i] || {};
-              const st = e.status || 'work';
-              const route = e.route || '';
-              const docId = e.docId || '';
-              const isOff = st === 'off';
-              const bg = isOff ? '#fee2e2' : '#f0fdf4';
-              const color = isOff ? '#dc2626' : '#16a34a';
-              const label = isOff ? '휴무' : (route || '출근');
-              const swapBase = docId ? '/swap?id='+docId+'&from='+encodeURIComponent(drv.name)+'&date='+weekDays[i]+'&did='+dealerId+'&ws='+weekStart+'&di='+i+'&fromRoute='+encodeURIComponent(e.route||'') : '';
-              const swapOnClick = swapBase ? `onclick="(function(){var r=prompt('내가 배송할 라우트 입력 (없으면 빈칸)','');if(r===null)return;location.href='${swapBase}&myRoute='+encodeURIComponent(r);})();return false;"` : '';
-              cells += `<td style="padding:8px 4px;text-align:center;border:1px solid #e2e8f0">
-                <div style="background:${bg};color:${color};border-radius:6px;padding:4px 6px;font-size:12px;font-weight:700;margin-bottom:4px">${label}</div>
-                ${swapBase ? `<a href="#" ${swapOnClick} style="font-size:10px;color:#f59e0b;text-decoration:none">교체요청</a>` : ''}
-              </td>`;
-            }
-            rows += `<tr><td style="padding:8px;font-size:13px;font-weight:700;border:1px solid #e2e8f0;white-space:nowrap">${drv.name}<br><span style="font-size:10px;color:#94a3b8">${drv.camp||''}</span></td>${cells}</tr>`;
-          });
-
-          const html = `<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${coName} 근무표</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#f8fafc;color:#1e293b;padding:12px}.header{background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:14px;padding:16px;text-align:center;margin-bottom:16px;color:#fff}.header h1{font-size:18px;font-weight:900}.header p{font-size:12px;opacity:.85;margin-top:4px}.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.nav a{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;color:#1e40af;text-decoration:none}.nav span{font-size:13px;font-weight:700;color:#374151}.wrap{overflow-x:auto}.tbl{width:100%;border-collapse:collapse;min-width:600px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}.tbl th{padding:10px 6px;background:#1e40af;color:#fff;font-size:12px;text-align:center}.tbl td{vertical-align:middle}</style>
-</head><body>
-<div class="header"><h1>${coName}</h1><p>${camp||'전체'} 캠프 근무표</p></div>
-<div class="nav">
-  <a href="${baseUrl}&m=${prevM}">‹ 이전주</a>
-  <span>${weekDays[0].slice(5)} ~ ${weekDays[6].slice(5)}</span>
-  <a href="${baseUrl}&m=${nextM}">다음주 ›</a>
-</div>
-<div class="wrap">
-<table class="tbl">
-  <thead><tr><th>이름</th>${weekDays.map((d,i)=>`<th>${d.slice(5)}<br>(${dayLabels[i]})</th>`).join('')}</tr></thead>
-  <tbody>${rows || '<tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8">등록된 기사가 없습니다</td></tr>'}</tbody>
-</table>
-</div>
-</body></html>`;
-          return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
-        } catch(e) {
-          return new Response('오류: '+e.message, {status:500});
-        }
-      }
-
-      if (path === '/swap') {
-        const docId = url.searchParams.get('id') || '';
-        const fromName = url.searchParams.get('from') || '';
-        const date = url.searchParams.get('date') || '';
-        if (!docId) return new Response('잘못된 접근입니다.', { status: 400 });
-
-        if (request.method === 'POST') {
-          try {
-            const fsToken = await getAccessToken(env);
-            const body = await request.json();
-            // 휴무↔휴무 날짜 교환
-            if (body.mode === 'exchange') {
-              const fsToken2 = await getAccessToken(env);
-              const now2 = new Date().toISOString();
-              const ws2 = url.searchParams.get('ws') || '';
-              const did2 = url.searchParams.get('did') || '';
-              const baseUrl2 = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week';
-
-              // 요청자 휴무 문서 조회
-              const fromDocRes = await fetch(baseUrl2+'/'+docId,{headers:{'Authorization':'Bearer '+fsToken2}});
-              const fromFields = (await fromDocRes.json()).fields||{};
-              const fromDriverId = fromFields.driverId?.stringValue||'';
-              const fromDayIndex = parseInt(fromFields.dayIndex?.integerValue||fromFields.dayIndex?.doubleValue||0);
-
-              // 수락자 휴무 문서 조회
-              const toDocRes = await fetch(baseUrl2+'/'+body.myDocId,{headers:{'Authorization':'Bearer '+fsToken2}});
-              const toFields = (await toDocRes.json()).fields||{};
-              const toDriverId = toFields.driverId?.stringValue||'';
-              const toDayIndex = parseInt(toFields.dayIndex?.integerValue||toFields.dayIndex?.doubleValue||0);
-
-              // 요청자의 해당 주 전체 문서 조회 → JS에서 dayIndex 필터링
-              const rqAll = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
-                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
-                {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
-                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:fromDriverId}}}
-              ]}},limit:7}});
-              const rqAllRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rqAll});
-              const rqAllData = await rqAllRes.json();
-              const fromDoc2 = (rqAllData||[]).filter(r=>r.document).find(r=>{
-                const di=parseInt(r.document.fields?.dayIndex?.integerValue||r.document.fields?.dayIndex?.doubleValue||0);
-                return di===toDayIndex;
-              });
-              const fromToDay = fromDoc2?.document?.fields||{};
-              const fromToDayRoute = fromToDay.route?.stringValue||'';
-              const fromToDayRot = fromToDay.rotation?.stringValue||'';
-              const fromToDayDocId = fromDoc2?.document?.name?.split('/')?.pop()||'';
-
-              // 수락자의 해당 주 전체 문서 조회 → JS에서 dayIndex 필터링
-              const rq2All = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[
-                {fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did2}}},
-                {fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws2}}},
-                {fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}}
-              ]}},limit:7}});
-              const rq2AllRes = await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},body:rq2All});
-              const rq2AllData = await rq2AllRes.json();
-              const toDoc2 = (rq2AllData||[]).filter(r=>r.document).find(r=>{
-                const di=parseInt(r.document.fields?.dayIndex?.integerValue||r.document.fields?.dayIndex?.doubleValue||0);
-                return di===fromDayIndex;
-              });
-              const toFromDay = toDoc2?.document?.fields||{};
-              const toFromDayRoute = toFromDay.route?.stringValue||'';
-              const toFromDayRot = toFromDay.rotation?.stringValue||'';
-              const toFromDayDocId = toDoc2?.document?.name?.split('/')?.pop()||'';
-
-              // 요청자: 기존날짜 → 수락자 라우트로 출근 (수락자가 입력한 myRoute 우선)
-              const fromNewRoute = body.myRoute||toFromDayRoute||'';
-              const toNewRoute = body.fromRoute||fromToDayRoute||'';
-              await fetch(baseUrl2+'/'+docId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=rotation&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
-                {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                body:JSON.stringify({fields:{status:{stringValue:'work'},route:{stringValue:fromNewRoute},rotation:{stringValue:toFromDayRot},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
-
-              // 수락자: 휴무일 → 출근 (요청자 라우트로) - updateMask 없이 전체 업데이트
-              const toDocFields = (await (await fetch(baseUrl2+'/'+body.myDocId,{headers:{'Authorization':'Bearer '+fsToken2}})).json()).fields||{};
-              await fetch(baseUrl2+'/'+body.myDocId,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                body:JSON.stringify({fields:Object.assign({},toDocFields,{status:{stringValue:'work'},route:{stringValue:toNewRoute},rotation:{stringValue:fromToDayRot},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}})})});
-
-              // 요청자: 수락자 날짜에 휴무
-              if(fromToDayDocId){
-                await fetch(baseUrl2+'/'+fromToDayDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
-                  {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                  body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:body.name||''},swapAt:{stringValue:now2}}})});
-              }
-
-              // 수락자: 요청자 날짜에 휴무
-              if(toFromDayDocId){
-                await fetch(baseUrl2+'/'+toFromDayDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=route&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt',
-                  {method:'PATCH',headers:{'Authorization':'Bearer '+fsToken2,'Content-Type':'application/json'},
-                  body:JSON.stringify({fields:{status:{stringValue:'off'},route:{stringValue:''},swapWith:{stringValue:fromName},swapAt:{stringValue:now2}}})});
-              }
-
-              return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
-            }
-            const did = url.searchParams.get('did') || '';
-            const ws = url.searchParams.get('ws') || '';
-            const di = parseInt(url.searchParams.get('di') || '0');
-            // 1. 휴무자 docId → 출근으로 변경
-            const p1Url = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+docId;
-            const p1Res = await fetch(p1Url, {headers:{'Authorization':'Bearer '+fsToken}});
-            const p1Data = await p1Res.json();
-            const offRoute = p1Data.fields?.route?.stringValue || '';
-            const patch1Url = p1Url+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
-            await fetch(patch1Url,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},
-              body:JSON.stringify({fields:{status:{stringValue:'work'},swapWith:{stringValue:body.name||''},swapAt:{stringValue:new Date().toISOString()}}})});
-            // 2. 수락자(출근) → 휴무로 변경 (drivers에서 이름으로 driverId 찾기)
-            if (did && ws) {
-              const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-              const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:body.name||''}}}]}},limit:1}});
-              const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
-              const qData = await qRes.json();
-              const toDriverId = qData[0]?.document?.name?.split('/')?.pop() || '';
-              if (toDriverId) {
-                // 수락자의 해당 날짜 roster_week 문서 찾기
-                const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-                const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws}}},{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}},{fieldFilter:{field:{fieldPath:'dayIndex'},op:'EQUAL',value:{integerValue:di}}}]}},limit:1}});
-                const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
-                const rData = await rRes.json();
-                const toDocId = rData[0]?.document?.name?.split('/').pop() || '';
-                if (toDocId) {
-                  const p2Url = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/roster_week/'+toDocId+'?updateMask.fieldPaths=status&updateMask.fieldPaths=swapWith&updateMask.fieldPaths=swapAt';
-                  await fetch(p2Url,{method:'PATCH',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},
-                    body:JSON.stringify({fields:{status:{stringValue:'off'},swapWith:{stringValue:fromName},swapAt:{stringValue:new Date().toISOString()}}})});
-                }
-              }
-            }
-            return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
-          } catch(e) {
-            return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-          }
-        }
-
-        // action=myoff: 수락자 휴무 날짜 조회
-        if (url.searchParams.get('action') === 'mydays') {
-          const name = url.searchParams.get('name') || '';
-          const did = url.searchParams.get('did') || '';
-          const ws = url.searchParams.get('ws') || '';
-          try {
-            const fsToken = await getAccessToken(env);
-            // 이름으로 driverId 찾기
-            const qUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-            const qBody = JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'name'},op:'EQUAL',value:{stringValue:name}}}]}},limit:1}});
-            const qRes = await fetch(qUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:qBody});
-            const qData = await qRes.json();
-            const toDriverId = qData[0]?.document?.name?.split('/')?.pop() || '';
-            if (!toDriverId) return new Response(JSON.stringify({ok:false,error:'기사를 찾을 수 없습니다'}),{headers:{'Content-Type':'application/json'}});
-            // 해당 주 전체 날짜 조회
-            const rUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery';
-            const rBody = JSON.stringify({structuredQuery:{from:[{collectionId:'roster_week'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:did}}},{fieldFilter:{field:{fieldPath:'weekStart'},op:'EQUAL',value:{stringValue:ws}}},{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:toDriverId}}}]}},limit:7}});
-            const rRes = await fetch(rUrl,{method:'POST',headers:{'Authorization':'Bearer '+fsToken,'Content-Type':'application/json'},body:rBody});
-            const rData = await rRes.json();
-            const dayDocs = {};
-            const weekDays2 = [];
-            const sun2 = new Date(ws);
-            for (let i=0;i<7;i++){const d=new Date(sun2);d.setDate(sun2.getDate()+i);weekDays2.push(d.toISOString().slice(0,10));}
-            (rData||[]).filter(r=>r.document).forEach(r=>{
-              const f=r.document.fields||{};
-              const di=parseInt(f.dayIndex?.integerValue||f.dayIndex?.doubleValue||0);
-              const docId2=r.document.name.split('/').pop();
-              const status=f.status?.stringValue||'work';
-              const route=f.route?.stringValue||'';
-              if(weekDays2[di]) dayDocs[weekDays2[di]]={docId:docId2,status,route};
-            });
-            return new Response(JSON.stringify({ok:true,dayDocs}),{headers:{'Content-Type':'application/json'}});
-          } catch(e) {
-            return new Response(JSON.stringify({ok:false,error:e.message}),{headers:{'Content-Type':'application/json'}});
-          }
-        }
-
-        const fromRoute = url.searchParams.get('fromRoute') || '';
-        const myRouteParam = url.searchParams.get('myRoute') || '';
-        const html = `<!DOCTYPE html><html lang="ko"><head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>근무 교체 요청</title>
-<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}.card{background:#1e293b;border-radius:16px;padding:24px;max-width:420px;width:100%}.icon{font-size:40px;text-align:center;margin-bottom:12px}.title{font-size:17px;font-weight:900;text-align:center;margin-bottom:6px}.desc{font-size:12px;color:#94a3b8;text-align:center;margin-bottom:20px;line-height:1.6}.label{font-size:11px;color:#64748b;margin-bottom:4px;margin-top:12px}input,select{width:100%;padding:11px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:14px;outline:none;margin-bottom:4px}input:focus,select:focus{border-color:#3b82f6}.btn{width:100%;padding:13px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}.btn-green{background:linear-gradient(135deg,#059669,#10b981)}.day-btn{width:100%;padding:10px 12px;background:#0f172a;border:1.5px solid #334155;border-radius:10px;color:#f1f5f9;font-size:12px;cursor:pointer;margin-bottom:6px;text-align:left;display:flex;justify-content:space-between;align-items:center}.day-btn.selected{border-color:#10b981;background:#052e16}.day-btn .badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700}.off-badge{background:#fee2e2;color:#dc2626}.work-badge{background:#dcfce7;color:#16a34a}.divider{text-align:center;color:#475569;font-size:12px;margin:12px 0}</style>
-</head><body>
-<div class="card">
-  <div id="form-wrap">
-    <div class="icon"></div>
-    <div class="title">근무 교체 요청</div>
-    <div class="desc">${fromName}님의 <b>${date}</b>${fromRoute?' ('+fromRoute+')':''} 교체 요청<br>이름 입력 후 교체할 날짜를 선택하세요.</div>
-    <div class="label">내 이름</div>
-    <input type="text" id="swap-name" placeholder="이름 입력 후 조회">
-    <button class="btn" onclick="loadMyDays()">조회</button>
-    <div id="days-wrap" style="display:none">
-      <div class="label">교체할 날짜 선택</div>
-      <div id="day-list"></div>
-      <div id="route-wrap" style="display:none">
-        <div class="label">${fromName}님 라우트 <span style="color:#64748b">(교체 후 ${fromName}이 배송할 라우트)</span></div>
-        <input type="text" id="from-route" placeholder="예: 101C" value="${myRouteParam}">
-        <div class="label" style="margin-top:8px">내 라우트 <span style="color:#64748b">(교체 후 내가 배송할 라우트)</span></div>
-        <input type="text" id="my-route" placeholder="예: 215D (없으면 빈칸)">
-        <button class="btn btn-green" onclick="acceptExchange()">교체 수락</button>
+    <!-- 📊 대시보드 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('dashboard')">
+        <span class="acc-icon" id="ico-dashboard">▶</span>
+        <span class="acc-title">대시보드</span>
       </div>
+      <div class="acc-body" id="acc-dashboard"></div>
     </div>
-  </div>
-  <div id="success-wrap" style="display:none;text-align:center;padding:20px">
-    <div style="font-size:56px;margin-bottom:16px"></div>
-    <div style="font-size:18px;font-weight:900;margin-bottom:8px">교체 완료!</div>
-    <div id="success-msg" style="font-size:13px;color:#94a3b8;line-height:1.6"></div>
-  </div>
+
+    <!-- ✅ 가입 승인 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('join')">
+        <span class="acc-icon" id="ico-join">▶</span>
+        <span class="acc-title">가입 승인</span>
+        <span class="acc-badge" id="badge-join"></span>
+      </div>
+      <div class="acc-body" id="acc-join"></div>
+    </div>
+
+    <!-- 👥 고객사 관리 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('companies')">
+        <span class="acc-icon" id="ico-companies">▶</span>
+        <span class="acc-title">고객사 관리</span>
+      </div>
+      <div class="acc-body" id="acc-companies"></div>
+    </div>
+
+    <!-- 💬 채팅 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('chat')">
+        <span class="acc-icon" id="ico-chat">▶</span>
+        <span class="acc-title">1:1 채팅</span>
+        <span class="acc-badge" id="badge-chat"></span>
+      </div>
+      <div class="acc-body" id="acc-chat"></div>
+    </div>
+
+    <!-- 📢 공지 발송 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('notice')">
+        <span class="acc-icon" id="ico-notice">▶</span>
+        <span class="acc-title">공지 발송</span>
+      </div>
+      <div class="acc-body" id="acc-notice"></div>
+    </div>
+
+    <!-- 💰 결제 현황 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('billing')">
+        <span class="acc-icon" id="ico-billing">▶</span>
+        <span class="acc-title">결제 현황</span>
+      </div>
+      <div class="acc-body" id="acc-billing"></div>
+    </div>
+
+  </div><!-- /main-scroll -->
+</div><!-- /main-screen -->
+
+<!-- 상세 모달 -->
+<div id="detail-overlay" onclick="if(event.target===this)_ctrlCloseDetail()">
+  <div id="detail-box"></div>
 </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="/mbtico-ctrl.js?v=1"></script>
 <script>
-var _myDays={};
-var _selectedDate='';
-var _selectedDocId='';
-
-function _toast(msg,dur){var t=document.createElement('div');t.textContent=msg;t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:12px 20px;border-radius:10px;font-size:14px;z-index:9999;max-width:80vw;text-align:center';document.body.appendChild(t);setTimeout(function(){t.remove();},(dur||2800));}
-
-async function loadMyDays(){
-  var name=document.getElementById('swap-name').value.trim();
-  if(!name){_toast('이름을 입력해주세요');return;}
-  var params=new URLSearchParams(window.location.search);
-  var did=params.get('did')||'';
-  var ws=params.get('ws')||'';
-  try{
-    var res=await fetch('/swap?id=${docId}&action=mydays&name='+encodeURIComponent(name)+'&did='+did+'&ws='+ws);
-    var data=await res.json();
-    if(!data.ok){_toast(data.error||'조회 실패');return;}
-    _myDays=data.dayDocs||{};
-    var dates=Object.keys(_myDays).sort();
-    var el=document.getElementById('day-list');
-    el.innerHTML='';
-    if(!dates.length){
-      el.innerHTML='<div style="font-size:12px;color:#64748b;padding:8px 0">이번 주 일정이 없습니다</div>';
-    } else {
-      dates.forEach(function(d){
-        var info=_myDays[d];
-        var isOff=info.status==='off';
-        var badge='<span class="badge '+(isOff?'off-badge':'work-badge')+'">'+(isOff?'휴무':(info.route||'출근'))+'</span>';
-        var b=document.createElement('button');
-        b.className='day-btn';
-        b.innerHTML='<span>'+d+'</span>'+badge;
-        b.onclick=function(){
-          document.querySelectorAll('.day-btn').forEach(function(x){x.classList.remove('selected');});
-          b.classList.add('selected');
-          _selectedDate=d;
-          _selectedDocId=info.docId;
-          document.getElementById('route-wrap').style.display='block';
-        };
-        el.appendChild(b);
-      });
-    }
-    document.getElementById('days-wrap').style.display='block';
-  }catch(e){_toast('오류: '+e.message);}
-}
-
-async function acceptExchange(){
-  var name=document.getElementById('swap-name').value.trim();
-  var myRoute=document.getElementById('my-route').value.trim();
-  if(!_selectedDate||!_selectedDocId){_toast('날짜를 선택해주세요');return;}
-  try{
-    var params=new URLSearchParams(window.location.search);
-    var res=await fetch('/swap?id=${docId}&did='+params.get('did')+'&ws='+params.get('ws')+'&di='+params.get('di'),
-      {method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:name,mode:'exchange',myDate:_selectedDate,myDocId:_selectedDocId,myRoute:document.getElementById('my-route').value.trim(),fromRoute:document.getElementById('from-route').value.trim()})});
-    var data=await res.json();
-    if(data.ok){
-      document.getElementById('form-wrap').style.display='none';
-      document.getElementById('success-wrap').style.display='block';
-      document.getElementById('success-msg').textContent='${date}(${fromName}) ↔ '+_selectedDate+'('+name+') 교체 완료!';
-    }else{_toast('오류: '+(data.error||'다시 시도해주세요'));}
-  }catch(e){_toast('오류가 발생했습니다');}
-}
+  // 앱 시작
+  window.addEventListener('DOMContentLoaded', _ctrlInit);
+  // ESC → 모달 닫기
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') _ctrlCloseDetail();
+  });
 </script>
-</body></html>`;
-        return new Response(html, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}});
+</body>
+</html>
+`;
+        return new Response(ctrlHtml, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
-
-      if (path === '/stmt') {
-        const token = url.searchParams.get('t') || '';
-        if (!token) return new Response('잘못된 접근입니다.', { status: 400 });
-        try {
-          const fsToken = await getAccessToken(env);
-          const docUrl = 'https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/statement_share/' + token;
-          const fsRes = await fetch(docUrl, { headers: { 'Authorization': 'Bearer ' + fsToken } });
-          if (!fsRes.ok) throw new Error('not found');
-          const fsData = await fsRes.json();
-          const f = fsData.fields || {};
-          const gs = k => f[k]?.stringValue || '';
-          const gn = k => parseFloat(f[k]?.integerValue || f[k]?.doubleValue || 0);
-          const name     = gs('driverName');
-          const month    = gs('month');
-          const net      = gn('net');
-          const coName   = gs('_coName') || gs('companyName') || 'DONWAY';
-          const vatInc   = gn('vatIncome') || net;
-          const supply   = Math.round(vatInc/1.1);
-          const vat      = vatInc - supply;
-          const emp      = gn('emp');
-          const work     = gn('work');
-          const fresh    = gn('fresh');
-          const finc     = gn('finc');
-        const incReason  = gs('incReason') || '';
-          const nocont   = gn('nocont');
-          const etcPlus  = gn('etcPlus');
-          const etcMinus = gn('etcMinus');
-          const dmg      = gn('dmg');
-          const adv      = gn('adv');
-          const deduct   = gn('deduct') || emp+work+dmg+etcMinus+adv;
-          const dcnt     = gn('dcnt');
-          const fincPer  = gn('fincPerUnit');
-          const bizNum   = gs('bizNum') || '373-86-02536';
-          const contactPhone = gs('contactPhone') || '051-711-3103';
-          const dmgReason = gs('dmgReason');
-          const etcMinusReason = gs('etcMinusReason');
-          const etcPlusReason  = gs('etcPlusReason');
-          const etcPlusTL      = gn('etcPlusTL');
-          const etcPlusTLReason = gs('etcPlusTLReason');
-          const ceoName      = gs('ceoName');
-          const bizAddr       = gs('bizAddr');
-          const bizType       = gs('bizType');
-          const bizItem       = gs('bizItem');
-          const driverBizNum  = gs('driverBizNum');
-          const settleDocId   = gs('settleDocId');
-          const taxState      = gs('taxInvoiceState');
-          const taxReqAt      = gs('taxInvoiceRequestAt');
-          const monthLabel = month.replace('-', '년 ') + '월';
-
-          // 라우트별 실적
-          let routeRows = '';
-          let totalDcnt = 0, totalRcnt = 0, totalAmt = 0;
-          const rdArr = f['routeDetails']?.arrayValue?.values || [];
-          rdArr.forEach(rv => {
-            const rf = rv.mapValue?.fields || {};
-            const route = rf.route?.stringValue || '';
-            const cnt   = parseFloat(rf.cnt?.integerValue || rf.cnt?.doubleValue || 0);
-            const ret   = parseFloat(rf.ret?.integerValue || rf.ret?.doubleValue || 0);
-            const price = parseFloat(rf.unitPrice?.integerValue || rf.unitPrice?.doubleValue || 0);
-            const dAmt  = cnt * price;
-            const rAmt  = ret * price;
-            const amt   = dAmt + rAmt;
-            totalDcnt += cnt; totalRcnt += ret; totalAmt += amt;
-            routeRows += `<tr>
-              <td class="rt">${route}</td>
-              <td class="num">${cnt}</td>
-              <td class="num">${ret}</td>
-              <td class="num">₩${price.toLocaleString()}</td>
-              <td class="num bold blue">₩${amt.toLocaleString()}</td>
-            </tr>`;
-          });
-
-          // 일일 상세 내역 (5일씩 show/hide 페이지네이션)
-          const drFields = f['dateRoutes']?.mapValue?.fields || {};
-          const dfFields = f['dateFresh']?.mapValue?.fields || {};
-          const dateSet = new Set([...Object.keys(drFields), ...Object.keys(dfFields)]);
-          const dailyDates = Array.from(dateSet).sort();
-          const _DS = 5;
-          const _dTotalPages = Math.ceil(dailyDates.length / _DS);
-          let dailyTotalFresh = 0;
-          Object.keys(dfFields).forEach(dt => {
-            dailyTotalFresh += parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
-          });
-
-          let allPages = '';
-          for (let pi = 0; pi < _dTotalPages; pi++) {
-            const pageDates = dailyDates.slice(pi * _DS, (pi + 1) * _DS);
-            let rows = '';
-            pageDates.forEach(dt => {
-              const routesMap = drFields[dt]?.mapValue?.fields || {};
-              const routeKeys = Object.keys(routesMap).sort();
-              let dayDcnt = 0, dayRcnt = 0;
-              const routeParts = [];
-              routeKeys.forEach(rt => {
-                const rf2 = routesMap[rt]?.mapValue?.fields || {};
-                const c = parseFloat(rf2.cnt?.integerValue || rf2.cnt?.doubleValue || 0);
-                const rr = parseFloat(rf2.ret?.integerValue || rf2.ret?.doubleValue || 0);
-                dayDcnt += c; dayRcnt += rr;
-                routeParts.push(rt + '(' + c + (rr ? '/반' + rr : '') + ')');
-              });
-              const dayFresh = parseFloat(dfFields[dt]?.integerValue || dfFields[dt]?.doubleValue || 0);
-              rows += `<tr>
-                <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:11px;color:#185FA5;font-weight:600">${dt}</td>
-                <td style="padding:5px 8px;border-bottom:1px solid #eee;font-size:10px;color:#475569">${routeParts.join(', ') || '-'}</td>
-                <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayDcnt}</td>
-                <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px">${dayRcnt}</td>
-                <td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;font-size:11px;${dayFresh>0?'color:#059669':'color:#94a3b8'}">${dayFresh>0?'+'+dayFresh.toLocaleString():'-'}</td>
-              </tr>`;
-            });
-            const freshFoot = (pi === _dTotalPages - 1 && dailyTotalFresh > 0)
-              ? `<tfoot><tr style="background:#f0fdf4"><td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">프레시백 합계</td><td style="padding:6px 8px;font-size:11px;font-weight:700;color:#059669;text-align:right">+${dailyTotalFresh.toLocaleString()}원</td></tr></tfoot>`
-              : '';
-            allPages += `<div id="dp-page-${pi}" style="display:${pi===0?'block':'none'}">
-              <table>
-                <thead><tr style="background:#f8fafc">
-                  <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">날짜</th>
-                  <th style="padding:6px 8px;text-align:left;font-size:10px;color:#64748b">라우트(건수)</th>
-                  <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">배송</th>
-                  <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">반품</th>
-                  <th style="padding:6px 8px;text-align:right;font-size:10px;color:#64748b">프레시백</th>
-                </tr></thead>
-                <tbody>${rows}</tbody>
-                ${freshFoot}
-              </table>
-            </div>`;
-          }
-
-          const nav = _dTotalPages > 1 ? `
-            <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:6px">
-              <button id="dp-prev" onclick="var cur=parseInt(document.getElementById('dp-cur').value);if(cur>0){document.getElementById('dp-page-'+cur).style.display='none';document.getElementById('dp-page-'+(cur-1)).style.display='block';document.getElementById('dp-cur').value=cur-1;document.getElementById('dp-label').textContent=cur+'/${_dTotalPages}';}" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">◀</button>
-              <span id="dp-label" style="font-size:11px;color:#64748b">1/${_dTotalPages}</span>
-              <button id="dp-next" onclick="var cur=parseInt(document.getElementById('dp-cur').value);if(cur<${_dTotalPages}-1){document.getElementById('dp-page-'+cur).style.display='none';document.getElementById('dp-page-'+(cur+1)).style.display='block';document.getElementById('dp-cur').value=cur+1;document.getElementById('dp-label').textContent=(cur+2)+'/${_dTotalPages}';}" style="border:none;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 10px;font-size:12px;cursor:pointer">▶</button>
-              <input type="hidden" id="dp-cur" value="0">
-            </div>` : '';
-
-          const dailySec = dailyDates.length ? `
-            <div class="sec">
-              <div class="sec-title">일일 상세 내역 (날짜별 배송/반품/프레시백)</div>
-              ${allPages}
-              ${nav}
-            </div>` : '';
-
-          // 아이디지원 섹션
-          const idsArr = (f['idSupportRules']?.arrayValue?.values || []).map(v => {
-            const vf = v.mapValue?.fields || {};
-            return {
-              fromId: vf.fromId?.stringValue || '',
-              toId: vf.toId?.stringValue || '',
-              dates: (vf.dates?.arrayValue?.values || []).map(dv => dv.stringValue || '').sort()
-            };
-          }).filter(r => r.fromId || r.toId);
-          const driverUid = gs('userId') || gs('driver') || '';
-          const idsSec = idsArr.length ? `
-            <div class="sec" style="margin-top:12px">
-              <div class="sec-title" style="font-size:12px;font-weight:800;color:#166534;margin-bottom:8px">아이디 지원 내역</div>
-              ${idsArr.map(r => {
-                const isFrom = r.fromId === driverUid;
-                const other = isFrom ? r.toId : r.fromId;
-                const arrow = isFrom ? r.fromId + ' → ' + r.toId : r.fromId + ' → ' + r.toId;
-                const badge = isFrom ? '<span style="font-size:9px;background:#dcfce7;color:#166534;padding:1px 5px;border-radius:8px;margin-left:4px">지원</span>' : '<span style="font-size:9px;background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;margin-left:4px">수혜</span>';
-                return '<div style="font-size:11px;color:#374151;margin-bottom:4px">' + arrow + badge + '<span style="color:#64748b;margin-left:6px">' + r.dates.join(', ') + '</span></div>';
-              }).join('')}
-            </div>` : '';
-
-          // 추가 항목
-          let addRows = '';
-          addRows += `<tr><td class="item">③ 프레시백 회수금액</td><td class="amt green">+₩${fresh.toLocaleString()}</td></tr>`;
-          addRows += `<tr><td class="item">④ 프레시백 인센티브${fincPer>0?' <small>('+dcnt+'건 × '+fincPer+'원)</small>':''}</td><td class="amt green">+₩${finc.toLocaleString()}</td></tr>`;
-          if(incReason) addRows += `<tr><td class="item" style="padding-left:16px;color:#6b7280;font-size:11px">└ 가중요인: ${incReason}</td><td class="amt green" style="font-size:11px"></td></tr>`;
-          addRows += `<tr><td class="item">⑤ 미계약건</td><td class="amt green">+₩${nocont.toLocaleString()}</td></tr>`;
-          if(etcPlus>0)  addRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
-          if(etcPlusTL>0) addRows += `<tr><td class="item">팀장수수료${etcPlusTLReason?' <small style="color:#94a3b8">('+etcPlusTLReason+')</small>':''}</td><td class="amt green">+₩${etcPlusTL.toLocaleString()}</td></tr>`;
-
-          // 공제 항목
-          let deductRows = '';
-          deductRows += `<tr><td class="item">고용보험 (0.8%, 80만↑)</td><td class="amt red">-₩${emp.toLocaleString()}</td></tr>`;
-          deductRows += `<tr><td class="item">산재보험 (0.88%)</td><td class="amt red">-₩${work.toLocaleString()}</td></tr>`;
-          deductRows += `<tr><td class="item">⑥ 분실/파손${dmgReason?' ('+dmgReason+')':''}</td><td class="amt red">-₩${dmg.toLocaleString()}</td></tr>`;
-          deductRows += `<tr><td class="item">⑦ 기타(+)${etcPlusReason?' <small style="color:#94a3b8">('+etcPlusReason+')</small>':''}</td><td class="amt green">+₩${etcPlus.toLocaleString()}</td></tr>`;
-          deductRows += `<tr><td class="item">⑧ 기타(-)${etcMinusReason?' <small style="color:#94a3b8">('+etcMinusReason+')</small>':''}</td><td class="amt red">-₩${etcMinus.toLocaleString()}</td></tr>`;
-          deductRows += `<tr><td class="item">⑨ 가불 공제</td><td class="amt red">-₩${adv.toLocaleString()}</td></tr>`;
-
-          const routeSec = routeRows ? `
-            <div class="sec">
-              <div class="sec-title">① 배송 ② 반품 — 라우트별 실적 (건수×단가)</div>
-              <table>
-                <thead><tr style="background:#f8fafc">
-                  <th style="padding:5px 8px;text-align:left">라우트</th>
-                  <th style="padding:5px 8px;text-align:right">배송건</th>
-                  <th style="padding:5px 8px;text-align:right">반품건</th>
-                  <th style="padding:5px 8px;text-align:right">단가</th>
-                  <th style="padding:5px 8px;text-align:right">소계</th>
-                </tr></thead>
-                <tbody>${routeRows}</tbody>
-                <tfoot><tr style="background:#eff6ff;font-weight:700">
-                  <td style="padding:6px 8px">합계</td>
-                  <td style="padding:6px 8px;text-align:right">${totalDcnt}건</td>
-                  <td style="padding:6px 8px;text-align:right">${totalRcnt}건</td>
-                  <td></td>
-                  <td style="padding:6px 8px;text-align:right;color:#185FA5">₩${totalAmt.toLocaleString()}</td>
-                </tr></tfoot>
-              </table>
-            </div>` : '';
-
-          const addSec = (addRows || deductRows) ? `
-            <div class="sec" style="padding-top:0">
-              <table>${addRows}${deductRows}</table>
-            </div>` : '';
-
-          // 세금계산서 섹션 (버튼 탭하면 펼침)
-          const taxSec = `
-            <div class="sec" style="padding-bottom:0">
-              <button onclick="var el=document.getElementById('tax-detail');el.style.display=el.style.display==='none'?'block':'none';this.textContent=el.style.display==='none'?'세금계산서 보기 ▼':'세금계산서 닫기 ▲'"
-                style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px">
-                세금계산서 보기 ▼
-              </button>
-              <div id="tax-detail" style="display:none;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px;margin-bottom:12px">
-                <div style="font-size:11px;font-weight:800;color:#7c3aed;margin-bottom:10px;padding-bottom:6px;border-bottom:1.5px solid #e9d5ff">세금계산서 내역</div>
-                <table>
-                  <tr><td class="item" style="color:#64748b">공급가액</td><td class="amt" style="color:#7c3aed">₩${supply.toLocaleString()}</td></tr>
-                  <tr><td class="item" style="color:#64748b">부가세 (10%)</td><td class="amt" style="color:#7c3aed">₩${vat.toLocaleString()}</td></tr>
-                  <tr style="border-top:1.5px solid #e9d5ff;font-weight:800"><td class="item" style="color:#7c3aed">합계 (VAT포함)</td><td class="amt" style="color:#7c3aed;font-size:14px">₩${vatInc.toLocaleString()}</td></tr>
-                </table>
-                <div style="margin-top:10px;font-size:10px;color:#94a3b8;line-height:1.8">
-                  공급자: ${coName}${ceoName?' (대표: '+ceoName+')':''}<br>
-                  사업자번호: ${bizNum}<br>
-                  ${bizAddr?'사업장 주소: '+bizAddr+'<br>':''}                  ${bizType?'업태: '+bizType+(bizItem?' · 종목: '+bizItem:'')+'<br>':''}                  문의: ${contactPhone}
-                </div>
-              </div>
-            </div>`;
-
-          const css = `
-            *{margin:0;padding:0;box-sizing:border-box}
-            body{background:#f1f5f9;font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;min-height:100vh;padding:16px}
-            .logo{text-align:center;font-size:12px;font-weight:900;color:#1e3a8a;letter-spacing:.1em;padding:12px 0 4px}
-            .wrap{max-width:480px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.1)}
-            .hdr{background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;padding:18px 20px}
-            .hdr .lbl{font-size:10px;opacity:.7;margin-bottom:4px}
-            .hdr .ttl{font-size:18px;font-weight:800;margin-bottom:2px}
-            .hdr .sub{font-size:12px;opacity:.85}
-            .summary{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:2px solid #e2e8f0}
-            .sbox{padding:10px;text-align:center;border-right:1px solid #e2e8f0}
-            .sbox:last-child{border-right:none}
-            .slbl{font-size:9px;color:#64748b;margin-bottom:3px}
-            .sval{font-size:13px;font-weight:800}
-            .ssub{font-size:9px;color:#94a3b8;margin-top:2px}
-            .sec{padding:12px 14px;overflow-x:auto}
-            .sec-title{font-size:11px;font-weight:800;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e2e8f0}
-            table{width:100%;border-collapse:collapse;font-size:11px}
-            td{padding:5px 8px}
-            .rt{border-bottom:1px solid #eee;font-weight:600;color:#185FA5}
-            .num{border-bottom:1px solid #eee;text-align:right}
-            .bold{font-weight:700}
-            .blue{color:#185FA5}
-            .item{font-size:12px;color:#374151}
-            .item small{font-size:10px}
-            .amt{text-align:right;font-size:12px;font-weight:700}
-            .green{color:#059669}
-            .red{color:#dc2626}
-            .net-row{background:#eff6ff;border-radius:8px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin:0 14px 14px}
-            .ft{padding:10px 14px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center;line-height:1.8}
-          `;
-
-          const html = `<!DOCTYPE html><html lang="ko" translate="no"><head><meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <meta name="google" content="notranslate">
-            <title>${coName} 정산명세서</title>
-            <style>${css}</style></head><body>
-            <div class="logo">DONWAY</div>
-            <div class="wrap">
-              <div class="hdr">
-                <div class="lbl">OFFICIAL STATEMENT · ${coName}</div>
-                <div class="ttl">${monthLabel} 정산 명세서</div>
-                <div class="sub">${name} &nbsp;<span style="opacity:.6">쿠팡</span></div>
-              </div>
-              <div class="summary">
-                <div class="sbox"><div class="slbl">세금계산서 합계</div><div class="sval" style="color:#7c3aed">₩${vatInc.toLocaleString()}</div><div class="ssub">공급가 ₩${supply.toLocaleString()} + VAT ₩${vat.toLocaleString()}</div></div>
-                <div class="sbox"><div class="slbl">공제 합계</div><div class="sval" style="color:#dc2626">-₩${deduct.toLocaleString()}</div><div class="ssub">고용+산재+파손+기타(-)+가불</div></div>
-                <div class="sbox"><div class="slbl">실 지급액</div><div class="sval" style="color:#185FA5">₩${net.toLocaleString()}</div></div>
-              </div>
-              ${routeSec}
-              ${dailySec}${idsSec}
-              ${addSec}
-              ${taxSec}
-              <div class="net-row"><span style="font-weight:700;font-size:13px">실지급액</span><span style="font-size:22px;font-weight:900;color:#185FA5">₩${net.toLocaleString()}</span></div>
-              <div class="ft">${coName} · ${contactPhone} · 사업자번호 ${bizNum}<br>DONWAY 자동 발행 · 고유 링크로 보호됩니다</div>
-              <!-- 세금계산서 신청 섹션 -->
-              ${(()=>{
-                if(taxState==='역발행승인'){
-                  return `<div id="tax-invoice-section" style="margin:14px;border:1.5px solid #d1fae5;border-radius:12px;overflow:hidden">
-                    <div style="background:#ecfdf5;padding:12px 14px;border-bottom:1px solid #d1fae5">
-                      <div style="font-size:12px;font-weight:800;color:#065f46">전자세금계산서</div>
-                    </div>
-                    <div style="padding:16px;text-align:center">
-                      <div style="font-size:20px;margin-bottom:6px">✅</div>
-                      <div style="font-size:13px;font-weight:700;color:#059669">발행 완료</div>
-                      <div style="font-size:11px;color:#64748b;margin-top:4px">전자세금계산서가 발행되었습니다</div>
-                    </div>
-                  </div>`;
-                } else if(taxState==='역발행요청'){
-                  const reqDate=taxReqAt?taxReqAt.slice(0,10):'';
-                  return `<div id="tax-invoice-section" style="margin:14px;border:1.5px solid #fef9c3;border-radius:12px;overflow:hidden">
-                    <div style="background:#fefce8;padding:12px 14px;border-bottom:1px solid #fef9c3">
-                      <div style="font-size:12px;font-weight:800;color:#92400e">전자세금계산서</div>
-                    </div>
-                    <div style="padding:16px;text-align:center">
-                      <div style="font-size:20px;margin-bottom:6px">⏳</div>
-                      <div style="font-size:13px;font-weight:700;color:#b45309">승인 대기 중</div>
-                      <div style="font-size:11px;color:#64748b;margin-top:4px">팝빌 앱 또는 문자에서 승인해 주세요${reqDate?' ('+reqDate+' 신청)':''}</div>
-                    </div>
-                  </div>`;
-                } else {
-                  const hasBiz=!!driverBizNum;
-                  return `<div id="tax-invoice-section" style="margin:14px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
-                    <div style="background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0">
-                      <div style="font-size:12px;font-weight:800;color:#1e3a8a">전자세금계산서 신청</div>
-                      <div style="font-size:10px;color:#64748b;margin-top:2px">역발행 방식으로 발급됩니다</div>
-                    </div>
-                    <div id="tax-form" style="padding:14px;display:flex;flex-direction:column;gap:10px">
-                      ${hasBiz?`<div style="font-size:11px;color:#475569;padding:8px 10px;background:#f1f5f9;border-radius:6px">사업자번호 <strong>${driverBizNum}</strong>로 신청합니다</div>`
-                               :`<input id="drv-biznum" type="tel" placeholder="사업자번호 (숫자 10자리)" maxlength="12" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">`}
-                      <button onclick="${hasBiz?'requestTax()':'submitBizAndTax()'}" style="padding:12px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">세금계산서 신청하기</button>
-                      <div id="tax-msg" style="font-size:11px;text-align:center;color:#64748b"></div>
-                    </div>
-                    <div id="tax-done" style="display:none;padding:16px;text-align:center">
-                      <div style="font-size:20px;margin-bottom:6px">✅</div>
-                      <div style="font-size:13px;font-weight:700;color:#059669">세금계산서 등록 신청 완료</div>
-                      <div style="font-size:11px;color:#64748b;margin-top:4px">공인인증서를 등록해야 최종 발행됩니다</div>
-                      <div id="tax-cert-section" style="margin-top:12px;display:none">
-                        <a id="tax-cert-link" href="#" target="_blank" style="display:inline-block;padding:10px 18px;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none">공인인증서 등록하기</a>
-                        <div style="font-size:10px;color:#94a3b8;margin-top:6px">팝빌 앱 설치 후 서명하거나 위 버튼으로 등록하세요</div>
-                      </div>
-                    </div>
-                  </div>`;
-                }
-              })()}
-              <!-- 계좌 등록 폼 -->
-              <div id="bank-section" style="margin:14px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
-                <div style="background:#f8fafc;padding:12px 14px;border-bottom:1px solid #e2e8f0">
-                  <div style="font-size:12px;font-weight:800;color:#1e3a8a">계좌 정보 등록</div>
-                  <div style="font-size:10px;color:#64748b;margin-top:2px">등록된 계좌로 급여가 이체됩니다</div>
-                </div>
-                <div id="bank-form" style="padding:14px;display:flex;flex-direction:column;gap:10px">
-                  <select id="bank-name" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff">
-                    <option value="">은행 선택</option>
-                    <option>국민은행</option><option>신한은행</option><option>우리은행</option>
-                    <option>하나은행</option><option>농협은행</option><option>기업은행</option>
-                    <option>카카오뱅크</option><option>토스뱅크</option><option>케이뱅크</option>
-                    <option>SC제일은행</option><option>새마을금고</option><option>신협</option>
-                    <option>우체국</option><option>부산은행</option><option>경남은행</option>
-                    <option>대구은행</option><option>광주은행</option>
-                  </select>
-                  <input id="bank-num" type="tel" placeholder="계좌번호 (- 없이 숫자만)" style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px">
-                  <button onclick="submitBank()" style="padding:12px;background:linear-gradient(135deg,#1e3a8a,#3b82f6);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">계좌 등록</button>
-                  <div id="bank-msg" style="font-size:11px;text-align:center;color:#64748b"></div>
-                </div>
-                <div id="bank-done" style="display:none;padding:14px;text-align:center">
-                  <div style="font-size:24px;margin-bottom:6px"></div>
-                  <div style="font-size:13px;font-weight:700;color:#059669">계좌가 등록되었습니다</div>
-                  <div style="font-size:11px;color:#64748b;margin-top:4px">관리자에게 전달되었습니다</div>
-                </div>
-              </div>
-            </div>
-            <script>
-            var _stmtToken="${token}", _stmtDealer="${gs('dealerId')}", _stmtName="${name}";
-            var _autoBiz="${driverBizNum}", _autoTaxSt="${taxState||''}";
-            if(_autoBiz&&!_autoTaxSt){document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){requestTax(_autoBiz);},900);});}
-            async function requestTax(bizNum){
-              var msg=document.getElementById("tax-msg");
-              if(msg)msg.textContent="처리 중... (팝빌 연동회원 등록 포함, 잠시 기다려 주세요)";
-              try{
-                var res=await fetch("/api/stmt-tax-issue",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:_stmtToken,driverBizNum:bizNum||""})});
-                var d=await res.json();
-                if(d.ok){
-                  var tf=document.getElementById("tax-form");
-                  var td=document.getElementById("tax-done");
-                  if(tf)tf.style.display="none";
-                  if(td)td.style.display="block";
-                  if(d.certUrl){
-                    var cs=document.getElementById("tax-cert-section");
-                    var cl=document.getElementById("tax-cert-link");
-                    if(cs)cs.style.display="block";
-                    if(cl)cl.href=d.certUrl;
-                  }
-                } else if(d.alreadyRequested){
-                  if(msg){msg.style.color="#b45309";msg.textContent="이미 신청된 세금계산서가 있습니다";}
-                } else {
-                  if(msg){msg.style.color="#dc2626";msg.textContent=d.error||"오류가 발생했습니다. 관리자에게 문의하세요.";}
-                }
-              }catch(e){if(msg){msg.style.color="#dc2626";msg.textContent="네트워크 오류가 발생했습니다";}}
-            }
-            async function submitBizAndTax(){
-              var inp=document.getElementById("drv-biznum");
-              var msg=document.getElementById("tax-msg");
-              if(!inp)return;
-              var biz=inp.value.replace(/[^0-9]/g,"");
-              if(biz.length!==10){if(msg){msg.style.color="#dc2626";msg.textContent="사업자번호 10자리를 입력해주세요";}return;}
-              await requestTax(biz);
-            }
-            async function submitBank(){
-              var bn=document.getElementById("bank-name").value;
-              var bnum=document.getElementById("bank-num").value.replace(/[^0-9]/g,"");
-              var msg=document.getElementById("bank-msg");
-              if(!bn){msg.style.color="#dc2626";msg.textContent="은행을 선택해주세요";return;}
-              if(!bnum||bnum.length<10){msg.style.color="#dc2626";msg.textContent="올바른 계좌번호를 입력해주세요";return;}
-              msg.style.color="#64748b";msg.textContent="확인 중...";
-              try{
-                var res=await fetch("/api/register-bank",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:_stmtToken,bankName:bn,bankNum:bnum,driverName:_stmtName,dealerId:_stmtDealer})});
-                var data=await res.json();
-                if(data.ok){document.getElementById("bank-form").style.display="none";document.getElementById("bank-done").style.display="block";}
-                else{msg.style.color="#dc2626";msg.textContent=data.error||"등록 실패. 관리자에게 문의하세요.";}
-              }catch(e){msg.style.color="#dc2626";msg.textContent="오류가 발생했습니다";}
-            }
-            </script>
-            </body></html>`;
-
-          return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8', 'Cache-Control': 'no-store' } });
-        } catch(e2) {
-          return new Response('<!DOCTYPE html><html><body style="background:#0f1623;color:#f0f4ff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;text-align:center"><div><div style="font-size:40px;margin-bottom:16px"></div><div>명세서를 찾을 수 없거나 만료되었습니다.</div><div style="font-size:11px;color:#94a3b8;margin-top:12px">' + e2.message + '</div></div></body></html>', { status:404, headers:{'Content-Type':'text/html;charset=utf-8'} });
-        }
+      // 배송앱 라우트 → filo.ai.kr 리다이렉트 (2026-09-20 워커 분리 이후)
+      if (path === '/label' || path === '/label.html') return Response.redirect('https://filo.ai.kr/label', 302);
+      if (path === '/delivery' || path === '/delivery.html') {
+        const did = new URL(request.url).searchParams.get('did') || '';
+        return Response.redirect('https://filo.ai.kr/drivers' + (did ? '?did=' + did : ''), 302);
       }
-
-      if (path === '/settle' || path === '/settle.html') return Response.redirect('https://donway.ai.kr/join', 302);
-
-    // ★ slug 기반 동적 manifest + 아이콘
-    // /c/{slug}/manifest.json → 회사명으로 동적 생성
-    // /c/{slug}/icon.svg → 회사명 첫 두 글자 SVG 아이콘
-    // /c/{slug} → settle.html 서빙 (향후 회사별 랜딩)
-    const slugMatch = path.match(/^\/c\/([A-Za-z0-9\-_]+)(\/.+)?$/);
-    if (slugMatch) {
-      const slug = slugMatch[1];
-      const subPath = slugMatch[2] || '';
-      const fsToken2 = await getAccessToken(env);
-      // Firestore에서 slug로 회사 조회
-      const qUrl = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`;
-      const qBody = JSON.stringify({ structuredQuery: {
-        from: [{ collectionId: 'companies' }],
-        where: { fieldFilter: { field: { fieldPath: 'slug' }, op: 'EQUAL', value: { stringValue: slug } } },
-        limit: 1
-      }});
-      const qRes = await fetch(qUrl, { method:'POST', headers:{ 'Authorization':`Bearer ${fsToken2}`, 'Content-Type':'application/json' }, body: qBody });
-      const qData = await qRes.json();
-      const compDoc = qData[0]?.document?.fields || {};
-      const compName = compDoc.companyName?.stringValue || 'DONWAY';
-      const shortName = compName.length > 4 ? compName.slice(0,2) : compName;
-      const shortLabel = compDoc.shortLabel?.stringValue || '';
-      const label = shortLabel || shortName.slice(0,2);
-
-      const dwLogoB64 = compDoc.slugLogoB64?.stringValue || '';
-      // 커스텀 로고 PNG
-      if (subPath === '/logo.png' && dwLogoB64) {
-        const dwLogoStr = dwLogoB64.replace(/^data:image\/\w+;base64,/, '');
-        const dwLogoBin = Uint8Array.from(atob(dwLogoStr), c => c.charCodeAt(0));
-        return new Response(dwLogoBin, { headers: { 'Content-Type':'image/png', 'Cache-Control':'public,max-age=3600' } });
-      }
-      // SVG 아이콘
-      if (subPath === '/icon.svg') {
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#00c8f8"/><text x="96" y="130" font-size="88" font-family="'Noto Sans KR',sans-serif" font-weight="700" fill="white" text-anchor="middle">${label}</text></svg>`;
-        return new Response(svg, { headers: { 'Content-Type':'image/svg+xml', 'Cache-Control':'public,max-age=3600' } });
-      }
-
-      // manifest.json
-      if (subPath === '/manifest.json') {
-        const dwIconSrc = dwLogoB64 ? '/c/'+slug+'/logo.png' : '/c/'+slug+'/icon.svg';
-        const dwIconType = dwLogoB64 ? 'image/png' : 'image/svg+xml';
-        const manifest = {
-          name: compName + ' DONWAY',
-          short_name: shortLabel || shortName,
-          start_url: '/c/' + slug,
-          display: 'standalone',
-          background_color: '#0f1623',
-          theme_color: '#00c8f8',
-          icons: [
-            { src: dwIconSrc, sizes: dwLogoB64 ? '512x512' : 'any', type: dwIconType, purpose: 'any maskable' }
-          ]
-        };
-        return new Response(JSON.stringify(manifest), { headers: { 'Content-Type':'application/manifest+json', 'Cache-Control':'no-cache' } });
-      }
-
-      // /c/{slug} → settle.html 서빙 + manifest 링크 주입
-      if (!subPath || subPath === '/') {
-        const kvStream_c = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
-        if (kvStream_c) {
-          return new Response(kvStream_c, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
-        }
+      if (path === '/emergency' || path === '/emergency.html') return Response.redirect('https://filo.ai.kr/emergency', 302);
+      if (path === '/emergency-manifest.json') return Response.redirect('https://filo.ai.kr/emergency-manifest.json' + (url.search||''), 302);
+      if (path === '/checkin' || path === '/checkin.html') return Response.redirect('https://filo.ai.kr/checkin', 302);
+      if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
+      if (path === '/register' || path === '/register.html') return Response.redirect('https://filo.ai.kr/register', 301);
+      if (path === '/drivers' || path === '/drivers.html') return Response.redirect('https://filo.ai.kr/drivers', 302);
+      if (path === '/notice' || path === '/notice.html') return Response.redirect('https://filo.ai.kr/notice', 302);
+      if (path === '/schedule' || path === '/schedule.html') return Response.redirect('https://filo.ai.kr/schedule', 302);
+      if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
+      if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://filo.ai.kr/register', 301);
+      if (path === '/driver-join') return Response.redirect('https://filo.ai.kr/register', 302);
+      if (path === '/clients') return Response.redirect('https://filo.ai.kr', 302);
+      // 배송앱 슬러그 → filo.ai.kr 리다이렉트 (2026-09-20 워커 분리 이후)
+      if (method === 'GET' && !path.startsWith('/api/')) {
+        return Response.redirect('https://filo.ai.kr' + path + (url.search||''), 302);
       }
     }
-      if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
-      if (path === '/admin' || path === '/admin.html') return serveKVFile(env, 'settle.html', 'text/html');
-      if (path === '/admin-sub' || path === '/admin_sub.html') return Response.redirect('https://mbtico.kr/control', 302);
-
-      // ── 전자계약서 ─────────────────────────────────────────────────────────────
-      if (path === '/contract' || path === '/contract/') return serveKVFile(env, 'contract.html', 'text/html');
-      if (path === '/sign') return serveKVFile(env, 'contract-sign.html', 'text/html');
-      if (path === '/api/contract/view' && method === 'GET') {
-        const t = url.searchParams.get('t') || '';
-        if (!t) return new Response(JSON.stringify({ok:false,error:'token required'}),{status:400,headers:{'Content-Type':'application/json'}});
-        try {
-          const fsToken = await getAccessToken(env);
-          const docRes = await fetch(`${FS_BASE}/eContracts/${encodeURIComponent(t)}`, { headers:{'Authorization':`Bearer ${fsToken}`} });
-          if (!docRes.ok) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
-          const fd = await docRes.json();
-          if (fd.error) return new Response(JSON.stringify({ok:false,error:'계약서를 찾을 수 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
-          const f = fd.fields || {};
-          const gs = k => f[k]?.stringValue || '';
-          return new Response(JSON.stringify({ok:true, contract:{
-            ctype:gs('ctype'), name:gs('name'), phone:gs('phone'),
-            startDate:gs('startDate'), endDate:gs('endDate'), loc:gs('loc'),
-            pay:gs('pay'), payDay:gs('payDay'), payType:gs('payType'),
-            vehicle:gs('vehicle'), special:gs('special'), status:gs('status'),
-            agencyName:gs('agencyName'), agencyRep:gs('agencyRep'),
-            agencyBizno:gs('agencyBizno'), agencyPhone:gs('agencyPhone'),
-            agencyAddr:gs('agencyAddr'), agencyAccount:gs('agencyAccount'),
-            camp:gs('camp'), route:gs('route'), returnFee:gs('returnFee'),
-            licenseNo:gs('licenseNo'), sortWork:gs('sortWork'), createdAt:gs('createdAt')
-          }}), {headers:{'Content-Type':'application/json'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-        }
-      }
-      if (path === '/api/contract/otp' && method === 'POST') {
-        try {
-          const body = await request.json();
-          const { name, phone, ctype, startDate, endDate, loc, pay, payDay, payType, vehicle, special, agencyName, agencyRep, agencyBizno, agencyPhone, agencyAddr, agencyAccount, camp, route, returnFee, licenseNo, sortWork } = body;
-          if (!phone) return new Response(JSON.stringify({ok:false,error:'전화번호 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
-          if (!agencyName) return new Response(JSON.stringify({ok:false,error:'대리점 상호명 필요'}),{status:400,headers:{'Content-Type':'application/json'}});
-          const fsToken = await getAccessToken(env);
-          const contractId = 'EC' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase();
-          const otp = String(Math.floor(100000 + Math.random() * 900000));
-          const now = new Date().toISOString();
-          const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-          await fetch(`${FS_BASE}/eContracts/${contractId}`, {
-            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
-            body: JSON.stringify({ fields:{
-              ctype:{stringValue:ctype||'regular'}, name:{stringValue:name||''},
-              phone:{stringValue:phone}, startDate:{stringValue:startDate||''},
-              endDate:{stringValue:endDate||''}, loc:{stringValue:loc||''},
-              pay:{stringValue:String(pay||'')}, payDay:{stringValue:payDay||''},
-              payType:{stringValue:payType||''}, vehicle:{stringValue:vehicle||''},
-              special:{stringValue:special||''}, status:{stringValue:'pending'},
-              agencyName:{stringValue:agencyName}, agencyRep:{stringValue:agencyRep||''},
-              agencyBizno:{stringValue:agencyBizno||''}, agencyPhone:{stringValue:agencyPhone||''},
-              agencyAddr:{stringValue:agencyAddr||''}, agencyAccount:{stringValue:agencyAccount||''},
-              camp:{stringValue:camp||''}, route:{stringValue:route||''},
-              returnFee:{stringValue:String(returnFee||'')}, licenseNo:{stringValue:licenseNo||''},
-              sortWork:{stringValue:sortWork||'미수행'}, createdAt:{stringValue:now}
-            }})
-          });
-          await fetch(`${FS_BASE}/contract_otps`, {
-            method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
-            body: JSON.stringify({ fields:{
-              contractId:{stringValue:contractId}, phone:{stringValue:phone},
-              otp:{stringValue:otp}, expiresAt:{stringValue:expiresAt},
-              used:{booleanValue:false}, createdAt:{stringValue:now}
-            }})
-          });
-          const signUrl = `https://donway.ai.kr/sign?t=${contractId}`;
-          const smsText = `[DONWAY] ${name||'귀하'}님 계약서 전자서명\nOTP: ${otp} (10분 유효)\n서명: ${signUrl}`;
-          if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
-            const dt = new Date().toISOString();
-            const sl = Math.random().toString(36).slice(2);
-            const enc = new TextEncoder();
-            const ck = await crypto.subtle.importKey('raw', enc.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-            const sg = await crypto.subtle.sign('HMAC', ck, enc.encode(dt+sl));
-            const sig = Array.from(new Uint8Array(sg)).map(b=>b.toString(16).padStart(2,'0')).join('');
-            await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
-              method:'POST', headers:{'Content-Type':'application/json','Authorization':`HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt}, salt=${sl}, signature=${sig}`},
-              body: JSON.stringify({messages:[{to:phone.replace(/[^0-9]/g,''),from:'05171133103',type:'SMS',text:smsText}]})
-            }).catch(()=>{});
-          }
-          return new Response(JSON.stringify({ok:true, contractId, signUrl}), {headers:{'Content-Type':'application/json'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-        }
-      }
-      if (path === '/api/contract/sign' && method === 'POST') {
-        try {
-          const body = await request.json();
-          const { token: contractId, otp, signatureB64, contentHash } = body;
-          if (!contractId || !otp || !signatureB64) return new Response(JSON.stringify({ok:false,error:'필수 파라미터 누락'}),{status:400,headers:{'Content-Type':'application/json'}});
-          const fsToken = await getAccessToken(env);
-          const now = new Date().toISOString();
-          const qRes = await fetch(`${FS_BASE}:runQuery`, {
-            method:'POST', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
-            body: JSON.stringify({ structuredQuery:{
-              from:[{collectionId:'contract_otps'}],
-              where:{ compositeFilter:{ op:'AND', filters:[
-                {fieldFilter:{field:{fieldPath:'contractId'},op:'EQUAL',value:{stringValue:contractId}}},
-                {fieldFilter:{field:{fieldPath:'otp'},op:'EQUAL',value:{stringValue:String(otp)}}},
-                {fieldFilter:{field:{fieldPath:'used'},op:'EQUAL',value:{booleanValue:false}}}
-              ]}}, limit:1
-            }})
-          });
-          const qData = await qRes.json();
-          const otpDoc = qData?.[0]?.document;
-          if (!otpDoc) return new Response(JSON.stringify({ok:false,error:'OTP가 올바르지 않거나 만료되었습니다'}),{status:400,headers:{'Content-Type':'application/json'}});
-          const expiresAt = otpDoc.fields?.expiresAt?.stringValue || '';
-          if (expiresAt && new Date(expiresAt) < new Date()) {
-            return new Response(JSON.stringify({ok:false,error:'OTP가 만료되었습니다. 다시 요청해 주세요'}),{status:400,headers:{'Content-Type':'application/json'}});
-          }
-          await fetch(otpDoc.name + '?updateMask.fieldPaths=used&updateMask.fieldPaths=usedAt', {
-            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
-            body: JSON.stringify({ fields:{ used:{booleanValue:true}, usedAt:{stringValue:now} } })
-          });
-          const ip = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
-          const ua = request.headers.get('User-Agent') || '';
-          // 계약서 서명 상태 업데이트
-          const contractDoc = await fetch(`${FS_BASE}/eContracts/${contractId}`, { headers:{'Authorization':`Bearer ${fsToken}`} });
-          const contractData = contractDoc.ok ? await contractDoc.json() : null;
-          const cf = contractData?.fields || {};
-          const gs2 = k => cf[k]?.stringValue || '';
-          await fetch(`${FS_BASE}/eContracts/${contractId}?updateMask.fieldPaths=status&updateMask.fieldPaths=signedAt&updateMask.fieldPaths=signatureB64&updateMask.fieldPaths=contentHash&updateMask.fieldPaths=ip&updateMask.fieldPaths=ua`, {
-            method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
-            body: JSON.stringify({ fields:{
-              status:{stringValue:'signed'}, signedAt:{stringValue:now},
-              signatureB64:{stringValue:signatureB64}, contentHash:{stringValue:contentHash||''},
-              ip:{stringValue:ip}, ua:{stringValue:ua}
-            }})
-          });
-          // 계약서 사본 안내 SMS 발송 (근로기준법 제17조 — 계약서 교부 의무)
-          if (env.SOLAPI_KEY && env.SOLAPI_SECRET) {
-            const drPhone = gs2('phone');
-            const signUrl2 = `https://donway.ai.kr/sign?t=${contractId}`;
-            const smsText2 = `[DONWAY] 전자서명 완료\n계약서 사본: ${signUrl2}\n서명일시: ${now.slice(0,16)}\n이 링크로 계약서를 언제든지 확인하세요.`;
-            if (drPhone) {
-              const dt2 = new Date().toISOString();
-              const sl2 = Math.random().toString(36).slice(2);
-              const enc2 = new TextEncoder();
-              const ck2 = await crypto.subtle.importKey('raw', enc2.encode(env.SOLAPI_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-              const sg2 = await crypto.subtle.sign('HMAC', ck2, enc2.encode(dt2+sl2));
-              const sig2 = Array.from(new Uint8Array(sg2)).map(b=>b.toString(16).padStart(2,'0')).join('');
-              await fetch('https://api.solapi.com/messages/v4/send-many/detail', {
-                method:'POST', headers:{'Content-Type':'application/json','Authorization':`HMAC-SHA256 apiKey=${env.SOLAPI_KEY}, date=${dt2}, salt=${sl2}, signature=${sig2}`},
-                body: JSON.stringify({messages:[{to:drPhone.replace(/[^0-9]/g,''),from:'05171133103',type:'SMS',text:smsText2}]})
-              }).catch(()=>{});
-            }
-          }
-          return new Response(JSON.stringify({ok:true}), {headers:{'Content-Type':'application/json'}});
-        } catch(e) {
-          return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
-        }
-      }
-      // ── 전자계약서 끝 ─────────────────────────────────────────────────────────
-
-
-
-      // ★ /{slug} 직접 접속 처리 (donway.ai.kr/kimdh47900 등)
-      if (!path.startsWith('/api/') && method === 'GET') {
-        const slugDirect = path.match(/^\/([a-zA-Z0-9\u0041-\uD7A3\-_]{1,30})\/?$/);
-        const knownDirect = new Set(['/join','/settle','/register','/admin','/admin-sub','/stmt','/c','/sign','/contract','/manifest.json','/sw.js','/firebase-messaging-sw.js','/robots.txt','/sitemap.xml','/favicon.ico','/naver335e547bce1645ef18a6f68fac7f87eb.html']);
-        if (slugDirect && !knownDirect.has(slugDirect[0].replace(/\/$/,''))) {
-          const slug2 = slugDirect[1];
-          try {
-            const kvStream_s = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('settle.html','stream') : null;
-            if (kvStream_s) {
-              return new Response(kvStream_s, { headers: { 'Content-Type':'text/html;charset=utf-8', 'Cache-Control':'no-store', ...SECURITY_HEADERS } });
-            }
-          } catch(e) {}
-        }
-      }
-    }
-
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
     if (hostname === 'bico.kr' || hostname === 'mbetco.kr' || hostname === 'www.mbetco.kr') {
       if (path === '/' || path === '') return serveKVFile(env, 'filo.html', 'text/html');
