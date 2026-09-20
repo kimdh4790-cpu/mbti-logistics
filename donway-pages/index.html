@@ -7798,44 +7798,6 @@ function _ctrRenderWrite(){
     +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
     +'<input type="hidden" id="ctr-pdf-url">'
     +'</div>'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">④ 계약 정보 입력</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">기사 성명</label><input id="ctr-f-name" placeholder="홍길동" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">전화번호</label><input id="ctr-f-phone" placeholder="010-0000-0000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">사업자등록번호</label><input id="ctr-f-biznum" placeholder="000-00-00000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">주민등록번호</label><input id="ctr-f-ssn" placeholder="000000-0000000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">주소</label><input id="ctr-f-addr" placeholder="서울시 ..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">자동차 등록번호</label><input id="ctr-f-carnum" placeholder="12가 3456" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">종사자격증번호</label><input id="ctr-f-licnum" placeholder="자격증번호" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계약기간</label>'
-    +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
-    +'<input id="ctr-f-sy" type="number" value="'+_sy+'" style="width:62px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<span style="font-size:12px;color:var(--text3)">년</span>'
-    +'<input id="ctr-f-sm" type="number" min="1" max="12" value="'+_sm+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<span style="font-size:12px;color:var(--text3)">월</span>'
-    +'<input id="ctr-f-sd" type="number" min="1" max="31" value="'+_sd+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<span style="font-size:12px;color:var(--text3)">일 ~</span>'
-    +'<input id="ctr-f-ey" type="number" value="'+_ey+'" style="width:62px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<span style="font-size:12px;color:var(--text3)">년</span>'
-    +'<input id="ctr-f-em" type="number" min="1" max="12" value="'+_em+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<span style="font-size:12px;color:var(--text3)">월</span>'
-    +'<input id="ctr-f-ed" type="number" min="1" max="31" value="'+_ed+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<span style="font-size:12px;color:var(--text3)">일</span>'
-    +'</div></div>'
-    +'<button onclick="_ctrApplyTyped()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">📝 DOCX에 입력하기</button>'
-    +'</div>'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">⑤ 등록 기사 선택 <span style="font-weight:400">(선택 — 위 항목 자동완성)</span></div>'
-    +'<select id="ctr-drv-sel" onchange="_ctrSelectDriver(this.value)" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<option value="">— 직접 입력 (기본) —</option>'
-    +'</select>'
-    +'</div>'
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🖊 대리점 서명 / 도장</div>'
@@ -7869,7 +7831,6 @@ function _ctrRenderWrite(){
     +'<button onclick="_ctrSave()" style="flex:2;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 저장 + 서명요청</button>'
     +'</div>';
 
-  _ctrLoadDrivers();
   _ctrLoadStamp();
   _ctrLoadContractTemplate(t);
   _ctrRenderConditions(t);
@@ -7904,112 +7865,6 @@ function _ctrSelectType(t){
   _ctrRenderWrite();
 }
 
-function _ctrLoadDrivers(){
-  var cid=_CU&&(_CU.dealerId||_CU.companyId);
-  if(!_db||!cid)return;
-  _db.collection('drivers').where('dealerId','==',cid).orderBy('name').limit(200).get()
-  .then(function(snap){
-    var sel=document.getElementById('ctr-drv-sel');
-    if(!sel)return;
-    window._ctrDrivers=[];
-    snap.forEach(function(doc){
-      var d=doc.data();
-      if(d.is_active===false||d.status==='pending')return;
-      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||d.bizNumber||'',ssn:d.ssn||d.idNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||'',routes:d.routes||[],camp:d.camp||'',carNum:d.carNum||d.carNumber||d.vehicleNum||'',licenseNum:d.licenseNum||d.licenseNumber||d.qualificationNum||''});
-      sel.innerHTML+='<option value="'+doc.id+'">'+esc(d.name||doc.id)+'</option>';
-    });
-  }).catch(function(){});
-}
-
-function _ctrSelectDriver(id){
-  var drv=(window._ctrDrivers||[]).find(function(d){return d.id===id;});
-  if(!drv)return;
-  window._ctrDriver=drv;
-  // 타이핑 폼에 기사 데이터 자동완성
-  var setV=function(elId,val){var el=document.getElementById(elId);if(el&&val)el.value=val;};
-  setV('ctr-f-name',drv.name);
-  setV('ctr-f-phone',drv.phone);
-  setV('ctr-f-biznum',drv.bizNum);
-  setV('ctr-f-ssn',drv.ssn);
-  setV('ctr-f-addr',drv.address);
-  setV('ctr-f-carnum',drv.carNum);
-  setV('ctr-f-licnum',drv.licenseNum);
-  // 라우트 단가 자동 선택
-  if(drv.routes&&drv.routes.length){
-    Object.keys(window.RPRICE||{}).forEach(function(rk){
-      var cb=document.getElementById('ctr-rc-'+rk);var inp=document.getElementById('ctr-rp-'+rk);
-      if(cb)cb.checked=false;if(inp)inp.disabled=true;
-    });
-    drv.routes.forEach(function(r){
-      var rk=r.route||r.name;var rp=r.price;
-      var cb=document.getElementById('ctr-rc-'+rk);var inp=document.getElementById('ctr-rp-'+rk);
-      if(cb)cb.checked=true;
-      if(inp){inp.disabled=false;if(rp!=null)inp.value=rp;}
-    });
-  }
-  toast('✅ '+drv.name+' 정보 자동완성');
-}
-
-function _ctrApplyTyped(){
-  var dc=document.getElementById('ctr-docx-content');
-  if(!dc){toast('DOCX 파일을 먼저 업로드하세요');return;}
-  var gv=function(id){var el=document.getElementById(id);return el?el.value.trim():'';};
-  var name=gv('ctr-f-name'),phone=gv('ctr-f-phone'),biznum=gv('ctr-f-biznum');
-  var ssn=gv('ctr-f-ssn'),addr=gv('ctr-f-addr'),carnum=gv('ctr-f-carnum'),licnum=gv('ctr-f-licnum');
-  var sy=gv('ctr-f-sy'),sm=gv('ctr-f-sm'),sd=gv('ctr-f-sd');
-  var ey=gv('ctr-f-ey'),em=gv('ctr-f-em'),ed=gv('ctr-f-ed');
-  var cp=window._ctrCompany||{};
-  var tmp=document.createElement('div');
-  tmp.innerHTML=dc.innerHTML;
-  function _blankU(u){return !u.textContent.replace(/[\s\u00a0]/g,'');}
-  tmp.querySelectorAll('tr').forEach(function(row){
-    var rt=row.textContent||'';
-    if(/\uBD80\uD130/.test(rt)&&/\uAE4C\uC9C0/.test(rt)){
-      var dates=[sy,sm,sd,ey,em,ed];var us=row.querySelectorAll('u');var fi=0;
-      us.forEach(function(u){if(fi<6&&_blankU(u)){u.textContent=dates[fi++]||'';}});
-      if(fi===0){var c2=0;row.innerHTML=row.innerHTML.replace(/_{3,}/g,function(){return c2<dates.length?dates[c2++]||'':'';});}
-    }
-    if(carnum&&/\uC790\uB3D9\uCC28.*\uB4F1\uB85D\uBC88\uD638|\uB4F1\uB85D\uBC88\uD638|\uCC28\uB7C9\uB0B4\uC5ED/.test(rt)){
-      var us2=row.querySelectorAll('u');var f2=false;
-      us2.forEach(function(u){if(!f2&&_blankU(u)){u.textContent=carnum;f2=true;}});
-      if(!f2)row.innerHTML=row.innerHTML.replace(/_{3,}/,carnum);
-    }
-    if(licnum&&/\uC885\uC0AC\uC790\uACA9/.test(rt)){
-      var us3=row.querySelectorAll('u');var f3=false;
-      us3.forEach(function(u){if(!f3&&_blankU(u)){u.textContent=licnum;f3=true;}});
-      if(!f3)row.innerHTML=row.innerHTML.replace(/_{3,}/,licnum);
-    }
-  });
-  tmp.querySelectorAll('u').forEach(function(u){
-    if(!_blankU(u))return;
-    var prev='';var n=u;
-    while(n&&prev.length<200){n=n.previousSibling;if(!n)break;prev=(n.textContent||'')+prev;}
-    if(!prev&&u.parentNode){var p=u.parentNode.previousSibling;if(p)prev=(p.textContent||'')+prev;}
-    prev=prev.slice(-200);
-    var rowText='';var rowEl=u.closest('tr');if(rowEl)rowText=rowEl.textContent||'';
-    var cellText='';var cellEl=u.closest('td,th,p');if(cellEl)cellText=cellEl.textContent||'';
-    var ctx=rowText||cellText||prev;
-    var isCompany=/\uC704\uD0C1\uC790|\uB300\uB9AC\uC810|\uAC11\)/.test(prev);
-    var val='';
-    if(/\uD0DD\uBC30\uC885\uC0AC\uC790\uC778|\uC218\uD0C1\uC790\uC778|\uC744\s*\)/.test(prev)) val=name;
-    else if(/\uC131\s*\uBA85/.test(prev)&&!isCompany) val=name;
-    else if(/\uC804\uD654|\uC5F0\uB77D\uCC98|\uD734\uB300/.test(prev)&&!isCompany) val=phone;
-    else if(/\uC0AC\uC5C5\uC790\s*\uB4F1\uB85D/.test(prev)&&!isCompany) val=biznum;
-    else if(/\uC8FC\uBBFC\uB4F1\uB85D|\uC8FC\uBBFC\s*\uBC88\uD638/.test(prev)) val=ssn;
-    else if(/\uC8FC\s*\uC18C|\uAC70\uC8FC/.test(prev)&&!isCompany) val=addr;
-    else if(/\uC790\uB3D9\uCC28.*\uB4F1\uB85D\uBC88\uD638|\uB4F1\uB85D\uBC88\uD638/.test(ctx)) val=carnum;
-    else if(/\uC885\uC0AC\uC790\uACA9/.test(ctx)) val=licnum;
-    else if(/\uC131\s*\uBA85/.test(prev)&&isCompany) val=cp.ceoName||cp.repName||'';
-    else if(/\uC0AC\uC5C5\uC790\s*\uB4F1\uB85D/.test(prev)&&isCompany) val=cp.bizNum||'';
-    else if(/\uC8FC\s*\uC18C/.test(prev)&&isCompany) val=cp.bizAddr||cp.address||'';
-    if(val)u.textContent=val;
-  });
-  dc.innerHTML=tmp.innerHTML;
-  toast('DOCX\uC5D0 \uC785\uB825 \uC644\uB8CC');
-}
-function _ctrAutoFillDocx(){_ctrApplyTyped();}
-
-
 function _ctrRenderConditions(t){
   var el=document.getElementById('ctr-conditions');
   if(!el)return;
@@ -8043,7 +7898,6 @@ function _ctrRouteCheck(rk){
   if(!cb||!inp)return;
   inp.disabled=!cb.checked;
   if(cb.checked)inp.focus();
-  _ctrAutoFillDocx(); // 라우트 변경 시 캠프명 재계산
 }
 
 function _ctrCollect(){
@@ -8308,7 +8162,6 @@ async function _ctrDocxLoad(inp){
     try{var _sk='ctr_docx_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
     // 기사 이미 선택된 경우 자동 채우기
-    if(window._ctrDriver)_ctrAutoFillDocx();
   }catch(e){
     if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
     toast('❌ DOCX 변환 실패: '+e.message);
@@ -8691,11 +8544,8 @@ async function _ctrSave(){
       var _dc=document.getElementById('ctr-docx-content');
       if(_dc)_dc.innerHTML=window._ctrDocxOrigHtml;
       var _ds=document.getElementById('ctr-docx-status');
-      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 빈칸 '+(window._ctrDocxBlankCount||0)+'개 · 다음 기사 정보 입력 후 저장하세요</span>';
+      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 빈칸 '+( window._ctrDocxBlankCount||0)+'개 · 빈칸을 직접 클릭하여 입력 후 저장하세요</span>';
     }
-    // 기사 선택 및 정보 필드 초기화
-    var _drvSel=document.getElementById('ctr-drv-sel');if(_drvSel)_drvSel.value='';
-    var _drvInfo=document.getElementById('ctr-drv-info');if(_drvInfo){_drvInfo.style.display='none';_drvInfo.innerHTML='';}
     window._ctrDriver=null;
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
     if(driverSig){toast('✅ 양측 서명 완료 — 서명요청 알림톡 생략');return;}
