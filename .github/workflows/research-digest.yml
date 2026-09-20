@@ -22,9 +22,9 @@ jobs:
 
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      ALIGO_API_KEY: ${{ secrets.ALIGO_API_KEY }}
-      ALIGO_USER_ID: ${{ secrets.ALIGO_USER_ID }}
-      ALIGO_SENDER: ${{ secrets.ALIGO_SENDER }}
+      SOLAPI_KEY: ${{ secrets.SOLAPI_KEY }}
+      SOLAPI_SECRET: ${{ secrets.SOLAPI_SECRET }}
+      SOLAPI_SENDER: ${{ secrets.SOLAPI_SENDER }}
       ADMIN_PHONE: ${{ secrets.ADMIN_PHONE }}
 
     steps:
