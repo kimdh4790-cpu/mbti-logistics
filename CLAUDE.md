@@ -638,6 +638,16 @@ cd mbtico-pages && npx wrangler deploy
   - isVisiting 슈퍼어드민 고객 방문 시 고객 services 기준 표시로 변경
 - **Firestore 읽기/쓰기 체크**: contracts·cal_memos·drivers 컬렉션 보안 규칙 정상 확인 (canRead/canWrite/canOwn 패턴)
 
+### ✅ 완료 (2026-09-20 DONWAY 계약서 정보 입력 타이핑 방식으로 전환)
+- **계약서 정보 입력 완전 재설계** (donway-pages/index.html):
+  - 복잡한 DOCX 자동감지 방식 제거 → 직접 타이핑 입력 방식으로 전환
+  - 항목별 입력란: 기사명·전화·사업자번호·주민번호·주소·차량번호·자격증번호·계약기간(시작·종료)
+  - "📝 DOCX에 입력하기" 버튼: 타이핑한 값을 DOCX 빈칸에 키워드 매핑으로 채움
+  - 등록 기사 선택은 선택사항(위 항목 자동완성 보조)으로 변경
+  - 계약기간 기본값 오늘~1년 후 자동 설정
+  - `_ctrApplyTyped()` 신규 함수, `_ctrAutoFillDocx()` alias로 유지
+  - 화면 순서: DOCX 업로드 → 정보 타이핑 → 기사 선택(선택) → 라우트 → 서명
+
 ### ✅ 완료 (2026-09-20 DONWAY 계약서 탭 단일화 + 코드 경량화)
 - **내 템플릿 탭 완전 삭제** (donway-pages/index.html): `_ctrRenderTemplate()` + `_wt*` 함수 전체(~370라인) 제거
 - **간편서명 탭 완전 삭제** (donway-pages/index.html): `_ctrRenderQuick()` + `_ctrQk*` 함수 전체(~131라인) 제거
