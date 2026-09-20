@@ -2080,54 +2080,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       return Response.redirect('https://mbtico.kr/register', 301);
     }
 
-    if (!['mbtico.kr','www.mbtico.kr'].includes(hostname)) {
-    const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
-    if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
-      const companySlug = slugMatch[1];
-      try {
-        const resp = await fetchAsset('/settle.html', request, env);
-        let html = await resp.text();
-        // slug + 보안헤더 주입 (</head> 앞에 삽입 - 가장 안전한 위치)
-        const storageSDK = '<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage-compat.js"></script>';
-        // manifest 링크를 슬러그 기반으로 교체
-        html = html.replace('href="/manifest.json"', 'href="/' + companySlug + '/manifest.json"');
-        const slugScript = '<script>window.__AK="";window._COMPANY_SLUG=' + JSON.stringify(companySlug) + ';window._SLUG_MODE=true;</script>';
-        // 구독 팝업: AI정산+배달대행만 노출 / 회사등록: 범용·재고 숨김 / 요금 실제값으로 교체
-        const hideScript = '<style>' +
-          '#svc-universal-card,#svc-inventory-card{display:none!important}' +
-          '.sub-amt-qr_payroll,.sub-tier-label-qr_payroll{display:none!important}' +
-          '</style>' +
-          '<script>(function(){' +
-          // 구독 팝업 카드 숨김
-          'var HIDE=["qr_payroll","universal","filo_combo"];' +
-          'function _hideCards(){document.querySelectorAll("button[data-pkey]").forEach(function(btn){' +
-          'if(HIDE.indexOf(btn.dataset.pkey)>-1){var el=btn;for(var i=0;i<5;i++){el=el.parentElement;if(!el)break;' +
-          'if(el.getAttribute&&(el.getAttribute("style")||"").indexOf("bg3")>-1){el.style.display="none";break;}}}' +
-          '});}' +
-          // 요금 옵션 실제값으로 교체
-          'function _fixPrices(){' +
-          'var sel=document.getElementById("settle-tier-select");if(!sel||sel.dataset.fixed)return;sel.dataset.fixed="1";' +
-          '[["50","~50명 — 12.5만원/월"],["100","~100명 — 25만원/월"],["200","~200명 — 50만원/월"],' +
-          '["300","~300명 — 75만원/월"],["400","~400명 — 100만원/월"],["500","~500명 — 125만원/월"],' +
-          '["1000","~1000명 — 250만원/월"],["9999","1000명+ — 별도 문의"]].forEach(function(r){var o=Array.prototype.find.call(sel.options,function(op){return op.value===r[0];});if(o)o.textContent=r[1];});' +
-          '}' +
-          'function _initObservers(){if(!document.body)return;' +
-          'var obs=new MutationObserver(_hideCards);obs.observe(document.body,{childList:true,subtree:true});_hideCards();' +
-          'var obs2=new MutationObserver(_fixPrices);obs2.observe(document.body,{childList:true,subtree:true});_fixPrices();}' +
-          'if(document.body){_initObservers();}else{document.addEventListener("DOMContentLoaded",_initObservers);}' +
-          '})();</script>';
-        html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n' + hideScript + '\n</head>');
-        const slugHeaders = new Headers();
-        slugHeaders.set('Content-Type', 'text/html; charset=utf-8');
-        slugHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        slugHeaders.set('X-Company-Slug', companySlug);
-        Object.entries(SECURITY_HEADERS).forEach(([k,v]) => slugHeaders.set(k,v));
-        return new Response(html, { status: 200, headers: slugHeaders });
-      } catch(e) {
-        return new Response('Not found', { status: 404 });
-      }
-    }
-    } // end mbtico.kr slug 제외
+    // 슬러그 기반 회사별 URL은 DONWAY(donway.ai.kr) 전용 — filo.ai.kr에서는 사용 안 함
 
     if (path === '/settle.html' || path === '/settle' || path === '/settle/') return Response.redirect('https://donway.ai.kr/join', 302);
 
