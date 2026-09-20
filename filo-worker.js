@@ -2163,6 +2163,9 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ 회사 등록 / 기사 가입 링크 생성
+    if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
+
     // ★ 직원 관리
     if (path === '/drivers' || path === '/drivers/') {
       const resp = await fetchAsset('/drivers.html', request);
