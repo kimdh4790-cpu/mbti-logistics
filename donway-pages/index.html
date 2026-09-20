@@ -7772,6 +7772,9 @@ function _ctrRenderWrite(){
       +'</div>';
   }).join('');
 
+  var _td=new Date();var _ed2=new Date(_td.getFullYear()+1,_td.getMonth(),_td.getDate()-1);
+  var _sy=_td.getFullYear(),_sm=_td.getMonth()+1,_sd=_td.getDate();
+  var _ey=_ed2.getFullYear(),_em=_ed2.getMonth()+1,_ed=_ed2.getDate();
   var body=document.getElementById('ctr-body');
   body.innerHTML=
     '<div class="card" style="margin-bottom:12px">'
@@ -7789,30 +7792,51 @@ function _ctrRenderWrite(){
     +'</div>'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ③ 기사 정보</div>'
-    +'<select id="ctr-drv-sel" onchange="_ctrSelectDriver(this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
-    +'<option value="">— 등록 기사 선택 (미등록 시 계약서에 직접 입력) —</option>'
-    +'</select>'
-    +'<div id="ctr-drv-info" style="display:none;margin-top:8px;background:var(--bg2);border-radius:8px;padding:10px;font-size:12px;line-height:1.8"></div>'
-    +'</div>'
-    +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🚗 계약서 자동완성 정보</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">차량번호</label><input id="ctr-carnum" placeholder="예: 12가 3456" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">종사자격증번호</label><input id="ctr-licnum" placeholder="자격증 번호" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
-    +'</div>'
-    +'<div id="ctr-autofill-log" style="display:none;font-size:11px;background:var(--bg2);border-radius:8px;padding:8px 12px;margin-bottom:8px;line-height:1.8;color:var(--text2)"></div>'
-    +'<button onclick="_ctrAutoFillDocx(true)" style="width:100%;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 DOCX 자동완성 적용</button>'
-    +'</div>'
-    +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">📎 계약서 파일 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
-    +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7">💡 DOCX 업로드 시 빈칸(_____)이 자동 감지됩니다. 문서를 <b>직접 클릭해서 입력·수정</b>한 뒤 저장하면 기사에게 전달됩니다.</div>'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">③ 계약서 DOCX 업로드</div>'
     +'<input type="file" id="ctr-docx-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrDocxLoad(this)" style="display:none">'
-    +'<div id="ctr-docx-status"><label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label></div>'
+    +'<div id="ctr-docx-status"><label for="ctr-docx-file" style="display:block;padding:12px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 DOCX 파일 선택 (워드 파일만)</label></div>'
     +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
     +'<input type="hidden" id="ctr-pdf-url">'
     +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">④ 계약 정보 입력</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">기사 성명</label><input id="ctr-f-name" placeholder="홍길동" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">전화번호</label><input id="ctr-f-phone" placeholder="010-0000-0000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">사업자등록번호</label><input id="ctr-f-biznum" placeholder="000-00-00000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">주민등록번호</label><input id="ctr-f-ssn" placeholder="000000-0000000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">주소</label><input id="ctr-f-addr" placeholder="서울시 ..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">자동차 등록번호</label><input id="ctr-f-carnum" placeholder="12가 3456" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">종사자격증번호</label><input id="ctr-f-licnum" placeholder="자격증번호" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계약기간</label>'
+    +'<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
+    +'<input id="ctr-f-sy" type="number" value="'+_sy+'" style="width:62px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<span style="font-size:12px;color:var(--text3)">년</span>'
+    +'<input id="ctr-f-sm" type="number" min="1" max="12" value="'+_sm+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<span style="font-size:12px;color:var(--text3)">월</span>'
+    +'<input id="ctr-f-sd" type="number" min="1" max="31" value="'+_sd+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<span style="font-size:12px;color:var(--text3)">일 ~</span>'
+    +'<input id="ctr-f-ey" type="number" value="'+_ey+'" style="width:62px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<span style="font-size:12px;color:var(--text3)">년</span>'
+    +'<input id="ctr-f-em" type="number" min="1" max="12" value="'+_em+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<span style="font-size:12px;color:var(--text3)">월</span>'
+    +'<input id="ctr-f-ed" type="number" min="1" max="31" value="'+_ed+'" style="width:44px;padding:7px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<span style="font-size:12px;color:var(--text3)">일</span>'
+    +'</div></div>'
+    +'<button onclick="_ctrApplyTyped()" style="width:100%;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">📝 DOCX에 입력하기</button>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">⑤ 등록 기사 선택 <span style="font-weight:400">(선택 — 위 항목 자동완성)</span></div>'
+    +'<select id="ctr-drv-sel" onchange="_ctrSelectDriver(this.value)" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text)">'
+    +'<option value="">— 직접 입력 (기본) —</option>'
+    +'</select>'
+    +'</div>'
+    +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🖊 대리점 서명 / 도장</div>'
     +'<div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">'
@@ -7901,21 +7925,17 @@ function _ctrSelectDriver(id){
   var drv=(window._ctrDrivers||[]).find(function(d){return d.id===id;});
   if(!drv)return;
   window._ctrDriver=drv;
-  // 기사 정보 요약 표시
-  var infoEl=document.getElementById('ctr-drv-info');
-  if(infoEl){
-    var _esc2=function(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');};
-    infoEl.style.display='';
-    infoEl.innerHTML='<b>'+_esc2(drv.name)+'</b>'+(drv.phone?' · '+_esc2(drv.phone):'')+(drv.bizNum?'<br>사업자 '+_esc2(drv.bizNum):'');
-  }
-  // 차량번호·자격증번호 자동완성 입력란에 기사 데이터 채우기
-  var carnumEl=document.getElementById('ctr-carnum');
-  var licnumEl=document.getElementById('ctr-licnum');
-  if(carnumEl&&drv.carNum)carnumEl.value=drv.carNum;
-  if(licnumEl&&drv.licenseNum)licnumEl.value=drv.licenseNum;
+  // 타이핑 폼에 기사 데이터 자동완성
+  var setV=function(elId,val){var el=document.getElementById(elId);if(el&&val)el.value=val;};
+  setV('ctr-f-name',drv.name);
+  setV('ctr-f-phone',drv.phone);
+  setV('ctr-f-biznum',drv.bizNum);
+  setV('ctr-f-ssn',drv.ssn);
+  setV('ctr-f-addr',drv.address);
+  setV('ctr-f-carnum',drv.carNum);
+  setV('ctr-f-licnum',drv.licenseNum);
   // 라우트 단가 자동 선택
   if(drv.routes&&drv.routes.length){
-    // 전체 체크박스 해제 먼저
     Object.keys(window.RPRICE||{}).forEach(function(rk){
       var cb=document.getElementById('ctr-rc-'+rk);var inp=document.getElementById('ctr-rp-'+rk);
       if(cb)cb.checked=false;if(inp)inp.disabled=true;
@@ -7927,108 +7947,68 @@ function _ctrSelectDriver(id){
       if(inp){inp.disabled=false;if(rp!=null)inp.value=rp;}
     });
   }
-  // DOCX 로드된 경우 빈칸 자동 채우기
-  _ctrAutoFillDocx();
+  toast('✅ '+drv.name+' 정보 자동완성');
 }
 
-async function _ctrAutoFillDocx(manual){
+function _ctrApplyTyped(){
   var dc=document.getElementById('ctr-docx-content');
-  if(!dc){if(manual)toast('❌ DOCX 파일을 먼저 업로드하세요');return;}
-  var drv=window._ctrDriver||{};
+  if(!dc){toast('DOCX 파일을 먼저 업로드하세요');return;}
+  var gv=function(id){var el=document.getElementById(id);return el?el.value.trim():'';};
+  var name=gv('ctr-f-name'),phone=gv('ctr-f-phone'),biznum=gv('ctr-f-biznum');
+  var ssn=gv('ctr-f-ssn'),addr=gv('ctr-f-addr'),carnum=gv('ctr-f-carnum'),licnum=gv('ctr-f-licnum');
+  var sy=gv('ctr-f-sy'),sm=gv('ctr-f-sm'),sd=gv('ctr-f-sd');
+  var ey=gv('ctr-f-ey'),em=gv('ctr-f-em'),ed=gv('ctr-f-ed');
   var cp=window._ctrCompany||{};
-  // 수동 입력값 우선 반영
-  var overrideCarNum=(document.getElementById('ctr-carnum')||{}).value||'';
-  var overrideLicNum=(document.getElementById('ctr-licnum')||{}).value||'';
-  if(overrideCarNum)drv=Object.assign({},drv,{carNum:overrideCarNum});
-  if(overrideLicNum)drv=Object.assign({},drv,{licenseNum:overrideLicNum});
-  if(_db&&Object.keys(_routeCampMap).length===0){
-    var _cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
-    if(_cid){
-      try{var _s=await _db.collection('settings').doc(_cid+'_routeCampMap').get();if(_s.exists)Object.assign(_routeCampMap,_s.data());}catch(_e){}
-    }
-  }
-  var _campSet=[];
-  Object.keys(window.RPRICE||{}).forEach(function(rk){
-    var cb=document.getElementById('ctr-rc-'+rk);
-    if(cb&&cb.checked){var c=(_routeCampMap&&_routeCampMap[rk])||'';if(c&&_campSet.indexOf(c)<0)_campSet.push(c);}
-  });
-  var campVal=_campSet.join(', ');
-  var today=new Date();
-  var endDate=new Date(today.getFullYear()+1,today.getMonth(),today.getDate()-1);
   var tmp=document.createElement('div');
   tmp.innerHTML=dc.innerHTML;
-  function _blankU(u){return !u.textContent.replace(/[ \s]/g,'');}
-
-  // ① 행(TR) 단위 채우기 — 레이블 셀과 데이터 셀이 분리된 경우도 대응
+  function _blankU(u){return !u.textContent.replace(/[\s\u00a0]/g,'');}
   tmp.querySelectorAll('tr').forEach(function(row){
     var rt=row.textContent||'';
-    // 계약기간 행: 행 전체에 "부터"와 "까지" 포함 시 순서대로 년/월/일 × 2 채우기
-    if(/부터/.test(rt)&&/까지/.test(rt)){
-      var us=row.querySelectorAll('u');
-      var fi=0;
-      var dates=[today.getFullYear(),today.getMonth()+1,today.getDate(),endDate.getFullYear(),endDate.getMonth()+1,endDate.getDate()];
-      us.forEach(function(u){if(fi<6&&_blankU(u)){u.textContent=dates[fi++];}});
-      if(fi===0){var h=row.innerHTML;var c2=0;row.innerHTML=h.replace(/_{3,}/g,function(m){return c2<dates.length?dates[c2++]:m;});}
+    if(/\uBD80\uD130/.test(rt)&&/\uAE4C\uC9C0/.test(rt)){
+      var dates=[sy,sm,sd,ey,em,ed];var us=row.querySelectorAll('u');var fi=0;
+      us.forEach(function(u){if(fi<6&&_blankU(u)){u.textContent=dates[fi++]||'';}});
+      if(fi===0){var c2=0;row.innerHTML=row.innerHTML.replace(/_{3,}/g,function(){return c2<dates.length?dates[c2++]||'':'';});}
     }
-    // 차량번호 행
-    if(/자동차.*등록번호|등록번호|차량내역/.test(rt)&&drv.carNum){
+    if(carnum&&/\uC790\uB3D9\uCC28.*\uB4F1\uB85D\uBC88\uD638|\uB4F1\uB85D\uBC88\uD638|\uCC28\uB7C9\uB0B4\uC5ED/.test(rt)){
       var us2=row.querySelectorAll('u');var f2=false;
-      us2.forEach(function(u){if(!f2&&_blankU(u)){u.textContent=drv.carNum;f2=true;}});
-      if(!f2){row.innerHTML=row.innerHTML.replace(/_{3,}/,drv.carNum);}
+      us2.forEach(function(u){if(!f2&&_blankU(u)){u.textContent=carnum;f2=true;}});
+      if(!f2)row.innerHTML=row.innerHTML.replace(/_{3,}/,carnum);
     }
-    // 종사자격 행
-    if(/종사자격/.test(rt)&&drv.licenseNum){
+    if(licnum&&/\uC885\uC0AC\uC790\uACA9/.test(rt)){
       var us3=row.querySelectorAll('u');var f3=false;
-      us3.forEach(function(u){if(!f3&&_blankU(u)){u.textContent=drv.licenseNum;f3=true;}});
-      if(!f3){row.innerHTML=row.innerHTML.replace(/_{3,}/,drv.licenseNum);}
+      us3.forEach(function(u){if(!f3&&_blankU(u)){u.textContent=licnum;f3=true;}});
+      if(!f3)row.innerHTML=row.innerHTML.replace(/_{3,}/,licnum);
     }
   });
-
-  // ② <u> 태그 기반 자동완성 (이름·연락처·사업자번호·주소·캠프명 등)
-  var uTags=tmp.querySelectorAll('u');
-  uTags.forEach(function(u){
+  tmp.querySelectorAll('u').forEach(function(u){
     if(!_blankU(u))return;
-    var prev='';
-    var n=u;
+    var prev='';var n=u;
     while(n&&prev.length<200){n=n.previousSibling;if(!n)break;prev=(n.textContent||'')+prev;}
     if(!prev&&u.parentNode){var p=u.parentNode.previousSibling;if(p)prev=(p.textContent||'')+prev;}
+    prev=prev.slice(-200);
     var rowText='';var rowEl=u.closest('tr');if(rowEl)rowText=rowEl.textContent||'';
     var cellText='';var cellEl=u.closest('td,th,p');if(cellEl)cellText=cellEl.textContent||'';
-    prev=prev.slice(-200);
-    var isCompany=/위탁자|대리점|갑\)/.test(prev);
+    var ctx=rowText||cellText||prev;
+    var isCompany=/\uC704\uD0C1\uC790|\uB300\uB9AC\uC810|\uAC11\)/.test(prev);
     var val='';
-    if(/택배종사자인|수탁자인|을\s*\)/.test(prev)) val=drv.name;
-    else if(/캠프명/.test(rowText||cellText||prev)) val=campVal;
-    else if(/성\s*명/.test(prev)&&!isCompany) val=drv.name;
-    else if(/전화|연락처|휴대/.test(prev)&&!isCompany) val=drv.phone;
-    else if(/사업자\s*등록/.test(prev)&&!isCompany) val=drv.bizNum;
-    else if(/주민등록|주민\s*번호/.test(prev)) val=drv.ssn;
-    else if(/주\s*소|거주/.test(prev)&&!isCompany) val=drv.address;
-    else if(/성\s*명/.test(prev)&&isCompany) val=cp.ceoName||cp.repName;
-    else if(/사업자\s*등록/.test(prev)&&isCompany) val=cp.bizNum;
-    else if(/주\s*소/.test(prev)&&isCompany) val=cp.bizAddr||cp.address;
-    else if(/자동차.*등록번호|등록번호/.test(rowText||cellText||prev)) val=drv.carNum;
-    else if(/종사자격/.test(rowText||cellText||prev)) val=drv.licenseNum;
-    if(val){u.textContent=val;}
+    if(/\uD0DD\uBC30\uC885\uC0AC\uC790\uC778|\uC218\uD0C1\uC790\uC778|\uC744\s*\)/.test(prev)) val=name;
+    else if(/\uC131\s*\uBA85/.test(prev)&&!isCompany) val=name;
+    else if(/\uC804\uD654|\uC5F0\uB77D\uCC98|\uD734\uB300/.test(prev)&&!isCompany) val=phone;
+    else if(/\uC0AC\uC5C5\uC790\s*\uB4F1\uB85D/.test(prev)&&!isCompany) val=biznum;
+    else if(/\uC8FC\uBBFC\uB4F1\uB85D|\uC8FC\uBBFC\s*\uBC88\uD638/.test(prev)) val=ssn;
+    else if(/\uC8FC\s*\uC18C|\uAC70\uC8FC/.test(prev)&&!isCompany) val=addr;
+    else if(/\uC790\uB3D9\uCC28.*\uB4F1\uB85D\uBC88\uD638|\uB4F1\uB85D\uBC88\uD638/.test(ctx)) val=carnum;
+    else if(/\uC885\uC0AC\uC790\uACA9/.test(ctx)) val=licnum;
+    else if(/\uC131\s*\uBA85/.test(prev)&&isCompany) val=cp.ceoName||cp.repName||'';
+    else if(/\uC0AC\uC5C5\uC790\s*\uB4F1\uB85D/.test(prev)&&isCompany) val=cp.bizNum||'';
+    else if(/\uC8FC\s*\uC18C/.test(prev)&&isCompany) val=cp.bizAddr||cp.address||'';
+    if(val)u.textContent=val;
   });
   dc.innerHTML=tmp.innerHTML;
-  // 진단 로그 출력
-  var logEl=document.getElementById('ctr-autofill-log');
-  if(logEl){
-    var today2=new Date();
-    var endDate2=new Date(today2.getFullYear()+1,today2.getMonth(),today2.getDate()-1);
-    var fmt=function(d){return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();};
-    var lines=[
-      '📅 계약기간: '+fmt(today2)+' ~ '+fmt(endDate2),
-      '👤 기사명: '+(drv.name||'<span style="color:#ef4444">미선택</span>'),
-      '🚗 차량번호: '+(drv.carNum||'<span style="color:#ef4444">미입력 (위 차량번호 칸에 입력 후 재적용)</span>'),
-      '🪪 자격증번호: '+(drv.licenseNum||'<span style="color:#ef4444">미입력 (위 자격증번호 칸에 입력 후 재적용)</span>')
-    ];
-    logEl.style.display='block';
-    logEl.innerHTML=lines.join('<br>');
-    if(manual)toast('✅ 자동완성 적용 완료');
-  }
+  toast('DOCX\uC5D0 \uC785\uB825 \uC644\uB8CC');
 }
+function _ctrAutoFillDocx(){_ctrApplyTyped();}
+
 
 function _ctrRenderConditions(t){
   var el=document.getElementById('ctr-conditions');
