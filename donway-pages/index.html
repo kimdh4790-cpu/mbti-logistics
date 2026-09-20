@@ -7825,6 +7825,12 @@ function _ctrRenderWrite(){
     +'<button onclick="_ctrStampClear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
     +'</div>'
     +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">✍️ 기사 서명 <span style="font-size:11px;font-weight:400;color:var(--text3)">(현장 직접 서명 시 — 선택)</span></div>'
+    +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:6px 10px;margin-bottom:8px">현장 서명 없이 저장하면 기사에게 알림톡으로 서명 링크를 발송합니다.</div>'
+    +'<canvas id="ctr-driver-sig" style="border:1px solid var(--border);border-radius:8px;width:100%;height:110px;background:#fff;touch-action:none;display:block"></canvas>'
+    +'<button onclick="window._driverSigPad&&window._driverSigPad.clear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
+    +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button onclick="_ctrPreview()" style="flex:1;padding:12px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">👁 미리보기</button>'
     +'<button onclick="_ctrSave()" style="flex:2;padding:12px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">💾 저장 + 서명요청</button>'
@@ -7844,6 +7850,15 @@ function _ctrRenderWrite(){
     canvas.height=canvas.offsetHeight*ratio;
     canvas.getContext('2d').scale(ratio,ratio);
     window._adminSigPad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
+    // 기사 서명 패드
+    var dCanvas=document.getElementById('ctr-driver-sig');
+    if(dCanvas&&window.SignaturePad){
+      window._driverSigPad=null;
+      dCanvas.width=dCanvas.offsetWidth*ratio;
+      dCanvas.height=dCanvas.offsetHeight*ratio;
+      dCanvas.getContext('2d').scale(ratio,ratio);
+      window._driverSigPad=new SignaturePad(dCanvas,{backgroundColor:'rgb(255,255,255)',penColor:'#1a56db'});
+    }
   },200);
 }
 
@@ -7867,7 +7882,7 @@ function _ctrLoadDrivers(){
     snap.forEach(function(doc){
       var d=doc.data();
       if(d.is_active===false||d.status==='pending')return;
-      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||d.bizNumber||'',ssn:d.ssn||d.idNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||'',routes:d.routes||[],camp:d.camp||''});
+      window._ctrDrivers.push({id:doc.id,name:d.name||'',phone:d.phone||d.tel||'',bizNum:d.bizNum||d.bizNumber||'',ssn:d.ssn||d.idNum||'',address:d.address||d.addr||'',bankName:d.bankName||'',account:d.accountNumber||d.account||'',routes:d.routes||[],camp:d.camp||'',carNum:d.carNum||d.carNumber||d.vehicleNum||'',licenseNum:d.licenseNum||d.licenseNumber||d.qualificationNum||''});
       sel.innerHTML+='<option value="'+doc.id+'">'+esc(d.name||doc.id)+'</option>';
     });
   }).catch(function(){});
@@ -7907,42 +7922,64 @@ async function _ctrAutoFillDocx(){
   if(!dc)return;
   var drv=window._ctrDriver||{};
   var cp=window._ctrCompany||{};
-  // _routeCampMap 비어있으면 Firestore에서 fetch
   if(_db&&Object.keys(_routeCampMap).length===0){
     var _cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
     if(_cid){
       try{var _s=await _db.collection('settings').doc(_cid+'_routeCampMap').get();if(_s.exists)Object.assign(_routeCampMap,_s.data());}catch(_e){}
     }
   }
-  // 선택된 라우트에서 캠프명 계산
   var _campSet=[];
   Object.keys(window.RPRICE||{}).forEach(function(rk){
     var cb=document.getElementById('ctr-rc-'+rk);
     if(cb&&cb.checked){var c=(_routeCampMap&&_routeCampMap[rk])||'';if(c&&_campSet.indexOf(c)<0)_campSet.push(c);}
   });
   var campVal=_campSet.join(', ');
+  var today=new Date();
+  var endDate=new Date(today.getFullYear()+1,today.getMonth(),today.getDate()-1);
   var tmp=document.createElement('div');
   tmp.innerHTML=dc.innerHTML;
+
+  // ① 셀 단위 직접 채우기 (계약기간·차량번호·자격증번호)
+  tmp.querySelectorAll('td,th').forEach(function(cell){
+    var ct=cell.textContent||'';
+    // 계약기간 셀: 빈 <u> 태그를 순서대로 년/월/일/년/월/일 채우기
+    if(/부터/.test(ct)&&/까지/.test(ct)){
+      var us=cell.querySelectorAll('u');
+      var fi=0;
+      var dates=[today.getFullYear(),today.getMonth()+1,today.getDate(),endDate.getFullYear(),endDate.getMonth()+1,endDate.getDate()];
+      us.forEach(function(u){if(fi<6&&!u.textContent.trim()){u.textContent=dates[fi++];}});
+    }
+    // 자동차 등록번호 셀
+    if(/자동차.*등록번호|등록번호/.test(ct)&&drv.carNum){
+      var us2=cell.querySelectorAll('u');
+      var filled2=false;
+      us2.forEach(function(u){if(!filled2&&!u.textContent.trim()){u.textContent=drv.carNum;filled2=true;}});
+      if(!filled2)cell.innerHTML=cell.innerHTML.replace(/_{3,}/,drv.carNum);
+    }
+    // 종사자격증 번호 셀
+    if(/종사자격/.test(ct)&&drv.licenseNum){
+      var us3=cell.querySelectorAll('u');
+      var filled3=false;
+      us3.forEach(function(u){if(!filled3&&!u.textContent.trim()){u.textContent=drv.licenseNum;filled3=true;}});
+      if(!filled3)cell.innerHTML=cell.innerHTML.replace(/_{3,}/,drv.licenseNum);
+    }
+  });
+
+  // ② <u> 태그 기반 자동완성 (이름·연락처·사업자번호·주소·캠프명 등)
   var uTags=tmp.querySelectorAll('u');
   uTags.forEach(function(u){
-    if(u.textContent.trim())return; // 이미 내용 있으면 건드리지 않음
-    // 이 <u> 앞 최대 120자 텍스트 수집
+    if(u.textContent.trim())return;
     var prev='';
     var n=u;
-    while(n&&prev.length<120){
-      n=n.previousSibling;
-      if(!n)break;
-      prev=(n.textContent||'')+prev;
-    }
-    if(!prev&&u.parentNode){
-      var p=u.parentNode.previousSibling;
-      if(p)prev=(p.textContent||'')+prev;
-    }
-    prev=prev.slice(-120);
+    while(n&&prev.length<200){n=n.previousSibling;if(!n)break;prev=(n.textContent||'')+prev;}
+    if(!prev&&u.parentNode){var p=u.parentNode.previousSibling;if(p)prev=(p.textContent||'')+prev;}
+    var rowText='';var rowEl=u.closest('tr');if(rowEl)rowText=rowEl.textContent||'';
+    var cellText='';var cellEl=u.closest('td,th,p');if(cellEl)cellText=cellEl.textContent||'';
+    prev=prev.slice(-200);
     var isCompany=/위탁자|대리점|갑\)/.test(prev);
     var val='';
     if(/택배종사자인|수탁자인|을\s*\)/.test(prev)) val=drv.name;
-    else if(/캠프명/.test(prev)) val=campVal;
+    else if(/캠프명/.test(rowText||cellText||prev)) val=campVal;
     else if(/성\s*명/.test(prev)&&!isCompany) val=drv.name;
     else if(/전화|연락처|휴대/.test(prev)&&!isCompany) val=drv.phone;
     else if(/사업자\s*등록/.test(prev)&&!isCompany) val=drv.bizNum;
@@ -7951,6 +7988,8 @@ async function _ctrAutoFillDocx(){
     else if(/성\s*명/.test(prev)&&isCompany) val=cp.ceoName||cp.repName;
     else if(/사업자\s*등록/.test(prev)&&isCompany) val=cp.bizNum;
     else if(/주\s*소/.test(prev)&&isCompany) val=cp.bizAddr||cp.address;
+    else if(/자동차.*등록번호|등록번호/.test(rowText||cellText||prev)) val=drv.carNum;
+    else if(/종사자격/.test(rowText||cellText||prev)) val=drv.licenseNum;
     if(val){u.textContent=val;}
   });
   dc.innerHTML=tmp.innerHTML;
@@ -8598,6 +8637,10 @@ async function _ctrSave(){
   } else if(window._adminSigPad&&!window._adminSigPad.isEmpty()){
     adminSig=window._adminSigPad.toDataURL('image/png');
   }
+  var driverSig='';
+  if(window._driverSigPad&&!window._driverSigPad.isEmpty()){
+    driverSig=window._driverSigPad.toDataURL('image/png');
+  }
   var typeLabel={wisu:'위수탁',subok:'부속합의서'}[data.type]||'계약';
   var todayStr=new Date().toISOString().slice(0,10);
   data.title=data.driverName+' '+typeLabel+' ('+todayStr+')';
@@ -8605,8 +8648,8 @@ async function _ctrSave(){
   var dealerId=_CU.dealerId||_CU.uid;
   try{
     var ref=await _db.collection('contracts').add(Object.assign({},data,{
-      dealerId:dealerId,adminSig:adminSig,signToken:signToken,
-      status:adminSig?'pending_driver':'draft',
+      dealerId:dealerId,adminSig:adminSig,driverSig:driverSig,signToken:signToken,
+      status:(adminSig&&driverSig)?'signed':adminSig?'pending_driver':'draft',
       createdAt:firebase.firestore.FieldValue.serverTimestamp(),
       adminSignedAt:adminSig?new Date().toISOString():'',
       adminUid:_CU.uid||'',
@@ -8640,7 +8683,8 @@ async function _ctrSave(){
     var _drvInfo=document.getElementById('ctr-drv-info');if(_drvInfo){_drvInfo.style.display='none';_drvInfo.innerHTML='';}
     window._ctrDriver=null;
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
-    // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송
+    if(driverSig){toast('✅ 양측 서명 완료 — 서명요청 알림톡 생략');return;}
+    // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송 (기사 서명 없을 때만)
     if(adminSig&&data.driverPhone){
       var signUrl='https://donway.ai.kr/contract/sign/'+signToken;
       var coName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'대리점';
