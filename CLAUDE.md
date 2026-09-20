@@ -38,12 +38,11 @@
 | `SOCIAL_MEDIA_MEMO.md` | 소셜미디어·영상 작업 시 |
 | `BUSINESS_MEMO.md` | 비즈니스·요금·POS기·특허·경쟁사 관련 시 |
 | `INFRA_MEMO.md` | Oracle Cloud·GitHub Actions·플러그인·OmniRoute 작업 시 |
-| `FILO_DINE_MEMO.md` | FILO·DINE 앱 작업 시 |
 | `YONGCHA_MEMO.md` | 용차앱 작업 시 |
-| `배송앱_변경내역.md` | 배송앱·emergency.html 수정 시 |
+| `배송앱_변경내역.md` | 배송앱(filo.ai.kr)·emergency.html 수정 시 |
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 | `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
-| `SCAN_MEMO.md` | SCAN AI (mbtico.kr/scan) 문서분석 서비스 작업 시 |
+| `SCAN_MEMO.md` | SCAN AI (dine.ne.kr) 문서분석 서비스 작업 시 |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
@@ -71,12 +70,11 @@ npm run smoke:filo     # FILO만
 ### 파일 수정 시 영향 범위 (꼭 확인)
 | 수정 파일 | 테스트 대상 |
 |---|---|
-| `_worker.js` | **전체 5개 앱** (filo, dine, donway, yongcha, mbtico) |
-| `filo-common.js` | FILO + DINE |
-| `filo-order-common.js` | FILO (order·table-order·store·kitchen) |
-| `filo-staff.js` | FILO + DINE (members·attendance 공유) |
-| `filo-*.js`, `filo.html` | FILO만 |
-| `dine-*.js`, `dine.html` | DINE만 |
+| `_worker.js` | DONWAY + mbtico.kr (공통 API) |
+| `filo-worker.js` | filo.ai.kr 배송앱 |
+| `dine-worker.js` | dine.ne.kr SCAN 서비스 |
+| `emergency.html` | 배송앱(filo.ai.kr) 핵심 |
+| `scan.html` | SCAN(dine.ne.kr) 핵심 |
 | `donway*.js` | DONWAY만 |
 | `yongcha*.js` | 용차앱만 |
 | `mbtico*.js`, `mbtico-pages/` | MBTICO만 |
@@ -103,63 +101,29 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 
 ## 📱 앱별 구조 & 담당 파일 (세션 시작 시 담당 앱 확인 필수)
 
-### 🟣 FILO (filo.ai.kr) — 매장 관리 SaaS
-> 담당 메모: FILO_DINE_MEMO.md 필독
-- **진입**: filo.html / filo-auth.js (로그인·홈 대시보드·라우팅)
-- **공통**: filo-common.js ← 절대 직접 수정 금지. 읽기만 허용
-- **POS**: filo-pos.js, filo-pos-core.js, filo-pos-ui.js
-- **주문**: filo-order.js, filo-order-common.js
-- **테이블**: filo-table.js
-- **메뉴**: filo-menu.js (55KB), filo-menu-mgmt.js, filo-menu-recipe.js
-- **예약/웨이팅**: filo-booking.js
-- **직원/QR출퇴근**: filo-staff.js, filo-qr.js
-- **급여**: filo-payroll2.js
-- **회원**: filo-members.js
-- **재고**: filo-inventory.js
-- **마진분석**: filo-margin.js
-- **결제**: filo-payment.js
-- **스케줄**: filo-schedule.js
-- **설정**: filo-settings.js
-- **리포트**: filo-report.js
-- **랜딩**: filo-landing.html, filo-landing.js
+### 🟣 FILO (filo.ai.kr) — 배송앱 (2026-09-20 전환)
+> 담당 메모: `배송앱_변경내역.md` 필독
+- **핵심 파일**: emergency.html (배송 기사 앱), filo-worker.js (라우터)
+- filo.ai.kr은 배송앱 위주로 운영
+- 구 매장관리 SaaS(filo-auth.js, filo-pos.js 등) 폐기 방향
 
 **FILO 절대 금지**
-- filo-common.js 수정 금지
-- Firestore filo_orders 컬렉션 필드명 변경 금지 (tableNum·status·date·dealerId·items)
-- tableNum 타입 혼재(String·int) 상태 유지 — 변경 시 전체 주문 조회 깨짐
-- _filoToast() 대신 alert() 사용 금지
+- filo-worker.js 대규모 수정 금지 (배송앱 라우팅 핵심)
+- emergency.html 수정 전 반드시 배송앱_변경내역.md 확인
 
 ---
 
-### 🟢 DINE (dine.ne.kr) — 직원 전용 앱
-> 담당 메모: FILO_DINE_MEMO.md 필독
-- **진입**: dine.html / dine.js
-- **스케줄**: dine-schedule.js
-- **분석**: dine-analytics.js
-- **직원**: dine-staff.js ← FILO의 members 컬렉션 공유 사용
-- **급여**: dine-payroll.js
-- **매출**: dine-sales.js
-- **세금**: dine-tax.js
-- **회원·예약**: dine-member.js ← filo_bookings, filo_customers 공유
-- **랜딩**: dine-landing.html, dine-landing.js
+### 🟢 DINE (dine.ne.kr) — SCAN 문서분석 서비스 (2026-09-20 전환)
+> 담당 메모: `SCAN_MEMO.md` 필독
+- **핵심 파일**: scan.html (프론트), dine-worker.js (라우터+API)
+- dine.ne.kr 루트 → scan.html 서빙
+- SCAN API: `/api/seolyuhana/*` (analyze·result·download·points·point-request·point-approve)
+- Firebase authDomain: `dine.ne.kr`
+- 백엔드 모듈: `seolyuhana/services/analyze.js`, `seolyuhana/utils/parser.js`, `seolyuhana/output/builder.js`
 
-**DINE 절대 금지**
-- DINE용 별도 직원 컬렉션 생성 금지 (FILO members 컬렉션 그대로 공유)
-- FILO·DINE 공유 컬렉션: members, attendance, filo_bookings, filo_customers, filo_sales
-- _dineToast() 대신 alert() 사용 금지
-
----
-
-### 🟡 QR 주문·주방 (filo.ai.kr/order·/store·/kitchen)
-- order.html, order.js, order-done.html — 고객 QR 주문
-- table-order.html — 테이블 직접 주문 (선결제/후불 모달 완료)
-- store.html — 매장 주문 현황
-- kitchen.html — 주방 디스플레이
-- filo-order-common.js — 메뉴 로딩·번역 공통 (order·table-order·store 공유)
-
-**QR 주문 절대 금지**
-- filo_orders 컬렉션 구조 변경 금지
-- filo-order-common.js의 _applyTranslationsToGrid() 로직 단독 수정 금지 (order·store 동시 영향)
+**DINE/SCAN 절대 금지**
+- scan.html authDomain을 다시 mbtico.kr로 변경 금지
+- dine-worker.js의 `/api/seolyuhana/*` 핸들러 구조 변경 금지
 
 ---
 
@@ -215,7 +179,6 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 - GitHub Actions secrets (CF_GLOBAL_KEY)
 - 슈퍼어드민 UID·dealerId
 - deploy.yml 수정 가능 (단, workflow 파일 변경 시 auto-merge 안 됨 → GitHub에서 수동 Merge 필요)
-- filo-common.js 직접 수정 금지
 - DONWAY preFreshback/dateFresh 로직 수정 금지
 
 ## 📦 배송앱 작업 전 필독
@@ -261,7 +224,7 @@ cd mbtico-pages && npx wrangler deploy
 - 5개 초과 목록  페이지네이션
 - 이모지 금지  Lucide SVG 사용
 - 폰트: Pretendard 전용
-- alert() 금지  _filoToast()/_dineToast() 사용
+- alert() 금지  toast 함수 사용
 - Claude Code 원격 컨테이너: 코드 수정+배포 가능. Playwright 브라우저가 외부 URL 접근 불가 → 녹화/업로드 불가
 - Oracle Cloud (161.33.136.154): Playwright + Chromium + Node.js 완전 실행 가능. 녹화·편집·업로드 모두 가능
 - wrangler login은 로컬 또는 Oracle Cloud에서만
