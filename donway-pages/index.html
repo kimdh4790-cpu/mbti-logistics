@@ -7797,6 +7797,15 @@ function _ctrRenderWrite(){
     +'</div>'
     +'<div id="ctr-conditions" class="card" style="margin-bottom:12px"></div>'
     +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🚗 계약서 자동완성 정보</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">차량번호</label><input id="ctr-carnum" placeholder="예: 12가 3456" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">종사자격증번호</label><input id="ctr-licnum" placeholder="자격증 번호" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div id="ctr-autofill-log" style="display:none;font-size:11px;background:var(--bg2);border-radius:8px;padding:8px 12px;margin-bottom:8px;line-height:1.8;color:var(--text2)"></div>'
+    +'<button onclick="_ctrAutoFillDocx(true)" style="width:100%;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔄 DOCX 자동완성 적용</button>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">📎 계약서 파일 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택)</span></div>'
     +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:8px 12px;margin-bottom:10px;line-height:1.7">💡 DOCX 업로드 시 빈칸(_____)이 자동 감지됩니다. 문서를 <b>직접 클릭해서 입력·수정</b>한 뒤 저장하면 기사에게 전달됩니다.</div>'
     +'<input type="file" id="ctr-docx-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrDocxLoad(this)" style="display:none">'
@@ -7899,6 +7908,11 @@ function _ctrSelectDriver(id){
     infoEl.style.display='';
     infoEl.innerHTML='<b>'+_esc2(drv.name)+'</b>'+(drv.phone?' · '+_esc2(drv.phone):'')+(drv.bizNum?'<br>사업자 '+_esc2(drv.bizNum):'');
   }
+  // 차량번호·자격증번호 자동완성 입력란에 기사 데이터 채우기
+  var carnumEl=document.getElementById('ctr-carnum');
+  var licnumEl=document.getElementById('ctr-licnum');
+  if(carnumEl&&drv.carNum)carnumEl.value=drv.carNum;
+  if(licnumEl&&drv.licenseNum)licnumEl.value=drv.licenseNum;
   // 라우트 단가 자동 선택
   if(drv.routes&&drv.routes.length){
     // 전체 체크박스 해제 먼저
@@ -7917,11 +7931,16 @@ function _ctrSelectDriver(id){
   _ctrAutoFillDocx();
 }
 
-async function _ctrAutoFillDocx(){
+async function _ctrAutoFillDocx(manual){
   var dc=document.getElementById('ctr-docx-content');
-  if(!dc)return;
+  if(!dc){if(manual)toast('❌ DOCX 파일을 먼저 업로드하세요');return;}
   var drv=window._ctrDriver||{};
   var cp=window._ctrCompany||{};
+  // 수동 입력값 우선 반영
+  var overrideCarNum=(document.getElementById('ctr-carnum')||{}).value||'';
+  var overrideLicNum=(document.getElementById('ctr-licnum')||{}).value||'';
+  if(overrideCarNum)drv=Object.assign({},drv,{carNum:overrideCarNum});
+  if(overrideLicNum)drv=Object.assign({},drv,{licenseNum:overrideLicNum});
   if(_db&&Object.keys(_routeCampMap).length===0){
     var _cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
     if(_cid){
@@ -7993,6 +8012,22 @@ async function _ctrAutoFillDocx(){
     if(val){u.textContent=val;}
   });
   dc.innerHTML=tmp.innerHTML;
+  // 진단 로그 출력
+  var logEl=document.getElementById('ctr-autofill-log');
+  if(logEl){
+    var today2=new Date();
+    var endDate2=new Date(today2.getFullYear()+1,today2.getMonth(),today2.getDate()-1);
+    var fmt=function(d){return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();};
+    var lines=[
+      '📅 계약기간: '+fmt(today2)+' ~ '+fmt(endDate2),
+      '👤 기사명: '+(drv.name||'<span style="color:#ef4444">미선택</span>'),
+      '🚗 차량번호: '+(drv.carNum||'<span style="color:#ef4444">미입력 (위 차량번호 칸에 입력 후 재적용)</span>'),
+      '🪪 자격증번호: '+(drv.licenseNum||'<span style="color:#ef4444">미입력 (위 자격증번호 칸에 입력 후 재적용)</span>')
+    ];
+    logEl.style.display='block';
+    logEl.innerHTML=lines.join('<br>');
+    if(manual)toast('✅ 자동완성 적용 완료');
+  }
 }
 
 function _ctrRenderConditions(t){
