@@ -7800,6 +7800,28 @@ function _ctrRenderWrite(){
     +'</div>'
     +''
     +'<div class="card" style="margin-bottom:12px">'
+    +'<div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:10px">— ④ 계약 정보 <span style="font-size:11px;font-weight:400">(선택 — 보관함 요약 및 기본계약서 자동입력)</span></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계약 시작일</label>'
+    +'<input id="ctr-start-date" type="date" value="'+_sy+'-'+(_sm<10?'0':'')+_sm+'-'+(_sd<10?'0':'')+_sd+'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">계약 종료일</label>'
+    +'<input id="ctr-end-date" type="date" value="'+_ey+'-'+(_em<10?'0':'')+_em+'-'+(_ed<10?'0':'')+_ed+'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">배송수수료 (원/건)</label>'
+    +'<input id="ctr-unit-price" type="number" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">집화수수료 (원/건)</label>'
+    +'<input id="ctr-collect-price" type="number" placeholder="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">차량번호</label>'
+    +'<input id="ctr-car-num" type="text" placeholder="12가 3456" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">종사자격증번호</label>'
+    +'<input id="ctr-lic-num" type="text" placeholder="번호 입력" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'</div>'
+    +'</div>'
+    +''
+    +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">🖊 대리점 서명 / 도장</div>'
     +'<div style="display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">'
     +'<button id="ctr-sig-tab" onclick="_ctrSigTab(\'sig\')" style="flex:1;padding:8px;background:var(--primary);color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer">✍️ 서명</button>'
@@ -7866,6 +7888,9 @@ function _ctrSelectType(t){
   // 타입 전환 시 해당 타입 캐시로 교체 (없으면 null)
   window._ctrPdfCache=window._ctrPdfCache||{};
   window._ctrCustomPdfUrl=window._ctrPdfCache[t]||null;
+  window._ctrDocxOrigHtml=null;
+  window._ctrDocxFileName=null;
+  window._ctrDocxBlankCount=0;
   _ctrRenderWrite();
 }
 
@@ -8035,7 +8060,7 @@ function _ctrLoadStamp(){
 }
 function _ctrSetPdfStatus(url,saved){
   var urlEl=document.getElementById('ctr-pdf-url');
-  var statusEl=document.getElementById('ctr-pdf-status');
+  var statusEl=document.getElementById('ctr-docx-status');
   if(urlEl)urlEl.value=url;
   // 타입별 캐시에 저장
   window._ctrPdfCache=window._ctrPdfCache||{};
@@ -8054,7 +8079,7 @@ function _ctrRemoveContractTemplate(){
   delete window._ctrPdfCache[window._ctrType||'wisu'];
   var urlEl=document.getElementById('ctr-pdf-url');
   if(urlEl)urlEl.value='';
-  var statusEl=document.getElementById('ctr-pdf-status');
+  var statusEl=document.getElementById('ctr-docx-status');
   if(statusEl)statusEl.innerHTML='<label for="ctr-pdf-file" style="flex:1;display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 파일 선택 (PDF·이미지·Word)</label>';
   // Firestore에서도 삭제
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
@@ -8181,7 +8206,7 @@ async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
   var allowed=['pdf','image/','msword','wordprocessingml','doc','hwp','excel','spreadsheet','xls'];
   if(!allowed.some(function(t){return file.type.includes(t)||file.name.toLowerCase().match(/\.(doc|hwp|xls)/);})){toast('❌ PDF·이미지·Word 파일만 업로드 가능합니다');inp.value='';return;}
-  var statusEl=document.getElementById('ctr-pdf-status');
+  var statusEl=document.getElementById('ctr-docx-status');
   if(statusEl)statusEl.innerHTML='<span style="font-size:12px;color:var(--text3)">⏳ 업로드 중...</span>';
   try{
     var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid)||'unknown';
