@@ -1153,6 +1153,16 @@ export default {
       return Response.redirect('https://' + hostname + url.pathname + url.search, 301);
     }
 
+    // ── Firebase Auth redirect handler (authDomain: dine.ne.kr → proxy to mbti-logistics.firebaseapp.com) ──
+    if (path.startsWith('/__/auth/')) {
+      const firebaseUrl = 'https://mbti-logistics.firebaseapp.com' + url.pathname + url.search;
+      const authResp = await fetch(firebaseUrl, { headers: { 'User-Agent': request.headers.get('User-Agent') || '' } });
+      return new Response(authResp.body, {
+        status: authResp.status,
+        headers: { 'Content-Type': authResp.headers.get('Content-Type') || 'text/html', 'Cache-Control': 'no-cache' }
+      });
+    }
+
     // ── Rate Limiting (API 엔드포인트만) ──
     const isApiPath = ['/claude-ocr','/label-ocr','/scan-save','/truck-save'].includes(path);
     if (isApiPath) {

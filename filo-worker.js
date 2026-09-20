@@ -2075,6 +2075,11 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
       return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
     }
+    // filo.ai.kr/mbtico-join → mbtico.kr 가입 페이지로 리다이렉트
+    if (path === '/mbtico-join' || path === '/company-join') {
+      return Response.redirect('https://mbtico.kr/register', 301);
+    }
+
     if (!['mbtico.kr','www.mbtico.kr'].includes(hostname)) {
     const slugMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
     if (slugMatch && !knownPaths.has(slugMatch[0].replace(/\/$/,'')) && method === 'GET') {
@@ -2099,7 +2104,6 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           'if(HIDE.indexOf(btn.dataset.pkey)>-1){var el=btn;for(var i=0;i<5;i++){el=el.parentElement;if(!el)break;' +
           'if(el.getAttribute&&(el.getAttribute("style")||"").indexOf("bg3")>-1){el.style.display="none";break;}}}' +
           '});}' +
-          'var obs=new MutationObserver(_hideCards);obs.observe(document.body,{childList:true,subtree:true});_hideCards();' +
           // 요금 옵션 실제값으로 교체
           'function _fixPrices(){' +
           'var sel=document.getElementById("settle-tier-select");if(!sel||sel.dataset.fixed)return;sel.dataset.fixed="1";' +
@@ -2107,7 +2111,10 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
           '["300","~300명 — 75만원/월"],["400","~400명 — 100만원/월"],["500","~500명 — 125만원/월"],' +
           '["1000","~1000명 — 250만원/월"],["9999","1000명+ — 별도 문의"]].forEach(function(r){var o=Array.prototype.find.call(sel.options,function(op){return op.value===r[0];});if(o)o.textContent=r[1];});' +
           '}' +
-          'var obs2=new MutationObserver(_fixPrices);obs2.observe(document.body,{childList:true,subtree:true});_fixPrices();' +
+          'function _initObservers(){if(!document.body)return;' +
+          'var obs=new MutationObserver(_hideCards);obs.observe(document.body,{childList:true,subtree:true});_hideCards();' +
+          'var obs2=new MutationObserver(_fixPrices);obs2.observe(document.body,{childList:true,subtree:true});_fixPrices();}' +
+          'if(document.body){_initObservers();}else{document.addEventListener("DOMContentLoaded",_initObservers);}' +
           '})();</script>';
         html = html.replace('</head>', storageSDK + '\n' + slugScript + '\n' + hideScript + '\n</head>');
         const slugHeaders = new Headers();
