@@ -663,6 +663,8 @@ cd mbtico-pages && npx wrangler deploy
 - **_worker.js archive POST**: `if(_aCustomUrl)` 조건에 `||_aDocxHtmlSaved` 추가 → 로컬 DOCX 업로드+타이핑 케이스에서도 아카이브 정상 생성
 - 수정 전: contenteditable에서 타이핑 후 저장해도 전자서명 완료 시 빈 wisu 템플릿 표시
 - 수정 후: 타이핑한 내용이 서명 완료 아카이브 HTML에 정확히 반영됨
+- **_worker.js archive DOCX 케이스 _aDetailTable 제거**: DOCX 업로드 케이스에서 빈 "📋 계약 주요 내용" 요약 박스 표시 안 함 → DOCX 원본 HTML + 서명 블록만 표시 (구조화 필드 삭제 후 빈 표만 나오던 문제 해결)
+- **donway-pages/index.html 범용 빈칸 감지 시스템**: MBTICO 전용 하드코딩 카드 제거 → `_ctrRenderBlankInputs()` / `_ctrFillBlanks()` 신규 구현 (어떤 대리점 DOCX든 `<u>` 빈칸 자동감지 → 동적 입력폼)
 
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
