@@ -181,3 +181,7 @@ node scripts/monitor/content-monitor.js  # YouTube (일별)
 | 2026-09-14 | content-monitor.js classify(): "AI트렌드" 카테고리 추가 (최우선) — 신규 AI 모델·도구·에이전트·MCP·RAG·LLM·생성AI 등 AI 최신 동향 전용 분류 |
 | 2026-09-19 | channels.json: MONEY TOUCH @handle → channelId 직접 등록 (UCId55ph0gspBax7VQKBqTYg) |
 | 2026-09-19 | content-monitor.js classify(): https.request → fetch 교체 (GitHub Actions 프록시 오류 수정), 카테고리 개편 (수익창출·AI기능업그레이드 최우선) + 키워드 기반 폴백 분류 추가 |
+| 2026-09-20 | research-digest.js: sendSMS() 함수 삭제 (Solapi SMS 발송 제거), output JSON 커밋 스텝 추가 |
+| 2026-09-20 | research-digest.yml: SOLAPI_API_KEY·SOLAPI_API_SECRET·ADMIN_PHONE env 제거, output JSON git commit+push 스텝 추가 |
+| 2026-09-20 | _worker.js: `<script>` 템플릿 리터럴 esbuild 파싱 오류 수정 (`${'<script>'}` / `${'</script>'}` 분리) |
+| 2026-09-20 | auto-merge.yml: Deploy Worker 스텝 wrangler → wrangler@4, continue-on-error: true 추가 |
