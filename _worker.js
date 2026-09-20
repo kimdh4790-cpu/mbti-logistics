@@ -8889,7 +8889,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
             const r = await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,{
               method:'POST',
               headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
-              body:JSON.stringify({message:{token:fcmToken,notification:{title,body:msgBody},android:{priority:'high'},webpush:{notification:{icon:'/icon-192.png',requireInteraction:true}}}})
+              body:JSON.stringify({message:{token:fcmToken,notification:{title,body:msgBody},android:{priority:'high'},webpush:{notification:{icon:'/dine-icon-192.png',requireInteraction:true}}}})
             });
             if (r.ok) sent++; else skipped++;
           } catch(e){ skipped++; }
@@ -10024,7 +10024,7 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         + `  const data=payload.data||{};`
         + `  const title='DONWAY '+(payload.notification&&payload.notification.title||'알림');`
         + `  const body=(payload.notification&&payload.notification.body)||'';`
-        + `  return self.registration.showNotification(title,{body:body,icon:'/icon-192.png',badge:'/icon-192.png',tag:'donway-push',renotify:true,vibrate:[200,100,200]});`
+        + `  return self.registration.showNotification(title,{body:body,icon:'/donway-icon-192.png',badge:'/donway-icon-192.png',tag:'donway-push',renotify:true,vibrate:[200,100,200]});`
         + `});`
         + `self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.matchAll({type:'window'}).then(function(cl){for(var c of cl){if('focus' in c)return c.focus();}if(clients.openWindow)return clients.openWindow('/'+e.notification.data&&e.notification.data.url||'${slug}');}));});`
         + `self.addEventListener('install',function(){self.skipWaiting();});`
@@ -10052,6 +10052,19 @@ p{font-size:14px;color:#8899aa;margin-bottom:24px}
         mH.set('Content-Type', 'application/manifest+json');
         mH.set('Cache-Control', 'no-cache');
         return new Response(mResp.body, {status: mResp.status, headers: mH});
+      }
+      // dine.ne.kr → SCAN manifest 서빙
+      if (hostname.includes('dine.ne')) {
+        return new Response(JSON.stringify({
+          name:'SCAN — AI 문서 분석', short_name:'SCAN',
+          description:'계약서·자소서·등기부 AI 분석 · 다국어 번역',
+          start_url:'/scan', scope:'/', display:'standalone',
+          orientation:'portrait', background_color:'#0a0a14', theme_color:'#F472B6', lang:'ko',
+          icons:[
+            {src:'/dine-icon-192.png',sizes:'192x192',type:'image/png',purpose:'any maskable'},
+            {src:'/dine-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
+          ]
+        }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
       }
     }
     if (path === '/manifest_donway.json' || path === '/manifest.json') {
