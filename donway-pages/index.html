@@ -193,7 +193,7 @@ window.onBizDocSelected=onBizDocSelected;</script>
     </div>
 
     <!-- 로그인 폼 -->
-    <div id="form-login">
+    <form id="form-login" onsubmit="return false">
       <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--bg3);border-radius:10px;padding:4px">
         <button id="login-tab-email" onclick="_switchLoginTab('email')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;transition:.2s">🪪 아이디·이메일</button>
         <button id="login-tab-phone" onclick="_switchLoginTab('phone')" style="flex:1;padding:8px;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:.2s">📱 전화번호</button>
@@ -233,10 +233,10 @@ window.onBizDocSelected=onBizDocSelected;</script>
         <button onclick="_showFindPw()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0">🔑 비밀번호 찾기</button>
         <button onclick="toggleDark()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;padding:0">🌙 다크모드</button>
       </div>
-    </div>
+    </form>
 
     <!-- 회사 등록 폼 (간소화 단일 폼) -->
-    <div id="form-register" style="display:none">
+    <form id="form-register" onsubmit="return false" style="display:none">
       <div id="reg-main-form">
         <div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--text2)">
           🎁 <strong>한달 무료 체험</strong> — 오픈 이벤트 · 계좌이체 월 갱신
@@ -324,10 +324,10 @@ _checkSlugDuplicate(this.value);
           문의: <strong>051-711-3103</strong>
         </div>
       </div>
-    </div>
+    </form>
 
     <!-- 직원 가입 폼 -->
-    <div id="form-join" style="display:none">
+    <form id="form-join" onsubmit="return false" style="display:none">
       <div style="display:flex;gap:4px;margin-bottom:14px;background:var(--bg3);border-radius:8px;padding:4px">
         <button id="join-tab-quick" onclick="_switchJoinTab('quick')" style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff">⚡ 빠른 가입</button>
         <button id="join-tab-full"  onclick="_switchJoinTab('full')"  style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">📝 일반 가입</button>
@@ -385,7 +385,7 @@ _checkSlugDuplicate(this.value);
       <div id="j-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
       <button id="join-submit-btn" class="btn btn-blue" style="width:100%;padding:11px;font-size:14px;font-weight:700"
         onclick="document.getElementById('join-full-form').style.display!=='none'?doJoin():doQuickJoin()">가입하기</button>
-    </div>
+    </form>
   </div>
 </div>
 
