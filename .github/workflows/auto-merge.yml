@@ -47,11 +47,12 @@ jobs:
           done
 
       - name: Deploy Worker (_worker.js)
+        continue-on-error: true
         env:
           CLOUDFLARE_API_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CLOUDFLARE_EMAIL: kimdh4790@gmail.com
         run: |
-          npm install -g wrangler --silent
+          npm install -g wrangler@4 --silent
           npx wrangler deploy
 
       - name: Purge Cloudflare Cache
