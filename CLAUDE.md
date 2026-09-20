@@ -672,6 +672,16 @@ cd mbtico-pages && npx wrangler deploy
 - **_worker.js archive DOCX 케이스 _aDetailTable 제거**: DOCX 업로드 케이스에서 빈 "📋 계약 주요 내용" 요약 박스 표시 안 함 → DOCX 원본 HTML + 서명 블록만 표시 (구조화 필드 삭제 후 빈 표만 나오던 문제 해결)
 - **donway-pages/index.html 범용 빈칸 감지 시스템**: MBTICO 전용 하드코딩 카드 제거 → `_ctrRenderBlankInputs()` / `_ctrFillBlanks()` 신규 구현 (어떤 대리점 DOCX든 `<u>` 빈칸 자동감지 → 동적 입력폼)
 
+### ✅ 완료 (2026-09-20 filo·dine Worker 분리)
+- **filo-worker.js 신규**: filo.ai.kr 전용 Worker (wrangler.filo.toml)
+  - `_worker.js`에서 DONWAY 블록(L1154-3470) + mbtico.kr 블록 + bico/mbetco compat + DONWAY 아이콘 + handleYongcha 함수 제거
+  - 공통 헬퍼 + filo 라우팅 + 전체 공통 API 포함 (~14,954라인)
+- **dine-worker.js 신규**: dine.ne.kr 전용 Worker (wrangler.dine.toml)
+  - filo-worker.js와 동일 구조 (공통 헬퍼 + 전체 공통 API 포함)
+  - dine.ne.kr 루트→SCAN 앱 서빙, SCAN API 블록 포함
+- **wrangler.toml 슬림화**: filo.ai.kr/*, dine.ne.kr/* 라우트 제거 → DONWAY + mbtico.kr만 남음
+- **deploy.yml**: "Deploy Filo Worker" + "Deploy Dine Worker" 스텝 추가, 캐시 퍼지 대상 filo.ai.kr·dine.ne.kr 추가
+
 ### ✅ 완료 (2026-09-20 SCAN dine.ne.kr 단일 운영 전환)
 - **SCAN 도메인 단일화**: mbtico.kr/scan 폐기 → dine.ne.kr에서만 운영
 - `_worker.js` mbtico.kr 블록: `/scan`, `/scan.html`, `/scan-manifest.json`, `/scan-icon-192.png`, `/scan-icon-512.png` 라우트 삭제 (PR #116 포함)
