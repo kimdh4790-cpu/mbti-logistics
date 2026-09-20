@@ -3469,7 +3469,7 @@ async function acceptExchange(){
       }
     }
 
-        // ★ mbtico.kr → 엠비티아이 배송앱
+        // ★ mbtico.kr → 엠비티아이 관제센터
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr') {
       // Firebase Auth 핸들러 프록시 (signInWithRedirect 크로스도메인 쿠키 이슈 해결)
       if (path.startsWith('/__/auth/')) {
@@ -3481,7 +3481,10 @@ async function acceptExchange(){
         const _mbtManifest = {name:'MBTICO 관제센터',short_name:'MBTICO',start_url:'/control',display:'standalone',background_color:'#08101f',theme_color:'#08101f',icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}]};
         return new Response(JSON.stringify(_mbtManifest),{headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-cache'}});
       }
-      if (path === '/' || path === '') { const _lResp = await fetchAsset('/mbti_landing.html', request, env); return new Response(await _lResp.text(), {status:_lResp.status,headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}}); }
+      if (path === '/' || path === '') {
+        const _mbtiLand = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MBTICO — 물류·배송 스마트 플랫폼</title><meta name="description" content="FILO·DONWAY·용차앱·SCAN — 물류 현장을 위한 통합 솔루션"><link rel="icon" href="/mbti-icon-192.png"><link rel="manifest" href="/mbtico-manifest.json"><style>*{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08101f;--bg2:#0d1b3e;--gold:#c9a84c;--tx:#f0f4ff;--tx2:#8b949e}body{background:var(--bg);color:var(--tx);font-family:-apple-system,'Pretendard',sans-serif;min-height:100vh}.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid rgba(201,168,76,.15)}.logo{font-size:20px;font-weight:900;color:var(--gold);letter-spacing:.5px}.nav-btn{padding:8px 18px;border-radius:8px;background:var(--gold);color:var(--bg);font-size:13px;font-weight:700;text-decoration:none}.hero{text-align:center;padding:72px 24px 48px}.hero-tag{display:inline-block;padding:5px 16px;background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);border-radius:999px;font-size:12px;color:var(--gold);font-weight:700;margin-bottom:20px;letter-spacing:.5px}.hero-title{font-size:34px;font-weight:900;line-height:1.25;margin-bottom:16px}.hero-sub{font-size:15px;color:var(--tx2);max-width:460px;margin:0 auto 36px;line-height:1.85}.cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center}.btn-gold{padding:14px 28px;border-radius:10px;background:var(--gold);color:var(--bg);font-weight:800;font-size:15px;text-decoration:none}.btn-outline{padding:14px 28px;border-radius:10px;border:1.5px solid rgba(201,168,76,.4);color:var(--gold);font-size:15px;font-weight:700;text-decoration:none}.products{padding:8px 24px 64px;max-width:900px;margin:0 auto}.sec-title{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:24px;text-align:center;text-transform:uppercase}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}@media(max-width:560px){.grid{grid-template-columns:1fr}}.card{background:var(--bg2);border:1.5px solid rgba(201,168,76,.12);border-radius:16px;padding:24px;text-decoration:none;color:var(--tx);display:block;transition:.2s}.card:hover{border-color:rgba(201,168,76,.4)}.card-icon{font-size:26px;margin-bottom:12px}.card-name{font-size:17px;font-weight:900;margin-bottom:6px}.card-desc{font-size:13px;color:var(--tx2);line-height:1.7}.card-tag{display:inline-block;margin-top:12px;padding:3px 10px;background:rgba(201,168,76,.1);border-radius:6px;font-size:11px;color:var(--gold);font-weight:700}footer{text-align:center;padding:28px 24px;border-top:1px solid rgba(255,255,255,.05);font-size:12px;color:var(--tx2)}</style></head><body><nav class="nav"><div class="logo">MBTICO</div><a href="/control" class="nav-btn">관제센터 로그인</a></nav><section class="hero"><div class="hero-tag">유한회사 엠비티아이</div><h1 class="hero-title">물류·배송 현장을 위한<br>통합 스마트 플랫폼</h1><p class="hero-sub">배송기사 앱부터 정산·매칭·문서분석까지 — MBTICO의 솔루션으로 현장 업무를 자동화하세요.</p><div class="cta"><a href="/control" class="btn-gold">관제센터 로그인</a><a href="https://filo.ai.kr" class="btn-outline">배송앱 FILO</a></div></section><section class="products"><p class="sec-title">Products</p><div class="grid"><a href="https://filo.ai.kr" class="card"><div class="card-icon">🚚</div><div class="card-name">FILO</div><div class="card-desc">배송기사 전용 통합 앱 — 긴급배송·QR스캔·라벨·출퇴근 관리</div><span class="card-tag">filo.ai.kr</span></a><a href="https://donway.ai.kr" class="card"><div class="card-icon">📊</div><div class="card-name">DONWAY</div><div class="card-desc">배달대행·쿠팡 물류사 전용 — 엑셀 업로드 한 번에 수백 명 정산 완료</div><span class="card-tag">donway.ai.kr</span></a><a href="https://yongcha.app" class="card"><div class="card-icon">🚛</div><div class="card-name">용차앱</div><div class="card-desc">소장·기사 직접 거래 정보 서비스 — AI 기사 추천, 단건 요청·연결</div><span class="card-tag">yongcha.app</span></a><a href="https://dine.ne.kr" class="card"><div class="card-icon">📄</div><div class="card-name">SCAN</div><div class="card-desc">AI 공문서·계약서 분석 서비스 — 등기부·사업자·이력서 즉시 분석</div><span class="card-tag">dine.ne.kr</span></a></div></section><footer>ⓒ 2026 유한회사 엠비티아이 · 사업자번호 373-86-02536</footer></body></html>`;
+        return new Response(_mbtiLand, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
+      }
       // /app 경로 제거됨 (레거시 물류앱v9 삭제)
       if (path === '/hub') { const _hResp = await fetchAsset('/mbtico_hub.html', request, env); return new Response(await _hResp.text(), {status:_hResp.status,headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}}); }
       if (path === '/control' || path === '/control/') {
@@ -3750,115 +3753,27 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 `;
         return new Response(ctrlHtml, {headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}});
       }
-      if (path === '/label' || path === '/label.html') return serveKVFile(env, 'label.html', 'text/html');
-      // /delivery → /drivers 리다이렉트 (drivers.html로 통합)
+      // 배송앱 라우트 → filo.ai.kr 리다이렉트 (2026-09-20 워커 분리 이후)
+      if (path === '/label' || path === '/label.html') return Response.redirect('https://filo.ai.kr/label', 302);
       if (path === '/delivery' || path === '/delivery.html') {
-        var did = new URL(request.url).searchParams.get('did') || '';
-        return Response.redirect('https://mbtico.kr/drivers' + (did ? '?did=' + did : ''), 302);
-      }
-      if (path === '/emergency' || path === '/emergency.html') return serveKVFile(env, 'emergency.html', 'text/html');
-      if (path === '/emergency-manifest.json') {
         const did = new URL(request.url).searchParams.get('did') || '';
-        const startUrl = '/emergency' + (did ? '?did=' + encodeURIComponent(did) : '');
-        const manifest = { name:'긴급배송앱', short_name:'배송앱', start_url:startUrl, scope:'/', display:'standalone', background_color:'#0f172a', theme_color:'#0f172a', icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
-        return new Response(JSON.stringify(manifest), { headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'} });
+        return Response.redirect('https://filo.ai.kr/drivers' + (did ? '?did=' + did : ''), 302);
       }
-      if (path === '/checkin' || path === '/checkin.html') return serveKVFile(env, 'checkin.html', 'text/html');
-      // /v9 경로 제거됨 (레거시 물류앱v9 삭제)
+      if (path === '/emergency' || path === '/emergency.html') return Response.redirect('https://filo.ai.kr/emergency', 302);
+      if (path === '/emergency-manifest.json') return Response.redirect('https://filo.ai.kr/emergency-manifest.json' + (url.search||''), 302);
+      if (path === '/checkin' || path === '/checkin.html') return Response.redirect('https://filo.ai.kr/checkin', 302);
       if (path === '/admin' || path === '/admin.html') return Response.redirect('https://mbtico.kr/control', 302);
-      if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
-      if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
-      if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
-      if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
+      if (path === '/register' || path === '/register.html') return Response.redirect('https://filo.ai.kr/register', 301);
+      if (path === '/drivers' || path === '/drivers.html') return Response.redirect('https://filo.ai.kr/drivers', 302);
+      if (path === '/notice' || path === '/notice.html') return Response.redirect('https://filo.ai.kr/notice', 302);
+      if (path === '/schedule' || path === '/schedule.html') return Response.redirect('https://filo.ai.kr/schedule', 302);
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
-      if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://mbtico.kr/register', 301);
-      if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
-      if (path === '/clients') return new Response(_MBTICO_CLIENTS_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});
-      // 2단계 슬러그: mbtico.kr/{배송회사}/{고객사} → 기사 가입 페이지 직접 서빙 (URL 유지)
+      if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://filo.ai.kr/register', 301);
+      if (path === '/driver-join') return Response.redirect('https://filo.ai.kr/register', 302);
+      if (path === '/clients') return Response.redirect('https://filo.ai.kr', 302);
+      // 배송앱 슬러그 → filo.ai.kr 리다이렉트 (2026-09-20 워커 분리 이후)
       if (method === 'GET' && !path.startsWith('/api/')) {
-        let _mbtPath; try{_mbtPath=decodeURIComponent(path);}catch(e){_mbtPath=path;}
-        const _twoSlug = _mbtPath.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
-        if (_twoSlug) {
-          try {
-            const _kvClient = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('client:'+_twoSlug[1]+':'+_twoSlug[2], 'json') : null;
-            if (_kvClient && _kvClient.dealerId) {
-              const _inj = '<script>window.__MBT={did:'+JSON.stringify(_kvClient.dealerId)+',cid:'+JSON.stringify(_twoSlug[2])+',name:'+JSON.stringify(_kvClient.clientName||_twoSlug[2])+',co:'+JSON.stringify(_kvClient.companyName||_twoSlug[1])+'};' + '<\/script>';
-              const _html = _DRIVER_JOIN_HTML.replace('</head>', _inj+'</head>');
-              return new Response(_html, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
-            }
-          } catch(e) {}
-        }
-      }
-      // 1단계 슬러그: mbtico.kr/{배송회사} → 회사 클라이언트 목록 페이지
-      if (method === 'GET' && !path.startsWith('/api/')) {
-        let _mbtPath1; try{_mbtPath1=decodeURIComponent(path);}catch(e){_mbtPath1=path;}
-        const _slugMatch = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
-        const _reserved = new Set(['/settle','/register','/admin','/hub','/control','/drivers','/notice','/schedule','/scan','/mbtico_hub','/mbtico-hub','/mbtico-join','/company-join','/driver-join','/emergency','/checkin','/delivery','/clients','/label']);
-        // ── 슬러그 manifest.json: /{slug}/manifest.json 또는 /{slug}/{app}/manifest.json
-        const _mani2 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
-        const _mani1 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/manifest\.json$/);
-        if (_mani2 || _mani1) {
-          try {
-            const _ms = _mani2 ? _mani2[1] : _mani1[1];
-            const _ma = _mani2 ? _mani2[2] : '';
-            const _mkv = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_ms, 'json') : null;
-            if (_mkv && _mkv.emergency) {
-              const _mStart = _ma ? '/'+_ms+'/'+_ma : '/'+_ms;
-              const _mScope = '/'+_ms; // /mbti 또는 /mbti/앱 모두 커버, start_url 포함
-              const _coName = (_mkv.companyName||'').replace(/[<>"&]/g,'');
-              const _mName = _coName ? _coName+' 배송앱' : '배송앱';
-              const _mManifest = { name:_mName, short_name:'배송앱', start_url:_mStart, scope:_mScope, display:'standalone', background_color:'#0f172a', theme_color:'#c9a84c', icons:[{src:'/mbti-icon-192.png',sizes:'192x192',type:'image/png'},{src:'/mbti-icon-192.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}] };
-              return new Response(JSON.stringify(_mManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'}});
-            }
-          } catch(e) {}
-        }
-        // ── 2단계 슬러그: /{slug}/{appSlug} → 앱별 기사 로그인 페이지
-        const _appSlugMatch2 = _mbtPath1.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/([a-zA-Z0-9가-힣\-_]{1,30})\/?$/);
-        if (_appSlugMatch2 && !_reserved.has('/'+_appSlugMatch2[1]) && _appSlugMatch2[2]!=='manifest.json' && _appSlugMatch2[2]!=='sw.js') {
-          try {
-            const _pkv2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_appSlugMatch2[1], 'json') : null;
-            if (_pkv2 && _pkv2.emergency) {
-              const _eh2 = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('emergency.html', 'text') : null;
-              if (_eh2) {
-                const _su2 = (_pkv2.uid||'').replace(/['"<>\\]/g,'');
-                const _ss2 = _appSlugMatch2[1].replace(/['"<>\\]/g,'');
-                const _sa2 = _appSlugMatch2[2].replace(/['"<>\\]/g,'');
-                const _inj2 = _eh2.replace('<head>',
-                  `<head><script>try{localStorage.setItem('mbti_emer_dealerId','${_su2}');window._pwaSlug='${_ss2}';window._pwaAppName='${_sa2}';}catch(e){}</script>`);
-                return new Response(_inj2, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
-              }
-            }
-          } catch(e) {}
-        }
-        if (_slugMatch && !_reserved.has(_mbtPath1.replace(/\/$/,''))) {
-          try {
-            const _kvSlug = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('company-slug:'+_slugMatch[1], 'json') : null;
-            if (_kvSlug && _kvSlug.uid) {
-              // ── 긴급배송앱 슬러그: emergency:true 이면 emergency.html 직접 서빙
-              if (_kvSlug.emergency) {
-                const _emerHtml = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.get('emergency.html', 'text') : null;
-                if (_emerHtml) {
-                  const _safeUid = (_kvSlug.uid||'').replace(/['"<>]/g,'');
-                  const _safeSlug = _slugMatch[1].replace(/['"<>]/g,'');
-                  const _injected = _emerHtml.replace('<head>',
-                    `<head><script>try{localStorage.setItem('mbti_emer_dealerId','${_safeUid}');window._pwaSlug='${_safeSlug}';}catch(e){}</script>`);
-                  return new Response(_injected, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
-                }
-              }
-              // 회사 슬러그 페이지: 배송처 목록 + 각 기사 가입 링크
-              const _coSlug = _slugMatch[1];
-              const _coName = _kvSlug.companyName || _coSlug;
-              const _listResult = env.DONWAY_ASSETS ? await env.DONWAY_ASSETS.list({prefix:'client:'+_coSlug+':'}) : {keys:[]};
-              const _clientLinks = await Promise.all((_listResult.keys||[]).map(async function(k){
-                const _cd = await env.DONWAY_ASSETS.get(k.name, 'json');
-                const _cs = k.name.replace('client:'+_coSlug+':','');
-                return {slug:_cs, name:(_cd&&_cd.clientName)||_cs};
-              }));
-              const _coPageHtml = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${_coName} 배송앱</title><meta name="theme-color" content="#0a0f1e"><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#0a0f1e;color:#e2e8f0;font-family:-apple-system,'Noto Sans KR',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}.card{background:#0d1b3e;border:1px solid rgba(0,102,255,.2);border-radius:20px;padding:32px 24px;width:100%;max-width:400px}.logo{text-align:center;margin-bottom:28px}.truck{font-size:40px;margin-bottom:12px}.title{font-size:22px;font-weight:900;background:linear-gradient(90deg,#0066ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.sub{font-size:12px;color:#64748b;margin-top:6px}.section-title{font-size:11px;color:#64748b;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:12px}.client-list{display:flex;flex-direction:column;gap:10px}.client-btn{display:block;padding:16px 20px;background:rgba(0,102,255,.08);border:1.5px solid rgba(0,102,255,.2);border-radius:14px;color:#e2e8f0;text-decoration:none;font-size:15px;font-weight:700;transition:.15s}.client-btn:hover{background:rgba(0,102,255,.18);border-color:rgba(0,102,255,.5)}.client-btn .sub2{font-size:11px;color:#64748b;font-weight:400;margin-top:3px}.empty{text-align:center;color:#475569;font-size:13px;padding:24px 0}.login-row{text-align:center;margin-top:20px;font-size:11px;color:#475569}.login-row a{color:#00d4ff;text-decoration:none}</style></head><body><div class="card"><div class="logo"><div class="truck">🚚</div><div class="title">${_coName} 배송앱</div><div class="sub">배송기사 가입 안내</div></div>${_clientLinks.length?'<div class="section-title">배송처 선택</div><div class="client-list">'+_clientLinks.map(function(c){return '<a href="/'+encodeURIComponent(_coSlug)+'/'+encodeURIComponent(c.slug)+'" class="client-btn"><span>'+c.name+'</span><div class="sub2">기사 가입하기</div></a>';}).join('')+'</div>':'<div class="empty">등록된 배송처가 없습니다</div>'}<div class="login-row"><a href="/hub">회사 관리자 로그인</a></div></div></body></html>`;
-              return new Response(_coPageHtml, {headers:{'Content-Type':'text/html;charset=UTF-8','Cache-Control':'no-store'}});
-            }
-          } catch(e) {}
-        }
+        return Response.redirect('https://filo.ai.kr' + path + (url.search||''), 302);
       }
     }
     // ★ mbetco.kr / bico.kr → FILO 구버전 호환
