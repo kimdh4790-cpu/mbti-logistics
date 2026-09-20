@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MBTICO — 물류·배송·정산 AI 올인원 플랫폼</title>
+<meta name="description" content="DONWAY 정산·SCAN 문서분석·용차앱·FILO 배송앱 — 물류 현장을 위한 SaaS 4종 세트">
+<meta name="theme-color" content="#e0f2fe">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --w:#ffffff;--sky0:#f0f9ff;--sky1:#e0f2fe;--sky2:#bae6fd;--sky3:#7dd3fc;
+  --pk:#ec4899;--pk2:#f9a8d4;--pk3:#fce7f3;
+  --lm:#22c55e;--lm2:#86efac;--lm3:#dcfce7;
+  --gd:#f59e0b;--gd2:#fcd34d;--gd3:#fef3c7;
+  --bl:#0ea5e9;--bl2:#7dd3fc;--bl3:#e0f2fe;
+  --t1:#0f172a;--t2:#334155;--t3:#64748b;--t4:#94a3b8;
+  --rad:20px;--r2:14px;--r3:10px
+}
+html{scroll-behavior:smooth}
+body{font-family:'Pretendard',system-ui,-apple-system,sans-serif;background:var(--sky0);color:var(--t1);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--sky2);border-radius:99px}
+
+/* ═══ NAV ═══ */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(240,249,255,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(186,230,253,.6);transition:.3s}
+nav.scrolled{background:rgba(255,255,255,.92);box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.n-logo{font-size:19px;font-weight:900;letter-spacing:-1px;background:linear-gradient(130deg,var(--pk),var(--gd));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.n-links{display:flex;gap:6px;align-items:center}
+.n-a{padding:7px 15px;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;transition:.2s;white-space:nowrap}
+.n-ghost{color:var(--t2);background:transparent;border:1.5px solid var(--sky2)}
+.n-ghost:hover{background:var(--sky1);border-color:var(--sky3);color:var(--t1)}
+.n-cta{background:linear-gradient(130deg,var(--pk),#a855f7);color:#fff;border:none;box-shadow:0 3px 14px rgba(168,85,247,.3)}
+.n-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(168,85,247,.4)}
+
+/* ═══ HERO ═══ */
+.hero{min-height:100vh;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:110px 20px 80px;background:linear-gradient(155deg,var(--w) 0%,var(--sky1) 55%,#dbeafe 100%)}
+#c{position:absolute;inset:0;z-index:0;pointer-events:none}
+.hero-body{position:relative;z-index:1;max-width:780px;margin:0 auto}
+.hero-chip{display:inline-flex;align-items:center;gap:8px;padding:7px 20px;background:var(--w);border:1.5px solid var(--sky2);border-radius:99px;font-size:12px;font-weight:700;color:var(--t3);margin-bottom:28px;box-shadow:0 2px 16px rgba(14,165,233,.12);animation:fadedown .7s both}
+.hero-chip em{color:var(--pk);font-style:normal;font-weight:800}
+.hero-dot{width:7px;height:7px;border-radius:50%;background:var(--lm);animation:pulse 1.8s infinite}
+.hero-h1{font-size:clamp(38px,8.5vw,76px);font-weight:900;line-height:1.06;letter-spacing:-2.5px;margin-bottom:22px;animation:fadeup .7s .15s both}
+.gh1{background:linear-gradient(135deg,#1e293b,#334155);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-pk{background:linear-gradient(135deg,var(--pk),#a855f7 60%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-lm{background:linear-gradient(135deg,var(--lm),#06b6d4 70%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-gd{background:linear-gradient(135deg,var(--gd),#fb923c 70%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.g-bl{background:linear-gradient(135deg,var(--bl),#6366f1 70%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero-sub{font-size:16px;color:var(--t3);line-height:1.9;max-width:540px;margin:0 auto 38px;animation:fadeup .7s .25s both}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:60px;animation:fadeup .7s .35s both}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:13px 28px;border-radius:99px;font-size:13.5px;font-weight:800;cursor:pointer;text-decoration:none;border:none;transition:.25s;white-space:nowrap}
+.btn-pk{background:linear-gradient(130deg,var(--pk),#a855f7);color:#fff;box-shadow:0 4px 22px rgba(236,72,153,.32)}
+.btn-pk:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(236,72,153,.42)}
+.btn-outline{background:var(--w);color:var(--t1);border:2px solid var(--sky2);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.btn-outline:hover{border-color:var(--sky3);transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.1)}
+
+/* STATS ROW */
+.stats{display:flex;gap:0;justify-content:center;animation:fadeup .7s .45s both}
+.stat-wrap{display:flex;gap:48px;background:var(--w);border:1.5px solid var(--sky2);border-radius:var(--rad);padding:22px 40px;box-shadow:0 8px 32px rgba(14,165,233,.1);flex-wrap:wrap;justify-content:center;gap:32px}
+.stat{text-align:center}
+.stat-n{font-size:30px;font-weight:900;letter-spacing:-1px}
+.stat-l{font-size:11px;color:var(--t4);font-weight:600;margin-top:2px}
+
+/* FLOATING PRODUCT CHIPS */
+.float-chips{position:absolute;bottom:30px;left:0;right:0;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;z-index:1;animation:fadeup .7s .6s both}
+.fchip{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--w);border-radius:99px;font-size:12px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.08);border:1.5px solid;cursor:pointer;text-decoration:none;transition:.2s;color:var(--t1)}
+.fchip:hover{transform:translateY(-3px)}
+.fchip-gd{border-color:var(--gd2);color:var(--t1)}.fchip-gd:hover{background:var(--gd3)}
+.fchip-pk{border-color:var(--pk2)}.fchip-pk:hover{background:var(--pk3)}
+.fchip-lm{border-color:var(--lm2)}.fchip-lm:hover{background:var(--lm3)}
+.fchip-bl{border-color:var(--bl2)}.fchip-bl:hover{background:var(--bl3)}
+.fchip-dot{width:8px;height:8px;border-radius:50%}
+
+/* ═══ SECTION BASE ═══ */
+section{padding:100px 20px}
+.inner{max-width:1000px;margin:0 auto}
+.s-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 16px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;margin-bottom:14px}
+.s-h2{font-size:clamp(28px,5vw,44px);font-weight:900;letter-spacing:-1.5px;line-height:1.15;margin-bottom:12px}
+.s-sub{font-size:14px;color:var(--t3);line-height:1.9;max-width:500px;margin-bottom:44px}
+
+/* PRODUCT OVERVIEW */
+.overview{background:var(--w)}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+.p-card{border-radius:var(--rad);padding:30px 22px;text-align:center;text-decoration:none;color:inherit;transition:.3s;border:2px solid;display:block;position:relative;overflow:hidden}
+.p-card::before{content:'';position:absolute;inset:0;opacity:0;transition:.3s;border-radius:inherit}
+.p-card:hover{transform:translateY(-8px)}
+.p-card:hover::before{opacity:1}
+.pc-gd{background:var(--gd3);border-color:var(--gd2)}.pc-gd::before{background:linear-gradient(135deg,rgba(245,158,11,.06),transparent)}.pc-gd:hover{box-shadow:0 20px 50px rgba(245,158,11,.18)}
+.pc-pk{background:var(--pk3);border-color:var(--pk2)}.pc-pk::before{background:linear-gradient(135deg,rgba(236,72,153,.06),transparent)}.pc-pk:hover{box-shadow:0 20px 50px rgba(236,72,153,.18)}
+.pc-lm{background:var(--lm3);border-color:var(--lm2)}.pc-lm::before{background:linear-gradient(135deg,rgba(34,197,94,.06),transparent)}.pc-lm:hover{box-shadow:0 20px 50px rgba(34,197,94,.18)}
+.pc-bl{background:var(--bl3);border-color:var(--bl2)}.pc-bl::before{background:linear-gradient(135deg,rgba(14,165,233,.06),transparent)}.pc-bl:hover{box-shadow:0 20px 50px rgba(14,165,233,.18)}
+.p-icon{width:60px;height:60px;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.p-name{font-size:18px;font-weight:900;margin-bottom:5px}
+.p-domain{font-size:11px;color:var(--t4);font-weight:600;margin-bottom:14px}
+.p-desc{font-size:12.5px;color:var(--t2);line-height:1.75}
+.p-tag{display:inline-flex;align-items:center;gap:4px;margin-top:14px;padding:5px 13px;border-radius:99px;font-size:10.5px;font-weight:800}
+
+/* ═══ PRODUCT SECTIONS ═══ */
+.feat-wrap{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.feat-content{}
+.feat-list{list-style:none;display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
+.feat-li{display:flex;gap:14px;align-items:flex-start}
+.feat-icon-wrap{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.feat-li-t{font-size:14px;font-weight:800;margin-bottom:3px}
+.feat-li-d{font-size:12.5px;color:var(--t3);line-height:1.65}
+.feat-cta{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:99px;font-size:13px;font-weight:800;cursor:pointer;text-decoration:none;border:none;transition:.25s}
+.feat-mock{border-radius:var(--rad);padding:28px;border:2px solid;box-shadow:0 16px 50px rgba(0,0,0,.08);position:relative;overflow:hidden;background:var(--w)}
+
+/* ═══ MOCK UI ELEMENTS ═══ */
+.mock-header{display:flex;align-items:center;gap:8px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid;font-size:12px;font-weight:700}
+.mock-dots{display:flex;gap:5px}
+.mock-dot{width:9px;height:9px;border-radius:50%}
+.mk-r{background:#ff5f57}.mk-y{background:#febc2e}.mk-g{background:#28c840}
+.mock-title{font-size:11px;font-weight:700;opacity:.6;flex:1;text-align:center}
+
+/* DONWAY MOCK */
+.dw-table{width:100%;border-collapse:collapse;font-size:11px}
+.dw-table th{background:rgba(245,158,11,.1);color:var(--gd);font-weight:800;padding:7px 10px;text-align:left;font-size:10px}
+.dw-table td{padding:8px 10px;border-bottom:1px solid rgba(245,158,11,.1);color:var(--t2)}
+.dw-table tr:last-child td{border-bottom:none}
+.dw-amount{font-weight:800;color:var(--t1)}
+.dw-badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:800;background:rgba(34,197,94,.12);color:var(--lm)}
+.dw-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.dw-sum-card{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;padding:10px;text-align:center}
+.dw-sum-n{font-size:16px;font-weight:900;color:var(--gd)}
+.dw-sum-l{font-size:9px;color:var(--t4);font-weight:600;margin-top:1px}
+
+/* SCAN MOCK */
+.scan-upload{border:2px dashed var(--pk2);border-radius:var(--r2);padding:20px;text-align:center;background:var(--pk3);margin-bottom:14px}
+.scan-upload-icon{margin-bottom:8px}
+.scan-upload-t{font-size:12px;font-weight:700;color:var(--pk);margin-bottom:4px}
+.scan-upload-s{font-size:10px;color:var(--t4)}
+.scan-result{background:rgba(236,72,153,.04);border:1px solid var(--pk2);border-radius:var(--r3);padding:14px}
+.scan-result-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:11px}
+.scan-result-row:last-child{margin-bottom:0}
+.scan-pill{padding:2px 8px;border-radius:99px;font-size:9px;font-weight:800;background:var(--pk3);color:var(--pk)}
+.scan-line{height:6px;background:linear-gradient(90deg,var(--pk),var(--pk2));border-radius:3px;animation:shimmer 2s infinite}
+.scan-line-s{height:6px;background:var(--pk2);border-radius:3px;width:60%}
+
+/* 용차 MOCK */
+.yc-map{background:linear-gradient(135deg,rgba(34,197,94,.06),rgba(6,182,212,.06));border-radius:var(--r2);height:120px;position:relative;overflow:hidden;margin-bottom:14px;border:1px solid var(--lm2)}
+.yc-route{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.yc-pin{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid var(--w)}
+.yc-pin-a{background:var(--lm);top:20%;left:15%}
+.yc-pin-b{background:var(--gd);top:35%;left:45%}
+.yc-pin-c{background:var(--pk);top:60%;left:70%}
+.yc-driver{display:flex;align-items:center;gap:10px;background:var(--lm3);border-radius:var(--r3);padding:10px;margin-bottom:8px;border:1px solid var(--lm2)}
+.yc-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--lm),var(--bl));display:flex;align-items:center;justify-content:center;color:var(--w);font-size:12px;font-weight:700;flex-shrink:0}
+.yc-info{flex:1;font-size:11px}
+.yc-name{font-weight:800;color:var(--t1);margin-bottom:2px}
+.yc-rate{color:var(--lm);font-weight:700;font-size:10px}
+.yc-ai-badge{background:linear-gradient(135deg,var(--lm),#06b6d4);color:var(--w);padding:3px 9px;border-radius:99px;font-size:9px;font-weight:800}
+
+/* FILO MOCK */
+.filo-status-bar{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,var(--bl),#6366f1);border-radius:var(--r2);padding:12px 16px;margin-bottom:12px;color:var(--w)}
+.filo-status-t{font-size:11px;font-weight:800;opacity:.9}
+.filo-status-n{font-size:22px;font-weight:900;line-height:1}
+.filo-jobs{display:flex;flex-direction:column;gap:8px}
+.filo-job{display:flex;align-items:center;gap:10px;background:var(--bl3);border:1px solid var(--bl2);border-radius:var(--r3);padding:10px}
+.filo-job-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.fj-going{background:var(--lm)}
+.fj-wait{background:var(--gd)}
+.fj-done{background:var(--t4)}
+.filo-job-info{flex:1;font-size:11px}
+.filo-job-t{font-weight:800;color:var(--t1);margin-bottom:1px}
+.filo-job-s{color:var(--t4);font-size:10px}
+.filo-job-amt{font-size:12px;font-weight:900;color:var(--bl)}
+
+/* ═══ AI FEATURES ═══ */
+.ai-section{background:linear-gradient(160deg,#0f172a 0%,#1e1b4b 50%,#0c1445 100%);color:#fff}
+.ai-section .s-sub{color:rgba(255,255,255,.6)}
+.ai-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.ai-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:var(--r2);padding:22px;transition:.25s;cursor:default}
+.ai-card:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);transform:translateY(-4px)}
+.ai-card-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;font-size:22px}
+.ai-card-t{font-size:13.5px;font-weight:800;margin-bottom:6px;color:#fff}
+.ai-card-d{font-size:12px;color:rgba(255,255,255,.5);line-height:1.7}
+.ai-card-tag{display:inline-block;margin-top:10px;padding:3px 10px;border-radius:99px;font-size:10px;font-weight:700;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)}
+
+/* ═══ CTA ═══ */
+.cta-section{background:linear-gradient(140deg,var(--sky0),var(--sky1),#dbeafe);text-align:center}
+.cta-box{background:var(--w);border-radius:28px;padding:56px 40px;box-shadow:0 20px 60px rgba(14,165,233,.12);border:2px solid var(--sky2);max-width:680px;margin:0 auto;position:relative;overflow:hidden}
+.cta-box::before{content:'';position:absolute;top:-80px;right:-80px;width:240px;height:240px;background:radial-gradient(circle,rgba(236,72,153,.15),transparent 70%);border-radius:50%;pointer-events:none}
+.cta-box::after{content:'';position:absolute;bottom:-80px;left:-80px;width:200px;height:200px;background:radial-gradient(circle,rgba(34,197,94,.12),transparent 70%);border-radius:50%;pointer-events:none}
+.cta-h2{font-size:clamp(26px,4.5vw,38px);font-weight:900;letter-spacing:-1.5px;line-height:1.2;margin-bottom:16px;position:relative;z-index:1}
+.cta-p{font-size:14px;color:var(--t3);line-height:1.9;margin-bottom:36px;position:relative;z-index:1}
+.cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1}
+.products-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:36px;position:relative;z-index:1}
+.prod-link{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:99px;font-size:12px;font-weight:700;text-decoration:none;transition:.2s;border:1.5px solid}
+
+/* ═══ FOOTER ═══ */
+footer{background:var(--t1);color:rgba(255,255,255,.5);padding:40px 20px}
+.footer-inner{max-width:1000px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-logo{font-size:16px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--pk),var(--gd));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-link{color:rgba(255,255,255,.4);text-decoration:none;font-size:12px;font-weight:600;transition:.2s}
+.footer-link:hover{color:rgba(255,255,255,.8)}
+.footer-copy{font-size:11px;color:rgba(255,255,255,.25);width:100%;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08)}
+
+/* ═══ REVEAL ═══ */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity .65s cubic-bezier(.22,1,.36,1),transform .65s cubic-bezier(.22,1,.36,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal-left{opacity:0;transform:translateX(-36px);transition:opacity .65s cubic-bezier(.22,1,.36,1),transform .65s cubic-bezier(.22,1,.36,1)}
+.reveal-left.in{opacity:1;transform:none}
+.reveal-right{opacity:0;transform:translateX(36px);transition:opacity .65s cubic-bezier(.22,1,.36,1),transform .65s cubic-bezier(.22,1,.36,1)}
+.reveal-right.in{opacity:1;transform:none}
+.delay1{transition-delay:.1s}
+.delay2{transition-delay:.2s}
+.delay3{transition-delay:.3s}
+.delay4{transition-delay:.4s}
+
+/* ═══ KEYFRAMES ═══ */
+@keyframes fadedown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
+@keyframes fadeup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:.6}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ripple{0%{transform:scale(.8);opacity:1}100%{transform:scale(2.4);opacity:0}}
+
+/* ═══ SECTIONS COLORS ═══ */
+.donway-sec{background:linear-gradient(155deg,var(--w) 0%,var(--gd3) 100%)}
+.scan-sec{background:linear-gradient(155deg,var(--sky0) 0%,var(--pk3) 100%)}
+.yongcha-sec{background:linear-gradient(155deg,var(--w) 0%,var(--lm3) 100%)}
+.filo-sec{background:linear-gradient(155deg,var(--sky0) 0%,var(--bl3) 100%)}
+
+.sc-gd{background:rgba(245,158,11,.1);color:var(--gd);border:1.5px solid var(--gd2)}
+.sc-pk{background:rgba(236,72,153,.1);color:var(--pk);border:1.5px solid var(--pk2)}
+.sc-lm{background:rgba(34,197,94,.1);color:var(--lm);border:1.5px solid var(--lm2)}
+.sc-bl{background:rgba(14,165,233,.1);color:var(--bl);border:1.5px solid var(--bl2)}
+
+.fi-gd{border-color:var(--gd2);box-shadow:0 20px 60px rgba(245,158,11,.1)}
+.fi-pk{border-color:var(--pk2);box-shadow:0 20px 60px rgba(236,72,153,.1)}
+.fi-lm{border-color:var(--lm2);box-shadow:0 20px 60px rgba(34,197,94,.1)}
+.fi-bl{border-color:var(--bl2);box-shadow:0 20px 60px rgba(14,165,233,.1)}
+
+.fcta-gd{background:linear-gradient(130deg,var(--gd),#fb923c);color:#fff;box-shadow:0 4px 20px rgba(245,158,11,.3)}
+.fcta-gd:hover{box-shadow:0 8px 28px rgba(245,158,11,.4);transform:translateY(-2px)}
+.fcta-pk{background:linear-gradient(130deg,var(--pk),#a855f7);color:#fff;box-shadow:0 4px 20px rgba(236,72,153,.3)}
+.fcta-pk:hover{box-shadow:0 8px 28px rgba(236,72,153,.4);transform:translateY(-2px)}
+.fcta-lm{background:linear-gradient(130deg,var(--lm),#06b6d4);color:#fff;box-shadow:0 4px 20px rgba(34,197,94,.3)}
+.fcta-lm:hover{box-shadow:0 8px 28px rgba(34,197,94,.4);transform:translateY(-2px)}
+.fcta-bl{background:linear-gradient(130deg,var(--bl),#6366f1);color:#fff;box-shadow:0 4px 20px rgba(14,165,233,.3)}
+.fcta-bl:hover{box-shadow:0 8px 28px rgba(14,165,233,.4);transform:translateY(-2px)}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  nav{padding:10px 16px}
+  .n-links .n-ghost:not(:last-child){display:none}
+  .hero{padding:90px 16px 70px}
+  .stat-wrap{padding:18px 24px;gap:22px}
+  .feat-wrap{grid-template-columns:1fr;gap:32px}
+  .feat-wrap .feat-mock{order:-1}
+  .inner{max-width:100%}
+  section{padding:72px 16px}
+  .ai-grid{grid-template-columns:1fr 1fr}
+  .cta-box{padding:36px 22px}
+  .footer-inner{flex-direction:column;align-items:flex-start;gap:14px}
+}
+@media(max-width:480px){
+  .ai-grid{grid-template-columns:1fr}
+  .prod-grid{grid-template-columns:1fr 1fr}
+  .stat-wrap{padding:16px 18px;gap:18px}
+  .stat-n{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="n-logo">MBTICO</div>
+  <div class="n-links">
+    <a href="https://donway.ai.kr" target="_blank" class="n-a n-ghost">DONWAY</a>
+    <a href="https://dine.ne.kr" target="_blank" class="n-a n-ghost">SCAN</a>
+    <a href="https://yongcha.app" target="_blank" class="n-a n-ghost">용차앱</a>
+    <a href="https://filo.ai.kr/mbtico-join" class="n-a n-cta">무료 시작</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <canvas id="c"></canvas>
+  <div class="hero-body">
+    <div class="hero-chip">
+      <div class="hero-dot"></div>
+      <span>물류 현장 <em>4종 SaaS</em> 올인원 플랫폼</span>
+    </div>
+    <h1 class="hero-h1">
+      <span class="gh1">물류를</span><br>
+      <span class="g-pk">더 빠르게</span> <span class="g-lm">더 정확하게</span><br>
+      <span class="g-gd">더 스마트하게</span>
+    </h1>
+    <p class="hero-sub">정산·문서분석·배차·배송 — 유한회사 엠비티아이의 물류 특화 AI SaaS 4종으로 현장의 모든 비효율을 없애드립니다.</p>
+    <div class="hero-btns">
+      <a href="https://filo.ai.kr/mbtico-join" class="btn btn-pk">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        무료로 시작하기
+      </a>
+      <a href="#products" class="btn btn-outline">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        서비스 둘러보기
+      </a>
+    </div>
+    <div class="stats">
+      <div class="stat-wrap">
+        <div class="stat">
+          <div class="stat-n g-pk" id="s1">0</div>
+          <div class="stat-l">정산 기사</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n g-lm" id="s2">0</div>
+          <div class="stat-l">문서 분석</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n g-gd" id="s3">0</div>
+          <div class="stat-l">완료 배송</div>
+        </div>
+        <div class="stat">
+          <div class="stat-n g-bl" id="s4">0</div>
+          <div class="stat-l">가입 기업</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="float-chips">
+    <a href="https://donway.ai.kr" target="_blank" class="fchip fchip-gd">
+      <div class="fchip-dot" style="background:var(--gd)"></div>
+      <span>DONWAY</span>
+      <span style="font-size:10px;color:var(--t4)">donway.ai.kr</span>
+    </a>
+    <a href="https://dine.ne.kr" target="_blank" class="fchip fchip-pk">
+      <div class="fchip-dot" style="background:var(--pk)"></div>
+      <span>SCAN</span>
+      <span style="font-size:10px;color:var(--t4)">dine.ne.kr</span>
+    </a>
+    <a href="https://yongcha.app" target="_blank" class="fchip fchip-lm">
+      <div class="fchip-dot" style="background:var(--lm)"></div>
+      <span>용차앱</span>
+      <span style="font-size:10px;color:var(--t4)">yongcha.app</span>
+    </a>
+    <a href="https://filo.ai.kr" target="_blank" class="fchip fchip-bl">
+      <div class="fchip-dot" style="background:var(--bl)"></div>
+      <span>FILO 배송앱</span>
+      <span style="font-size:10px;color:var(--t4)">filo.ai.kr</span>
+    </a>
+  </div>
+</section>
+
+<!-- PRODUCTS OVERVIEW -->
+<section class="overview" id="products">
+  <div class="inner">
+    <div style="text-align:center;margin-bottom:52px" class="reveal">
+      <div class="s-chip sc-bl">MBTICO 제품군</div>
+      <h2 class="s-h2">현장에서 쓰는 <span class="g-pk">진짜 도구</span></h2>
+      <p class="s-sub" style="margin:0 auto">개발사가 직접 물류 현장을 운영하며 만든 SaaS. 복잡한 설정 없이 당일 도입.</p>
+    </div>
+    <div class="prod-grid">
+      <a href="https://donway.ai.kr" target="_blank" class="p-card pc-gd reveal delay1">
+        <div class="p-icon" style="background:var(--gd3)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+        </div>
+        <div class="p-name" style="color:var(--gd)">DONWAY</div>
+        <div class="p-domain">donway.ai.kr</div>
+        <div class="p-desc">배달대행·쿠팡 물류사 전용<br>드라이버 정산 SaaS<br>엑셀 업로드 → 수백 명 한 번에</div>
+        <div class="p-tag" style="background:var(--gd3);color:var(--gd)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>정산 SaaS
+        </div>
+      </a>
+      <a href="https://dine.ne.kr" target="_blank" class="p-card pc-pk reveal delay2">
+        <div class="p-icon" style="background:var(--pk3)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        </div>
+        <div class="p-name" style="color:var(--pk)">SCAN</div>
+        <div class="p-domain">dine.ne.kr</div>
+        <div class="p-desc">AI 문서분석 SaaS<br>계약서·자소서·등기부 등<br>AI가 핵심 정보를 즉시 추출</div>
+        <div class="p-tag" style="background:var(--pk3);color:var(--pk)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>문서분석 AI
+        </div>
+      </a>
+      <a href="https://yongcha.app" target="_blank" class="p-card pc-lm reveal delay3">
+        <div class="p-icon" style="background:var(--lm3)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        </div>
+        <div class="p-name" style="color:var(--lm)">용차앱</div>
+        <div class="p-domain">yongcha.app</div>
+        <div class="p-desc">소장·기사 직접 거래<br>정보 서비스<br>AI 기사 추천 · 실시간 매칭</div>
+        <div class="p-tag" style="background:var(--lm3);color:var(--lm)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>직접 거래 플랫폼
+        </div>
+      </a>
+      <a href="https://filo.ai.kr" target="_blank" class="p-card pc-bl reveal delay4">
+        <div class="p-icon" style="background:var(--bl3)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/><path d="M8 6h8M8 10h8M8 14h4"/></svg>
+        </div>
+        <div class="p-name" style="color:var(--bl)">FILO 배송앱</div>
+        <div class="p-domain">filo.ai.kr</div>
+        <div class="p-desc">쿠팡·택배 배송기사 전용<br>긴급배송·QR·출퇴근 관리<br>슬러그 기반 원터치 접속</div>
+        <div class="p-tag" style="background:var(--bl3);color:var(--bl)">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>배송 드라이버 앱
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- DONWAY -->
+<section class="donway-sec" id="donway">
+  <div class="inner">
+    <div class="feat-wrap">
+      <div class="feat-content reveal-left">
+        <div class="s-chip sc-gd">DONWAY</div>
+        <h2 class="s-h2"><span class="g-gd">정산,</span><br>이제 클릭<br>한 번으로</h2>
+        <p class="s-sub">배달대행사·쿠팡플렉스 물류사를 위한 드라이버 정산 SaaS. 엑셀 업로드 한 번으로 수백 명 정산 완료.</p>
+        <ul class="feat-list">
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--gd3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">엑셀 업로드 → 즉시 정산</div>
+              <div class="feat-li-d">쿠팡·배달대행 플랫폼 엑셀 그대로 업로드. 수백 명 정산을 3분 안에.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--gd3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.26h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.85a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">카카오 알림톡 자동 발송</div>
+              <div class="feat-li-d">정산 완료 즉시 기사 전원에게 명세서 알림톡 일괄 발송.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--gd3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">팝빌 세금계산서 자동발행</div>
+              <div class="feat-li-d">기사별 역발행 세금계산서 자동 발행. 건당 100원 종량제.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--gd3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">위수탁 계약서 전자서명</div>
+              <div class="feat-li-d">DOCX 업로드 → 빈칸 자동 채우기 → 카카오톡 전자서명까지 원스톱.</div>
+            </div>
+          </li>
+        </ul>
+        <a href="https://donway.ai.kr" target="_blank" class="feat-cta fcta-gd">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          DONWAY 시작하기
+        </a>
+        <div style="margin-top:14px;font-size:11px;color:var(--t4)">~50명 ₩125,000 / 월 · 7일 무료체험 · 계좌이체 월 갱신</div>
+      </div>
+      <div class="feat-mock fi-gd reveal-right">
+        <div class="mock-header" style="border-color:rgba(245,158,11,.15)">
+          <div class="mock-dots"><div class="mock-dot mk-r"></div><div class="mock-dot mk-y"></div><div class="mock-dot mk-g"></div></div>
+          <div class="mock-title" style="color:var(--gd)">DONWAY 정산 대시보드</div>
+        </div>
+        <!-- 정산 요약 -->
+        <div class="dw-summary" style="margin-bottom:14px">
+          <div class="dw-sum-card">
+            <div class="dw-sum-n">48명</div>
+            <div class="dw-sum-l">이번달 기사</div>
+          </div>
+          <div class="dw-sum-card">
+            <div class="dw-sum-n">₩12.4M</div>
+            <div class="dw-sum-l">총 지급액</div>
+          </div>
+        </div>
+        <!-- 테이블 -->
+        <table class="dw-table">
+          <thead>
+            <tr><th>기사명</th><th>건수</th><th>지급액</th><th>상태</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>김철수</td><td>243건</td><td class="dw-amount">₩326,000</td><td><span class="dw-badge">완료</span></td></tr>
+            <tr><td>이영희</td><td>198건</td><td class="dw-amount">₩271,000</td><td><span class="dw-badge">완료</span></td></tr>
+            <tr><td>박민준</td><td>312건</td><td class="dw-amount">₩418,000</td><td><span class="dw-badge">완료</span></td></tr>
+            <tr><td>최지수</td><td>176건</td><td class="dw-amount">₩244,000</td><td><span class="dw-badge">완료</span></td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:12px;padding:10px;background:rgba(245,158,11,.06);border-radius:var(--r3);border:1px solid rgba(245,158,11,.15);font-size:11px;color:var(--t3);text-align:center">
+          <span style="color:var(--gd);font-weight:800">48명 전원</span> 카카오 알림톡 발송 완료 ✓
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCAN -->
+<section class="scan-sec" id="scan">
+  <div class="inner">
+    <div class="feat-wrap">
+      <div class="feat-mock fi-pk reveal-left" style="order:1">
+        <div class="mock-header" style="border-color:rgba(236,72,153,.15)">
+          <div class="mock-dots"><div class="mock-dot mk-r"></div><div class="mock-dot mk-y"></div><div class="mock-dot mk-g"></div></div>
+          <div class="mock-title" style="color:var(--pk)">SCAN — AI 문서분석</div>
+        </div>
+        <div class="scan-upload">
+          <div class="scan-upload-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="1.8" style="margin:0 auto;display:block"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="scan-upload-t">계약서.pdf 분석 완료</div>
+          <div class="scan-upload-s">29,900P 차감 · 2.3초</div>
+        </div>
+        <div class="scan-result">
+          <div class="scan-result-row">
+            <span class="scan-pill">핵심</span>
+            <div style="flex:1"><div class="scan-line"></div></div>
+          </div>
+          <div class="scan-result-row">
+            <span class="scan-pill">위험</span>
+            <div style="flex:1"><div class="scan-line" style="background:linear-gradient(90deg,var(--gd),var(--gd2));animation-delay:.3s"></div></div>
+          </div>
+          <div class="scan-result-row">
+            <span class="scan-pill">요약</span>
+            <div style="flex:1">
+              <div class="scan-line" style="margin-bottom:5px"></div>
+              <div class="scan-line-s"></div>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:var(--pk3);border-radius:var(--r3);font-size:11px;color:var(--t2)">
+            <span style="color:var(--pk);font-weight:800">AI 경고</span> 제5조 중도해지 위약금 조항 — 계약 기간 대비 과도한 조항 확인됨
+          </div>
+        </div>
+      </div>
+      <div class="feat-content reveal-right" style="order:2">
+        <div class="s-chip sc-pk">SCAN</div>
+        <h2 class="s-h2"><span class="g-pk">문서 분석</span><br>AI가 3초 만에<br>핵심만 추출</h2>
+        <p class="s-sub">계약서·자소서·등기부·공문서 — 어떤 문서든 업로드하면 AI가 핵심 정보·위험 조항을 즉시 추출합니다.</p>
+        <ul class="feat-list">
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--pk3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">계약서·등기부 위험 조항 탐지</div>
+              <div class="feat-li-d">전세사기·깡통전세 위험 자동 감지. 선순위채권·전세가율 분석.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--pk3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">자소서 AI 완전 재작성</div>
+              <div class="feat-li-d">수정안 제시 + AI 완전 재작성 두 모드. 6개 언어 번역 지원.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--pk3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">포인트 충전 즉시 사용</div>
+              <div class="feat-li-d">1P = 1원. 19,900P~39,900P/건. 보너스 포인트로 더 저렴하게.</div>
+            </div>
+          </li>
+        </ul>
+        <a href="https://dine.ne.kr" target="_blank" class="feat-cta fcta-pk">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          SCAN 체험하기
+        </a>
+        <div style="margin-top:14px;font-size:11px;color:var(--t4)">30,000P 충전 시작 · 계약서 1건 = 29,900P · 즉시 사용</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 용차앱 -->
+<section class="yongcha-sec" id="yongcha">
+  <div class="inner">
+    <div class="feat-wrap">
+      <div class="feat-content reveal-left">
+        <div class="s-chip sc-lm">용차앱</div>
+        <h2 class="s-h2"><span class="g-lm">소장과 기사</span><br>수수료 없이<br>직접 거래</h2>
+        <p class="s-sub">주선사업자 없는 소장·기사 직접 거래 정보 서비스. AI 추천으로 최적의 거래 상대를 연결합니다.</p>
+        <ul class="feat-list">
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--lm3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">AI 기사 추천</div>
+              <div class="feat-li-d">루트·날씨·단가 데이터로 최적 기사를 AI가 추천. 직접 선택도 가능.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--lm3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">부가통신사업자 등록 완료</div>
+              <div class="feat-li-d">플랫폼은 계약 당사자가 아닙니다. 소장·기사가 직접 거래.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--lm3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">DONWAY 구독 소장 무료</div>
+              <div class="feat-li-d">DONWAY 정산 구독 중인 소장님은 용차앱 무료 이용.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--lm3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">캠프별 단가 관리</div>
+              <div class="feat-li-d">택배사별·캠프별 단가 등록. 공고 원터치 등록.</div>
+            </div>
+          </li>
+        </ul>
+        <a href="https://yongcha.app" target="_blank" class="feat-cta fcta-lm">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          용차앱 시작하기
+        </a>
+        <div style="margin-top:14px;font-size:11px;color:var(--t4)">기사 ₩150,000/월 · 소장 ₩50,000/월 · DONWAY 구독 소장 무료</div>
+      </div>
+      <div class="feat-mock fi-lm reveal-right">
+        <div class="mock-header" style="border-color:rgba(34,197,94,.15)">
+          <div class="mock-dots"><div class="mock-dot mk-r"></div><div class="mock-dot mk-y"></div><div class="mock-dot mk-g"></div></div>
+          <div class="mock-title" style="color:var(--lm)">용차앱 — 매칭 현황</div>
+        </div>
+        <!-- 지도 영역 -->
+        <div class="yc-map">
+          <svg width="100%" height="100%" viewBox="0 0 300 120" preserveAspectRatio="none" style="position:absolute;inset:0">
+            <defs>
+              <linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#22c55e;stop-opacity:.5"/>
+                <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:.5"/>
+              </linearGradient>
+            </defs>
+            <path d="M45 24 Q120 50 135 52 Q200 65 210 72" stroke="url(#rg)" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/>
+          </svg>
+          <div class="yc-pin yc-pin-a" title="출발">
+            <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--lm);font-weight:800;white-space:nowrap">출발</div>
+          </div>
+          <div class="yc-pin yc-pin-b">
+            <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--gd);font-weight:800;white-space:nowrap">경유</div>
+          </div>
+          <div class="yc-pin yc-pin-c">
+            <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--pk);font-weight:800;white-space:nowrap">도착</div>
+          </div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(14,165,233,.15));border-radius:99px;padding:5px 14px;font-size:10px;font-weight:800;color:var(--lm);border:1px solid var(--lm2)">AI 최적 루트 추천</div>
+        </div>
+        <!-- 기사 목록 -->
+        <div class="yc-driver">
+          <div class="yc-av">김</div>
+          <div class="yc-info">
+            <div class="yc-name">김민수 기사</div>
+            <div class="yc-rate">★★★★★ 4.9 · 1톤 경기도</div>
+          </div>
+          <div class="yc-ai-badge">AI 1순위</div>
+        </div>
+        <div class="yc-driver" style="opacity:.7">
+          <div class="yc-av" style="background:linear-gradient(135deg,var(--gd),#fb923c)">이</div>
+          <div class="yc-info">
+            <div class="yc-name">이준혁 기사</div>
+            <div class="yc-rate">★★★★☆ 4.6 · 2.5톤 서울</div>
+          </div>
+          <div style="font-size:10px;color:var(--t4);font-weight:700">2순위</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FILO -->
+<section class="filo-sec" id="filo">
+  <div class="inner">
+    <div class="feat-wrap">
+      <div class="feat-mock fi-bl reveal-left" style="order:1">
+        <div class="mock-header" style="border-color:rgba(14,165,233,.15)">
+          <div class="mock-dots"><div class="mock-dot mk-r"></div><div class="mock-dot mk-y"></div><div class="mock-dot mk-g"></div></div>
+          <div class="mock-title" style="color:var(--bl)">FILO 배송앱</div>
+        </div>
+        <div class="filo-status-bar">
+          <div>
+            <div class="filo-status-t">오늘 배송 현황</div>
+            <div class="filo-status-n">47건</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:20px;font-weight:900">₩63,400</div>
+            <div style="font-size:9px;opacity:.7">오늘 수입</div>
+          </div>
+        </div>
+        <div class="filo-jobs">
+          <div class="filo-job">
+            <div class="filo-job-dot fj-going"></div>
+            <div class="filo-job-info">
+              <div class="filo-job-t">긴급 배송 · CJ대한통운</div>
+              <div class="filo-job-s">경기 하남시 미사동 · 진행중</div>
+            </div>
+            <div class="filo-job-amt">₩8,500</div>
+          </div>
+          <div class="filo-job">
+            <div class="filo-job-dot fj-wait"></div>
+            <div class="filo-job-info">
+              <div class="filo-job-t">QR 스캔 완료 · 롯데택배</div>
+              <div class="filo-job-s">서울 송파구 잠실동 · 대기중</div>
+            </div>
+            <div class="filo-job-amt">₩7,200</div>
+          </div>
+          <div class="filo-job">
+            <div class="filo-job-dot fj-done"></div>
+            <div class="filo-job-info">
+              <div class="filo-job-t">배송 완료 · 쿠팡플렉스</div>
+              <div class="filo-job-s">서울 강동구 · 완료 13:24</div>
+            </div>
+            <div class="filo-job-amt" style="color:var(--t4)">₩6,800</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <div style="flex:1;background:rgba(14,165,233,.08);border:1px solid var(--bl2);border-radius:var(--r3);padding:10px;text-align:center;font-size:11px">
+            <div style="font-weight:900;color:var(--bl);font-size:14px">QR</div>
+            <div style="color:var(--t4);font-size:9px">스캔</div>
+          </div>
+          <div style="flex:1;background:rgba(14,165,233,.08);border:1px solid var(--bl2);border-radius:var(--r3);padding:10px;text-align:center;font-size:11px">
+            <div style="font-weight:900;color:var(--bl);font-size:14px">출근</div>
+            <div style="color:var(--t4);font-size:9px">08:42</div>
+          </div>
+          <div style="flex:1;background:rgba(14,165,233,.08);border:1px solid var(--bl2);border-radius:var(--r3);padding:10px;text-align:center;font-size:11px">
+            <div style="font-weight:900;color:var(--lm);font-size:14px">35건</div>
+            <div style="color:var(--t4);font-size:9px">완료</div>
+          </div>
+        </div>
+      </div>
+      <div class="feat-content reveal-right" style="order:2">
+        <div class="s-chip sc-bl">FILO 배송앱</div>
+        <h2 class="s-h2"><span class="g-bl">배송기사</span><br>전용 앱,<br>원터치 접속</h2>
+        <p class="s-sub">filo.ai.kr/{슬러그}로 앱 설치 없이 접속. 긴급배송·QR스캔·출퇴근·정산 명세서까지 한 앱에.</p>
+        <ul class="feat-list">
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--bl3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">슬러그 기반 원터치 접속</div>
+              <div class="feat-li-d">filo.ai.kr/{슬러그}/emergency — 앱 설치 없이 QR 스캔으로 즉시 접속.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--bl3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2.5"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 7h3v3H7zM7 14h3v3H7zM14 7h3v3h-3z"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">QR 스캔·라벨 출력</div>
+              <div class="feat-li-d">바코드 스캔으로 배송 상태 즉시 업데이트. 라벨 출력 지원.</div>
+            </div>
+          </li>
+          <li class="feat-li">
+            <div class="feat-icon-wrap" style="background:var(--bl3)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2.5"><circle cx="12" cy="7" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>
+            </div>
+            <div>
+              <div class="feat-li-t">출퇴근 QR 관리</div>
+              <div class="feat-li-d">기사별 출퇴근 QR 자동 생성. 시급 계산·급여명세서 자동 생성.</div>
+            </div>
+          </li>
+        </ul>
+        <a href="https://filo.ai.kr/mbtico-join" class="feat-cta fcta-bl">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          FILO 배송앱 가입
+        </a>
+        <div style="margin-top:14px;font-size:11px;color:var(--t4)">무료 체험 · 가입 즉시 슬러그 발급</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI FEATURES -->
+<section class="ai-section" id="ai">
+  <div class="inner">
+    <div style="text-align:center;margin-bottom:52px" class="reveal">
+      <div class="s-chip" style="background:rgba(139,92,246,.15);color:#a78bfa;border:1.5px solid rgba(139,92,246,.3)">AI 기능</div>
+      <h2 class="s-h2">모든 제품에 <span style="background:linear-gradient(135deg,#a855f7,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">AI가 내장</span></h2>
+      <p class="s-sub">서버사이드 Claude AI. 별도 API 키 없이 즉시 사용 가능한 AI 기능.</p>
+    </div>
+    <div class="ai-grid">
+      <div class="ai-card reveal delay1">
+        <div class="ai-card-icon" style="background:rgba(245,158,11,.15)">⚡</div>
+        <div class="ai-card-t">DONWAY AI CS봇</div>
+        <div class="ai-card-d">기사 문의 자동 응답. 정산 내역·단가 정책 자동 설명.</div>
+        <span class="ai-card-tag">DONWAY</span>
+      </div>
+      <div class="ai-card reveal delay2">
+        <div class="ai-card-icon" style="background:rgba(236,72,153,.15)">🔍</div>
+        <div class="ai-card-t">계약서 위험 조항 탐지</div>
+        <div class="ai-card-d">전세사기·깡통전세 위험 자동 감지. 선순위채권 합계 분석.</div>
+        <span class="ai-card-tag">SCAN</span>
+      </div>
+      <div class="ai-card reveal delay3">
+        <div class="ai-card-icon" style="background:rgba(34,197,94,.15)">🗺️</div>
+        <div class="ai-card-t">AI 루트 코치</div>
+        <div class="ai-card-d">실시간 날씨·교통 데이터로 최적 루트·기사 매칭 추천.</div>
+        <span class="ai-card-tag">용차앱</span>
+      </div>
+      <div class="ai-card reveal delay4">
+        <div class="ai-card-icon" style="background:rgba(14,165,233,.15)">📊</div>
+        <div class="ai-card-t">매출 AI 예측</div>
+        <div class="ai-card-d">최근 7일 매출 기반 다음 주 매출 예측. 메뉴·재고 최적화 제안.</div>
+        <span class="ai-card-tag">FILO</span>
+      </div>
+      <div class="ai-card reveal delay1">
+        <div class="ai-card-icon" style="background:rgba(168,85,247,.15)">✍️</div>
+        <div class="ai-card-t">자소서 AI 재작성</div>
+        <div class="ai-card-d">원본 유지 수정안 + AI 완전 재작성 두 모드. 6개 언어 번역.</div>
+        <span class="ai-card-tag">SCAN</span>
+      </div>
+      <div class="ai-card reveal delay2">
+        <div class="ai-card-icon" style="background:rgba(245,158,11,.15)">📱</div>
+        <div class="ai-card-t">카카오 알림톡 자동화</div>
+        <div class="ai-card-d">정산 완료·서명 요청·급여명세서 자동 발송. n8n 연동.</div>
+        <span class="ai-card-tag">DONWAY · FILO</span>
+      </div>
+      <div class="ai-card reveal delay3">
+        <div class="ai-card-icon" style="background:rgba(6,182,212,.15)">🌍</div>
+        <div class="ai-card-t">다국어 메뉴 번역</div>
+        <div class="ai-card-d">Claude AI로 메뉴 일괄 번역. 외국인 고객 대응 자동화.</div>
+        <span class="ai-card-tag">FILO</span>
+      </div>
+      <div class="ai-card reveal delay4">
+        <div class="ai-card-icon" style="background:rgba(34,197,94,.15)">🤝</div>
+        <div class="ai-card-t">단가 자동 추천</div>
+        <div class="ai-card-d">거리·차량·날씨·시간대 분석으로 적정 단가를 AI가 추천.</div>
+        <span class="ai-card-tag">용차앱</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="inner">
+    <div class="cta-box reveal">
+      <div class="s-chip sc-pk" style="margin-bottom:20px">지금 시작하세요</div>
+      <h2 class="cta-h2">물류 현장의 모든 비효율,<br><span class="g-pk">MBTICO가 해결합니다</span></h2>
+      <p class="cta-p">정산·문서분석·배차·배송 — 4종 SaaS로 현장 업무 시간을 80% 단축하세요.<br>7일 무료체험, 신용카드 불필요.</p>
+      <div class="cta-btns">
+        <a href="https://filo.ai.kr/mbtico-join" class="btn btn-pk">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          무료로 시작하기
+        </a>
+        <a href="https://filo.ai.kr/mbtico_hub" class="btn btn-outline">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          관제센터 접속
+        </a>
+      </div>
+      <div class="products-row">
+        <a href="https://donway.ai.kr" target="_blank" class="prod-link" style="border-color:var(--gd2);color:var(--gd)">
+          <span>⚡</span>DONWAY
+        </a>
+        <a href="https://dine.ne.kr" target="_blank" class="prod-link" style="border-color:var(--pk2);color:var(--pk)">
+          <span>🔍</span>SCAN
+        </a>
+        <a href="https://yongcha.app" target="_blank" class="prod-link" style="border-color:var(--lm2);color:var(--lm)">
+          <span>🗺️</span>용차앱
+        </a>
+        <a href="https://filo.ai.kr" target="_blank" class="prod-link" style="border-color:var(--bl2);color:var(--bl)">
+          <span>📦</span>FILO 배송앱
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">MBTICO</div>
+      <div style="font-size:11px;margin-top:4px;color:rgba(255,255,255,.3)">유한회사 엠비티아이 · 사업자 373-86-02536</div>
+    </div>
+    <div class="footer-links">
+      <a href="https://donway.ai.kr" target="_blank" class="footer-link">DONWAY</a>
+      <a href="https://dine.ne.kr" target="_blank" class="footer-link">SCAN</a>
+      <a href="https://yongcha.app" target="_blank" class="footer-link">용차앱</a>
+      <a href="https://filo.ai.kr" target="_blank" class="footer-link">FILO</a>
+    </div>
+  </div>
+  <div class="footer-inner" style="padding-top:0">
+    <div class="footer-copy">© 2026 유한회사 엠비티아이. All rights reserved. · 하나은행 270-910019-24204 (유)엠비티아이</div>
+  </div>
+</footer>
+
+<script>
+/* ══════════════════════════════════
+   CONSTELLATION CANVAS
+══════════════════════════════════ */
+(function(){
+  const cv=document.getElementById('c');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  let W,H,nodes=[],mouse={x:-1000,y:-1000};
+  const COLORS=['#ec4899','#22c55e','#f59e0b','#0ea5e9','#a855f7'];
+  const N=window.innerWidth<600?28:55;
+
+  function resize(){
+    const dpr=Math.min(devicePixelRatio,2);
+    W=cv.offsetWidth;H=cv.offsetHeight;
+    cv.width=W*dpr;cv.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function mk(){
+    nodes=[];
+    for(let i=0;i<N;i++){
+      nodes.push({
+        x:Math.random()*W,y:Math.random()*H,
+        vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,
+        r:Math.random()*2.5+1.2,
+        c:COLORS[Math.floor(Math.random()*COLORS.length)],
+        a:Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    const D=160,MD=180;
+    // edges
+    for(let i=0;i<N;i++){
+      for(let j=i+1;j<N;j++){
+        const dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist<D){
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x,nodes[i].y);
+          ctx.lineTo(nodes[j].x,nodes[j].y);
+          const a=(1-dist/D)*.2;
+          ctx.strokeStyle=`rgba(14,165,233,${a})`;
+          ctx.lineWidth=.7;
+          ctx.stroke();
+        }
+      }
+      // mouse proximity
+      const mx=nodes[i].x-mouse.x,my=nodes[i].y-mouse.y;
+      const md=Math.sqrt(mx*mx+my*my);
+      if(md<MD){
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x,nodes[i].y);
+        ctx.lineTo(mouse.x,mouse.y);
+        ctx.strokeStyle=`rgba(236,72,153,${(1-md/MD)*.35})`;
+        ctx.lineWidth=.8;
+        ctx.stroke();
+      }
+    }
+    // nodes
+    nodes.forEach(n=>{
+      // halo
+      const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*6);
+      g.addColorStop(0,n.c.replace(')',',0.12)').replace('rgb','rgba').replace('#','rgba(').replace('ec4899','rgba(236,72,153').replace('22c55e','rgba(34,197,94').replace('f59e0b','rgba(245,158,11').replace('0ea5e9','rgba(14,165,233').replace('a855f7','rgba(168,85,247'));
+      // just use a simpler glow
+      ctx.beginPath();
+      ctx.arc(n.x,n.y,n.r*5,0,Math.PI*2);
+      const hc=hexToRgba(n.c,.08);
+      const grad=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*5);
+      grad.addColorStop(0,hexToRgba(n.c,.12));
+      grad.addColorStop(1,hexToRgba(n.c,0));
+      ctx.fillStyle=grad;
+      ctx.fill();
+      // core
+      ctx.beginPath();
+      ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fillStyle=hexToRgba(n.c,.65);
+      ctx.fill();
+    });
+  }
+
+  function hexToRgba(hex,a){
+    const r=parseInt(hex.slice(1,3),16);
+    const g=parseInt(hex.slice(3,5),16);
+    const b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function tick(){
+    nodes.forEach(n=>{
+      n.x+=n.vx;n.y+=n.vy;
+      if(n.x<0||n.x>W)n.vx*=-1;
+      if(n.y<0||n.y>H)n.vy*=-1;
+      // subtle gravity toward mouse
+      const dx=mouse.x-n.x,dy=mouse.y-n.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<200&&d>0){n.vx+=dx/d*.008;n.vy+=dy/d*.008;}
+      // speed limit
+      const spd=Math.sqrt(n.vx*n.vx+n.vy*n.vy);
+      if(spd>1.2){n.vx*=1.2/spd;n.vy*=1.2/spd;}
+    });
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  const hero=cv.parentElement;
+  hero.addEventListener('mousemove',e=>{
+    const r=hero.getBoundingClientRect();
+    mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;
+  });
+  hero.addEventListener('mouseleave',()=>{mouse.x=-1000;mouse.y=-1000;});
+  hero.addEventListener('touchmove',e=>{
+    const r=hero.getBoundingClientRect();
+    mouse.x=e.touches[0].clientX-r.left;
+    mouse.y=e.touches[0].clientY-r.top;
+  },{passive:true});
+
+  new ResizeObserver(()=>{resize();mk();}).observe(cv.parentElement);
+  resize();mk();tick();
+})();
+
+/* ══════════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════════ */
+(function(){
+  const els=document.querySelectorAll('.reveal,.reveal-left,.reveal-right');
+  if(!('IntersectionObserver' in window)){els.forEach(e=>e.classList.add('in'));return;}
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+  els.forEach(e=>io.observe(e));
+})();
+
+/* ══════════════════════════════════
+   NAV SCROLL
+══════════════════════════════════ */
+(function(){
+  const nav=document.getElementById('nav');
+  window.addEventListener('scroll',()=>{
+    nav.classList.toggle('scrolled',window.scrollY>60);
+  },{passive:true});
+})();
+
+/* ══════════════════════════════════
+   COUNTER ANIMATION
+══════════════════════════════════ */
+(function(){
+  const targets={s1:{n:12800,suffix:'명+'},s2:{n:3200,suffix:'건+'},s3:{n:87000,suffix:'건+'},s4:{n:340,suffix:'개+'}};
+  const fmt=n=>n>=10000?Math.floor(n/1000)+'K':n.toLocaleString();
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting)return;
+      const el=e.target;
+      const {n,suffix}=targets[el.id];
+      let start=0;const dur=1600;const t0=performance.now();
+      function step(now){
+        const p=Math.min((now-t0)/dur,1);
+        const ease=1-Math.pow(1-p,3);
+        el.textContent=fmt(Math.round(ease*n))+suffix;
+        if(p<1)requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+      io.unobserve(el);
+    });
+  },{threshold:.5});
+  ['s1','s2','s3','s4'].forEach(id=>{const el=document.getElementById(id);if(el)io.observe(el);});
+})();
+
+/* ══════════════════════════════════
+   SHIMMER ANIMATION
+══════════════════════════════════ */
+(function(){
+  const style=document.createElement('style');
+  style.textContent=`
+    .scan-line{background:linear-gradient(90deg,#ec4899 0%,#f9a8d4 50%,#ec4899 100%);background-size:200% 100%;animation:shimmer 2s linear infinite;}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  `;
+  document.head.appendChild(style);
+})();
+</script>
+</body>
+</html>
