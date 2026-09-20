@@ -13,7 +13,7 @@
 //   donway.ai.kr  → /join=/admin → settle.html (AI정산 SaaS)
 //   filo.ai.kr    → filo.html + /api/* + JS 파일 서빙 (외식업 운영)
 //   dine.ne.kr    → dine.html + dine-*.js 서빙 (외식업 특화)
-//   mbtico.kr     → /hub/label/scan/emergency 등 (배송현장앱)
+//   filo.ai.kr    → /emergency·/{slug}/emergency → emergency.html (배송현장앱)
 //
 // [KV 키 — 절대 변경 금지]
 //   settle.html → 'settle.html' (donway-pages/index.html 아님!)
