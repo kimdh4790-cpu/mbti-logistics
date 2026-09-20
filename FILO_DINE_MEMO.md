@@ -744,3 +744,10 @@ filo-order-common.js DOM 적용 ([data-orig] 셀렉터)
 - `filo-auth.js`: 히어로 카드 "오늘 매출" 라벨 `rgba(200,163,86,.6)` → `rgba(255,255,255,.55)` (다크 로즈 배경에 적합)
 - `filo-inventory.js`: 취소 버튼 `rgba(255,255,255,.06)` → `var(--surface2,#f4f4f5)` (흰 배경 불가시 버그 수정)
 - `filo-pos.js`: 결제 오버레이 합계 금액·카드 직접결제 섹션·할인 탭·확인 버튼 `#c8a356` → `#f43f5e/#f87171`
+
+### 2026-09-20
+**dine.ne.kr 루트(/) SCAN 앱 전용 운영 전환**
+- dine.ne.kr 루트(`/`)는 이제 SCAN 문서 AI 앱(scan.html)을 서빙함
+- `_worker.js` dine.ne.kr 블록: `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채이지 않도록 수정
+- DINE SaaS 자체는 영향 없음 — 로그인(`/dine`, `/dine.html` 경로) 및 모든 API는 기존과 동일하게 동작
+- mbtico.kr/scan 라우트 삭제 → SCAN은 dine.ne.kr에서만 단일 운영

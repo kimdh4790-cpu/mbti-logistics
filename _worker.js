@@ -3768,25 +3768,6 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       if (path === '/drivers' || path === '/drivers.html') return serveKVFile(env, 'drivers.html', 'text/html');
       if (path === '/notice' || path === '/notice.html') return serveKVFile(env, 'notice.html', 'text/html');
       if (path === '/schedule' || path === '/schedule.html') return serveKVFile(env, 'schedule.html', 'text/html');
-      if (path === '/scan' || path === '/scan.html') return serveKVFile(env, 'scan.html', 'text/html');
-      if (path === '/scan-manifest.json') {
-        const _scanManifest = {
-          name: 'SCAN - 문서 AI 분석',
-          short_name: 'SCAN',
-          start_url: '/scan',
-          display: 'standalone',
-          background_color: '#08101f',
-          theme_color: '#08101f',
-          icons: [
-            {src:'/scan-icon-192.png',sizes:'192x192',type:'image/png'},
-            {src:'/scan-icon-512.png',sizes:'512x512',type:'image/png',purpose:'any maskable'}
-          ]
-        };
-        return new Response(JSON.stringify(_scanManifest), {headers:{'Content-Type':'application/manifest+json','Cache-Control':'no-store'}});
-      }
-      if (path === '/scan-icon-192.png') return serveKVFile(env, 'scan-icon-192.png', 'image/png');
-      if (path === '/scan-icon-512.png') return serveKVFile(env, 'scan-icon-512.png', 'image/png');
-
       if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
       if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://mbtico.kr/register', 301);
       if (path === '/driver-join') return new Response(_DRIVER_JOIN_HTML, {headers:{'Content-Type':'text/html;charset=UTF-8'}});

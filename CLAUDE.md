@@ -672,6 +672,13 @@ cd mbtico-pages && npx wrangler deploy
 - **_worker.js archive DOCX 케이스 _aDetailTable 제거**: DOCX 업로드 케이스에서 빈 "📋 계약 주요 내용" 요약 박스 표시 안 함 → DOCX 원본 HTML + 서명 블록만 표시 (구조화 필드 삭제 후 빈 표만 나오던 문제 해결)
 - **donway-pages/index.html 범용 빈칸 감지 시스템**: MBTICO 전용 하드코딩 카드 제거 → `_ctrRenderBlankInputs()` / `_ctrFillBlanks()` 신규 구현 (어떤 대리점 DOCX든 `<u>` 빈칸 자동감지 → 동적 입력폼)
 
+### ✅ 완료 (2026-09-20 SCAN dine.ne.kr 단일 운영 전환)
+- **SCAN 도메인 단일화**: mbtico.kr/scan 폐기 → dine.ne.kr에서만 운영
+- `_worker.js` mbtico.kr 블록: `/scan`, `/scan.html`, `/scan-manifest.json`, `/scan-icon-192.png`, `/scan-icon-512.png` 라우트 삭제 (PR #116 포함)
+- SCAN API(`/api/seolyuhana/*`) 공통 라우팅 블록으로 이전 → mbtico.kr + dine.ne.kr 양쪽에서 동작
+- `_worker.js` dine.ne.kr 블록에 `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채지지 않도록 수정
+- SCAN_MEMO.md 도메인 이전 이력 섹션 추가 + 서비스 위치 업데이트
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
