@@ -7973,10 +7973,22 @@ function _ctrCollect(){
   var routePrices=[];var routeStr='';var firstPrice='';var campAuto='';var areaAuto='전구역관할';
   var drv=window._ctrDriver||{};
   var _td2=new Date();
-  var _ed2=new Date(_td2.getFullYear()+1,_td2.getMonth(),_td2.getDate()-1);
   var _fmtIso=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-  var startDate=_fmtIso(_td2);
-  var endDate=_fmtIso(_ed2);
+  // DOCX 타이핑 내용에서 계약기간 날짜 추출
+  var _extractContractDates=function(){
+    var c=document.getElementById('ctr-docx-content');
+    var text=c?c.innerText||c.textContent:'';
+    var periIdx=text.indexOf('계약기간');
+    var searchText=periIdx>=0?text.slice(periIdx,periIdx+300):text;
+    var krRe=/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
+    var dates=[];var m;
+    while((m=krRe.exec(searchText))!==null){dates.push(m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0'));}
+    if(!dates.length){var isoRe=/(\d{4}-\d{2}-\d{2})/g;while((m=isoRe.exec(searchText))!==null)dates.push(m[1]);}
+    return{start:dates[0]||_fmtIso(_td2),end:dates[1]||dates[0]||_fmtIso(_td2)};
+  };
+  var _cDates=_extractContractDates();
+  var startDate=_cDates.start;
+  var endDate=_cDates.end;
   var collectPrice='';
   var unitPrice=firstPrice;
   var carNum=drv.carNum||'';
