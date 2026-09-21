@@ -1283,7 +1283,8 @@ export default {
         Object.entries(SECURITY_HEADERS).forEach(([k,v]) => scanH.set(k,v));
         return new Response(scanResp.body, {status: scanResp.status, headers: scanH});
       }
-      // workers.dev = 물류앱, 그 외 = DONWAY 랜딩
+    } // ── end if (path === '/') ──────────────────────────────────────────────
+
     // ── SCAN (서류하나) API — mbtico.kr + dine.ne.kr ──────────────────────────
     if (hostname === 'mbtico.kr' || hostname === 'www.mbtico.kr' || hostname.includes('dine.ne')) {
     // ══════════════════════════════════════════════════════════════
