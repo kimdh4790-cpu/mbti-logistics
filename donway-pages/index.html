@@ -7931,15 +7931,15 @@ function _ctrApplyTyped(silent){
   // 키워드 기반 매핑: 빈칸 앞 텍스트에서 키워드 감지 → 해당 값 삽입
   // 순서 매핑 방식은 수수료% 빈칸에 이름/전화번호가 들어가는 오류 발생
   var keywordMap=[
-    {keys:['성명','이름','기사명','운송인','운수종사자','계약자'],val:_g2('ctr-driver-name-input')||drv.name||''},
+    {keys:['성명','이름','기사명','운송인','운수종사자','계약자','종사자'],val:_g2('ctr-driver-name-input')||drv.name||''},
     {keys:['사업자등록번호','사업자번호'],val:drv.bizNum||''},
     {keys:['주민등록번호','주민번호','생년월일'],val:drv.ssn||''},
     {keys:['주소','소재지','거주지'],val:drv.address||''},
     {keys:['차량내역','차량번호','등록번호'],val:drv.carNum||''},
     {keys:['종사자격','자격증번호'],val:drv.licenseNum||drv.licenseNumber||''},
     {keys:['전화번호','연락처','휴대폰','전화'],val:_g2('ctr-driver-phone-input')||drv.phone||''},
-    {keys:['계약시작','시작일','개시일'],val:_fmtKr(_td)},
-    {keys:['계약종료','종료일','만료일'],val:_fmtKr(_ed)},
+    {keys:['계약종료','종료일','만료일','부터'],val:_fmtKr(_ed)},
+    {keys:['계약시작','시작일','개시일','계약기간'],val:_fmtKr(_td)},
   ];
   var html=c.innerHTML;
   var filled=0;
