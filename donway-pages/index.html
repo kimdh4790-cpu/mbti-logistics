@@ -7839,12 +7839,6 @@ function _ctrRenderWrite(){
   _ctrLoadContractTemplate(t);
   setTimeout(_ctrRestoreDocx,100);
   setTimeout(function(){
-    var _td3=new Date();var _ed4=new Date(_td3.getFullYear()+1,_td3.getMonth(),_td3.getDate()-1);
-    var _fmtD=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-    var _si=document.getElementById('ctr-start-date');if(_si&&!_si.value)_si.value=_fmtD(_td3);
-    var _ei=document.getElementById('ctr-end-date');if(_ei&&!_ei.value)_ei.value=_fmtD(_ed4);
-  },80);
-  setTimeout(function(){
     var canvas=document.getElementById('ctr-admin-sig');
     if(!canvas||!window.SignaturePad)return;
     window._adminSigPad=null;
@@ -7888,18 +7882,22 @@ function _ctrApplyTyped(silent){
   var c=document.getElementById('ctr-docx-content');
   if(!c){if(!silent)toast('⚠️ DOCX 파일을 먼저 업로드하세요');return;}
   var _g2=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
+  var drv=window._ctrDriver||{};
+  var _td=new Date();
+  var _ed=new Date(_td.getFullYear()+1,_td.getMonth(),_td.getDate()-1);
+  var _fmtKr=function(d){return d.getFullYear()+'년 '+String(d.getMonth()+1).padStart(2,'0')+'월 '+String(d.getDate()).padStart(2,'0')+'일';};
   // 키워드 기반 매핑: 빈칸 앞 텍스트에서 키워드 감지 → 해당 값 삽입
   // 순서 매핑 방식은 수수료% 빈칸에 이름/전화번호가 들어가는 오류 발생
   var keywordMap=[
-    {keys:['성명','이름','기사명','운송인','운수종사자','계약자'],val:_g2('ctr-driver-name-input')},
-    {keys:['사업자등록번호','사업자번호'],val:_g2('ctr-driver-biz-input')},
-    {keys:['주민등록번호','주민번호','생년월일'],val:_g2('ctr-driver-id-input')},
-    {keys:['주소','소재지','거주지'],val:_g2('ctr-driver-addr-input')},
-    {keys:['차량번호','등록번호','자동차'],val:_g2('ctr-car-num')},
-    {keys:['자격증','종사자격'],val:_g2('ctr-lic-num')},
-    {keys:['전화번호','연락처','휴대폰','전화'],val:_g2('ctr-driver-phone-input')},
-    {keys:['계약시작','시작일','개시일'],val:_g2('ctr-start-date')},
-    {keys:['계약종료','종료일','만료일'],val:_g2('ctr-end-date')},
+    {keys:['성명','이름','기사명','운송인','운수종사자','계약자'],val:_g2('ctr-driver-name-input')||drv.name||''},
+    {keys:['사업자등록번호','사업자번호'],val:drv.bizNum||''},
+    {keys:['주민등록번호','주민번호','생년월일'],val:drv.ssn||''},
+    {keys:['주소','소재지','거주지'],val:drv.address||''},
+    {keys:['차량번호','등록번호','자동차'],val:drv.carNum||''},
+    {keys:['자격증','종사자격'],val:drv.licenseNum||''},
+    {keys:['전화번호','연락처','휴대폰','전화'],val:_g2('ctr-driver-phone-input')||drv.phone||''},
+    {keys:['계약시작','시작일','개시일'],val:_fmtKr(_td)},
+    {keys:['계약종료','종료일','만료일'],val:_fmtKr(_ed)},
   ];
   var html=c.innerHTML;
   var filled=0;
@@ -7934,12 +7932,15 @@ function _ctrCollect(){
   var cp=window._ctrCompany||{};
   var routePrices=[];var routeStr='';var firstPrice='';var campAuto='';var areaAuto='전구역관할';
   var drv=window._ctrDriver||{};
-  var startDate='';
-  var endDate='';
+  var _td2=new Date();
+  var _ed2=new Date(_td2.getFullYear()+1,_td2.getMonth(),_td2.getDate()-1);
+  var _fmtIso=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  var startDate=_fmtIso(_td2);
+  var endDate=_fmtIso(_ed2);
   var collectPrice='';
   var unitPrice=firstPrice;
-  var carNum='';
-  var licNum='';
+  var carNum=drv.carNum||'';
+  var licNum=drv.licenseNum||'';
   return {
     type:window._ctrType||'wisu',
     dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
