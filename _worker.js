@@ -6545,6 +6545,128 @@ service cloud.firestore {
       }
     }
 
+    // ── 배달대행 일일 데이터 업로드 (/api/delivery-daily-upload) ──
+    // 대리점이 기사별 일일 건수/거절/취소 업로드
+    if (path === '/api/delivery-daily-upload' && method === 'POST') {
+      const _ddlH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _ddlUser = await verifyFirebaseToken(request, env);
+      if (!_ddlUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:_ddlH});
+      try {
+        const body = await request.json();
+        // body: { dealerId, date: 'YYYY-MM-DD', rows: [{phone, name, count, reject, cancel}] }
+        const { dealerId: _ddlDid, date: _ddlDate, rows: _ddlRows } = body;
+        if (!_ddlDid || !_ddlDate || !Array.isArray(_ddlRows) || !_ddlRows.length) {
+          return new Response(JSON.stringify({ok:false,error:'필수 파라미터 누락'}),{status:400,headers:_ddlH});
+        }
+        // 대리점 소유자 검증
+        const _ddlToken = await getAccessToken(env);
+        const _ddlFsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const _ddlCompRes = await fetch(`${_ddlFsBase}/companies/${_ddlDid}`, {
+          headers:{'Authorization':`Bearer ${_ddlToken}`}
+        });
+        if (!_ddlCompRes.ok) return new Response(JSON.stringify({ok:false,error:'대리점 없음'}),{status:404,headers:_ddlH});
+        const _ddlCompData = await _ddlCompRes.json();
+        if ((_ddlCompData.fields?.uid?.stringValue||'') !== _ddlUser.localId) {
+          return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:_ddlH});
+        }
+        // YYYY-MM 추출
+        const _ddlYM = _ddlDate.slice(0,7); // e.g. 2026-09
+        const _ddlDay = _ddlDate.slice(8,10); // e.g. 21
+        let saved = 0;
+        for (const row of _ddlRows) {
+          const phone = String(row.phone||'').replace(/\D/g,'');
+          if (!phone) continue;
+          const docId = `${_ddlDid}_${phone}_${_ddlYM.replace('-','')}`;
+          const docUrl = `${_ddlFsBase}/delivery_daily/${docId}`;
+          // 기존 문서 읽어서 머지
+          const existing = await fetch(docUrl, {headers:{'Authorization':`Bearer ${_ddlToken}`}});
+          let fields = {
+            dealerId:{stringValue:_ddlDid},
+            phone:{stringValue:phone},
+            name:{stringValue:row.name||''},
+            ym:{stringValue:_ddlYM},
+            updatedAt:{stringValue:new Date().toISOString()}
+          };
+          if (existing.ok) {
+            const exData = await existing.json();
+            fields = Object.assign({}, exData.fields||{}, fields);
+          }
+          // 날짜 키에 당일 데이터 저장
+          fields[`d${_ddlDay}`] = {mapValue:{fields:{
+            count:{integerValue:String(parseInt(row.count)||0)},
+            reject:{integerValue:String(parseInt(row.reject)||0)},
+            cancel:{integerValue:String(parseInt(row.cancel)||0)}
+          }}};
+          await fetch(docUrl + (existing.ok ? '' : ''), {
+            method: existing.ok ? 'PATCH' : 'POST',
+            headers:{'Authorization':`Bearer ${_ddlToken}`,'Content-Type':'application/json'},
+            body: JSON.stringify({fields})
+          });
+          saved++;
+        }
+        return new Response(JSON.stringify({ok:true, saved}), {headers:_ddlH});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
+    }
+
+    // ── 배달대행 일일 데이터 조회 (/api/delivery-daily) ──
+    // 기사가 자신의 월별 데이터 조회
+    if (path === '/api/delivery-daily' && method === 'GET') {
+      const _ddhH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _ddhUser = await verifyFirebaseToken(request, env);
+      if (!_ddhUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:_ddhH});
+      try {
+        const _ddhYM = url.searchParams.get('ym') || new Date().toISOString().slice(0,7);
+        const _ddhDid = url.searchParams.get('did') || '';
+        if (!_ddhDid) return new Response(JSON.stringify({ok:false,error:'did 필요'}),{status:400,headers:_ddhH});
+        // 기사 본인 전화번호 확인
+        const _ddhToken = await getAccessToken(env);
+        const _ddhFsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        // drivers 컬렉션에서 이 uid의 전화번호 조회
+        const _ddhDrvRes = await fetch(
+          `${_ddhFsBase}/drivers?orderBy=name&pageSize=200`,
+          {headers:{'Authorization':`Bearer ${_ddhToken}`}}
+        );
+        let phone = '';
+        if (_ddhDrvRes.ok) {
+          const _ddhDrvData = await _ddhDrvRes.json();
+          for (const doc of (_ddhDrvData.documents||[])) {
+            const f = doc.fields||{};
+            if ((f.uid?.stringValue||'') === _ddhUser.localId || (f.dealerId?.stringValue||'')===_ddhDid) {
+              if ((f.dealerId?.stringValue||'')=== _ddhDid && (f.uid?.stringValue||'')=== _ddhUser.localId) {
+                phone = (f.phone?.stringValue||'').replace(/\D/g,'');
+                break;
+              }
+            }
+          }
+        }
+        if (!phone) return new Response(JSON.stringify({ok:false,error:'기사 정보 없음'}),{status:404,headers:_ddhH});
+        const docId = `${_ddhDid}_${phone}_${_ddhYM.replace('-','')}`;
+        const _ddhDocRes = await fetch(
+          `${_ddhFsBase}/delivery_daily/${docId}`,
+          {headers:{'Authorization':`Bearer ${_ddhToken}`}}
+        );
+        if (!_ddhDocRes.ok) return new Response(JSON.stringify({ok:true,data:{}}),{headers:_ddhH});
+        const _ddhDoc = await _ddhDocRes.json();
+        // Firestore 필드를 plain object로 변환
+        const raw = _ddhDoc.fields||{};
+        const days = {};
+        for (const key of Object.keys(raw)) {
+          if (!key.match(/^d\d{2}$/)) continue;
+          const mv = raw[key].mapValue?.fields||{};
+          days[key.slice(1)] = {
+            count: parseInt(mv.count?.integerValue||0),
+            reject: parseInt(mv.reject?.integerValue||0),
+            cancel: parseInt(mv.cancel?.integerValue||0)
+          };
+        }
+        return new Response(JSON.stringify({ok:true, data:days, name:raw.name?.stringValue||'', ym:_ddhYM}),{headers:_ddhH});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      }
+    }
+
     // ── 전체 고객사 공지 FCM 발송 (/api/send-notice) ──
     if (path === '/api/send-notice' && method === 'POST') {
       const _admin = await requireAdmin(request, env);
