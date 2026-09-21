@@ -7969,6 +7969,10 @@ function _ctrApplyTyped(silent){
   if(!silent)toast(filled?'✅ 빈칸 '+filled+'개 채우기 완료':'ℹ️ 채울 수 있는 빈칸이 없습니다');
 }
 
+function _ctrSanitizeAddr(s){
+  if(!s)return s;
+  return s.replace(/(시|구|도|군|읍|면|동|리)\s*\.\s*/g,'\ ').replace(/\s{2,}/g,' ').trim();
+}
 function _ctrCollect(){
   var _g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var cp=window._ctrCompany||{};
@@ -8034,7 +8038,7 @@ function _ctrCollect(){
     driverPhone:_g('ctr-driver-phone-input')||drv.phone||typed.driverPhone||'',
     driverBizNum:_g('ctr-driver-biz-input')||drv.bizNum||typed.driverBizNum||'',
     driverIdNum:_g('ctr-driver-id-input')||drv.ssn||typed.driverIdNum||'',
-    driverAddr:_g('ctr-driver-addr-input')||drv.address||typed.driverAddr||'',
+    driverAddr:_ctrSanitizeAddr(_g('ctr-driver-addr-input')||drv.address||typed.driverAddr||''),
     camp:campAuto,
     area:areaAuto,
     route:routeStr,
@@ -27897,7 +27901,7 @@ function saveNewDriver(){
     commissionRate:parseInt((document.getElementById('adr-commission')||{value:'0'}).value||'0')||0,
     basePay:parseInt((document.getElementById('adr-basepay')||{value:'0'}).value||'0')||0,
     bankAccount:(document.getElementById('adr-bank')||{value:''}).value.trim()||'',
-    address:(document.getElementById('adr-address')||{value:''}).value.trim()||'',
+    address:_ctrSanitizeAddr((document.getElementById('adr-address')||{value:''}).value.trim()||''),
     jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
     status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
@@ -28507,12 +28511,12 @@ function saveDriver(id){
     accountNumber:(document.getElementById('edr-bank')||{value:''}).value.trim()||'',
   bankName:gvs('edr-bankname')||'',
   carNum:gvs('edr-carnum')||'',
-  address:gvs('edr-address')||'',
+  address:_ctrSanitizeAddr(gvs('edr-address')||''),
   licenseNum:gvs('edr-license')||'',
   safetyEdu:gvs('edr-safetyedu')||'',
     bankName:gvs('edr-bankname')||'',
     carNum:gvs('edr-carnum')||'',
-    address:gvs('edr-address')||'',
+    address:_ctrSanitizeAddr(gvs('edr-address')||''),
     clothSize:gvs('edr-clothsize')||'',
     safetyEdu:gvs('edr-safetyedu')||'',
     licenseNum:gvs('edr-license')||'',
