@@ -8773,10 +8773,7 @@ function _ctrRenderList(){
         +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
         +(d.archiveUrl||d.signToken
           ?'<a href="'+(d.signToken?'/contract/download/'+d.signToken+'?inline=1':d.archiveUrl)+'" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none">서명완료본 보기</a>'
-          +'<button onclick="_ctrExportSignedDocx(\''+eid+'\',\''+esc(d.driverName||'기사')+'\',\''+esc(d.archiveUrl||'')+'\')" style="padding:8px 12px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="서명완료본 DOCX 내보내기">📄 DOCX</button>'
-          +'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="padding:8px 10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer" title="서명전 초안 인쇄">초안</button>'
           +(d.signToken?'<a href="/contract/download/'+d.signToken+'" style="display:inline-flex;align-items:center;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none" title="서명완료본 저장">💾 저장</a>':'')
-          +(d.signToken?'<button onclick="_ctrPatchArchive(\''+esc(d.signToken||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer" title="인쇄 버튼 오류 수정">🔧 수정</button>':'')
           :'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">인쇄·PDF</button>'
           +'<button onclick="_ctrDownload(window._ctrDocs[\''+eid+'\'])" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">저장</button>')
         +(d.status==='pending_driver'&&d.signToken&&d.driverPhone
