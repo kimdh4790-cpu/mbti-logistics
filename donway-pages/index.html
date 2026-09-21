@@ -7375,72 +7375,20 @@ function doJoin(){
   if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 합니다';err.style.display='block';return;}
 
   err.textContent='가입 중...';err.style.color='var(--text3)';err.style.display='block';
-  var uid='';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
-    uid=cred.user.uid;
-    var userDoc={
-      name:name,driverId:driverId,email:email,
-      companyId:companyId,dealerId:companyId,companyName:companyName,
-      role:joinRole,
-      store:joinStore,
-      bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-    // users 컬렉션 저장
-      // ★ members 컬렉션 자동 저장 — 관리자 직원목록·기사관리 즉시 표시
-      _db.collection('members').doc(uid).set({
-        uid:uid, name:name, driverId:driverId, email:email, phone:'',
-        dealerId:companyId, companyName:companyName,
-        role:joinRole, store:joinStore,
-        bizNum:bizNum, bizName:bizName, bizOwner:bizOwner,
-        status:'active', platform:'donway', authUid:uid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true}).catch(function(){});
-    return _db.collection('users').doc(uid).set(userDoc).then(function(){
-      // ★ members 컬렉션 자동 저장 — 관리자 직원 목록·기사 관리에 즉시 표시
-      var memberDoc={
-        uid:uid, name:name, driverId:driverId, email:email, phone:'',
-        dealerId:companyId, companyName:companyName,
-        role:joinRole, store:joinStore,
-        bizNum:bizNum, bizName:bizName, bizOwner:bizOwner,
-        status:'active', platform:'donway', authUid:uid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
-      };
-      _db.collection('members').doc(uid).set(memberDoc,{merge:true}).catch(function(){});
-      // drivers 컬렉션에도 자동 등록 (관리자 기사 관리에 표시)
-      return _db.collection('drivers').where('dealerId','==',companyId).where('userId','==',driverId).get()
-      .then(function(snap){
-        if(snap.empty){
-          return _db.collection('drivers').add({
-            dealerId:companyId,
-            userId:driverId,
-            name:name,
-            email:email,
-            bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
-            camp:'',route:'',
-            authUid:uid,
-            joinedAt:firebase.firestore.FieldValue.serverTimestamp(),
-            createdAt:firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        // 이미 있으면 authUid만 업데이트
-        return snap.docs[0].ref.update({authUid:uid,email:email,bizNum:bizNum,bizName:bizName,bizOwner:bizOwner});
+    var uid=cred.user.uid;
+    return fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:name,phone:'',companyId:companyId,companyName:companyName,
+        driverId:driverId,uid:uid,role:joinRole,
+        isBiz:!!(bizNum||bizName),bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
+        email:email,store:joinStore
+      })}).then(function(r){return r.json();}).then(function(data){
+        if(!data.ok) throw new Error(data.error||'서버 오류');
+        return uid;
       });
-    });
   }).then(function(){
-    toast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됐습니다. 로그인해 주세요');
-    // ★ 서버사이드 members 백업 저장 (클라이언트 실패 대비)
-    fetch('/api/join-member',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({uid:cred&&cred.user&&cred.user.uid||'',
-        name:document.getElementById('j-name').value.trim(),
-        driverId:document.getElementById('j-driverid').value.trim(),
-        email:document.getElementById('j-email').value.trim(),
-        dealerId:document.getElementById('j-code').dataset.companyId||'',
-        companyName:document.getElementById('j-code').dataset.companyName||'',
-        platform:'donway'
-      })}).catch(function(){});
+    toast('✅ 가입 완료! 로그인해 주세요');
     switchTab('login');
     setTimeout(_requestFcmAfterJoin, 1000);
     ['j-name','j-driverid','j-email','j-pw','j-code','j-biz-num','j-biz-name','j-biz-owner'].forEach(function(id){

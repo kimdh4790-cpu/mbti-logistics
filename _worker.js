@@ -6556,7 +6556,17 @@ service cloud.firestore {
         const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'OR',filters:[{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:_cccCode}}}]}},limit:1}};
         const _cccRes = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ)});
         const _cccArr = await _cccRes.json();
-        const _cccDoc = (_cccArr||[]).find(r=>r.document);
+        let _cccDoc = (_cccArr||[]).find(r=>r.document);
+        // fallback: dealerId prefix (code == dealerId.slice(0,8).toUpperCase())
+        if (!_cccDoc && _cccCode.length>=6) {
+          const _cccPfx = `${_cccFsBase}/companies`;
+          const _cccRef = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
+          const _cccRefEnd = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
+          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN_OR_EQUAL',value:{referenceValue:_cccRefEnd}}}]}},limit:1}};
+          const _cccR2 = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ2)});
+          const _cccA2 = await _cccR2.json();
+          _cccDoc = (_cccA2||[]).find(r=>r.document);
+        }
         if (!_cccDoc) return new Response(JSON.stringify({ok:false,error:'존재하지 않는 회사코드'}),{headers:_cccH});
         const _cccDid = _cccDoc.document.name.split('/').pop();
         const _cccF = _cccDoc.document.fields||{};
@@ -6570,8 +6580,8 @@ service cloud.firestore {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {
         const _djBody = await request.json();
-        const {name,phone,companyId,companyName,driverId,isBiz,bizNum,bizName,bizType,bizKind,bizAddr,ssn,joinDate,role,uid,pw} = _djBody;
-        if (!name||!phone||!companyId) return new Response(JSON.stringify({ok:false,error:'name,phone,companyId 필수'}),{status:400,headers:_djH});
+        const {name,phone,companyId,companyName,driverId,isBiz,bizNum,bizName,bizType,bizKind,bizAddr,ssn,joinDate,role,uid,pw,email,store,bizOwner} = _djBody;
+        if (!name||!companyId) return new Response(JSON.stringify({ok:false,error:'name,companyId 필수'}),{status:400,headers:_djH});
         // companyCode 역조회
         const _djToken = await getAccessToken(env);
         const _djFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
@@ -6595,6 +6605,9 @@ service cloud.firestore {
         };
         if (pw) _djFields.pw={stringValue:pw};
         if (uid) _djFields.uid={stringValue:uid};
+        if (email) _djFields.email={stringValue:email};
+        if (store) _djFields.store={stringValue:store};
+        if (bizOwner) _djFields.bizOwner={stringValue:bizOwner};
         if (isBiz) { _djFields.isBiz={booleanValue:true};_djFields.bizNum={stringValue:bizNum||''};_djFields.bizName={stringValue:bizName||''};_djFields.bizType={stringValue:bizType||''};_djFields.bizKind={stringValue:bizKind||''};_djFields.bizAddr={stringValue:bizAddr||''}; }
         if (ssn) _djFields.ssn={stringValue:ssn};
         if (joinDate) _djFields.joinDate={stringValue:joinDate};
