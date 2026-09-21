@@ -6545,6 +6545,65 @@ service cloud.firestore {
       }
     }
 
+    // ── 회사코드 검증 (/api/check-company-code) ── 익명 유저 Firestore 권한 우회
+    if (path === '/api/check-company-code' && method === 'GET') {
+      const _cccH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const _cccCode = (url.searchParams.get('code')||'').trim().toUpperCase();
+        if (!_cccCode) return new Response(JSON.stringify({ok:false,error:'code 필수'}),{status:400,headers:_cccH});
+        const _cccToken = await getAccessToken(env);
+        const _cccFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+        const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'OR',filters:[{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:_cccCode}}}]}},limit:1}};
+        const _cccRes = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ)});
+        const _cccArr = await _cccRes.json();
+        const _cccDoc = (_cccArr||[]).find(r=>r.document);
+        if (!_cccDoc) return new Response(JSON.stringify({ok:false,error:'존재하지 않는 회사코드'}),{headers:_cccH});
+        const _cccDid = _cccDoc.document.name.split('/').pop();
+        const _cccF = _cccDoc.document.fields||{};
+        const _cccName = _cccF.companyName?.stringValue||_cccF.company?.stringValue||'';
+        return new Response(JSON.stringify({ok:true,companyId:_cccDid,companyName:_cccName}),{headers:_cccH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_cccH}); }
+    }
+
+    // ── 배달대행 기사 가입 (/api/driver-join) ── Firestore 권한 우회 서버사이드 저장
+    if (path === '/api/driver-join' && method === 'POST') {
+      const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const _djBody = await request.json();
+        const {name,phone,companyId,companyName,driverId,isBiz,bizNum,bizName,bizType,bizKind,bizAddr,ssn,joinDate,role,uid,pw} = _djBody;
+        if (!name||!phone||!companyId) return new Response(JSON.stringify({ok:false,error:'name,phone,companyId 필수'}),{status:400,headers:_djH});
+        // companyCode 역조회
+        const _djToken = await getAccessToken(env);
+        const _djFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+        const _djCompDoc = await fetch(`${_djFsBase}/companies/${companyId}`,{headers:{'Authorization':`Bearer ${_djToken}`}});
+        const _djCompData = _djCompDoc.ok ? (await _djCompDoc.json()) : {};
+        const _djCompCode = _djCompData.fields?.companyCode?.stringValue||'';
+        const _djFields = {
+          name:{stringValue:name||''},
+          phone:{stringValue:(phone||'').replace(/[^0-9]/g,'')},
+          dealerId:{stringValue:companyId},
+          companyName:{stringValue:companyName||''},
+          companyCode:{stringValue:_djCompCode},
+          userId:{stringValue:driverId||uid||''},
+          driverId:{stringValue:driverId||uid||''},
+          role:{stringValue:role||'driver'},
+          is_active:{booleanValue:true},
+          status:{stringValue:'재직'},
+          joinedViaQR:{booleanValue:true},
+          joinType:{stringValue:'quick'},
+          createdAt:{timestampValue:new Date().toISOString()}
+        };
+        if (pw) _djFields.pw={stringValue:pw};
+        if (uid) _djFields.uid={stringValue:uid};
+        if (isBiz) { _djFields.isBiz={booleanValue:true};_djFields.bizNum={stringValue:bizNum||''};_djFields.bizName={stringValue:bizName||''};_djFields.bizType={stringValue:bizType||''};_djFields.bizKind={stringValue:bizKind||''};_djFields.bizAddr={stringValue:bizAddr||''}; }
+        if (ssn) _djFields.ssn={stringValue:ssn};
+        if (joinDate) _djFields.joinDate={stringValue:joinDate};
+        const _djRes = await fetch(`${_djFsBase}/drivers`,{method:'POST',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_djFields})});
+        if (!_djRes.ok) { const _djErr=await _djRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(_djErr)}),{headers:_djH}); }
+        return new Response(JSON.stringify({ok:true}),{headers:_djH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_djH}); }
+    }
+
     // ── 배달대행 일일 데이터 업로드 (/api/delivery-daily-upload) ──
     // 대리점이 기사별 일일 건수/거절/취소 업로드
     if (path === '/api/delivery-daily-upload' && method === 'POST') {
