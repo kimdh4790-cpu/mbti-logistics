@@ -7888,28 +7888,44 @@ function _ctrApplyTyped(silent){
   var c=document.getElementById('ctr-docx-content');
   if(!c){if(!silent)toast('⚠️ DOCX 파일을 먼저 업로드하세요');return;}
   var _g2=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
-  var fills=[
-    _g2('ctr-driver-name-input'),
-    _g2('ctr-driver-biz-input'),
-    _g2('ctr-driver-id-input'),
-    _g2('ctr-driver-addr-input'),
-    _g2('ctr-car-num'),
-    _g2('ctr-lic-num'),
-    _g2('ctr-driver-phone-input'),
-    _g2('ctr-start-date'),
-    _g2('ctr-end-date')
+  // 키워드 기반 매핑: 빈칸 앞 텍스트에서 키워드 감지 → 해당 값 삽입
+  // 순서 매핑 방식은 수수료% 빈칸에 이름/전화번호가 들어가는 오류 발생
+  var keywordMap=[
+    {keys:['성명','이름','기사명','운송인','운수종사자','계약자'],val:_g2('ctr-driver-name-input')},
+    {keys:['사업자등록번호','사업자번호'],val:_g2('ctr-driver-biz-input')},
+    {keys:['주민등록번호','주민번호','생년월일'],val:_g2('ctr-driver-id-input')},
+    {keys:['주소','소재지','거주지'],val:_g2('ctr-driver-addr-input')},
+    {keys:['차량번호','등록번호','자동차'],val:_g2('ctr-car-num')},
+    {keys:['자격증','종사자격'],val:_g2('ctr-lic-num')},
+    {keys:['전화번호','연락처','휴대폰','전화'],val:_g2('ctr-driver-phone-input')},
+    {keys:['계약시작','시작일','개시일'],val:_g2('ctr-start-date')},
+    {keys:['계약종료','종료일','만료일'],val:_g2('ctr-end-date')},
   ];
   var html=c.innerHTML;
-  var idx=0,filled=0;
-  html=html.replace(/<u>((?:&nbsp;|&#xa0;|\s)*)<\/u>/gi,function(match,inner){
-    if(inner.replace(/&nbsp;|&#xa0;|\s/g,'').length>0)return match;
-    while(idx<fills.length&&!fills[idx])idx++;
-    if(idx<fills.length){filled++;return '<u><b>'+fills[idx++]+'</b></u>';}
-    return match;
-  });
-  c.innerHTML=html;
+  var filled=0;
+  var blankRe=/<u>((?:&nbsp;|&#xa0;|\s)*)<\/u>/gi;
+  var result='';var lastIdx=0;var m;
+  while((m=blankRe.exec(html))!==null){
+    var inner=m[1];
+    result+=html.slice(lastIdx,m.index);
+    if(inner.replace(/&nbsp;|&#xa0;|\s/g,'').length>0){result+=m[0];}
+    else{
+      var pre=html.slice(Math.max(0,m.index-500),m.index).replace(/<[^>]*>/g,'').toLowerCase();
+      var fv=null;
+      for(var i=0;i<keywordMap.length&&!fv;i++){
+        if(!keywordMap[i].val)continue;
+        for(var j=0;j<keywordMap[i].keys.length;j++){
+          if(pre.indexOf(keywordMap[i].keys[j])>=0){fv=keywordMap[i].val;break;}
+        }
+      }
+      if(fv){result+='<u><b>'+fv+'</b></u>';filled++;}else{result+=m[0];}
+    }
+    lastIdx=m.index+m[0].length;
+  }
+  result+=html.slice(lastIdx);
+  c.innerHTML=result;
   var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
-  try{localStorage.setItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid,html);}catch(_e){}
+  try{localStorage.setItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid,result);}catch(_e){}
   if(!silent)toast(filled?'✅ 빈칸 '+filled+'개 채우기 완료':'ℹ️ 채울 수 있는 빈칸이 없습니다');
 }
 

@@ -129,6 +129,7 @@ claude/* 브랜치 push
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-21 | DONWAY 계약서 DOCX 빈칸 채우기 키워드 매핑으로 전환 — _ctrApplyTyped 순서 기반→컨텍스트 키워드 기반 (수수료% 빈칸에 이름/전화번호 오삽입 버그 수정) |
 | 2026-09-21 | DONWAY 주민번호·사업자번호 검증 로직 강화 — replace(/-/g,'') → replace(/[^0-9]/g,'') (모바일 전각 하이픈 U+FF0D 등 처리) |
 | 2026-09-21 | DONWAY 카카오 로그인 후 동의 체크박스 초기화 버그 수정 — kakaoLogin() _allAgreed() 선검증 + sessionStorage 동의 상태 보존 (_worker.js lines 1668-1682) |
 | 2026-09-21 | DONWAY 계약서 서명 페이지 SyntaxError 수정 — signPage 백틱 템플릿 내 \n → \\n (rendered line 169:27, _worker.js lines 1661/1695/1698) |
