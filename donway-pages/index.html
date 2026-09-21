@@ -6970,22 +6970,23 @@ function doRegister(){
 
 // ── 회사코드 확인 ──
 function checkCompanyCode(){
-  var code=document.getElementById('j-code').value.trim().toUpperCase();
+  var code=(document.getElementById('j-code').value||'').trim().toUpperCase();
   var msg=document.getElementById('j-code-msg');
   if(!code){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='회사코드를 입력하세요';return;}
   msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='확인 중...';
-  _db.collection('companies').where('companyCode','==',code).get().then(function(snap){
-    if(!snap.empty){
-      var co=snap.docs[0].data();
-      msg.style.color='#059669';
-      msg.textContent='✅ '+co.companyName+' — 코드 확인됨';
-      document.getElementById('j-code').dataset.companyId=snap.docs[0].id;
-      document.getElementById('j-code').dataset.companyName=co.companyName;
-    } else {
-      msg.style.color='var(--red)';msg.textContent='❌ 유효하지 않은 회사코드입니다';
-      document.getElementById('j-code').dataset.companyId='';
-    }
-  });
+  fetch('/api/check-company-code?code='+encodeURIComponent(code))
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.ok){
+        msg.style.color='#059669';
+        msg.textContent='✅ '+data.companyName+' — 코드 확인됨';
+        document.getElementById('j-code').dataset.companyId=data.companyId;
+        document.getElementById('j-code').dataset.companyName=data.companyName||'';
+      } else {
+        msg.style.color='var(--red)';msg.textContent='❌ 유효하지 않은 회사코드입니다';
+        document.getElementById('j-code').dataset.companyId='';
+      }
+    }).catch(function(){msg.style.color='var(--red)';msg.textContent='오류 — 잠시 후 다시 시도';});
 }
 
 // ── 직원 가입 ──
@@ -7024,27 +7025,16 @@ function _quickVerifyCode(code){
   clearTimeout(_quickCodeTimer);
   msg.innerHTML='<span style="color:var(--text3)">확인 중...</span>';
   _quickCodeTimer=setTimeout(function(){
-    if(!_db){msg.innerHTML='<span style="color:var(--text3)">로딩 중...</span>';setTimeout(function(){_quickVerifyCode(code);},800);return;}
-    _db.collection('companies').where('companyCode','==',code).limit(1).get()
-      .then(function(snap){
-        if(!snap.empty){
-          var d=snap.docs[0].data(),cid=snap.docs[0].id;
-          var el=document.getElementById('j-code');
-          if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
-          msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
+    fetch('/api/check-company-code?code='+encodeURIComponent(code.toUpperCase()))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var el=document.getElementById('j-code');
+        if(data.ok){
+          if(el){el.dataset.companyId=data.companyId;el.dataset.companyName=data.companyName||'';}
+          msg.innerHTML='<span style="color:var(--green)">✅ '+esc(data.companyName||'확인됨')+'</span>';
         } else {
-          // companyCode 없으면 slug로도 시도
-          return _db.collection('companies').where('slug','==',code).limit(1).get()
-            .then(function(snap2){
-              if(!snap2.empty){
-                var d=snap2.docs[0].data(),cid=snap2.docs[0].id;
-                var el=document.getElementById('j-code');
-                if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
-                msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
-              } else {
-                msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';
-              }
-            });
+          if(el){el.dataset.companyId='';el.dataset.companyName='';}
+          msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';
         }
       }).catch(function(e){msg.innerHTML='<span style="color:var(--red)">오류: '+e.message+'</span>';});
   },500);
@@ -7077,32 +7067,33 @@ function doQuickJoin(){
   var driverId=driverIdInput||('drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4));
   var btn=document.getElementById('join-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='가입 중...';}
-  firebase.auth().createUserWithEmailAndPassword(email,pw)
-    .then(function(cred){
-      var uid=cred.user.uid;
-      var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
-        role:joinRoleQ,store:joinStoreQ,driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
-        bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
-        ssn:ssn,joinDate:joinDate,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
-      return _db.collection('users').doc(uid).set(data).then(function(){
-        return _db.collection('drivers').add(Object.assign({},data,{
-          userId:uid,is_active:true,status:'재직',jobsub:'',camp:'',wave:'',joinedViaQR:true
-        }));
+  // SHA-256 해시 비밀번호 계산 후 서버사이드 드라이버 등록
+  (async function(){
+    var pwHash='';
+    try{
+      var enc=new TextEncoder().encode(pw);
+      var buf=await crypto.subtle.digest('SHA-256',enc);
+      pwHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    }catch(e){}
+    var payload={name:name,phone:phone,companyId:companyId,companyName:companyName,
+      driverId:driverId,role:joinRoleQ,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
+      bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,ssn:ssn,joinDate:joinDate,pw:pwHash};
+    fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(btn){btn.disabled=false;btn.textContent='가입하기';}
+        if(data.ok){
+          toast('✅ 가입 완료! 전화번호로 로그인하세요');
+          switchTab('login');
+          if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
+        } else {
+          if(err){err.textContent=data.error||'가입 오류';err.style.display='';}
+        }
+      }).catch(function(e){
+        if(btn){btn.disabled=false;btn.textContent='가입하기';}
+        if(err){err.textContent='네트워크 오류 — 인터넷 연결 확인';err.style.display='';}
       });
-    })
-    .then(function(){
-      if(btn){btn.disabled=false;btn.textContent='가입하기';}
-      toast('✅ 가입 완료! 전화번호로 로그인하세요');
-      switchTab('login');
-      if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
-      setTimeout(_requestFcmAfterJoin, 1000);
-    })
-    .catch(function(e){
-      if(btn){btn.disabled=false;btn.textContent='가입하기';}
-      var msgs={'auth/email-already-in-use':'이미 등록된 연락처입니다','auth/weak-password':'비밀번호 6자 이상','auth/network-request-failed':'네트워크 오류 — 인터넷 연결 확인','auth/too-many-requests':'잠시 후 다시 시도하세요','auth/invalid-email':'이메일 형식 오류'};
-      if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
-    });
+  })();
 }
 
 
