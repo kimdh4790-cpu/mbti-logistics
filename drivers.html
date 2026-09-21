@@ -22612,18 +22612,18 @@ var _dcalData = {};
 var _dcalLoading = false;
 
 async function dDeliveryCal() {
+  await _loadDeliveryCal(_dcalYM);
   return _renderDeliveryCal();
 }
 
 async function _loadDeliveryCal(ym) {
-  var did = S.dealerId || '';
-  if (!did) { _dcalData={}; return; }
+  var me = (ls('drivers')||[]).find(function(d){ return d.name===S.curDriver || d.userId===S.curDriver; }) || {};
+  var phone = (me.phone||'').replace(/\D/g,'');
+  var code = me.companyCode || '';
+  if (!phone || !code) { _dcalData={}; return; }
   _dcalLoading = true;
   try {
-    var token = await firebase.auth().currentUser.getIdToken();
-    var res = await fetch('/api/delivery-daily?ym='+ym+'&did='+encodeURIComponent(did), {
-      headers:{'Authorization':'Bearer '+token}
-    });
+    var res = await fetch('/api/delivery-daily?ym='+encodeURIComponent(ym)+'&phone='+encodeURIComponent(phone)+'&code='+encodeURIComponent(code));
     var json = await res.json();
     if (json.ok) _dcalData = json.data || {};
     else _dcalData = {};

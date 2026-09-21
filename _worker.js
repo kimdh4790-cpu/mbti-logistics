@@ -6611,42 +6611,25 @@ service cloud.firestore {
     }
 
     // ── 배달대행 일일 데이터 조회 (/api/delivery-daily) ──
-    // 기사가 자신의 월별 데이터 조회
+    // 기사가 자신의 월별 데이터 조회 (phone + companyCode 기반, Firebase Auth 불필요)
     if (path === '/api/delivery-daily' && method === 'GET') {
       const _ddhH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
-      const _ddhUser = await verifyFirebaseToken(request, env);
-      if (!_ddhUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:_ddhH});
       try {
         const _ddhYM = url.searchParams.get('ym') || new Date().toISOString().slice(0,7);
-        const _ddhDid = url.searchParams.get('did') || '';
-        if (!_ddhDid) return new Response(JSON.stringify({ok:false,error:'did 필요'}),{status:400,headers:_ddhH});
-        // 기사 본인 전화번호 확인
+        const _ddhPhone = (url.searchParams.get('phone')||'').replace(/\D/g,'');
+        const _ddhCode = url.searchParams.get('code') || '';
+        if (!_ddhPhone || !_ddhCode) return new Response(JSON.stringify({ok:false,error:'phone, code 필요'}),{status:400,headers:_ddhH});
         const _ddhToken = await getAccessToken(env);
         const _ddhFsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
-        // drivers 컬렉션에서 이 uid의 전화번호 조회
-        const _ddhDrvRes = await fetch(
-          `${_ddhFsBase}/drivers?orderBy=name&pageSize=200`,
-          {headers:{'Authorization':`Bearer ${_ddhToken}`}}
-        );
-        let phone = '';
-        if (_ddhDrvRes.ok) {
-          const _ddhDrvData = await _ddhDrvRes.json();
-          for (const doc of (_ddhDrvData.documents||[])) {
-            const f = doc.fields||{};
-            if ((f.uid?.stringValue||'') === _ddhUser.localId || (f.dealerId?.stringValue||'')===_ddhDid) {
-              if ((f.dealerId?.stringValue||'')=== _ddhDid && (f.uid?.stringValue||'')=== _ddhUser.localId) {
-                phone = (f.phone?.stringValue||'').replace(/\D/g,'');
-                break;
-              }
-            }
-          }
-        }
-        if (!phone) return new Response(JSON.stringify({ok:false,error:'기사 정보 없음'}),{status:404,headers:_ddhH});
-        const docId = `${_ddhDid}_${phone}_${_ddhYM.replace('-','')}`;
-        const _ddhDocRes = await fetch(
-          `${_ddhFsBase}/delivery_daily/${docId}`,
-          {headers:{'Authorization':`Bearer ${_ddhToken}`}}
-        );
+        // companyCode → dealerId (companies 컬렉션)
+        const _ddhCompQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_ddhCode}}},limit:1}};
+        const _ddhCompRes = await fetch(`${_ddhFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_ddhToken}`,'Content-Type':'application/json'},body:JSON.stringify(_ddhCompQ)});
+        const _ddhCompArr = await _ddhCompRes.json();
+        const _ddhCompDoc = (_ddhCompArr||[]).find(r=>r.document);
+        if (!_ddhCompDoc) return new Response(JSON.stringify({ok:false,error:'회사 정보 없음'}),{status:404,headers:_ddhH});
+        const _ddhDid = _ddhCompDoc.document.name.split('/').pop();
+        const docId = `${_ddhDid}_${_ddhPhone}_${_ddhYM.replace('-','')}`;
+        const _ddhDocRes = await fetch(`${_ddhFsBase}/delivery_daily/${docId}`,{headers:{'Authorization':`Bearer ${_ddhToken}`}});
         if (!_ddhDocRes.ok) return new Response(JSON.stringify({ok:true,data:{}}),{headers:_ddhH});
         const _ddhDoc = await _ddhDocRes.json();
         // Firestore 필드를 plain object로 변환
@@ -6661,7 +6644,7 @@ service cloud.firestore {
             cancel: parseInt(mv.cancel?.integerValue||0)
           };
         }
-        return new Response(JSON.stringify({ok:true, data:days, name:raw.name?.stringValue||'', ym:_ddhYM}),{headers:_ddhH});
+        return new Response(JSON.stringify({ok:true, data:days, ym:_ddhYM}),{headers:_ddhH});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       }
