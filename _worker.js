@@ -6558,14 +6558,23 @@ service cloud.firestore {
         const _cccArr = await _cccRes.json();
         let _cccDoc = (_cccArr||[]).find(r=>r.document);
         // fallback: dealerId prefix (code == dealerId.slice(0,8).toUpperCase())
+        // Firestore __name__ range query requires orderBy __name__
         if (!_cccDoc && _cccCode.length>=6) {
-          const _cccPfx = `${_cccFsBase}/companies`;
           const _cccRef = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
           const _cccRefEnd = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
-          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN_OR_EQUAL',value:{referenceValue:_cccRefEnd}}}]}},limit:1}};
+          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN_OR_EQUAL',value:{referenceValue:_cccRefEnd}}}]}},orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],limit:1}};
           const _cccR2 = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ2)});
           const _cccA2 = await _cccR2.json();
           _cccDoc = (_cccA2||[]).find(r=>r.document);
+        }
+        // final fallback: list documents and find ID starting with code
+        if (!_cccDoc && _cccCode.length>=6) {
+          const _cccListRes = await fetch(`${_cccFsBase}/companies?pageSize=100&orderBy=__name__`,{headers:{'Authorization':`Bearer ${_cccToken}`}});
+          if (_cccListRes.ok) {
+            const _cccList = await _cccListRes.json();
+            const _cccMatch = (_cccList.documents||[]).find(d=>{const _id=d.name.split('/').pop();return _id.startsWith(_cccCode)||_id.toUpperCase().startsWith(_cccCode);});
+            if (_cccMatch) _cccDoc = {document:_cccMatch};
+          }
         }
         if (!_cccDoc) return new Response(JSON.stringify({ok:false,error:'존재하지 않는 회사코드'}),{headers:_cccH});
         const _cccDid = _cccDoc.document.name.split('/').pop();
