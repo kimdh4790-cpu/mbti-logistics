@@ -7825,7 +7825,8 @@ function _ctrRenderWrite(){
     +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">👤 기사 성명 <span style="color:#ef4444">(동의서·보관함 표시)</span></label>'
     +'<input id="ctr-driver-name-input" type="text" placeholder="홍길동" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
     +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">📱 기사 전화번호 <span style="color:#ef4444">(알림톡 발송 필수)</span></label>'
-    +'<input id="ctr-driver-phone-input" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<input id="ctr-driver-phone-input" type="tel" placeholder="010-0000-0000" oninput="_ctrLookupDriverByPhone(this.value)" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div id="ctr-driver-lookup-status" style="font-size:11px;color:var(--text3);margin-top:-6px;margin-bottom:10px"></div>'
     +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:6px 10px;margin-bottom:8px">현장 서명 없이 저장하면 기사에게 알림톡으로 서명 링크를 발송합니다.</div>'
     +'<canvas id="ctr-driver-sig" style="border:1px solid var(--border);border-radius:8px;width:100%;height:110px;background:#fff;touch-action:none;display:block"></canvas>'
     +'<button onclick="window._driverSigPad&&window._driverSigPad.clear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
@@ -7876,6 +7877,47 @@ function _ctrSaveEdited(){
   if(!content)return;
   var _sk='ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
   try{localStorage.setItem(_sk,content.innerHTML);}catch(_e){}
+}
+
+var _ctrPhoneLookupTimer=null;
+function _ctrLookupDriverByPhone(raw){
+  var st=document.getElementById('ctr-driver-lookup-status');
+  var phone=raw.replace(/[^0-9]/g,'');
+  if(phone.length<10){window._ctrDriver=null;if(st)st.textContent='';return;}
+  if(_ctrPhoneLookupTimer)clearTimeout(_ctrPhoneLookupTimer);
+  _ctrPhoneLookupTimer=setTimeout(function(){
+    if(!_db||!_CU)return;
+    var cid=_CU.dealerId||_CU.companyId||_CU.uid;
+    if(st)st.textContent='🔍 기사 정보 조회 중...';
+    _db.collection('drivers').where('dealerId','==',cid).where('phone','==',phone).limit(1).get()
+    .then(function(snap){
+      if(snap.empty){
+        // 하이픈 포함 포맷으로도 시도
+        var ph2=phone.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3');
+        return _db.collection('drivers').where('dealerId','==',cid).where('phone','==',ph2).limit(1).get();
+      }
+      return snap;
+    })
+    .then(function(snap2){
+      if(snap2&&!snap2.empty){
+        var d=Object.assign({id:snap2.docs[0].id},snap2.docs[0].data());
+        window._ctrDriver=d;
+        var ni=document.getElementById('ctr-driver-name-input');
+        if(ni&&!ni.value&&d.name)ni.value=d.name;
+        if(st){
+          var info='✅ '+esc(d.name||'기사')+'님 조회 완료';
+          if(d.carNum)info+=' · 차량 '+esc(d.carNum);
+          if(d.licenseNum)info+=' · 자격 '+esc(d.licenseNum);
+          st.textContent=info;
+          st.style.color='#10b981';
+        }
+        _ctrApplyTyped(true);
+      } else {
+        window._ctrDriver=null;
+        if(st){st.textContent='ℹ️ 등록된 기사 없음 — DOCX에 직접 입력하세요';st.style.color='var(--text3)';}
+      }
+    }).catch(function(){if(st)st.textContent='';});
+  },600);
 }
 
 function _ctrApplyTyped(silent){
