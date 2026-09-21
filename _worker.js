@@ -1671,6 +1671,8 @@ window.onload=function(){
   var params=new URLSearchParams(location.search);
   var kc=params.get('kakaoCode');
   if(kc){
+    if(sessionStorage.getItem('dl_agreed_${_cToken}')){agreePrivacy();}
+    sessionStorage.removeItem('dl_agreed_${_cToken}');
     fetch('/api/contract/kakao-identify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:kc})})
       .then(function(r){return r.json();})
       .then(function(d){if(d.ok)showSignStep(d.kakaoId,d.kakaoNick);else showSignStep(null,'');})
@@ -1678,6 +1680,8 @@ window.onload=function(){
   }
 };
 function kakaoLogin(){
+  if(!_allAgreed()){alert('모든 동의 항목을 체크한 후 카카오 로그인을 진행할 수 있습니다.\\n동의서를 모두 확인하고 체크해주세요.');return;}
+  sessionStorage.setItem('dl_agreed_${_cToken}','1');
   Kakao.Auth.authorize({redirectUri:'https://donway.ai.kr',state:'sign:${_cToken}',scope:'profile_nickname'});
 }` : ''}
 async function submitSign(){
