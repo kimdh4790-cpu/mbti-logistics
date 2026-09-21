@@ -557,12 +557,14 @@ export default {
     const method   = request.method;
     const hostname = url.hostname;
 
-    // SCAN AI proxy: mbtico.kr/scan → filo.ai.kr handles /api/seolyuhana/*
-    if (path.startsWith('/api/seolyuhana/')) {
+    // SCAN AI proxy: mbtico.kr/scan → _worker.js mbtico.kr block handles /api/seolyuhana/* and /api/scan/*
+    if (path.startsWith('/api/seolyuhana/') || path.startsWith('/api/scan/')) {
       const proxyUrl = 'https://filo.ai.kr' + path + (url.search || '');
+      const proxyHeaders = new Headers(request.headers);
+      proxyHeaders.set('x-mbtico-host', 'mbtico.kr'); // route to mbtico block in _worker.js
       return fetch(new Request(proxyUrl, {
         method: request.method,
-        headers: request.headers,
+        headers: proxyHeaders,
         body: (request.method !== 'GET' && request.method !== 'HEAD') ? request.body : null,
         duplex: 'half'
       }));
