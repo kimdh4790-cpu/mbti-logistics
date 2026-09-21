@@ -84,7 +84,7 @@ claude/* 브랜치 push
 | # | 상태 | 항목 | 담당 파일 | 메모 |
 |---|---|---|---|---|
 | 1 | `[-]` | FCM 영수증 푸시 실 기기 동작 확인 | filo-pos-pay.js | 실 기기 필요. 로컬 테스트 불가 |
-| 2 | `[-]` | 팝빌 키 발급 → Cloudflare Secret 등록 → 역발행 실전 테스트 | _worker.js | 박주선 팀장(010-5330-0078) 연락 필요. POPBILL_LINK_ID / POPBILL_SECRET_KEY 발급 후 진행 |
+| 2 | `[-]` | 팝빌 키 발급 → Cloudflare Secret 등록 → 역발행 실전 테스트 | _worker.js | 박주선 팀장(010-5330-0078 / jooseon@linkhubcorp.com) 연락 → LinkID+SecretKey 수신 → wrangler secret put 3개 등록 → 테스트. 요금: **50원/건**, 은행조회 8원/건. 코드 완성됨 키만 대기. |
 
 ---
 
