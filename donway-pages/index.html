@@ -8262,8 +8262,8 @@ async function _ctrDocxLoad(inp){
     window._ctrDocxOrigHtml=html;
     window._ctrDocxFileName=file.name;
     window._ctrDocxBlankCount=blankCount;
-    // localStorage에 DOCX 저장 (새로고침 후에도 유지)
-    try{var _sk='ctr_docx_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
+    // localStorage에 DOCX 저장 (새로고침 후에도 유지) — 새 파일 업로드 시 이전 편집 기록도 초기화
+    try{var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';var _ct=window._ctrType||'wisu';var _sk='ctr_docx_'+_ct+'_'+_uid;var _ek='ctr_docx_edit_'+_ct+'_'+_uid;localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));localStorage.removeItem(_ek);}catch(_e){}
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
     // 기사 이미 선택된 경우 자동 채우기
   }catch(e){
