@@ -7948,7 +7948,7 @@ function _ctrApplyTyped(silent){
     result+=html.slice(lastIdx,m.index);
     if(inner.replace(/&nbsp;|&#xa0;|\s/g,'').length>0){result+=m[0];}
     else{
-      var pre=html.slice(Math.max(0,m.index-500),m.index).replace(/<[^>]*>/g,'').toLowerCase();
+      var pre=html.slice(Math.max(0,m.index-150),m.index).replace(/<[^>]*>/g,'').toLowerCase();
       var fv=null;
       for(var i=0;i<keywordMap.length&&!fv;i++){
         if(!keywordMap[i].val)continue;
@@ -7984,25 +7984,33 @@ function _ctrCollect(){
     while((m=uRe.exec(html))!==null){
       var val=m[1].replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').trim();
       if(!val||!val.replace(/\s/g,''))continue;
-      var pre=html.slice(Math.max(0,m.index-500),m.index).replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').toLowerCase();
+      var pre=html.slice(Math.max(0,m.index-150),m.index).replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').toLowerCase();
+      // 날짜 패턴: YYYY년 MM월 DD일 또는 YYYY-MM-DD
+      var isDate=/^\d{4}[-년]\s*\d{1,2}[-월]\s*\d{1,2}/.test(val)||/^\d{4}-\d{2}-\d{2}$/.test(val);
       if(!r.driverName&&/성명|이름|기사명|운송인|운수종사자|계약자|종사자/.test(pre))r.driverName=val;
       else if(!r.driverBizNum&&/사업자등록번호|사업자번호/.test(pre))r.driverBizNum=val;
       else if(!r.driverIdNum&&/주민등록번호|주민번호|생년월일/.test(pre))r.driverIdNum=val;
       else if(!r.driverAddr&&/주소|소재지|거주지/.test(pre))r.driverAddr=val;
-      else if(!r.carNum&&/차량내역|차량번호|등록번호/.test(pre))r.carNum=val;
-      else if(!r.licenseNum&&/종사자격|자격증번호/.test(pre))r.licenseNum=val;
+      else if(!r.carNum&&/차량내역|차량번호|자동차\s*등록번호/.test(pre))r.carNum=val;
+      else if(!r.licenseNum&&/종사자격|자격증\s*번호/.test(pre))r.licenseNum=val;
       else if(!r.driverPhone&&/전화번호|연락처|휴대폰|전화/.test(pre))r.driverPhone=val;
+      else if(!r.deliveryFee&&/배송수수료|배송단가/.test(pre))r.deliveryFee=val;
+      // 계약기간 날짜: <u>로 타이핑된 날짜 값에서 직접 추출
+      else if(isDate&&!r.startDate&&/계약기간|부터|시작/.test(pre))r.startDate=val;
+      else if(isDate&&!r.endDate&&(r.startDate||/까지|종료/.test(pre)))r.endDate=val;
     }
-    // 계약기간 날짜 추출
-    var text=c.innerText||c.textContent||'';
-    var periIdx=text.indexOf('계약기간');
-    var searchText=periIdx>=0?text.slice(periIdx,periIdx+300):text;
-    var krRe=/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
-    var dates=[];var dm;
-    while((dm=krRe.exec(searchText))!==null){dates.push(dm[1]+'-'+String(dm[2]).padStart(2,'0')+'-'+String(dm[3]).padStart(2,'0'));}
-    if(!dates.length){var isoRe=/(\d{4}-\d{2}-\d{2})/g;while((dm=isoRe.exec(searchText))!==null)dates.push(dm[1]);}
-    r.startDate=dates[0]||_fmtIso(_td2);
-    r.endDate=dates[1]||dates[0]||_fmtIso(_td2);
+    // 계약기간 날짜 fallback: innerText 검색
+    if(!r.startDate||!r.endDate){
+      var text=c.innerText||c.textContent||'';
+      var periIdx=text.indexOf('계약기간');
+      var searchText=periIdx>=0?text.slice(periIdx,periIdx+500):text;
+      var krRe=/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
+      var dates=[];var dm;
+      while((dm=krRe.exec(searchText))!==null){dates.push(dm[1]+'-'+String(dm[2]).padStart(2,'0')+'-'+String(dm[3]).padStart(2,'0'));}
+      if(!dates.length){var isoRe=/(\d{4}-\d{2}-\d{2})/g;while((dm=isoRe.exec(searchText))!==null)dates.push(dm[1]);}
+      if(!r.startDate)r.startDate=dates[0]||_fmtIso(_td2);
+      if(!r.endDate)r.endDate=dates[1]||dates[0]||_fmtIso(_td2);
+    }
     return r;
   };
   var typed=_extractTyped();
@@ -8031,9 +8039,9 @@ function _ctrCollect(){
     startDate:startDate,
     endDate:endDate,
     collectPrice:collectPrice,
-    unitPrice:unitPrice,
+    unitPrice:unitPrice||typed.deliveryFee||'',
     carNum:carNum,
-    licenseNum:licNum,
+    licenseNum:licNum||typed.licenseNum||'',
     cycle:'매월 20일',
     special:'',
     routePricesJson:routePrices.length?JSON.stringify(routePrices):'',
