@@ -1825,6 +1825,24 @@ async function submitSign(){
           if(body.docxHtml){_dsPatchUrl+='&updateMask.fieldPaths=docxHtml';_dsPatchFields.docxHtml={stringValue:body.docxHtml};}
           const _dsPatchRes=await fetch(_dsPatchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_dsPatchFields})});
           if(!_dsPatchRes.ok){const _dsPatchErr=await _dsPatchRes.text().catch(()=>'');return new Response(JSON.stringify({ok:false,error:'서명 저장 실패 ('+_dsPatchRes.status+')'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
+          // 기사가 입력한 사업자번호·주민번호 → drivers 컬렉션 역저장 (다음 계약 자동완성용)
+          if((driverBizNum||driverIdNum)&&dealerId&&driverPhone){
+            try{
+              const _dpQ=JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:dealerId}}},{fieldFilter:{field:{fieldPath:'phone'},op:'EQUAL',value:{stringValue:driverPhone.replace(/[^0-9]/g,'')}}}]}},limit:1}});
+              const _dpQR=await fetch('https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery',{method:'POST',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:_dpQ});
+              const _dpQD=await _dpQR.json();
+              const _dpDoc=_dpQD?.[0]?.document;
+              if(_dpDoc){
+                const _dpName=_dpDoc.name.startsWith('https://')?_dpDoc.name:'https://firestore.googleapis.com/v1/'+_dpDoc.name;
+                let _dpUrl=_dpName+'?';
+                const _dpFields={};
+                if(driverBizNum){_dpUrl+='updateMask.fieldPaths=bizNum&';_dpFields.bizNum={stringValue:driverBizNum};}
+                if(driverIdNum){_dpUrl+='updateMask.fieldPaths=ssn&';_dpFields.ssn={stringValue:driverIdNum};}
+                _dpUrl=_dpUrl.replace(/[?&]$/,'');
+                await fetch(_dpUrl,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_dpFields})}).catch(()=>{});
+              }
+            }catch(_dpe){}
+          }
           // 서명 완료된 계약서 HTML → Firebase Storage 보관
           let _archiveResultUrl = '';
           try {
