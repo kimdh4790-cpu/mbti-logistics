@@ -6887,6 +6887,12 @@ service cloud.firestore {
         const { token: stmtToken, driverBizNum: bodyBizNum } = body;
         if (!stmtToken) return new Response(JSON.stringify({ok:false,error:'token 필수'}), {status:400, headers:{'Content-Type':'application/json'}});
 
+        // 사업자번호 형식 검증 (10자리 숫자, 하이픈 허용)
+        const cleanedBizNum = bodyBizNum ? String(bodyBizNum).replace(/-/g,'').trim() : '';
+        if (cleanedBizNum && !/^\d{10}$/.test(cleanedBizNum)) {
+          return new Response(JSON.stringify({ok:false,error:'올바른 사업자번호 형식이 아닙니다'}), {status:400, headers:{'Content-Type':'application/json'}});
+        }
+
         const fsToken = await getAccessToken(env);
         // statement_share 문서 조회
         const docRes = await fetch(`${FS_BASE}/statement_share/${stmtToken}`, {
@@ -6904,7 +6910,9 @@ service cloud.firestore {
           return new Response(JSON.stringify({ok:false,alreadyRequested:true}), {headers:{'Content-Type':'application/json'}});
         }
 
-        const senderCorpNum = bodyBizNum || gs2('driverBizNum');
+        // Firestore 저장값 우선, 없을 때만 body 입력값 사용 (재입력 방지)
+        const storedBizNum = gs2('driverBizNum');
+        const senderCorpNum = storedBizNum || cleanedBizNum;
         if (!senderCorpNum) {
           return new Response(JSON.stringify({ok:false,needBizNum:true}), {headers:{'Content-Type':'application/json'}});
         }
@@ -6963,6 +6971,15 @@ service cloud.firestore {
     // ── DONWAY 팝빌 웹훅 (/api/popbill-webhook) ──
     if (path === '/api/popbill-webhook' && method === 'POST') {
       try {
+        // 웹훅 시크릿 검증 — 설정된 경우 반드시 일치해야 함
+        const whSecret = request.headers.get('X-Popbill-Signature') ||
+                         request.headers.get('X-Popbill-Webhook-Secret') ||
+                         url.searchParams.get('secret') || '';
+        if (env.POPBILL_WEBHOOK_SECRET && whSecret !== env.POPBILL_WEBHOOK_SECRET) {
+          return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403, headers: { 'Content-Type': 'application/json' }
+          });
+        }
         const body = await request.json();
         const { MgtKey, State, StateDate } = body;
         const fsToken = await getAccessToken(env);
@@ -7252,8 +7269,17 @@ service cloud.firestore {
         if (!did || !phones || !phones.length || !msg) {
           return new Response(JSON.stringify({error:'did·phones·msg 필수'}),{status:400,headers:_bulkH});
         }
-        // 요청자가 해당 dealerId 소속인지 확인
-        if (_bulkUser.dealerId && _bulkUser.dealerId !== did) {
+        // 요청자 UID가 해당 dealerId 소속인지 Firestore로 검증 (IDOR 방어)
+        const _bulkFsToken = await getAccessToken(env);
+        const _bulkCompanyRes = await fetch(`${FS_BASE}/companies/${did}`, {
+          headers: { 'Authorization': `Bearer ${_bulkFsToken}` }
+        });
+        if (!_bulkCompanyRes.ok) {
+          return new Response(JSON.stringify({error:'매장을 찾을 수 없습니다'}),{status:404,headers:_bulkH});
+        }
+        const _bulkCompanyData = await _bulkCompanyRes.json();
+        const _bulkOwnerUid = _bulkCompanyData.fields?.uid?.stringValue || '';
+        if (_bulkOwnerUid !== _bulkUser.localId) {
           return new Response(JSON.stringify({error:'권한 없음'}),{status:403,headers:_bulkH});
         }
         if (!env.SOLAPI_KEY || !env.SOLAPI_SECRET) {
