@@ -8290,29 +8290,6 @@ function _ctrDocxClear(){
   if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
   var fi=document.getElementById('ctr-docx-file');if(fi)fi.value='';
 }
-async function _ctrExportSignedDocx(id,driverName,archiveUrl){
-  if(!archiveUrl){toast('서명완료본 URL이 없습니다');return;}
-  if(typeof htmlDocx==='undefined'){toast('DOCX 라이브러리 로드 중입니다. 잠시 후 다시 시도해주세요.');return;}
-  try{
-    toast('⏳ 서명완료본 불러오는 중...');
-    var res=await fetch(archiveUrl);
-    if(!res.ok)throw new Error('불러오기 실패 '+res.status);
-    var html=await res.text();
-    // body 내용만 추출
-    var bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-    var bodyHtml=bodyMatch?bodyMatch[1]:html;
-    // 인쇄 버튼 등 ctr-np 요소 제거
-    bodyHtml=bodyHtml.replace(/<[^>]+class="[^"]*ctr-np[^"]*"[^>]*>[\s\S]*?<\/[^>]+>/gi,'');
-    var docHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:"맑은 고딕",sans-serif;font-size:10pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px;font-size:9pt}img{max-width:200px}</style></head><body>'+bodyHtml+'</body></html>';
-    var blob=htmlDocx.asBlob(docHtml,{orientation:'portrait',margins:{top:720,bottom:720,left:1080,right:1080}});
-    var a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='계약서_서명완료_'+(driverName||'기사')+'.docx';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast('✅ 서명완료본 DOCX 내보내기 완료');
-  }catch(e){toast('❌ DOCX 내보내기 실패: '+e.message);}
-}
 function _ctrExportDocx(){
   var c=document.getElementById('ctr-docx-content');
   if(!c||!c.innerHTML.trim()){toast('먼저 계약서 내용을 입력해주세요');return;}
@@ -8797,20 +8774,6 @@ async function _ctrResendSign(docId,phone,token,name,btn){
   }).then(function(){toast('📲 서명요청 SMS 재발송 완료');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}})
   .catch(function(){toast('❌ 발송 실패');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}});
 }
-async function _ctrPatchArchive(token,btn){
-  if(!token){toast('⚠️ signToken 없음');return;}
-  if(btn){btn.disabled=true;btn.textContent='수정중...';}
-  var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e){}
-  fetch('/api/contract/patch-archive',{method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
-    body:JSON.stringify({signToken:token})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){if(d.patched){toast('✅ 인쇄 버튼 수정 완료 — 다시 열어보세요');_ctrRenderList();}else{toast('ℹ️ '+(d.msg||'이미 수정된 파일입니다'));}}
-    else{toast('❌ '+(d.error||'수정 실패'));}
-    if(btn){btn.disabled=false;btn.textContent='🔧 수정';}
-  }).catch(function(){toast('❌ 통신 오류');if(btn){btn.disabled=false;btn.textContent='🔧 수정';}});
-}
-
 function _ctrPrint(jsonStr){
   _ctrShowOverlay(typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr);
 }
