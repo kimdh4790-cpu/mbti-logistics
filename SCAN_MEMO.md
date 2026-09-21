@@ -7,7 +7,7 @@
 - **위치**: dine.ne.kr (이전: mbtico.kr/scan → 2026-09-20 이전 / filo.ai.kr/seolyuhana → 2026-09-06 이전)
 - **포지셔닝**: 소상공인·직장인 대상 AI 문서 분석 SaaS (1P=1원 포인트제)
 - **파일**: scan.html (authDomain: dine.ne.kr), dine-worker.js (라우터+API), seolyuhana/services/analyze.js
-- **PWA**: /scan-manifest.json, scan-icon-192/512.png (KV 업로드됨, dine.ne.kr에서 서빙)
+- **PWA**: /manifest.json (dine.ne.kr 전용 SCAN 매니페스트), 아이콘 `/dine-icon-192.png`·`/dine-apple-icon.png` — dine-worker.js `_PWA_ICONS` 객체에 base64 임베드, KV 불필요. ⚠️ scan.html이 `/scan-manifest.json` 링크 시 핸들러 없어 로고 안 뜸 (2026-09-21 수정 완료)
 - **2026-09-20 변경**: dine.ne.kr이 SCAN 전용 도메인으로 확정. scan.html authDomain mbtico.kr→dine.ne.kr 수정 완료. Firebase storageBucket·messagingSenderId·appId 추가.
 
 ---
@@ -521,6 +521,8 @@ curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/02709cbec18d848913
 ## 수정 이력
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-21 | **dine.ne.kr SCAN API 404 수정** (`dine-worker.js`): SCAN API 블록(`if (hostname.includes('dine.ne'))`)이 `if (path === '/')` 블록 안에 중첩돼 있어 `/api/seolyuhana/analyze` 등 API 경로 요청 시 외부 `if`가 false → SCAN 핸들러 전체 스킵 → 404. 닫는 `}` 추가로 SCAN API 블록을 `if (path === '/')` 바깥으로 이동해 수정. |
+| 2026-09-21 | **dine.ne.kr PWA 로고 수정** (`scan.html`): `<link rel="manifest" href="/scan-manifest.json?v=3">` → `/manifest.json`으로 변경. `dine-worker.js`에 `/scan-manifest.json` 핸들러가 없어 매니페스트 로드 실패 → 설치 다이얼로그에 "D" 글자 아이콘 표시. `/manifest.json` 핸들러는 line 5679에 존재하며 `_PWA_ICONS` base64 embedded 아이콘(`/dine-icon-192.png`, `/dine-apple-icon.png`) 참조. `apple-touch-icon`·`favicon` 링크 추가, `theme-color` `#F472B6` 수정. |
 | 2026-09-17 | **PDF 파싱 무한 대기 + 등기부 인식 실패 수정** (커밋 `72698935`, `d06159a4`, `089335d5`): ① `_worker.js` `_slyProcessJob()` — `parseFile()` 호출 전체를 `Promise.race([..., 60s 타임아웃])`으로 감싸 파싱 단계 무한 대기 방지. ② `analyze.js` — `AbortSignal.timeout()` CF Workers 불안정 문제: `_fetchWithTimeout()` 헬퍼 추가 (`AbortController+setTimeout`), Gemini/Workers AI/Claude API 호출 4개소 교체. ③ `parser.js` — `AbortSignal.timeout()` 동일 문제 `_fetchT()` 헬퍼로 교체 (parseHwp/tryOraclePdfImages/tryOraclePdfText/tryOraclePdfOcr 4개소). ④ `parser.js` `parsePdf()` Strategy 1 한국어 품질 검증 추가 — CIDFont 쓰레기 텍스트(인터넷등기소 RIS PDF 등) 필터링: `_hasKorean()` 검사로 한국어 비율 5% 미만이면 Oracle pdftotext 폴백(Strategy 2)으로 진입. 수정 전: `extracted.length > 50`만 체크 → CID 가비지 텍스트도 50자 이상이면 통과 → 등기부 인식 실패. |
 | 2026-09-14 | **경매 분석 결과 렌더링 전면 구현** (`scan.html` `renderResult()` + `analyze.js` `getScannedPrompt()` + `builder.js` `buildAuctionDocx()` + `_worker.js` 요약 폴백): `auction_analysis` serviceId에 대해 ① scan.html에 사건정보·당사자·권리관계·임차인현황·시세·입찰가 시뮬레이션·수익률 시뮬레이션·위험 요인·종합 의견 전체 섹션 렌더링 추가 (기존: 아무 것도 안 보이던 "인식이 안되네" 버그 수정). ② `getScannedPrompt()`에 `auction_analysis` 케이스 추가 (스캔 PDF 경로 프롬프트 오류 수정). ③ `buildAuctionDocx()` 신규 구현 — DOCX 빈 파일 버그 수정. ④ `_slyProcessJob()` 요약 폴백에 `analysisData.summary` 추가. |
 | 2026-09-14 | **경매 사건번호 자동 조회 기능 추가** (`oracle-server.js` + `_worker.js` + `scan.html`): 경매 서비스 선택 시 '사건번호' 입력 탭 노출. 사건번호 입력 → Oracle Cloud Puppeteer → 대법원경매정보(courtauction.go.kr) 스크래핑 → 기존 `analyzeAuction()` 파이프라인 연결. `/api/auction-scrape` Oracle 엔드포인트, `/api/scan/auction-fetch` Worker 프록시 엔드포인트 추가. 스크래핑 실패 시 graceful fallback으로 기본 분석 진행. |
