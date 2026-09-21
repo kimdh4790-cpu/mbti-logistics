@@ -7974,25 +7974,44 @@ function _ctrCollect(){
   var drv=window._ctrDriver||{};
   var _td2=new Date();
   var _fmtIso=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
-  // DOCX 타이핑 내용에서 계약기간 날짜 추출
-  var _extractContractDates=function(){
+  // DOCX 타이핑 내용 전체 추출 — <u>타이핑값</u> 태그에서 키워드 컨텍스트로 필드 매핑
+  var _extractTyped=function(){
     var c=document.getElementById('ctr-docx-content');
-    var text=c?c.innerText||c.textContent:'';
+    if(!c)return{};
+    var html=c.innerHTML;
+    var r={};
+    var uRe=/<u>([\s\S]*?)<\/u>/gi;var m;
+    while((m=uRe.exec(html))!==null){
+      var val=m[1].replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').trim();
+      if(!val||!val.replace(/\s/g,''))continue;
+      var pre=html.slice(Math.max(0,m.index-500),m.index).replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').toLowerCase();
+      if(!r.driverName&&/성명|이름|기사명|운송인|운수종사자|계약자|종사자/.test(pre))r.driverName=val;
+      else if(!r.driverBizNum&&/사업자등록번호|사업자번호/.test(pre))r.driverBizNum=val;
+      else if(!r.driverIdNum&&/주민등록번호|주민번호|생년월일/.test(pre))r.driverIdNum=val;
+      else if(!r.driverAddr&&/주소|소재지|거주지/.test(pre))r.driverAddr=val;
+      else if(!r.carNum&&/차량내역|차량번호|등록번호/.test(pre))r.carNum=val;
+      else if(!r.licenseNum&&/종사자격|자격증번호/.test(pre))r.licenseNum=val;
+      else if(!r.driverPhone&&/전화번호|연락처|휴대폰|전화/.test(pre))r.driverPhone=val;
+    }
+    // 계약기간 날짜 추출
+    var text=c.innerText||c.textContent||'';
     var periIdx=text.indexOf('계약기간');
     var searchText=periIdx>=0?text.slice(periIdx,periIdx+300):text;
     var krRe=/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
-    var dates=[];var m;
-    while((m=krRe.exec(searchText))!==null){dates.push(m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0'));}
-    if(!dates.length){var isoRe=/(\d{4}-\d{2}-\d{2})/g;while((m=isoRe.exec(searchText))!==null)dates.push(m[1]);}
-    return{start:dates[0]||_fmtIso(_td2),end:dates[1]||dates[0]||_fmtIso(_td2)};
+    var dates=[];var dm;
+    while((dm=krRe.exec(searchText))!==null){dates.push(dm[1]+'-'+String(dm[2]).padStart(2,'0')+'-'+String(dm[3]).padStart(2,'0'));}
+    if(!dates.length){var isoRe=/(\d{4}-\d{2}-\d{2})/g;while((dm=isoRe.exec(searchText))!==null)dates.push(dm[1]);}
+    r.startDate=dates[0]||_fmtIso(_td2);
+    r.endDate=dates[1]||dates[0]||_fmtIso(_td2);
+    return r;
   };
-  var _cDates=_extractContractDates();
-  var startDate=_cDates.start;
-  var endDate=_cDates.end;
+  var typed=_extractTyped();
+  var startDate=typed.startDate;
+  var endDate=typed.endDate;
   var collectPrice='';
   var unitPrice=firstPrice;
-  var carNum=drv.carNum||'';
-  var licNum=drv.licenseNum||'';
+  var carNum=drv.carNum||typed.carNum||'';
+  var licNum=drv.licenseNum||typed.licenseNum||'';
   return {
     type:window._ctrType||'wisu',
     dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
@@ -8001,11 +8020,11 @@ function _ctrCollect(){
     companyCeo:cp.ceoName||cp.repName||'',
     companyAddr:cp.bizAddr||cp.address||cp.addr||'',
     companyPhone:cp.settlementPhone||cp.phone||cp.tel||'',
-    driverName:_g('ctr-driver-name-input')||drv.name||'',
-    driverPhone:_g('ctr-driver-phone-input')||drv.phone||'',
-    driverBizNum:_g('ctr-driver-biz-input')||drv.bizNum||'',
-    driverIdNum:_g('ctr-driver-id-input')||drv.ssn||'',
-    driverAddr:_g('ctr-driver-addr-input')||drv.address||'',
+    driverName:_g('ctr-driver-name-input')||drv.name||typed.driverName||'',
+    driverPhone:_g('ctr-driver-phone-input')||drv.phone||typed.driverPhone||'',
+    driverBizNum:_g('ctr-driver-biz-input')||drv.bizNum||typed.driverBizNum||'',
+    driverIdNum:_g('ctr-driver-id-input')||drv.ssn||typed.driverIdNum||'',
+    driverAddr:_g('ctr-driver-addr-input')||drv.address||typed.driverAddr||'',
     camp:campAuto,
     area:areaAuto,
     route:routeStr,
