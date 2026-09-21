@@ -85,7 +85,7 @@ claude/* 브랜치 push
 |---|---|---|---|---|
 | 1 | `[-]` | FCM 영수증 푸시 실 기기 동작 확인 | filo-pos-pay.js | 실 기기 필요. 로컬 테스트 불가 |
 | 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
-| 3 | `[-]` | 팝빌 키 발급 후 Cloudflare Secret 등록 → 역발행 실전 테스트 | _worker.js | 연동신청 접수 완료 후 → LINK_ID+SecretKey 수신 → wrangler secret put 3개 등록 → 테스트. 요금: **100원/건**. 코드 완성됨 키만 대기. |
+| 3 | `[-]` | 팝빌 키 발급 후 Cloudflare Secret 등록 → 역발행 실전 테스트 | _worker.js | 연동신청 접수 완료 후 → LINK_ID+SecretKey 수신 → wrangler secret put 3개 등록 → 테스트. 요금: **100원/건 (부가세 별도 → 실청구 110원/건)**. 코드 완성됨 키만 대기. |
 
 ### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
 | 항목 | 값 |
