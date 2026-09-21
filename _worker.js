@@ -1607,7 +1607,7 @@ ${_contractViewHtml}
   <div><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">주민등록번호 <span style="font-weight:400;color:#64748b">(전체 입력 · 필수)</span></label><input id="drv-id-input" type="text" placeholder="예: 850101-1234567" maxlength="14" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
 </div>
 </div>
-<div class="card" id="sign-card" style="opacity:0.4;pointer-events:none">
+<div class="card" id="sign-card">
 <h1>✍️ 전자서명</h1>
 <div class="sub">${driverName}님, 아래에 서명해 주세요.</div>
 <div id="kakao-step">
@@ -1639,17 +1639,8 @@ function toggleAgree2(){var c=document.getElementById('agree-chk2');c.checked=!c
 function toggleAgree2b(){var c=document.getElementById('agree-chk2b');c.checked=!c.checked;updateAgree();}
 function toggleAgree3(){var c=document.getElementById('agree-chk3');c.checked=!c.checked;updateAgree();}
 function toggleAgree3b(){var c=document.getElementById('agree-chk3b');c.checked=!c.checked;updateAgree();}
-function updateAgree(){
-  var c1=document.getElementById('agree-chk');
-  var c2=document.getElementById('agree-chk2');
-  var c2b=document.getElementById('agree-chk2b');
-  var c3=document.getElementById('agree-chk3');
-  var c3b=document.getElementById('agree-chk3b');
-  var ok=c1&&c1.checked&&c2&&c2.checked&&c2b&&c2b.checked&&c3&&c3.checked&&c3b&&c3b.checked;
-  var card=document.getElementById('sign-card');
-  card.style.opacity=ok?'1':'0.4';
-  card.style.pointerEvents=ok?'auto':'none';
-}
+function _allAgreed(){var c1=document.getElementById('agree-chk'),c2=document.getElementById('agree-chk2'),c2b=document.getElementById('agree-chk2b'),c3=document.getElementById('agree-chk3'),c3b=document.getElementById('agree-chk3b');return c1&&c1.checked&&c2&&c2.checked&&c2b&&c2b.checked&&c3&&c3.checked&&c3b&&c3b.checked;}
+function updateAgree(){}
 (function(){
   var d=new Date();
   var ds=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
@@ -1667,6 +1658,7 @@ function initPad(){
   pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
 }
 function showSignStep(id, nick){
+  if(!_allAgreed()){alert('모든 동의 항목을 체크한 후 서명할 수 있습니다.\n위 동의서를 모두 확인하고 체크해주세요.');return;}
   _kakaoId=id||''; _kakaoNick=nick||'';
   document.getElementById('kakao-step').style.display='none';
   document.getElementById('sign-step').style.display='block';
