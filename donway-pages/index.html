@@ -5267,6 +5267,69 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 }
 // _parseCoupangExcelInner 끝
 
+// ══ 일일 배송 데이터 엑셀 업로드 ══
+// 양식: 날짜(YYYY-MM-DD) | 이름 | 전화번호 | 배송건수 | 거절건수 | 취소건수
+function _parseDailyDeliveryExcel(inp) {
+  var file = inp.files[0];
+  if (!file) return;
+  inp.value = '';
+  // XLSX 라이브러리가 로드되어 있는지 확인
+  if (typeof XLSX === 'undefined') {
+    toast('❌ 엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (!rows.length) { toast('❌ 빈 파일입니다'); return; }
+      // 헤더 행 skip (첫 행이 날짜 형식이 아니면 헤더로 간주)
+      var dataRows = rows.filter(function(r) {
+        var v = String(r[0]||'').trim();
+        return v.match(/^\d{4}[-\/]\d{2}[-\/]\d{2}$/) || v.match(/^\d{8}$/);
+      });
+      if (!dataRows.length) { toast('❌ 데이터 형식이 올바르지 않습니다.\n형식: 날짜(YYYY-MM-DD) | 이름 | 전화번호 | 배송 | 거절 | 취소'); return; }
+      // 날짜별로 그룹화
+      var byDate = {};
+      dataRows.forEach(function(r) {
+        var rawDate = String(r[0]||'').trim().replace(/\//g,'-');
+        var date = rawDate.length === 8 ? rawDate.slice(0,4)+'-'+rawDate.slice(4,6)+'-'+rawDate.slice(6,8) : rawDate;
+        if (!byDate[date]) byDate[date] = [];
+        var phone = String(r[2]||'').replace(/\D/g,'');
+        byDate[date].push({
+          name: String(r[1]||'').trim(),
+          phone: phone,
+          count: parseInt(r[3])||0,
+          reject: parseInt(r[4])||0,
+          cancel: parseInt(r[5])||0
+        });
+      });
+      var dates = Object.keys(byDate);
+      if (!dates.length) { toast('❌ 날짜 데이터가 없습니다'); return; }
+      toast('📅 ' + dates.length + '일치 데이터 업로드 중...');
+      var token = await firebase.auth().currentUser.getIdToken();
+      var did = _CU.dealerId;
+      var totalSaved = 0;
+      for (var i = 0; i < dates.length; i++) {
+        var res = await fetch('/api/delivery-daily-upload', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body: JSON.stringify({dealerId: did, date: dates[i], rows: byDate[dates[i]]})
+        });
+        var json = await res.json();
+        if (json.ok) totalSaved += json.saved || 0;
+      }
+      toast('✅ 일일 배송 데이터 업로드 완료 (' + totalSaved + '건)');
+    } catch(e) {
+      toast('❌ 오류: ' + (e.message||e));
+      console.error(e);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function _updatePromoPreview(margin, totalRaw, totalCnt){
   margin = parseInt(margin)||10;
   var pay = Math.round(totalRaw * (1 - Math.max(0, margin-10)/100));
@@ -27606,6 +27669,11 @@ function pageDrivers(){
   btnSync.textContent='🔄 정산 전체 일괄저장';
   btnSync.onclick=function(){_syncDriverNamesToSettlements();};
   tr.appendChild(btnSync);
+  // ★ 일일 배송 데이터 업로드 버튼
+  var btnDailyLbl=document.createElement('label');btnDailyLbl.className='btn btn-sm';
+  btnDailyLbl.style.cssText='background:#7c3aed;color:#fff;font-size:11px;cursor:pointer';
+  btnDailyLbl.innerHTML='📅 일일 배송 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_parseDailyDeliveryExcel(this)">';
+  tr.appendChild(btnDailyLbl);
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
