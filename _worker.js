@@ -1538,12 +1538,12 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 &nbsp;&nbsp;◦ 단, 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.
 </div>
 <div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px;font-size:11px;color:#1e293b;line-height:2.2">
-<div class="agree-box" onclick="toggleAgree2()">
-  <input type="checkbox" id="agree-chk2" onclick="event.stopPropagation();updateAgree()">
+<div class="agree-box">
+  <input type="checkbox" id="agree-chk2" onchange="updateAgree()">
   <label for="agree-chk2">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>개인정보</b>를 수집·이용하는데 <b>동의합니다.</b></label>
 </div>
-<div class="agree-box" style="margin-top:8px" onclick="toggleAgree2b()">
-  <input type="checkbox" id="agree-chk2b" onclick="event.stopPropagation();updateAgree()">
+<div class="agree-box" style="margin-top:8px">
+  <input type="checkbox" id="agree-chk2b" onchange="updateAgree()">
   <label for="agree-chk2b">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>고유식별정보(주민등록번호)</b>를 수집·이용하는데 <b>동의합니다.</b></label>
 </div>
 <div style="margin-top:14px;font-size:11px;color:#334155;line-height:2">
@@ -1572,12 +1572,12 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 &nbsp;&nbsp;◦ 단, 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.
 </div>
 <div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:12px">
-<div class="agree-box" onclick="toggleAgree3()">
-  <input type="checkbox" id="agree-chk3" onclick="event.stopPropagation();updateAgree()">
+<div class="agree-box">
+  <input type="checkbox" id="agree-chk3" onchange="updateAgree()">
   <label for="agree-chk3">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>개인정보</b>를 제3자에게 제공하는데 <b>동의합니다.</b></label>
 </div>
-<div class="agree-box" style="margin-top:8px" onclick="toggleAgree3b()">
-  <input type="checkbox" id="agree-chk3b" onclick="event.stopPropagation();updateAgree()">
+<div class="agree-box" style="margin-top:8px">
+  <input type="checkbox" id="agree-chk3b" onchange="updateAgree()">
   <label for="agree-chk3b">본인은 ${_sc_cname} 대리점이 위와 같이 본인의 <b>고유식별정보(주민등록번호)</b>를 제3자에게 제공하는데 <b>동의합니다.</b></label>
 </div>
 <div style="margin-top:14px;font-size:11px;color:#334155;line-height:2">
@@ -1594,8 +1594,8 @@ canvas{border:1.5px solid #e2e8f0;border-radius:10px;width:100%;height:160px;bac
 ${_contractViewHtml}
 </div>
 <div class="card">
-<div class="agree-box" onclick="toggleAgree1()">
-  <input type="checkbox" id="agree-chk" onclick="event.stopPropagation();updateAgree()">
+<div class="agree-box">
+  <input type="checkbox" id="agree-chk" onchange="updateAgree()">
   <label for="agree-chk">위 계약 내용을 충분히 확인하였으며, 계약 내용에 <b>동의합니다.</b> (필수)</label>
 </div>
 </div>
