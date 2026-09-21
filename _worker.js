@@ -1342,7 +1342,9 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
           const _sc_rpJson = _cg('routePricesJson');
           let _sc_rps = []; try{ if(_sc_rpJson) _sc_rps = JSON.parse(_sc_rpJson); }catch(e){};
           const _sc_sort = _cg('sortPrice'); const _sc_cycle = _cg('cycle') || '매월 20일';
-          const _sc_dphone = _cg('driverPhone'); const _sc_daddr = _cg('driverAddr');
+          const _sc_dphone = _cg('driverPhone');
+          const _scSanitizeAddr = s => s ? s.replace(/(시|구|도|군|읍|면|동|리)\s*\.\s*/g,'$1 ').replace(/\s{2,}/g,' ').trim() : s;
+          const _sc_daddr = _scSanitizeAddr(_cg('driverAddr'));
           const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth'); const _sc_ssn = _cg('driverIdNum');
           const _sc_carnum = _cg('carNum'); const _sc_licnum = _cg('licenseNum');
           const _sc_special = _cg('special');
@@ -1850,7 +1852,8 @@ async function submitSign(){
             const _ag = k => _af[k]?.stringValue||'';
             const _aPAmt = v => {var n=Number(v);return(v&&!isNaN(n))?n.toLocaleString('ko-KR')+'원':'　　　원';};
             const _aType = _ag('type'), _aTypeName = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'}[_aType]||_ag('title')||'계약서';
-            const _aDriver=_ag('driverName'),_aPhone=_ag('driverPhone'),_aBiz=driverBizNum||_ag('driverBizNum'),_aAddr=_ag('driverAddr');
+            const _aScAddr = s => s ? s.replace(/(시|구|도|군|읍|면|동|리)\s*\.\s*/g,'$1 ').replace(/\s{2,}/g,' ').trim() : s;
+            const _aDriver=_ag('driverName'),_aPhone=_ag('driverPhone'),_aBiz=driverBizNum||_ag('driverBizNum'),_aAddr=_aScAddr(_ag('driverAddr'));
             const _aIdNum=driverIdNum||_ag('driverIdNum');
             let _aAdSig=_ag('adminSig');
             if (!_aAdSig && dealerId) {try{const _aCompR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${dealerId}`,{headers:{Authorization:'Bearer '+_dsFs}});const _aCompD=await _aCompR.json();_aAdSig=_aCompD.fields?.stampImage?.stringValue||'';}catch(_e){}}
