@@ -129,6 +129,7 @@ claude/* 브랜치 push
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-21 | DONWAY 주민번호·사업자번호 검증 로직 강화 — replace(/-/g,'') → replace(/[^0-9]/g,'') (모바일 전각 하이픈 U+FF0D 등 처리) |
 | 2026-09-21 | DONWAY 카카오 로그인 후 동의 체크박스 초기화 버그 수정 — kakaoLogin() _allAgreed() 선검증 + sessionStorage 동의 상태 보존 (_worker.js lines 1668-1682) |
 | 2026-09-21 | DONWAY 계약서 서명 페이지 SyntaxError 수정 — signPage 백틱 템플릿 내 \n → \\n (rendered line 169:27, _worker.js lines 1661/1695/1698) |
 | 2026-09-21 | 동의 체크박스 모바일 탭 안 되는 버그 수정 (onclick 이중토글 → onchange 통일) + ③ 계약 주요 내용 폼 제거 (DOCX 직접 타이핑 방식 유지) |
