@@ -1658,7 +1658,7 @@ function initPad(){
   pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
 }
 function showSignStep(id, nick){
-  if(!_allAgreed()){alert('모든 동의 항목을 체크한 후 서명할 수 있습니다.\n위 동의서를 모두 확인하고 체크해주세요.');return;}
+  if(!_allAgreed()){alert('모든 동의 항목을 체크한 후 서명할 수 있습니다.\\n위 동의서를 모두 확인하고 체크해주세요.');return;}
   _kakaoId=id||''; _kakaoNick=nick||'';
   document.getElementById('kakao-step').style.display='none';
   document.getElementById('sign-step').style.display='block';
@@ -1692,10 +1692,10 @@ async function submitSign(){
   var _idVal=_idEl?_idEl.value.trim():'';
   var _idDigits=_idVal.replace(/-/g,'');
   if(!_idDigits||_idDigits.length!==13||!/^\d{13}$/.test(_idDigits)){
-    alert('주민등록번호를 전체 13자리 입력해 주세요.\n예: 850101-1234567');
+    alert('주민등록번호를 전체 13자리 입력해 주세요.\\n예: 850101-1234567');
     btn.disabled=false;btn.textContent='서명 완료 및 제출';return;
   }
-  if(_bizVal){var _bizDigits=_bizVal.replace(/-/g,'');if(!/^\d{10}$/.test(_bizDigits)){alert('사업자등록번호 형식이 올바르지 않습니다.\n예: 123-45-67890 (10자리)');btn.disabled=false;btn.textContent='서명 완료 및 제출';return;}}
+  if(_bizVal){var _bizDigits=_bizVal.replace(/-/g,'');if(!/^\d{10}$/.test(_bizDigits)){alert('사업자등록번호 형식이 올바르지 않습니다.\\n예: 123-45-67890 (10자리)');btn.disabled=false;btn.textContent='서명 완료 및 제출';return;}}
   try{
     var _docxHtml=window._docxRenderedHtml||'';
     var res=await fetch('/api/contract/sign-driver',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({signToken:'${_cToken}',driverSig:sig,kakaoId:_kakaoId,kakaoNick:_kakaoNick,driverBizNum:_bizVal,driverIdNum:_idVal,docxHtml:_docxHtml})});
