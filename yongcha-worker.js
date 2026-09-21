@@ -1257,8 +1257,13 @@ function _esc(s){
 // (이걸 안 하면 이름에 ' 가 있는 사용자는 버튼이 통째로 깨짐)
 function _jsq(s){
   if(s===null||s===undefined)return '';
-  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')
-    .replace(/\r?\n/g,' ').replace(/</g,'\\u003c');
+  var r=String(s),b=String.fromCharCode(92),n=String.fromCharCode(10),cr=String.fromCharCode(13);
+  r=r.split(b).join(b+b);
+  r=r.split("'").join(b+"'");
+  r=r.split('"').join('&quot;');
+  r=r.split(cr).join('').split(n).join(' ');
+  r=r.split('<').join(b+'u003c');
+  return r;
 }
 function _ago(ts){
   if(!ts||!ts.seconds)return '';
