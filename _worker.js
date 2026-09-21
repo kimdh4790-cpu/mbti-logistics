@@ -1195,7 +1195,7 @@ export default {
         if (!_dlAdSig) { const _dlCid=_dg('dealerId'); if(_dlCid){try{const _dlCR=await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${_dlCid}`,{headers:{Authorization:'Bearer '+_dlFsToken}});const _dlCD=await _dlCR.json();_dlAdSig=_dlCD.fields?.stampImage?.stringValue||'';}catch(_e){}} }
         const _dlSignedAt = _dg('signedAt')||_dg('createdAt')||'';
         const _dlDateStr = _dlSignedAt ? new Date(_dlSignedAt).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'}) : new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric'});
-        const _dlPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
+        const _dlPAmt = v => {var n=Number(v);return(v&&!isNaN(n))?n.toLocaleString('ko-KR')+'원':'　　　원';};
         const _dlStart=_dg('startDate'),_dlEnd=_dg('endDate'),_dlMonths=(()=>{if(!_dlStart||!_dlEnd)return'';const _pd=s=>{let d=new Date(s);if(!isNaN(d))return d;const m=s.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):new Date(NaN);};const _s=_pd(_dlStart),_e=_pd(_dlEnd);if(isNaN(_s)||isNaN(_e))return'';const _m=Math.round((_e-_s)/(1000*60*60*24*30));return _m>0?_m+'개월':'';})()
         const _dlRoute=_dg('route'),_dlArea=_dg('area'),_dlCamp=_dg('camp'),_dlUnit=_dg('unitPrice'),_dlCollect=_dg('collectPrice'),_dlCycle=_dg('cycle')||'매월 20일',_dlSort=_dg('sortPrice'),_dlCarnum=_dg('carNum'),_dlLicnum=_dg('licenseNum'),_dlSpecial=_dg('special');
         const _dlCompanyCeo=_dg('companyCeo')||'';
@@ -1655,7 +1655,7 @@ function initPad(){
   canvas.width=canvas.offsetWidth*ratio;
   canvas.height=canvas.offsetHeight*ratio;
   canvas.getContext('2d').scale(ratio,ratio);
-  pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#111'});
+  pad=new SignaturePad(canvas,{backgroundColor:'rgb(255,255,255)',penColor:'#000',minWidth:2.5,maxWidth:4});
 }
 function showSignStep(id, nick){
   if(!_allAgreed()){alert('모든 동의 항목을 체크한 후 서명할 수 있습니다.\\n위 동의서를 모두 확인하고 체크해주세요.');return;}
@@ -1830,7 +1830,7 @@ async function submitSign(){
           try {
             const _af = _dsF;
             const _ag = k => _af[k]?.stringValue||'';
-            const _aPAmt = v => v?Number(v).toLocaleString('ko-KR')+'원':'0원';
+            const _aPAmt = v => {var n=Number(v);return(v&&!isNaN(n))?n.toLocaleString('ko-KR')+'원':'　　　원';};
             const _aType = _ag('type'), _aTypeName = {wisu:'택배 운송 위·수탁 표준계약서',subok:'계약해지에 관한 부속합의서',qflex:'퀵플렉스 계약서',labor:'근로계약서'}[_aType]||_ag('title')||'계약서';
             const _aDriver=_ag('driverName'),_aPhone=_ag('driverPhone'),_aBiz=driverBizNum||_ag('driverBizNum'),_aAddr=_ag('driverAddr');
             const _aIdNum=driverIdNum||_ag('driverIdNum');
