@@ -718,7 +718,7 @@ cd mbtico-pages && npx wrangler deploy
   - `/api/stmt-tax-issue`: 자동가입 후 certUrl 응답에 포함
   - 명세서 프론트: 신청 완료 시 "공인인증서 등록하기" 링크 버튼 노출 (`#tax-cert-section`)
 - **팝빌 키 발급 필요** (연동 미완료): 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com) 연락 후 POPBILL_LINK_ID / POPBILL_SECRET_KEY Cloudflare Secret 등록
-- **팝빌 견적서 수신** (2026-07-31): 전자세금계산서 발행 100원/건 (종량제, 연동비용 무료), No. 202607-712
+- **팝빌 견적서 수신** (2026-07-31, 재중 2026-09-21): 전자세금계산서 발행 **50원/건** (종량제, 연동비용 무료), No. 202607-712
 
 ### ✅ 완료 (2026-09-18 DONWAY 계약서 카카오톡 인쇄 버튼 수정)
 - **_worker.js `_dlBtnBar`**: `onclick="window.print()"` → `_dlPrint()` 함수로 교체
@@ -862,7 +862,7 @@ cd mbtico-pages && npx wrangler deploy
 
 ### 계약 정보
 - 견적서 No. 202607-712 (2026-07-31)
-- 요금: 전자세금계산서 발행 **100원/건** (종량제, 연동비용 무료)
+- 요금: 전자세금계산서 발행 **50원/건** (종량제, 연동비용 무료) / 은행계좌조회 8원/건 / 홈택스수집 월 100,000원(VAT별도)
 - 담당: **박주선 팀장** / 010-5330-0078 / jooseon@linkhubcorp.com
 - 팝빌 키 발급 후 아래 Cloudflare Secrets 등록 필요
 
