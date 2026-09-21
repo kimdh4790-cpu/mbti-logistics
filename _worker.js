@@ -1633,7 +1633,7 @@ ${_contractViewHtml}
 </div>
 <script>
 var pad, _kakaoId='', _kakaoNick='';
-function agreePrivacy(){['agree-chk','agree-chk2','agree-chk2b','agree-chk3','agree-chk3b'].forEach(function(id){var el=document.getElementById(id);if(el)el.checked=true;});updateAgree();}
+function agreePrivacy(){['agree-chk','agree-chk2','agree-chk2b','agree-chk3','agree-chk3b'].forEach(function(id){var el=document.getElementById(id);if(el){el.checked=true;el.dispatchEvent(new Event('change'));}});updateAgree();var sc=document.getElementById('sign-card');if(sc)sc.scrollIntoView({behavior:'smooth',block:'start'});}
 function toggleAgree1(){var c=document.getElementById('agree-chk');c.checked=!c.checked;updateAgree();}
 function toggleAgree2(){var c=document.getElementById('agree-chk2');c.checked=!c.checked;updateAgree();}
 function toggleAgree2b(){var c=document.getElementById('agree-chk2b');c.checked=!c.checked;updateAgree();}
