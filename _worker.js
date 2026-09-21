@@ -1738,10 +1738,17 @@ async function submitSign(){
           const now = new Date().toISOString();
           const signIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || '';
           const signUa = request.headers.get('User-Agent') || '';
+          // 계약서 원본 SHA-256 해시 (문서 위변조 방지)
+          let contractHash = '';
+          try {
+            const _hashSrc = (body.docxHtml || _dsF.docxHtml?.stringValue || signToken) + signToken;
+            const _hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_hashSrc));
+            contractHash = Array.from(new Uint8Array(_hashBuf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+          } catch(_){}
           // 서명 저장 + 메타데이터 + 카카오 본인확인
           // docxHtml이 비어있으면 updateMask에서 제외 (대리점 타이핑 내용 덮어쓰기 방지)
-          let _dsPatchUrl=`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa&updateMask.fieldPaths=kakaoId&updateMask.fieldPaths=kakaoNick&updateMask.fieldPaths=driverBizNum&updateMask.fieldPaths=driverIdNum`;
-          const _dsPatchFields={driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa},kakaoId:{stringValue:kakaoId||''},kakaoNick:{stringValue:kakaoNick||''},driverBizNum:{stringValue:driverBizNum||''},driverIdNum:{stringValue:driverIdNum||''}};
+          let _dsPatchUrl=`${_dsDocName}?updateMask.fieldPaths=driverSig&updateMask.fieldPaths=driverSignedAt&updateMask.fieldPaths=status&updateMask.fieldPaths=driverSignIp&updateMask.fieldPaths=driverSignUa&updateMask.fieldPaths=kakaoId&updateMask.fieldPaths=kakaoNick&updateMask.fieldPaths=driverBizNum&updateMask.fieldPaths=driverIdNum&updateMask.fieldPaths=contractHash`;
+          const _dsPatchFields={driverSig:{stringValue:driverSig},driverSignedAt:{stringValue:now},status:{stringValue:'signed'},driverSignIp:{stringValue:signIp},driverSignUa:{stringValue:signUa},kakaoId:{stringValue:kakaoId||''},kakaoNick:{stringValue:kakaoNick||''},driverBizNum:{stringValue:driverBizNum||''},driverIdNum:{stringValue:driverIdNum||''},contractHash:{stringValue:contractHash}};
           if(body.docxHtml){_dsPatchUrl+='&updateMask.fieldPaths=docxHtml';_dsPatchFields.docxHtml={stringValue:body.docxHtml};}
           const _dsPatchRes=await fetch(_dsPatchUrl,{method:'PATCH',headers:{Authorization:'Bearer '+_dsFs,'Content-Type':'application/json'},body:JSON.stringify({fields:_dsPatchFields})});
           if(!_dsPatchRes.ok){const _dsPatchErr=await _dsPatchRes.text().catch(()=>'');return new Response(JSON.stringify({ok:false,error:'서명 저장 실패 ('+_dsPatchRes.status+')'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});}
