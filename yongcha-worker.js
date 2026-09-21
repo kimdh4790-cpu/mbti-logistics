@@ -941,15 +941,6 @@ select.inp option{background:#24243d;color:#f0f1f8}
     if(e.ctrlKey&&e.keyCode===85) e.preventDefault(); // Ctrl+U
     if(e.metaKey&&e.altKey&&e.keyCode===73) e.preventDefault(); // Cmd+Option+I
   });
-  // devtools 감지 — 열리면 경고 후 홈으로
-  var _dtOpen=false;
-  setInterval(function(){
-    var t=new Date();
-    debugger;
-    if(new Date()-t>100){
-      if(!_dtOpen){_dtOpen=true;console.clear();alert('보안 정책상 개발자 도구 사용이 제한됩니다.');location.reload();}
-    } else {_dtOpen=false;}
-  },2000);
 })();
 </script>
 </head>
