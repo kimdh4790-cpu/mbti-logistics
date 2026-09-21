@@ -3,7 +3,6 @@
 // 사용법: node scripts/monitor/content-monitor.js
 // Oracle Cloud cron: 매일 09:00 KST (00:00 UTC)
 
-import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -71,62 +70,62 @@ function parseRSS(xml) {
   return items;
 }
 
-// Claude Haiku로 분류 (https 직접 호출 — Node.js fetch ByteString 오류 우회)
+// 키워드 기반 폴백 분류 (API 실패 시)
+function classifyByKeyword(title) {
+  const t = title.toLowerCase();
+  const aiWords = ['claude','gpt','gemini','llm','ai','chatgpt','copilot','midjourney','suno','runway','mcp','rag','프롬프트','생성ai','에이전트','클로드','챗gpt','fable','haiku','sonnet','opus'];
+  const moneyWords = ['부업','수익','매출','창업','투자','돈버는','월급','재테크','파이어','사이드','side','monetize','수익화','월수익','정산','세금','절세'];
+  const appWords = ['pos','kiosk','키오스크','배달','정산','근태','급여','재고','주문','예약','물류','기사','소장','매장','식당','카페'];
+  const aiUpgradeWords = ['자동화','n8n','노코드','api','webhook','크롤링','스크래핑','파이썬','python','workflow','자동','봇','bot'];
+  if (aiWords.some(w => t.includes(w))) return { category: 'AI기능업그레이드', reason: '키워드 기반: AI 관련' };
+  if (moneyWords.some(w => t.includes(w))) return { category: '수익창출', reason: '키워드 기반: 수익/부업 관련' };
+  if (aiUpgradeWords.some(w => t.includes(w))) return { category: 'AI기능업그레이드', reason: '키워드 기반: 자동화 관련' };
+  if (appWords.some(w => t.includes(w))) return { category: '앱기능', reason: '키워드 기반: 앱/서비스 관련' };
+  return null; // 패스
+}
+
+// Claude Haiku로 분류 (fetch 사용)
 async function classify(videoTitle, channelName) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return classifyByKeyword(videoTitle) || { category: '패스', reason: 'API키 미설정' };
+  }
+
   const prompt = `MBTICO 관점에서 이 YouTube 영상을 분류해줘.
-MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouTube "AI 자동화 연구소" 채널 운영 중. 대표가 직접 시청해서 아이디어 얻는 용도.
+MBTICO: 소상공인 SaaS (FILO 매장관리POS, DONWAY 정산, 용차앱), YouTube "AI 자동화 연구소" 채널 운영. 대표가 직접 시청해서 아이디어 얻는 용도.
 
 채널: ${channelName}
 제목: ${videoTitle}
 
-분류 기준 (AI트렌드 최우선 — 조금이라도 해당하면 패스 금지):
-- AI트렌드: 신규 AI 모델(Claude/GPT/Gemini/Grok 등)·새 AI 도구·AI 에이전트·MCP·RAG·LLM·프롬프트 엔지니어링·이미지/영상/음성 생성 AI·AI 자동화 기법 등 AI 분야 최신 동향. 다른 카테고리와 겹치면 AI트렌드 우선
-- 강의소재: AI·자동화·노코드·개발·SaaS·마케팅·수익화·창업 등 "AI 자동화 연구소" 강의 주제로 쓸 수 있는 것
-- 앱기능: FILO(매장POS)/DONWAY(정산)/용차앱에 추가하면 좋을 기능·UX·워크플로우 아이디어
-- 수익성: 새로운 사업 아이템, 수익 모델, 트렌드 아이디어, 부업·투자·비즈니스 기회 — 분야 무관하게 돈이 될 가능성 있는 것
-- 패스: 개인 일상·먹방·여행·순수 오락 등 위 네 가지와 전혀 무관한 것만
+분류 기준 (수익창출·AI기능업그레이드 최우선):
+- 수익창출: 부업·창업·매출·수익화·사이드프로젝트·투자·사업 아이디어 — 돈이 될 가능성 있는 모든 것 (MONEY TOUCH 영상 대부분 해당)
+- AI기능업그레이드: AI 신모델(Claude/GPT/Gemini 등)·AI도구·에이전트·MCP·자동화·n8n·프롬프트·이미지/영상 생성AI — FILO·DONWAY·용차앱에 AI기능 추가할 때 참고할 내용
+- 앱기능: FILO(매장POS)/DONWAY(정산)/용차앱에 추가할 UI·기능·UX 아이디어 (매장운영·물류·정산 관련)
+- 패스: 강아지·먹방·여행·스포츠·뷰티 등 위 세 카테고리와 완전히 무관한 것만
 
-JSON만: {"category":"AI트렌드","reason":"한줄이유"}`;
+JSON만: {"category":"수익창출","reason":"한줄이유"}`;
 
-  const body = Buffer.from(JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 150,
-    messages: [{ role: 'user', content: prompt }]
-  }), 'utf8');
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return { category: '패스', reason: 'API키 미설정' };
-  }
-
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname: 'api.anthropic.com',
-      path: '/v1/messages',
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': body.length,
         'anthropic-version': '2023-06-01',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
-      }
-    }, (res) => {
-      const chunks = [];
-      res.on('data', chunk => chunks.push(chunk));
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-          const raw = data.content[0].text;
-          const j = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
-          resolve(JSON.parse(j));
-        } catch {
-          resolve({ category: '패스', reason: '분류 실패' });
-        }
-      });
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        messages: [{ role: 'user', content: prompt }]
+      })
     });
-    req.on('error', () => resolve({ category: '패스', reason: '네트워크 오류' }));
-    req.write(body);
-    req.end();
-  });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const j = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1);
+    return JSON.parse(j);
+  } catch {
+    // API 실패 시 키워드 폴백
+    return classifyByKeyword(videoTitle) || { category: '패스', reason: 'API오류·키워드도 미매칭' };
+  }
 }
 
 // Aligo SMS 발송 (환경변수 설정 시)

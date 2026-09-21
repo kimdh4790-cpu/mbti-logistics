@@ -1,6 +1,13 @@
 # MBTICO - CLAUDE.md
 > 유한회사 엠비티아이 SaaS 모노레포. 세션 시작 시 반드시 이 파일 전체를 읽고 시작할 것.
 
+## 🕐 시간 표기 원칙 (필수)
+- **모든 시간은 한국 표준시(KST = UTC+9) 기준으로 표기하고 등록할 것**
+- UTC로 저장해야 하는 경우(cron 등)에도 사용자에게는 반드시 KST로 보고
+- 예: "목 00:00 UTC" → "목 09:00 KST"로 표현
+
+---
+
 ## ⚡ 자율 적용 원칙 (2026-09-09 확정)
 - **무료 + 유용한 도구·라이브러리·기법은 발견 즉시 허락 없이 바로 적용**
 - 적용 후 무엇을 왜 썼는지 한 줄 보고만 하면 됨
@@ -31,12 +38,11 @@
 | `SOCIAL_MEDIA_MEMO.md` | 소셜미디어·영상 작업 시 |
 | `BUSINESS_MEMO.md` | 비즈니스·요금·POS기·특허·경쟁사 관련 시 |
 | `INFRA_MEMO.md` | Oracle Cloud·GitHub Actions·플러그인·OmniRoute 작업 시 |
-| `FILO_DINE_MEMO.md` | FILO·DINE 앱 작업 시 |
 | `YONGCHA_MEMO.md` | 용차앱 작업 시 |
-| `배송앱_변경내역.md` | 배송앱·emergency.html 수정 시 |
+| `배송앱_변경내역.md` | 배송앱(filo.ai.kr)·emergency.html 수정 시 |
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 | `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
-| `SCAN_MEMO.md` | SCAN AI (mbtico.kr/scan) 문서분석 서비스 작업 시 |
+| `SCAN_MEMO.md` | SCAN AI (dine.ne.kr) 문서분석 서비스 작업 시 |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
@@ -64,12 +70,12 @@ npm run smoke:filo     # FILO만
 ### 파일 수정 시 영향 범위 (꼭 확인)
 | 수정 파일 | 테스트 대상 |
 |---|---|
-| `_worker.js` | **전체 5개 앱** (filo, dine, donway, yongcha, mbtico) |
-| `filo-common.js` | FILO + DINE |
-| `filo-order-common.js` | FILO (order·table-order·store·kitchen) |
-| `filo-staff.js` | FILO + DINE (members·attendance 공유) |
-| `filo-*.js`, `filo.html` | FILO만 |
-| `dine-*.js`, `dine.html` | DINE만 |
+| `_worker.js` | DONWAY (donway.ai.kr 전용) |
+| `mbtico-worker.js` | mbtico.kr 관제센터 |
+| `filo-worker.js` | filo.ai.kr 배송앱 |
+| `dine-worker.js` | dine.ne.kr SCAN 서비스 |
+| `emergency.html` | 배송앱(filo.ai.kr) 핵심 |
+| `scan.html` | SCAN(dine.ne.kr) 핵심 |
 | `donway*.js` | DONWAY만 |
 | `yongcha*.js` | 용차앱만 |
 | `mbtico*.js`, `mbtico-pages/` | MBTICO만 |
@@ -96,63 +102,29 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 
 ## 📱 앱별 구조 & 담당 파일 (세션 시작 시 담당 앱 확인 필수)
 
-### 🟣 FILO (filo.ai.kr) — 매장 관리 SaaS
-> 담당 메모: FILO_DINE_MEMO.md 필독
-- **진입**: filo.html / filo-auth.js (로그인·홈 대시보드·라우팅)
-- **공통**: filo-common.js ← 절대 직접 수정 금지. 읽기만 허용
-- **POS**: filo-pos.js, filo-pos-core.js, filo-pos-ui.js
-- **주문**: filo-order.js, filo-order-common.js
-- **테이블**: filo-table.js
-- **메뉴**: filo-menu.js (55KB), filo-menu-mgmt.js, filo-menu-recipe.js
-- **예약/웨이팅**: filo-booking.js
-- **직원/QR출퇴근**: filo-staff.js, filo-qr.js
-- **급여**: filo-payroll2.js
-- **회원**: filo-members.js
-- **재고**: filo-inventory.js
-- **마진분석**: filo-margin.js
-- **결제**: filo-payment.js
-- **스케줄**: filo-schedule.js
-- **설정**: filo-settings.js
-- **리포트**: filo-report.js
-- **랜딩**: filo-landing.html, filo-landing.js
+### 🟣 FILO (filo.ai.kr) — 배송앱 (2026-09-20 전환)
+> 담당 메모: `배송앱_변경내역.md` 필독
+- **핵심 파일**: emergency.html (배송 기사 앱), filo-worker.js (라우터)
+- filo.ai.kr은 배송앱 위주로 운영
+- 구 매장관리 SaaS(filo-auth.js, filo-pos.js 등) 폐기 방향
 
 **FILO 절대 금지**
-- filo-common.js 수정 금지
-- Firestore filo_orders 컬렉션 필드명 변경 금지 (tableNum·status·date·dealerId·items)
-- tableNum 타입 혼재(String·int) 상태 유지 — 변경 시 전체 주문 조회 깨짐
-- _filoToast() 대신 alert() 사용 금지
+- filo-worker.js 대규모 수정 금지 (배송앱 라우팅 핵심)
+- emergency.html 수정 전 반드시 배송앱_변경내역.md 확인
 
 ---
 
-### 🟢 DINE (dine.ne.kr) — 직원 전용 앱
-> 담당 메모: FILO_DINE_MEMO.md 필독
-- **진입**: dine.html / dine.js
-- **스케줄**: dine-schedule.js
-- **분석**: dine-analytics.js
-- **직원**: dine-staff.js ← FILO의 members 컬렉션 공유 사용
-- **급여**: dine-payroll.js
-- **매출**: dine-sales.js
-- **세금**: dine-tax.js
-- **회원·예약**: dine-member.js ← filo_bookings, filo_customers 공유
-- **랜딩**: dine-landing.html, dine-landing.js
+### 🟢 DINE (dine.ne.kr) — SCAN 문서분석 서비스 (2026-09-20 전환)
+> 담당 메모: `SCAN_MEMO.md` 필독
+- **핵심 파일**: scan.html (프론트), dine-worker.js (라우터+API)
+- dine.ne.kr 루트 → scan.html 서빙
+- SCAN API: `/api/seolyuhana/*` (analyze·result·download·points·point-request·point-approve)
+- Firebase authDomain: `dine.ne.kr`
+- 백엔드 모듈: `seolyuhana/services/analyze.js`, `seolyuhana/utils/parser.js`, `seolyuhana/output/builder.js`
 
-**DINE 절대 금지**
-- DINE용 별도 직원 컬렉션 생성 금지 (FILO members 컬렉션 그대로 공유)
-- FILO·DINE 공유 컬렉션: members, attendance, filo_bookings, filo_customers, filo_sales
-- _dineToast() 대신 alert() 사용 금지
-
----
-
-### 🟡 QR 주문·주방 (filo.ai.kr/order·/store·/kitchen)
-- order.html, order.js, order-done.html — 고객 QR 주문
-- table-order.html — 테이블 직접 주문 (선결제/후불 모달 완료)
-- store.html — 매장 주문 현황
-- kitchen.html — 주방 디스플레이
-- filo-order-common.js — 메뉴 로딩·번역 공통 (order·table-order·store 공유)
-
-**QR 주문 절대 금지**
-- filo_orders 컬렉션 구조 변경 금지
-- filo-order-common.js의 _applyTranslationsToGrid() 로직 단독 수정 금지 (order·store 동시 영향)
+**DINE/SCAN 절대 금지**
+- scan.html authDomain을 다시 mbtico.kr로 변경 금지
+- dine-worker.js의 `/api/seolyuhana/*` 핸들러 구조 변경 금지
 
 ---
 
@@ -179,6 +151,7 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 ---
 
 ### ⚪ MBTICO 관제센터 (mbtico.kr)
+- **mbtico-worker.js** ← 전용 Worker (wrangler.mbtico.toml, 2026-09-20 _worker.js에서 분리)
 - mbtico-pages/ ← 별도 wrangler (cd mbtico-pages && npx wrangler deploy)
 - mbtico-ctrl.js — 슈퍼어드민용 (채팅·공지·결제·매장 관리)
 
@@ -188,8 +161,18 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 
 ---
 
-### ⚫ 공유 Worker (_worker.js) — 전체 앱 API 라우터
-- filo.ai.kr·dine.ne.kr·donway.ai.kr·mbtico.kr·yongcha.app 모두 이 파일 거침
+### ⚫ _worker.js — donway.ai.kr 전용 Worker
+> 2026-09-20: mbtico.kr 블록 분리 완료. 현재 donway.ai.kr 전용.
+
+**도메인별 Worker 파일 현황**
+| 도메인 | Worker 파일 | wrangler config |
+|---|---|---|
+| filo.ai.kr | filo-worker.js | wrangler.filo.toml |
+| dine.ne.kr | dine-worker.js | wrangler.dine.toml |
+| donway.ai.kr | _worker.js | wrangler.toml |
+| mbtico.kr | mbtico-worker.js | wrangler.mbtico.toml |
+| yongcha.app | yongcha-worker.js | wrangler.yongcha.toml |
+
 - KV(DONWAY_ASSETS)에서 HTML·JS 파일 서빙
 - Firestore SA 키로 서버사이드 Firestore 직접 접근
 
@@ -197,6 +180,11 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 - `}{status:400` 치환 패턴 수정 금지 (Worker 빌드 깨짐)
 - wrangler.toml [vars] 수정 금지
 - Cloudflare Secrets는 대시보드 또는 `wrangler secret put` (OPC VM에서 CF_GLOBAL_KEY 사용)으로 관리
+
+### 🔴 DONWAY 계약서 설계 원칙 (절대 변경 금지)
+- **계약 내용 입력 방식**: DOCX 파일 다운로드 → 기사가 직접 타이핑 → 등록. 별도 입력 폼(담당구역·수수료·차량번호 등) 추가 금지
+- **사업자번호·주민번호**: 기사가 서명 페이지(알림톡 링크)에서 직접 입력. 대리점 화면에서 미리 입력 받지 않음
+- **_ctrRenderWrite()**: ② 대리점 정보 카드 + ④ DOCX 업로드 + ⑤ 대리점 서명 3단계만 존재. ③ 계약 주요 내용 폼 절대 추가 금지
 
 ---
 
@@ -208,7 +196,6 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 - GitHub Actions secrets (CF_GLOBAL_KEY)
 - 슈퍼어드민 UID·dealerId
 - deploy.yml 수정 가능 (단, workflow 파일 변경 시 auto-merge 안 됨 → GitHub에서 수동 Merge 필요)
-- filo-common.js 직접 수정 금지
 - DONWAY preFreshback/dateFresh 로직 수정 금지
 
 ## 📦 배송앱 작업 전 필독
@@ -254,7 +241,7 @@ cd mbtico-pages && npx wrangler deploy
 - 5개 초과 목록  페이지네이션
 - 이모지 금지  Lucide SVG 사용
 - 폰트: Pretendard 전용
-- alert() 금지  _filoToast()/_dineToast() 사용
+- alert() 금지  toast 함수 사용
 - Claude Code 원격 컨테이너: 코드 수정+배포 가능. Playwright 브라우저가 외부 URL 접근 불가 → 녹화/업로드 불가
 - Oracle Cloud (161.33.136.154): Playwright + Chromium + Node.js 완전 실행 가능. 녹화·편집·업로드 모두 가능
 - wrangler login은 로컬 또는 Oracle Cloud에서만
@@ -612,6 +599,92 @@ cd mbtico-pages && npx wrangler deploy
 - Firebase Auth popup→redirect 폴백 + getRedirectResult 초기화 추가
 - 슈퍼어드민(kimdh4790@gmail.com·soungkyekim@naver.com) 무제한 포인트(∞P) 바이패스
 
+### ✅ 완료 (2026-09-15 DONWAY 카카오 소셜 로그인/가입)
+- **카카오 OAuth 콜백 처리 수정** (_worker.js): 루트(`/`)에서 `?code=` 파라미터 감지 시 `/join?code=...&state=...`으로 302 리다이렉트 → `settle.html` IIFE가 콜백 처리 (이전에는 `donway_landing.html`이 서빙돼 콜백 실행 안 됨)
+- **카카오 SDK v2.7.x 호환** (donway-pages/index.html): `Kakao.Auth.login()` → `Kakao.Auth.authorize({redirectUri, state})`
+- **OAuth state 파라미터**: intent('login'/'register')를 state로 전달 (sessionStorage 소실 방지)
+- **소셜 가입 간소화**: 카카오 가입 시 사업자등록증·담당자명·연락처 필수 검증 제거 (`!_socialAuthType&&` 가드)
+- **`/api/kakao-auth` 엔드포인트** (_worker.js): 카카오 인증코드 → Firebase Custom Token 교환
+- 카카오 리다이렉트 URI: `https://donway.ai.kr` (Kakao Developers에 등록, 변경 불필요)
+
+### ✅ 완료 (2026-09-14 DONWAY 계약서 시스템 + 대시보드 정리)
+- **pageSchedule + _renderCalendar 복원**: git history(826ce16)에서 달력 함수 추출, pages 객체 참조 추가
+- **DONWAY 계약서 시스템 전면 구현** (donway-pages/index.html):
+  - 위수탁/퀵플렉스/근로계약 3종 계약 유형 카드 선택
+  - 등록 기사 드롭다운 → 성명·전화·사업자번호·주소 자동 입력
+  - 유형별 조건 폼 + 미리보기(새 창 인쇄 가능) + Firestore `contracts` 저장 + 보관함 조회·인쇄·삭제
+- **대시보드 퀵버튼 비정산 제거**: 세무사 연동·출퇴근 현황·근무 설정·근무표·급여 계산·연차 관리·배차 현황·직원 가입 QR·송금 관리 제거
+  - 유지: 정산하기·기사 관리·위수탁 계약서·달력 (settle 서비스 기준)
+  - isVisiting 슈퍼어드민 고객 방문 시 고객 services 기준 표시로 변경
+- **Firestore 읽기/쓰기 체크**: contracts·cal_memos·drivers 컬렉션 보안 규칙 정상 확인 (canRead/canWrite/canOwn 패턴)
+
+### ✅ 완료 (2026-09-20 DONWAY 계약서 정보 입력 타이핑 방식으로 전환)
+- **계약서 정보 입력 완전 재설계** (donway-pages/index.html):
+  - 복잡한 DOCX 자동감지 방식 제거 → 직접 타이핑 입력 방식으로 전환
+  - 항목별 입력란: 기사명·전화·사업자번호·주민번호·주소·차량번호·자격증번호·계약기간(시작·종료)
+  - "📝 DOCX에 입력하기" 버튼: 타이핑한 값을 DOCX 빈칸에 키워드 매핑으로 채움
+  - 등록 기사 선택은 선택사항(위 항목 자동완성 보조)으로 변경
+  - 계약기간 기본값 오늘~1년 후 자동 설정
+  - `_ctrApplyTyped()` 신규 함수, `_ctrAutoFillDocx()` alias로 유지
+  - 화면 순서: DOCX 업로드 → 정보 타이핑 → 기사 선택(선택) → 라우트 → 서명
+
+### ✅ 완료 (2026-09-20 DONWAY 계약서 탭 단일화 + 코드 경량화)
+- **내 템플릿 탭 완전 삭제** (donway-pages/index.html): `_ctrRenderTemplate()` + `_wt*` 함수 전체(~370라인) 제거
+- **간편서명 탭 완전 삭제** (donway-pages/index.html): `_ctrRenderQuick()` + `_ctrQk*` 함수 전체(~131라인) 제거
+- **2탭으로 단일화**: 계약 작성 / 계약 목록 (기존 4탭 → 2탭)
+- **DOCX localStorage 영속화**: 업로드한 계약서 파일을 새로고침 후에도 유지 (`ctr_docx_{dealerId}` 키)
+  - `_ctrDocxLoad()`: 변환 후 localStorage 저장
+  - `_ctrDocxClear()`: × 삭제 버튼 클릭 시 localStorage 삭제 + 화면 초기화
+  - `_ctrRestoreDocx()`: 계약 작성 탭 렌더 시 100ms 후 자동 복원
+- **`_ctrAutoFillDocx()` async화**: `_routeCampMap` 비어있을 때 Firestore(`settings/{cid}_routeCampMap`)에서 자동 fetch → 캠프명 자동입력 정확도 향상
+
+### ✅ 완료 (2026-09-20 카톡 전자서명 후 타이핑 내용 아카이브 반영 수정)
+- **_worker.js POST 핸들러**: `_ag('docxHtml')||body.docxHtml` 순서로 변경 (Firestore 우선, body 폴백)
+- **_worker.js sign 페이지 GET**: `JSON.stringify()` 결과에서 `</script>` → `<\/script>` 이스케이프 (인라인 스크립트 파싱 오류 방지)
+- **donway-pages/index.html `_ctrCollect()`**: `#ctr-docx-content` DOM 없을 때 localStorage(`ctr_docx_edit_` → `ctr_docx_`) 폴백으로 타이핑 내용 복원
+- **donway-pages/index.html**: `_ctrRenderBlankInputs()` 빈 스텁, `_ctrSave()`에서 `_ctrFillBlanks()` 호출 제거
+
+### ✅ 완료 (2026-09-20 DONWAY 계약서 아카이브 버그 수정)
+- **_worker.js sign page GET**: `_adminDocxHtml` 경로에서 `window._docxRenderedHtml` 미설정 수정 → 인라인 `<script>` 주입으로 설정
+- **_worker.js archive POST**: `if(_aCustomUrl)` 조건에 `||_aDocxHtmlSaved` 추가 → 로컬 DOCX 업로드+타이핑 케이스에서도 아카이브 정상 생성
+- 수정 전: contenteditable에서 타이핑 후 저장해도 전자서명 완료 시 빈 wisu 템플릿 표시
+- 수정 후: 타이핑한 내용이 서명 완료 아카이브 HTML에 정확히 반영됨
+- **_worker.js archive DOCX 케이스 _aDetailTable 제거**: DOCX 업로드 케이스에서 빈 "📋 계약 주요 내용" 요약 박스 표시 안 함 → DOCX 원본 HTML + 서명 블록만 표시 (구조화 필드 삭제 후 빈 표만 나오던 문제 해결)
+- **donway-pages/index.html 범용 빈칸 감지 시스템**: MBTICO 전용 하드코딩 카드 제거 → `_ctrRenderBlankInputs()` / `_ctrFillBlanks()` 신규 구현 (어떤 대리점 DOCX든 `<u>` 빈칸 자동감지 → 동적 입력폼)
+
+### ✅ 완료 (2026-09-20 mbtico.kr Worker 분리)
+- **mbtico-worker.js 신규**: mbtico.kr 전용 Worker (wrangler.mbtico.toml)
+  - `_worker.js`에서 mbtico.kr 블록(~307라인) 제거 → donway.ai.kr 전용으로 슬림화
+  - 공통 헬퍼 + mbtico.kr 라우팅 + 전체 공통 API 포함
+  - mbtico-ctrl.js KV 서빙, Firebase `/__/auth/` 프록시, 관제센터 전체 기능 포함
+- **wrangler.toml**: mbtico.kr/* 라우트 제거 → donway.ai.kr/* 만 남음
+- **deploy.yml**: "Deploy Mbtico Worker" 스텝 추가 (wrangler.mbtico.toml 사용)
+- 5개 도메인 전부 전용 Worker로 분리 완료 (filo/dine/donway/_worker/mbtico/yongcha)
+
+### ✅ 완료 (2026-09-20 filo·dine Worker 분리)
+- **filo-worker.js 신규**: filo.ai.kr 전용 Worker (wrangler.filo.toml)
+  - `_worker.js`에서 DONWAY 블록(L1154-3470) + mbtico.kr 블록 + bico/mbetco compat + DONWAY 아이콘 + handleYongcha 함수 제거
+  - 공통 헬퍼 + filo 라우팅 + 전체 공통 API 포함 (~14,954라인)
+- **dine-worker.js 신규**: dine.ne.kr 전용 Worker (wrangler.dine.toml)
+  - filo-worker.js와 동일 구조 (공통 헬퍼 + 전체 공통 API 포함)
+  - dine.ne.kr 루트→SCAN 앱 서빙, SCAN API 블록 포함
+- **wrangler.toml 슬림화**: filo.ai.kr/*, dine.ne.kr/* 라우트 제거 → DONWAY + mbtico.kr만 남음
+- **deploy.yml**: "Deploy Filo Worker" + "Deploy Dine Worker" 스텝 추가, 캐시 퍼지 대상 filo.ai.kr·dine.ne.kr 추가
+
+### ✅ 완료 (2026-09-20 SCAN dine.ne.kr 단일 운영 전환)
+- **SCAN 도메인 단일화**: mbtico.kr/scan 폐기 → dine.ne.kr에서만 운영
+- `_worker.js` mbtico.kr 블록: `/scan`, `/scan.html`, `/scan-manifest.json`, `/scan-icon-192.png`, `/scan-icon-512.png` 라우트 삭제 (PR #116 포함)
+- SCAN API(`/api/seolyuhana/*`) 공통 라우팅 블록으로 이전 → mbtico.kr + dine.ne.kr 양쪽에서 동작
+- `_worker.js` dine.ne.kr 블록에 `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채지지 않도록 수정
+- SCAN_MEMO.md 도메인 이전 이력 섹션 추가 + 서비스 위치 업데이트
+
+### ✅ 완료 (2026-09-21 DONWAY 계약서 아카이브 중복 서명란 제거)
+- **_worker.js 아카이브 생성 로직 수정**: 타이핑 DOCX 케이스에서 `${_aSignBlock}` 제거
+  - 원인: 타이핑 DOCX HTML(위수탁 표준 템플릿)에 이미 `(인)` 치환으로 갑+을 서명 삽입됨 + `_aSignBlock` 별도 서명 테이블 + `_aHtml` 하단 검증 테이블 = 서명 3중 중복
+  - 수정: `_aDocxHtml` 브랜치에서 `${_aSignBlock}` 완전 제거 → 타이핑 HTML + 하단 검증 테이블만 남음
+- **docxHtml 우선순위 수정**: `body.docxHtml||_ag('docxHtml')` → `_ag('docxHtml')||body.docxHtml` (Firestore 최우선)
+- **계약서 서명 플로우**: 대리점(갑) 도장/서명 먼저 저장(`adminSig` Firestore) → 알림톡 발송 → 기사(을) 서명 페이지 서명란 1개(을만) → 완성본에 갑 도장+을 서명 모두 표시
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
@@ -638,11 +711,32 @@ cd mbtico-pages && npx wrangler deploy
 - pip3 + mesa-libGL 설치 완료, 서버 포트 3101 정상 기동
 - setup_ocr.sh mesa-libGL 의존성 추가 완료
 
+### ✅ 완료 (2026-09-18 팝빌 역발행 자동등록 플로우)
+- **정산명세서 세금계산서 버튼 탭 → 팝빌 연동회원 자동등록 + 공인인증서 URL 반환**
+  - `popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum)`: CheckIsMember → **CheckID(중복확인)** → 미가입 시 JoinMember 자동 호출 (팝빌 공식 프로세스 준수)
+  - `popbillGetDriverCertUrl(env, driverCorpNum)`: GetTaxCertURL 호출, 등록 링크 반환
+  - `/api/stmt-tax-issue`: 자동가입 후 certUrl 응답에 포함
+  - 명세서 프론트: 신청 완료 시 "공인인증서 등록하기" 링크 버튼 노출 (`#tax-cert-section`)
+- **팝빌 키 발급 필요** (연동 미완료): 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com) 연락 후 POPBILL_LINK_ID / POPBILL_SECRET_KEY Cloudflare Secret 등록
+- **팝빌 견적서 수신** (2026-07-31): 전자세금계산서 발행 **100원/건** (종량제, 연동비용 무료), No. 202607-712
+
+### ✅ 완료 (2026-09-18 DONWAY 계약서 카카오톡 인쇄 버튼 수정)
+- **_worker.js `_dlBtnBar`**: `onclick="window.print()"` → `_dlPrint()` 함수로 교체
+  - KakaoTalk 감지 시: 노란 안내 배너("우측 상단 ··· → 외부 브라우저로 열기") 표시
+  - 일반 브라우저: 기존대로 `window.print()` 정상 동작
+
+### ✅ 완료 (2026-09-18 팝빌 버그 수정)
+- **DONWAY 팝빌 함수 3개 test mode 하드코딩 수정** (`_worker.js`):
+  - `popbillIssueReverseDonway` / `popbillAutoJoinDriver` / `popbillGetDriverCertUrl` 모두 `POPBILL_TEST_MODE` 환경변수 반영
+  - `taxInvoiceIsTest` Firestore 필드도 `isTest` 값으로 정확히 저장
+- **`/api/popbill-webhook` 동기화 버그 수정**: `settlements` 컬렉션만 업데이트하던 것을 `statement_share`도 동시 업데이트 (기사 명세서 페이지 상태 반영)
+
 ### 최우선
 1. FCM 영수증 푸시 - 실 기기에서 동작 확인 필요
+2. 팝빌 키 발급 → Cloudflare Secret 등록 → 역발행 실전 테스트
 
 ### 중간
-2. 관제센터 채팅/공지/결제 탭 실사용 테스트
+3. 관제센터 채팅/공지/결제 탭 실사용 테스트
 
 ### 파일 분리·경량화 (대형 작업)
 8. mbtico-pages/_worker.js 경량화 (515KB)
@@ -679,17 +773,26 @@ cd mbtico-pages && npx wrangler deploy
 정산명세서: KA01TP260618101225825DuJHXpoC4kY
 재고발주:   KA01TP260623201607025LtxVxj2AoHI
 급여명세서: KA01TP260623201919874SBFmHTNdNft
+계약서서명: KA01TP260914215829605ddx2vWo50Iy
 채널ID:     KA01PF260618094439788FzuY2GxDiSW
 
 ---
 
 ## 📋 세션 시작 체크리스트
 1. CLAUDE.md 전체 읽기 완료
-2. 담당 앱 확인 → 해당 메모 파일 읽기
+2. **TASKS.md 열어서 미완료·진행중 항목 확인** ← 필수. 이전 세션 이어서 작업 가능
+3. 담당 앱 확인 → 해당 메모 파일 읽기
    - FILO·DINE 담당 → FILO_DINE_MEMO.md
-3. git pull origin main
-4. 미완료 작업 목록 확인
-5. 작업 전 대상 파일 절대 금지 항목 재확인
+4. git pull origin main
+5. 사용자 명령과 관련 TASKS.md 항목 `[~]` 진행중으로 변경
+6. 작업 전 대상 파일 절대 금지 항목 재확인
+
+## 📝 TASKS.md 업데이트 규칙 (필수)
+- 작업 시작 시: 해당 항목 `[~]` 진행중으로 변경
+- 작업 완료 시: `[x]` + 날짜 기록, 최근 완료 섹션으로 이동
+- 외부 조건 필요(키 발급 등): `[-]` 보류로 표시
+- 새 작업 발생 시: 해당 우선순위 테이블에 즉시 추가
+- **TASKS.md 업데이트 없이 세션 종료 금지**
 
 ## 📝 메모 업데이트 규칙
 - FILO·DINE 파일 수정 시 → FILO_DINE_MEMO.md 수정 이력에 날짜·파일·내용 추가
@@ -755,6 +858,56 @@ cd mbtico-pages && npx wrangler deploy
 
 ---
 
+## 🧾 팝빌(Popbill) 연동 정보 (DONWAY 세금계산서 자동발행)
+
+### 계약 정보
+- 견적서 No. 202607-712 (2026-07-31)
+- 요금: 전자세금계산서 발행 **100원/건 (부가세 별도, 실청구 110원/건)** (종량제, 연동비용 무료) / 홈택스수집(전자세금계산서) 150,000원/월 / 은행계좌조회 100,000원/월(계좌 1개당)
+- 담당: **박주선 팀장** / 010-5330-0078 / jooseon@linkhubcorp.com
+- 팝빌 키 발급 후 아래 Cloudflare Secrets 등록 필요
+
+### 환경변수 (Cloudflare Secrets)
+| 변수명 | 설명 |
+|---|---|
+| `POPBILL_LINK_ID` | 팝빌 링크아이디 (연동 계정 ID) |
+| `POPBILL_SECRET_KEY` | 팝빌 비밀키 |
+| `POPBILL_TEST_MODE` | `'false'` = 실환경 / 다른 값 = 테스트환경 |
+
+### API 엔드포인트
+- **테스트**: `https://testserviceapi.popbill.com`
+- **실환경**: `https://serviceapi.popbill.com`
+
+### 역발행 프로세스 (기사 → 대리점)
+```
+1. CheckIsMember(corpNum)      — 팝빌 가입 여부 확인
+2. CheckID("DW{corpNum}")      — ID 중복 확인 (충돌 시 "DW{corpNum}A" 시도)
+3. JoinMember(corpNum, id)     — 미가입 시 자동 가입
+4. GetTaxCertURL(corpNum)      — 공인인증서 등록 링크 반환 → 기사에게 발송
+5. RegistRequest(...)          — 역발행 신청 (기사가 신청, 대리점에게 요청)
+6. Issue(...)                  — 대리점이 최종 발행 (국세청 전송)
+```
+
+### _worker.js 구현 함수
+- `popbillIssueReverseDonway(env, ...)` — 역발행 메인 함수
+- `popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum)` — 기사 자동 가입
+- `popbillGetDriverCertUrl(env, driverCorpNum)` — 공인인증서 등록 URL 반환
+- `/api/stmt-tax-issue` — 명세서 세금계산서 발행 엔드포인트
+- `/api/popbill-webhook` — 팝빌 상태 변경 웹훅 (settlements + statement_share 동기화)
+
+### 기사 Popbill ID 명명 규칙
+- 1차: `DW{사업자번호}` (예: DW3738602536)
+- 충돌 시 2차: `DW{사업자번호}A`
+
+### 대리점(DONWAY) 사업자번호
+- `373-86-02536`
+
+### 현재 상태 (2026-09-18)
+- 코드 구현 완료 (test mode 정상 작동)
+- 팝빌 LINK_ID / SECRET_KEY 발급 대기 중
+- 박주선 팀장에게 연락 후 키 발급 → Cloudflare Secret 등록 → 실환경 테스트 필요
+
+---
+
 ## 🔍 시장조사 원칙 (필독)
 - 시장조사 요청 시 최대한 많고 폭넓게 조사할 것
 - 경쟁사는 직접 언급된 것 외에도 유사 카테고리 업체까지 능동적으로 탐색
@@ -783,24 +936,23 @@ cd mbtico-pages && npx wrangler deploy
 - **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
 - **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
 
-### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-05 기준)
-| 요일 | KST | 제품 | 플랫폼 |
-|---|---|---|---|
-| 일 | 09:00 | 인프런 | YouTube |
-| 일 | 10:30 | 인프런 | Instagram |
-| 월 | 09:00 | 용차앱 | YouTube |
-| 화 | 09:00 | FILO | YouTube |
-| 화 | 10:30 | FILO | Instagram |
-| 수 | 09:00 | 인프런 | YouTube |
-| 수 | 10:30 | 인프런 | Instagram |
-| 목 | 09:00 | DONWAY | YouTube |
-| 목 | 10:30 | DONWAY | Instagram |
-| 금 | 09:00 | DINE | YouTube |
-| 금 | 10:30 | DINE | Instagram |
-| 토 | 09:00 | 인프런 | YouTube |
+### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-18 기준)
+| 요일 | KST | 제품 | 플랫폼 | 상태 |
+|---|---|---|---|---|
+| 일 | 09:00 | 인프런 | YouTube | ✅ 운영 |
+| 일 | 10:30 | 인프런 | Instagram | ✅ 운영 |
+| 월 | 09:00 | 용차앱 | YouTube | ✅ 운영 |
+| 화 | 09:00 | FILO | YouTube | ⏸ 보류 |
+| 화 | 10:30 | FILO | Instagram | ⏸ 보류 |
+| 수 | 09:00 | 인프런 | YouTube | ✅ 운영 |
+| 수 | 10:30 | 인프런 | Instagram | ✅ 운영 |
+| 목 | 09:00 | DONWAY | YouTube | ✅ 운영 |
+| 목 | 10:30 | DONWAY | Instagram | ✅ 운영 |
+| 금 | 09:00 | DINE | YouTube | ⏸ 보류 |
+| 금 | 10:30 | DINE | Instagram | ⏸ 보류 |
+| 토 | 09:00 | 인프런 | YouTube | ✅ 운영 |
 
-> mbtico는 홍보 준비 완료 전까지 스케줄 제외
-> 인프런: 주 4회 (수·토·일 YouTube, 수·일 Instagram) — 6주 순환으로 클립별 집중 홍보
+> 운영 중: 용차앱(월)·인프런(일·수·토)·DONWAY(목) / 보류: FILO(화)·DINE(금)
 
 ### 프로필 이미지 (회사 로고)
 - 파일: `assets/logo.png`

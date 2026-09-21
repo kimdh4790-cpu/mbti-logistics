@@ -65,6 +65,7 @@
     "@playwright/test": "^1.62.1",
     "@remotion/bundler": "^4.0.518",
     "@remotion/renderer": "^4.0.518",
+    "ffmpeg-static": "^5.3.0",
     "firebase": "^12.17.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -73,7 +74,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
     "express": "^4.21.0",
-    "ffmpeg-static": "^5.3.0",
     "googleapis": "^176.0.0",
     "jszip": "^3.10.1",
     "multer": "^2.0.1",

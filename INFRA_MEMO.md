@@ -384,9 +384,25 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 |---|---|
 | `TOSS_SECRET_KEY` | 등록됐으나 계좌이체 전용 운영 중 — 활성화 계획 없으면 방치 가능 |
 
+### Worker 파일 구조 (2026-09-20 분리 완료)
+| 파일 | 도메인 | wrangler 설정 | 비고 |
+|---|---|---|---|
+| `_worker.js` | donway.ai.kr, mbtico.kr | `wrangler.toml` | DONWAY + mbtico.kr (기존 유지) |
+| `filo-worker.js` | filo.ai.kr | `wrangler.filo.toml` | **신규** — FILO 전용 |
+| `dine-worker.js` | dine.ne.kr | `wrangler.dine.toml` | **신규** — DINE+SCAN 전용 |
+| `yongcha-worker.js` | yongcha.app | `wrangler.yongcha.toml` | 기존 유지 |
+| `mbtico-pages/_worker.js` | mbtico.kr (Pages) | `mbtico-pages/wrangler.toml` | 기존 유지 |
+
+> filo-worker.js · dine-worker.js는 _worker.js에서 DONWAY/mbtico/bico/handleYongcha 블록을 제거한 버전.
+> 공통 API(join-member, approve, 번역, AI 등) 양쪽 모두 포함.
+
 ### Oracle Cloud에서 wrangler deploy (yongcha-worker.js 등 수동 배포 시)
 ```bash
 CLOUDFLARE_API_KEY="<Global_API_Key>" CLOUDFLARE_EMAIL="kimdh4790@gmail.com" npx wrangler deploy
+# 특정 worker 배포:
+npx wrangler deploy --config wrangler.filo.toml
+npx wrangler deploy --config wrangler.dine.toml
+npx wrangler deploy --config wrangler.yongcha.toml
 # Global API Key 위치: dash.cloudflare.com → My Profile → API Tokens → Global API Key → 보기
 ```
 > ⚠️ `CLOUDFLARE_API_TOKEN` (API Token)이 아닌 `CLOUDFLARE_API_KEY` (Global API Key) + `CLOUDFLARE_EMAIL` 조합 사용. 2026-08-30 확인.

@@ -85,18 +85,6 @@ JSON 배열로 응답: [{"idx":1,"category":"강의소재","reason":"한줄이�
   });
 }
 
-async function sendSMS(message) {
-  const { ALIGO_API_KEY, ALIGO_USER_ID, ALIGO_SENDER, ADMIN_PHONE } = process.env;
-  if (!ALIGO_API_KEY || !ADMIN_PHONE) return;
-  const body = new URLSearchParams({
-    key: ALIGO_API_KEY, user_id: ALIGO_USER_ID,
-    sender: ALIGO_SENDER, receiver: ADMIN_PHONE,
-    msg: message, msg_type: 'SMS',
-  });
-  try {
-    await fetch('https://apis.aligo.in/send/', { method: 'POST', body });
-  } catch {}
-}
 
 async function main() {
   const today = new Date().toISOString().slice(0, 10);
@@ -160,13 +148,6 @@ async function main() {
       if (i.reason) console.log(`    → ${i.reason}`);
     });
   }
-
-  // 8. SMS 발송
-  const smsLines = allClassified.slice(0, 5).map(
-    i => `[${i.category}][${i.source}] ${(i.title || i.name || '').slice(0, 25)}`
-  );
-  const smsMsg = `[MBTICO 주간리서치] ${today}\n총${allClassified.length}건\n${smsLines.join('\n')}`;
-  await sendSMS(smsMsg);
 
   console.log(`\n저장: ${outPath}`);
   return digest;

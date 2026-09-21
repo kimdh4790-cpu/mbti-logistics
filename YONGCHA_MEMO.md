@@ -88,6 +88,7 @@ git push -u origin claude/브랜치명
 | `yongcha_daily_records` | 일일 건수/정산 기록 |
 | `yongcha_scouts` | 스카우트 제안 |
 | `donway_settlements` | DONWAY 정산 연동 |
+| `yongcha_income_manual` | 기사 수기 수입 입력 (workDate/area/courier/count/unitPrice) |
 
 ---
 
@@ -100,7 +101,7 @@ git push -u origin claude/브랜치명
 | 1순위 | business.juso.go.kr WFS (apikey: `3B63BE88F1A06653075E0C88883B157E`) |
 | 2순위 | vWorld WFS (key: `DCCA6DA8-58C2-3561-B5AC-FC7DC19BCA6A` / env.VWORLD_API_KEY) |
 | 3순위 | KV `basidco:{zip}` 캐시 |
-| 클라이언트 | `_doUpdateMapZones()` → fetch 후 `kakao.maps.Polygon` 그리기 |
+| 클라이언트 | `_doUpdateMapZones()` → fetch 후 `L.polygon()` 그리기 (Leaflet.js) |
 
 ---
 
@@ -134,7 +135,10 @@ git push -u origin claude/브랜치명
 
 ### 위치/지도
 - `_yLoadGeo()` — GPS 취득 (Promise) — 주의: _CU.lat/lng로 먼저 채움
-- `_loadKakaoMap(cb)` — 카카오맵 SDK 동적 로드
+- `_loadKakaoMap(cb)` — (deprecated, no-op 래퍼로 유지) 카카오맵 SDK 로드 → Leaflet로 마이그레이션 완료
+- `_lTiles(m)` — Leaflet 지도에 OpenStreetMap 타일 레이어 추가 헬퍼
+- `/api/geocode?q=` — Nominatim 프록시 (주소→{x,y} 좌표), yongcha-worker.js 핸들러
+- `/api/reverse-geocode?lat=&lng=` — Nominatim 역지오코딩 (좌표→행정구역명)
 - 홈 지도: watchPosition으로 실시간 파란 점 갱신 (_homeWatchFirst 플래그)
 
 ### AI
@@ -195,7 +199,7 @@ git push -u origin claude/브랜치명
 - `/api/yongcha/popbill-issue` POST — 서버 핸들러 정상 (yongcha_work + yongcha_users Firestore 조회 후 호출)
 - **수정 완료**: `_ySendSettleNotify` 클라이언트 호출에 `Authorization: Bearer <token>` 헤더 추가 (`_yGetToken()` 사용)
   - `yongcha.html` line 3204, `_worker.js` line 15342 (YONGCHA_HTML_YONGCHA 내부) 동시 수정
-- `yongcha-worker.js`에 팝빌 라우트 추가 필요 (현재 `_worker.js`에만 있음) — 미완료
+- `yongcha-worker.js` 팝빌 라우트 완료 (line 10848~11090, helpers: ycPopbillHmacSign/ycPopbillGetToken/ycPopbillIssueReverse)
 
 ---
 
@@ -281,10 +285,51 @@ git push -u origin claude/브랜치명
 
 ---
 
+## 국토부 유권해석 결과 (2026-09-17)
+
+- **민원번호**: 1AA-2609-0025376
+- **답변일**: 2026-09-17 15:24:28
+- **처리기관**: 국토교통부 물류산업과
+- **담당자**: 김승현 (044-201-4026)
+
+### 결론 요약
+
+| 조항 | 결론 |
+|---|---|
+| 제24조 화물운송주선사업 | **해당 없음** — 화주가 개입하지 않는 구조이므로 현행법상 주선사업 허가 불필요 |
+| 제24조의2 화물정보망사업자 | 현행법 직접 언급 없음 — 단, **개정안 모니터링 필수** |
+
+### 🚨 법 개정 현황 (2026-09-17 업데이트)
+
+- **의안번호 15469** ('25.12.22. 발의, 맹성규 의원 대표발의)
+- **2026년 8월 26일 국회 본회의 통과 (이미 통과됨!)**
+- 주요 내용: "화물운송플랫폼사업" 독립 업종 신설 — 플랫폼 운영자 등록/신고 의무화
+- **시행일**: 공포 후 1년 경과일 → 2027년 하반기 예정
+- 참고: 여객 분야 타다법(2020년)과 동일 구조 — 플랫폼 업종 등록제 도입
+- 출처: 법률신문 https://www.lawtimes.co.kr/news/articleView.html?idxno=226508
+
+### 실무 적용
+
+- 현재(2026-09 기준): 아직 유예기간 — 별도 허가·등록 없이 운영 **적법**
+- 시행일(2027년 하반기) 이후: 화물운송플랫폼사업자 **등록/신고 의무** 발생
+- **즉시 해야 할 것**:
+  1. 국토부 담당자 김승현(044-201-4026)에게 등록 요건 사전 확인
+  2. 시행령/시행규칙 입법예고 모니터링
+  3. 유한회사 엠비티아이 법인으로 등록 가능 여부 확인 (자본금 요건 등)
+- 앱 내 "부가통신사업자" 포지셔닝 유지하되 등록 준비 병행
+
+---
+
 ## 변경 이력
 
 | 날짜 | 파일 | 내용 |
 |------|------|------|
+| 2026-09-18 | .github/workflows/yongcha-upload.yml | **용차앱 소장/기사 홍보영상 업로드 완료 (2026-09-18)**: YouTube 소장 https://www.youtube.com/watch?v=lc34LE8Qg4s / YouTube 기사 https://www.youtube.com/watch?v=TzN80kOr--s / Instagram 기사 Media ID: 18134007631645445 / Instagram 소장: ffmpeg H.264 baseline 재인코딩 후 업로드 성공. Instagram 소장 오류(ProcessingFailedError 400) 원인: 원본 파일 코덱 비호환 → `libx264 -profile:v baseline -level 3.1 -pix_fmt yuv420p -r 30 -c:a aac -b:a 128k -ar 44100 -movflags +faststart` 재인코딩으로 해결. **신규 업로드 워크플로우**: GitHub Actions 캐시 버그(upload-yongcha-promo.yml 0-job 즉시 실패)를 새 파일명으로 우회. |
+| 2026-09-18 | yongcha.html, yongcha-worker.js | **채팅방 입력창 하단 네비게이션에 가려지는 버그 수정**: `_pgChatRoom` 진입 시 `#bnav` hide(`display:none`), `_goPage` 복귀 시 `#bnav` 복원(`display:''`). |
+| 2026-09-18 | yongcha.html, yongcha-worker.js | **지원 후 새로고침 시 버튼 초기화 버그 수정**: `_myAppliedPosts{}` 캐시 추가. `_loadFilteredPosts()` 진입 시 `yongcha_applies` 1회 조회해 기사 지원 이력 캐시 로드. `_makePostCard`에서 `_myAppliedPosts[d.id]` 체크 — 이미 지원 시 "지원함"(disabled) 렌더. `_applyPost` 성공 시 캐시에 추가, `_yCancelApply` 성공 시 캐시 삭제. |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **30일 무료체험 시스템**: 가입 시 trialEndsAt(+30일) 저장, D-7 주황 배너/D-0 빨간 배너+구독 모달 자동 표시 (_yCheckTrial, _yShowTrialBanner, _yShowSubscribeModal) |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **귀로 매칭**: 배송 완료 모달에 50km 이내 open 공고 자동 검색 패널 추가 (_yAutoFindReturnTrip, _yFindReturnTrip) — 완료 지점 기준 거리순 정렬, 상위 3건 표시 |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **소득장부 페이지** (_pgIncomeLedger): 기사 yongcha_applies 월별 집계, 단순경비율 61.5% 종합소득세 예상, 월별 운행 목록 펼침. 홈 퀵액션·프로필 진입 버튼 추가 |
 | 2026-08-17 | yongcha.html, _worker.js | 홈 지도 현위치 버그: watchPosition 실시간 GPS 추적으로 교체 |
 | 2026-08-17 | yongcha.html | 실수령액 계산기 토글 "부가세" → "사업소득세" 수정 |
 | 2026-08-17 | _worker.js | FILO/DINE 로고 base64 임베드 (아이콘 404 → 직접 서빙) |
@@ -308,4 +353,25 @@ git push -u origin claude/브랜치명
 | 2026-09-09 | yongcha.html | 보안: /api/routeiq-match, /api/yongcha/recommend, /api/yongcha/entrance-codes 3개 fetch에 Authorization: Bearer 토큰 추가 |
 | 2026-09-10 | yongcha-worker.js | 로그인 로딩 화면 stuck 수정: body 인라인 스크립트에 9초 비상 폴백 타이머 추가 (Firebase CDN 로드 실패 시에도 로그인 화면 표시). _yRiqMatch·_yAiRecommend: await를 비async .then() 안에서 쓰던 버그 수정 (_riqTok/_aiTok=undefined → Authorization: Bearer undefined → 401). 올바른 .then(function(tok){}) 프로미스 체이닝으로 전환. postsSnap 클로징 브래킷 누락도 함께 수정. |
 | 2026-09-14 | YONGCHA_MEMO.md | 영업용 번호판 업계 지식 섹션 추가: 아바사자 vs 배넘버 차이, 적재량별 종류, 용차 실무 규칙 (국토부 기준) |
+| 2026-09-17 | YONGCHA_MEMO.md | 국토부 유권해석 결과 기록: 제24조 주선사업 해당 없음, 제24조의2 현행법 직접 해당 없음. 법 개정안(의안번호 15469) 모니터링 필요. 담당자: 김승현 044-201-4026. |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | 배송구역 지도 미표시 버그 수정: _updateMapZones setTimeout(0) 지연 + _initPostMap 150ms relayout 추가 (kakao SDK 이미 로드된 경우 동기 Map 생성으로 0×0 컨테이너 읽히던 문제 해결) |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | 카카오맵 다중 polling interval 방지: _kakaoInitPending 전역 플래그 추가, _updateMapZones 가드 (zone 추가/삭제마다 새 setInterval 생성 → 타임아웃 7번 반복 버그 수정). timeout handler retry 제거(_kakaoKey=null 상태 재시도 무한루프 버그). 근본 해결은 Kakao Developers에서 yongcha.app 도메인 등록 필요. |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **카카오맵 → Leaflet.js + OpenStreetMap 전면 마이그레이션**: Kakao Developers 유료 API 활성화 불가(카드 등록 필요)로 카카오맵 완전 제거. Leaflet.js v1.9.4 (cdnjs, API 키/도메인 등록/과금 없음)로 교체. 지오코딩: /api/geocode (Nominatim 프록시), 역지오코딩: /api/reverse-geocode (Nominatim 프록시), 우편번호→좌표: 기존 /api/yongcha/basidco 재사용. yongcha-worker.js const YONGCHA_HTML 구조 복원(이전 파일 구조 파손 함께 수정). |
 | 2026-09-01 | — | 국토교통부 물류산업과 유권해석 질의 접수 완료. 신청번호: 1AA-2609-0025376. 질의내용: 소장-기사 위수탁 연결(화주 개입 없음, 월구독 수익) 구조가 화물자동차운수사업법 제24조의2 화물정보망사업자 등록 대상 및 제24조 주선사업 허가 대상 해당 여부. 답변 예상: 2~3주 내 (2026-09-15~22경). |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **법적 용어 정비 (근무→운행 15곳)**: 용자 UI에서 '근무'(고용관계 시사) 단어 전수 교체 → '운행'. 선호 근무타입→운행형태, 근무 조건→운행 조건, 근무 시간대→운행 시간대, 근무 요일→운행 요일, 월 근무일수→월 운행일수, 실제 근무 내용→실제 운행 내용. |
+| 2026-09-18 | scripts/content/variants/yongcha-variants.json | **형식 전면 재작성**: 중첩 구조(`{product, variants:{A:...}}` + `narration` 문자열 배열) → generate-variant.js 호환 플랫 구조(`{A:{lines:[{startSec,text}], slides:[...], voice, speedRate, ...}}`). A: 직접거래 투명성, B: 기사 수입 극대화, C: 소장 기사 직접 거래, D: 기존 주선 방식 비교. 수정 전 형식은 generate-variant.js에서 `variants["A"] === undefined` → process.exit(1) → 나레이션 무음 버그 원인. |
+| 2026-09-18 | yongcha.html, yongcha-worker.js | **PWA 홈화면 설치 유도 배너 추가**: `<link rel="manifest">` + `theme-color` 메타 태그 추가. Android Chrome: `beforeinstallprompt` 이벤트 캡처 → 하단 고정 골드/네이비 배너 (설치/닫기 버튼). iOS Safari: 3초 후 하단 힌트 패널 표시 (공유→홈 화면에 추가 순서 안내). 이미 설치 감지(`display-mode:standalone` / `navigator.standalone`)시 배너 숨김. 세션 내 닫기는 sessionStorage에 저장. |
+| 2026-09-17 | scripts/content/variants/yongcha-variants.json | 변형 YouTube/Instagram 메타 법적 용어 정비: Variant C '직접 연결'→'직접 거래 정보', '연결 요청'→'지원 요청', '#기사직접연결'→'#기사직접지원'. Variant B '직접 연결하세요'→'직접 지원하세요'. |
+| 2026-09-17 | scripts/remotion/YongchaPromo.jsx | Remotion 영상 콘텐츠 법적 용어 정비: YONGCHA_VARIANTS punchline 4변형 업데이트 ('직접 매칭'→'직접 거래', '배차'→'운행'), SUBTITLES_ALL 6라인 교체, SceneMatching 타이틀 '직접 매칭'→'직접 거래'. |
+| 2026-09-17 | scripts/content/yongcha-narration.json | 나레이션 단일 스크립트 → 4변형 구조(A: 기사 타겟, B: 수수료 타겟, C: 소장 타겟, D: 충격 타겟)로 전면 재작성. 모든 변형에서 '직접 운행', '직접 지원', '공차 없이 운행' 등 법적 안전 문구 적용. |
+| 2026-09-17 | scripts/remotion/render-yongcha.js | WEEK_VARIANT 기반 4변형 자동 선택 + --variant= 수동 지정 옵션 추가. browserExecutable 옵션으로 headless_shell 경로 정확히 지정 (chrome 대신 headless_shell 사용). |
+| 2026-09-17 | scripts/content/yongcha-subtitles.srt | 자막 6구간 법적 용어 기반으로 전면 재작성 (60초 대응). |
+| 2026-09-17 | assets/promo/yongcha-promo.html | 캡쳐용 HTML 슬라이드 법적 문구 교체: '직접 계약'→'직접 거래 정보 서비스', '직접 연결'→'직접 거래', '직접 매칭'→'직접 거래 정보'. |
+| 2026-09-17 | output/ | Remotion 렌더링 완료: yongcha-promo.mp4(17.6MB, 1800프레임, 30fps). FFmpeg 자막 합성 완료: yongcha-final.mp4 + yongcha-reels.mp4(1.8MB, SRT→ASS 변환). |
+| 2026-09-17 | yongcha.html / yongcha-worker.js | _showDetailMap v4: 기사 공고 상세 지도를 기초구역 폴리곤+우편번호 라벨 방식으로 교체. 기존 반경 원(circle) 근사값 제거, z.coords 폴리곤(teal) + 라벨 마커 표시. void container.offsetWidth 리플로우 보장. 소장 지도(_doUpdateMapZones)와 동일 UX. |
+| 2026-09-17 | yongcha.html / yongcha-worker.js | 법적 리스크 수정: ① 공고 카드 "일 최소보장 30/35만원" 플랫폼 고정값 제거 → 소장이 직접 입력한 경우에만 "소장 제시 최저 N만원/일" 표시. ② 공고 상세 "소장 제시 최소보장" → "소장 직접 제시 조건"으로 변경, 플랫폼 계산 기본값 삭제. ③ 등록 폼 "최소보장금액" → "최저 지급 조건 (소장이 직접 제시하는 거래 조건)" 라벨 변경. ④ AI 예측 "최소보장" → "시세 하단 (참고용)". ⑤ 시세 분석 "최소보장 기준표" → "지역별 시세 참고" + 참고용 면책 문구 추가. 플랫폼이 보장의 당사자가 되는 표현 전면 제거. |
+| 2026-09-17 | yongcha.html / yongcha-worker.js | 가입 약관 동의 추가: 이용약관(필수)·개인정보 처리방침(필수)·마케팅 수신(선택) 체크박스 + 내용보기 토글. _yRegister()에 필수 약관 미동의 시 가입 차단 검증 추가. Firestore 저장 필드: agreedTermsAt(서버 타임스탬프), agreedTermsVersion('v1.0-2026-09-17'), agreedMarketing(bool). 이용약관 내용: 서비스 성격(부가통신사업자), 직접 거래 원칙, 플랫폼 책임 한계, 최저 지급 조건 비보장 명시. |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | **보안 강화 (security-review 에이전트 HIGH 소견 적용)**: ① 공동현관 비밀번호 DB 기능 전면 삭제 (앱이 배송앱이 아님) — _pgEntranceCodes·_ecLoad·_ecSearch·_ecVote·_ecOpenAdd·_ecSubmit·_ecItems 제거, 라우트·퀵버튼 제거. ② _toggleSuspend·_togglePremium·_forceClosePost·_yCleanTestAccounts·_yCleanPlaywrightPosts·_yCleanDupPosts — admin 타입 가드 추가. ③ _judgeApply — async .get() 소유권 확인 후 update 실행 (agencyId 불일치 시 거부). ④ _judgeJobApply — role check + async .get() 소유권 확인, 누락된 });  클로저 수정. ⑤ _togglePost·_toggleJobStatus — agency/admin 가드 추가. ⑥ _sendScout — agency 타입 가드 추가. ⑦ _applyJob — driver 타입 가드 추가. ⑧ Stored XSS: _loadResumes(driverRegion, vehicleType), _loadJobsDriver(jobType, courier, vehicleType, workDays), _showJobDetail(region, area, courier, jobType, vehicleType, workDays, workHours, settleDay) 전부 _esc() 적용. ⑨ e.message innerHTML 삽입 6곳 _esc() 래핑. |
+| 2026-09-17 | yongcha.html, yongcha-worker.js | 계약서 미리보기 수정: _showContract 모달에 "전체 계약서 보기" 버튼 추가 (_openContractDoc). Firestore yongcha_contracts에서 계약 데이터 조회 후 법적 문구 포함 HTML 생성 → window.open으로 신규 탭 표시 (DOCX/mammoth.js 의존성 없음). |
+| 2026-09-18 | yongcha.html, yongcha-worker.js | **소스코드 보호 + 상생 메시지 + 고정지입채용 탭 + 자동차등록증 첨부 + 관리자 자격증 승인**: ① 소스코드 보호 스크립트(`</head>` 앞): 우클릭·F12·Ctrl+Shift+I·Ctrl+U 차단, DevTools 감지 시 페이지 교체+리로드. ② 소장 홈 상생 배너: "🤝 단건 용차로 만난 기사를 소속 기사로 채용" + 고정 채용 공고 올리기 버튼. ③ 공고/이력서 탭 3개로 확장: 내 공고 / 고정 지입 채용(yongcha_jobs jobType:'고정지입') / 이력서 찾기. `_loadFixedJobs`, `_showFixedJobWriteModal`, `_saveFixedJob` 신규 함수. ④ 자동차등록증 첨부: 기사 프로필 카드 추가, 사진 업로드 Firebase Storage(`yongcha_vehicle_reg/`), `_yUploadVehicleReg` 함수, vehicleRegUrl/vehicleRegVerified 필드. ⑤ 관리자 패널: 자동차등록증 이미지 확인 링크 + `_toggleVehicleRegVerify` 승인/취소. ⑥ `_openChatRoom` null 가드(_CU·otherUid 없을 때 _yToast 처리). |
+| 2026-09-18 | yongcha.html, yongcha-worker.js | **경쟁사 분석 기반 기사 기능 4종 업그레이드** (yongchacall.app·baroil.io 벤치마킹): ① **소득장부 수기 입력** (`_ledgerManualModal·_ledgerSaveManual`): yongcha_income_manual 컬렉션에 외부 운송 건(날짜/구역/택배사/건수/단가) 직접 추가. ② **소득장부 CSV 내보내기** (`_ledgerExportCSV`): 수기+자동 전체 내역 BOM UTF-8 Excel 호환 CSV 다운로드. ③ **칭찬 키워드 집계 표시**: 받은 후기의 criteria 배열 값 빈도순 집계 → 프로필 상단 배지 노출 (상위 8개, ×N 카운트). ④ **화물운송자격증 인증 뱃지** (`_ySaveLicenseNum`): 기사가 자격증 번호 등록 → admin이 licenseVerified:true 승인 → ✓ 뱃지 표시. yongcha_users 신규 필드: licenseNum(string), licenseVerified(boolean). |

@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>SCAN — AI 문서분석</title>
-<link rel="manifest" href="/scan-manifest.json?v=3">
-<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/dine-apple-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/dine-icon-192.png">
+<meta name="theme-color" content="#F472B6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2100,8 +2102,11 @@ import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRe
 
 const firebaseConfig = {
   apiKey: "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
-  authDomain: "mbtico.kr",
-  projectId: "mbti-logistics"
+  authDomain: "dine.ne.kr",
+  projectId: "mbti-logistics",
+  storageBucket: "mbti-logistics.appspot.com",
+  messagingSenderId: "40761160761",
+  appId: "1:40761160761:web:20545b610f03f534e949e8"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -2249,7 +2254,7 @@ async function loadPoints(retry) {
       return;
     }
     const d = await r.json();
-    console.log('[SCAN] loadPoints 성공 retry=' + retry + ' balance=' + d.balance, 'signupBonus=' + d.signupBonus);
+    console.log('[SCAN] loadPoints 성공 retry=' + retry + ' balance=' + d.balance, 'signupBonus=' + d.signupBonus, '_dbg=', JSON.stringify(d._dbg));
     const bal = d.balance || 0;
     window._slyPoints = bal;
     const el = document.getElementById('slyPtsBadge'); if (el) el.textContent = `${bal.toLocaleString()} P`;

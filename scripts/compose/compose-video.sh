@@ -76,12 +76,12 @@ build_audio_args() {
 
 build_audio_filter() {
   if [ "$HAS_NAR" = "1" ] && [ "$HAS_BGM" = "1" ]; then
-    # 나레이션 + BGM 덕킹 믹싱 (나레이션 1:audio stream, BGM 2:audio stream)
-    echo "[1:a]volume=1.0[nar];[2:a]volume=0.10[bgm];[nar][bgm]amix=inputs=2:duration=first:normalize=0[audio]"
+    # 나레이션 + BGM 덕킹 믹싱 (aresample=44100: TTS 24kHz vs BGM 44.1kHz 불일치 버징 방지)
+    echo "[1:a]aresample=44100,volume=1.0[nar];[2:a]aresample=44100,volume=0.10[bgm];[nar][bgm]amix=inputs=2:duration=first:normalize=0[audio]"
   elif [ "$HAS_NAR" = "1" ]; then
-    echo "[1:a]volume=1.0[audio]"
+    echo "[1:a]aresample=44100,volume=1.0[audio]"
   elif [ "$HAS_BGM" = "1" ]; then
-    echo "[1:a]volume=1.0[audio]"
+    echo "[1:a]aresample=44100,volume=1.0[audio]"
   fi
 }
 

@@ -113,7 +113,7 @@ async function googleTTS(text, outFile) {
   const bodyStr = JSON.stringify({
     input: { text },
     voice: { languageCode: 'ko-KR', name: script.voice || 'ko-KR-Neural2-C' },
-    audioConfig: { audioEncoding: 'MP3', speakingRate: script.speedRate || 1.0, pitch: 0 },
+    audioConfig: { audioEncoding: 'MP3', speakingRate: script.speedRate || 1.0, pitch: 0, sampleRateHertz: 44100 },
   });
 
   return new Promise((resolve, reject) => {
@@ -275,7 +275,7 @@ async function buildFinalAudio(lines, segments, outFile) {
       // silence 생성
       const silFile = path.join(tmpDir, `silence_${i}.mp3`);
       execSync(
-        `${ffmpeg} -y -f lavfi -i anullsrc=r=24000:cl=mono -t ${gap.toFixed(3)} -q:a 9 -acodec libmp3lame "${silFile}"`,
+        `${ffmpeg} -y -f lavfi -i anullsrc=r=44100:cl=mono -t ${gap.toFixed(3)} -q:a 9 -acodec libmp3lame "${silFile}"`,
         { stdio: 'pipe' }
       );
       concatList.push(silFile);
@@ -293,7 +293,7 @@ async function buildFinalAudio(lines, segments, outFile) {
   fs.writeFileSync(listFile, concatList.map(f => `file '${f}'`).join('\n'));
 
   execSync(
-    `${ffmpeg} -y -f concat -safe 0 -i "${listFile}" -c copy "${outFile}"`,
+    `${ffmpeg} -y -f concat -safe 0 -i "${listFile}" -c:a libmp3lame -b:a 128k -ar 44100 "${outFile}"`,
     { stdio: 'pipe' }
   );
 
@@ -304,7 +304,11 @@ async function buildFinalAudio(lines, segments, outFile) {
 
 // ─── Main ─────────────────────────────────────────────────────────
 async function main() {
-  const lines = script.lines;
+  // variants 구조(yongcha 등) 지원: activeVariant 기준으로 lines 선택
+  const activeVariant = script.activeVariant;
+  const lines = script.lines ||
+    (activeVariant && script.variants && script.variants[activeVariant] && script.variants[activeVariant].lines) ||
+    (script.variants && script.variants['A'] && script.variants['A'].lines);
   const voice = script.voice || 'nara';
   const speed = script.speedRate ?? 0;
   const useFishAudio = !!(process.env.FISH_AUDIO_API_KEY && process.env.FISH_AUDIO_VOICE_ID);
