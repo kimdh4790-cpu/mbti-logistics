@@ -158,6 +158,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 — /api/check-company-code(GET) + /api/driver-join(POST) 서버사이드 API 신규, _quickVerifyCode·checkCompanyCode·doQuickJoin 클라이언트 Firestore 직접 접근 제거, SHA-256 pw 해시 저장 |
 | 2026-09-21 | DONWAY 배달대행 기사 앱 탭 정리 — 입차(pni1)·정산(pni5) 탭 제거, 배달대행 기사는 홈·배송달력·내정보만 노출 (AI정산은 알림톡 전용, 앱 불필요) |
 | 2026-09-21 | DONWAY 배달대행 기사 일일 배송 달력 뷰 추가 — POST /api/delivery-daily-upload (대리점 엑셀업로드), GET /api/delivery-daily (기사 본인 데이터만 조회, uid+dealerId 검증), drivers.html 배송달력 탭(pni7) + 월별 캘린더 UI + 하단 누적 통계, donway-pages/index.html 📅 일일 배송 업로드 버튼 (_parseDailyDeliveryExcel) — PR #142 머지 완료 |
 | 2026-09-21 | DONWAY 배송달력 API 인증 방식 수정 — GET /api/delivery-daily를 Firebase Auth(uid 불일치)에서 phone+companyCode 파라미터 기반으로 교체, companies 컬렉션에서 dealerId 조회, drivers.html _loadDeliveryCal S.dealerId→ls('drivers') 캐시 phone/companyCode 사용, dDeliveryCal()에 _loadDeliveryCal 호출 추가 — PR #143 |
