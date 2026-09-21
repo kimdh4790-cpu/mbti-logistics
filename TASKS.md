@@ -129,6 +129,7 @@ claude/* 브랜치 push
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-21 | DONWAY 계약서 대리점·기사 동일 계약서 공유 — "서명완료본 보기" 링크를 archiveUrl(구 Firebase Storage HTML) → /contract/download/{signToken}?inline=1 으로 변경, 기사가 보는 것과 동일한 페이지 제공 |
 | 2026-09-21 | DONWAY 계약서 빈칸 auto-fill 키워드 보강 — '종사자' 추가(택배종사자인___ 패턴), '계약기간'→시작일, '부터'→종료일, end-date entry 먼저 체크 (계약기간 2-blank 구조 정확 대응) |
 | 2026-09-21 | DONWAY 계약서 DOCX 빈칸 채우기 키워드 매핑 정밀도 강화 — '자동차' 키워드 제거(분류수수료 오삽입 버그), '차량내역' 추가, licenseNumber 폴백, '자격증'→'자격증번호' 변경 |
 | 2026-09-21 | DONWAY 계약서 전화번호→기사 자동조회 — ctr-driver-phone-input oninput 시 Firestore drivers 조회 → window._ctrDriver 세팅 → 차량번호·종사자격 auto-fill (하이픈 포함/미포함 두 포맷 지원) |
