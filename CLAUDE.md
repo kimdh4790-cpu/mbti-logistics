@@ -678,6 +678,13 @@ cd mbtico-pages && npx wrangler deploy
 - `_worker.js` dine.ne.kr 블록에 `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채지지 않도록 수정
 - SCAN_MEMO.md 도메인 이전 이력 섹션 추가 + 서비스 위치 업데이트
 
+### ✅ 완료 (2026-09-21 DONWAY 계약서 아카이브 중복 서명란 제거)
+- **_worker.js 아카이브 생성 로직 수정**: 타이핑 DOCX 케이스에서 `${_aSignBlock}` 제거
+  - 원인: 타이핑 DOCX HTML(위수탁 표준 템플릿)에 이미 `(인)` 치환으로 갑+을 서명 삽입됨 + `_aSignBlock` 별도 서명 테이블 + `_aHtml` 하단 검증 테이블 = 서명 3중 중복
+  - 수정: `_aDocxHtml` 브랜치에서 `${_aSignBlock}` 완전 제거 → 타이핑 HTML + 하단 검증 테이블만 남음
+- **docxHtml 우선순위 수정**: `body.docxHtml||_ag('docxHtml')` → `_ag('docxHtml')||body.docxHtml` (Firestore 최우선)
+- **계약서 서명 플로우**: 대리점(갑) 도장/서명 먼저 저장(`adminSig` Firestore) → 알림톡 발송 → 기사(을) 서명 페이지 서명란 1개(을만) → 완성본에 갑 도장+을 서명 모두 표시
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
