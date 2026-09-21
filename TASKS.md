@@ -129,6 +129,7 @@ claude/* 브랜치 push
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-21 | DONWAY 계약서 전화번호→기사 자동조회 — ctr-driver-phone-input oninput 시 Firestore drivers 조회 → window._ctrDriver 세팅 → 차량번호·종사자격 auto-fill (하이픈 포함/미포함 두 포맷 지원) |
 | 2026-09-21 | DONWAY 대리점계약서 아카이브 빈칸 수정 — _ctrApplyTyped 계약기간 자동계산(오늘/1년후 한국어포맷), _ctrCollect startDate/endDate/carNum/licNum 하드코딩 '' 제거, dead code(비존재 DOM setTimeout) 제거 |
 | 2026-09-21 | DONWAY 계약서 DOCX 빈칸 채우기 키워드 매핑으로 전환 — _ctrApplyTyped 순서 기반→컨텍스트 키워드 기반 (수수료% 빈칸에 이름/전화번호 오삽입 버그 수정) |
 | 2026-09-21 | DONWAY 주민번호·사업자번호 검증 로직 강화 — replace(/-/g,'') → replace(/[^0-9]/g,'') (모바일 전각 하이픈 U+FF0D 등 처리) |
