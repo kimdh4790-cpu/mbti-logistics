@@ -6991,17 +6991,49 @@ service cloud.firestore {
           if (State === '3' || State === '역발행승인') {
             const settleDoc = await fsGet(fsToken, 'settlements', settleId);
             const fields = settleDoc.fields || {};
-            const driverToken = fields.driverFcmToken?.stringValue;
-            const agencyToken = fields.agencyFcmToken?.stringValue;
-            const driverName  = fields.driverName?.stringValue || '기사';
-            const agencyName  = fields.agencyName?.stringValue || '대리점';
-            const totalAmt    = fields.totalAmount?.integerValue || fields.totalAmount?.doubleValue || 0;
-            const amtStr      = Number(totalAmt).toLocaleString('ko-KR');
+            const driverToken  = fields.driverFcmToken?.stringValue;
+            const agencyToken  = fields.agencyFcmToken?.stringValue;
+            const driverName   = fields.driverName?.stringValue || '기사';
+            const agencyName   = fields.agencyName?.stringValue || '대리점';
+            const totalAmt     = fields.totalAmount?.integerValue || fields.totalAmount?.doubleValue || 0;
+            const amtStr       = Number(totalAmt).toLocaleString('ko-KR');
+            const receiverCorp = fields.receiverCorpNum?.stringValue || '373-86-02536';
+
+            // 기사 승인 → 대리점 명의로 최종 발행(Issue) → 국세청 전송
+            let issueOk = false;
+            try {
+              const mgtKeyFromDoc = fields.taxInvoiceMgtKey?.stringValue || MgtKey;
+              await popbillIssueTaxinvoice(env, mgtKeyFromDoc, receiverCorp, `DONWAY 역발행 정산 #${settleId}`);
+              issueOk = true;
+              // 최종 발행 완료 상태 업데이트
+              const issueFields = {
+                taxInvoiceState:   { stringValue: '역발행승인' },
+                taxInvoiceIssuedAt:{ stringValue: new Date().toISOString() }
+              };
+              const issueMask = Object.keys(issueFields).map(k => `updateMask.fieldPaths=${k}`).join('&');
+              await Promise.allSettled([
+                fetch(`${FS_BASE}/settlements/${settleId}?${issueMask}`, {
+                  method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+                  body: JSON.stringify({ fields: issueFields })
+                }),
+                fetch(`${FS_BASE}/statement_share/${settleId}?${issueMask}`, {
+                  method:'PATCH', headers:{'Authorization':`Bearer ${fsToken}`,'Content-Type':'application/json'},
+                  body: JSON.stringify({ fields: issueFields })
+                })
+              ]);
+            } catch(issueErr) {
+              console.error('[popbill-webhook] Issue 발행 실패:', issueErr.message);
+            }
+
             const fcmPromises = [];
-            if (driverToken) fcmPromises.push(sendFCMPush(driverToken, '세금계산서 발행 완료',
-              `${agencyName} 세금계산서 ${amtStr}원이 승인되었습니다.`, { type: 'tax_invoice_approved', settleId }));
-            if (agencyToken) fcmPromises.push(sendFCMPush(agencyToken, '세금계산서 역발행 승인 완료',
-              `${driverName} 기사 세금계산서 ${amtStr}원 역발행이 완료되었습니다.`, { type: 'tax_invoice_approved', settleId }));
+            if (driverToken) fcmPromises.push(sendFCMPush(driverToken,
+              issueOk ? '세금계산서 발행 완료' : '세금계산서 승인 완료',
+              `${agencyName} 세금계산서 ${amtStr}원이 승인${issueOk ? '·발행' : ''}되었습니다.`,
+              { type: 'tax_invoice_approved', settleId }));
+            if (agencyToken) fcmPromises.push(sendFCMPush(agencyToken,
+              issueOk ? '세금계산서 역발행·국세청 전송 완료' : '세금계산서 역발행 승인 완료',
+              `${driverName} 기사 세금계산서 ${amtStr}원 역발행이 ${issueOk ? '발행 완료(국세청 전송)' : '승인'}되었습니다.`,
+              { type: 'tax_invoice_approved', settleId }));
             await Promise.allSettled(fcmPromises);
           }
           if (State === '역발행거부') {
@@ -18135,8 +18167,9 @@ async function popbillIssueReverse(env, params) {
     Memo: `용차앱 정산 #${settleId}`
   };
 
+  // 역발행즉시요청(RegistRequest #8): 등록+요청 한 번에 처리
   const resp = await fetch(
-    `${BASE}/Taxinvoice/역발행요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: {
@@ -18251,8 +18284,9 @@ async function popbillIssueReverseDonway(env, params) {
     Memo: `DONWAY 정산 #${settleId}`
   };
 
+  // 역발행즉시요청(RegistRequest #8): 등록+요청 한 번에 처리
   const resp = await fetch(
-    `${BASE}/Taxinvoice/역발행요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
@@ -18346,14 +18380,33 @@ async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpN
   throw new Error(`팝빌 회원확인 실패: ${checkData.message} (${checkData.code})`);
 }
 
-// ── 팝빌 공인인증서 등록 URL 발급 ─────────────────────────────────────────
+// ── 팝빌 공인인증서 등록 URL 발급 (GetTaxCertURL, 인증서 관리 #1) ──────────
 async function popbillGetDriverCertUrl(env, driverCorpNum) {
   const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
   const pbToken = await popbillGetToken(env, driverCorpNum);
-  const resp = await fetch(`${BASE}/Member/GetURL?CorpNum=${driverCorpNum}&TOGO=CERT`, {
+  // 전자세금계산서 공인인증서 등록 팝업 URL
+  const resp = await fetch(`${BASE}/Taxinvoice/GetURL?CorpNum=${driverCorpNum}&TOGO=CERT`, {
     headers: { 'Authorization': `Bearer ${pbToken}` }
   });
   const data = await resp.json();
   return data.url || data.URL || '';
+}
+
+// ── 팝빌 역발행 최종 발행 (Issue #6, 기사 승인 후 대리점이 호출) ─────────────
+async function popbillIssueTaxinvoice(env, mgtKey, corpNum, memo) {
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+  const pbToken = await popbillGetToken(env, corpNum);
+  const body = { Memo: memo || '역발행 최종 발행' };
+  const resp = await fetch(
+    `${BASE}/Taxinvoice/발행?CorpNum=${corpNum}&MgtKey=${mgtKey}`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify(body)
+    }
+  );
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(`팝빌 발행 실패 (${resp.status}): ${data.message || resp.statusText}`);
+  return { ok: true, resultCode: data.resultCode, message: data.message };
 }
 
