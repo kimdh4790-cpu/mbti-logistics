@@ -1343,7 +1343,7 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
           let _sc_rps = []; try{ if(_sc_rpJson) _sc_rps = JSON.parse(_sc_rpJson); }catch(e){};
           const _sc_sort = _cg('sortPrice'); const _sc_cycle = _cg('cycle') || '매월 20일';
           const _sc_dphone = _cg('driverPhone'); const _sc_daddr = _cg('driverAddr');
-          const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth');
+          const _sc_dbiz = _cg('driverBizNum'); const _sc_dbirth = _cg('driverBirth'); const _sc_ssn = _cg('driverIdNum');
           const _sc_carnum = _cg('carNum'); const _sc_licnum = _cg('licenseNum');
           const _sc_special = _cg('special');
           const _sc_preDays = _cg('preDepositDays')||'';
@@ -1604,7 +1604,7 @@ ${_contractViewHtml}
 <div class="sub">동의 체크 전에 아래 정보를 먼저 입력해 주세요.</div>
 <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;font-size:12px">
   <div style="margin-bottom:8px"><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">사업자등록번호 (있으면 입력)</label><input id="drv-biz-input" type="text" value="${_sc_dbiz}" placeholder="예: 123-45-67890" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
-  <div><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">주민등록번호 <span style="font-weight:400;color:#64748b">(전체 입력 · 필수)</span></label><input id="drv-id-input" type="text" placeholder="예: 850101-1234567" maxlength="14" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
+  <div><label style="display:block;font-weight:700;margin-bottom:4px;color:#334155">주민등록번호 <span style="font-weight:400;color:#64748b">(전체 입력 · 필수)</span></label><input id="drv-id-input" type="text" value="${_sc_ssn}" placeholder="예: 850101-1234567" maxlength="14" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:13px;outline:none"></div>
 </div>
 </div>
 <div class="card" id="sign-card">
