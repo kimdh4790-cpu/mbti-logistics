@@ -18280,16 +18280,19 @@ async function popbillHmacSign(message, base64Key) {
 
 // ── 팝빌 세션 토큰 발급 ──────────────────────────────────────────────────
 async function popbillGetToken(env, corpNum) {
-  const linkId    = env.POPBILL_LINK_ID;
-  const secretKey = env.POPBILL_SECRET_KEY;
+  const linkId    = (env.POPBILL_LINK_ID || '').trim();
+  const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
   if (!linkId || !secretKey) throw new Error('POPBILL 인증키 미설정 (POPBILL_LINK_ID / POPBILL_SECRET_KEY)');
+
+  // 사업자번호 하이픈 제거 (예: 373-86-02536 → 3738602536)
+  const cleanCorpNum = corpNum.replace(/-/g, '').trim();
 
   // yyyyMMdd'T'HHmmss'Z' 형식
   const now = new Date();
   const timestamp = now.toISOString()
     .replace(/-/g, '').replace(/:/g, '').replace(/\.\d+Z$/, 'Z');
 
-  const signMsg = `${timestamp}\n${linkId}\n${corpNum}`;
+  const signMsg = `${timestamp}\n${linkId}\n${cleanCorpNum}`;
   const signature = await popbillHmacSign(signMsg, secretKey);
 
   const authBase = 'https://auth.popbill.com';
@@ -18300,11 +18303,13 @@ async function popbillGetToken(env, corpNum) {
       'Authorization': `LINKAUTHKEY ${linkId}:${signature}`,
       'Content-Type': 'application/json; charset=utf-8'
     },
-    body: JSON.stringify({ CorpNum: corpNum, ID: linkId })
+    body: JSON.stringify({ CorpNum: cleanCorpNum, ID: '' })
   });
 
-  if (!resp.ok) throw new Error(`팝빌 토큰 발급 실패 (${resp.status}): ${await resp.text()}`);
-  const data = await resp.json();
+  const respText = await resp.text();
+  if (!resp.ok) throw new Error(`팝빌 토큰 발급 실패 (${resp.status}): ${respText}`);
+  let data;
+  try { data = JSON.parse(respText); } catch { throw new Error('팝빌 토큰 응답 파싱 실패: ' + respText); }
   if (!data.session_token) throw new Error('팝빌 session_token 없음: ' + JSON.stringify(data));
   return data.session_token;
 }
@@ -18388,7 +18393,7 @@ async function popbillIssueReverse(env, params) {
 
   // 역발행즉시요청(RegistRequest #8): 등록+요청 한 번에 처리
   const resp = await fetch(
-    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${cleanSenderCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: {
@@ -18461,11 +18466,15 @@ async function popbillIssueReverseDonway(env, params) {
   if (!senderCorpNum || !receiverCorpNum) throw new Error('공급자/공급받는자 사업자번호 필수');
   if (!settleId) throw new Error('settleId 필수');
 
+  // 사업자번호 하이픈 제거
+  const cleanSenderCorpNum   = senderCorpNum.replace(/-/g, '').trim();
+  const cleanReceiverCorpNum = receiverCorpNum.replace(/-/g, '').trim();
+
   const mgtKey = `DW${settleId}`.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24);
   const isTest = env.POPBILL_TEST_MODE !== 'false';
   const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
 
-  const pbToken = await popbillGetToken(env, receiverCorpNum);
+  const pbToken = await popbillGetToken(env, cleanReceiverCorpNum);
   const wDate = writeDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const supply = Number(supplyAmt) || 0;
   const tax    = Number(taxAmt)    || Math.round(supply * 0.1);
@@ -18481,13 +18490,13 @@ async function popbillIssueReverseDonway(env, params) {
     SupplyCostTotal:  String(supply),
     TaxTotal:         String(tax),
     TotalAmount:      String(total),
-    SenderCorpNum:    senderCorpNum,
+    SenderCorpNum:    cleanSenderCorpNum,
     SenderCorpName:   senderName || '',
     SenderCEOName:    senderCEO  || senderName || '',
     SenderEmail:      senderEmail || '',
     SenderBizType:    '개인',
     SenderBizClass:   '택배',
-    ReceiverCorpNum:  receiverCorpNum,
+    ReceiverCorpNum:  cleanReceiverCorpNum,
     ReceiverCorpName: receiverName || '',
     ReceiverEmail:    receiverEmail || '',
     DetailList: [{
@@ -18554,30 +18563,33 @@ async function popbillIssueReverseDonway(env, params) {
 // ── 팝빌 기사 자동 연동회원 등록 (CheckIsMember → JoinMember) ─────────────
 async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpNum) {
   const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
-  const linkId = env.POPBILL_LINK_ID;
+  const linkId = (env.POPBILL_LINK_ID || '').trim();
+  // 사업자번호 하이픈 제거
+  const cleanDriverCorpNum  = driverCorpNum.replace(/-/g, '').trim();
+  const cleanAgencyCorpNum  = agencyCorpNum.replace(/-/g, '').trim();
   // 대리점 토큰으로 기사 회원 여부 확인
-  const agencyToken = await popbillGetToken(env, agencyCorpNum);
-  const checkRes = await fetch(`${BASE}/Join/CheckIsMember?CorpNum=${driverCorpNum}&LinkID=${encodeURIComponent(linkId)}`, {
+  const agencyToken = await popbillGetToken(env, cleanAgencyCorpNum);
+  const checkRes = await fetch(`${BASE}/Join/CheckIsMember?CorpNum=${cleanDriverCorpNum}&LinkID=${encodeURIComponent(linkId)}`, {
     headers: { 'Authorization': `Bearer ${agencyToken}` }
   });
   const checkData = await checkRes.json();
   if (checkData.code === 1) return { alreadyMember: true };
   if (checkData.code === 0) {
     // ID 중복 확인 (CheckID API) — 팝빌 공식 프로세스
-    let candidateId = `DW${driverCorpNum}`;
+    let candidateId = `DW${cleanDriverCorpNum}`;
     const checkIdRes = await fetch(`${BASE}/Member/CheckID/${encodeURIComponent(candidateId)}`, {
       headers: { 'Authorization': `Bearer ${agencyToken}` }
     }).catch(() => null);
     if (checkIdRes) {
       const checkIdData = await checkIdRes.json().catch(() => ({}));
       // code 1 = 이미 사용중 → suffix 추가
-      if (checkIdData.code === 1) candidateId = `DW${driverCorpNum}A`;
+      if (checkIdData.code === 1) candidateId = `DW${cleanDriverCorpNum}A`;
     }
     const joinBody = {
       LinkID: linkId,
-      CorpNum: driverCorpNum,
+      CorpNum: cleanDriverCorpNum,
       ID: candidateId,
-      PWD: driverCorpNum.slice(-4) + 'Mb0!',
+      PWD: cleanDriverCorpNum.slice(-4) + 'Mb0!',
       Ceoname: driverName || '',
       CorpName: driverName || '',
       Address: '',
