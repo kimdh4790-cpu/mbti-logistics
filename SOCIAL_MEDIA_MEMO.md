@@ -98,6 +98,7 @@ GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
 | 2026-09-20 | scripts/content/yongcha-subtitles.srt | yongcha-narration.json 타이밍에 맞춰 자막 동기화 |
 | 2026-09-20 | scripts/content/donway-narration.json | 전자서명·세금 강조 5구간 나레이션 확정 (0/9/20/31/44) |
 | 2026-09-22 | GitHub Actions | **YONGCHA·인프런·DONWAY 영상 재렌더링 큐** — 3개 동시 실행(record,compose,youtube). YONGCHA: 무음+자막가림 수정 재업로드. 인프런: 무음 수정 재업로드. DONWAY: D변형(세금계산서·전자서명 angle) Week 39 |
+| 2026-09-22 | GitHub Actions | **YONGCHA·인프런·DONWAY Instagram Reels 업로드** — 3개 동시 실행(instagram). YouTube 업로드(Runs #68-70) 완료 확인 후 Instagram 큐 실행 |
 | 2026-09-20 | scripts/content/donway-subtitles.srt | donway-narration.json 타이밍에 맞춰 자막 동기화 |
 | 2026-09-09 | scripts/content/variants/yongcha-variants.json | 용차앱 A/B/C/D variants 전면 재기획: 포맷 표준화(product·variants 래퍼·angle·narration 문자열 배열·slides 문자열 배열·instagram_caption 추가), 각도 재설계(직접거래 투명성/기사 수입 극대화/소장 기사 직접 연결/기존 주선 방식 비교), 부가통신사업자 포지셔닝 전면 적용 |
 
@@ -355,7 +356,7 @@ node scripts/run-pipeline.js --product <product> --steps record,compose,youtube
 | 블로커 | 해결 방법 | 담당 |
 |---|---|---|
 | **YONGCHA 깨진 영상(eDpowbKedgs) 삭제** | YouTube Studio에서 수동 삭제 필요 (새 영상은 Actions로 업로드 중) | 사용자 |
-| **YONGCHA·인프런·DONWAY GitHub Actions 결과 확인** | Actions 완료 후 YouTube에서 업로드 확인 | Claude |
+| **Instagram Reels 업로드 결과 확인** | DONWAY·인프런·YONGCHA Instagram Actions 완료 후 게시 확인 | Claude |
 
 ### 업로드 필수 순서 (반드시 지킬 것)
 ```
@@ -370,9 +371,9 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 | 제품 | 나레이션 MP3 | 영상 소스 | 편집 MP4 | YouTube |
 |---|---|---|---|---|
 | FILO | ✅ 완료 | ✅ Remotion (FiloPromo.jsx) | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
-| DONWAY | ✅ 완료 | ✅ Remotion (DonwayPromo.jsx, 2026-08-29) | output/donway-promo.mp4 | ✅ 숏츠 완료 (3HRSPE2bNDM) |
-| YONGCHA | ✅ 완료 | ✅ Remotion (YongchaPromo.jsx, 2026-08-29) | output/yongcha-promo.mp4 | ⚠️ eDpowbKedgs 깨짐(무음+자막가림) — GitHub Actions 재실행(2026-09-22, record,compose,youtube) 결과 대기 중 |
-| 인프런 | ✅ inflearn-narration.json (2026-09-04) | ✅ Remotion (InflearnPromo.jsx, 2026-09-04) | output/inflearn-promo.mp4 | ⚠️ 무음 업로드됨 — GitHub Actions 재실행(2026-09-22, record,compose,youtube) 결과 대기 중 |
+| DONWAY | ✅ 완료 | ✅ Remotion (DonwayPromo.jsx, 2026-08-29) | output/donway-promo.mp4 | ✅ 숏츠 완료 (3HRSPE2bNDM) / D변형 재업로드(2026-09-22, Run #70) / Instagram Reels 업로드 중 |
+| YONGCHA | ✅ 완료 | ✅ Remotion (YongchaPromo.jsx, 2026-08-29) | output/yongcha-promo.mp4 | ✅ YouTube 재업로드 완료(2026-09-22, Run #68) / Instagram Reels 업로드 중(2026-09-22) |
+| 인프런 | ✅ inflearn-narration.json (2026-09-04) | ✅ Remotion (InflearnPromo.jsx, 2026-09-04) | output/inflearn-promo.mp4 | ✅ YouTube 재업로드 완료(2026-09-22, Run #69) / Instagram Reels 업로드 중(2026-09-22) |
 | MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 (스케줄 제외) |
 
 ---
