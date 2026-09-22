@@ -7155,7 +7155,7 @@ service cloud.firestore {
         const patchFields = {
           taxInvoiceState:     { stringValue: '역발행요청' },
           taxInvoiceRequestAt: { stringValue: now },
-          ...(bodyBizNum ? { driverBizNum: { stringValue: bodyBizNum } } : {})
+          ...(cleanedBizNum ? { driverBizNum: { stringValue: cleanedBizNum } } : {})
         };
         await fetch(`${FS_BASE}/statement_share/${stmtToken}?${Object.keys(patchFields).map(k=>`updateMask.fieldPaths=${k}`).join('&')}`, {
           method: 'PATCH',
@@ -18525,7 +18525,7 @@ async function popbillIssueReverseDonway(env, params) {
 
   // 역발행즉시요청(RegistRequest #8): 등록+요청 한 번에 처리
   const resp = await fetch(
-    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${senderCorpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${cleanSenderCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
@@ -18625,9 +18625,10 @@ async function popbillAutoJoinDriver(env, driverCorpNum, driverName, agencyCorpN
 // ── 팝빌 공인인증서 등록 URL 발급 (GetTaxCertURL, 인증서 관리 #1) ──────────
 async function popbillGetDriverCertUrl(env, driverCorpNum) {
   const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
-  const pbToken = await popbillGetToken(env, driverCorpNum);
+  const cleanCorpNum = driverCorpNum.replace(/-/g, '').trim();
+  const pbToken = await popbillGetToken(env, cleanCorpNum);
   // 전자세금계산서 공인인증서 등록 팝업 URL
-  const resp = await fetch(`${BASE}/Taxinvoice/GetURL?CorpNum=${driverCorpNum}&TOGO=CERT`, {
+  const resp = await fetch(`${BASE}/Taxinvoice/GetURL?CorpNum=${cleanCorpNum}&TOGO=CERT`, {
     headers: { 'Authorization': `Bearer ${pbToken}` }
   });
   const data = await resp.json();
@@ -18637,10 +18638,11 @@ async function popbillGetDriverCertUrl(env, driverCorpNum) {
 // ── 팝빌 역발행 최종 발행 (Issue #6, 기사 승인 후 대리점이 호출) ─────────────
 async function popbillIssueTaxinvoice(env, mgtKey, corpNum, memo) {
   const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
-  const pbToken = await popbillGetToken(env, corpNum);
+  const cleanCorpNum = corpNum.replace(/-/g, '').trim();
+  const pbToken = await popbillGetToken(env, cleanCorpNum);
   const body = { Memo: memo || '역발행 최종 발행' };
   const resp = await fetch(
-    `${BASE}/Taxinvoice/발행?CorpNum=${corpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/발행?CorpNum=${cleanCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
