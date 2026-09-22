@@ -527,6 +527,17 @@ node scripts/run-pipeline.js --product filo --steps record,compose,youtube
 
 ---
 
+## 후크 플레이북 (2026-09-22 추가)
+
+`scripts/content/hooks-playbook.md` — 바이럴 후킹 18원칙 + 스토리텔링 7단계 + 100만+ 후크 49개를 MBTICO 4개 제품에 적용한 실전 가이드.
+
+- social-planner 에이전트 영상 스크립트 작성 전 반드시 읽을 것
+- 용차앱/DONWAY/인프런/FILO 제품별 후크 8종×4 테이블 포함
+- 60초 영상 타임라인(초 단위) 스토리텔링 구조 포함
+- Claude/ChatGPT용 후크 생성 프롬프트 템플릿 포함
+
+---
+
 ## 콘텐츠 A/B/C/D 로테이션 시스템 (2026-08-29 구축)
 
 ### 개요
@@ -709,6 +720,8 @@ scripts/content/variants/{product}-variants.json  ← A/B/C/D 변형
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-22 | **후크 플레이북 신규** — `scripts/content/hooks-playbook.md`: 바이럴 후킹 18원칙 4카테고리 요약 + 스토리텔링 7단계 60초 타임라인 + 용차앱/DONWAY/인프런/FILO 제품별 후크 테이블 + 프롬프트 템플릿. social-planner 에이전트 영상 스크립트 작성 전 참조 |
+| 2026-09-22 | **Archify 스킬 설치** — `.claude/skills/archify/` 219파일 추가: 아키텍처·워크플로우·시퀀스·데이터플로우·라이프사이클 다이어그램 생성기. 원격 세션에서도 `/archify` 슬래시 커맨드로 사용 가능 |
 | 2026-09-10 | **SCAN AI 영상 파이프라인 구축** — Oracle Cloud VM에서 `render-scan.js`로 scan-promo.mp4·scan-reels.mp4(각 10.6MB, 60초) 렌더 완료. `scripts/content/scan-meta.json` 신규: YouTube/Instagram 메타데이터 3개 변형(기본·전세사기예방·취업서류첨삭·계약서분석). `social-media.yml`에 scan 제품 옵션 추가(workflow_dispatch, Remotion 렌더 포함). Oracle Cloud Agent Reach 5/15채널 활성(YouTube·Jina·RSS·V2EX·B站) — yt-dlp `--js-runtimes node` 설정 완료 |
 | 2026-09-09 | **Fish Audio 목소리 클론 통합** — voice_id `208686d6952741e28f43fdacc4b65c14` ("활기찬 젊은 목소리" @김형우, Public). `generate-narration.js` `fishAudioTTS()` 추가: Fish Audio → Google TTS → CLOVA → ElevenLabs 우선순위. `model: s2.1-pro-free` 헤더 추가(무료 플랜 필수). GitHub Secrets `FISH_AUDIO_VOICE_ID` 등록 완료. `FISH_AUDIO_API_KEY` 발급 후 등록 필요 |
 | 2026-09-09 | **영상 파이프라인 2가지 버그 수정** — ①DONWAY Runway AI 한글 hallucination: Runway 생성 대상에서 donway 제거, Remotion 코드 기반으로 전환. ②Runway/Remotion promo.mp4 있을 때 나레이션+자막 미적용: `social-media.yml`에 `mix_audio()` 함수 추가 — 기존 promo.mp4에 나레이션+BGM+자막 사후 합성 |
