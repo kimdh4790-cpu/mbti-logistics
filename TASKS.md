@@ -86,7 +86,7 @@ claude/* 브랜치 push
 | 1 | `[-]` | FCM 영수증 푸시 실 기기 동작 확인 | filo-pos-pay.js | 실 기기 필요. 로컬 테스트 불가 |
 | 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
 | 3 | `[x]` | **팝빌 키 발급 → Cloudflare Secret 등록 완료** (2026-09-22) | _worker.js | LINK_ID=MBTI / SecretKey 발급. Cloudflare Worker(mbti-logistics) 비밀에 POPBILL_LINK_ID·POPBILL_SECRET_KEY 등록 완료. POPBILL_TEST_MODE=true 추가 필요 → 테스트 진행 가능. |
-| 4 | `[ ]` | **팝빌 역발행 테스트 → 운영전환 신청** | _worker.js | 2026-09-22 error 1016 수정 완료(ID 필드·하이픈·trim). 공동인증서 test.popbill.com 등록 완료(2026-09-22, CrossCert 77일, 등록자 김형우). 테스트포인트 5,000P 지급 완료(2026-09-22, 이누리 매니저). LINK_ID 활성화 완료. **API URL 사업자번호 하이픈 버그 수정 완료(2026-09-22, d600b21a) → 지금 바로 테스트 가능.** 다음 단계: DONWAY 정산명세서 → "세금계산서 발행" 버튼 클릭 → 성공 확인 → POPBILL_TEST_MODE=false 운영전환. |
+| 4 | `[-]` | **팝빌 역발행 테스트 → 운영전환 신청** | _worker.js | 2026-09-22 error 1016 수정 완료(ID 필드·하이픈·trim). 공동인증서 test.popbill.com 등록 완료. 테스트포인트 5,000P 지급 완료. **팝빌 기술문의 접수 완료(2026-09-22)** — error 1016 "링크아이디가 존재하지 않습니다": LINK_ID "MBTI" 서버 미등록 이슈. 답변 대기 중. 답변 후 테스트 → POPBILL_TEST_MODE=false 운영전환. |
 
 ### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
 | 항목 | 값 |
@@ -159,6 +159,8 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱(무음+자막가림 재업로드), 인프런(무음 재업로드), DONWAY(D변형: 세금계산서·전자서명 angle) 3개 동시 큐. steps=record,compose,youtube |
+| 2026-09-22 | **팝빌 기술문의 접수** — developers.popbill.com/customer-center/techinquiry 에 LINK_ID "MBTI" error 1016 문의. 답변 대기 중 |
 | 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 — /api/check-company-code(GET) + /api/driver-join(POST) 서버사이드 API 신규, _quickVerifyCode·checkCompanyCode·doQuickJoin 클라이언트 Firestore 직접 접근 제거, SHA-256 pw 해시 저장 |
 | 2026-09-21 | DONWAY 배달대행 기사 앱 탭 정리 — 입차(pni1)·정산(pni5) 탭 제거, 배달대행 기사는 홈·배송달력·내정보만 노출 (AI정산은 알림톡 전용, 앱 불필요) |
 | 2026-09-21 | DONWAY 배달대행 기사 일일 배송 달력 뷰 추가 — POST /api/delivery-daily-upload (대리점 엑셀업로드), GET /api/delivery-daily (기사 본인 데이터만 조회, uid+dealerId 검증), drivers.html 배송달력 탭(pni7) + 월별 캘린더 UI + 하단 누적 통계, donway-pages/index.html 📅 일일 배송 업로드 버튼 (_parseDailyDeliveryExcel) — PR #142 머지 완료 |
