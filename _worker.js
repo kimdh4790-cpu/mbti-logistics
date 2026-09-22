@@ -7063,7 +7063,7 @@ service cloud.firestore {
       }
     }
 
-    // ── 팝빌 연동 상태 확인 (/api/popbill-status) ──
+    // ── 팝빌 연동 상태 확인 + 실제 토큰 발급 테스트 (/api/popbill-status) ──
     if (path === '/api/popbill-status' && method === 'GET') {
       const pw = (new URL(request.url)).searchParams.get('pw') || '';
       const _pbSUser = pw === 'mbtico2026' ? { email: 'admin' } : await verifyFirebaseToken(request, env);
@@ -7071,13 +7071,24 @@ service cloud.firestore {
       const linkId    = (env.POPBILL_LINK_ID    || '').trim();
       const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
       const testMode  = (env.POPBILL_TEST_MODE  || '').trim();
+      // 실제 토큰 발급 테스트 (DONWAY 사업자번호로)
+      let tokenTest = { ok: false, error: '키 미설정' };
+      if (linkId && secretKey) {
+        try {
+          const token = await popbillGetToken(env, '3738602536');
+          tokenTest = { ok: true, token: token ? token.slice(0,8)+'...' : '(empty)' };
+        } catch(e) {
+          tokenTest = { ok: false, error: e.message };
+        }
+      }
       return new Response(JSON.stringify({
         configured: !!(linkId && secretKey),
         testMode:   testMode !== 'false',
-        POPBILL_LINK_ID:    linkId    ? `${linkId.slice(0,4)}*** (${linkId.length}자)` : '❌ 미등록',
+        POPBILL_LINK_ID:    linkId    ? `${linkId} (${linkId.length}자)` : '❌ 미등록',
         POPBILL_SECRET_KEY: secretKey ? `${secretKey.slice(0,4)}...${secretKey.slice(-4)} (${secretKey.length}자)` : '❌ 미등록',
-        POPBILL_TEST_MODE:  testMode  || '❌ 미등록',
-        api_base: testMode === 'true' ? 'testserviceapi.popbill.com' : 'serviceapi.popbill.com'
+        POPBILL_TEST_MODE:  testMode  || '미설정(기본값: 테스트모드)',
+        api_base: testMode === 'false' ? 'serviceapi.popbill.com' : 'testserviceapi.popbill.com',
+        tokenTest
       }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } });
     }
 
