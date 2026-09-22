@@ -7163,8 +7163,8 @@ service cloud.firestore {
 
     // ── 팝빌 환경변수 등록 확인 (슈퍼어드민 전용) ──
     if (path === '/api/popbill-status' && method === 'GET') {
-      const uid = request.headers.get('X-UID') || '';
-      if (!SUPER_ADMINS.includes(uid)) {
+      const pw = (new URL(request.url)).searchParams.get('pw') || '';
+      if (pw !== 'mbtico2026') {
         return new Response(JSON.stringify({ error: '권한 없음' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
       const linkId    = (env.POPBILL_LINK_ID    || '').trim();
