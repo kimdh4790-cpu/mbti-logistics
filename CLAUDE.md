@@ -695,6 +695,16 @@ cd mbtico-pages && npx wrangler deploy
   - awesome-design-md 포맷 기준, `.claude/skills/` 통해 원격 세션에서도 자동 사용 가능
 - **CLAUDE.md 업데이트**: 메모 테이블 + 세션 시작 체크리스트에 DESIGN.md 항목 추가
 
+### ✅ 완료 (2026-09-22 소셜미디어 후크 플레이북 + Archify 스킬)
+- **`scripts/content/hooks-playbook.md` 신규**: 바이럴 후킹 18원칙 + 스토리텔링 7단계 + 100만+ 후크 49개를 MBTICO 4개 제품에 적용한 실전 가이드
+  - 4카테고리 요약: 믿게만들기(구체숫자·사회적증거) / 내얘기로만들기(자기관련성) / 판돈키우기(손실회피) / 정보숨기기(호기심격차)
+  - 60초 영상 타임라인(0~60초) 스토리텔링 7단계 매핑
+  - 용차앱·DONWAY·인프런·FILO 제품별 후크 8종 테이블 + 추천 오프닝
+  - Claude/ChatGPT용 후크 생성 프롬프트 템플릿
+  - social-planner 에이전트 영상 스크립트 작성 전 참조 파일 (파일 상단에 명시)
+- **`SOCIAL_MEDIA_MEMO.md` 업데이트**: 후크 플레이북 섹션 + 수정 이력 추가
+- **`.claude/skills/archify/` 신규** (tt-a1i/archify, MIT, 60k+ stars): 아키텍처·워크플로우·시퀀스·데이터플로우·라이프사이클 5종 인터랙티브 HTML 다이어그램 생성기. 원격 세션에서 `/archify` 슬래시 커맨드로 사용 가능
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
