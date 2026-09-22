@@ -43,7 +43,7 @@
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 | `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
 | `SCAN_MEMO.md` | SCAN AI (dine.ne.kr) 문서분석 서비스 작업 시 |
-| `DESIGN.md` | UI·화면·랜딩 디자인 작업 시 (색상·타이포·컴포넌트 기준) |
+| `DESIGN.md` | **매 세션 시작 시 필수** (색상·타이포·컴포넌트 기준 — CLAUDE.md 다음 바로 읽을 것) |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
@@ -806,7 +806,7 @@ cd mbtico-pages && npx wrangler deploy
 4. git pull origin main
 5. 사용자 명령과 관련 TASKS.md 항목 `[~]` 진행중으로 변경
 6. 작업 전 대상 파일 절대 금지 항목 재확인
-7. UI·화면 작업 시 → DESIGN.md 읽기 (흰색+하늘 배경, 핑크+연두+골드 포인트)
+7. DESIGN.md 읽기 (흰색+하늘 배경, 핑크+연두+골드 포인트) — UI 작업 여부 무관 필수
 
 ## 📝 TASKS.md 업데이트 규칙 (필수)
 - 작업 시작 시: 해당 항목 `[~]` 진행중으로 변경
