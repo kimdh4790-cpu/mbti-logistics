@@ -7065,12 +7065,20 @@ service cloud.firestore {
 
     // ── 팝빌 연동 상태 확인 (/api/popbill-status) ──
     if (path === '/api/popbill-status' && method === 'GET') {
-      const _pbSUser = await verifyFirebaseToken(request, env);
+      const pw = (new URL(request.url)).searchParams.get('pw') || '';
+      const _pbSUser = pw === 'mbtico2026' ? { email: 'admin' } : await verifyFirebaseToken(request, env);
       if (!_pbSUser) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      const linkId    = (env.POPBILL_LINK_ID    || '').trim();
+      const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
+      const testMode  = (env.POPBILL_TEST_MODE  || '').trim();
       return new Response(JSON.stringify({
-        configured: !!(env.POPBILL_LINK_ID && env.POPBILL_SECRET_KEY),
-        testMode:   (env.POPBILL_TEST_MODE !== 'false')
-      }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+        configured: !!(linkId && secretKey),
+        testMode:   testMode !== 'false',
+        POPBILL_LINK_ID:    linkId    ? `${linkId.slice(0,4)}*** (${linkId.length}자)` : '❌ 미등록',
+        POPBILL_SECRET_KEY: secretKey ? `${secretKey.slice(0,4)}...${secretKey.slice(-4)} (${secretKey.length}자)` : '❌ 미등록',
+        POPBILL_TEST_MODE:  testMode  || '❌ 미등록',
+        api_base: testMode === 'true' ? 'testserviceapi.popbill.com' : 'serviceapi.popbill.com'
+      }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } });
     }
 
     // ── 기사 /stmt 페이지에서 세금계산서 역발행 신청 (/api/stmt-tax-issue) ──
@@ -7159,23 +7167,6 @@ service cloud.firestore {
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}});
       }
-    }
-
-    // ── 팝빌 환경변수 등록 확인 (슈퍼어드민 전용) ──
-    if (path === '/api/popbill-status' && method === 'GET') {
-      const pw = (new URL(request.url)).searchParams.get('pw') || '';
-      if (pw !== 'mbtico2026') {
-        return new Response(JSON.stringify({ error: '권한 없음' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-      }
-      const linkId    = (env.POPBILL_LINK_ID    || '').trim();
-      const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
-      const testMode  = (env.POPBILL_TEST_MODE  || '').trim();
-      return new Response(JSON.stringify({
-        POPBILL_LINK_ID:    linkId    ? `${linkId.slice(0,4)}*** (${linkId.length}자)` : '❌ 미등록',
-        POPBILL_SECRET_KEY: secretKey ? `${secretKey.slice(0,4)}...${secretKey.slice(-4)} (${secretKey.length}자)` : '❌ 미등록',
-        POPBILL_TEST_MODE:  testMode  || '❌ 미등록',
-        api_base: testMode === 'true' ? 'testserviceapi.popbill.com' : 'serviceapi.popbill.com'
-      }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
     }
 
     // ── DONWAY 팝빌 웹훅 (/api/popbill-webhook) ──
