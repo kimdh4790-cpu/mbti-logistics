@@ -86,7 +86,7 @@ claude/* 브랜치 push
 | 1 | `[-]` | FCM 영수증 푸시 실 기기 동작 확인 | filo-pos-pay.js | 실 기기 필요. 로컬 테스트 불가 |
 | 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
 | 3 | `[x]` | **팝빌 키 발급 → Cloudflare Secret 등록 완료** (2026-09-22) | _worker.js | LINK_ID=MBTI / SecretKey 발급. Cloudflare Worker(mbti-logistics) 비밀에 POPBILL_LINK_ID·POPBILL_SECRET_KEY 등록 완료. POPBILL_TEST_MODE=true 추가 필요 → 테스트 진행 가능. |
-| 4 | `[~]` | 팝빌 역발행 테스트 → 운영전환 신청 | _worker.js | 2026-09-22 오류 수정 완료(error 1016): body ID 필드 `linkId`→빈문자열, 사업자번호 하이픈 제거, env trim(). 재테스트 필요. 오류 지속 시 박주선 팀장(010-5330-0078)에 LINK_ID "MBTI" 테스트환경 활성화 여부 확인 요청. 완료 후 POPBILL_TEST_MODE=false 운영전환 신청 |
+| 4 | `[-]` | 팝빌 역발행 테스트 → 운영전환 신청 | _worker.js | 2026-09-22 error 1016 수정 완료(ID 필드·하이픈·trim). 공동인증서 등록 필요 — MagicLine4NX 설치 실패(DLL 오류) + 하드디스크 인증서 파일 못 찾음. 박주선 팀장(010-5330-0078)에 문의 발송 완료(2026-09-22). 답변 후 재진행. |
 
 ### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
 | 항목 | 값 |
