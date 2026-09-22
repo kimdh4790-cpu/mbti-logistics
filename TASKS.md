@@ -40,7 +40,7 @@
 | **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy` |
 | **KV 업로드** | settle.html 예외: `--path donway-pages/index.html` |
 | **핵심 파일** | `donway-pages/index.html` (settle.html로 KV서빙), `donway_landing.js`, `drivers.html` |
-| **주요 기능** | 엑셀 업로드 → 수백명 기사 정산 / 정산명세서 알림톡 발송 / 계약서 시스템(위수탁·퀵플렉스·근로) / 카카오 소셜 로그인 / 팝빌 세금계산서 역발행(키 발급 대기) |
+| **주요 기능** | 엑셀 업로드 → 수백명 기사 정산 / 정산명세서 알림톡 발송 / 계약서 시스템(위수탁·퀵플렉스·근로) / 카카오 소셜 로그인 / 팝빌 세금계산서 역발행(테스트 중) |
 | **요금** | 50명 ₩125,000 / 100명 ₩250,000 / 500명 ₩1,250,000 / 1000명+ 문의 |
 | **주의** | preFreshback/dateFresh 로직 수정 금지 / settle.html·drivers.html 리팩토링 금지 |
 
@@ -85,7 +85,8 @@ claude/* 브랜치 push
 |---|---|---|---|---|
 | 1 | `[-]` | FCM 영수증 푸시 실 기기 동작 확인 | filo-pos-pay.js | 실 기기 필요. 로컬 테스트 불가 |
 | 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
-| 3 | `[-]` | 팝빌 키 발급 후 Cloudflare Secret 등록 → 역발행 실전 테스트 | _worker.js | 연동신청 접수 완료 후 → LINK_ID+SecretKey 수신 → wrangler secret put 3개 등록 → 테스트. 요금: **100원/건 (부가세 별도 → 실청구 110원/건)**. 코드 완성됨 키만 대기. |
+| 3 | `[x]` | **팝빌 키 발급 → Cloudflare Secret 등록 완료** (2026-09-22) | _worker.js | LINK_ID=MBTI / SecretKey 발급. Cloudflare Worker(mbti-logistics) 비밀에 POPBILL_LINK_ID·POPBILL_SECRET_KEY 등록 완료. POPBILL_TEST_MODE=true 추가 필요 → 테스트 진행 가능. |
+| 4 | `[~]` | 팝빌 역발행 테스트 → 운영전환 신청 | _worker.js | 테스트환경(test.popbill.com) → 기사 가입·인증서등록·역발행·발행 흐름 테스트. 완료 후 https://developers.popbill.com/customer-center/serviceopen 운영전환 신청 → POPBILL_TEST_MODE=false |
 
 ### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
 | 항목 | 값 |
