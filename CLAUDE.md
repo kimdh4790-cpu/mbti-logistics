@@ -717,7 +717,7 @@ cd mbtico-pages && npx wrangler deploy
   - `popbillGetDriverCertUrl(env, driverCorpNum)`: GetTaxCertURL 호출, 등록 링크 반환
   - `/api/stmt-tax-issue`: 자동가입 후 certUrl 응답에 포함
   - 명세서 프론트: 신청 완료 시 "공인인증서 등록하기" 링크 버튼 노출 (`#tax-cert-section`)
-- **팝빌 키 발급 필요** (연동 미완료): 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com) 연락 후 POPBILL_LINK_ID / POPBILL_SECRET_KEY Cloudflare Secret 등록
+- **팝빌 키 발급 완료** (2026-09-22): LINK_ID=MBTI / Cloudflare Secret 3개 등록 완료. 테스트 중. 담당: 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com)
 - **팝빌 견적서 수신** (2026-07-31): 전자세금계산서 발행 **100원/건** (종량제, 연동비용 무료), No. 202607-712
 
 ### ✅ 완료 (2026-09-18 DONWAY 계약서 카카오톡 인쇄 버튼 수정)
@@ -866,12 +866,12 @@ cd mbtico-pages && npx wrangler deploy
 - 담당: **박주선 팀장** / 010-5330-0078 / jooseon@linkhubcorp.com
 - 팝빌 키 발급 후 아래 Cloudflare Secrets 등록 필요
 
-### 환경변수 (Cloudflare Secrets)
-| 변수명 | 설명 |
-|---|---|
-| `POPBILL_LINK_ID` | 팝빌 링크아이디 (연동 계정 ID) |
-| `POPBILL_SECRET_KEY` | 팝빌 비밀키 |
-| `POPBILL_TEST_MODE` | `'false'` = 실환경 / 다른 값 = 테스트환경 |
+### 환경변수 (Cloudflare Secrets) — 2026-09-22 등록 완료
+| 변수명 | 값 | 설명 |
+|---|---|---|
+| `POPBILL_LINK_ID` | `MBTI` | 팝빌 링크아이디 (2026-09-22 발급) |
+| `POPBILL_SECRET_KEY` | (Cloudflare Secret에만 보관) | 팝빌 비밀키 — 박주선 팀장 발급 |
+| `POPBILL_TEST_MODE` | `true` | `'false'` = 실환경 / 다른 값 = 테스트환경 |
 
 ### API 엔드포인트
 - **테스트**: `https://testserviceapi.popbill.com`
@@ -901,10 +901,13 @@ cd mbtico-pages && npx wrangler deploy
 ### 대리점(DONWAY) 사업자번호
 - `373-86-02536`
 
-### 현재 상태 (2026-09-18)
-- 코드 구현 완료 (test mode 정상 작동)
-- 팝빌 LINK_ID / SECRET_KEY 발급 대기 중
-- 박주선 팀장에게 연락 후 키 발급 → Cloudflare Secret 등록 → 실환경 테스트 필요
+### 현재 상태 (2026-09-22)
+- 코드 구현 완료
+- **API Key 발급 완료** (2026-09-22, 박주선 팀장)
+- **Cloudflare Secret 3개 등록 완료** (mbti-logistics Worker)
+- 현재 테스트환경 (testserviceapi.popbill.com) 연결 중
+- 테스트 계정: mbtico2026 / Mbtico2026! → test.popbill.com
+- 운영전환 후 POPBILL_TEST_MODE=false 로 변경 필요
 
 ---
 
