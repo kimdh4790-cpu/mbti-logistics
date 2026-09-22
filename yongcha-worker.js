@@ -1,4 +1,4 @@
-const YONGCHA_HTML = ﻿<!DOCTYPE html>
+const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -941,15 +941,6 @@ select.inp option{background:#24243d;color:#f0f1f8}
     if(e.ctrlKey&&e.keyCode===85) e.preventDefault(); // Ctrl+U
     if(e.metaKey&&e.altKey&&e.keyCode===73) e.preventDefault(); // Cmd+Option+I
   });
-  // devtools 감지 — 열리면 경고 후 홈으로
-  var _dtOpen=false;
-  setInterval(function(){
-    var t=new Date();
-    debugger;
-    if(new Date()-t>100){
-      if(!_dtOpen){_dtOpen=true;console.clear();alert('보안 정책상 개발자 도구 사용이 제한됩니다.');location.reload();}
-    } else {_dtOpen=false;}
-  },2000);
 })();
 </script>
 </head>
@@ -1257,8 +1248,13 @@ function _esc(s){
 // (이걸 안 하면 이름에 ' 가 있는 사용자는 버튼이 통째로 깨짐)
 function _jsq(s){
   if(s===null||s===undefined)return '';
-  return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')
-    .replace(/\r?\n/g,' ').replace(/</g,'\\u003c');
+  var r=String(s),b=String.fromCharCode(92),n=String.fromCharCode(10),cr=String.fromCharCode(13);
+  r=r.split(b).join(b+b);
+  r=r.split("'").join(b+"'");
+  r=r.split('"').join('&quot;');
+  r=r.split(cr).join('').split(n).join(' ');
+  r=r.split('<').join(b+'u003c');
+  return r;
 }
 function _ago(ts){
   if(!ts||!ts.seconds)return '';

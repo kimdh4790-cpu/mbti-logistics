@@ -13,7 +13,7 @@
 //   donway.ai.kr  → /join=/admin → settle.html (AI정산 SaaS)
 //   filo.ai.kr    → filo.html + /api/* + JS 파일 서빙 (외식업 운영)
 //   dine.ne.kr    → dine.html + dine-*.js 서빙 (외식업 특화)
-//   mbtico.kr     → /hub/label/scan/emergency 등 (배송현장앱)
+//   filo.ai.kr    → /emergency·/{slug}/emergency → emergency.html (배송현장앱)
 //
 // [KV 키 — 절대 변경 금지]
 //   settle.html → 'settle.html' (donway-pages/index.html 아님!)
@@ -2075,9 +2075,16 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       }
       return new Response(out.join('\n'),{headers:{'Content-Type':'text/plain;charset=utf-8'}});
     }
-    // filo.ai.kr에서 mbtico.kr 전용 경로 → mbtico.kr로 리다이렉트
-    if (path === '/mbtico_hub' || path === '/mbtico-hub') return Response.redirect('https://mbtico.kr/hub', 301);
-    if (path === '/mbtico-join' || path === '/company-join') return Response.redirect('https://mbtico.kr/register', 301);
+    // 배송앱 허브 (mbtico_hub.html from KV)
+    if (path === '/mbtico_hub' || path === '/mbtico-hub' || path === '/mbtico_hub.html') {
+      const resp = await fetchAsset('/mbtico_hub.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+    // 회사/직원 가입 (join.html from KV)
+    if (path === '/mbtico-join' || path === '/company-join') {
+      const resp = await fetchAsset('/join.html', request);
+      return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
 
     // 슬러그 기반 회사별 URL은 DONWAY(donway.ai.kr) 전용 — filo.ai.kr에서는 사용 안 함
 
@@ -2156,6 +2163,9 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
+    // ★ 회사 등록 / 기사 가입 링크 생성
+    if (path === '/register' || path === '/register.html') return serveRegisterHTML(env);
+
     // ★ 직원 관리
     if (path === '/drivers' || path === '/drivers/') {
       const resp = await fetchAsset('/drivers.html', request);
@@ -2195,6 +2205,24 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     if (path === '/emergency' || path === '/emergency/') {
       const resp = await fetchAsset('/emergency.html', request);
       return new Response(await resp.text(), { status: resp.status, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+    // ★ 슬러그 기반 배송앱 접속: filo.ai.kr/{slug}/emergency
+    const _slugEmMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{1,30})\/emergency\/?$/);
+    if (_slugEmMatch && method === 'GET') {
+      const _eSlug = _slugEmMatch[1];
+      const resp = await fetchAsset('/emergency.html', request);
+      let html = await resp.text();
+      html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
+    // ★ 슬러그 단독 접속: filo.ai.kr/{slug} → 배송앱 직접 진입 (뒤에 /emergency 불필요)
+    const _slugOnlyMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{2,30})\/?$/);
+    if (_slugOnlyMatch && method === 'GET' && !knownPaths.has('/'+_slugOnlyMatch[1])) {
+      const _eSlug = _slugOnlyMatch[1];
+      const resp = await fetchAsset('/emergency.html', request);
+      let html = await resp.text();
+      html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
 
     // ★ 직원 셀프 체크인
@@ -4629,6 +4657,7 @@ service cloud.firestore {
           ]
         }), {status:200, headers:{'Content-Type':'application/manifest+json; charset=utf-8','Cache-Control':'no-cache'}});
       }
+    }
     if (path === '/manifest_donway.json' || path === '/manifest.json') {
       return new Response(JSON.stringify({
         name:'DONWAY — 자동화 정산 플랫폼', short_name:'DONWAY',

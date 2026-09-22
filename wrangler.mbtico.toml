@@ -1,5 +1,5 @@
-name = "mbti-logistics"
-main = "_worker.js"
+name = "mbtico-worker"
+main = "mbtico-worker.js"
 compatibility_date = "2025-11-01"
 account_id = "02709cbec18d848913b4246015b9148f"
 workers_dev = false
@@ -12,5 +12,5 @@ binding = "DONWAY_ASSETS"
 id = "7f0e90efaea64f3ab08ff00f8970b28b"
 
 [[routes]]
-pattern = "donway.ai.kr/*"
-zone_name = "donway.ai.kr"
+pattern = "mbtico.kr/*"
+zone_name = "mbtico.kr"
