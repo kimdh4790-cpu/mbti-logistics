@@ -18482,6 +18482,9 @@ async function popbillIssueReverseDonway(env, params) {
   const isTest = env.POPBILL_TEST_MODE !== 'false';
   const BASE = isTest ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
 
+  // 대리점(DONWAY) 자체를 팝빌 연동회원으로 등록 (최초 1회)
+  try { await popbillAutoJoinDriver(env, cleanReceiverCorpNum, receiverName || '엠비티아이', cleanReceiverCorpNum); } catch(e) { console.error('[popbill-join-agency]', e.message); }
+
   const pbToken = await popbillGetToken(env, cleanReceiverCorpNum);
   const wDate = writeDate || new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const supply = Number(supplyAmt) || 0;
