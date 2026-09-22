@@ -43,6 +43,7 @@
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 | `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
 | `SCAN_MEMO.md` | SCAN AI (dine.ne.kr) 문서분석 서비스 작업 시 |
+| `DESIGN.md` | UI·화면·랜딩 디자인 작업 시 (색상·타이포·컴포넌트 기준) |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
@@ -652,6 +653,15 @@ cd mbtico-pages && npx wrangler deploy
 - `_worker.js` dine.ne.kr 블록에 `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채지지 않도록 수정
 - SCAN_MEMO.md 도메인 이전 이력 섹션 추가 + 서비스 위치 업데이트
 
+### ✅ 완료 (2026-09-22 디자인 시스템 수립)
+- **DESIGN.md 신규**: 전 제품 공통 디자인 시스템 정의
+  - 배경: 흰색(#FFFFFF) + 하늘(#EAF6FF)
+  - 포인트 3색: 핑크(주 액션 #F472B6) · 연두(성공 #86EFAC) · 골드(프리미엄 #FBBF24)
+  - Pretendard 전용, 모바일 퍼스트(375px), 다크모드 토큰 포함
+  - 버튼(primary/secondary/accent) · 카드 · 뱃지 · 입력필드 · 하단 내비 컴포넌트 정의
+  - awesome-design-md 포맷 기준, `.claude/skills/` 통해 원격 세션에서도 자동 사용 가능
+- **CLAUDE.md 업데이트**: 메모 테이블 + 세션 시작 체크리스트에 DESIGN.md 항목 추가
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
@@ -752,6 +762,7 @@ cd mbtico-pages && npx wrangler deploy
 3. git pull origin main
 4. 미완료 작업 목록 확인
 5. 작업 전 대상 파일 절대 금지 항목 재확인
+6. UI·화면 작업 시 → DESIGN.md 읽기 (흰색+하늘 배경, 핑크+연두+골드 포인트)
 
 ## 📝 메모 업데이트 규칙
 - FILO·DINE 파일 수정 시 → FILO_DINE_MEMO.md 수정 이력에 날짜·파일·내용 추가
