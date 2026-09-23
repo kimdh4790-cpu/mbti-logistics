@@ -18330,8 +18330,8 @@ async function popbillJoinMember(env, corpNum, corpName, ceoName, id, pwd, bizTy
   const _p = n => String(n).padStart(2, '0');
   const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
   // /Join 엔드포인트는 LINKAUTHKEY 직접 인증 (session token 불필요)
-  // 서명 메시지: timestamp\n${linkId}\n${cleanCorpNum}
-  const signMsg = `${timestamp}\n${linkId}\n${cleanCorpNum}`;
+  // 서비스 API LINKAUTHKEY 서명: timestamp\n${linkId} (CorpNum 제외 — Token API와 다름)
+  const signMsg = `${timestamp}\n${linkId}`;
   const signature = await popbillHmacSign(signMsg, secretKey);
   const joinBody = {
     LinkID: linkId,
@@ -18390,7 +18390,8 @@ async function popbillGetToken(env, corpNum) {
   const signMsg = `${timestamp}\n${linkId}\n${cleanCorpNum}`;
   const signature = await popbillHmacSign(signMsg, secretKey);
 
-  const authBase = 'https://auth.popbill.com';
+  // 테스트 모드는 testauth, 실환경은 auth
+  const authBase = env.POPBILL_TEST_MODE !== 'false' ? 'https://testauth.popbill.com' : 'https://auth.popbill.com';
   const resp = await fetch(`${authBase}/Token`, {
     method: 'POST',
     headers: {
