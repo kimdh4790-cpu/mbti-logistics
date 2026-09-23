@@ -7071,14 +7071,27 @@ service cloud.firestore {
       const linkId    = (env.POPBILL_LINK_ID    || '').trim();
       const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
       const testMode  = (env.POPBILL_TEST_MODE  || '').trim();
-      // 실제 토큰 발급 테스트 (DONWAY 사업자번호로)
       let tokenTest = { ok: false, error: '키 미설정' };
+      let autoJoinResult = null;
       if (linkId && secretKey) {
         try {
           const token = await popbillGetToken(env, '3738602536');
           tokenTest = { ok: true, token: token ? token.slice(0,8)+'...' : '(empty)' };
         } catch(e) {
           tokenTest = { ok: false, error: e.message };
+          // 1016 = 미가입 회원 → 자동으로 DONWAY 사업자 등록 시도
+          if (e.message && e.message.includes('1016')) {
+            try {
+              autoJoinResult = await popbillJoinMember(env, '3738602536', '유한회사엠비티아이', '김형우', 'DONWAY3738602536', 'Mbtico2026!', '법인', '소프트웨어');
+              if (autoJoinResult.code >= 0 || autoJoinResult.code === -10) {
+                // code -10 = 이미 가입된 ID → 그래도 토큰 재시도
+                const token2 = await popbillGetToken(env, '3738602536');
+                tokenTest = { ok: true, token: token2 ? token2.slice(0,8)+'...' : '(empty)', autoJoined: true };
+              }
+            } catch(e2) {
+              autoJoinResult = { code: -1, message: e2.message };
+            }
+          }
         }
       }
       return new Response(JSON.stringify({
@@ -7088,8 +7101,28 @@ service cloud.firestore {
         POPBILL_SECRET_KEY: secretKey ? `${secretKey.slice(0,4)}...${secretKey.slice(-4)} (${secretKey.length}자)` : '❌ 미등록',
         POPBILL_TEST_MODE:  testMode  || '미설정(기본값: 테스트모드)',
         api_base: testMode === 'false' ? 'serviceapi.popbill.com' : 'testserviceapi.popbill.com',
-        tokenTest
+        tokenTest,
+        autoJoinResult
       }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    // ── 팝빌 DONWAY 회원 초기 등록 (/api/popbill-init) ──────────────────────
+    if (path === '/api/popbill-init' && method === 'POST') {
+      const pw = (new URL(request.url)).searchParams.get('pw') || '';
+      if (pw !== 'mbtico2026') return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      try {
+        const joinResult = await popbillJoinMember(env, '3738602536', '유한회사엠비티아이', '김형우', 'DONWAY3738602536', 'Mbtico2026!', '법인', '소프트웨어');
+        let tokenTest = null;
+        if (joinResult.code >= 0 || joinResult.code === -10) {
+          try {
+            const token = await popbillGetToken(env, '3738602536');
+            tokenTest = { ok: true, token: token ? token.slice(0,8)+'...' : '(empty)' };
+          } catch(e2) { tokenTest = { ok: false, error: e2.message }; }
+        }
+        return new Response(JSON.stringify({ joinResult, tokenTest }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
     }
 
     // ── 기사 /stmt 페이지에서 세금계산서 역발행 신청 (/api/stmt-tax-issue) ──
@@ -18284,6 +18317,49 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
       'X-Content-Type-Options': 'nosniff'
     }
   });
+}
+
+// ── 팝빌 회원 등록 (LINKAUTHKEY, 기존 토큰 불필요) ──────────────────────────
+async function popbillJoinMember(env, corpNum, corpName, ceoName, id, pwd, bizType, bizClass) {
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+  const linkId    = (env.POPBILL_LINK_ID || '').trim();
+  const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
+  if (!linkId || !secretKey) throw new Error('POPBILL 인증키 미설정');
+  const cleanCorpNum = corpNum.replace(/-/g, '').trim();
+  const now = new Date();
+  const _p = n => String(n).padStart(2, '0');
+  const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
+  // /Join 엔드포인트는 LINKAUTHKEY 직접 인증 (session token 불필요)
+  // 서명 메시지: timestamp\n${linkId}\n${cleanCorpNum}
+  const signMsg = `${timestamp}\n${linkId}\n${cleanCorpNum}`;
+  const signature = await popbillHmacSign(signMsg, secretKey);
+  const joinBody = {
+    LinkID: linkId,
+    CorpNum: cleanCorpNum,
+    ID: id || `DW${cleanCorpNum}`,
+    PWD: pwd || cleanCorpNum.slice(-4) + 'Mb0!',
+    Ceoname: ceoName || corpName || '',
+    CorpName: corpName || '',
+    Address: '',
+    BizType: bizType || '법인',
+    BizClass: bizClass || '소프트웨어',
+    ContactName: ceoName || corpName || '',
+    ContactEmail: '',
+    ContactTEL: ''
+  };
+  const resp = await fetch(`${BASE}/Join`, {
+    method: 'POST',
+    headers: {
+      'x-lh-date': timestamp,
+      'Authorization': `LINKAUTHKEY ${linkId}:${signature}`,
+      'Content-Type': 'application/json; charset=utf-8'
+    },
+    body: JSON.stringify(joinBody)
+  });
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { code: -1, message: text }; }
+  return data;
 }
 
 // ── 팝빌 HMAC-SHA256 서명 ──────────────────────────────────────────────────
