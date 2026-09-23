@@ -18306,10 +18306,10 @@ async function popbillGetToken(env, corpNum) {
   // 사업자번호 하이픈 제거 (예: 373-86-02536 → 3738602536)
   const cleanCorpNum = corpNum.replace(/-/g, '').trim();
 
-  // yyyyMMdd'T'HHmmss'Z' 형식
+  // yyyyMMddHHmmss 형식 (팝빌 요구 형식, T/Z 없음, 14자리)
   const now = new Date();
-  const timestamp = now.toISOString()
-    .replace(/-/g, '').replace(/:/g, '').replace(/\.\d+Z$/, 'Z');
+  const _p = n => String(n).padStart(2, '0');
+  const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
 
   const signMsg = `${timestamp}\n${linkId}\n${cleanCorpNum}`;
   const signature = await popbillHmacSign(signMsg, secretKey);
