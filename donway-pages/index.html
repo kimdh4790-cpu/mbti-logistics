@@ -8632,6 +8632,9 @@ async function _ctrSave(){
     if(_rcSnap.exists){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});Object.assign(_routeCampMap,_rcSnap.data());}
   }catch(e){}
   _ctrApplyTyped(true);
+  // edit 키 즉시 삭제 — async Firestore 완료 전 탭 전환 시 이름 복원 방지
+  var _editKey='ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
+  try{localStorage.removeItem(_editKey);}catch(_e){}
   var data=_ctrCollect();
   var adminSig='';
   if(window._adminStampImg){
@@ -8674,8 +8677,6 @@ async function _ctrSave(){
     }
     window._adminSigPad=null;
     // DOCX 원본 템플릿으로 리셋 (파일은 유지, 빈칸만 초기화)
-    var _uid2=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
-    try{localStorage.removeItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid2);}catch(_e){}
     if(window._ctrDocxOrigHtml){
       var _dc=document.getElementById('ctr-docx-content');
       if(_dc)_dc.innerHTML=window._ctrDocxOrigHtml;
