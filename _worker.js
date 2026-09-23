@@ -7082,7 +7082,7 @@ service cloud.firestore {
           // 1016 = 미가입 회원 → 자동으로 DONWAY 사업자 등록 시도
           if (e.message && e.message.includes('1016')) {
             try {
-              autoJoinResult = await popbillJoinMember(env, '3738602536', '유한회사엠비티아이', '김형우', 'DONWAY3738602536', 'Mbtico2026!', '법인', '소프트웨어');
+              autoJoinResult = await popbillJoinMemberDebug(env, '3738602536', '유한회사엠비티아이', '김형우', 'DONWAY3738602536', 'Mbtico2026!', '법인', '소프트웨어');
               if (autoJoinResult.code >= 0 || autoJoinResult.code === -10) {
                 // code -10 = 이미 가입된 ID → 그래도 토큰 재시도
                 const token2 = await popbillGetToken(env, '3738602536');
@@ -18362,6 +18362,61 @@ async function popbillJoinMember(env, corpNum, corpName, ceoName, id, pwd, bizTy
   let data;
   try { data = JSON.parse(text); } catch { data = { code: -1, message: text }; }
   return data;
+}
+
+// ── 팝빌 회원 등록 (디버그용 — HTTP 상태코드·rawText 포함) ──────────────────
+async function popbillJoinMemberDebug(env, corpNum, corpName, ceoName, id, pwd, bizType, bizClass) {
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+  const linkId    = (env.POPBILL_LINK_ID || '').trim();
+  const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
+  if (!linkId || !secretKey) return { httpStatus: 0, rawText: '', code: -1, message: 'POPBILL 인증키 미설정' };
+  const cleanCorpNum = corpNum.replace(/-/g, '').trim();
+  const now = new Date();
+  const _p = n => String(n).padStart(2, '0');
+  const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
+  const signMsg = `${timestamp}\n${linkId}`;
+  const signature = await popbillHmacSign(signMsg, secretKey);
+  const joinBody = {
+    LinkID: linkId,
+    CorpNum: cleanCorpNum,
+    ID: id || `DW${cleanCorpNum}`,
+    PWD: pwd || cleanCorpNum.slice(-4) + 'Mb0!',
+    Ceoname: ceoName || corpName || '',
+    CorpName: corpName || '',
+    Address: '',
+    BizType: bizType || '법인',
+    BizClass: bizClass || '소프트웨어',
+    ContactName: ceoName || corpName || '',
+    ContactEmail: '',
+    ContactTEL: ''
+  };
+  let httpStatus = 0;
+  let rawText = '';
+  try {
+    const resp = await fetch(`${BASE}/Join`, {
+      method: 'POST',
+      headers: {
+        'x-lh-date': timestamp,
+        'Authorization': `LINKAUTHKEY ${linkId}:${signature}`,
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify(joinBody)
+    });
+    httpStatus = resp.status;
+    rawText = await resp.text();
+  } catch(e) {
+    return { httpStatus: 0, rawText: e.message, code: -1, message: `fetch 실패: ${e.message}` };
+  }
+  let parsed = null;
+  try { parsed = JSON.parse(rawText); } catch { /* plain text */ }
+  return {
+    httpStatus,
+    rawText: rawText.slice(0, 300),
+    signMsg: signMsg.replace(secretKey, '***'),
+    joinBodySent: { ...joinBody, PWD: '***' },
+    code: parsed?.code ?? -1,
+    message: parsed?.message ?? rawText
+  };
 }
 
 // ── 팝빌 HMAC-SHA256 서명 ──────────────────────────────────────────────────
