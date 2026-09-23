@@ -8683,6 +8683,9 @@ async function _ctrSave(){
       if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 다음 계약서 작성 준비됨</span>';
     }
     window._ctrDriver=null;
+    // 입력 필드 초기화 (이름·전화번호 — 다음 기사 계약 시 이전 값 잔류 방지)
+    var _ni=document.getElementById('ctr-driver-name-input');if(_ni)_ni.value='';
+    var _pi=document.getElementById('ctr-driver-phone-input');if(_pi)_pi.value='';
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
     if(driverSig){toast('✅ 양측 서명 완료 — 서명요청 알림톡 생략');return;}
     // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송 (기사 서명 없을 때만)
