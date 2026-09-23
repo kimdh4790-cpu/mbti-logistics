@@ -6552,28 +6552,27 @@ service cloud.firestore {
         if (!_cccCode) return new Response(JSON.stringify({ok:false,error:'code 필수'}),{status:400,headers:_cccH});
         const _cccToken = await getAccessToken(env);
         const _cccFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
-        const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'OR',filters:[{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:_cccCode}}}]}},limit:1}};
+        // 1단계: companyCode 단일 필드 쿼리 (OR 복합쿼리→복합인덱스 필요 오류 방지)
+        const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},limit:1}};
         const _cccRes = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ)});
-        const _cccArr = await _cccRes.json();
-        let _cccDoc = (_cccArr||[]).find(r=>r.document);
-        // fallback: dealerId prefix (code == dealerId.slice(0,8).toUpperCase())
-        // Firestore __name__ range query requires orderBy __name__
+        const _cccRaw = await _cccRes.json();
+        const _cccArr = Array.isArray(_cccRaw) ? _cccRaw : [];
+        let _cccDoc = _cccArr.find(r=>r.document);
+        // 1-b단계: slug 필드 쿼리
+        if (!_cccDoc) {
+          const _cccQs = {structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:_cccCode}}},limit:1}};
+          const _cccRs = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQs)});
+          const _cccAs = await _cccRs.json();
+          _cccDoc = (Array.isArray(_cccAs)?_cccAs:[]).find(r=>r.document);
+        }
+        // 2단계: dealerId prefix range 쿼리 (코드 = dealerId 앞 8자)
         if (!_cccDoc && _cccCode.length>=6) {
           const _cccRef = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
           const _cccRefEnd = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
-          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN_OR_EQUAL',value:{referenceValue:_cccRefEnd}}}]}},orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],limit:1}};
+          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN',value:{referenceValue:_cccRefEnd}}}]}},orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],limit:1}};
           const _cccR2 = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ2)});
           const _cccA2 = await _cccR2.json();
-          _cccDoc = (_cccA2||[]).find(r=>r.document);
-        }
-        // final fallback: list documents and find ID starting with code
-        if (!_cccDoc && _cccCode.length>=6) {
-          const _cccListRes = await fetch(`${_cccFsBase}/companies?pageSize=100&orderBy=__name__`,{headers:{'Authorization':`Bearer ${_cccToken}`}});
-          if (_cccListRes.ok) {
-            const _cccList = await _cccListRes.json();
-            const _cccMatch = (_cccList.documents||[]).find(d=>{const _id=d.name.split('/').pop();return _id.startsWith(_cccCode)||_id.toUpperCase().startsWith(_cccCode);});
-            if (_cccMatch) _cccDoc = {document:_cccMatch};
-          }
+          _cccDoc = (Array.isArray(_cccA2)?_cccA2:[]).find(r=>r.document);
         }
         if (!_cccDoc) return new Response(JSON.stringify({ok:false,error:'존재하지 않는 회사코드'}),{headers:_cccH});
         const _cccDid = _cccDoc.document.name.split('/').pop();
