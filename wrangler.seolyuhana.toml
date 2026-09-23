@@ -7,3 +7,7 @@ workers_dev = true
 [[routes]]
 pattern = "mbtico.kr/api/seolyuhana/*"
 zone_name = "mbtico.kr"
+
+[[routes]]
+pattern = "dine.ne.kr/api/seolyuhana/*"
+zone_name = "dine.ne.kr"
