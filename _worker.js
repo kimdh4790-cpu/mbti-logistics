@@ -7100,7 +7100,9 @@ service cloud.firestore {
         POPBILL_LINK_ID:    linkId    ? `${linkId} (${linkId.length}자)` : '❌ 미등록',
         POPBILL_SECRET_KEY: secretKey ? `${secretKey.slice(0,4)}...${secretKey.slice(-4)} (${secretKey.length}자)` : '❌ 미등록',
         POPBILL_TEST_MODE:  testMode  || '미설정(기본값: 테스트모드)',
-        api_base: testMode === 'false' ? 'serviceapi.popbill.com' : 'testserviceapi.popbill.com',
+        auth_base: testMode === 'false' ? 'auth.popbill.com' : 'testauth.popbill.com',
+        api_base:  testMode === 'false' ? 'serviceapi.popbill.com' : 'testserviceapi.popbill.com',
+        hint: testMode !== 'false' ? '⚠️ 테스트 모드: LINK_ID가 팝빌 테스트 서버에 미활성화 시 1016 오류. POPBILL_TEST_MODE=false 로 변경하면 프로덕션 서버 사용.' : null,
         tokenTest,
         autoJoinResult
       }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } });
