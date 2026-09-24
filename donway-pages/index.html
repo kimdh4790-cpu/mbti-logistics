@@ -7429,7 +7429,7 @@ function doPhoneLogin(){
     .then(function(){if(btn){btn.disabled=false;btn.textContent='로그인';}})
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
-      var msgs={'auth/user-not-found':'등록되지 않은 전화번호','auth/wrong-password':'비밀번호가 틀렸습니다','auth/invalid-credential':'전화번호 또는 비밀번호 오류','auth/too-many-requests':'잠시 후 시도하세요'};
+      var msgs={'auth/user-not-found':'등록되지 않은 전화번호','auth/wrong-password':'비밀번호가 틀렸습니다','auth/invalid-credential':'전화번호 또는 비밀번호 오류','auth/invalid-login-credentials':'전화번호 또는 비밀번호 오류','auth/too-many-requests':'잠시 후 시도하세요'};
       if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
     });
 }
