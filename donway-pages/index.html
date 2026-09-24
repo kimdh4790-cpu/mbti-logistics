@@ -5833,25 +5833,26 @@ if(window.location.hash==='#join'){
       var _lb=document.getElementById('btn-login-submit');
       if(_lb){_lb.disabled=false;_lb.textContent='로그인';}
     }else{
-      _db.doc('users/'+user.uid).get().then(function(snap){
-        var d=snap.exists?snap.data():{};
-        // ★ 기사 계정(@donway.internal) → Worker API(서버사이드)로 dealerId/역할 조회
-        if(!d.dealerId&&user.email&&user.email.endsWith('@donway.internal')){
-          return user.getIdToken().then(function(tok){
+      // ★ 기사 계정(@donway.internal) → users 컬렉션 조회 없이 Worker API로 처리
+      var _isDriverEmail=user.email&&user.email.endsWith('@donway.internal');
+      (_isDriverEmail
+        ? user.getIdToken().then(function(tok){
             return fetch('/api/my-driver-profile',{headers:{'Authorization':'Bearer '+tok}});
           }).then(function(r){return r.json();}).then(function(j){
-            if(j.ok&&j.dealerId){Object.assign(d,{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||''});}
-            else{d.dealerId=user.uid;}
+            if(j.ok&&j.dealerId)return{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||''};
+            // API 실패시에도 role:driver 강제 (companies 체크 우회를 위해)
+            return{dealerId:user.uid,role:'driver'};
+          }).catch(function(){return{dealerId:user.uid,role:'driver'};})
+        : _db.doc('users/'+user.uid).get().then(function(snap){
+            var d=snap.exists?snap.data():{};
+            // ★ dealerId 누락 방어 — 없으면 자동 보정 (딜러 계정 전용)
+            if(!d.dealerId){
+              _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
+              d.dealerId=user.uid;
+            }
             return d;
-          }).catch(function(){d.dealerId=user.uid;return d;});
-        }
-        // ★ dealerId 누락 방어 — 없으면 자동 보정 (신규/구버전 계정 단도리)
-        if(!d.dealerId){
-          _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
-          d.dealerId=user.uid;
-        }
-        return d;
-      }).then(function(d){
+          })
+      ).then(function(d){
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
