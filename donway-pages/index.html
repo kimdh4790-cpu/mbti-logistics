@@ -7527,6 +7527,11 @@ function doLogin(){
     _tryLogin(input);
     return;
   }
+  // 전화번호 형식(숫자만, 10~11자리)이면 Firestore 조회 없이 @donway.internal 시도
+  if(/^\d{10,11}$/.test(input)){
+    _tryLogin(input+'@donway.internal');
+    return;
+  }
   // 아이디 형식 → users/drivers 컬렉션에서 이메일 조회
   if(!_db){
     if(btn){btn.disabled=false;btn.textContent='로그인';}
