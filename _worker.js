@@ -375,7 +375,7 @@ async function handleSAFirestore(request, env) {
       fieldMap[k] = typeof v==='number' ? {integerValue:v} : {stringValue:String(v)};
     }
     const fsRes = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/${collection}/${docId}?updateMask.fieldPaths=${Object.keys(fields).join('&updateMask.fieldPaths=')}`,
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${collection}/${docId}?updateMask.fieldPaths=${Object.keys(fields).join('&updateMask.fieldPaths=')}`,
       {method:'PATCH', headers:{'Authorization':`Bearer ${access_token}`,'Content-Type':'application/json'},
        body:JSON.stringify({fields:fieldMap})}
     );
@@ -412,7 +412,7 @@ async function handleDriversBatch(request, env) {
 
     const PROJECT = 'mbti-logistics';
     // drivers 컬렉션 전체 조회
-    const listRes = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/drivers?pageSize=200`, {headers:{'Authorization':`Bearer ${access_token}`}});
+    const listRes = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/drivers?pageSize=200`, {headers:{'Authorization':`Bearer ${access_token}`}});
     const listData = await listRes.json();
     const docs = listData.documents || [];
 
@@ -6551,7 +6551,7 @@ service cloud.firestore {
         const _cccCode = (url.searchParams.get('code')||'').trim().toUpperCase();
         if (!_cccCode) return new Response(JSON.stringify({ok:false,error:'code 필수'}),{status:400,headers:_cccH});
         const _cccToken = await getAccessToken(env);
-        const _cccFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+        const _cccFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
         // 1단계: companyCode 단일 필드 쿼리 (OR 복합쿼리→복합인덱스 필요 오류 방지)
         const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},limit:1}};
         const _cccRes = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ)});
@@ -6567,8 +6567,8 @@ service cloud.firestore {
         }
         // 2단계: dealerId prefix range 쿼리 (코드 = dealerId 앞 8자)
         if (!_cccDoc && _cccCode.length>=6) {
-          const _cccRef = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
-          const _cccRefEnd = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
+          const _cccRef = `projects/${PROJECT_ID}/databases/(default)/documents/companies/${_cccCode}`;
+          const _cccRefEnd = `projects/${PROJECT_ID}/databases/(default)/documents/companies/${_cccCode}`;
           const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN',value:{referenceValue:_cccRefEnd}}}]}},orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],limit:1}};
           const _cccR2 = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ2)});
           const _cccA2 = await _cccR2.json();
@@ -6591,7 +6591,7 @@ service cloud.firestore {
         if (!name||!companyId) return new Response(JSON.stringify({ok:false,error:'name,companyId 필수'}),{status:400,headers:_djH});
         // companyCode 역조회
         const _djToken = await getAccessToken(env);
-        const _djFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+        const _djFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
         const _djCompDoc = await fetch(`${_djFsBase}/companies/${companyId}`,{headers:{'Authorization':`Bearer ${_djToken}`}});
         const _djCompData = _djCompDoc.ok ? (await _djCompDoc.json()) : {};
         const _djCompCode = _djCompData.fields?.companyCode?.stringValue||'';
