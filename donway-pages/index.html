@@ -7067,7 +7067,7 @@ function doQuickJoin(){
   var driverId=driverIdInput||('drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4));
   var btn=document.getElementById('join-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='가입 중...';}
-  // SHA-256 해시 비밀번호 계산 후 서버사이드 드라이버 등록
+  // 1. Firebase Auth 계정 생성 → 2. Firestore 드라이버 등록
   (async function(){
     var pwHash='';
     try{
@@ -7075,9 +7075,34 @@ function doQuickJoin(){
       var buf=await crypto.subtle.digest('SHA-256',enc);
       pwHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
     }catch(e){}
+    // Firebase Auth 계정 생성 (없으면 생성, 이미 있으면 무시)
+    var authUid='';
+    if(_auth){
+      try{
+        var cred=await _auth.createUserWithEmailAndPassword(email,pw);
+        authUid=cred.user.uid;
+      }catch(ae){
+        if(ae.code==='auth/email-already-in-use'){
+          // 이미 가입된 전화번호 — 비밀번호 확인 후 uid 획득
+          try{
+            var sc=await _auth.signInWithEmailAndPassword(email,pw);
+            authUid=sc.user.uid;
+          }catch(se){
+            if(btn){btn.disabled=false;btn.textContent='가입하기';}
+            if(err){err.textContent='이미 가입된 전화번호입니다. 비밀번호를 확인하세요';err.style.display='';}
+            return;
+          }
+        }else{
+          if(btn){btn.disabled=false;btn.textContent='가입하기';}
+          if(err){err.textContent='계정 생성 실패: '+(ae.message||ae.code);err.style.display='';}
+          return;
+        }
+      }
+    }
     var payload={name:name,phone:phone,companyId:companyId,companyName:companyName,
       driverId:driverId,role:joinRoleQ,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
-      bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,ssn:ssn,joinDate:joinDate,pw:pwHash};
+      bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,ssn:ssn,joinDate:joinDate,pw:pwHash,
+      uid:authUid,email:email};
     fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
       .then(function(r){return r.json();})
       .then(function(data){
