@@ -7046,7 +7046,13 @@ function _quickVerifyCode(code){
         var el=document.getElementById('j-code');
         if(data.ok){
           if(el){el.dataset.companyId=data.companyId;el.dataset.companyName=data.companyName||'';}
-          msg.innerHTML='<span style="color:var(--green)">✅ '+esc(data.companyName||'확인됨')+'</span>';
+          if(!data.hasDelivery){
+            // AI 정산 전용 대리점 — 기사 앱 가입 불필요
+            if(el){el.dataset.companyId='';}
+            msg.innerHTML='<span style="color:#f59e0b">⚠️ '+esc(data.companyName||'')+'<br><span style="font-size:10px">이 대리점은 AI 정산을 사용합니다. 기사 앱 가입이 필요하지 않습니다.</span></span>';
+          } else {
+            msg.innerHTML='<span style="color:var(--green)">✅ '+esc(data.companyName||'확인됨')+'</span>';
+          }
         } else {
           if(el){el.dataset.companyId='';el.dataset.companyName='';}
           msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';

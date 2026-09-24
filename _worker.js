@@ -6578,7 +6578,12 @@ service cloud.firestore {
         const _cccDid = _cccDoc.document.name.split('/').pop();
         const _cccF = _cccDoc.document.fields||{};
         const _cccName = _cccF.companyName?.stringValue||_cccF.company?.stringValue||'';
-        return new Response(JSON.stringify({ok:true,companyId:_cccDid,companyName:_cccName}),{headers:_cccH});
+        // 서비스 타입: delivery 여부 반환 (배달대행만 기사 앱 가입 필요)
+        const _cccSvcs = (_cccF.services?.arrayValue?.values||[]).map(v=>v.stringValue||'');
+        const _cccSvcType = _cccF.serviceType?.stringValue||'';
+        const _cccDelivPaid = _cccF.deliveryPaid?.booleanValue||false;
+        const _cccHasDelivery = _cccDelivPaid || _cccSvcs.includes('delivery') || _cccSvcType==='delivery';
+        return new Response(JSON.stringify({ok:true,companyId:_cccDid,companyName:_cccName,hasDelivery:_cccHasDelivery}),{headers:_cccH});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_cccH}); }
     }
 
