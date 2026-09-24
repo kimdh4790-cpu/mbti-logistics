@@ -6583,6 +6583,45 @@ service cloud.firestore {
     }
 
     // ── 배달대행 기사 가입 (/api/driver-join) ── Firestore 권한 우회 서버사이드 저장
+    // ── 테스트 기사 계정 생성 (슈퍼어드민 전용) ──
+    if (path === '/api/create-test-driver' && method === 'POST') {
+      const _ctdH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _ctdUser = await verifyFirebaseToken(request, env);
+      const _SADMIN = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+      if (!_ctdUser || !_SADMIN.includes(_ctdUser.email)) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:_ctdH});
+      try {
+        const {phone, pw, name, companyId} = await request.json();
+        if (!phone || !pw) return new Response(JSON.stringify({ok:false,error:'phone,pw 필수'}),{status:400,headers:_ctdH});
+        const _ctdToken = await getAccessToken(env);
+        const _ctdEmail = phone.replace(/[^0-9]/g,'')+'@donway.internal';
+        // 1. Firebase Auth 계정 생성 (Admin REST API)
+        const _ctdAuthRes = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${_ctdToken}`},
+          body: JSON.stringify({email:_ctdEmail,password:pw,displayName:name||phone,emailVerified:true})
+        });
+        const _ctdAuthData = await _ctdAuthRes.json();
+        if (_ctdAuthData.error) return new Response(JSON.stringify({ok:false,error:_ctdAuthData.error.message}),{headers:_ctdH});
+        const _ctdUid = _ctdAuthData.localId;
+        // 2. Firestore drivers 문서 생성
+        const _ctdFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+        if (companyId) {
+          const _ctdCompDoc = await fetch(`${_ctdFsBase}/companies/${companyId}`,{headers:{Authorization:'Bearer '+_ctdToken}});
+          const _ctdCompData = _ctdCompDoc.ok ? await _ctdCompDoc.json() : {};
+          await fetch(`${_ctdFsBase}/drivers`,{method:'POST',headers:{Authorization:'Bearer '+_ctdToken,'Content-Type':'application/json'},body:JSON.stringify({fields:{
+            uid:{stringValue:_ctdUid},email:{stringValue:_ctdEmail},
+            name:{stringValue:name||phone},phone:{stringValue:phone.replace(/[^0-9]/g,'')},
+            dealerId:{stringValue:companyId},
+            companyName:{stringValue:_ctdCompData.fields?.companyName?.stringValue||''},
+            companyCode:{stringValue:_ctdCompData.fields?.companyCode?.stringValue||''},
+            role:{stringValue:'driver'},is_active:{booleanValue:true},status:{stringValue:'재직'},
+            createdAt:{timestampValue:new Date().toISOString()}
+          }})});
+        }
+        return new Response(JSON.stringify({ok:true,uid:_ctdUid,email:_ctdEmail}),{headers:_ctdH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_ctdH}); }
+    }
+
     if (path === '/api/driver-join' && method === 'POST') {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {
