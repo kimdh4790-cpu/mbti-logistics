@@ -5835,11 +5835,19 @@ if(window.location.hash==='#join'){
     }else{
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
+        // ★ 기사 계정(@donway.internal) → drivers 컬렉션에서 dealerId/역할 조회
+        if(!d.dealerId&&user.email&&user.email.endsWith('@donway.internal')){
+          return _db.collection('drivers').where('uid','==',user.uid).limit(1).get()
+            .then(function(ds){if(!ds.empty){var drv=ds.docs[0].data();Object.assign(d,{dealerId:drv.dealerId,role:'driver',name:drv.name||'',phone:drv.phone||'',companyName:drv.companyName||''});}else{d.dealerId=user.uid;}return d;})
+            .catch(function(){d.dealerId=user.uid;return d;});
+        }
         // ★ dealerId 누락 방어 — 없으면 자동 보정 (신규/구버전 계정 단도리)
         if(!d.dealerId){
           _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
           d.dealerId=user.uid;
         }
+        return d;
+      }).then(function(d){
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
@@ -5865,6 +5873,8 @@ if(window.location.hash==='#join'){
           if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
         }).catch(function(){});
 
+        // ★ 기사 계정: companies 체크 없이 바로 showApp()
+        if(_CU.role==='driver'){showApp();return;}
         // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능 동기적 처리
         _db.collection('companies').doc(_dealerId).get().then(function(cSnap){
           if(!cSnap.exists && !isSuperAdmin()){
@@ -5934,7 +5944,7 @@ if(window.location.hash==='#join'){
                 return a.phone&&_userEmail.indexOf(a.phone)>=0;
               });
               // users 컬렉션에서 전화번호 확인
-              var _userPhone=(snap.exists?snap.data().phone:'')||'';
+              var _userPhone=d.phone||'';
               _allowed=_allowed||_loginAllowed.some(function(a){
                 return a.phone&&_userPhone.replace(/[^0-9]/g,'')===a.phone.replace(/[^0-9]/g,'');
               });
