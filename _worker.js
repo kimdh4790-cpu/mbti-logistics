@@ -6622,6 +6622,38 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_ctdH}); }
     }
 
+    // ── 기사 자신의 프로필 조회 (서버사이드 Firestore, 보안규칙 우회) ──
+    if (path === '/api/my-driver-profile' && method === 'GET') {
+      const _mdpH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const _mdpUser = await verifyFirebaseToken(request, env);
+        if (!_mdpUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:_mdpH});
+        const _mdpToken = await getAccessToken(env);
+        const _mdpFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+        // uid로 먼저 조회
+        const _mdpQ = {structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_mdpUser.uid}}}]}},limit:1}};
+        const _mdpRes = await fetch(`${_mdpFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify(_mdpQ)});
+        const _mdpRaw = await _mdpRes.json();
+        let _mdpDoc = (Array.isArray(_mdpRaw)?_mdpRaw:[]).find(r=>r.document);
+        // uid 쿼리 실패 시 email로 재시도
+        if (!_mdpDoc && _mdpUser.email) {
+          const _mdpQ2 = {structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'email'},op:'EQUAL',value:{stringValue:_mdpUser.email}}},limit:1}};
+          const _mdpRes2 = await fetch(`${_mdpFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify(_mdpQ2)});
+          const _mdpRaw2 = await _mdpRes2.json();
+          _mdpDoc = (Array.isArray(_mdpRaw2)?_mdpRaw2:[]).find(r=>r.document);
+          // email 조회 성공 시 uid 백필
+          if (_mdpDoc) {
+            const _mdpRef = _mdpDoc.document.name;
+            fetch(`${_mdpFsBase}/${_mdpRef.split('/documents/')[1]}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{uid:{stringValue:_mdpUser.uid}}})}).catch(()=>{});
+          }
+        }
+        if (!_mdpDoc) return new Response(JSON.stringify({ok:false,error:'driver_not_found'}),{headers:_mdpH});
+        const _mdpF = _mdpDoc.document.fields||{};
+        const _mdpDealerId = _mdpF.dealerId?.stringValue||'';
+        return new Response(JSON.stringify({ok:true,dealerId:_mdpDealerId,name:_mdpF.name?.stringValue||'',phone:_mdpF.phone?.stringValue||'',companyName:_mdpF.companyName?.stringValue||'',role:'driver'}),{headers:_mdpH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_mdpH}); }
+    }
+
     if (path === '/api/driver-join' && method === 'POST') {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {

@@ -5835,24 +5835,15 @@ if(window.location.hash==='#join'){
     }else{
       _db.doc('users/'+user.uid).get().then(function(snap){
         var d=snap.exists?snap.data():{};
-        // ★ 기사 계정(@donway.internal) → drivers 컬렉션에서 dealerId/역할 조회
+        // ★ 기사 계정(@donway.internal) → Worker API(서버사이드)로 dealerId/역할 조회
         if(!d.dealerId&&user.email&&user.email.endsWith('@donway.internal')){
-          return _db.collection('drivers').where('uid','==',user.uid).limit(1).get()
-            .then(function(ds){
-              if(!ds.empty){var drv=ds.docs[0].data();Object.assign(d,{dealerId:drv.dealerId,role:'driver',name:drv.name||'',phone:drv.phone||'',companyName:drv.companyName||''});return d;}
-              // uid 필드가 없는 구버전 계정 → email로 재시도
-              return _db.collection('drivers').where('email','==',user.email).limit(1).get()
-                .then(function(ds2){
-                  if(!ds2.empty){
-                    var drv2=ds2.docs[0].data();
-                    Object.assign(d,{dealerId:drv2.dealerId,role:'driver',name:drv2.name||'',phone:drv2.phone||'',companyName:drv2.companyName||''});
-                    // uid 백필 — 다음 로그인부터 uid 쿼리 작동
-                    ds2.docs[0].ref.update({uid:user.uid}).catch(function(){});
-                  }else{d.dealerId=user.uid;}
-                  return d;
-                });
-            })
-            .catch(function(){d.dealerId=user.uid;return d;});
+          return user.getIdToken().then(function(tok){
+            return fetch('/api/my-driver-profile',{headers:{'Authorization':'Bearer '+tok}});
+          }).then(function(r){return r.json();}).then(function(j){
+            if(j.ok&&j.dealerId){Object.assign(d,{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||''});}
+            else{d.dealerId=user.uid;}
+            return d;
+          }).catch(function(){d.dealerId=user.uid;return d;});
         }
         // ★ dealerId 누락 방어 — 없으면 자동 보정 (신규/구버전 계정 단도리)
         if(!d.dealerId){
