@@ -1153,8 +1153,8 @@ export default {
       return Response.redirect('https://' + hostname + url.pathname + url.search, 301);
     }
 
-    // ── Firebase Auth redirect handler (authDomain: dine.ne.kr → proxy to mbti-logistics.firebaseapp.com) ──
-    if (path.startsWith('/__/auth/')) {
+    // ── Firebase Auth/firebase proxy (authDomain: dine.ne.kr → mbti-logistics.firebaseapp.com) ──
+    if (path.startsWith('/__/auth/') || path.startsWith('/__/firebase/')) {
       const firebaseUrl = 'https://mbti-logistics.firebaseapp.com' + url.pathname + url.search;
       const authResp = await fetch(firebaseUrl, { headers: { 'User-Agent': request.headers.get('User-Agent') || '' } });
       return new Response(authResp.body, {
