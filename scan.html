@@ -1658,7 +1658,7 @@ body {
     <span class="sly-hero-chip gold">🏠 전세사기 진단</span>
     <span class="sly-hero-chip pink">🎬 시나리오 기획</span>
   </div>
-  <button class="sly-intro-skip" onclick="_slySkipIntro()">시작하기 →</button>
+  <button class="sly-intro-skip" onclick="window._slySkipIntro&&window._slySkipIntro()">시작하기 →</button>
 </div>
 
 <!-- 헤더 -->
@@ -2102,7 +2102,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRe
 
 const firebaseConfig = {
   apiKey: "AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0",
-  authDomain: "mbti-logistics.firebaseapp.com",
+  authDomain: "dine.ne.kr",
   projectId: "mbti-logistics",
   storageBucket: "mbti-logistics.appspot.com",
   messagingSenderId: "40761160761",
