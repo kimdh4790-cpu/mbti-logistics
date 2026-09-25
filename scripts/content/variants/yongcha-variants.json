@@ -1,94 +1,112 @@
 {
   "A": {
-    "angle": "소장·기사 상생 플랫폼",
+    "angle": "수수료 없는 직접 거래",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
-    "youtube_title": "수수료 없는 소장·기사 상생 플랫폼 | 용차앱",
-    "youtube_description": "용차앱은 소장님과 기사님이 직접 정보를 주고받는 상생 플랫폼이에요. 중간 수수료 없이 서로에게 이익이 되는 구조. yongcha.app",
-    "hashtags": ["#용차앱", "#소장기사상생", "#수수료없음", "#화물기사", "#택배대리점", "#물류", "#상생플랫폼"],
-    "instagram_caption": "소장님과 기사님이 함께 이익을 나누는 상생 플랫폼\n\n중간 수수료 없이 직접 정보 교환\nAI 기사 추천\n공고 등록·투명한 단가 공개\n기사 ₩150,000/월 · 소장 ₩50,000/월\nDONWAY 소장님은 무료\n\nyongcha.app 에서 시작하세요",
+    "youtube_title": "기사 연결 수수료 월 수십만원? 이제 0원으로 | 용차앱",
+    "youtube_description": "소장님과 기사님이 직접 정보를 주고받는 플랫폼. 중간 수수료 없이 직접 거래. AI 기사 추천. 신뢰도 등급 확인 후 직접 선택. 소장 월 50,000원 / 기사 월 150,000원. yongcha.app",
+    "hashtags": ["#용차앱", "#화물수수료없음", "#직접거래", "#화물기사", "#택배대리점소장", "#수수료제로"],
+    "instagram_caption": "기사 연결할 때마다 수수료 내고 계셨죠?\n\n용차앱은 수수료 없는 직접 정보 교환\n소장님 공고 → 기사님 직접 지원\nAI가 조건 맞는 기사 정보 먼저 추천\n신뢰도 등급 S/A/B/C 확인 후 직접 선택\n\n소장 ₩50,000/월 · 기사 ₩150,000/월\nDONWAY 소장님은 무료\n\nyongcha.app",
     "lines": [
-      { "startSec": 0,  "text": "소장님과 기사님이 서로 상생하는 물류, 가능할까요?" },
-      { "startSec": 12, "text": "용차앱은 소장님과 기사님이 직접 정보를 주고받는 상생 플랫폼이에요. 중간에 수수료가 없어요." },
-      { "startSec": 24, "text": "공고 등록, AI 기사 추천, 투명한 단가 공개. 서로에게 이익이 되는 구조예요." },
-      { "startSec": 37, "text": "기사님은 월 십오만 원, 소장님은 월 오만 원. DONWAY 쓰시는 소장님은 무료예요." },
-      { "startSec": 50, "text": "소장·기사 상생 앱, 용차앱. yongcha.app" }
+      { "startSec": 0,  "text": "소장님, 기사 한 명 연결할 때마다 수수료 내고 계세요?" },
+      { "startSec": 7,  "text": "한 달이면 수십만 원이 그냥 새는 거예요." },
+      { "startSec": 14, "text": "용차앱은 수수료가 없어요. 소장님이 직접 공고 올리면 기사님이 바로 지원해요." },
+      { "startSec": 21, "text": "중간에 주선사 없이요." },
+      { "startSec": 28, "text": "AI가 내 위치, 차종, 경력에 딱 맞는 기사님 정보 먼저 보여줘요." },
+      { "startSec": 35, "text": "신뢰도 등급 S, A, B, C 확인하고 직접 선택하면 돼요." },
+      { "startSec": 42, "text": "기사님도 좋아요. 수수료 빠지지 않고 실수령이 그대로 들어오니까요." },
+      { "startSec": 49, "text": "소장님 월 오만 원, 기사님 월 십오만 원." },
+      { "startSec": 56, "text": "수수료 없는 직접 거래. 용차앱. yongcha.app" }
     ],
     "slides": [
-      { "type": "hero", "tag": "소장·기사 상생", "title": "서로에게 이익이 되는\n물류 상생\n가능합니다", "sub": "수수료 없이 직접 정보를 주고받아요" },
-      { "type": "feature", "icon": "🤝", "title": "소장 ↔ 기사 상생", "desc": "중간 수수료 없이\n서로 직접 정보를 주고받아요" },
-      { "type": "feature", "icon": "🤖", "title": "AI 기사 추천", "desc": "공고 등록 즉시\nAI가 맞는 기사님 추천" },
+      { "type": "hero", "tag": "수수료 0원", "title": "기사 연결\n수수료 없애면\n답 나와요", "sub": "소장·기사 직접 정보 교환 플랫폼" },
+      { "type": "compare", "bad": "기존: 수수료 건당 과금\n월 수십만 원 새는 구조", "good": "용차앱: 월정액 하나로\n수수료 없는 직접 거래" },
+      { "type": "feature", "icon": "🤖", "title": "AI 기사 추천", "desc": "위치·차종·경력 맞는\n기사 정보 즉시 추천" },
+      { "type": "feature", "icon": "⭐", "title": "신뢰도 등급 확인", "desc": "S/A/B/C 등급 확인 후\n직접 선택하세요" },
       { "type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 소장님은 무료" },
-      { "type": "cta", "title": "상생 시작", "sub": "용차앱에서 지금 바로", "domain": "yongcha.app" }
+      { "type": "cta", "title": "수수료 없애세요", "sub": "용차앱에서 지금 바로", "domain": "yongcha.app" }
     ]
   },
   "B": {
-    "angle": "기사 상생 혜택",
+    "angle": "기사 이탈 방지",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
-    "youtube_title": "기사님 수입 직접 챙기는 상생 구조 | AI 추천 · 용차앱",
-    "youtube_description": "수수료 0원 상생 플랫폼. 소장님 공고를 기사님이 직접 보고 지원하세요. AI가 내 조건에 맞는 공고 먼저 추천. yongcha.app",
-    "hashtags": ["#용차앱", "#화물기사상생", "#AI공고추천", "#수수료없음", "#화물운송", "#상생플랫폼", "#기사혜택"],
-    "instagram_caption": "수수료 없는 상생 구조로 수입을 직접 챙기세요\n\nAI가 내 조건에 맞는 공고 먼저 추천\n실수령액 계산기 (유류비·3.3% 세금 포함)\n소장님과 직접 정보 교환\n기사님 ₩150,000/월\n\nyongcha.app",
+    "youtube_title": "기사님들이 떠나는 진짜 이유 | 수수료 0원 용차앱",
+    "youtube_description": "기사 이탈율 1위 원인: 수수료 과다. 용차앱은 수수료 없는 직접 거래. 기사 실수령 100% 보장. 유류비·차량할부·세금 포함 실수령액 자동 계산. yongcha.app",
+    "hashtags": ["#용차앱", "#기사이탈방지", "#화물기사수입", "#실수령액", "#수수료없음", "#AI공고추천"],
+    "instagram_caption": "기사님들이 떠나는 이유 아세요?\n수수료 때문에 실수령이 너무 작아서요\n\n용차앱으로 기사 수입 지키세요\n수수료 0원 직접 거래\nAI가 내 조건에 맞는 공고 먼저 추천\n유류비·세금 포함 실수령액 자동 계산\n\n기사 ₩150,000/월 · DONWAY 소장님 무료\n\nyongcha.app",
     "lines": [
-      { "startSec": 0,  "text": "소장님과 기사님이 서로 상생하는 물류, 가능할까요?" },
-      { "startSec": 12, "text": "용차앱은 수수료 없이 소장님과 기사님이 직접 정보를 주고받는 상생 플랫폼이에요." },
-      { "startSec": 24, "text": "AI가 내 위치, 경력, 차종에 맞는 공고를 먼저 추천해줘요. 찾아 헤맬 필요가 없어요." },
-      { "startSec": 37, "text": "기사님 월 십오만 원, 소장님 월 오만 원. DONWAY 쓰시는 소장님은 무료예요." },
-      { "startSec": 50, "text": "소장·기사 상생 앱, 용차앱. yongcha.app" }
+      { "startSec": 0,  "text": "기사님들이 플랫폼을 떠나는 이유 아세요?" },
+      { "startSec": 7,  "text": "수수료 때문에 실수령이 너무 작아서예요." },
+      { "startSec": 14, "text": "용차앱은 기사님 수입이 통째로 들어와요. 수수료 제로예요." },
+      { "startSec": 21, "text": "소장님 공고를 직접 보고 지원하니까 불필요한 중간 단계가 없어요." },
+      { "startSec": 28, "text": "AI가 내 위치, 경력, 차종에 맞는 공고 정보를 먼저 보여줘요." },
+      { "startSec": 35, "text": "유류비, 차량 할부, 세금까지 실수령액이 자동 계산돼요." },
+      { "startSec": 42, "text": "기사님 월 십오만 원으로 더 많이 버는 구조를 만드세요." },
+      { "startSec": 49, "text": "DONWAY 쓰시는 소장님은 용차앱 구독료가 무료예요." },
+      { "startSec": 56, "text": "기사가 남는 플랫폼. 용차앱. yongcha.app" }
     ],
     "slides": [
-      { "type": "hero", "tag": "기사 상생 혜택", "title": "수수료 없는\n상생 구조로\n수입 직접 챙기세요", "sub": "소장님 공고를 직접 보고 지원하세요" },
-      { "type": "feature", "icon": "🤝", "title": "상생 플랫폼", "desc": "수수료 없이\n소장·기사 직접 정보 교환" },
-      { "type": "feature", "icon": "🤖", "title": "AI 공고 추천", "desc": "내 위치·경력·차종에 맞는\n공고를 AI가 먼저 추천" },
-      { "type": "feature", "icon": "🧮", "title": "실수령액 계산기", "desc": "유류비·차량 할부\n3.3% 세금까지 한 번에" },
+      { "type": "hero", "tag": "기사 이탈 방지", "title": "기사님들이\n왜 떠나는지\n아세요?", "sub": "수수료 0원으로 기사 수입 지키세요" },
+      { "type": "feature", "icon": "💰", "title": "수수료 제로", "desc": "수수료 없이\n기사 수입 그대로 보장" },
+      { "type": "feature", "icon": "🧮", "title": "실수령액 자동 계산", "desc": "유류비·할부·3.3% 세금\n정확한 실수령 확인" },
+      { "type": "feature", "icon": "🤖", "title": "AI 공고 추천", "desc": "위치·경력·차종 맞는\n공고 정보 자동 추천" },
       { "type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 소장님은 무료" }
     ]
   },
   "C": {
-    "angle": "소장 상생 혜택",
+    "angle": "빠른 기사 채용",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
-    "youtube_title": "기사 직접 매칭·DONWAY 소장님 무료 | 용차앱 상생 플랫폼",
-    "youtube_description": "기사 구하기 힘드셨죠? 용차앱에 공고 올리면 기사님이 직접 지원해요. 소장·기사 상생 구조. DONWAY 구독 소장님은 무료. yongcha.app",
-    "hashtags": ["#용차앱", "#택배대리점소장", "#기사직접지원", "#DONWAY", "#상생플랫폼", "#소장혜택", "#물류"],
-    "instagram_caption": "소장님과 기사님이 함께 잘 되는 상생 플랫폼\n\n공고 올리면 기사님이 직접 지원\n경력·신뢰도 등급 확인 후 선택\nAI 기사 추천\n소장님 ₩50,000/월\nDONWAY 구독 소장님은 무료\n\nyongcha.app",
+    "youtube_title": "기사 구하는데 하루가 다 가죠? 10분으로 줄이는 법 | 용차앱",
+    "youtube_description": "공고 한 번 올리면 근처 기사님들이 직접 지원해요. AI 기사 추천. 경력·신뢰도 등급 확인 후 직접 선택. 채용까지 10분. DONWAY 소장님 무료. yongcha.app",
+    "hashtags": ["#용차앱", "#기사채용", "#택배대리점", "#소장님", "#AI기사추천", "#직접지원"],
+    "instagram_caption": "기사 구하는 데 하루 종일 전화하고 계세요?\n\n용차앱에 공고 올리면 기사님이 직접 와요\n경력·신뢰도 등급 확인 후 직접 선택\nAI가 조건 맞는 기사 먼저 추천\n채용까지 10분이면 충분\n\n소장 ₩50,000/월 · DONWAY 소장님 무료\n\nyongcha.app",
     "lines": [
-      { "startSec": 0,  "text": "소장님과 기사님이 서로 상생하는 물류, 가능할까요?" },
-      { "startSec": 12, "text": "용차앱에 공고 올리면 근처 기사님들이 직접 보고 지원 요청해와요. 수수료 없이요." },
-      { "startSec": 24, "text": "기사 프로필, 경력, 신뢰도 등급까지 확인하고 직접 선택하세요. 서로에게 이익이 되는 구조예요." },
-      { "startSec": 37, "text": "DONWAY로 정산하고 계신 소장님은 용차앱 구독료가 무료예요." },
-      { "startSec": 50, "text": "소장·기사 상생 앱, 용차앱. yongcha.app" }
+      { "startSec": 0,  "text": "기사 구하는 데 하루가 다 가시죠?" },
+      { "startSec": 7,  "text": "전화하고, 기다리고, 안 와서 또 전화하고." },
+      { "startSec": 14, "text": "용차앱에 공고 한 번 올리면 근처 기사님들이 직접 지원해 와요." },
+      { "startSec": 21, "text": "경력, 신뢰도 등급, 차종까지 프로필 다 보고 선택하면 돼요." },
+      { "startSec": 28, "text": "AI가 조건에 맞는 기사님 자동으로 먼저 추천해줘요." },
+      { "startSec": 35, "text": "중간 수수료도 없고, 전화 돌릴 필요도 없어요." },
+      { "startSec": 42, "text": "공고 등록부터 기사 연결까지 십 분이면 충분해요." },
+      { "startSec": 49, "text": "소장님 월 오만 원, DONWAY 구독 소장님은 무료예요." },
+      { "startSec": 56, "text": "더 빠른 채용. 용차앱. yongcha.app" }
     ],
     "slides": [
-      { "type": "hero", "tag": "소장님 상생 혜택", "title": "기사 구하기\n어렵지 않아요\n상생으로 해결하세요", "sub": "공고 올리면 기사님이 직접 와요" },
-      { "type": "feature", "icon": "📢", "title": "공고 올리면 직접 지원", "desc": "근처 기사님들이\n직접 보고 지원 요청해요" },
-      { "type": "feature", "icon": "⭐", "title": "신뢰도 등급 확인", "desc": "경력·신뢰도 S/A/B/C 등급\n확인 후 직접 선택하세요" },
-      { "type": "feature", "icon": "🎁", "title": "DONWAY 소장 무료", "desc": "DONWAY로 정산 중이라면\n용차앱 구독료 무료" },
-      { "type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 소장님은 무료" }
+      { "type": "hero", "tag": "채용 10분", "title": "기사 구하는 데\n하루가 다\n가고 계세요?", "sub": "공고 올리면 기사님이 직접 지원해요" },
+      { "type": "feature", "icon": "📢", "title": "공고 올리면 직접 지원", "desc": "근처 기사님들이\n직접 보고 지원해요" },
+      { "type": "feature", "icon": "⭐", "title": "신뢰도 등급 선택", "desc": "S/A/B/C 등급 확인 후\n직접 선택하세요" },
+      { "type": "feature", "icon": "⚡", "title": "채용까지 10분", "desc": "공고 → AI 추천 → 선택\n빠른 기사 채용 완료" },
+      { "type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 소장님은 무료" },
+      { "type": "cta", "title": "지금 바로 채용", "sub": "용차앱에서 시작하세요", "domain": "yongcha.app" }
     ]
   },
   "D": {
-    "angle": "기존 주선 방식 vs 상생 플랫폼 비교",
+    "angle": "건당 수수료 vs 월정액 비교",
     "voice": "ko-KR-Neural2-A",
     "speedRate": 1.0,
-    "youtube_title": "수수료 빠지는 기존 방식 vs 상생 플랫폼 용차앱 | 직접 비교",
-    "youtube_description": "공고 한 건에 수수료 내고 계세요? 용차앱은 월정액 하나로 공고 무제한 + 상생 구조. yongcha.app",
-    "hashtags": ["#용차앱", "#화물앱비교", "#상생플랫폼", "#화물기사", "#택배대리점", "#수수료비교", "#물류"],
-    "instagram_caption": "기존 방식의 수수료 구조 vs 용차앱 상생 구조\n\n기존: 수수료 건당 과금\n용차앱: 월정액 하나로 공고 무제한 + 상생 구조\nAI 기사 추천\n기사 ₩150,000 / 소장 ₩50,000\nDONWAY 소장 무료\n\nyongcha.app 에서 직접 비교해보세요",
+    "youtube_title": "건당 수수료 내는 방식 vs 월정액 무제한 | 용차앱 직접 비교",
+    "youtube_description": "기존 앱 건당 수수료 vs 용차앱 월정액 하나로 무제한. 소장·기사 모두 수수료 없는 구조. AI 기사 추천. 월 50,000원(소장) / 150,000원(기사). yongcha.app",
+    "hashtags": ["#용차앱", "#수수료비교", "#월정액무제한", "#화물앱비교", "#AI기사추천", "#직접거래"],
+    "instagram_caption": "기존 방식: 건당 수수료\n용차앱: 월정액 하나로 무제한\n\n어떤 구조가 더 유리한지 직접 비교해보세요\nAI 기사 정보 추천\n신뢰도 등급 확인\n실수령액 자동 계산\n\n기사 ₩150,000/월 · 소장 ₩50,000/월\nDONWAY 소장님 무료\n\nyongcha.app",
     "lines": [
-      { "startSec": 0,  "text": "소장님과 기사님이 서로 상생하는 물류, 가능할까요?" },
-      { "startSec": 12, "text": "용차앱은 수수료 없이 소장님과 기사님이 직접 정보를 주고받는 상생 플랫폼이에요." },
-      { "startSec": 24, "text": "공고 열람부터 기사 연결까지, 월정액 하나로 무제한이에요. AI가 공고도 추천해줘요." },
-      { "startSec": 37, "text": "기사님 월 십오만 원, 소장님 월 오만 원. DONWAY 쓰시는 소장님은 무료예요." },
-      { "startSec": 50, "text": "소장·기사 상생 앱, 용차앱. yongcha.app" }
+      { "startSec": 0,  "text": "기존 화물 앱, 건당 수수료 얼마예요?" },
+      { "startSec": 7,  "text": "월 50건이면 수십만 원이 그냥 빠져나가요." },
+      { "startSec": 14, "text": "용차앱은 월정액 하나로 공고 무제한이에요." },
+      { "startSec": 21, "text": "소장님도, 기사님도, 수수료 없는 직접 거래 구조예요." },
+      { "startSec": 28, "text": "AI가 조건 맞는 기사 정보 바로 추천해줘요." },
+      { "startSec": 35, "text": "신뢰도 등급, 실수령액 계산까지 한 번에 확인돼요." },
+      { "startSec": 42, "text": "기사님 월 십오만 원, 소장님 월 오만 원." },
+      { "startSec": 49, "text": "DONWAY 구독 소장님은 무료예요." },
+      { "startSec": 56, "text": "수수료 없애면 답 나와요. 용차앱. yongcha.app" }
     ],
     "slides": [
-      { "type": "hero", "tag": "직접 비교", "title": "수수료 빠지는\n기존 방식 vs\n상생 플랫폼", "sub": "어떤 구조가 더 유리한지 비교해보세요" },
-      { "type": "compare", "bad": "기존: 수수료 건당 과금\n소장·기사 모두 비용 발생", "good": "용차앱: 월정액 하나로\n공고 무제한 + 상생 구조" },
-      { "type": "feature", "icon": "🤖", "title": "AI 기사 추천", "desc": "내 조건에 맞는 공고를\nAI가 먼저 추천해줘요" },
+      { "type": "hero", "tag": "직접 비교", "title": "건당 수수료\nvs\n월정액 무제한", "sub": "어떤 구조가 더 유리한지 비교해보세요" },
+      { "type": "compare", "bad": "기존: 건당 수수료\n월 50건 = 수십만 원 지출", "good": "용차앱: 월정액 하나로\n공고 무제한 + 수수료 없음" },
+      { "type": "feature", "icon": "🤖", "title": "AI 기사 추천", "desc": "내 조건에 맞는\n기사 정보 즉시 추천" },
       { "type": "price", "driver": "₩150,000/월", "dealer": "₩50,000/월", "donway": "DONWAY 소장님은 무료" },
-      { "type": "cta", "title": "상생 플랫폼 시작", "sub": "소장·기사 모두 이익이 되는 구조", "domain": "yongcha.app" }
+      { "type": "cta", "title": "지금 비교해보세요", "sub": "수수료 없애면 답 나와요", "domain": "yongcha.app" }
     ]
   }
 }
