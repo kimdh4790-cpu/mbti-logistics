@@ -10,10 +10,10 @@ var YONGCHA_THEMES = [
   { bg: '#140000', mid: '#7f1d1d', accent: '#dc2626', accent2: '#f87171' }, // D: 빨강 (충격)
 ];
 var YONGCHA_VARIANTS = [
-  { hook: ['화물기사들이', '이걸 몰랐다고?'],         punchline: '주선사 없이도 공고 바로 지원하는 방법 있어요' },
-  { hook: ['주선 수수료', '왜 아직 내고 있어요?'],     punchline: '직접 거래하면 수수료가 0원이에요' },
-  { hook: ['기사 구하는데', '하루가 다 가죠?'],        punchline: 'AI가 3초 만에 딱 맞는 기사 정보 추천해요' },
-  { hook: ['연간 3천만원이', '어디서 새는지 알아요?'], punchline: '주선사 수수료에서 다 새고 있어요' },
+  { hook: ['기사 연결 수수료', '월 수십만원 내세요?'],    punchline: '용차앱은 수수료 0원, 직접 거래예요' },        // A: 수수료 직격
+  { hook: ['기사님들이', '왜 떠나는지 아세요?'],          punchline: '수수료 때문이에요. 용차앱에선 수입이 그대로예요' }, // B: 기사 이탈
+  { hook: ['기사 구하는데', '하루가 다 가죠?'],           punchline: 'AI가 3초 만에 딱 맞는 기사 정보 추천해요' },   // C: 빠른 채용
+  { hook: ['건당 수수료', 'vs 월정액 무제한'],            punchline: '월 오만원 하나로 공고 무제한, 수수료 없음' },   // D: 가격 비교
 ];
 var WEEK_VARIANT = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000)) % 4;
 var T = YONGCHA_THEMES[WEEK_VARIANT];
