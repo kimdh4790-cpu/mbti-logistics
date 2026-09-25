@@ -1356,6 +1356,15 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
       <div class="acc-body" id="acc-dashboard"></div>
     </div>
 
+    <!-- 🔗 앱 현황 -->
+    <div class="acc-item">
+      <div class="acc-header" onclick="_ctrlToggle('apps')">
+        <span class="acc-icon" id="ico-apps">▶</span>
+        <span class="acc-title">앱 현황</span>
+      </div>
+      <div class="acc-body" id="acc-apps"></div>
+    </div>
+
     <!-- ✅ 가입 승인 -->
     <div class="acc-item">
       <div class="acc-header" onclick="_ctrlToggle('join')">
@@ -1415,7 +1424,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:-apple-sy
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-<script src="/mbtico-ctrl.js?v=1"></script>
+<script src="/mbtico-ctrl.js?v=2"></script>
 <script>
   // 앱 시작
   window.addEventListener('DOMContentLoaded', _ctrlInit);
