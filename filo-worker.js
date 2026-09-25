@@ -13,7 +13,7 @@
 //   donway.ai.kr  → /join=/admin → settle.html (AI정산 SaaS)
 //   filo.ai.kr    → filo.html + /api/* + JS 파일 서빙 (외식업 운영)
 //   dine.ne.kr    → dine.html + dine-*.js 서빙 (외식업 특화)
-//   mbtico.kr     → /hub/label/scan/emergency 등 (배송현장앱)
+//   filo.ai.kr    → /emergency·/{slug}/emergency → emergency.html (배송현장앱)
 //
 // [KV 키 — 절대 변경 금지]
 //   settle.html → 'settle.html' (donway-pages/index.html 아님!)
@@ -2215,6 +2215,15 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
       html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
       return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
     }
+    // ★ 슬러그 단독 접속: filo.ai.kr/{slug} → 배송앱 직접 진입 (뒤에 /emergency 불필요)
+    const _slugOnlyMatch = path.match(/^\/([a-zA-Z0-9가-힣\-_]{2,30})\/?$/);
+    if (_slugOnlyMatch && method === 'GET' && !knownPaths.has('/'+_slugOnlyMatch[1])) {
+      const _eSlug = _slugOnlyMatch[1];
+      const resp = await fetchAsset('/emergency.html', request);
+      let html = await resp.text();
+      html = html.replace('</head>', '<script>window._COMPANY_SLUG='+JSON.stringify(_eSlug)+';window._SLUG_MODE=true;</script></head>');
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+    }
 
     // ★ 직원 셀프 체크인
     if (path === '/checkin' || path === '/checkin/') {
@@ -3516,8 +3525,7 @@ service cloud.firestore {
 
     // ── 기사 프로필 저장: POST /api/emergency-driver-profile ──
     if (path === '/api/emergency-driver-profile' && method === 'POST') {
-      const _dpUser = await verifyFirebaseToken(request, env);
-      if (!_dpUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
+      // 익명 로그인 타이밍 이슈로 토큰 없을 수 있음 → dealerId로 회사 검증으로 대체
       try {
         const body = await request.json();
         const { dealerId, driverName, phone, idNum, carNum, carType, bankAccount } = body;

@@ -5267,6 +5267,69 @@ function _parseCoupangExcelInner(file,fbDrivers,month){
 }
 // _parseCoupangExcelInner 끝
 
+// ══ 일일 배송 데이터 엑셀 업로드 ══
+// 양식: 날짜(YYYY-MM-DD) | 이름 | 전화번호 | 배송건수 | 거절건수 | 취소건수
+function _parseDailyDeliveryExcel(inp) {
+  var file = inp.files[0];
+  if (!file) return;
+  inp.value = '';
+  // XLSX 라이브러리가 로드되어 있는지 확인
+  if (typeof XLSX === 'undefined') {
+    toast('❌ 엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도하세요.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (!rows.length) { toast('❌ 빈 파일입니다'); return; }
+      // 헤더 행 skip (첫 행이 날짜 형식이 아니면 헤더로 간주)
+      var dataRows = rows.filter(function(r) {
+        var v = String(r[0]||'').trim();
+        return v.match(/^\d{4}[-\/]\d{2}[-\/]\d{2}$/) || v.match(/^\d{8}$/);
+      });
+      if (!dataRows.length) { toast('❌ 데이터 형식이 올바르지 않습니다.\n형식: 날짜(YYYY-MM-DD) | 이름 | 전화번호 | 배송 | 거절 | 취소'); return; }
+      // 날짜별로 그룹화
+      var byDate = {};
+      dataRows.forEach(function(r) {
+        var rawDate = String(r[0]||'').trim().replace(/\//g,'-');
+        var date = rawDate.length === 8 ? rawDate.slice(0,4)+'-'+rawDate.slice(4,6)+'-'+rawDate.slice(6,8) : rawDate;
+        if (!byDate[date]) byDate[date] = [];
+        var phone = String(r[2]||'').replace(/\D/g,'');
+        byDate[date].push({
+          name: String(r[1]||'').trim(),
+          phone: phone,
+          count: parseInt(r[3])||0,
+          reject: parseInt(r[4])||0,
+          cancel: parseInt(r[5])||0
+        });
+      });
+      var dates = Object.keys(byDate);
+      if (!dates.length) { toast('❌ 날짜 데이터가 없습니다'); return; }
+      toast('📅 ' + dates.length + '일치 데이터 업로드 중...');
+      var token = await firebase.auth().currentUser.getIdToken();
+      var did = _CU.dealerId;
+      var totalSaved = 0;
+      for (var i = 0; i < dates.length; i++) {
+        var res = await fetch('/api/delivery-daily-upload', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+          body: JSON.stringify({dealerId: did, date: dates[i], rows: byDate[dates[i]]})
+        });
+        var json = await res.json();
+        if (json.ok) totalSaved += json.saved || 0;
+      }
+      toast('✅ 일일 배송 데이터 업로드 완료 (' + totalSaved + '건)');
+    } catch(e) {
+      toast('❌ 오류: ' + (e.message||e));
+      console.error(e);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function _updatePromoPreview(margin, totalRaw, totalCnt){
   margin = parseInt(margin)||10;
   var pay = Math.round(totalRaw * (1 - Math.max(0, margin-10)/100));
@@ -5286,6 +5349,7 @@ function _updatePromoPreview(margin, totalRaw, totalCnt){
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 <script>
 // ══ 캠프별 취합 UI (parseCoupangExcel 이후 호출) ══
 function renderCpPending(){
@@ -5769,13 +5833,26 @@ if(window.location.hash==='#join'){
       var _lb=document.getElementById('btn-login-submit');
       if(_lb){_lb.disabled=false;_lb.textContent='로그인';}
     }else{
-      _db.doc('users/'+user.uid).get().then(function(snap){
-        var d=snap.exists?snap.data():{};
-        // ★ dealerId 누락 방어 — 없으면 자동 보정 (신규/구버전 계정 단도리)
-        if(!d.dealerId){
-          _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
-          d.dealerId=user.uid;
-        }
+      // ★ 기사 계정(@donway.internal) → users 컬렉션 조회 없이 Worker API로 처리
+      var _isDriverEmail=user.email&&user.email.endsWith('@donway.internal');
+      (_isDriverEmail
+        ? user.getIdToken().then(function(tok){
+            return fetch('/api/my-driver-profile',{headers:{'Authorization':'Bearer '+tok}});
+          }).then(function(r){return r.json();}).then(function(j){
+            if(j.ok&&j.dealerId)return{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||''};
+            // API 실패시에도 role:driver 강제 (companies 체크 우회를 위해)
+            return{dealerId:user.uid,role:'driver'};
+          }).catch(function(){return{dealerId:user.uid,role:'driver'};})
+        : _db.doc('users/'+user.uid).get().then(function(snap){
+            var d=snap.exists?snap.data():{};
+            // ★ dealerId 누락 방어 — 없으면 자동 보정 (딜러 계정 전용)
+            if(!d.dealerId){
+              _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
+              d.dealerId=user.uid;
+            }
+            return d;
+          })
+      ).then(function(d){
         var _dealerId=d.dealerId||user.uid;
         _CU=Object.assign({},d,{uid:user.uid,email:user.email,name:d.name||'',
           companyName:d.companyName||d.name||'',
@@ -5801,6 +5878,8 @@ if(window.location.hash==='#join'){
           if(cs.exists){_campConfig=cs.data()||{};_syncCampColors();}
         }).catch(function(){});
 
+        // ★ 기사 계정: companies 체크 없이 바로 showApp()
+        if(_CU.role==='driver'){showApp();return;}
         // ★ companies 읽어서 plan/trialEnd _CU에 추가 → 기능 동기적 처리
         _db.collection('companies').doc(_dealerId).get().then(function(cSnap){
           if(!cSnap.exists && !isSuperAdmin()){
@@ -5870,7 +5949,7 @@ if(window.location.hash==='#join'){
                 return a.phone&&_userEmail.indexOf(a.phone)>=0;
               });
               // users 컬렉션에서 전화번호 확인
-              var _userPhone=(snap.exists?snap.data().phone:'')||'';
+              var _userPhone=d.phone||'';
               _allowed=_allowed||_loginAllowed.some(function(a){
                 return a.phone&&_userPhone.replace(/[^0-9]/g,'')===a.phone.replace(/[^0-9]/g,'');
               });
@@ -6906,22 +6985,23 @@ function doRegister(){
 
 // ── 회사코드 확인 ──
 function checkCompanyCode(){
-  var code=document.getElementById('j-code').value.trim().toUpperCase();
+  var code=(document.getElementById('j-code').value||'').trim().toUpperCase();
   var msg=document.getElementById('j-code-msg');
   if(!code){msg.style.display='block';msg.style.color='var(--red)';msg.textContent='회사코드를 입력하세요';return;}
   msg.style.display='block';msg.style.color='var(--text3)';msg.textContent='확인 중...';
-  _db.collection('companies').where('companyCode','==',code).get().then(function(snap){
-    if(!snap.empty){
-      var co=snap.docs[0].data();
-      msg.style.color='#059669';
-      msg.textContent='✅ '+co.companyName+' — 코드 확인됨';
-      document.getElementById('j-code').dataset.companyId=snap.docs[0].id;
-      document.getElementById('j-code').dataset.companyName=co.companyName;
-    } else {
-      msg.style.color='var(--red)';msg.textContent='❌ 유효하지 않은 회사코드입니다';
-      document.getElementById('j-code').dataset.companyId='';
-    }
-  });
+  fetch('/api/check-company-code?code='+encodeURIComponent(code))
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.ok){
+        msg.style.color='#059669';
+        msg.textContent='✅ '+data.companyName+' — 코드 확인됨';
+        document.getElementById('j-code').dataset.companyId=data.companyId;
+        document.getElementById('j-code').dataset.companyName=data.companyName||'';
+      } else {
+        msg.style.color='var(--red)';msg.textContent='❌ 유효하지 않은 회사코드입니다';
+        document.getElementById('j-code').dataset.companyId='';
+      }
+    }).catch(function(){msg.style.color='var(--red)';msg.textContent='오류 — 잠시 후 다시 시도';});
 }
 
 // ── 직원 가입 ──
@@ -6960,27 +7040,22 @@ function _quickVerifyCode(code){
   clearTimeout(_quickCodeTimer);
   msg.innerHTML='<span style="color:var(--text3)">확인 중...</span>';
   _quickCodeTimer=setTimeout(function(){
-    if(!_db){msg.innerHTML='<span style="color:var(--text3)">로딩 중...</span>';setTimeout(function(){_quickVerifyCode(code);},800);return;}
-    _db.collection('companies').where('companyCode','==',code).limit(1).get()
-      .then(function(snap){
-        if(!snap.empty){
-          var d=snap.docs[0].data(),cid=snap.docs[0].id;
-          var el=document.getElementById('j-code');
-          if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
-          msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
+    fetch('/api/check-company-code?code='+encodeURIComponent(code.toUpperCase()))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        var el=document.getElementById('j-code');
+        if(data.ok){
+          if(el){el.dataset.companyId=data.companyId;el.dataset.companyName=data.companyName||'';}
+          if(!data.hasDelivery){
+            // AI 정산 전용 대리점 — 기사 앱 가입 불필요
+            if(el){el.dataset.companyId='';}
+            msg.innerHTML='<span style="color:#f59e0b">⚠️ '+esc(data.companyName||'')+'<br><span style="font-size:10px">이 대리점은 AI 정산을 사용합니다. 기사 앱 가입이 필요하지 않습니다.</span></span>';
+          } else {
+            msg.innerHTML='<span style="color:var(--green)">✅ '+esc(data.companyName||'확인됨')+'</span>';
+          }
         } else {
-          // companyCode 없으면 slug로도 시도
-          return _db.collection('companies').where('slug','==',code).limit(1).get()
-            .then(function(snap2){
-              if(!snap2.empty){
-                var d=snap2.docs[0].data(),cid=snap2.docs[0].id;
-                var el=document.getElementById('j-code');
-                if(el){el.dataset.companyId=cid;el.dataset.companyName=d.companyName||'';}
-                msg.innerHTML='<span style="color:var(--green)">✅ '+esc(d.companyName||'확인됨')+'</span>';
-              } else {
-                msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';
-              }
-            });
+          if(el){el.dataset.companyId='';el.dataset.companyName='';}
+          msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';
         }
       }).catch(function(e){msg.innerHTML='<span style="color:var(--red)">오류: '+e.message+'</span>';});
   },500);
@@ -7013,32 +7088,58 @@ function doQuickJoin(){
   var driverId=driverIdInput||('drv_'+phone.slice(-4)+'_'+Date.now().toString(36).slice(-4));
   var btn=document.getElementById('join-submit-btn');
   if(btn){btn.disabled=true;btn.textContent='가입 중...';}
-  firebase.auth().createUserWithEmailAndPassword(email,pw)
-    .then(function(cred){
-      var uid=cred.user.uid;
-      var data={uid:uid,name:name,phone:phone,email:email,dealerId:companyId,companyName:companyName,
-        role:joinRoleQ,store:joinStoreQ,driverId:driverId,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
-        bizType:bizType,bizKind:bizKind,bizItem:bizKind,bizAddr:bizAddr,bizRep:name,
-        ssn:ssn,joinDate:joinDate,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),joinType:'quick'};
-      return _db.collection('users').doc(uid).set(data).then(function(){
-        return _db.collection('drivers').add(Object.assign({},data,{
-          userId:uid,is_active:true,status:'재직',jobsub:'',camp:'',wave:'',joinedViaQR:true
-        }));
+  // 1. Firebase Auth 계정 생성 → 2. Firestore 드라이버 등록
+  (async function(){
+    var pwHash='';
+    try{
+      var enc=new TextEncoder().encode(pw);
+      var buf=await crypto.subtle.digest('SHA-256',enc);
+      pwHash=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    }catch(e){}
+    // Firebase Auth 계정 생성 (없으면 생성, 이미 있으면 무시)
+    var authUid='';
+    if(_auth){
+      try{
+        var cred=await _auth.createUserWithEmailAndPassword(email,pw);
+        authUid=cred.user.uid;
+      }catch(ae){
+        if(ae.code==='auth/email-already-in-use'){
+          // 이미 가입된 전화번호 — 비밀번호 확인 후 uid 획득
+          try{
+            var sc=await _auth.signInWithEmailAndPassword(email,pw);
+            authUid=sc.user.uid;
+          }catch(se){
+            if(btn){btn.disabled=false;btn.textContent='가입하기';}
+            if(err){err.textContent='이미 가입된 전화번호입니다. 비밀번호를 확인하세요';err.style.display='';}
+            return;
+          }
+        }else{
+          if(btn){btn.disabled=false;btn.textContent='가입하기';}
+          if(err){err.textContent='계정 생성 실패: '+(ae.message||ae.code);err.style.display='';}
+          return;
+        }
+      }
+    }
+    var payload={name:name,phone:phone,companyId:companyId,companyName:companyName,
+      driverId:driverId,role:joinRoleQ,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
+      bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,ssn:ssn,joinDate:joinDate,pw:pwHash,
+      uid:authUid,email:email};
+    fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(btn){btn.disabled=false;btn.textContent='가입하기';}
+        if(data.ok){
+          toast('✅ 가입 완료! 전화번호로 로그인하세요');
+          switchTab('login');
+          if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
+        } else {
+          if(err){err.textContent=data.error||'가입 오류';err.style.display='';}
+        }
+      }).catch(function(e){
+        if(btn){btn.disabled=false;btn.textContent='가입하기';}
+        if(err){err.textContent='네트워크 오류 — 인터넷 연결 확인';err.style.display='';}
       });
-    })
-    .then(function(){
-      if(btn){btn.disabled=false;btn.textContent='가입하기';}
-      toast('✅ 가입 완료! 전화번호로 로그인하세요');
-      switchTab('login');
-      if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
-      setTimeout(_requestFcmAfterJoin, 1000);
-    })
-    .catch(function(e){
-      if(btn){btn.disabled=false;btn.textContent='가입하기';}
-      var msgs={'auth/email-already-in-use':'이미 등록된 연락처입니다','auth/weak-password':'비밀번호 6자 이상','auth/network-request-failed':'네트워크 오류 — 인터넷 연결 확인','auth/too-many-requests':'잠시 후 다시 시도하세요','auth/invalid-email':'이메일 형식 오류'};
-      if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
-    });
+  })();
 }
 
 
@@ -7320,72 +7421,20 @@ function doJoin(){
   if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 합니다';err.style.display='block';return;}
 
   err.textContent='가입 중...';err.style.color='var(--text3)';err.style.display='block';
-  var uid='';
   _auth.createUserWithEmailAndPassword(email,pw).then(function(cred){
-    uid=cred.user.uid;
-    var userDoc={
-      name:name,driverId:driverId,email:email,
-      companyId:companyId,dealerId:companyId,companyName:companyName,
-      role:joinRole,
-      store:joinStore,
-      bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    };
-    // users 컬렉션 저장
-      // ★ members 컬렉션 자동 저장 — 관리자 직원목록·기사관리 즉시 표시
-      _db.collection('members').doc(uid).set({
-        uid:uid, name:name, driverId:driverId, email:email, phone:'',
-        dealerId:companyId, companyName:companyName,
-        role:joinRole, store:joinStore,
-        bizNum:bizNum, bizName:bizName, bizOwner:bizOwner,
-        status:'active', platform:'donway', authUid:uid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
-      },{merge:true}).catch(function(){});
-    return _db.collection('users').doc(uid).set(userDoc).then(function(){
-      // ★ members 컬렉션 자동 저장 — 관리자 직원 목록·기사 관리에 즉시 표시
-      var memberDoc={
-        uid:uid, name:name, driverId:driverId, email:email, phone:'',
-        dealerId:companyId, companyName:companyName,
-        role:joinRole, store:joinStore,
-        bizNum:bizNum, bizName:bizName, bizOwner:bizOwner,
-        status:'active', platform:'donway', authUid:uid,
-        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
-        joinedAt:firebase.firestore.FieldValue.serverTimestamp()
-      };
-      _db.collection('members').doc(uid).set(memberDoc,{merge:true}).catch(function(){});
-      // drivers 컬렉션에도 자동 등록 (관리자 기사 관리에 표시)
-      return _db.collection('drivers').where('dealerId','==',companyId).where('userId','==',driverId).get()
-      .then(function(snap){
-        if(snap.empty){
-          return _db.collection('drivers').add({
-            dealerId:companyId,
-            userId:driverId,
-            name:name,
-            email:email,
-            bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
-            camp:'',route:'',
-            authUid:uid,
-            joinedAt:firebase.firestore.FieldValue.serverTimestamp(),
-            createdAt:firebase.firestore.FieldValue.serverTimestamp()
-          });
-        }
-        // 이미 있으면 authUid만 업데이트
-        return snap.docs[0].ref.update({authUid:uid,email:email,bizNum:bizNum,bizName:bizName,bizOwner:bizOwner});
+    var uid=cred.user.uid;
+    return fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        name:name,phone:'',companyId:companyId,companyName:companyName,
+        driverId:driverId,uid:uid,role:joinRole,
+        isBiz:!!(bizNum||bizName),bizNum:bizNum,bizName:bizName,bizOwner:bizOwner,
+        email:email,store:joinStore
+      })}).then(function(r){return r.json();}).then(function(data){
+        if(!data.ok) throw new Error(data.error||'서버 오류');
+        return uid;
       });
-    });
   }).then(function(){
-    toast('✅ 가입 완료! 관리자 직원 목록에 자동 등록됐습니다. 로그인해 주세요');
-    // ★ 서버사이드 members 백업 저장 (클라이언트 실패 대비)
-    fetch('/api/join-member',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({uid:cred&&cred.user&&cred.user.uid||'',
-        name:document.getElementById('j-name').value.trim(),
-        driverId:document.getElementById('j-driverid').value.trim(),
-        email:document.getElementById('j-email').value.trim(),
-        dealerId:document.getElementById('j-code').dataset.companyId||'',
-        companyName:document.getElementById('j-code').dataset.companyName||'',
-        platform:'donway'
-      })}).catch(function(){});
+    toast('✅ 가입 완료! 로그인해 주세요');
     switchTab('login');
     setTimeout(_requestFcmAfterJoin, 1000);
     ['j-name','j-driverid','j-email','j-pw','j-code','j-biz-num','j-biz-name','j-biz-owner'].forEach(function(id){
@@ -7426,7 +7475,7 @@ function doPhoneLogin(){
     .then(function(){if(btn){btn.disabled=false;btn.textContent='로그인';}})
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}
-      var msgs={'auth/user-not-found':'등록되지 않은 전화번호','auth/wrong-password':'비밀번호가 틀렸습니다','auth/invalid-credential':'전화번호 또는 비밀번호 오류','auth/too-many-requests':'잠시 후 시도하세요'};
+      var msgs={'auth/user-not-found':'등록되지 않은 전화번호','auth/wrong-password':'비밀번호가 틀렸습니다','auth/invalid-credential':'전화번호 또는 비밀번호 오류','auth/invalid-login-credentials':'전화번호 또는 비밀번호 오류','auth/too-many-requests':'잠시 후 시도하세요'};
       if(err){err.textContent=msgs[e.code]||e.message;err.style.display='';}
     });
 }
@@ -7522,6 +7571,11 @@ function doLogin(){
   // 이메일 형식이면 바로 로그인
   if(input.indexOf('@')>=0){
     _tryLogin(input);
+    return;
+  }
+  // 전화번호 형식(숫자만, 10~11자리)이면 Firestore 조회 없이 @donway.internal 시도
+  if(/^\d{10,11}$/.test(input)){
+    _tryLogin(input+'@donway.internal');
     return;
   }
   // 아이디 형식 → users/drivers 컬렉션에서 이메일 조회
@@ -7792,7 +7846,8 @@ function _ctrRenderWrite(){
     +'</div>'
     +'</div>'
     +'<div class="card" style="margin-bottom:12px">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">③ 계약서 DOCX 업로드</div>'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">④ 계약서 DOCX 업로드 <span style="font-size:11px;font-weight:400;color:var(--text3)">(선택 — 없으면 기본 16조 위수탁 사용)</span></div>'
+    +'<a href="/donway-wisu-template.docx" download style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;margin-bottom:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#16a34a;font-weight:600;text-decoration:none">📥 표준 위수탁 계약서 양식 다운로드</a>'
     +'<input type="file" id="ctr-docx-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="_ctrDocxLoad(this)" style="display:none">'
     +'<div id="ctr-docx-status"><label for="ctr-docx-file" style="display:block;padding:12px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 계약서 DOCX 파일 선택 (워드 파일만)</label></div>'
     +'<div id="ctr-docx-editor" style="display:none;margin-top:10px"></div>'
@@ -7819,13 +7874,14 @@ function _ctrRenderWrite(){
     +'<button onclick="_ctrStampClear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
     +'</div>'
     +'</div>'
-    +'<div id="ctr-blank-inputs-card" style="display:none;margin-bottom:12px"></div>'
+    +''
     +'<div class="card" style="margin-bottom:12px">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">✍️ 기사 서명 <span style="font-size:11px;font-weight:400;color:var(--text3)">(현장 직접 서명 시 — 선택)</span></div>'
     +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">👤 기사 성명 <span style="color:#ef4444">(동의서·보관함 표시)</span></label>'
     +'<input id="ctr-driver-name-input" type="text" placeholder="홍길동" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
     +'<div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">📱 기사 전화번호 <span style="color:#ef4444">(알림톡 발송 필수)</span></label>'
-    +'<input id="ctr-driver-phone-input" type="tel" placeholder="010-0000-0000" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<input id="ctr-driver-phone-input" type="tel" placeholder="010-0000-0000" oninput="_ctrLookupDriverByPhone(this.value)" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>'
+    +'<div id="ctr-driver-lookup-status" style="font-size:11px;color:var(--text3);margin-top:-6px;margin-bottom:10px"></div>'
     +'<div style="font-size:11px;color:var(--text3);background:var(--bg2);border-radius:8px;padding:6px 10px;margin-bottom:8px">현장 서명 없이 저장하면 기사에게 알림톡으로 서명 링크를 발송합니다.</div>'
     +'<canvas id="ctr-driver-sig" style="border:1px solid var(--border);border-radius:8px;width:100%;height:110px;background:#fff;touch-action:none;display:block"></canvas>'
     +'<button onclick="window._driverSigPad&&window._driverSigPad.clear()" style="margin-top:6px;padding:5px 12px;background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer">지우기</button>'
@@ -7871,74 +7927,6 @@ function _ctrSelectType(t){
   _ctrRenderWrite();
 }
 
-function _ctrRenderBlankInputs(){
-  var bc=document.getElementById('ctr-blank-inputs-card');
-  if(!bc)return;
-  var html=window._ctrDocxOrigHtml||'';
-  if(!html){bc.style.display='none';bc.innerHTML='';return;}
-  // <u> 태그를 빈칸으로 인식 — 연속된 밑줄(___)도 포함
-  var matches=[];
-  var tmp=document.createElement('div');tmp.innerHTML=html;
-  var uEls=tmp.querySelectorAll('u');
-  uEls.forEach(function(u,i){
-    var txt=(u.textContent||'').replace(/\s|_/g,'');
-    if(txt.length<3){matches.push({idx:i,label:_ctrGuessLabel(u,tmp),id:'ctr-blank-'+i});}
-  });
-  if(!matches.length){bc.style.display='none';bc.innerHTML='';return;}
-  var rows=matches.map(function(m){
-    return '<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px">빈칸 '+(m.idx+1)+(m.label?' · '+m.label:'')+' </label>'
-      +'<input id="'+m.id+'" type="text" placeholder="내용 입력" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:var(--bg2);color:var(--text1);box-sizing:border-box"></div>';
-  }).join('');
-  bc.style.display='block';
-  bc.innerHTML='<div class="card" style="margin-bottom:0">'
-    +'<div style="font-size:13px;font-weight:700;margin-bottom:10px">✍️ DOCX 빈칸 자동입력</div>'
-    +rows
-    +'<button onclick="_ctrFillBlanks()" style="width:100%;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px">📝 DOCX에 입력하기</button>'
-    +'</div>';
-  window._ctrBlankMatches=matches;
-}
-function _ctrGuessLabel(uEl,root){
-  // 앞 텍스트 노드에서 레이블 추정
-  var prev=uEl.previousSibling;
-  while(prev){
-    var t=(prev.textContent||'').trim().replace(/[:：\s]+$/,'');
-    if(t.length>0&&t.length<20)return t;
-    prev=prev.previousSibling;
-  }
-  return '';
-}
-function _ctrFillBlanks(){
-  var matches=window._ctrBlankMatches||[];
-  if(!matches.length){toast('빈칸 목록이 없습니다. DOCX를 다시 업로드해 주세요.');return;}
-  var html=window._ctrDocxOrigHtml||'';
-  if(!html){toast('DOCX 원문이 없습니다.');return;}
-  var tmp=document.createElement('div');tmp.innerHTML=html;
-  var uEls=tmp.querySelectorAll('u');
-  matches.forEach(function(m){
-    var inp=document.getElementById(m.id);
-    var val=inp?inp.value.trim():'';
-    if(!val)return;
-    var u=uEls[m.idx];
-    if(u){var span=document.createElement('span');span.style.fontWeight='700';span.style.color='#0066ff';span.textContent=val;u.parentNode.replaceChild(span,u);}
-  });
-  var filled=tmp.innerHTML;
-  window._ctrDocxOrigHtml=filled;
-  // 편집기에 반영
-  var editor=document.getElementById('ctr-docx-editor');
-  var content=editor?editor.querySelector('[contenteditable]')||editor.querySelector('#ctr-docx-content'):null;
-  if(content)content.innerHTML=filled;
-  // localStorage 업데이트
-  try{
-    var _sk='ctr_docx_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
-    var stored=JSON.parse(localStorage.getItem(_sk)||'{}');
-    stored.html=filled;
-    localStorage.setItem(_sk,JSON.stringify(stored));
-  }catch(_e){}
-  // 빈칸 카드 숨김
-  var bc=document.getElementById('ctr-blank-inputs-card');if(bc){bc.style.display='none';bc.innerHTML='';}
-  window._ctrBlankMatches=[];
-  toast('✅ DOCX 빈칸 입력 완료');
-}
 function _ctrSaveEdited(){
   var content=document.getElementById('ctr-docx-content');
   if(!content)return;
@@ -7946,17 +7934,151 @@ function _ctrSaveEdited(){
   try{localStorage.setItem(_sk,content.innerHTML);}catch(_e){}
 }
 
+var _ctrPhoneLookupTimer=null;
+function _ctrLookupDriverByPhone(raw){
+  var st=document.getElementById('ctr-driver-lookup-status');
+  var phone=raw.replace(/[^0-9]/g,'');
+  if(phone.length<10){window._ctrDriver=null;if(st)st.textContent='';return;}
+  if(_ctrPhoneLookupTimer)clearTimeout(_ctrPhoneLookupTimer);
+  _ctrPhoneLookupTimer=setTimeout(function(){
+    if(!_db||!_CU)return;
+    var cid=_CU.dealerId||_CU.companyId||_CU.uid;
+    if(st)st.textContent='🔍 기사 정보 조회 중...';
+    _db.collection('drivers').where('dealerId','==',cid).where('phone','==',phone).limit(1).get()
+    .then(function(snap){
+      if(snap.empty){
+        // 하이픈 포함 포맷으로도 시도
+        var ph2=phone.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3');
+        return _db.collection('drivers').where('dealerId','==',cid).where('phone','==',ph2).limit(1).get();
+      }
+      return snap;
+    })
+    .then(function(snap2){
+      if(snap2&&!snap2.empty){
+        var d=Object.assign({id:snap2.docs[0].id},snap2.docs[0].data());
+        window._ctrDriver=d;
+        var ni=document.getElementById('ctr-driver-name-input');
+        if(ni&&!ni.value&&d.name)ni.value=d.name;
+        if(st){
+          var info='✅ '+esc(d.name||'기사')+'님 조회 완료';
+          if(d.carNum)info+=' · 차량 '+esc(d.carNum);
+          if(d.licenseNum)info+=' · 자격 '+esc(d.licenseNum);
+          st.textContent=info;
+          st.style.color='#10b981';
+        }
+        _ctrApplyTyped(true);
+      } else {
+        window._ctrDriver=null;
+        if(st){st.textContent='ℹ️ 등록된 기사 없음 — DOCX에 직접 입력하세요';st.style.color='var(--text3)';}
+      }
+    }).catch(function(){if(st)st.textContent='';});
+  },600);
+}
+
+function _ctrApplyTyped(silent){
+  var c=document.getElementById('ctr-docx-content');
+  if(!c){if(!silent)toast('⚠️ DOCX 파일을 먼저 업로드하세요');return;}
+  var _g2=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
+  var drv=window._ctrDriver||{};
+  var _td=new Date();
+  var _ed=new Date(_td.getFullYear()+1,_td.getMonth(),_td.getDate()-1);
+  var _fmtKr=function(d){return d.getFullYear()+'년 '+String(d.getMonth()+1).padStart(2,'0')+'월 '+String(d.getDate()).padStart(2,'0')+'일';};
+  // 키워드 기반 매핑: 빈칸 앞 텍스트에서 키워드 감지 → 해당 값 삽입
+  // 순서 매핑 방식은 수수료% 빈칸에 이름/전화번호가 들어가는 오류 발생
+  var keywordMap=[
+    {keys:['성명','이름','기사명','운송인','운수종사자','계약자'],val:_g2('ctr-driver-name-input')||drv.name||''},
+    {keys:['사업자등록번호','사업자번호'],val:drv.bizNum||''},
+    {keys:['주민등록번호','주민번호','생년월일'],val:drv.ssn||''},
+    {keys:['주소','소재지','거주지'],val:drv.address||''},
+    {keys:['차량내역','차량번호','등록번호'],val:drv.carNum||''},
+    {keys:['종사자격','자격증번호'],val:drv.licenseNum||drv.licenseNumber||''},
+    {keys:['전화번호','연락처','휴대폰','전화'],val:_g2('ctr-driver-phone-input')||drv.phone||''},
+  ];
+  var html=c.innerHTML;
+  var filled=0;
+  var blankRe=/<u>((?:&nbsp;|&#xa0;|\s)*)<\/u>/gi;
+  var result='';var lastIdx=0;var m;
+  while((m=blankRe.exec(html))!==null){
+    var inner=m[1];
+    result+=html.slice(lastIdx,m.index);
+    if(inner.replace(/&nbsp;|&#xa0;|\s/g,'').length>0){result+=m[0];}
+    else{
+      var pre=html.slice(Math.max(0,m.index-150),m.index).replace(/<[^>]*>/g,'').toLowerCase();
+      var fv=null;
+      for(var i=0;i<keywordMap.length&&!fv;i++){
+        if(!keywordMap[i].val)continue;
+        for(var j=0;j<keywordMap[i].keys.length;j++){
+          if(pre.indexOf(keywordMap[i].keys[j])>=0){fv=keywordMap[i].val;break;}
+        }
+      }
+      if(fv){result+='<u><b>'+fv+'</b></u>';filled++;}else{result+=m[0];}
+    }
+    lastIdx=m.index+m[0].length;
+  }
+  result+=html.slice(lastIdx);
+  c.innerHTML=result;
+  var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
+  try{localStorage.setItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid,result);}catch(_e){}
+  if(!silent)toast(filled?'✅ 빈칸 '+filled+'개 채우기 완료':'ℹ️ 채울 수 있는 빈칸이 없습니다');
+}
+
+function _ctrSanitizeAddr(s){
+  if(!s)return s;
+  return s.replace(/(시|구|도|군|읍|면|동|리)\s*\.\s*/g,'\ ').replace(/\s{2,}/g,' ').trim();
+}
 function _ctrCollect(){
   var _g=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var cp=window._ctrCompany||{};
   var routePrices=[];var routeStr='';var firstPrice='';var campAuto='';var areaAuto='전구역관할';
   var drv=window._ctrDriver||{};
-  var startDate=_g('ctr-start-date');
-  var endDate=_g('ctr-end-date');
-  var collectPrice=_g('ctr-collect-price');
-  var unitPrice=_g('ctr-unit-price')||firstPrice;
-  var carNum=_g('ctr-car-num');
-  var licNum=_g('ctr-lic-num');
+  var _td2=new Date();
+  var _fmtIso=function(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  // DOCX 타이핑 내용 전체 추출 — <u>타이핑값</u> 태그에서 키워드 컨텍스트로 필드 매핑
+  var _extractTyped=function(){
+    var c=document.getElementById('ctr-docx-content');
+    if(!c)return{};
+    var html=c.innerHTML;
+    var r={};
+    var uRe=/<u>([\s\S]*?)<\/u>/gi;var m;
+    while((m=uRe.exec(html))!==null){
+      var val=m[1].replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').trim();
+      if(!val||!val.replace(/\s/g,''))continue;
+      var pre=html.slice(Math.max(0,m.index-150),m.index).replace(/<[^>]*>/g,'').replace(/&nbsp;|&#xa0;/g,' ').toLowerCase();
+      // 날짜 패턴: YYYY년 MM월 DD일 또는 YYYY-MM-DD
+      var isDate=/^\d{4}[-년]\s*\d{1,2}[-월]\s*\d{1,2}/.test(val)||/^\d{4}-\d{2}-\d{2}$/.test(val);
+      if(!r.driverName&&/성명|이름|기사명|운송인|운수종사자|계약자/.test(pre))r.driverName=val;
+      else if(!r.driverBizNum&&/사업자등록번호|사업자번호/.test(pre))r.driverBizNum=val;
+      else if(!r.driverIdNum&&/주민등록번호|주민번호|생년월일/.test(pre))r.driverIdNum=val;
+      else if(!r.driverAddr&&/주소|소재지|거주지/.test(pre))r.driverAddr=val;
+      else if(!r.carNum&&/차량내역|차량번호|자동차\s*등록번호/.test(pre))r.carNum=val;
+      else if(!r.licenseNum&&/종사자격|자격증\s*번호/.test(pre))r.licenseNum=val;
+      else if(!r.driverPhone&&/전화번호|연락처|휴대폰|전화/.test(pre))r.driverPhone=val;
+      else if(!r.deliveryFee&&/배송수수료|배송단가/.test(pre))r.deliveryFee=val;
+      // 계약기간 날짜: <u>로 타이핑된 날짜 값에서 직접 추출
+      else if(isDate&&!r.startDate&&/계약기간|부터|시작/.test(pre))r.startDate=val;
+      else if(isDate&&!r.endDate&&(r.startDate||/까지|종료/.test(pre)))r.endDate=val;
+    }
+    // 계약기간 날짜 fallback: innerText 검색
+    if(!r.startDate||!r.endDate){
+      var text=c.innerText||c.textContent||'';
+      var periIdx=text.indexOf('계약기간');
+      var searchText=periIdx>=0?text.slice(periIdx,periIdx+500):text;
+      var krRe=/(\d{4})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/g;
+      var dates=[];var dm;
+      while((dm=krRe.exec(searchText))!==null){dates.push(dm[1]+'-'+String(dm[2]).padStart(2,'0')+'-'+String(dm[3]).padStart(2,'0'));}
+      if(!dates.length){var isoRe=/(\d{4}-\d{2}-\d{2})/g;while((dm=isoRe.exec(searchText))!==null)dates.push(dm[1]);}
+      if(!r.startDate)r.startDate=dates[0]||_fmtIso(_td2);
+      if(!r.endDate)r.endDate=dates[1]||dates[0]||_fmtIso(_td2);
+    }
+    return r;
+  };
+  var typed=_extractTyped();
+  var startDate=typed.startDate;
+  var endDate=typed.endDate;
+  var collectPrice='';
+  var unitPrice=firstPrice;
+  var carNum=drv.carNum||typed.carNum||'';
+  var licNum=drv.licenseNum||typed.licenseNum||'';
   return {
     type:window._ctrType||'wisu',
     dealerId:_CU&&(_CU.dealerId||_CU.companyId)||'',
@@ -7965,20 +8087,22 @@ function _ctrCollect(){
     companyCeo:cp.ceoName||cp.repName||'',
     companyAddr:cp.bizAddr||cp.address||cp.addr||'',
     companyPhone:cp.settlementPhone||cp.phone||cp.tel||'',
-    driverName:_g('ctr-driver-name-input')||drv.name||'',
-    driverPhone:_g('ctr-driver-phone-input')||drv.phone||'',
-    driverBizNum:drv.bizNum||'',
-    driverIdNum:drv.ssn||'',
-    driverAddr:drv.address||'',
+    driverName:_g('ctr-driver-name-input')||drv.name||typed.driverName||'',
+    driverPhone:_g('ctr-driver-phone-input')||drv.phone||typed.driverPhone||'',
+    driverBizNum:_g('ctr-driver-biz-input')||drv.bizNum||typed.driverBizNum||'',
+    driverIdNum:_g('ctr-driver-id-input')||drv.ssn||typed.driverIdNum||'',
+    driverAddr:_ctrSanitizeAddr(_g('ctr-driver-addr-input')||drv.address||typed.driverAddr||''),
     camp:campAuto,
     area:areaAuto,
     route:routeStr,
     startDate:startDate,
     endDate:endDate,
     collectPrice:collectPrice,
-    unitPrice:unitPrice,
+    unitPrice:unitPrice||typed.deliveryFee||'',
     carNum:carNum,
-    licenseNum:licNum,
+    licenseNum:licNum||typed.licenseNum||'',
+    cycle:'매월 20일',
+    special:'',
     routePricesJson:routePrices.length?JSON.stringify(routePrices):'',
     customContractUrl:_g('ctr-pdf-url'),
     docxHtml:(function(){var c=document.getElementById('ctr-docx-content');if(c&&c.innerHTML)return c.innerHTML;try{var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';var _ct=window._ctrType||'wisu';var ed=localStorage.getItem('ctr_docx_edit_'+_ct+'_'+_uid);if(ed)return ed;var sd=localStorage.getItem('ctr_docx_'+_ct+'_'+_uid);if(sd){var p=JSON.parse(sd);return p.html||'';}}catch(_e){}return '';})(),
@@ -8192,15 +8316,15 @@ async function _ctrDocxLoad(inp){
         +'</div>'
         +'<div id="ctr-docx-content" contenteditable="true" oninput="_ctrSaveEdited()" style="border:1px solid #8b5cf6;border-radius:8px;padding:16px 20px;font-size:12px;line-height:1.9;max-height:420px;overflow-y:auto;background:#fff;color:#111;outline:none;cursor:text">'
         +html
-        +'</div>';
+        +'</div>'
+        +'<button onclick="_ctrExportDocx()" style="margin-top:10px;width:100%;padding:10px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">📄 타이핑 내용 DOCX로 내보내기</button>';
     }
     window._ctrDocxOrigHtml=html;
     window._ctrDocxFileName=file.name;
     window._ctrDocxBlankCount=blankCount;
-    // localStorage에 DOCX 저장 (새로고침 후에도 유지)
-    try{var _sk='ctr_docx_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));}catch(_e){}
+    // localStorage에 DOCX 저장 (새로고침 후에도 유지) — 새 파일 업로드 시 이전 편집 기록도 초기화
+    try{var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';var _ct=window._ctrType||'wisu';var _sk='ctr_docx_'+_ct+'_'+_uid;var _ek='ctr_docx_edit_'+_ct+'_'+_uid;localStorage.setItem(_sk,JSON.stringify({fileName:file.name,html:html,blankCount:blankCount}));localStorage.removeItem(_ek);}catch(_e){}
     if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(file.name)+' 변환 완료 · 빈칸 '+blankCount+'개 감지</span>';
-    setTimeout(_ctrRenderBlankInputs,50);
     // 기사 이미 선택된 경우 자동 채우기
   }catch(e){
     if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
@@ -8218,7 +8342,21 @@ function _ctrDocxClear(){
   var status=document.getElementById('ctr-docx-status');
   if(status)status.innerHTML='<label for="ctr-docx-file" style="display:block;padding:10px;background:var(--bg2);border:2px dashed var(--border);border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:var(--text3)">📁 DOCX 파일 선택 (워드 파일만)</label>';
   var fi=document.getElementById('ctr-docx-file');if(fi)fi.value='';
-  var bc=document.getElementById('ctr-blank-inputs-card');if(bc){bc.style.display='none';bc.innerHTML='';}
+}
+function _ctrExportDocx(){
+  var c=document.getElementById('ctr-docx-content');
+  if(!c||!c.innerHTML.trim()){toast('먼저 계약서 내용을 입력해주세요');return;}
+  if(typeof htmlDocx==='undefined'){toast('DOCX 라이브러리 로드 중입니다. 잠시 후 다시 시도해주세요.');return;}
+  try{
+    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:"맑은 고딕",sans-serif;font-size:10pt;line-height:1.8}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 8px;font-size:9pt}</style></head><body>'+c.innerHTML+'</body></html>';
+    var blob=htmlDocx.asBlob(html,{orientation:'portrait',margins:{top:720,bottom:720,left:1080,right:1080}});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(window._ctrDocxFileName||'계약서')+'_타이핑완료.docx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('✅ DOCX 내보내기 완료');
+  }catch(e){toast('❌ DOCX 내보내기 실패: '+e.message);}
 }
 function _ctrRestoreDocx(){
   var _uid=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
@@ -8243,8 +8381,7 @@ function _ctrRestoreDocx(){
   window._ctrDocxOrigHtml=saved.html;
   window._ctrDocxFileName=saved.fileName;
   window._ctrDocxBlankCount=saved.blankCount||0;
-  if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(saved.fileName)+' · 빈칸 '+saved.blankCount+'개</span>';
-  setTimeout(_ctrRenderBlankInputs,50);
+  if(status)status.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(saved.fileName)+'</span>';
 }
 async function _ctrUploadPdf(inp){
   var file=inp.files[0];if(!file)return;
@@ -8408,8 +8545,8 @@ function _ctrGenHTML(data){
       +'마. 동의를 거부할 권리<br>'
       +'&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용의 동의를 거부할 권리가 있습니다.<br>'
       +'&nbsp;&nbsp;◦ 단, 개인정보 수집·이용 또는 고유식별정보(주민등록번호) 수집 및 이용에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.</div>'
-      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 수집‧이용하는데 동의합니다. (동의함 ✅ &nbsp;동의하지 않음 □)</div>'
-      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 수집‧이용하는데 동의합니다. (동의함 ✅ &nbsp;동의하지 않음 □)</div>'
+      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 수집‧이용하는데 동의합니다. (동의함 □ &nbsp;동의하지 않음 □)</div>'
+      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 수집‧이용하는데 동의합니다. (동의함 □ &nbsp;동의하지 않음 □)</div>'
       +'<div style="font-size:11px;margin-top:12px">'+dateStr+'</div>'
       +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : '+(data.driverBizNum||'　　　　　　　')+'<br>(주민등록번호) : '+(data.driverIdNum||'　　　　　　　')+'<br>성 명 : '+(data.driverName||'　　　　　　　　　')
       +(data.driverSig?'<br><img src="'+data.driverSig+'" style="max-height:40px;max-width:160px;margin:2px 0;display:block">':' (서명)')
@@ -8429,8 +8566,8 @@ function _ctrGenHTML(data){
       +'마. 동의를 거부할 권리<br>'
       +'&nbsp;&nbsp;◦ 정보주체는 본인의 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 대한 동의를 거부할 권리가 있습니다.<br>'
       +'&nbsp;&nbsp;◦ 단, 개인정보 제공 또는 고유식별정보(주민등록번호) 제공에 동의하지 않을 경우에는 택배운송 위·수탁 계약이 불가합니다.</div>'
-      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 제3자에게 제공하는데 동의합니다. (동의함 ✅ &nbsp;동의하지 않음 □)</div>'
-      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 제3자에게 제공하는데 동의합니다. (동의함 ✅ &nbsp;동의하지 않음 □)</div>'
+      +'<div style="font-size:11px;margin-top:10px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 개인정보를 제3자에게 제공하는데 동의합니다. (동의함 □ &nbsp;동의하지 않음 □)</div>'
+      +'<div style="font-size:11px;margin-top:6px">본인은 엠비티아이(유) 대리점이 위와 같이 본인의 고유식별정보(주민등록번호)를 제3자에게 제공하는데 동의합니다. (동의함 □ &nbsp;동의하지 않음 □)</div>'
       +'<div style="font-size:11px;margin-top:12px">'+dateStr+'</div>'
       +'<div style="font-size:11px;margin-top:6px">사업자등록번호 : '+(data.driverBizNum||'　　　　　　　')+'<br>(주민등록번호) : '+(data.driverIdNum||'　　　　　　　')+'<br>성 명 : '+(data.driverName||'　　　　　　　　　')
       +(data.driverSig?'<br><img src="'+data.driverSig+'" style="max-height:40px;max-width:160px;margin:2px 0;display:block">':' (서명)')
@@ -8545,6 +8682,10 @@ async function _ctrSave(){
     var _rcSnap=await _db.collection('settings').doc(_cid+'_routeCampMap').get();
     if(_rcSnap.exists){Object.keys(_routeCampMap).forEach(function(k){delete _routeCampMap[k];});Object.assign(_routeCampMap,_rcSnap.data());}
   }catch(e){}
+  _ctrApplyTyped(true);
+  // edit 키 즉시 삭제 — async Firestore 완료 전 탭 전환 시 이름 복원 방지
+  var _editKey='ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+((_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'');
+  try{localStorage.removeItem(_editKey);}catch(_e){}
   var data=_ctrCollect();
   var adminSig='';
   if(window._adminStampImg){
@@ -8587,15 +8728,16 @@ async function _ctrSave(){
     }
     window._adminSigPad=null;
     // DOCX 원본 템플릿으로 리셋 (파일은 유지, 빈칸만 초기화)
-    var _uid2=(_CU&&(_CU.dealerId||_CU.companyId||_CU.uid))||'';
-    try{localStorage.removeItem('ctr_docx_edit_'+(window._ctrType||'wisu')+'_'+_uid2);}catch(_e){}
     if(window._ctrDocxOrigHtml){
       var _dc=document.getElementById('ctr-docx-content');
       if(_dc)_dc.innerHTML=window._ctrDocxOrigHtml;
       var _ds=document.getElementById('ctr-docx-status');
-      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 빈칸 '+( window._ctrDocxBlankCount||0)+'개 · 빈칸을 직접 클릭하여 입력 후 저장하세요</span>';
+      if(_ds)_ds.innerHTML='<span style="font-size:12px;color:#10b981;font-weight:700">✅ '+esc(window._ctrDocxFileName||'파일')+' · 다음 계약서 작성 준비됨</span>';
     }
     window._ctrDriver=null;
+    // 입력 필드 초기화 (이름·전화번호 — 다음 기사 계약 시 이전 값 잔류 방지)
+    var _ni=document.getElementById('ctr-driver-name-input');if(_ni)_ni.value='';
+    var _pi=document.getElementById('ctr-driver-phone-input');if(_pi)_pi.value='';
     // 도장은 유지 (_adminStampImg 삭제 금지 — 다음 계약에도 자동 사용)
     if(driverSig){toast('✅ 양측 서명 완료 — 서명요청 알림톡 생략');return;}
     // 기사 전화번호 있고 대리점 서명 완료된 경우 SMS 발송 (기사 서명 없을 때만)
@@ -8663,11 +8805,9 @@ function _ctrRenderList(){
         +(d.startDate?'📅 '+d.startDate+' ~ '+d.endDate:'')
         +'</div>'
         +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-        +(d.archiveUrl
-          ?'<a href="'+d.archiveUrl+'" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none">서명완료본 보기</a>'
-          +'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="padding:8px 10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer" title="서명전 초안 인쇄">초안</button>'
-          +(d.signToken&&d.archiveUrl?'<a href="/contract/download/'+d.signToken+'" style="display:inline-flex;align-items:center;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none" title="서명완료본 저장">💾 저장</a>':'')
-          +(d.signToken?'<button onclick="_ctrPatchArchive(\''+esc(d.signToken||'')+'\',this)" style="padding:8px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer" title="인쇄 버튼 오류 수정">🔧 수정</button>':'')
+        +(d.archiveUrl||d.signToken
+          ?'<a href="'+(d.signToken?'/contract/download/'+d.signToken+'?inline=1':d.archiveUrl)+'" target="_blank" style="flex:1;display:inline-flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none">서명완료본 보기</a>'
+          +(d.signToken?'<a href="/contract/download/'+d.signToken+'" style="display:inline-flex;align-items:center;padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none" title="서명완료본 저장">💾 저장</a>':'')
           :'<button onclick="_ctrPrint(window._ctrDocs[\''+eid+'\'])" style="flex:1;padding:8px;background:linear-gradient(135deg,#0066ff,#00d4ff);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">인쇄·PDF</button>'
           +'<button onclick="_ctrDownload(window._ctrDocs[\''+eid+'\'])" style="padding:8px 12px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="HTML 다운로드">저장</button>')
         +(d.status==='pending_driver'&&d.signToken&&d.driverPhone
@@ -8691,20 +8831,6 @@ async function _ctrResendSign(docId,phone,token,name,btn){
   }).then(function(){toast('📲 서명요청 SMS 재발송 완료');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}})
   .catch(function(){toast('❌ 발송 실패');if(btn){btn.disabled=false;btn.textContent='📲 재발송';}});
 }
-async function _ctrPatchArchive(token,btn){
-  if(!token){toast('⚠️ signToken 없음');return;}
-  if(btn){btn.disabled=true;btn.textContent='수정중...';}
-  var tkn='';try{tkn=await _auth.currentUser.getIdToken();}catch(e){}
-  fetch('/api/contract/patch-archive',{method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':tkn?'Bearer '+tkn:''},
-    body:JSON.stringify({signToken:token})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){if(d.patched){toast('✅ 인쇄 버튼 수정 완료 — 다시 열어보세요');_ctrRenderList();}else{toast('ℹ️ '+(d.msg||'이미 수정된 파일입니다'));}}
-    else{toast('❌ '+(d.error||'수정 실패'));}
-    if(btn){btn.disabled=false;btn.textContent='🔧 수정';}
-  }).catch(function(){toast('❌ 통신 오류');if(btn){btn.disabled=false;btn.textContent='🔧 수정';}});
-}
-
 function _ctrPrint(jsonStr){
   _ctrShowOverlay(typeof jsonStr==='string'?JSON.parse(jsonStr):jsonStr);
 }
@@ -27537,6 +27663,11 @@ function pageDrivers(){
   btnSync.textContent='🔄 정산 전체 일괄저장';
   btnSync.onclick=function(){_syncDriverNamesToSettlements();};
   tr.appendChild(btnSync);
+  // ★ 일일 배송 데이터 업로드 버튼
+  var btnDailyLbl=document.createElement('label');btnDailyLbl.className='btn btn-sm';
+  btnDailyLbl.style.cssText='background:#7c3aed;color:#fff;font-size:11px;cursor:pointer';
+  btnDailyLbl.innerHTML='📅 일일 배송 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_parseDailyDeliveryExcel(this)">';
+  tr.appendChild(btnDailyLbl);
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
@@ -27792,7 +27923,7 @@ function saveNewDriver(){
     commissionRate:parseInt((document.getElementById('adr-commission')||{value:'0'}).value||'0')||0,
     basePay:parseInt((document.getElementById('adr-basepay')||{value:'0'}).value||'0')||0,
     bankAccount:(document.getElementById('adr-bank')||{value:''}).value.trim()||'',
-    address:(document.getElementById('adr-address')||{value:''}).value.trim()||'',
+    address:_ctrSanitizeAddr((document.getElementById('adr-address')||{value:''}).value.trim()||''),
     jobsub:'쿠팡',is_active:(document.getElementById('adr-active')||{value:'true'}).value!=='false',
     status:'재직',createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){closeMoById('mo-add-dr');_drvCache=null;toast('✅ 기사 추가');pageDrivers();})
@@ -28402,12 +28533,12 @@ function saveDriver(id){
     accountNumber:(document.getElementById('edr-bank')||{value:''}).value.trim()||'',
   bankName:gvs('edr-bankname')||'',
   carNum:gvs('edr-carnum')||'',
-  address:gvs('edr-address')||'',
+  address:_ctrSanitizeAddr(gvs('edr-address')||''),
   licenseNum:gvs('edr-license')||'',
   safetyEdu:gvs('edr-safetyedu')||'',
     bankName:gvs('edr-bankname')||'',
     carNum:gvs('edr-carnum')||'',
-    address:gvs('edr-address')||'',
+    address:_ctrSanitizeAddr(gvs('edr-address')||''),
     clothSize:gvs('edr-clothsize')||'',
     safetyEdu:gvs('edr-safetyedu')||'',
     licenseNum:gvs('edr-license')||'',

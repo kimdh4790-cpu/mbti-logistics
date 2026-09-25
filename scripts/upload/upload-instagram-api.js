@@ -67,7 +67,7 @@ function apiRequest(method, endpoint, body = null) {
     const req = https.request(
       {
         hostname: 'graph.facebook.com',
-        path: `/v20.0${endpoint}`,
+        path: `/v26.0${endpoint}`,
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -112,9 +112,10 @@ async function initResumableUpload(caption) {
   return res; // { id, uri }
 }
 
-// 파일을 Meta 서버에 직접 스트리밍 업로드
+// 파일을 Meta 서버에 직접 전송 (Buffer 방식 — pipe 조기종료 방지)
 async function uploadVideoToMeta(uploadUri, videoPath) {
-  const fileSize = fs.statSync(videoPath).size;
+  const fileBuffer = fs.readFileSync(videoPath);
+  const fileSize = fileBuffer.length;
   const fileSizeMB = (fileSize / 1024 / 1024).toFixed(1);
   console.log(`[Instagram] 파일 직접 전송 중: ${path.basename(videoPath)} (${fileSizeMB} MB)`);
 
@@ -130,7 +131,7 @@ async function uploadVideoToMeta(uploadUri, videoPath) {
         offset: '0',
         file_size: String(fileSize),
         'Content-Type': 'application/octet-stream',
-        'Content-Length': fileSize,
+        'Content-Length': String(fileSize),
       },
     };
 
@@ -138,7 +139,7 @@ async function uploadVideoToMeta(uploadUri, videoPath) {
       let data = '';
       res.on('data', d => (data += d));
       res.on('end', () => {
-        console.log(`  전송 응답 [${res.statusCode}]: ${data.slice(0, 200)}`);
+        console.log(`  전송 응답 [${res.statusCode}]: ${data.slice(0, 300)}`);
         if (res.statusCode >= 200 && res.statusCode < 300) {
           try { resolve(JSON.parse(data)); } catch { resolve({}); }
         } else {
@@ -148,10 +149,9 @@ async function uploadVideoToMeta(uploadUri, videoPath) {
     });
     req.on('error', reject);
 
-    // 스트림으로 파일 전송 (메모리 절약)
-    const fileStream = fs.createReadStream(videoPath);
-    fileStream.on('error', reject);
-    fileStream.pipe(req);
+    // Buffer로 한 번에 전송 (스트림 조기종료 방지, 최대 ~1GB 지원)
+    req.write(fileBuffer);
+    req.end();
   });
 }
 

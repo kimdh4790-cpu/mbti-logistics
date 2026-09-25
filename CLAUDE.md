@@ -43,6 +43,7 @@
 | `STRATEGY_MEMO.md` | 전략·시장조사·경쟁사·Oracle 확장 계획 논의 시 |
 | `RESEARCH_MEMO.md` | 정보수집 자동화 시스템 (인프런·ProductHunt·YouTube 트렌드 수집) 관련 작업 시 |
 | `SCAN_MEMO.md` | SCAN AI (dine.ne.kr) 문서분석 서비스 작업 시 |
+| `DESIGN.md` | **매 세션 시작 시 필수** (색상·타이포·컴포넌트 기준 — CLAUDE.md 다음 바로 읽을 것) |
 
 ### ⚠️ 메모 업데이트 무조건 필수 규칙
 - 어떤 작업이든 완료 후 **관련 메모 파일 수정 이력 업데이트 필수**
@@ -180,6 +181,11 @@ Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
 - `}{status:400` 치환 패턴 수정 금지 (Worker 빌드 깨짐)
 - wrangler.toml [vars] 수정 금지
 - Cloudflare Secrets는 대시보드 또는 `wrangler secret put` (OPC VM에서 CF_GLOBAL_KEY 사용)으로 관리
+
+### 🔴 DONWAY 계약서 설계 원칙 (절대 변경 금지)
+- **계약 내용 입력 방식**: DOCX 파일 다운로드 → 기사가 직접 타이핑 → 등록. 별도 입력 폼(담당구역·수수료·차량번호 등) 추가 금지
+- **사업자번호·주민번호**: 기사가 서명 페이지(알림톡 링크)에서 직접 입력. 대리점 화면에서 미리 입력 받지 않음
+- **_ctrRenderWrite()**: ② 대리점 정보 카드 + ④ DOCX 업로드 + ⑤ 대리점 서명 3단계만 존재. ③ 계약 주요 내용 폼 절대 추가 금지
 
 ---
 
@@ -673,6 +679,32 @@ cd mbtico-pages && npx wrangler deploy
 - `_worker.js` dine.ne.kr 블록에 `!path.startsWith('/api/')` 가드 추가 → API 요청이 scan.html로 가로채지지 않도록 수정
 - SCAN_MEMO.md 도메인 이전 이력 섹션 추가 + 서비스 위치 업데이트
 
+### ✅ 완료 (2026-09-21 DONWAY 계약서 아카이브 중복 서명란 제거)
+- **_worker.js 아카이브 생성 로직 수정**: 타이핑 DOCX 케이스에서 `${_aSignBlock}` 제거
+  - 원인: 타이핑 DOCX HTML(위수탁 표준 템플릿)에 이미 `(인)` 치환으로 갑+을 서명 삽입됨 + `_aSignBlock` 별도 서명 테이블 + `_aHtml` 하단 검증 테이블 = 서명 3중 중복
+  - 수정: `_aDocxHtml` 브랜치에서 `${_aSignBlock}` 완전 제거 → 타이핑 HTML + 하단 검증 테이블만 남음
+- **docxHtml 우선순위 수정**: `body.docxHtml||_ag('docxHtml')` → `_ag('docxHtml')||body.docxHtml` (Firestore 최우선)
+- **계약서 서명 플로우**: 대리점(갑) 도장/서명 먼저 저장(`adminSig` Firestore) → 알림톡 발송 → 기사(을) 서명 페이지 서명란 1개(을만) → 완성본에 갑 도장+을 서명 모두 표시
+
+### ✅ 완료 (2026-09-22 디자인 시스템 수립)
+- **DESIGN.md 신규**: 전 제품 공통 디자인 시스템 정의
+  - 배경: 흰색(#FFFFFF) + 하늘(#EAF6FF)
+  - 포인트 3색: 핑크(주 액션 #F472B6) · 연두(성공 #86EFAC) · 골드(프리미엄 #FBBF24)
+  - Pretendard 전용, 모바일 퍼스트(375px), 다크모드 토큰 포함
+  - 버튼(primary/secondary/accent) · 카드 · 뱃지 · 입력필드 · 하단 내비 컴포넌트 정의
+  - awesome-design-md 포맷 기준, `.claude/skills/` 통해 원격 세션에서도 자동 사용 가능
+- **CLAUDE.md 업데이트**: 메모 테이블 + 세션 시작 체크리스트에 DESIGN.md 항목 추가
+
+### ✅ 완료 (2026-09-22 소셜미디어 후크 플레이북 + Archify 스킬)
+- **`scripts/content/hooks-playbook.md` 신규**: 바이럴 후킹 18원칙 + 스토리텔링 7단계 + 100만+ 후크 49개를 MBTICO 4개 제품에 적용한 실전 가이드
+  - 4카테고리 요약: 믿게만들기(구체숫자·사회적증거) / 내얘기로만들기(자기관련성) / 판돈키우기(손실회피) / 정보숨기기(호기심격차)
+  - 60초 영상 타임라인(0~60초) 스토리텔링 7단계 매핑
+  - 용차앱·DONWAY·인프런·FILO 제품별 후크 8종 테이블 + 추천 오프닝
+  - Claude/ChatGPT용 후크 생성 프롬프트 템플릿
+  - social-planner 에이전트 영상 스크립트 작성 전 참조 파일 (파일 상단에 명시)
+- **`SOCIAL_MEDIA_MEMO.md` 업데이트**: 후크 플레이북 섹션 + 수정 이력 추가
+- **`.claude/skills/archify/` 신규** (tt-a1i/archify, MIT, 60k+ stars): 아키텍처·워크플로우·시퀀스·데이터플로우·라이프사이클 5종 인터랙티브 HTML 다이어그램 생성기. 원격 세션에서 `/archify` 슬래시 커맨드로 사용 가능
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
@@ -705,8 +737,8 @@ cd mbtico-pages && npx wrangler deploy
   - `popbillGetDriverCertUrl(env, driverCorpNum)`: GetTaxCertURL 호출, 등록 링크 반환
   - `/api/stmt-tax-issue`: 자동가입 후 certUrl 응답에 포함
   - 명세서 프론트: 신청 완료 시 "공인인증서 등록하기" 링크 버튼 노출 (`#tax-cert-section`)
-- **팝빌 키 발급 필요** (연동 미완료): 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com) 연락 후 POPBILL_LINK_ID / POPBILL_SECRET_KEY Cloudflare Secret 등록
-- **팝빌 견적서 수신** (2026-07-31): 전자세금계산서 발행 100원/건 (종량제, 연동비용 무료), No. 202607-712
+- **팝빌 키 발급 완료** (2026-09-22): LINK_ID=MBTI / Cloudflare Secret 3개 등록 완료. 테스트 중. 담당: 박주선 팀장 (010-5330-0078, jooseon@linkhubcorp.com)
+- **팝빌 견적서 수신** (2026-07-31): 전자세금계산서 발행 **100원/건** (종량제, 연동비용 무료), No. 202607-712
 
 ### ✅ 완료 (2026-09-18 DONWAY 계약서 카카오톡 인쇄 버튼 수정)
 - **_worker.js `_dlBtnBar`**: `onclick="window.print()"` → `_dlPrint()` 함수로 교체
@@ -768,11 +800,20 @@ cd mbtico-pages && npx wrangler deploy
 
 ## 📋 세션 시작 체크리스트
 1. CLAUDE.md 전체 읽기 완료
-2. 담당 앱 확인 → 해당 메모 파일 읽기
+2. **TASKS.md 열어서 미완료·진행중 항목 확인** ← 필수. 이전 세션 이어서 작업 가능
+3. 담당 앱 확인 → 해당 메모 파일 읽기
    - FILO·DINE 담당 → FILO_DINE_MEMO.md
-3. git pull origin main
-4. 미완료 작업 목록 확인
-5. 작업 전 대상 파일 절대 금지 항목 재확인
+4. git pull origin main
+5. 사용자 명령과 관련 TASKS.md 항목 `[~]` 진행중으로 변경
+6. 작업 전 대상 파일 절대 금지 항목 재확인
+7. DESIGN.md 읽기 (흰색+하늘 배경, 핑크+연두+골드 포인트) — UI 작업 여부 무관 필수
+
+## 📝 TASKS.md 업데이트 규칙 (필수)
+- 작업 시작 시: 해당 항목 `[~]` 진행중으로 변경
+- 작업 완료 시: `[x]` + 날짜 기록, 최근 완료 섹션으로 이동
+- 외부 조건 필요(키 발급 등): `[-]` 보류로 표시
+- 새 작업 발생 시: 해당 우선순위 테이블에 즉시 추가
+- **TASKS.md 업데이트 없이 세션 종료 금지**
 
 ## 📝 메모 업데이트 규칙
 - FILO·DINE 파일 수정 시 → FILO_DINE_MEMO.md 수정 이력에 날짜·파일·내용 추가
@@ -842,16 +883,16 @@ cd mbtico-pages && npx wrangler deploy
 
 ### 계약 정보
 - 견적서 No. 202607-712 (2026-07-31)
-- 요금: 전자세금계산서 발행 **100원/건** (종량제, 연동비용 무료)
+- 요금: 전자세금계산서 발행 **100원/건 (부가세 별도, 실청구 110원/건)** (종량제, 연동비용 무료) / 홈택스수집(전자세금계산서) 150,000원/월 / 은행계좌조회 100,000원/월(계좌 1개당)
 - 담당: **박주선 팀장** / 010-5330-0078 / jooseon@linkhubcorp.com
 - 팝빌 키 발급 후 아래 Cloudflare Secrets 등록 필요
 
-### 환경변수 (Cloudflare Secrets)
-| 변수명 | 설명 |
-|---|---|
-| `POPBILL_LINK_ID` | 팝빌 링크아이디 (연동 계정 ID) |
-| `POPBILL_SECRET_KEY` | 팝빌 비밀키 |
-| `POPBILL_TEST_MODE` | `'false'` = 실환경 / 다른 값 = 테스트환경 |
+### 환경변수 (Cloudflare Secrets) — 2026-09-22 등록 완료
+| 변수명 | 값 | 설명 |
+|---|---|---|
+| `POPBILL_LINK_ID` | `MBTI` | 팝빌 링크아이디 (2026-09-22 발급) |
+| `POPBILL_SECRET_KEY` | (Cloudflare Secret에만 보관) | 팝빌 비밀키 — 박주선 팀장 발급 |
+| `POPBILL_TEST_MODE` | `true` | `'false'` = 실환경 / 다른 값 = 테스트환경 |
 
 ### API 엔드포인트
 - **테스트**: `https://testserviceapi.popbill.com`
@@ -881,10 +922,13 @@ cd mbtico-pages && npx wrangler deploy
 ### 대리점(DONWAY) 사업자번호
 - `373-86-02536`
 
-### 현재 상태 (2026-09-18)
-- 코드 구현 완료 (test mode 정상 작동)
-- 팝빌 LINK_ID / SECRET_KEY 발급 대기 중
-- 박주선 팀장에게 연락 후 키 발급 → Cloudflare Secret 등록 → 실환경 테스트 필요
+### 현재 상태 (2026-09-22)
+- 코드 구현 완료
+- **API Key 발급 완료** (2026-09-22, 박주선 팀장)
+- **Cloudflare Secret 3개 등록 완료** (mbti-logistics Worker)
+- 현재 테스트환경 (testserviceapi.popbill.com) 연결 중
+- 테스트 계정: mbtico2026 / Mbtico2026! → test.popbill.com
+- 운영전환 후 POPBILL_TEST_MODE=false 로 변경 필요
 
 ---
 

@@ -692,11 +692,8 @@ body{background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
       <button class="pni on" id="pni0" onclick="DT('home',this)">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 9l7-7 7 7v8H13v-5H7v5H3V9z" fill="currentColor"/></svg>홈
       </button>
-      <button class="pni" id="pni1" onclick="DT('entry',this)">
-        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 3v9M7 9l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/><rect x="3" y="15" width="14" height="3" rx="1.5" fill="currentColor" opacity=".5"/></svg>입차
-      </button>
-      <button class="pni" id="pni5" onclick="DT('settle',this)">
-        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M10 2v16M6 6h5a2 2 0 010 4H6M6 10h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/></svg>정산
+      <button class="pni" id="pni7" onclick="DT('delivery_cal',this)">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M3 8h14M7 2v4M13 2v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>배송달력
       </button>
       <button class="pni" id="pni6" onclick="DT('mypage',this)">
         <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M3 18c0-4 14-4 14 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>내정보
@@ -8963,7 +8960,7 @@ function DT(tab,el){
   S.dtab=tab;
   document.querySelectorAll('.pni').forEach(n=>n.classList.remove('on'));
   if(el)el.classList.add('on');
-  var m={home:dHome,entry:dEntry,temp:dTemp,accident:dAccident,settle:dSettle,mypage:dMypageDriver,emergency_log:rEmergencyLog};
+  var m={home:dHome,entry:dEntry,temp:dTemp,accident:dAccident,settle:dSettle,mypage:dMypageDriver,emergency_log:rEmergencyLog,delivery_cal:dDeliveryCal};
   try{
     var _res=(m[tab]||dHome)();
     if(_res&&typeof _res.then==='function'){
@@ -22602,6 +22599,123 @@ async function otpLoginVerify(){
     }
   }, 500);
 })();
+
+// ══ 배송달력 — 기사 일일 건수/거절/취소 달력 뷰 ══
+var _dcalYM = (new Date().toISOString().slice(0,7));
+var _dcalData = {};
+var _dcalLoading = false;
+
+async function dDeliveryCal() {
+  await _loadDeliveryCal(_dcalYM);
+  return _renderDeliveryCal();
+}
+
+async function _loadDeliveryCal(ym) {
+  var me = (ls('drivers')||[]).find(function(d){ return d.name===S.curDriver || d.userId===S.curDriver; }) || {};
+  var phone = (me.phone||'').replace(/\D/g,'');
+  var code = me.companyCode || '';
+  if (!phone || !code) { _dcalData={}; return; }
+  _dcalLoading = true;
+  try {
+    var res = await fetch('/api/delivery-daily?ym='+encodeURIComponent(ym)+'&phone='+encodeURIComponent(phone)+'&code='+encodeURIComponent(code));
+    var json = await res.json();
+    if (json.ok) _dcalData = json.data || {};
+    else _dcalData = {};
+  } catch(e) { _dcalData = {}; }
+  _dcalLoading = false;
+}
+
+function _renderDeliveryCal() {
+  var ym = _dcalYM;
+  var parts = ym.split('-');
+  var yr = parseInt(parts[0]), mo = parseInt(parts[1]);
+  var prevYM = new Date(yr, mo-2, 1).toISOString().slice(0,7);
+  var nextYM = new Date(yr, mo, 1).toISOString().slice(0,7);
+  var daysInMonth = new Date(yr, mo, 0).getDate();
+  var firstDay = new Date(yr, mo-1, 1).getDay(); // 0=일
+
+  // 월 합계
+  var totalCount=0, totalReject=0, totalCancel=0;
+  for (var dd=1; dd<=daysInMonth; dd++) {
+    var key = String(dd).padStart(2,'0');
+    var d = _dcalData[key];
+    if (d) { totalCount+=d.count||0; totalReject+=d.reject||0; totalCancel+=d.cancel||0; }
+  }
+
+  var html = '<div style="padding:12px 14px 100px">';
+  // 헤더 - 월 이동
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">';
+  html += '<button onclick="_dcalYM=\''+prevYM+'\';_dcalData={};(async function(){await _loadDeliveryCal(\''+prevYM+'\');document.getElementById(\'dpc\').innerHTML=_renderDeliveryCal();})()" style="width:36px;height:36px;border:1.5px solid var(--border);background:var(--bg2);border-radius:8px;font-size:18px;cursor:pointer;color:var(--text)">&lt;</button>';
+  html += '<div style="text-align:center"><div style="font-size:16px;font-weight:800;color:var(--text)">'+yr+'년 '+mo+'월</div><div style="font-size:11px;color:var(--text3);margin-top:2px">배송 달력</div></div>';
+  html += '<button onclick="_dcalYM=\''+nextYM+'\';_dcalData={};(async function(){await _loadDeliveryCal(\''+nextYM+'\');document.getElementById(\'dpc\').innerHTML=_renderDeliveryCal();})()" style="width:36px;height:36px;border:1.5px solid var(--border);background:var(--bg2);border-radius:8px;font-size:18px;cursor:pointer;color:var(--text)">&gt;</button>';
+  html += '</div>';
+
+  if (_dcalLoading) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text3)">🔄 불러오는 중...</div>';
+    html += '</div>';
+    return html;
+  }
+
+  // 요일 헤더
+  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">';
+  ['일','월','화','수','목','금','토'].forEach(function(d,i){
+    html += '<div style="text-align:center;font-size:10px;font-weight:700;color:'+(i===0?'var(--red)':i===6?'var(--blue)':'var(--text3)')+'">'+d+'</div>';
+  });
+  html += '</div>';
+
+  // 달력 그리드
+  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
+  for (var i=0; i<firstDay; i++) html += '<div></div>';
+  for (var day=1; day<=daysInMonth; day++) {
+    var dayKey = String(day).padStart(2,'0');
+    var dayData = _dcalData[dayKey];
+    var hasData = dayData && (dayData.count||dayData.reject||dayData.cancel);
+    var col = (new Date(yr,mo-1,day).getDay()===0)?'var(--red)':(new Date(yr,mo-1,day).getDay()===6)?'var(--blue)':'var(--text)';
+    var today = new Date().toISOString().slice(0,10);
+    var isToday = (yr+'-'+(mo<10?'0':'')+mo+'-'+(day<10?'0':'')+day) === today;
+    html += '<div style="border:1px solid '+(isToday?'var(--blue)':'var(--border)')+';border-radius:8px;padding:4px 3px;background:'+(isToday?'var(--blue-l)':hasData?'var(--bg2)':'var(--bg)')+';min-height:64px">';
+    html += '<div style="text-align:right;font-size:10px;font-weight:'+(isToday?'800':'600')+';color:'+(isToday?'var(--blue)':col)+';margin-bottom:3px">'+day+'</div>';
+    if (hasData) {
+      html += '<div style="font-size:9px;line-height:1.6">';
+      html += '<div style="color:var(--teal);font-weight:700">✅'+dayData.count+'</div>';
+      if (dayData.reject) html += '<div style="color:var(--amber);font-weight:700">🔄'+(dayData.reject)+'</div>';
+      if (dayData.cancel) html += '<div style="color:var(--red);font-weight:700">❌'+(dayData.cancel)+'</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // 하단 실시간 카운팅
+  html += '<div style="position:fixed;bottom:56px;left:0;right:0;max-width:430px;margin:0 auto;background:var(--bg);border-top:2px solid var(--border);padding:10px 16px;z-index:50">';
+  html += '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">'+yr+'년 '+mo+'월 누계</div>';
+  html += '<div style="display:flex;gap:8px">';
+  html += '<div style="flex:1;padding:8px;background:rgba(16,185,129,.1);border:1px solid var(--teal);border-radius:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--teal)">'+totalCount+'</div><div style="font-size:10px;color:var(--teal);font-weight:600">배송완료</div></div>';
+  html += '<div style="flex:1;padding:8px;background:rgba(245,158,11,.1);border:1px solid var(--amber);border-radius:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--amber)">'+totalReject+'</div><div style="font-size:10px;color:var(--amber);font-weight:600">거절/반품</div></div>';
+  html += '<div style="flex:1;padding:8px;background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:var(--red)">'+totalCancel+'</div><div style="font-size:10px;color:var(--red);font-weight:600">취소</div></div>';
+  html += '</div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+// ★ 배송달력 탭 진입 시 데이터 로드
+var _origDT = DT;
+DT = function(tab, el) {
+  if (tab === 'delivery_cal') {
+    S.dtab = tab;
+    document.querySelectorAll('.pni').forEach(function(n){n.classList.remove('on');});
+    if(el) el.classList.add('on');
+    document.getElementById('dpc').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3)">🔄 불러오는 중...</div>';
+    _dcalData = {};
+    _loadDeliveryCal(_dcalYM).then(function(){
+      if(S.dtab==='delivery_cal') document.getElementById('dpc').innerHTML = _renderDeliveryCal();
+    });
+    return;
+  }
+  _origDT(tab, el);
+};
 
 // ★ 정산 메뉴 → DONWAY로 이동
 function openSettleCompare() {

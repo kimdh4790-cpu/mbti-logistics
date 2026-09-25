@@ -1658,7 +1658,7 @@ body {
     <span class="sly-hero-chip gold">🏠 전세사기 진단</span>
     <span class="sly-hero-chip pink">🎬 시나리오 기획</span>
   </div>
-  <button class="sly-intro-skip" onclick="_slySkipIntro()">시작하기 →</button>
+  <button class="sly-intro-skip" onclick="window._slySkipIntro&&window._slySkipIntro()">시작하기 →</button>
 </div>
 
 <!-- 헤더 -->
@@ -2309,18 +2309,9 @@ window._slySignIn = async () => {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   try {
-    // 팝업 먼저 시도, 실패하면 redirect
-    await signInWithPopup(auth, provider);
+    await signInWithRedirect(auth, provider);
   } catch(e) {
-    if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch(e2) {
-        _slyToast('로그인 실패: ' + (e2.code || e2.message));
-      }
-    } else if (e.code !== 'auth/cancelled-popup-request') {
-      _slyToast('로그인 오류: ' + (e.code || e.message));
-    }
+    _slyToast('로그인 오류: ' + (e.code || e.message));
   }
 };
 window._slySignOut = async () => {
