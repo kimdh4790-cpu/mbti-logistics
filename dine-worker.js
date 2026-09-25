@@ -1156,11 +1156,44 @@ export default {
     // ── Firebase Auth/firebase proxy (authDomain: dine.ne.kr → mbti-logistics.firebaseapp.com) ──
     if (path.startsWith('/__/auth/') || path.startsWith('/__/firebase/')) {
       const firebaseUrl = 'https://mbti-logistics.firebaseapp.com' + url.pathname + url.search;
-      const authResp = await fetch(firebaseUrl, { headers: { 'User-Agent': request.headers.get('User-Agent') || '' } });
-      return new Response(authResp.body, {
-        status: authResp.status,
-        headers: { 'Content-Type': authResp.headers.get('Content-Type') || 'text/html', 'Cache-Control': 'no-cache' }
+
+      // /__/firebase/init.json: authDomain을 dine.ne.kr로 오버라이드 (세션 스토리지 키 일치)
+      if (path === '/__/firebase/init.json') {
+        try {
+          const initResp = await fetch(firebaseUrl);
+          const cfg = await initResp.json();
+          cfg.authDomain = 'dine.ne.kr';
+          return new Response(JSON.stringify(cfg), {
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' }
+          });
+        } catch(e) {
+          return new Response('{}', { headers: { 'Content-Type': 'application/json' } });
+        }
+      }
+
+      // 나머지 /__/auth/*, /__/firebase/*: 전체 헤더 포워딩 프록시
+      const reqHeaders = {};
+      for (const [k, v] of request.headers.entries()) {
+        const kl = k.toLowerCase();
+        if (!kl.startsWith('cf-') && !['host','x-forwarded-for','x-real-ip','connection','keep-alive'].includes(kl)) {
+          reqHeaders[k] = v;
+        }
+      }
+      const authResp = await fetch(firebaseUrl, {
+        method: request.method,
+        headers: reqHeaders,
+        body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
+        redirect: 'manual'
       });
+      const respHeaders = new Headers();
+      for (const [k, v] of authResp.headers.entries()) {
+        const kl = k.toLowerCase();
+        if (!['content-encoding','transfer-encoding','connection','keep-alive'].includes(kl)) {
+          respHeaders.set(k, v);
+        }
+      }
+      respHeaders.set('Cache-Control', 'no-cache');
+      return new Response(authResp.body, { status: authResp.status, headers: respHeaders });
     }
 
     // ── Rate Limiting (API 엔드포인트만) ──
