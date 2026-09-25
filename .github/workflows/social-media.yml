@@ -216,7 +216,16 @@ jobs:
             for p in filo donway yongcha inflearn scan; do
               render_remotion $p
             done
+            # 기사·소장 관점 영상 추가 렌더
+            render_remotion yongcha-driver
+            render_remotion yongcha-dealer
           elif [ "$PRODUCT" = "filo" ] || [ "$PRODUCT" = "donway" ] || [ "$PRODUCT" = "yongcha" ] || [ "$PRODUCT" = "inflearn" ] || [ "$PRODUCT" = "scan" ]; then
+            render_remotion $PRODUCT
+            if [ "$PRODUCT" = "yongcha" ]; then
+              render_remotion yongcha-driver
+              render_remotion yongcha-dealer
+            fi
+          elif [ "$PRODUCT" = "yongcha-driver" ] || [ "$PRODUCT" = "yongcha-dealer" ]; then
             render_remotion $PRODUCT
           fi
 
@@ -337,7 +346,11 @@ jobs:
 
           FAILED=0
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha inflearn; do upload_yt $p || FAILED=1; done
+            for p in filo donway yongcha yongcha-driver yongcha-dealer inflearn; do upload_yt $p || FAILED=1; done
+          elif [ "$PRODUCT" = "yongcha" ]; then
+            upload_yt yongcha || FAILED=1
+            upload_yt yongcha-driver || FAILED=1
+            upload_yt yongcha-dealer || FAILED=1
           else
             upload_yt $PRODUCT || FAILED=1
           fi
@@ -383,7 +396,11 @@ jobs:
           }
 
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo dine donway yongcha mbtico; do upload_one $p; done
+            for p in filo dine donway yongcha yongcha-driver yongcha-dealer mbtico; do upload_one $p; done
+          elif [ "$PRODUCT" = "yongcha" ]; then
+            upload_one yongcha
+            upload_one yongcha-driver
+            upload_one yongcha-dealer
           else
             upload_one $PRODUCT
           fi
