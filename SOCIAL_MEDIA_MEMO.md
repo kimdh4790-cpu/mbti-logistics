@@ -371,6 +371,8 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 | FILO | ✅ 완료 | ✅ Remotion (FiloPromo.jsx) | ✅ 완료 (GitHub Actions, 8.9MB, 2026-08-28) | ✅ 숏츠 완료 (BdG2vAkzZuo) |
 | DONWAY | ✅ 완료 | ✅ Remotion (DonwayPromo.jsx, 2026-08-29) | output/donway-promo.mp4 | ✅ 숏츠 완료 (3HRSPE2bNDM) |
 | YONGCHA | ✅ 완료 | ✅ Remotion (YongchaPromo.jsx, 2026-08-29) | output/yongcha-promo.mp4 | ⚠️ eDpowbKedgs 깨짐(무음+자막가림) — 삭제 후 재업로드 필요 |
+| YONGCHA-DRIVER | ✅ yongcha-driver-meta.json (2026-09-25) | ✅ Remotion (YongchaDriverPromo.jsx, 2026-09-25) | output/yongcha-driver-promo.mp4 | 미업로드 (월요일 PRODUCT=yongcha 스케줄에 자동 포함) |
+| YONGCHA-DEALER | ✅ yongcha-dealer-meta.json (2026-09-25) | ✅ Remotion (YongchaDealerPromo.jsx, 2026-09-25) | output/yongcha-dealer-promo.mp4 | 미업로드 (월요일 PRODUCT=yongcha 스케줄에 자동 포함) |
 | 인프런 | ✅ inflearn-narration.json (2026-09-04) | ✅ Remotion (InflearnPromo.jsx, 2026-09-04) | output/inflearn-promo.mp4 | ⚠️ 무음 업로드됨 — 나레이션 추가 후 재업로드 필요 |
 | MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 (스케줄 제외) |
 
@@ -710,6 +712,7 @@ scripts/content/variants/{product}-variants.json  ← A/B/C/D 변형
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-09-25 | **용차앱 기사·소장 관점 영상 파이프라인 추가** — YongchaDriverPromo.jsx(5씬: 수수료0원후크/홈화면/공고목록/그리드메뉴/CTA, 60초), YongchaDealerPromo.jsx(5씬: 10초기사연결후크/대시보드+관제/공고등록/공고발송/CTA, 60초). render-yongcha-driver.js·render-yongcha-dealer.js 신규. yongcha-driver-meta.json·yongcha-dealer-meta.json 신규(YouTube/Instagram 메타). index.jsx에 YongchaDriverPromo·YongchaDriverReels·YongchaDealerPromo·YongchaDealerReels 4개 컴포지션 등록. social-media.yml PRODUCT=yongcha 시 driver+dealer 자동 렌더·업로드. 앱 실제 화면 기반 폰 목업 JSX로 구현(스크린샷 4장+3장 참조) |
 | 2026-09-10 | **SCAN AI 영상 파이프라인 구축** — Oracle Cloud VM에서 `render-scan.js`로 scan-promo.mp4·scan-reels.mp4(각 10.6MB, 60초) 렌더 완료. `scripts/content/scan-meta.json` 신규: YouTube/Instagram 메타데이터 3개 변형(기본·전세사기예방·취업서류첨삭·계약서분석). `social-media.yml`에 scan 제품 옵션 추가(workflow_dispatch, Remotion 렌더 포함). Oracle Cloud Agent Reach 5/15채널 활성(YouTube·Jina·RSS·V2EX·B站) — yt-dlp `--js-runtimes node` 설정 완료 |
 | 2026-09-09 | **Fish Audio 목소리 클론 통합** — voice_id `208686d6952741e28f43fdacc4b65c14` ("활기찬 젊은 목소리" @김형우, Public). `generate-narration.js` `fishAudioTTS()` 추가: Fish Audio → Google TTS → CLOVA → ElevenLabs 우선순위. `model: s2.1-pro-free` 헤더 추가(무료 플랜 필수). GitHub Secrets `FISH_AUDIO_VOICE_ID` 등록 완료. `FISH_AUDIO_API_KEY` 발급 후 등록 필요 |
 | 2026-09-09 | **영상 파이프라인 2가지 버그 수정** — ①DONWAY Runway AI 한글 hallucination: Runway 생성 대상에서 donway 제거, Remotion 코드 기반으로 전환. ②Runway/Remotion promo.mp4 있을 때 나레이션+자막 미적용: `social-media.yml`에 `mix_audio()` 함수 추가 — 기존 promo.mp4에 나레이션+BGM+자막 사후 합성 |
