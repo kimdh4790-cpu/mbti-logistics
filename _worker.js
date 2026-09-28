@@ -7308,27 +7308,28 @@ service cloud.firestore {
         const {access_token:_csToken} = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_csJwt}`})).json();
         const _csBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
         const _csAuthHdr = {'Authorization':'Bearer '+_csToken,'Content-Type':'application/json'};
-        // 슈퍼어드민(9XD2K3W1) 도장 원본 조회
-        const _ownerDoc = await (await fetch(`${_csBase}/companies/9XD2K3W1`,{headers:_csAuthHdr})).json();
-        const _ownerStamp = _ownerDoc.fields && _ownerDoc.fields.stampImage && _ownerDoc.fields.stampImage.stringValue;
-        if (!_ownerStamp) return new Response(JSON.stringify({error:'슈퍼어드민 도장 없음 — 이미 정리됐거나 미등록'}),{status:404,headers:{'Content-Type':'application/json'}});
         // 전체 companies 목록 조회 (최대 300건)
         const _allRes = await (await fetch(`${_csBase}/companies?pageSize=300`,{headers:_csAuthHdr})).json();
         const _allDocs = _allRes.documents || [];
+        // 동일한 stampImage가 2개 이상 문서에 있으면 오염된 도장 (각 대리점 도장은 유일해야 함)
+        const _stampCount = {};
+        for (const _doc of _allDocs) {
+          const _s = _doc.fields && _doc.fields.stampImage && _doc.fields.stampImage.stringValue;
+          if (_s) _stampCount[_s] = (_stampCount[_s] || 0) + 1;
+        }
         let _cleaned = 0;
         const _patches = [];
         for (const _doc of _allDocs) {
           const _docId = _doc.name.split('/').pop();
-          if (_docId === '9XD2K3W1') continue;
           const _stamp = _doc.fields && _doc.fields.stampImage && _doc.fields.stampImage.stringValue;
-          if (_stamp && _stamp === _ownerStamp) {
-            // stampImage 필드 삭제 (DELETE via PATCH with updateMask)
+          // 동일 도장이 2곳 이상 = 오염. 슈퍼어드민 dealerId 제외 후 삭제
+          if (_stamp && _stampCount[_stamp] >= 2 && _docId !== '9XD2K3W1tIhIs6XM74YT0xfRFEP2') {
             _patches.push(fetch(`${_csBase}/companies/${_docId}?updateMask.fieldPaths=stampImage`,{method:'PATCH',headers:_csAuthHdr,body:JSON.stringify({fields:{}})}));
             _cleaned++;
           }
         }
         await Promise.all(_patches);
-        return new Response(JSON.stringify({ok:true,cleaned:_cleaned,total:_allDocs.length}),{headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify({ok:true,cleaned:_cleaned,total:_allDocs.length,duplicates:Object.values(_stampCount).filter(v=>v>=2).length}),{headers:{'Content-Type':'application/json'}});
       } catch(e) {
         return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
       }
