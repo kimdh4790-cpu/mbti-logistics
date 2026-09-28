@@ -922,13 +922,13 @@ cd mbtico-pages && npx wrangler deploy
 ### 대리점(DONWAY) 사업자번호
 - `373-86-02536`
 
-### 현재 상태 (2026-09-22)
+### 현재 상태 (2026-09-28 실환경 전환 완료)
 - 코드 구현 완료
 - **API Key 발급 완료** (2026-09-22, 박주선 팀장)
 - **Cloudflare Secret 3개 등록 완료** (mbti-logistics Worker)
-- 현재 테스트환경 (testserviceapi.popbill.com) 연결 중
-- 테스트 계정: mbtico2026 / Mbtico2026! → test.popbill.com
-- 운영전환 후 POPBILL_TEST_MODE=false 로 변경 필요
+- **POPBILL_TEST_MODE=false 실환경 전환 완료** (2026-09-28)
+- 실환경 API: serviceapi.popbill.com 연결 중
+- 테스트 계정: mbtico2026 / Mbtico2026! → test.popbill.com (테스트 시 참고용)
 
 ---
 
