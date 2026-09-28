@@ -97,7 +97,7 @@ KV NS_ID:            7f0e90efaea64f3ab08ff00f8970b28b
 슈퍼어드민:          kimdh4790@gmail.com / soungkyekim@naver.com
 테스트 dealerId:     3lqP7HNSgVP18eZbMn6DnQxRXCA2
 매장 dealerId:       9XD2K3W1tIhIs6XM74YT0xfRFEP2
-Oracle Cloud IP:     161.33.136.154 (4코어/24GB, opc 계정, filo-a1-2c12g)
+Oracle Cloud IP:     161.33.136.154 (2코어/12GB, opc 계정, filo-a1-2c12g)
 
 ---
 
@@ -499,7 +499,7 @@ cd mbtico-pages && npx wrangler deploy
   - 썸네일: expense-thumbnail.png (600×337px, 영문)
 - **클립5: Oracle Cloud 무료 서버 완전 정복 (₩22,000)**
   - 구성: oracle-guide.pdf (9단계 완전 설치 가이드: 계정생성~crontab)
-  - 주요 내용: ARM A1.Flex 4코어/24GB 영구무료, n8n Docker 설치, VCN 방화벽, SSH 접속
+  - 주요 내용: ARM A1.Flex 2코어/12GB 영구무료, n8n Docker 설치, VCN 방화벽, SSH 접속
   - 썸네일: oracle-thumbnail.png (600×337px, 영문)
 - **클립6: 소상공인 AI 프롬프트 100선 (₩29,000)**
   - 구성: ai-prompts-guide.pdf (8카테고리 100프롬프트: 마케팅/회계/직원관리/계약/고객응대/공지/사업계획/일상)
@@ -1142,6 +1142,6 @@ agent-reach doctor
 인스턴스: filo-a1-2c12g
 IP: 161.33.136.154
 리전: Tokyo AD-1
-스펙: A1.Flex 4코어/24GB Always Free
+스펙: A1.Flex 2코어/12GB Always Free
 SSH 키: ssh-key-2026-08-02
 (구 인스턴스 instance-20260802-1554 / 155.248.187.99 — 삭제 여부 확인 필요)
