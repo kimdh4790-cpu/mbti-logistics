@@ -1,0 +1,99 @@
+{
+  "name": "소상공인 리뷰 알림 — 네이버·카카오 신규 리뷰 감지",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 30 }]
+        }
+      },
+      "name": "30분마다 체크",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://m.place.naver.com/restaurant/{{ $vars.NAVER_PLACE_ID }}/review/visitor",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "name": "네이버 플레이스 리뷰 수집",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 200],
+      "notes": "NAVER_PLACE_ID: 네이버 플레이스 ID (URL에서 숫자 부분)"
+    },
+    {
+      "parameters": {
+        "url": "https://place.map.kakao.com/{{ $vars.KAKAO_PLACE_ID }}/review",
+        "options": {
+          "response": { "response": { "responseFormat": "text" } }
+        }
+      },
+      "name": "카카오맵 리뷰 수집",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [460, 400],
+      "notes": "KAKAO_PLACE_ID: 카카오맵 장소 ID"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 마지막 확인 시간 이후 신규 리뷰 필터\nconst lastCheck = $vars.LAST_CHECK_TIME || new Date(0).toISOString();\nconst reviews = [];\n\n// 네이버 리뷰 파싱 (정규식)\nconst naverHtml = $('네이버 플레이스 리뷰 수집').item(0).json.data;\nconst naverMatches = naverHtml.matchAll(/class=\"pui__vn15t2\"[^>]*>([^<]+)<[^>]+class=\"pui__wMnit8\"[^>]*>([^<]+)/g);\nfor (const m of naverMatches) {\n  reviews.push({ source: '네이버', author: m[1].trim(), content: m[2].trim() });\n}\n\n// 카카오 리뷰 파싱\nconst kakaoHtml = $('카카오맵 리뷰 수집').item(0).json.data;\nconst kakaoMatches = kakaoHtml.matchAll(/class=\"review_cont\"[^>]*>([\\s\\S]*?)<\\/p>/g);\nfor (const m of kakaoMatches) {\n  reviews.push({ source: '카카오', author: '익명', content: m[1].replace(/<[^>]+>/g, '').trim() });\n}\n\nreturn reviews.map(r => ({ json: r }));"
+      },
+      "name": "신규 리뷰 파싱",
+      "type": "n8n-nodes-base.code",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [{
+            "value1": "={{ $json.content }}",
+            "operation": "contains",
+            "value2": ""
+          }]
+        }
+      },
+      "name": "리뷰 있으면 진행",
+      "type": "n8n-nodes-base.if",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": {
+          "values": [{
+            "role": "system",
+            "content": "당신은 친절하고 전문적인 소상공인 가게 주인입니다. 고객 리뷰에 진심 어린 답글을 작성해주세요. 답글은 3~4문장으로, 고객 이름을 언급하고, 리뷰 내용에 구체적으로 반응해주세요. 부정적인 내용이 있으면 진심으로 사과하고 개선 의지를 보여주세요."
+          }, {
+            "role": "user",
+            "content": "={{ '작성자: ' + $json.author + '\\n리뷰: ' + $json.content + '\\n\\n위 리뷰에 답글을 작성해주세요.' }}"
+          }]
+        },
+        "options": { "maxTokens": 300 }
+      },
+      "name": "ChatGPT 답글 초안 생성",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [1120, 300],
+      "notes": "OpenAI API Key 필요: n8n Credentials > OpenAI 등록"
+    },
+    {
+      "parameters": {
+        "phoneNumber": "={{ $vars.OWNER_PHONE }}",
+        "message": "={{ '[' + $json.source + '] 새 리뷰 — ' + $json.author + '\\n\\n' + $('신규 리뷰 파싱').item(0).json.content + '\\n\\n💬 답글 초안:\\n' + $json.message.content }}"
+      },
+      "name": "사장님 문자 발송",
+      "type": "n8n-nodes-base.sms",
+      "position": [1340, 300],
+      "notes": "알리고 SMS 또는 카카오 알림톡으로 교체 가능"
+    }
+  ],
+  "connections": {
+    "30분마다 체크": { "main": [[{ "node": "네이버 플레이스 리뷰 수집", "type": "main", "index": 0 }, { "node": "카카오맵 리뷰 수집", "type": "main", "index": 0 }]] },
+    "네이버 플레이스 리뷰 수집": { "main": [[{ "node": "신규 리뷰 파싱", "type": "main", "index": 0 }]] },
+    "카카오맵 리뷰 수집": { "main": [[{ "node": "신규 리뷰 파싱", "type": "main", "index": 1 }]] },
+    "신규 리뷰 파싱": { "main": [[{ "node": "리뷰 있으면 진행", "type": "main", "index": 0 }]] },
+    "리뷰 있으면 진행": { "main": [[{ "node": "ChatGPT 답글 초안 생성", "type": "main", "index": 0 }], []] },
+    "ChatGPT 답글 초안 생성": { "main": [[{ "node": "사장님 문자 발송", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
