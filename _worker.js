@@ -7309,7 +7309,9 @@ service cloud.firestore {
         const _csBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
         const _csAuthHdr = {'Authorization':'Bearer '+_csToken,'Content-Type':'application/json'};
         // 전체 companies 목록 조회 (최대 300건)
-        const _allRes = await (await fetch(`${_csBase}/companies?pageSize=300`,{headers:_csAuthHdr})).json();
+        const _allRaw = await fetch(`${_csBase}/companies?pageSize=300`,{headers:_csAuthHdr});
+        const _allRes = await _allRaw.json();
+        if (!_allRaw.ok || _allRes.error) return new Response(JSON.stringify({error:'Firestore list 실패', status:_allRaw.status, detail:_allRes}),{status:500,headers:{'Content-Type':'application/json'}});
         const _allDocs = _allRes.documents || [];
         // 동일한 stampImage가 2개 이상 문서에 있으면 오염된 도장 (각 대리점 도장은 유일해야 함)
         const _stampCount = {};
