@@ -7297,14 +7297,16 @@ service cloud.firestore {
         const SA_KEY = env.FIREBASE_SA_KEY ? JSON.parse(env.FIREBASE_SA_KEY) : null;
         if (!SA_KEY) return new Response(JSON.stringify({error:'SA_KEY 없음'}),{status:500,headers:{'Content-Type':'application/json'}});
         // SA JWT 발급
+        const _b64u = s => btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const _b64uBin = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
         const _csNow = Math.floor(Date.now()/1000);
-        const _csHdr = btoa(JSON.stringify({alg:'RS256',typ:'JWT'}));
-        const _csClaim = btoa(JSON.stringify({iss:SA_KEY.client_email,scope:'https://www.googleapis.com/auth/datastore',aud:'https://oauth2.googleapis.com/token',exp:_csNow+3600,iat:_csNow}));
+        const _csHdr = _b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
+        const _csClaim = _b64u(JSON.stringify({iss:SA_KEY.client_email,scope:'https://www.googleapis.com/auth/datastore',aud:'https://oauth2.googleapis.com/token',exp:_csNow+3600,iat:_csNow}));
         const _csPem = SA_KEY.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'');
         const _csBin = Uint8Array.from(atob(_csPem),c=>c.charCodeAt(0));
         const _csCk = await crypto.subtle.importKey('pkcs8',_csBin.buffer,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
         const _csSig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_csCk,new TextEncoder().encode(_csHdr+'.'+_csClaim));
-        const _csJwt = _csHdr+'.'+_csClaim+'.'+btoa(String.fromCharCode(...new Uint8Array(_csSig)));
+        const _csJwt = _csHdr+'.'+_csClaim+'.'+_b64uBin(_csSig);
         const {access_token:_csToken} = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_csJwt}`})).json();
         const _csBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
         const _csAuthHdr = {'Authorization':'Bearer '+_csToken,'Content-Type':'application/json'};
