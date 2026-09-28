@@ -18743,8 +18743,9 @@ async function popbillIssueReverseDonway(env, params) {
   };
 
   // 역발행즉시요청(RegistRequest #8): 등록+요청 한 번에 처리
+  // URL SenderCorpNum = API 호출 주체(공급받는자/대리점). invoiceBody 내 SenderCorpNum(기사)와 다름.
   const resp = await fetch(
-    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${cleanSenderCorpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${cleanReceiverCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },
