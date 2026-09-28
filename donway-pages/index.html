@@ -8167,10 +8167,10 @@ function _ctrStampUpload(inp){
       var dataUrl=cv.toDataURL('image/png');
       window._adminStampImg=dataUrl;
       _ctrShowStampPreview(dataUrl,true);
-      // localStorage에도 즉시 저장 (오프라인/빠른 복원용)
-      try{localStorage.setItem('donway_admin_stamp',dataUrl);}catch(le){}
-      // Firestore에도 저장 (영구 보관)
+      // localStorage에도 즉시 저장 (딜러별 격리 키)
       var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+      try{localStorage.setItem('donway_admin_stamp_'+cid,dataUrl);}catch(le){}
+      // Firestore에도 저장 (영구 보관)
       if(_db&&cid){
         _db.collection('companies').doc(cid).update({stampImage:dataUrl})
           .then(function(){toast('✅ 도장 저장 완료 — 다음 계약도 자동 적용됩니다');})
@@ -8195,15 +8195,17 @@ function _ctrStampClear(){
   var pr=document.getElementById('ctr-stamp-preview');
   if(pr)pr.innerHTML='<span style="font-size:22px">📂</span>';
   window._adminStampImg=null;
-  try{localStorage.removeItem('donway_admin_stamp');}catch(le){}
+  var _cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  try{localStorage.removeItem('donway_admin_stamp_'+_cid);localStorage.removeItem('donway_admin_stamp');}catch(le){}
   var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(_db&&cid)_db.collection('companies').doc(cid).update({stampImage:firebase.firestore.FieldValue.delete()}).catch(function(){});
   toast('🗑 도장이 삭제되었습니다');
 }
 function _ctrLoadStamp(){
-  // localStorage에서 즉시 복원 (빠름)
+  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
+  // localStorage에서 즉시 복원 (딜러별 격리 키)
   try{
-    var cached=localStorage.getItem('donway_admin_stamp');
+    var cached=localStorage.getItem('donway_admin_stamp_'+cid);
     if(cached){
       window._adminStampImg=cached;
       _ctrShowStampPreview(cached,true);
@@ -8211,7 +8213,6 @@ function _ctrLoadStamp(){
     }
   }catch(le){}
   // Firestore에서도 확인 (최신 동기화)
-  var cid=_CU&&(_CU.dealerId||_CU.companyId||_CU.uid);
   if(!_db||!cid)return;
   _db.collection('companies').doc(cid).get().then(function(doc){
     var img=doc.exists&&doc.data()&&doc.data().stampImage;
@@ -8219,11 +8220,9 @@ function _ctrLoadStamp(){
       window._adminStampImg=img;
       _ctrShowStampPreview(img,true);
       _ctrSigTab('stamp');
-      try{localStorage.setItem('donway_admin_stamp',img);}catch(le){}
-    } else if(window._adminStampImg){
-      // localStorage에는 있지만 Firestore에는 없음 → Firestore에도 업로드
-      _db.collection('companies').doc(cid).set({stampImage:window._adminStampImg},{merge:true}).catch(function(){});
+      try{localStorage.setItem('donway_admin_stamp_'+cid,img);}catch(le){}
     }
+    // localStorage에만 있고 Firestore에 없는 경우 자동 업로드 제거 (잘못된 딜러 데이터 오염 방지)
   });
 }
 function _ctrSetPdfStatus(url,saved){
