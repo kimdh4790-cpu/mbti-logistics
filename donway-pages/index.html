@@ -13278,7 +13278,11 @@ function pageDeliverySettle(){
   if(!isSuperAdmin()&&!_isPlanAllowedNow('delivery')){_renderPaywall('delivery');return;}
   window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산';
-  document.getElementById('topbar-right').innerHTML='';
+  var _dsTr=document.getElementById('topbar-right');_dsTr.innerHTML='';
+  var _dsDailyLbl=document.createElement('label');_dsDailyLbl.className='btn btn-sm';
+  _dsDailyLbl.style.cssText='background:#7c3aed;color:#fff;font-size:11px;cursor:pointer';
+  _dsDailyLbl.innerHTML='📅 일일 배송 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_parseDailyDeliveryExcel(this)">';
+  _dsTr.appendChild(_dsDailyLbl);
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
 
@@ -27663,11 +27667,13 @@ function pageDrivers(){
   btnSync.textContent='🔄 정산 전체 일괄저장';
   btnSync.onclick=function(){_syncDriverNamesToSettlements();};
   tr.appendChild(btnSync);
-  // ★ 일일 배송 데이터 업로드 버튼
-  var btnDailyLbl=document.createElement('label');btnDailyLbl.className='btn btn-sm';
-  btnDailyLbl.style.cssText='background:#7c3aed;color:#fff;font-size:11px;cursor:pointer';
-  btnDailyLbl.innerHTML='📅 일일 배송 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_parseDailyDeliveryExcel(this)">';
-  tr.appendChild(btnDailyLbl);
+  // 배달대행 서비스만 일일 배송 업로드 노출
+  if((_CU.serviceType||'settle')!=='settle'){
+    var btnDailyLbl=document.createElement('label');btnDailyLbl.className='btn btn-sm';
+    btnDailyLbl.style.cssText='background:#7c3aed;color:#fff;font-size:11px;cursor:pointer';
+    btnDailyLbl.innerHTML='📅 일일 배송 업로드<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="_parseDailyDeliveryExcel(this)">';
+    tr.appendChild(btnDailyLbl);
+  }
   // ★ 물류앱 연락처 동기화 (슈퍼어드민 전용)
   var c=document.getElementById('content');
   if(!_db){c.innerHTML='<div class="empty"><div class="empty-icon">👤</div>로그인 후 이용하세요</div>';return;}
