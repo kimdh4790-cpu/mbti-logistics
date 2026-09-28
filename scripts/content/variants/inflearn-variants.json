@@ -148,5 +148,30 @@
       { "type": "cta", "price": "₩29,000", "keyword": "AI 프롬프트 소상공인" }
     ],
     "hashtags": ["AI프롬프트", "ChatGPT", "소상공인AI", "인프런", "Claude"]
+  },
+  "G": {
+    "clip": "리뷰자동관리",
+    "clipId": "1674",
+    "url": "https://www.inflearn.com/clip/1674",
+    "youtube_title": "네이버·카카오 리뷰 자동 알림 | ChatGPT 답글 초안 자동화 n8n 인프런",
+    "youtube_description": "리뷰 답글, 바쁘다 보면 며칠씩 지나가죠?\nn8n + ChatGPT로 새 리뷰 30분 안에 알림 + 답글 초안 자동 생성.\n사장님은 복붙만 하면 됩니다.\n\n▶ 인프런에서 '리뷰 자동 관리' 검색\nhttps://www.inflearn.com/clip/1674\n\n#n8n #리뷰관리 #ChatGPT #소상공인자동화 #네이버플레이스 #카카오맵 #인프런",
+    "instagram_caption": "리뷰 답글 초안, ChatGPT가 써줍니다\n\n새 리뷰 올라오면 30분 안에 문자 알림\nAI가 맞춤 답글 초안까지 작성\n복붙만 하면 리뷰 관리 끝\n\n인프런에서 '리뷰 자동 관리' 검색\n\n#n8n #리뷰관리 #ChatGPT #소상공인 #네이버플레이스 #카카오맵 #인프런 #자동화",
+    "blog_title": "네이버 플레이스 리뷰 자동 알림 설정법 | n8n + ChatGPT 답글 초안 자동화 (인프런)",
+    "blog_keywords": ["네이버플레이스리뷰", "카카오맵리뷰", "리뷰답글자동화", "n8n소상공인", "ChatGPT답글"],
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "lines": [
+      { "startSec": 0.0, "text": "리뷰 답글, 바쁘다 보면 며칠씩 지나가죠?" },
+      { "startSec": 5.0, "text": "n8n이 30분마다 네이버·카카오 리뷰를 자동으로 확인합니다." },
+      { "startSec": 12.0, "text": "새 리뷰가 올라오면 ChatGPT가 맞춤 답글 초안을 써서 문자로 보내줍니다." },
+      { "startSec": 20.0, "text": "사장님은 복붙만 하면 됩니다. 인프런에서 리뷰 자동 관리 검색해보세요." }
+    ],
+    "slides": [
+      { "type": "hook", "tag": "리뷰 관리", "pain": "새 리뷰를 며칠 뒤에 발견하신 적 있나요?", "solution": "30분 안에 자동 알림 + AI 답글 초안" },
+      { "type": "feature", "icon": "🔔", "title": "자동 리뷰 알림", "points": ["네이버 플레이스 감지", "카카오맵 감지", "30분마다 자동 확인"] },
+      { "type": "feature", "icon": "✍️", "title": "ChatGPT 답글 초안", "points": ["고객 이름 자동 포함", "리뷰 내용 반영", "3~4문장 맞춤 작성"] },
+      { "type": "cta", "price": "₩19,000", "keyword": "리뷰 자동 관리" }
+    ],
+    "hashtags": ["n8n", "리뷰관리", "ChatGPT", "소상공인자동화", "네이버플레이스", "카카오맵", "인프런"]
   }
 }
