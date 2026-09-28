@@ -705,6 +705,15 @@ cd mbtico-pages && npx wrangler deploy
 - **`SOCIAL_MEDIA_MEMO.md` 업데이트**: 후크 플레이북 섹션 + 수정 이력 추가
 - **`.claude/skills/archify/` 신규** (tt-a1i/archify, MIT, 60k+ stars): 아키텍처·워크플로우·시퀀스·데이터플로우·라이프사이클 5종 인터랙티브 HTML 다이어그램 생성기. 원격 세션에서 `/archify` 슬래시 커맨드로 사용 가능
 
+### ✅ 완료 (2026-09-28 인프런 클립 7탄)
+- **인프런 클립 7탄: 소상공인 리뷰 자동 관리 (₩19,000)** — 등록 준비 완료
+  - scripts/inflearn-clips/review-auto/ 신규
+  - workflow-04-review-alert.json: 30분마다 네이버 플레이스·카카오맵 리뷰 수집 → ChatGPT gpt-4o-mini 답글 초안 생성 → SMS 발송
+  - review-guide.md: Oracle Cloud 설치 가이드 (7단계)
+  - product-description.md: 인프런 등록용 상품 소개
+  - inflearn-variants.json: G 변형 추가 (clipId 1674)
+  - inflearn-meta.json: YouTube 제목·설명·태그, Instagram 캡션, 블로그 제목 7개 업데이트
+
 ### 🗒️ 2026-09-08 신규 계획 (논의 완료, 착수 예정)
 
 #### SCAN 제조 견적 기능 (신규 수익화)
