@@ -7292,7 +7292,7 @@ service cloud.firestore {
     // ── 슈퍼어드민 도장 오염 일괄 정리 (/api/cleanup-stamp) ──
     if (path === '/api/cleanup-stamp' && method === 'POST') {
       const _csAdmin = await requireAdmin(request, env);
-      if (!_csAdmin.ok) return new Response(JSON.stringify({error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+      if (!_csAdmin) return new Response(JSON.stringify({error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
       try {
         const SA_KEY = env.FIREBASE_SA_KEY ? JSON.parse(env.FIREBASE_SA_KEY) : null;
         if (!SA_KEY) return new Response(JSON.stringify({error:'SA_KEY 없음'}),{status:500,headers:{'Content-Type':'application/json'}});
