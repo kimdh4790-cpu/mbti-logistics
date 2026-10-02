@@ -11342,12 +11342,21 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
   var period=r.editDate||(dateEl&&dateEl.value)||
     (document.getElementById('dw-save-week')?document.getElementById('dw-save-week').value:'');
   try {
-    var snap=await _db.collection('drivers').where('dealerId','==',did).get();
-    var phone='';
-    snap.forEach(function(d){
-      var data=d.data();
-      if(data.name===riderId||data.userId===riderId||data.id===riderId){phone=data.phone||'';}
-    });
+    // 캐시 우선 사용 → 없으면 Firestore 조회 (데스크탑 hang 방지)
+    var phone=(window._dwPhoneMap&&window._dwPhoneMap[riderId])||'';
+    if(!phone&&_db){
+      try{
+        var snap=await Promise.race([
+          _db.collection('drivers').where('dealerId','==',did).get(),
+          new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},5000);})
+        ]);
+        snap.forEach(function(d){
+          var data=d.data();
+          if(data.name===riderId||data.userId===riderId||data.id===riderId){phone=data.phone||'';}
+        });
+        if(phone&&window._dwPhoneMap)window._dwPhoneMap[riderId]=phone;
+      }catch(e3){console.warn('drivers lookup:',e3.message);}
+    }
     if(!phone){
       toast('⚠️ '+riderId+' 전화번호 없음 — 기사 관리에서 등록 필요');
       if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
@@ -11887,6 +11896,15 @@ window.dwRunLiveCalculations=function(){
   con.innerHTML='';
   var resultsEl=document.getElementById('dw-results');
   if(resultsEl) resultsEl.innerHTML='';
+
+  // 전화번호 캐시 미리 로드 (알림톡 버튼이 Firestore를 다시 조회하지 않도록)
+  window._dwPhoneMap={};
+  if(_db&&_CU){
+    var _did2=_CU.dealerId||_CU.uid;
+    _db.collection('drivers').where('dealerId','==',_did2).get().then(function(s){
+      s.forEach(function(d){var data=d.data();var k=data.name||data.userId||data.id||'';if(k&&data.phone)window._dwPhoneMap[k]=data.phone;});
+    }).catch(function(){});
+  }
 
   if(hasRiderMap){
     // ★ 기사별 순차 스트리밍
