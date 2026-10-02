@@ -40,7 +40,7 @@ const OUT  = path.join(ROOT, 'output/mailmind-raw.webm');
   console.log('[mailmind] 슬라이드 녹화 시작 (30초)...');
 
   // 6 slides × 5초 = 30초
-  await page.waitForTimeout(30000);
+  await page.waitForTimeout(62000);
 
   await ctx.close();
   await browser.close();
