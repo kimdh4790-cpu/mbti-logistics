@@ -11305,7 +11305,8 @@ window._dwPreviewStatement=async function(idx,btn){
       var net=r.net||0;var preTax=r.preTax||0;
       var tax=r.totalTax||Math.floor(preTax*0.033);
       var sanjae=Math.floor(preTax*0.0088);var goyal=Math.floor(preTax*0.008);
-      await _db.collection('statement_share').doc(token).set({
+      // fire-and-forget: 명세서 URL은 바로 사용, Firestore 쓰기는 비동기
+      _db.collection('statement_share').doc(token).set({
         dealerId:did,userId:riderId,name:riderId,
         month:period||new Date().toISOString().slice(0,7),
         netPay:net,preTax:preTax,tax:tax,sanjae:sanjae,goyal:goyal,
@@ -11315,11 +11316,11 @@ window._dwPreviewStatement=async function(idx,btn){
         storeBreakdown:storeBreakdown,
         type:'delivery',companyName:coName,
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }).catch(function(e2){console.warn('stmt_share write:',e2.message);});
       r.stmtToken=token;
       r.stmtUrl='https://donway.ai.kr/s/'+token;
     }
-    // 명세서 새 탭으로 열기
+    // 명세서 새 탭으로 열기 (Firestore 완료 기다리지 않음)
     window.open(r.stmtUrl,'_blank');
     // 알림톡 버튼 활성화
     var alimBtn=document.getElementById(cardId+'-alimtalk-btn');
