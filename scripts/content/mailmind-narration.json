@@ -1,0 +1,60 @@
+{
+  "product": "mailmind",
+  "url": "mailmind.yongcha.app",
+  "languages": 14,
+  "short": {
+    "voice": "en-US-Neural2-D",
+    "speedRate": 1.0,
+    "durationSec": 30,
+    "lines": [
+      { "startSec": 0,  "text": "Struggling with emails in foreign languages?" },
+      { "startSec": 5,  "text": "One click with MailMind. Understands 14 languages and crafts a culturally perfect reply." },
+      { "startSec": 15, "text": "Detects your industry. Compare 3 replies. Insert straight into Gmail. No more email anxiety." },
+      { "startSec": 25, "text": "Start free at mailmind dot yongcha dot app." }
+    ]
+  },
+  "short_ko": {
+    "voice": "ko-KR-Neural2-B",
+    "speedRate": 1.0,
+    "durationSec": 30,
+    "lines": [
+      { "startSec": 0,  "text": "외국어 이메일, 어떻게 답장하고 있어요?" },
+      { "startSec": 5,  "text": "MailMind 클릭 한 번. 14개 언어를 이해하고, 그 나라 문화까지 반영한 완벽한 답장이 완성됩니다." },
+      { "startSec": 15, "text": "업종 자동 감지, 3가지 답변 비교, Gmail에 바로 삽입. 이제 외국어 이메일이 두렵지 않습니다." },
+      { "startSec": 25, "text": "mailmind.yongcha.app 에서 무료로 시작하세요." }
+    ]
+  },
+  "short_ja": {
+    "voice": "ja-JP-Neural2-B",
+    "speedRate": 1.0,
+    "durationSec": 30,
+    "lines": [
+      { "startSec": 0,  "text": "外国語のメール、どう返信してますか？" },
+      { "startSec": 5,  "text": "MailMindをクリックするだけ。14言語を理解し、文化まで反映した完璧な返信が完成します。" },
+      { "startSec": 15, "text": "業種を自動検出。3パターンを比較してGmailに直接挿入。もう外国語メールは怖くない。" },
+      { "startSec": 25, "text": "mailmind.yongcha.app で無料スタート。" }
+    ]
+  },
+  "long": {
+    "voice": "en-US-Neural2-D",
+    "speedRate": 1.0,
+    "durationSec": 120,
+    "lines": [
+      { "startSec": 0,  "text": "How much time do you spend on emails in foreign languages every day?" },
+      { "startSec": 7,  "text": "Reading them carefully. Translating. Trying to sound professional. Then rewriting again." },
+      { "startSec": 16, "text": "MailMind is a Chrome extension that lives inside Gmail and changes all of that." },
+      { "startSec": 23, "text": "Open any email — in English, Japanese, Chinese, or any of 14 supported languages." },
+      { "startSec": 31, "text": "Click MailMind. It reads the entire email thread in seconds." },
+      { "startSec": 38, "text": "It detects your industry — IT, finance, legal — and applies the right terminology automatically." },
+      { "startSec": 47, "text": "It understands cultural context, so your reply sounds natural, not just translated." },
+      { "startSec": 55, "text": "Three reply options appear. Compare them. Choose the best one. Or let Smart Reply decide." },
+      { "startSec": 64, "text": "Click Insert — and your reply lands in Gmail's compose window, ready to send." },
+      { "startSec": 72, "text": "MailMind also summarizes long threads so you always know the context." },
+      { "startSec": 80, "text": "And it flags tasks — deadlines, follow-ups, meetings — so nothing slips through." },
+      { "startSec": 89, "text": "Set up your signature and templates once. MailMind remembers them every time." },
+      { "startSec": 98, "text": "Pro plan: 300 replies per month. 14 languages. Zero switching between apps." },
+      { "startSec": 108, "text": "Stop letting language be a barrier to your business." },
+      { "startSec": 114, "text": "Start free at mailmind dot yongcha dot app." }
+    ]
+  }
+}

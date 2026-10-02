@@ -18,6 +18,7 @@ on:
           - mbtico
           - inflearn
           - scan
+          - mailmind
       steps:
         description: '실행 단계 (콤마 구분)'
         required: true
@@ -220,16 +221,16 @@ jobs:
             render_remotion $PRODUCT
           fi
 
-      - name: 화면 녹화 (Playwright) — dine·mbtico만
-        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'dine' || env.PRODUCT == 'mbtico' || env.PRODUCT == 'all') }}
+      - name: 화면 녹화 (Playwright) — dine·mbtico·mailmind
+        if: ${{ contains(env.STEPS, 'record') && (env.PRODUCT == 'dine' || env.PRODUCT == 'mbtico' || env.PRODUCT == 'mailmind' || env.PRODUCT == 'all') }}
         run: |
           mkdir -p output
           if [ "$PRODUCT" = "all" ]; then
-            for p in dine mbtico; do
+            for p in dine mbtico mailmind; do
               echo "[$p] 녹화 시작..."
               node scripts/capture/record-$p.js || echo "[$p] 녹화 실패 (건너뜀)"
             done
-          elif [ "$PRODUCT" = "dine" ] || [ "$PRODUCT" = "mbtico" ]; then
+          elif [ "$PRODUCT" = "dine" ] || [ "$PRODUCT" = "mbtico" ] || [ "$PRODUCT" = "mailmind" ]; then
             node scripts/capture/record-$PRODUCT.js
           fi
 
@@ -288,7 +289,7 @@ jobs:
             for p in filo donway yongcha inflearn; do
               [ -f "output/${p}-promo.mp4" ] && mix_audio $p || echo "[$p] promo.mp4 없음"
             done
-            for p in dine mbtico; do
+            for p in dine mbtico mailmind; do
               RAW="output/${p}-raw.webm"
               [ -f "$RAW" ] && bash scripts/compose/compose-video.sh $p || echo "[$p] 녹화 파일 없음: 건너뜀"
             done
@@ -337,7 +338,7 @@ jobs:
 
           FAILED=0
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo donway yongcha inflearn; do upload_yt $p || FAILED=1; done
+            for p in filo donway yongcha inflearn mailmind; do upload_yt $p || FAILED=1; done
           else
             upload_yt $PRODUCT || FAILED=1
           fi
@@ -383,7 +384,7 @@ jobs:
           }
 
           if [ "$PRODUCT" = "all" ]; then
-            for p in filo dine donway yongcha mbtico; do upload_one $p; done
+            for p in filo dine donway yongcha mbtico mailmind; do upload_one $p; done
           else
             upload_one $PRODUCT
           fi

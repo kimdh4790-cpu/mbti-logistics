@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, initial-scale=1">
+<title>MailMind Promo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap">
+<style>
+  :root {
+    --pink:  #F472B6;
+    --gold:  #FBBF24;
+    --green: #86EFAC;
+    --dark:  #0D1117;
+    --card:  #161B22;
+    --border:#30363D;
+    --text:  #F0F6FC;
+    --muted: #8B949E;
+    --white: #FFFFFF;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1080px; height: 1920px;
+    overflow: hidden;
+    background: var(--dark);
+    font-family: 'Inter', sans-serif;
+    color: var(--text);
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .slide.active { opacity: 1; }
+
+  /* ── Slide 1: Hook ── */
+  #s1 { background: var(--dark); }
+  #s1 .sparkle { font-size: 72px; margin-bottom: 32px; }
+  #s1 .brand { font-size: 80px; font-weight: 900; letter-spacing: -2px;
+    background: linear-gradient(135deg, var(--pink) 0%, #A78BFA 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  #s1 .tagline { font-size: 40px; font-weight: 600; color: var(--muted);
+    margin-top: 20px; text-align: center; line-height: 1.4; max-width: 800px; }
+  #s1 .hook { font-size: 52px; font-weight: 900; color: var(--white);
+    margin-top: 48px; text-align: center; line-height: 1.3; max-width: 860px; }
+  #s1 .hook em { color: var(--pink); font-style: normal; }
+  #s1 .sub { font-size: 34px; color: var(--muted); margin-top: 24px; text-align: center; }
+
+  /* ── Slide 2: UI Demo ── */
+  #s2 { background: #0D1117; padding: 60px; }
+  .ui-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px 52px;
+    width: 900px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .ui-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+  }
+  .ui-brand { font-size: 36px; font-weight: 800; }
+  .ui-brand .star { color: var(--pink); }
+  .ui-pro { font-size: 22px; color: var(--muted); background: rgba(244,114,182,0.12);
+    border: 1px solid rgba(244,114,182,0.3); border-radius: 20px; padding: 6px 18px; }
+  .ui-badge { font-size: 22px; color: var(--pink);
+    background: rgba(244,114,182,0.1); border-radius: 8px; padding: 8px 18px;
+    margin-bottom: 28px; display: inline-flex; align-items: center; gap: 8px; }
+  .ui-tone-row { display: flex; gap: 20px; margin-bottom: 28px; }
+  .ui-select {
+    flex: 1; background: #21262D; border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px; font-size: 26px; color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+  .ui-btn-main {
+    width: 100%; padding: 28px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--pink) 0%, #C026D3 100%);
+    font-size: 32px; font-weight: 800; color: white;
+    text-align: center; margin-bottom: 20px;
+    box-shadow: 0 8px 30px rgba(244,114,182,0.4);
+  }
+  .ui-btn-row { display: flex; gap: 16px; margin-bottom: 20px; }
+  .ui-btn-sec {
+    flex: 1; padding: 22px; border-radius: 12px;
+    border: 1.5px solid var(--border); font-size: 24px; color: var(--text);
+    text-align: center; background: transparent;
+  }
+  .ui-btn-sec.active { border-color: var(--green); color: var(--green); }
+  .ui-summary {
+    background: #161B22; border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px; font-size: 22px; color: var(--muted);
+    line-height: 1.6; margin-bottom: 20px;
+  }
+  .ui-todo { background: rgba(251,191,36,0.1); border-left: 3px solid var(--gold);
+    border-radius: 8px; padding: 16px 20px; font-size: 22px; color: var(--gold);
+    display: flex; align-items: center; gap: 10px; }
+
+  /* ── Slide 3: 10 Languages ── */
+  #s3 { background: var(--dark); gap: 0; padding: 80px 60px; }
+  #s3 .section-title { font-size: 48px; font-weight: 900; text-align: center; margin-bottom: 20px; }
+  #s3 .section-title span { color: var(--pink); }
+  #s3 .subtitle { font-size: 30px; color: var(--muted); text-align: center; margin-bottom: 64px; }
+  .lang-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; width: 940px; }
+  .lang-pill {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 28px 16px;
+    text-align: center; transition: border-color 0.3s;
+  }
+  .lang-pill .flag { font-size: 48px; margin-bottom: 12px; }
+  .lang-pill .code { font-size: 28px; font-weight: 700; color: var(--white); }
+  .lang-pill .name { font-size: 20px; color: var(--muted); margin-top: 4px; }
+  .lang-pill.hi { border-color: var(--pink); background: rgba(244,114,182,0.08); }
+
+  /* ── Slide 4: 3 Answers Compare ── */
+  #s4 { background: var(--dark); padding: 80px 60px; }
+  #s4 .section-title { font-size: 52px; font-weight: 900; margin-bottom: 12px; text-align: center; }
+  #s4 .section-title span { color: var(--pink); }
+  #s4 .section-sub { font-size: 30px; color: var(--muted); margin-bottom: 56px; text-align: center; }
+  .answer-cards { display: flex; flex-direction: column; gap: 24px; width: 900px; }
+  .answer-card {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 28px 32px;
+  }
+  .answer-card.best { border-color: var(--pink); background: rgba(244,114,182,0.06); }
+  .answer-card .ac-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .ac-num { font-size: 22px; font-weight: 700; color: var(--muted); width: 36px; height: 36px;
+    border-radius: 50%; border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center; }
+  .ac-tone { font-size: 22px; color: var(--muted); }
+  .ac-best { font-size: 20px; color: var(--pink); background: rgba(244,114,182,0.15);
+    border-radius: 20px; padding: 4px 14px; margin-left: auto; }
+  .ac-body { font-size: 22px; color: #8B949E; line-height: 1.6; }
+  .ac-body strong { color: var(--text); }
+
+  /* ── Slide 5: Smart Features ── */
+  #s5 { background: var(--dark); padding: 80px 60px; }
+  #s5 .section-title { font-size: 52px; font-weight: 900; margin-bottom: 64px; text-align: center; }
+  #s5 .section-title span { color: var(--pink); }
+  .feature-list { display: flex; flex-direction: column; gap: 28px; width: 880px; }
+  .feature-item {
+    display: flex; align-items: flex-start; gap: 28px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px;
+  }
+  .feature-icon { font-size: 44px; flex-shrink: 0; }
+  .feature-text .ft-title { font-size: 30px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+  .feature-text .ft-desc { font-size: 24px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Slide 6: CTA ── */
+  #s6 {
+    background: radial-gradient(ellipse at 50% 40%, rgba(244,114,182,0.25) 0%, var(--dark) 70%);
+  }
+  #s6 .cta-brand { font-size: 96px; font-weight: 900;
+    background: linear-gradient(135deg, var(--pink) 0%, #A78BFA 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 24px; }
+  #s6 .cta-headline { font-size: 52px; font-weight: 800; color: var(--white);
+    text-align: center; line-height: 1.3; max-width: 800px; margin-bottom: 20px; }
+  #s6 .cta-sub { font-size: 32px; color: var(--muted); text-align: center; margin-bottom: 60px; }
+  #s6 .cta-btn {
+    background: linear-gradient(135deg, var(--pink) 0%, #C026D3 100%);
+    color: white; font-size: 36px; font-weight: 800;
+    padding: 28px 80px; border-radius: 60px;
+    box-shadow: 0 12px 40px rgba(244,114,182,0.45);
+    margin-bottom: 40px;
+  }
+  #s6 .cta-pro { font-size: 28px; color: var(--muted); display: flex; gap: 40px; }
+  #s6 .cta-pro span { color: var(--green); }
+
+  /* ── Animated dots ── */
+  .dots {
+    position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 16px; z-index: 100;
+  }
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--border); transition: background 0.3s, transform 0.3s;
+  }
+  .dot.on { background: var(--pink); transform: scale(1.3); }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Hook -->
+<div class="slide active" id="s1">
+  <div class="sparkle">✦</div>
+  <div class="brand">MailMind</div>
+  <div class="tagline">Gmail AI 답장 어시스턴트</div>
+  <div class="hook">이메일 답장,<br><em>AI가 대신합니다</em></div>
+  <div class="sub">10개 국어 · 업종 자동 감지 · 3가지 비교</div>
+</div>
+
+<!-- Slide 2: UI Demo -->
+<div class="slide" id="s2">
+  <div style="font-size:40px;font-weight:800;margin-bottom:40px;">Gmail 안에서 바로 사용</div>
+  <div class="ui-card">
+    <div class="ui-header">
+      <div class="ui-brand"><span class="star">✦</span> MailMind</div>
+      <div class="ui-pro">Pro · 이번 달 249/300회</div>
+    </div>
+    <div class="ui-badge">💻 IT 업종 감지 · 기술 용어 적용</div>
+    <div class="ui-tone-row">
+      <div class="ui-select">답장 톤: 업무적</div>
+      <div class="ui-select">내 언어: KR 한국어</div>
+    </div>
+    <div class="ui-btn-main">✦ AI 답장 생성</div>
+    <div class="ui-btn-row">
+      <div class="ui-btn-sec">🔀 답변 3가지 비교</div>
+      <div class="ui-btn-sec active">● 스마트 답장</div>
+    </div>
+    <div class="ui-btn-row">
+      <div class="ui-btn-sec" style="border-color:#30363D;">📋 스레드 요약</div>
+    </div>
+    <div class="ui-todo">📅 날짜/일정 언급됨 → 캘린더 확인 필요</div>
+  </div>
+</div>
+
+<!-- Slide 3: Languages -->
+<div class="slide" id="s3">
+  <div class="section-title">한 번에 <span>10개 국어</span> 전환</div>
+  <div class="subtitle">영어 답장을 클릭 한 번으로 일본어·중국어로</div>
+  <div class="lang-grid">
+    <div class="lang-pill hi"><div class="flag">🇰🇷</div><div class="code">KR</div><div class="name">한국어</div></div>
+    <div class="lang-pill"><div class="flag">🇺🇸</div><div class="code">US</div><div class="name">English</div></div>
+    <div class="lang-pill hi"><div class="flag">🇯🇵</div><div class="code">JP</div><div class="name">日本語</div></div>
+    <div class="lang-pill"><div class="flag">🇨🇳</div><div class="code">CN</div><div class="name">中文</div></div>
+    <div class="lang-pill"><div class="flag">🇪🇸</div><div class="code">ES</div><div class="name">Español</div></div>
+    <div class="lang-pill"><div class="flag">🇩🇪</div><div class="code">DE</div><div class="name">Deutsch</div></div>
+    <div class="lang-pill"><div class="flag">🇧🇷</div><div class="code">BR</div><div class="name">Português</div></div>
+    <div class="lang-pill"><div class="flag">🇸🇦</div><div class="code">SA</div><div class="name">العربية</div></div>
+    <div class="lang-pill"><div class="flag">🇮🇹</div><div class="code">IT</div><div class="name">Italiano</div></div>
+    <div class="lang-pill"><div class="flag">🇫🇷</div><div class="code">FR</div><div class="name">Français</div></div>
+  </div>
+</div>
+
+<!-- Slide 4: 3 answers compare -->
+<div class="slide" id="s4">
+  <div class="section-title">답변 <span>3가지 비교</span></div>
+  <div class="section-sub">같은 이메일, 다른 톤 — 최적을 선택하세요</div>
+  <div class="answer-cards">
+    <div class="answer-card best">
+      <div class="ac-header">
+        <div class="ac-num">1</div>
+        <div class="ac-tone">업무적 · 간결</div>
+        <div class="ac-best">✦ 추천</div>
+      </div>
+      <div class="ac-body"><strong>안녕하세요,</strong> 말씀하신 일정 확인하였습니다. 다음 주 화요일 오후 2시에 맞춰 진행하겠습니다...</div>
+    </div>
+    <div class="answer-card">
+      <div class="ac-header">
+        <div class="ac-num">2</div>
+        <div class="ac-tone">상세하게 · 정중</div>
+      </div>
+      <div class="ac-body">전달 주신 내용 꼼꼼히 검토하였습니다. Headless Dashboard 완료 및 Stripe, SSO 통합 진행에 감사드리며...</div>
+    </div>
+    <div class="answer-card">
+      <div class="ac-header">
+        <div class="ac-num">3</div>
+        <div class="ac-tone">친근하게 · 캐주얼</div>
+      </div>
+      <div class="ac-body">내용 잘 받았어요! 다음 주 일정 맞춰드릴게요. Q4 아이디어 관련해서 저도 몇 가지 생각해봤는데...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 5: Smart Features -->
+<div class="slide" id="s5">
+  <div class="section-title"><span>스마트</span> 기능 모음</div>
+  <div class="feature-list">
+    <div class="feature-item">
+      <div class="feature-icon">🏭</div>
+      <div class="feature-text">
+        <div class="ft-title">업종 자동 감지</div>
+        <div class="ft-desc">IT·금융·법무 업종 자동 인식 → 전문 용어 자동 적용</div>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">📋</div>
+      <div class="feature-text">
+        <div class="ft-title">스레드 요약</div>
+        <div class="ft-desc">긴 이메일 대화를 핵심만 요약 — 맥락 파악 10초</div>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">✅</div>
+      <div class="feature-text">
+        <div class="ft-title">할 일 자동 추출</div>
+        <div class="ft-desc">날짜·마감·후속 조치를 이메일에서 자동으로 감지</div>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">✍️</div>
+      <div class="feature-text">
+        <div class="ft-title">서명 · 템플릿</div>
+        <div class="ft-desc">자주 쓰는 인사말·서명 저장 → 한 번 설정, 평생 사용</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 6: CTA -->
+<div class="slide" id="s6">
+  <div class="cta-brand">MailMind</div>
+  <div class="cta-headline">이메일에 더 이상<br>시간 낭비하지 마세요</div>
+  <div class="cta-sub">Gmail 크롬 확장 · 설치 30초</div>
+  <div class="cta-btn">지금 무료로 시작하기</div>
+  <div class="cta-pro">
+    <span>✦</span> Pro 300회/월 &nbsp;·&nbsp; <span>✦</span> 10개 국어 &nbsp;·&nbsp; <span>✦</span> 업종 자동 감지
+  </div>
+</div>
+
+<!-- Navigation dots -->
+<div class="dots">
+  <div class="dot on" id="d0"></div>
+  <div class="dot" id="d1"></div>
+  <div class="dot" id="d2"></div>
+  <div class="dot" id="d3"></div>
+  <div class="dot" id="d4"></div>
+  <div class="dot" id="d5"></div>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.dot');
+  let cur = 0;
+  const SLIDE_DURATION = 5000;
+
+  function goTo(n) {
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('on');
+    cur = (n + slides.length) % slides.length;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('on');
+  }
+
+  let timer = setInterval(() => goTo(cur + 1), SLIDE_DURATION);
+
+  dots.forEach((d, i) => d.addEventListener('click', () => {
+    clearInterval(timer);
+    goTo(i);
+    timer = setInterval(() => goTo(cur + 1), SLIDE_DURATION);
+  }));
+</script>
+</body>
+</html>
