@@ -44,6 +44,35 @@
 
 ---
 
+### 4. MailMind — AI Gmail 이메일 답장 Chrome 확장 (신규, 2026-10-02)
+
+- **URL**: mailmind.yongcha.app
+- **설치 방식**: Chrome 확장 프로그램 (Gmail 내 사이드패널)
+- **개발자**: kimdh4790@gmail.com (Claude.ai와 공동 개발 중)
+- **개발 메모**: `/areas/mailmind.md` (Claude.ai 내부 메모)
+- **핵심 기능**: 외국어 이메일 → 클릭 한 번 → 14개 언어 완벽 답장 (문화 맥락 반영)
+- **세부 기능**: 업종 자동감지(IT·금융·법무), 3가지 답변 비교, Smart Reply, 스레드 요약, 할 일 추출, Gmail 바로 삽입, 서명·템플릿 설정
+- **요금**: Pro 300회/월
+- **지원 언어 14개**: KR·EN·JP·CN·ES·DE·PT(BR)·AR·IT·FR·TR 등
+
+**홍보 핵심 메시지:**
+- "외국어 이메일 → 클릭 한 번 → 14개 국어 완벽 답장"
+- "번역이 아닌 현지인처럼 — 문화 맥락 반영 답장"
+- "IT·금융·법무 업종 용어 자동 감지"
+- "3가지 답변 비교 + Smart Reply"
+- "Gmail 바로 삽입 — 앱 전환 없이"
+
+**영상 파이프라인 현황 (2026-10-02):**
+- 나레이션: `scripts/content/mailmind-narration.json` (KO/EN/JA 30초 + EN 2분)
+- 자막: `scripts/content/mailmind-subtitles.srt`
+- 메타: `scripts/content/mailmind-meta.json`
+- 프로모 HTML: `assets/promo/mailmind-promo.html` (6슬라이드, Playwright 녹화용)
+- 녹화 스크립트: `scripts/capture/record-mailmind.js`
+- social-media.yml: mailmind 제품 옵션 추가 완료 (2026-10-02, PR #156)
+- 업로드 스케줄: 미설정 (추후 social-media-schedule.yml에 추가 필요)
+
+---
+
 ## GitHub Actions 워크플로우 (Oracle SSH 없이 실행 가능)
 
 ### 필요한 GitHub Secrets
@@ -378,6 +407,7 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 | YONGCHA-DEALER | ✅ yongcha-dealer-meta.json (2026-09-25) | ✅ Remotion (YongchaDealerPromo.jsx, 2026-09-25) | output/yongcha-dealer-promo.mp4 | 미업로드 (월요일 PRODUCT=yongcha 스케줄에 자동 포함) |
 | 인프런 | ✅ inflearn-narration.json (2026-09-04) | ✅ Remotion (InflearnPromo.jsx, 2026-09-04) | output/inflearn-promo.mp4 | ✅ YouTube 재업로드 완료(2026-09-22, Run #69) / Instagram Reels 업로드 중(2026-09-22) |
 | MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 (스케줄 제외) |
+| **MailMind** | ✅ mailmind-narration.json (2026-10-02, KO/EN/JA/long) | ✅ assets/promo/mailmind-promo.html (Playwright, 6슬라이드) | 미생성 | 미완 (소셜미디어 파이프라인 추가 완료, 스케줄 미설정) |
 
 ---
 
