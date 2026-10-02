@@ -11353,12 +11353,59 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
       if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
       return;
     }
-    // 명세서 보기로 이미 생성된 토큰 재사용
+    // 명세서 URL 없으면 자동 생성
     var stmtUrl=r.stmtUrl||'';
     if(!stmtUrl){
-      toast('⚠️ 먼저 📄 명세서 버튼을 눌러 내용을 확인하세요.');
-      if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
-      return;
+      if(btn){btn.textContent='명세서 생성 중...';}
+      var dateMap2={};var storeMap2={};
+      var riderRows2=(window._dwRiderMap&&window._dwRiderMap[riderId])||[];
+      var _tp2=r.targetPrice||0;
+      riderRows2.forEach(function(row){
+        var dt=(row.completedAt||'').slice(0,10);
+        var pf=row.platformPrice||0;
+        var fee=_tp2>0?_tp2:pf;
+        if(dt&&dt!=='Invalid'){
+          if(!dateMap2[dt])dateMap2[dt]={cnt:0,pfAmt:0,fee:0};
+          dateMap2[dt].cnt++;dateMap2[dt].pfAmt+=pf;dateMap2[dt].fee+=fee;
+        }
+        var sn=row.storeName||'';
+        if(sn){
+          if(!storeMap2[sn])storeMap2[sn]={cnt:0,pfAmt:0,priceMap:{}};
+          storeMap2[sn].cnt++;storeMap2[sn].pfAmt+=pf;
+          var pk=String(pf);
+          storeMap2[sn].priceMap[pk]=(storeMap2[sn].priceMap[pk]||0)+1;
+        }
+      });
+      var dateBreakdown2=Object.keys(dateMap2).sort().map(function(dt){
+        return {date:dt,cnt:dateMap2[dt].cnt,pfAmt:dateMap2[dt].pfAmt,fee:dateMap2[dt].fee};
+      });
+      if(!dateBreakdown2.length&&riderRows2.length>0){
+        var _tc=riderRows2.length;
+        var _tpf=riderRows2.reduce(function(s,row){return s+(row.platformPrice||0);},0);
+        dateBreakdown2=[{date:period||new Date().toISOString().slice(0,10),cnt:_tc,pfAmt:_tpf,fee:_tp2>0?_tp2*_tc:_tpf}];
+      }
+      var storeBreakdown2=Object.keys(storeMap2).sort().map(function(sn){
+        var pm=storeMap2[sn].priceMap;
+        var prices=Object.keys(pm).map(function(p){return {price:Number(p),cnt:pm[p]};}).sort(function(a,b){return b.price-a.price;});
+        return {store:sn,cnt:storeMap2[sn].cnt,pfAmt:storeMap2[sn].pfAmt,prices:prices};
+      });
+      var token2=_db.collection('statement_share').doc().id;
+      var preTax2=r.preTax||0;var net2=r.net||0;
+      var tax2=r.totalTax||Math.floor(preTax2*0.033);
+      await _db.collection('statement_share').doc(token2).set({
+        dealerId:did,userId:riderId,name:riderId,
+        month:period||new Date().toISOString().slice(0,7),
+        netPay:net2,preTax:preTax2,tax:tax2,
+        sanjae:Math.floor(preTax2*0.0088),goyal:Math.floor(preTax2*0.008),
+        totalCount:r.totalCount||0,injected:r.injected||0,extracted:r.extracted||0,
+        pfSum:r.pfSum||0,targetPrice:r.targetPrice||0,
+        dateBreakdown:dateBreakdown2,storeBreakdown:storeBreakdown2,
+        type:'delivery',companyName:coName,
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      r.stmtToken=token2;
+      r.stmtUrl='https://donway.ai.kr/s/'+token2;
+      stmtUrl=r.stmtUrl;
     }
     var variables={
       '#{고객회사명}':coName,'#{이름}':riderId,'#{월}':period,
@@ -12022,7 +12069,7 @@ window.dwRunLiveCalculations=function(){
                 '<input id="'+_cid+'-edit-date" type="text" value="'+_pd+'" placeholder="2026-09-04~09-08" style="width:145px;padding:3px 5px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-size:11px">'+
                 '<button onclick="_dwApplyEdit(\''+_cid+'\','+_ri+')" style="padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;cursor:pointer;font-weight:700;color:var(--text)">적용</button>'+
                 '<button onclick="_dwPreviewStatement('+_ri+',this)" style="padding:3px 10px;background:#0f766e;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:700">📄 명세서</button>'+
-                '<button id="'+_cid+'-alimtalk-btn" onclick="_dwSendRiderAlimtalk('+_ri+',this)" disabled style="padding:3px 10px;background:#94a3b8;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:not-allowed;font-weight:700">📲 알림톡</button>';
+                '<button id="'+_cid+'-alimtalk-btn" onclick="_dwSendRiderAlimtalk('+_ri+',this)" style="padding:3px 10px;background:#2563eb;color:#fff;border:none;border-radius:5px;font-size:10px;cursor:pointer;font-weight:700">📲 알림톡</button>';
             }
           })(window._dwResults.length-1, cardId, _validCnt, net2, preTax);
           // ★ 전체 누적 합산
