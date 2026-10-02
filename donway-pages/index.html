@@ -11356,7 +11356,6 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
     // 명세서 URL 없으면 자동 생성
     var stmtUrl=r.stmtUrl||'';
     if(!stmtUrl){
-      if(btn){btn.textContent='명세서 생성 중...';}
       var dateMap2={};var storeMap2={};
       var riderRows2=(window._dwRiderMap&&window._dwRiderMap[riderId])||[];
       var _tp2=r.targetPrice||0;
@@ -11392,7 +11391,8 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
       var token2=_db.collection('statement_share').doc().id;
       var preTax2=r.preTax||0;var net2=r.net||0;
       var tax2=r.totalTax||Math.floor(preTax2*0.033);
-      await _db.collection('statement_share').doc(token2).set({
+      // fire-and-forget: URL은 바로 사용, 쓰기는 비동기
+      _db.collection('statement_share').doc(token2).set({
         dealerId:did,userId:riderId,name:riderId,
         month:period||new Date().toISOString().slice(0,7),
         netPay:net2,preTax:preTax2,tax:tax2,
@@ -11402,7 +11402,7 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
         dateBreakdown:dateBreakdown2,storeBreakdown:storeBreakdown2,
         type:'delivery',companyName:coName,
         createdAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      }).catch(function(e2){console.warn('stmt_share write:',e2.message);});
       r.stmtToken=token2;
       r.stmtUrl='https://donway.ai.kr/s/'+token2;
       stmtUrl=r.stmtUrl;
