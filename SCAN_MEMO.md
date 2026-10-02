@@ -57,6 +57,16 @@
 
 ---
 
+## 장애 이력 및 해결 (2026-09-23)
+
+### dine.ne.kr/api/seolyuhana/analyze 404 — wrangler.seolyuhana.toml 라우트 제거
+- **증상**: dine.ne.kr에서 분석 버튼 클릭 시 "서버 오류 (404)"
+- **근본 원인**: `seolyuhana_worker.js`가 `dine.ne.kr/api/seolyuhana/*` 라우트를 intercept → `filo.ai.kr`로 프록시 → `filo-worker.js`는 SCAN API 없음 → 404
+- **수정**: `wrangler.seolyuhana.toml`에서 `dine.ne.kr/api/seolyuhana/*` 라우트 제거
+- `dine-worker.js`가 `dine.ne.kr/*` 전체를 처리하며 이미 `/api/seolyuhana/*` 핸들러를 내장하고 있음
+
+---
+
 ## 장애 이력 및 해결 (2026-09-12~)
 
 ### 분석 타임아웃 "분석 시간 초과 (3.5분)" — 2026-09-12 수정

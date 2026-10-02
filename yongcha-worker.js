@@ -44,7 +44,7 @@ const YONGCHA_HTML = String.raw`﻿<!DOCTYPE html>
         {
           "@type":"Question",
           "name":"기사 요금제는 얼마인가요?",
-          "acceptedAnswer":{"@type":"Answer","text":"기사는 월 150,000원, 소장은 월 50,000원입니다. DONWAY 구독 소장은 용차앱을 무료로 이용할 수 있습니다."}
+          "acceptedAnswer":{"@type":"Answer","text":"2026년에는 기사·소장 모두 무료로 이용하실 수 있습니다. 2027년 1월부터 기사 월 150,000원, 소장 월 50,000원으로 전환 예정입니다. DONWAY 구독 소장은 2027년 이후에도 무료입니다."}
         },
         {
           "@type":"Question",
@@ -1517,11 +1517,12 @@ function _yTrialDaysLeft(){
   return Math.ceil((end-Date.now())/(86400*1000));
 }
 function _yCheckTrial(){
-  if(!_CU||ADMINS.indexOf(_CU.email)>=0)return; // 어드민 제외
-  // DONWAY 번들 소장은 무료 (trialEndsAt 없거나 serverValue)
+  if(!_CU||ADMINS.indexOf(_CU.email)>=0)return;
+  // 2026년 한 해 전체 무료 — 만료 배너 표시 안 함
+  if(new Date().getFullYear()<=2026)return;
   if(_CU.type==='agency'&&_CU.donwayFree)return;
   var left=_yTrialDaysLeft();
-  if(left===null)return; // trialEndsAt 없는 기존 유저는 스킵
+  if(left===null)return;
   if(left<=0){
     _yShowTrialExpiredBanner();
   } else if(left<=7){
@@ -1551,24 +1552,21 @@ function _yShowTrialExpiredBanner(){
 }
 function _yShowSubscribeModal(){
   var type=_CU&&_CU.type;
-  var price=type==='driver'?150000:50000;
-  var priceStr=type==='driver'?'150,000원/월':'50,000원/월';
   var body=document.getElementById('modal-body');
   body.innerHTML=
     '<div style="text-align:center;margin-bottom:16px">'+
-      '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#f59e0b,#d97706);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">'+
+      '<div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">'+
         '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'+
       '</div>'+
-      '<div style="font-size:20px;font-weight:900;letter-spacing:-.5px">구독료 납부 안내</div>'+
-      '<div style="font-size:13px;color:var(--t2);margin-top:4px">30일 무료체험 종료 후 계속 이용하시려면<br>아래 계좌로 구독료를 납부해 주세요</div>'+
+      '<div style="font-size:20px;font-weight:900;letter-spacing:-.5px">2026년 무료 서비스</div>'+
+      '<div style="font-size:13px;color:var(--t2);margin-top:4px">2026년 한 해 동안 용차앱을 무료로 이용하세요.<br>2027년 1월부터 유료로 전환될 예정입니다.</div>'+
     '</div>'+
     '<div class="card" style="padding:14px 16px;margin-bottom:12px">'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--t2)">요금</span><span style="font-weight:900;font-size:16px;color:var(--ac)">'+priceStr+'</span></div>'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--t2)">은행</span><span style="font-weight:700">하나은행</span></div>'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--t2)">계좌번호</span><span style="font-weight:800;font-variant-numeric:tabular-nums">270-910019-24204</span></div>'+
-      '<div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">예금주</span><span style="font-weight:700">(유)엠비티아이</span></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--t2)">2026년 요금</span><span style="font-weight:900;font-size:16px;color:#10b981">무료</span></div>'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="color:var(--t2)">2027년 1월 전환 예정</span><span style="font-weight:700;font-size:13px">기사 ₩150,000 · 소장 ₩50,000</span></div>'+
+      '<div style="display:flex;justify-content:space-between"><span style="color:var(--t2)">DONWAY 구독 소장</span><span style="font-weight:700">2027년 이후에도 무료</span></div>'+
     '</div>'+
-    '<div style="font-size:11.5px;color:var(--t3);margin-bottom:16px;text-align:center">입금 후 문의: 051-711-3103 · 확인 즉시 계속 이용 가능</div>'+
+    '<div style="font-size:11.5px;color:var(--t3);margin-bottom:16px;text-align:center">문의: 051-711-3103</div>'+
     '<button type="button" onclick="_closeModal()" style="width:100%;min-height:48px;background:var(--acl);color:var(--ac);border:none;border-radius:var(--r);font-size:15px;font-weight:800;cursor:pointer;font-family:inherit">확인했어요</button>';
   _openModal();
 }

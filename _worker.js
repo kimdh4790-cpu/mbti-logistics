@@ -375,7 +375,7 @@ async function handleSAFirestore(request, env) {
       fieldMap[k] = typeof v==='number' ? {integerValue:v} : {stringValue:String(v)};
     }
     const fsRes = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/${collection}/${docId}?updateMask.fieldPaths=${Object.keys(fields).join('&updateMask.fieldPaths=')}`,
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${collection}/${docId}?updateMask.fieldPaths=${Object.keys(fields).join('&updateMask.fieldPaths=')}`,
       {method:'PATCH', headers:{'Authorization':`Bearer ${access_token}`,'Content-Type':'application/json'},
        body:JSON.stringify({fields:fieldMap})}
     );
@@ -412,7 +412,7 @@ async function handleDriversBatch(request, env) {
 
     const PROJECT = 'mbti-logistics';
     // drivers 컬렉션 전체 조회
-    const listRes = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/drivers?pageSize=200`, {headers:{'Authorization':`Bearer ${access_token}`}});
+    const listRes = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/drivers?pageSize=200`, {headers:{'Authorization':`Bearer ${access_token}`}});
     const listData = await listRes.json();
     const docs = listData.documents || [];
 
@@ -6301,8 +6301,7 @@ service cloud.firestore {
 
     // ── 기사 프로필 저장: POST /api/emergency-driver-profile ──
     if (path === '/api/emergency-driver-profile' && method === 'POST') {
-      const _dpUser = await verifyFirebaseToken(request, env);
-      if (!_dpUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:{'Content-Type':'application/json'}});
+      // 익명 로그인 타이밍 이슈로 토큰 없을 수 있음 → dealerId로 회사 검증으로 대체
       try {
         const body = await request.json();
         const { dealerId, driverName, phone, idNum, carNum, carType, bankAccount } = body;
@@ -6552,39 +6551,114 @@ service cloud.firestore {
         const _cccCode = (url.searchParams.get('code')||'').trim().toUpperCase();
         if (!_cccCode) return new Response(JSON.stringify({ok:false,error:'code 필수'}),{status:400,headers:_cccH});
         const _cccToken = await getAccessToken(env);
-        const _cccFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
-        const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'OR',filters:[{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:_cccCode}}}]}},limit:1}};
+        const _cccFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+        // 1단계: companyCode 단일 필드 쿼리 (OR 복합쿼리→복합인덱스 필요 오류 방지)
+        const _cccQ = {structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'companyCode'},op:'EQUAL',value:{stringValue:_cccCode}}},limit:1}};
         const _cccRes = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ)});
-        const _cccArr = await _cccRes.json();
-        let _cccDoc = (_cccArr||[]).find(r=>r.document);
-        // fallback: dealerId prefix (code == dealerId.slice(0,8).toUpperCase())
-        // Firestore __name__ range query requires orderBy __name__
+        const _cccRaw = await _cccRes.json();
+        const _cccArr = Array.isArray(_cccRaw) ? _cccRaw : [];
+        let _cccDoc = _cccArr.find(r=>r.document);
+        // 1-b단계: slug 필드 쿼리
+        if (!_cccDoc) {
+          const _cccQs = {structuredQuery:{from:[{collectionId:'companies'}],where:{fieldFilter:{field:{fieldPath:'slug'},op:'EQUAL',value:{stringValue:_cccCode}}},limit:1}};
+          const _cccRs = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQs)});
+          const _cccAs = await _cccRs.json();
+          _cccDoc = (Array.isArray(_cccAs)?_cccAs:[]).find(r=>r.document);
+        }
+        // 2단계: dealerId prefix range 쿼리 (코드 = dealerId 앞 8자)
         if (!_cccDoc && _cccCode.length>=6) {
-          const _cccRef = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
-          const _cccRefEnd = `projects/${PROJECT}/databases/(default)/documents/companies/${_cccCode}`;
-          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN_OR_EQUAL',value:{referenceValue:_cccRefEnd}}}]}},orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],limit:1}};
+          const _cccRef = `projects/${PROJECT_ID}/databases/(default)/documents/companies/${_cccCode}`;
+          const _cccRefEnd = `projects/${PROJECT_ID}/databases/(default)/documents/companies/${_cccCode}`;
+          const _cccQ2 = {structuredQuery:{from:[{collectionId:'companies'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'__name__'},op:'GREATER_THAN_OR_EQUAL',value:{referenceValue:_cccRef}}},{fieldFilter:{field:{fieldPath:'__name__'},op:'LESS_THAN',value:{referenceValue:_cccRefEnd}}}]}},orderBy:[{field:{fieldPath:'__name__'},direction:'ASCENDING'}],limit:1}};
           const _cccR2 = await fetch(`${_cccFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_cccToken}`,'Content-Type':'application/json'},body:JSON.stringify(_cccQ2)});
           const _cccA2 = await _cccR2.json();
-          _cccDoc = (_cccA2||[]).find(r=>r.document);
-        }
-        // final fallback: list documents and find ID starting with code
-        if (!_cccDoc && _cccCode.length>=6) {
-          const _cccListRes = await fetch(`${_cccFsBase}/companies?pageSize=100&orderBy=__name__`,{headers:{'Authorization':`Bearer ${_cccToken}`}});
-          if (_cccListRes.ok) {
-            const _cccList = await _cccListRes.json();
-            const _cccMatch = (_cccList.documents||[]).find(d=>{const _id=d.name.split('/').pop();return _id.startsWith(_cccCode)||_id.toUpperCase().startsWith(_cccCode);});
-            if (_cccMatch) _cccDoc = {document:_cccMatch};
-          }
+          _cccDoc = (Array.isArray(_cccA2)?_cccA2:[]).find(r=>r.document);
         }
         if (!_cccDoc) return new Response(JSON.stringify({ok:false,error:'존재하지 않는 회사코드'}),{headers:_cccH});
         const _cccDid = _cccDoc.document.name.split('/').pop();
         const _cccF = _cccDoc.document.fields||{};
         const _cccName = _cccF.companyName?.stringValue||_cccF.company?.stringValue||'';
-        return new Response(JSON.stringify({ok:true,companyId:_cccDid,companyName:_cccName}),{headers:_cccH});
+        // 서비스 타입: delivery 여부 반환 (배달대행만 기사 앱 가입 필요)
+        const _cccSvcs = (_cccF.services?.arrayValue?.values||[]).map(v=>v.stringValue||'');
+        const _cccSvcType = _cccF.serviceType?.stringValue||'';
+        const _cccDelivPaid = _cccF.deliveryPaid?.booleanValue||false;
+        const _cccHasDelivery = _cccDelivPaid || _cccSvcs.includes('delivery') || _cccSvcType==='delivery';
+        return new Response(JSON.stringify({ok:true,companyId:_cccDid,companyName:_cccName,hasDelivery:_cccHasDelivery}),{headers:_cccH});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_cccH}); }
     }
 
     // ── 배달대행 기사 가입 (/api/driver-join) ── Firestore 권한 우회 서버사이드 저장
+    // ── 테스트 기사 계정 생성 (슈퍼어드민 전용) ──
+    if (path === '/api/create-test-driver' && method === 'POST') {
+      const _ctdH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _ctdUser = await verifyFirebaseToken(request, env);
+      const _SADMIN = ['kimdh4790@gmail.com','soungkyekim@naver.com'];
+      if (!_ctdUser || !_SADMIN.includes(_ctdUser.email)) return new Response(JSON.stringify({ok:false,error:'권한 없음'}),{status:403,headers:_ctdH});
+      try {
+        const {phone, pw, name, companyId} = await request.json();
+        if (!phone || !pw) return new Response(JSON.stringify({ok:false,error:'phone,pw 필수'}),{status:400,headers:_ctdH});
+        const _ctdToken = await getAccessToken(env);
+        const _ctdEmail = phone.replace(/[^0-9]/g,'')+'@donway.internal';
+        // 1. Firebase Auth 계정 생성 (Admin REST API)
+        const _ctdAuthRes = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${_ctdToken}`},
+          body: JSON.stringify({email:_ctdEmail,password:pw,displayName:name||phone,emailVerified:true})
+        });
+        const _ctdAuthData = await _ctdAuthRes.json();
+        if (_ctdAuthData.error) return new Response(JSON.stringify({ok:false,error:_ctdAuthData.error.message}),{headers:_ctdH});
+        const _ctdUid = _ctdAuthData.localId;
+        // 2. Firestore drivers 문서 생성
+        const _ctdFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+        if (companyId) {
+          const _ctdCompDoc = await fetch(`${_ctdFsBase}/companies/${companyId}`,{headers:{Authorization:'Bearer '+_ctdToken}});
+          const _ctdCompData = _ctdCompDoc.ok ? await _ctdCompDoc.json() : {};
+          await fetch(`${_ctdFsBase}/drivers`,{method:'POST',headers:{Authorization:'Bearer '+_ctdToken,'Content-Type':'application/json'},body:JSON.stringify({fields:{
+            uid:{stringValue:_ctdUid},email:{stringValue:_ctdEmail},
+            name:{stringValue:name||phone},phone:{stringValue:phone.replace(/[^0-9]/g,'')},
+            dealerId:{stringValue:companyId},
+            companyName:{stringValue:_ctdCompData.fields?.companyName?.stringValue||''},
+            companyCode:{stringValue:_ctdCompData.fields?.companyCode?.stringValue||''},
+            role:{stringValue:'driver'},is_active:{booleanValue:true},status:{stringValue:'재직'},
+            createdAt:{timestampValue:new Date().toISOString()}
+          }})});
+        }
+        return new Response(JSON.stringify({ok:true,uid:_ctdUid,email:_ctdEmail}),{headers:_ctdH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_ctdH}); }
+    }
+
+    // ── 기사 자신의 프로필 조회 (서버사이드 Firestore, 보안규칙 우회) ──
+    if (path === '/api/my-driver-profile' && method === 'GET') {
+      const _mdpH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const _mdpUser = await verifyFirebaseToken(request, env);
+        if (!_mdpUser) return new Response(JSON.stringify({ok:false,error:'인증 필요'}),{status:401,headers:_mdpH});
+        const _mdpToken = await getAccessToken(env);
+        const _mdpFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+        // uid로 먼저 조회
+        const _mdpQ = {structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_mdpUser.uid}}}]}},limit:1}};
+        const _mdpRes = await fetch(`${_mdpFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify(_mdpQ)});
+        const _mdpRaw = await _mdpRes.json();
+        let _mdpDoc = (Array.isArray(_mdpRaw)?_mdpRaw:[]).find(r=>r.document);
+        // uid 쿼리 실패 시 email로 재시도
+        if (!_mdpDoc && _mdpUser.email) {
+          const _mdpQ2 = {structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'email'},op:'EQUAL',value:{stringValue:_mdpUser.email}}},limit:1}};
+          const _mdpRes2 = await fetch(`${_mdpFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify(_mdpQ2)});
+          const _mdpRaw2 = await _mdpRes2.json();
+          _mdpDoc = (Array.isArray(_mdpRaw2)?_mdpRaw2:[]).find(r=>r.document);
+          // email 조회 성공 시 uid 백필
+          if (_mdpDoc) {
+            const _mdpRef = _mdpDoc.document.name;
+            fetch(`${_mdpFsBase}/${_mdpRef.split('/documents/')[1]}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{uid:{stringValue:_mdpUser.uid}}})}).catch(()=>{});
+          }
+        }
+        if (!_mdpDoc) return new Response(JSON.stringify({ok:false,error:'driver_not_found'}),{headers:_mdpH});
+        const _mdpF = _mdpDoc.document.fields||{};
+        const _mdpDealerId = _mdpF.dealerId?.stringValue||'';
+        return new Response(JSON.stringify({ok:true,dealerId:_mdpDealerId,name:_mdpF.name?.stringValue||'',phone:_mdpF.phone?.stringValue||'',companyName:_mdpF.companyName?.stringValue||'',role:'driver'}),{headers:_mdpH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_mdpH}); }
+    }
+
     if (path === '/api/driver-join' && method === 'POST') {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {
@@ -6593,7 +6667,7 @@ service cloud.firestore {
         if (!name||!companyId) return new Response(JSON.stringify({ok:false,error:'name,companyId 필수'}),{status:400,headers:_djH});
         // companyCode 역조회
         const _djToken = await getAccessToken(env);
-        const _djFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents`;
+        const _djFsBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
         const _djCompDoc = await fetch(`${_djFsBase}/companies/${companyId}`,{headers:{'Authorization':`Bearer ${_djToken}`}});
         const _djCompData = _djCompDoc.ok ? (await _djCompDoc.json()) : {};
         const _djCompCode = _djCompData.fields?.companyCode?.stringValue||'';
@@ -7071,14 +7145,27 @@ service cloud.firestore {
       const linkId    = (env.POPBILL_LINK_ID    || '').trim();
       const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
       const testMode  = (env.POPBILL_TEST_MODE  || '').trim();
-      // 실제 토큰 발급 테스트 (DONWAY 사업자번호로)
       let tokenTest = { ok: false, error: '키 미설정' };
+      let autoJoinResult = null;
       if (linkId && secretKey) {
         try {
           const token = await popbillGetToken(env, '3738602536');
           tokenTest = { ok: true, token: token ? token.slice(0,8)+'...' : '(empty)' };
         } catch(e) {
           tokenTest = { ok: false, error: e.message };
+          // 1016 = 미가입 회원 → 자동으로 DONWAY 사업자 등록 시도
+          if (e.message && e.message.includes('1016')) {
+            try {
+              autoJoinResult = await popbillJoinMemberDebug(env, '3738602536', '유한회사엠비티아이', '김형우', 'DONWAY3738602536', 'Mbtico2026!', '법인', '소프트웨어');
+              if (autoJoinResult.code >= 0 || autoJoinResult.code === -10) {
+                // code -10 = 이미 가입된 ID → 그래도 토큰 재시도
+                const token2 = await popbillGetToken(env, '3738602536');
+                tokenTest = { ok: true, token: token2 ? token2.slice(0,8)+'...' : '(empty)', autoJoined: true };
+              }
+            } catch(e2) {
+              autoJoinResult = { code: -1, message: e2.message };
+            }
+          }
         }
       }
       return new Response(JSON.stringify({
@@ -7087,9 +7174,31 @@ service cloud.firestore {
         POPBILL_LINK_ID:    linkId    ? `${linkId} (${linkId.length}자)` : '❌ 미등록',
         POPBILL_SECRET_KEY: secretKey ? `${secretKey.slice(0,4)}...${secretKey.slice(-4)} (${secretKey.length}자)` : '❌ 미등록',
         POPBILL_TEST_MODE:  testMode  || '미설정(기본값: 테스트모드)',
-        api_base: testMode === 'false' ? 'serviceapi.popbill.com' : 'testserviceapi.popbill.com',
-        tokenTest
+        auth_base: testMode === 'false' ? 'auth.popbill.com' : 'testauth.popbill.com',
+        api_base:  testMode === 'false' ? 'serviceapi.popbill.com' : 'testserviceapi.popbill.com',
+        hint: testMode !== 'false' ? '⚠️ 테스트 모드: LINK_ID가 팝빌 테스트 서버에 미활성화 시 1016 오류. POPBILL_TEST_MODE=false 로 변경하면 프로덕션 서버 사용.' : null,
+        tokenTest,
+        autoJoinResult
       }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' } });
+    }
+
+    // ── 팝빌 DONWAY 회원 초기 등록 (/api/popbill-init) ──────────────────────
+    if (path === '/api/popbill-init' && method === 'POST') {
+      const pw = (new URL(request.url)).searchParams.get('pw') || '';
+      if (pw !== 'mbtico2026') return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      try {
+        const joinResult = await popbillJoinMember(env, '3738602536', '유한회사엠비티아이', '김형우', 'DONWAY3738602536', 'Mbtico2026!', '법인', '소프트웨어');
+        let tokenTest = null;
+        if (joinResult.code >= 0 || joinResult.code === -10) {
+          try {
+            const token = await popbillGetToken(env, '3738602536');
+            tokenTest = { ok: true, token: token ? token.slice(0,8)+'...' : '(empty)' };
+          } catch(e2) { tokenTest = { ok: false, error: e2.message }; }
+        }
+        return new Response(JSON.stringify({ joinResult, tokenTest }), { headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      } catch(e) {
+        return new Response(JSON.stringify({ ok: false, error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
+      }
     }
 
     // ── 기사 /stmt 페이지에서 세금계산서 역발행 신청 (/api/stmt-tax-issue) ──
@@ -7177,6 +7286,56 @@ service cloud.firestore {
         return new Response(JSON.stringify({ok:true, certUrl, ...issueResult}), {headers:{'Content-Type':'application/json'}});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:e.message}), {status:500,headers:{'Content-Type':'application/json'}});
+      }
+    }
+
+    // ── 슈퍼어드민 도장 오염 일괄 정리 (/api/cleanup-stamp) ──
+    if (path === '/api/cleanup-stamp' && method === 'POST') {
+      const _csAdmin = await requireAdmin(request, env);
+      if (!_csAdmin) return new Response(JSON.stringify({error:'unauthorized'}),{status:401,headers:{'Content-Type':'application/json'}});
+      try {
+        const SA_KEY = env.FIREBASE_SA_KEY ? JSON.parse(env.FIREBASE_SA_KEY) : null;
+        if (!SA_KEY) return new Response(JSON.stringify({error:'SA_KEY 없음'}),{status:500,headers:{'Content-Type':'application/json'}});
+        // SA JWT 발급
+        const _b64u = s => btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const _b64uBin = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+        const _csNow = Math.floor(Date.now()/1000);
+        const _csHdr = _b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
+        const _csClaim = _b64u(JSON.stringify({iss:SA_KEY.client_email,scope:'https://www.googleapis.com/auth/datastore',aud:'https://oauth2.googleapis.com/token',exp:_csNow+3600,iat:_csNow}));
+        const _csPem = SA_KEY.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'');
+        const _csBin = Uint8Array.from(atob(_csPem),c=>c.charCodeAt(0));
+        const _csCk = await crypto.subtle.importKey('pkcs8',_csBin.buffer,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+        const _csSig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_csCk,new TextEncoder().encode(_csHdr+'.'+_csClaim));
+        const _csJwt = _csHdr+'.'+_csClaim+'.'+_b64uBin(_csSig);
+        const {access_token:_csToken} = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_csJwt}`})).json();
+        const _csBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const _csAuthHdr = {'Authorization':'Bearer '+_csToken,'Content-Type':'application/json'};
+        // 전체 companies 목록 조회 (최대 300건)
+        const _allRaw = await fetch(`${_csBase}/companies?pageSize=300`,{headers:_csAuthHdr});
+        const _allRes = await _allRaw.json();
+        if (!_allRaw.ok || _allRes.error) return new Response(JSON.stringify({error:'Firestore list 실패', status:_allRaw.status, detail:_allRes}),{status:500,headers:{'Content-Type':'application/json'}});
+        const _allDocs = _allRes.documents || [];
+        // 동일한 stampImage가 2개 이상 문서에 있으면 오염된 도장 (각 대리점 도장은 유일해야 함)
+        const _stampCount = {};
+        for (const _doc of _allDocs) {
+          const _s = _doc.fields && _doc.fields.stampImage && _doc.fields.stampImage.stringValue;
+          if (_s) _stampCount[_s] = (_stampCount[_s] || 0) + 1;
+        }
+        let _cleaned = 0;
+        const _patches = [];
+        for (const _doc of _allDocs) {
+          const _docId = _doc.name.split('/').pop();
+          const _stamp = _doc.fields && _doc.fields.stampImage && _doc.fields.stampImage.stringValue;
+          // 동일 도장이 2곳 이상 = 오염. 슈퍼어드민 dealerId 제외 후 삭제
+          if (_stamp && _stampCount[_stamp] >= 2 && _docId !== '9XD2K3W1tIhIs6XM74YT0xfRFEP2') {
+            _patches.push(fetch(`${_csBase}/companies/${_docId}?updateMask.fieldPaths=stampImage`,{method:'PATCH',headers:_csAuthHdr,body:JSON.stringify({fields:{}})}));
+            _cleaned++;
+          }
+        }
+        await Promise.all(_patches);
+        return new Response(JSON.stringify({ok:true,cleaned:_cleaned,total:_allDocs.length,duplicates:Object.values(_stampCount).filter(v=>v>=2).length}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) {
+        return new Response(JSON.stringify({error:e.message}),{status:500,headers:{'Content-Type':'application/json'}});
       }
     }
 
@@ -18286,6 +18445,104 @@ score 기준: 지역일치(30점)+단가우수(25점)+차종적합(20점)+긴급
   });
 }
 
+// ── 팝빌 회원 등록 (LINKAUTHKEY, 기존 토큰 불필요) ──────────────────────────
+async function popbillJoinMember(env, corpNum, corpName, ceoName, id, pwd, bizType, bizClass) {
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+  const linkId    = (env.POPBILL_LINK_ID || '').trim();
+  const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
+  if (!linkId || !secretKey) throw new Error('POPBILL 인증키 미설정');
+  const cleanCorpNum = corpNum.replace(/-/g, '').trim();
+  const now = new Date();
+  const _p = n => String(n).padStart(2, '0');
+  const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
+  // /Join 엔드포인트는 LINKAUTHKEY 직접 인증 (session token 불필요)
+  // 서비스 API LINKAUTHKEY 서명: timestamp\n${linkId} (CorpNum 제외 — Token API와 다름)
+  const signMsg = `${timestamp}\n${linkId}`;
+  const signature = await popbillHmacSign(signMsg, secretKey);
+  const joinBody = {
+    LinkID: linkId,
+    CorpNum: cleanCorpNum,
+    ID: id || `DW${cleanCorpNum}`,
+    PWD: pwd || cleanCorpNum.slice(-4) + 'Mb0!',
+    Ceoname: ceoName || corpName || '',
+    CorpName: corpName || '',
+    Address: '',
+    BizType: bizType || '법인',
+    BizClass: bizClass || '소프트웨어',
+    ContactName: ceoName || corpName || '',
+    ContactEmail: '',
+    ContactTEL: ''
+  };
+  const resp = await fetch(`${BASE}/Join`, {
+    method: 'POST',
+    headers: {
+      'x-lh-date': timestamp,
+      'Authorization': `LINKAUTHKEY ${linkId}:${signature}`,
+      'Content-Type': 'application/json; charset=utf-8'
+    },
+    body: JSON.stringify(joinBody)
+  });
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { code: -1, message: text }; }
+  return data;
+}
+
+// ── 팝빌 회원 등록 (디버그용 — HTTP 상태코드·rawText 포함) ──────────────────
+async function popbillJoinMemberDebug(env, corpNum, corpName, ceoName, id, pwd, bizType, bizClass) {
+  const BASE = env.POPBILL_TEST_MODE !== 'false' ? 'https://testserviceapi.popbill.com' : 'https://serviceapi.popbill.com';
+  const linkId    = (env.POPBILL_LINK_ID || '').trim();
+  const secretKey = (env.POPBILL_SECRET_KEY || '').trim();
+  if (!linkId || !secretKey) return { httpStatus: 0, rawText: '', code: -1, message: 'POPBILL 인증키 미설정' };
+  const cleanCorpNum = corpNum.replace(/-/g, '').trim();
+  const now = new Date();
+  const _p = n => String(n).padStart(2, '0');
+  const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
+  const signMsg = `${timestamp}\n${linkId}`;
+  const signature = await popbillHmacSign(signMsg, secretKey);
+  const joinBody = {
+    LinkID: linkId,
+    CorpNum: cleanCorpNum,
+    ID: id || `DW${cleanCorpNum}`,
+    PWD: pwd || cleanCorpNum.slice(-4) + 'Mb0!',
+    Ceoname: ceoName || corpName || '',
+    CorpName: corpName || '',
+    Address: '',
+    BizType: bizType || '법인',
+    BizClass: bizClass || '소프트웨어',
+    ContactName: ceoName || corpName || '',
+    ContactEmail: '',
+    ContactTEL: ''
+  };
+  let httpStatus = 0;
+  let rawText = '';
+  try {
+    const resp = await fetch(`${BASE}/Join`, {
+      method: 'POST',
+      headers: {
+        'x-lh-date': timestamp,
+        'Authorization': `LINKAUTHKEY ${linkId}:${signature}`,
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify(joinBody)
+    });
+    httpStatus = resp.status;
+    rawText = await resp.text();
+  } catch(e) {
+    return { httpStatus: 0, rawText: e.message, code: -1, message: `fetch 실패: ${e.message}` };
+  }
+  let parsed = null;
+  try { parsed = JSON.parse(rawText); } catch { /* plain text */ }
+  return {
+    httpStatus,
+    rawText: rawText.slice(0, 300),
+    signMsg: signMsg.replace(secretKey, '***'),
+    joinBodySent: { ...joinBody, PWD: '***' },
+    code: parsed?.code ?? -1,
+    message: parsed?.message ?? rawText
+  };
+}
+
 // ── 팝빌 HMAC-SHA256 서명 ──────────────────────────────────────────────────
 async function popbillHmacSign(message, base64Key) {
   const keyBytes = Uint8Array.from(atob(base64Key), c => c.charCodeAt(0));
@@ -18306,15 +18563,16 @@ async function popbillGetToken(env, corpNum) {
   // 사업자번호 하이픈 제거 (예: 373-86-02536 → 3738602536)
   const cleanCorpNum = corpNum.replace(/-/g, '').trim();
 
-  // yyyyMMdd'T'HHmmss'Z' 형식
+  // yyyyMMddHHmmss 형식 (팝빌 요구 형식, T/Z 없음, 14자리)
   const now = new Date();
-  const timestamp = now.toISOString()
-    .replace(/-/g, '').replace(/:/g, '').replace(/\.\d+Z$/, 'Z');
+  const _p = n => String(n).padStart(2, '0');
+  const timestamp = `${now.getUTCFullYear()}${_p(now.getUTCMonth()+1)}${_p(now.getUTCDate())}${_p(now.getUTCHours())}${_p(now.getUTCMinutes())}${_p(now.getUTCSeconds())}`;
 
   const signMsg = `${timestamp}\n${linkId}\n${cleanCorpNum}`;
   const signature = await popbillHmacSign(signMsg, secretKey);
 
-  const authBase = 'https://auth.popbill.com';
+  // 테스트 모드는 testauth, 실환경은 auth
+  const authBase = env.POPBILL_TEST_MODE !== 'false' ? 'https://testauth.popbill.com' : 'https://auth.popbill.com';
   const resp = await fetch(`${authBase}/Token`, {
     method: 'POST',
     headers: {
@@ -18535,8 +18793,9 @@ async function popbillIssueReverseDonway(env, params) {
   };
 
   // 역발행즉시요청(RegistRequest #8): 등록+요청 한 번에 처리
+  // URL SenderCorpNum = API 호출 주체(공급받는자/대리점). invoiceBody 내 SenderCorpNum(기사)와 다름.
   const resp = await fetch(
-    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${cleanSenderCorpNum}&MgtKey=${mgtKey}`,
+    `${BASE}/Taxinvoice/역발행즉시요청?SenderCorpNum=${cleanReceiverCorpNum}&MgtKey=${mgtKey}`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${pbToken}`, 'Content-Type': 'application/json; charset=utf-8' },

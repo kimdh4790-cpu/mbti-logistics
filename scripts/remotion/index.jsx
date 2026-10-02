@@ -2,8 +2,10 @@ const React = require('react');
 const { registerRoot, Composition } = require('remotion');
 const { FiloPromo }     = require('./FiloPromo');
 const { DonwayPromo }   = require('./DonwayPromo');
-const { YongchaPromo }  = require('./YongchaPromo');
-const { InflearnPromo } = require('./InflearnPromo');
+const { YongchaPromo }        = require('./YongchaPromo');
+const { YongchaDriverPromo }  = require('./YongchaDriverPromo');
+const { YongchaDealerPromo }  = require('./YongchaDealerPromo');
+const { InflearnPromo }       = require('./InflearnPromo');
 const { ScanPromo }     = require('./ScanPromo');
 
 var defaultFiloProps     = { hasNarration: false, hasBgm: false, slides: null, lines: null };
@@ -19,8 +21,12 @@ function Root() {
       <Composition id="FiloReels"     component={FiloPromo}     durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultFiloProps} />
       <Composition id="DonwayPromo"   component={DonwayPromo}   durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultDonwayProps} />
       <Composition id="DonwayReels"   component={DonwayPromo}   durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultDonwayProps} />
-      <Composition id="YongchaPromo"  component={YongchaPromo}  durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
-      <Composition id="YongchaReels"  component={YongchaPromo}  durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaPromo"        component={YongchaPromo}       durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaReels"        component={YongchaPromo}       durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaDriverPromo"  component={YongchaDriverPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaDriverReels"  component={YongchaDriverPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaDealerPromo"  component={YongchaDealerPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
+      <Composition id="YongchaDealerReels"  component={YongchaDealerPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
       <Composition id="InflearnPromo" component={InflearnPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
       <Composition id="InflearnReels" component={InflearnPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
       <Composition id="ScanPromo"     component={ScanPromo}     durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
