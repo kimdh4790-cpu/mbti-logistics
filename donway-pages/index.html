@@ -11332,7 +11332,12 @@ window._dwPreviewStatement=async function(idx,btn){
 };
 
 window._dwSendRiderAlimtalk=async function(idx,btn){
-  var r=window._dwResults&&window._dwResults[idx];if(!r)return;
+  var r=window._dwResults&&window._dwResults[idx];
+  if(!r){
+    toast('⚠️ 정산 데이터 없음 — 엑셀 업로드 후 정산하기를 먼저 실행해주세요');
+    if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
+    return;
+  }
   if(btn){btn.disabled=true;btn.textContent='발송 중...';}
   var did=_CU&&(_CU.dealerId||_CU.uid);
   var coName=(_CU&&_CU.companyName)||(_CU&&_CU.name)||'대리점';
