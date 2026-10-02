@@ -11361,8 +11361,7 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
         });
         if(phone&&window._dwPhoneMap)window._dwPhoneMap[riderId]=phone;
       }catch(e3){
-        // Firestore 차단 또는 타임아웃 — 직접 입력 유도
-        console.warn('Firestore 조회 실패(외부차단 가능성):', e3.message);
+        toast('⚠️ Firestore 차단/타임아웃: '+e3.message+' → 번호 직접 입력');
       }
     }
     if(!phone){
