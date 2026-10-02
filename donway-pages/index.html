@@ -11347,25 +11347,53 @@ window._dwSendRiderAlimtalk=async function(idx,btn){
   var period=r.editDate||(dateEl&&dateEl.value)||
     (document.getElementById('dw-save-week')?document.getElementById('dw-save-week').value:'');
   try {
-    // 캐시 우선 사용 → 없으면 Firestore 조회 (데스크탑 hang 방지)
+    // 캐시 우선 사용 → 없으면 Firestore 조회 (3s 타임아웃) → 실패시 직접 입력
     var phone=(window._dwPhoneMap&&window._dwPhoneMap[riderId])||'';
     if(!phone&&_db){
       try{
         var snap=await Promise.race([
           _db.collection('drivers').where('dealerId','==',did).get(),
-          new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},5000);})
+          new Promise(function(_,rej){setTimeout(function(){rej(new Error('timeout'));},3000);})
         ]);
         snap.forEach(function(d){
           var data=d.data();
           if(data.name===riderId||data.userId===riderId||data.id===riderId){phone=data.phone||'';}
         });
         if(phone&&window._dwPhoneMap)window._dwPhoneMap[riderId]=phone;
-      }catch(e3){console.warn('drivers lookup:',e3.message);}
+      }catch(e3){
+        // Firestore 차단 또는 타임아웃 — 직접 입력 유도
+        console.warn('Firestore 조회 실패(외부차단 가능성):', e3.message);
+      }
     }
     if(!phone){
-      toast('⚠️ '+riderId+' 전화번호 없음 — 기사 관리에서 등록 필요');
+      // 직접 입력 모달
       if(btn){btn.disabled=false;btn.textContent='📲 알림톡';}
-      return;
+      var manualPhone=await new Promise(function(resolve){
+        var mo=document.createElement('div');
+        mo.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;';
+        mo.innerHTML='<div style="background:var(--bg,#1e2533);border:1px solid var(--border,#2d3748);border-radius:12px;padding:24px;width:300px;color:var(--text,#e2e8f0)">'
+          +'<div style="font-weight:700;margin-bottom:8px">📲 '+riderId+' 전화번호 입력</div>'
+          +'<div style="font-size:12px;color:#94a3b8;margin-bottom:12px">기사 관리에 번호가 없거나 Firestore 연결이 차단되었습니다.</div>'
+          +'<input id="dw-manual-phone" type="tel" placeholder="01012345678" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:7px;border:1px solid var(--border,#2d3748);background:var(--bg2,#111827);color:var(--text,#e2e8f0);font-size:15px;margin-bottom:12px">'
+          +'<div style="display:flex;gap:8px">'
+          +'<button id="dw-phone-cancel" style="flex:1;padding:9px;background:var(--bg3,#2d3748);border:none;border-radius:7px;color:var(--text,#e2e8f0);cursor:pointer;font-size:13px">취소</button>'
+          +'<button id="dw-phone-ok" style="flex:2;padding:9px;background:#2563eb;border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:13px;font-weight:700">발송</button>'
+          +'</div></div>';
+        document.body.appendChild(mo);
+        var inp=mo.querySelector('#dw-manual-phone');inp.focus();
+        mo.querySelector('#dw-phone-ok').addEventListener('click',function(){
+          var v=inp.value.replace(/[^0-9]/g,'');
+          document.body.removeChild(mo);resolve(v||'');
+        });
+        mo.querySelector('#dw-phone-cancel').addEventListener('click',function(){
+          document.body.removeChild(mo);resolve('');
+        });
+        inp.addEventListener('keydown',function(e){if(e.key==='Enter'){mo.querySelector('#dw-phone-ok').click();}});
+      });
+      if(!manualPhone){return;}
+      phone=manualPhone;
+      if(window._dwPhoneMap)window._dwPhoneMap[riderId]=phone;
+      if(btn){btn.disabled=true;btn.textContent='발송 중...';}
     }
     // 명세서 URL 없으면 자동 생성
     var stmtUrl=r.stmtUrl||'';
