@@ -8,6 +8,10 @@ workers_dev = false
 pattern = "yongcha.app/*"
 zone_name = "yongcha.app"
 
+[[routes]]
+pattern = "mailmind.yongcha.app/*"
+zone_name = "yongcha.app"
+
 [[kv_namespaces]]
 binding = "DONWAY_ASSETS"
 id = "7f0e90efaea64f3ab08ff00f8970b28b"
