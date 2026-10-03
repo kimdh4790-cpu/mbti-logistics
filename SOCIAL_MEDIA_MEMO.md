@@ -407,7 +407,7 @@ compose 없이 업로드하면 나레이션 없는 무음 영상이 올라감!
 | YONGCHA-DEALER | ✅ yongcha-dealer-meta.json (2026-09-25) | ✅ Remotion (YongchaDealerPromo.jsx, 2026-09-25) | output/yongcha-dealer-promo.mp4 | 미업로드 (월요일 PRODUCT=yongcha 스케줄에 자동 포함) |
 | 인프런 | ✅ inflearn-narration.json (2026-09-04) | ✅ Remotion (InflearnPromo.jsx, 2026-09-04) | output/inflearn-promo.mp4 | ✅ YouTube 재업로드 완료(2026-09-22, Run #69) / Instagram Reels 업로드 중(2026-09-22) |
 | MBTICO | ✅ 완료 (StoryScope 적용) | ✅ mbtico-ocr.html (Playwright) | 미생성 | 미완 (스케줄 제외) |
-| **MailMind** | ✅ mailmind-narration.json (2026-10-02, KO/EN/JA/long) | ✅ assets/promo/mailmind-promo.html (Playwright, 6슬라이드) | 미생성 | 미완 (소셜미디어 파이프라인 추가 완료, 스케줄 미설정) |
+| **MailMind** | ✅ mailmind-narration.json (2026-10-02, KO/EN/JA/long) | ✅ assets/promo/mailmind-promo.html (Playwright, 6슬라이드) | 미생성 | **⏸ 보류** (2026-10-03, 스케줄 추후 별도 안내 예정) |
 
 ---
 
