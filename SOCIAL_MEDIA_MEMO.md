@@ -71,6 +71,17 @@
 - social-media.yml: mailmind 제품 옵션 추가 완료 (2026-10-02, PR #156)
 - 업로드 스케줄: 미설정 (추후 social-media-schedule.yml에 추가 필요)
 
+**언어별 프로모 HTML 현지화 현황 (2026-10-03):**
+- assets/promo/mailmind-promo.html을 언어별로 교체 후 녹화하는 방식
+- ✅ FR 프랑스어 (PR #164 머지)
+- ✅ DE 독일어 (PR #165 머지)
+- ✅ IT 이탈리아어 (PR #166 머지)
+- ✅ VN 베트남어 (PR #167 머지)
+- ✅ NL 네덜란드어 (PR #168 머지)
+- ✅ PL 폴란드어 (PR #169 머지)
+- ✅ TR 터키어 (PR #170 auto-merge 진행 중)
+- ⛔ AR 아랍어 — 스킵 (사용자 요청)
+
 ---
 
 ## GitHub Actions 워크플로우 (Oracle SSH 없이 실행 가능)
