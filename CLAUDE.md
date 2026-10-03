@@ -969,23 +969,26 @@ cd mbtico-pages && npx wrangler deploy
 - **용차앱**: AI 루트코치·스마트매칭·단가추천·날씨연동·주유소최저가·세금계산서 자동발행(팝빌)
 - **DONWAY**: AI CS봇·카카오 알림톡 서버발송·FCM 푸시·팝빌 세금계산서 자동발행
 
-### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-09-18 기준)
-| 요일 | KST | 제품 | 플랫폼 | 상태 |
-|---|---|---|---|---|
-| 일 | 09:00 | 인프런 | YouTube | ✅ 운영 |
-| 일 | 10:30 | 인프런 | Instagram | ✅ 운영 |
-| 월 | 09:00 | 용차앱 | YouTube | ✅ 운영 |
-| 화 | 09:00 | FILO | YouTube | ⏸ 보류 |
-| 화 | 10:30 | FILO | Instagram | ⏸ 보류 |
-| 수 | 09:00 | 인프런 | YouTube | ✅ 운영 |
-| 수 | 10:30 | 인프런 | Instagram | ✅ 운영 |
-| 목 | 09:00 | DONWAY | YouTube | ✅ 운영 |
-| 목 | 10:30 | DONWAY | Instagram | ✅ 운영 |
-| 금 | 09:00 | DINE | YouTube | ⏸ 보류 |
-| 금 | 10:30 | DINE | Instagram | ⏸ 보류 |
-| 토 | 09:00 | 인프런 | YouTube | ✅ 운영 |
+### 소셜미디어 업로드 스케줄 (GitHub Actions social-media-schedule.yml, 2026-10-03 기준)
+| 시각(KST) | 제품 | 플랫폼 | 상태 |
+|---|---|---|---|
+| **매일 09:05** | **MailMind Variant A** (오늘 언어) | YouTube + Instagram | ✅ 운영 |
+| **매일 15:00** | **MailMind Variant B** (오늘 언어) | YouTube + Instagram | ✅ 운영 |
+| 일 09:00 | 인프런 | YouTube | ✅ 운영 |
+| 일 10:30 | 인프런 | Instagram | ✅ 운영 |
+| 월 09:00 | 용차앱 | YouTube | ✅ 운영 |
+| 화 09:00 | FILO | YouTube | ⏸ 보류 |
+| 화 10:30 | FILO | Instagram | ⏸ 보류 |
+| 수 09:00 | 인프런 | YouTube | ✅ 운영 |
+| 수 10:30 | 인프런 | Instagram | ✅ 운영 |
+| 목 09:00 | DONWAY | YouTube | ✅ 운영 |
+| 목 10:30 | DONWAY | Instagram | ✅ 운영 |
+| 금 09:00 | DINE | YouTube | ⏸ 보류 |
+| 금 10:30 | DINE | Instagram | ⏸ 보류 |
+| 토 09:00 | 인프런 | YouTube | ✅ 운영 |
 
-> 운영 중: 용차앱(월)·인프런(일·수·토)·DONWAY(목) / 보류: FILO(화)·DINE(금)
+> MailMind: 매일 2회(09:05/15:00) 14일 로테이션(EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI)
+> 운영 중: MailMind(매일)·용차앱(월)·인프런(일·수·토)·DONWAY(목) / 보류: FILO(화)·DINE(금)
 
 ### 프로필 이미지 (회사 로고)
 - 파일: `assets/logo.png`

@@ -159,6 +159,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — mailmind-variants.json(28세트) + 동적 mailmind-promo.html(?lang=XX&variant=A/B) + social-media-schedule.yml 09:05/15:00 KST 크론 추가. 14일 로테이션(EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI). PR #172 머지 완료. |
 | 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱(무음+자막가림 재업로드), 인프런(무음 재업로드), DONWAY(D변형: 세금계산서·전자서명 angle) 3개 동시 큐. steps=record,compose,youtube |
 | 2026-09-22 | **팝빌 기술문의 접수** — developers.popbill.com/customer-center/techinquiry 에 LINK_ID "MBTI" error 1016 문의. 답변 대기 중 |
 | 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 — /api/check-company-code(GET) + /api/driver-join(POST) 서버사이드 API 신규, _quickVerifyCode·checkCompanyCode·doQuickJoin 클라이언트 Firestore 직접 접근 제거, SHA-256 pw 해시 저장 |

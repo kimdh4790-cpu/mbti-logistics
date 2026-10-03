@@ -62,25 +62,39 @@
 - "3가지 답변 비교 + Smart Reply"
 - "Gmail 바로 삽입 — 앱 전환 없이"
 
-**영상 파이프라인 현황 (2026-10-02):**
-- 나레이션: `scripts/content/mailmind-narration.json` (KO/EN/JA 30초 + EN 2분)
-- 자막: `scripts/content/mailmind-subtitles.srt`
+**영상 파이프라인 현황 (2026-10-03 완성):**
+- 나레이션: `scripts/content/mailmind-variants.json` (14개 언어 × A/B 2변형 = 28세트, Google TTS Neural2)
 - 메타: `scripts/content/mailmind-meta.json`
-- 프로모 HTML: `assets/promo/mailmind-promo.html` (6슬라이드, Playwright 녹화용)
-- 녹화 스크립트: `scripts/capture/record-mailmind.js`
+- 프로모 HTML: `assets/promo/mailmind-promo.html` (6슬라이드, `?lang=XX&variant=A/B` 쿼리 파라미터로 동적 렌더링)
+- 녹화 스크립트: `scripts/capture/record-mailmind.js` (`MAILMIND_LANG`, `MAILMIND_VARIANT` 환경변수 지원)
 - social-media.yml: mailmind 제품 옵션 추가 완료 (2026-10-02, PR #156)
-- 업로드 스케줄: 미설정 (추후 social-media-schedule.yml에 추가 필요)
+- **업로드 스케줄: ✅ 설정 완료 (PR #172 머지, 2026-10-03)**
 
-**언어별 프로모 HTML 현지화 현황 (2026-10-03):**
-- assets/promo/mailmind-promo.html을 언어별로 교체 후 녹화하는 방식
-- ✅ FR 프랑스어 (PR #164 머지)
-- ✅ DE 독일어 (PR #165 머지)
-- ✅ IT 이탈리아어 (PR #166 머지)
-- ✅ VN 베트남어 (PR #167 머지)
-- ✅ NL 네덜란드어 (PR #168 머지)
-- ✅ PL 폴란드어 (PR #169 머지)
-- ✅ TR 터키어 (PR #170 auto-merge 진행 중)
-- ⛔ AR 아랍어 — 스킵 (사용자 요청)
+**✅ 14개 언어 × 하루 2회 자동 업로드 시스템 완성 (2026-10-03, PR #172):**
+- 14일 로테이션: EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI
+- **09:05 KST** → Variant A (다국어 각도: "14개 언어로 AI 이메일")
+- **15:00 KST** → Variant B (생산성 각도: "이메일 시간 낭비 그만")
+- 나레이션 각 해당 언어로 Google TTS Neural2 자동 생성
+- 기준일: 2026-10-04 (Day 0 = EN)
+- AR 아랍어: ⛔ 스킵 (사용자 요청)
+
+**지원 언어 (14개) — Google TTS Neural2 음성:**
+| 코드 | 언어 | TTS 음성 |
+|---|---|---|
+| EN | English | en-US-Neural2-D |
+| KR | 한국어 | ko-KR-Neural2-B |
+| JP | 日本語 | ja-JP-Neural2-B |
+| ZH | 中文 | cmn-CN-Neural2-D |
+| ES | Español | es-ES-Neural2-B |
+| DE | Deutsch | de-DE-Neural2-B |
+| PT | Português | pt-BR-Neural2-B |
+| FR | Français | fr-FR-Neural2-B |
+| IT | Italiano | it-IT-Neural2-C |
+| VN | Tiếng Việt | vi-VN-Neural2-A |
+| NL | Nederlands | nl-NL-Neural2-B |
+| PL | Polski | pl-PL-Neural2-A |
+| TR | Türkçe | tr-TR-Neural2-B |
+| HI | हिन्दी | hi-IN-Neural2-B |
 
 ---
 
