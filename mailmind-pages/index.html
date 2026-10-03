@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MailMind AI — Perfect Email Replies in One Click</title>
+  <meta name="description" content="Any language, any tone, any situation. MailMind writes professional email replies for you — whether you can't read the language or just don't know what to say.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sky: #E3F2FD;
+      --sky-deep: #BBDEFB;
+      --white: #FFFFFF;
+      --pink: #E91E8C;
+      --pink-dark: #C2185B;
+      --pink-light: #FCE4EC;
+      --green: #43A047;
+      --green-light: #E8F5E9;
+      --gold: #F5A623;
+      --gold-light: #FFF8E1;
+      --text: #1A1A2E;
+      --text-2: #4A5568;
+      --text-3: #718096;
+      --border: #CBD5E0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
+
+    /* NAV */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--sky-deep);
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 56px;
+    }
+    .nav-logo {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .nav-logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800; font-size: 20px;
+      color: var(--pink);
+    }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      text-decoration: none; font-size: 14px; font-weight: 500;
+      color: var(--text-2); transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--pink); }
+    .btn-nav {
+      background: var(--pink); color: #fff;
+      padding: 8px 20px; border-radius: 20px;
+      font-size: 14px; font-weight: 600;
+      text-decoration: none; transition: background 0.15s;
+    }
+    .btn-nav:hover { background: var(--pink-dark); color: #fff; }
+
+    /* HERO */
+    .hero {
+      background: linear-gradient(160deg, var(--sky) 0%, var(--white) 60%);
+      padding: 90px 24px 80px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: var(--pink-light);
+      color: var(--pink);
+      font-size: 13px; font-weight: 600;
+      padding: 6px 16px; border-radius: 20px;
+      margin-bottom: 28px;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 7vw, 72px);
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--text);
+      max-width: 800px; margin: 0 auto 20px;
+    }
+    .hero h1 .pink { color: var(--pink); }
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--text-2);
+      max-width: 560px; margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-cta {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+    .btn-primary {
+      background: var(--pink); color: #fff;
+      padding: 14px 32px; border-radius: 28px;
+      font-size: 16px; font-weight: 700;
+      text-decoration: none; transition: all 0.15s;
+      box-shadow: 0 4px 20px rgba(233,30,140,0.3);
+    }
+    .btn-primary:hover { background: var(--pink-dark); transform: translateY(-1px); }
+    .btn-secondary {
+      background: var(--white); color: var(--text);
+      padding: 14px 32px; border-radius: 28px;
+      font-size: 16px; font-weight: 600;
+      text-decoration: none; border: 1.5px solid var(--border);
+      transition: all 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--pink); color: var(--pink); }
+    .hero-trust {
+      display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;
+      font-size: 13px; color: var(--text-3);
+    }
+    .hero-trust span { display: flex; align-items: center; gap: 6px; }
+    .hero-trust .dot { color: var(--green); font-size: 16px; }
+
+    /* PAIN POINTS */
+    .pain {
+      background: var(--sky);
+      padding: 72px 24px;
+    }
+    .section-label {
+      text-align: center;
+      font-size: 13px; font-weight: 600;
+      color: var(--pink); letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 700;
+      margin-bottom: 48px;
+      max-width: 600px; margin-left: auto; margin-right: auto;
+    }
+    .pain-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px; max-width: 960px; margin: 0 auto;
+    }
+    .pain-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 28px;
+      border: 1.5px solid var(--sky-deep);
+    }
+    .pain-icon {
+      font-size: 32px; margin-bottom: 14px;
+    }
+    .pain-card h3 {
+      font-size: 18px; font-weight: 700;
+      margin-bottom: 10px; color: var(--text);
+    }
+    .pain-card p { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+    .pain-card .solution {
+      margin-top: 14px;
+      font-size: 13px; font-weight: 600;
+      color: var(--green);
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* DEMO */
+    .demo-section {
+      padding: 80px 24px;
+      background: var(--white);
+    }
+    .demo-tab { display: none; }
+    .demo-tab.active { display: block; }
+    .demo-tab-btn {
+      padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-2);
+      transition: all 0.15s; font-family: inherit;
+    }
+    .demo-tab-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+    .ver-tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
+    .ver-tab { padding: 5px 14px; border-radius: 16px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-2); font-family: inherit; }
+    .ver-tab.active { background: var(--pink-light); border-color: var(--pink); color: var(--pink); }
+    .smart-summary { background: #e8f5e9; border-radius: 8px; padding: 12px; font-size: 13px; color: #2e7d32; margin-bottom: 10px; line-height: 1.6; }
+    .smart-lang-btn { width: 100%; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid #34a853; background: #fff; color: #34a853; margin-top: 8px; font-family: inherit; transition: all 0.15s; }
+    .smart-lang-btn:hover { background: #34a853; color: #fff; }
+    .demo-wrap {
+      max-width: 680px; margin: 0 auto;
+      background: var(--white);
+      border: 1.5px solid var(--sky-deep);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+    .demo-email-bar {
+      background: var(--sky);
+      padding: 14px 20px;
+      font-size: 13px; color: var(--text-2);
+      border-bottom: 1px solid var(--sky-deep);
+    }
+    .demo-email-from { font-weight: 600; color: var(--text); }
+    .demo-email-body {
+      padding: 20px;
+      font-size: 14px; color: var(--text-2);
+      line-height: 1.7;
+      border-bottom: 1px solid var(--sky-deep);
+    }
+    .demo-panel { padding: 20px; }
+    .demo-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .demo-logo { font-family: 'Outfit', sans-serif; font-weight: 700; color: var(--pink); font-size: 15px; }
+    .demo-usage { font-size: 12px; color: var(--text-3); }
+    .demo-tones {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;
+    }
+    .demo-tone {
+      font-size: 12px; padding: 4px 12px;
+      border: 1px solid var(--border); border-radius: 16px;
+      color: var(--text-2); cursor: pointer;
+    }
+    .demo-tone.active {
+      background: var(--pink-light); border-color: var(--pink); color: var(--pink); font-weight: 600;
+    }
+    .demo-btn {
+      width: 100%; padding: 11px;
+      background: var(--pink); color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; margin-bottom: 14px;
+    }
+    .demo-reply {
+      background: var(--sky);
+      border-radius: 10px; padding: 14px;
+      font-size: 13px; color: var(--text);
+      line-height: 1.7;
+    }
+    .demo-actions {
+      display: flex; gap: 8px; margin-top: 10px;
+    }
+    .demo-action {
+      flex: 1; padding: 7px;
+      border-radius: 8px; font-size: 12px; font-weight: 600;
+      cursor: pointer; text-align: center;
+    }
+    .demo-insert { background: var(--pink); color: #fff; border: none; }
+    .demo-copy { background: #fff; color: var(--pink); border: 1.5px solid var(--pink); }
+    .demo-smart { background: var(--gold-light); color: var(--gold); border: 1.5px solid var(--gold); }
+
+    /* FEATURES */
+    .features {
+      background: var(--sky);
+      padding: 80px 24px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px; max-width: 1000px; margin: 0 auto;
+    }
+    .feature-card {
+      background: var(--white);
+      border-radius: 16px; padding: 28px;
+      border: 1.5px solid var(--sky-deep);
+    }
+    .feature-icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+
+    /* PRICING */
+    .pricing {
+      padding: 80px 24px;
+      background: var(--white);
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px; max-width: 860px; margin: 0 auto;
+    }
+    .plan-card {
+      border-radius: 20px; padding: 32px;
+      border: 1.5px solid var(--border);
+      position: relative;
+    }
+    .plan-card.featured {
+      border-color: var(--pink);
+      box-shadow: 0 4px 24px rgba(233,30,140,0.12);
+    }
+    .plan-badge-top {
+      position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
+      background: var(--gold); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 14px; border-radius: 12px;
+    }
+    .plan-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--text-3); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 10px;
+    }
+    .plan-price {
+      font-family: 'Outfit', sans-serif;
+      font-size: 42px; font-weight: 800;
+      color: var(--text); margin-bottom: 4px;
+    }
+    .plan-price span { font-size: 18px; font-weight: 500; color: var(--text-3); }
+    .plan-limit {
+      font-size: 13px; color: var(--text-3); margin-bottom: 24px;
+    }
+    .plan-features { list-style: none; margin-bottom: 28px; }
+    .plan-features li {
+      font-size: 14px; padding: 7px 0;
+      border-bottom: 1px solid var(--sky);
+      display: flex; align-items: center; gap: 8px;
+      color: var(--text-2);
+    }
+    .plan-features li .check { color: var(--green); font-weight: 700; }
+    .btn-plan {
+      display: block; width: 100%; padding: 13px;
+      border-radius: 12px; text-align: center;
+      font-size: 15px; font-weight: 700;
+      text-decoration: none; transition: all 0.15s;
+    }
+    .btn-plan.outline {
+      border: 1.5px solid var(--border); color: var(--text);
+    }
+    .btn-plan.outline:hover { border-color: var(--pink); color: var(--pink); }
+    .btn-plan.filled {
+      background: var(--pink); color: #fff; border: none;
+    }
+    .btn-plan.filled:hover { background: var(--pink-dark); }
+
+    /* COMPARE */
+    .compare {
+      background: var(--sky);
+      padding: 80px 24px;
+    }
+    .compare-table {
+      max-width: 760px; margin: 0 auto;
+      width: 100%; border-collapse: collapse;
+      background: var(--white);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    }
+    .compare-table th {
+      padding: 16px 20px;
+      background: var(--sky-deep);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700; font-size: 14px;
+      text-align: center;
+    }
+    .compare-table th:first-child { text-align: left; }
+    .compare-table th.ours { color: var(--pink); }
+    .compare-table td {
+      padding: 13px 20px;
+      font-size: 14px; text-align: center;
+      border-bottom: 1px solid var(--sky);
+    }
+    .compare-table td:first-child { text-align: left; font-weight: 500; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .yes { color: var(--green); font-weight: 700; font-size: 16px; }
+    .no { color: #CBD5E0; font-size: 16px; }
+
+    /* FAQ */
+    .faq {
+      padding: 80px 24px;
+      background: var(--white);
+    }
+    .faq-list { max-width: 680px; margin: 0 auto; }
+    .faq-item {
+      border-bottom: 1px solid var(--sky-deep);
+      padding: 20px 0;
+    }
+    .faq-q {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer; color: var(--text);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .faq-a {
+      font-size: 14px; color: var(--text-2);
+      line-height: 1.8; margin-top: 12px;
+      display: none;
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-arrow { color: var(--pink); font-size: 18px; transition: transform 0.2s; }
+    .faq-item.open .faq-arrow { transform: rotate(45deg); }
+
+    /* CTA */
+    .cta-section {
+      background: linear-gradient(135deg, var(--pink) 0%, #9C27B0 100%);
+      padding: 80px 24px;
+      text-align: center;
+      color: #fff;
+    }
+    .cta-section h2 {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800; margin-bottom: 16px;
+    }
+    .cta-section p {
+      font-size: 18px; opacity: 0.9;
+      margin-bottom: 36px; max-width: 480px; margin-left: auto; margin-right: auto;
+    }
+    .btn-cta-white {
+      display: inline-block;
+      background: #fff; color: var(--pink);
+      padding: 16px 40px; border-radius: 32px;
+      font-size: 17px; font-weight: 800;
+      text-decoration: none; transition: all 0.15s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .btn-cta-white:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+
+    /* FOOTER */
+    footer {
+      background: var(--text);
+      color: rgba(255,255,255,0.6);
+      padding: 32px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+    .footer-logo { font-family: 'Outfit', sans-serif; font-weight: 800; color: var(--pink); font-size: 18px; }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13px; }
+    .footer-links a:hover { color: #fff; }
+
+    /* RESPONSIVE */
+    @media (max-width: 640px) {
+      nav .nav-links a:not(.btn-nav) { display: none; }
+      .hero { padding: 60px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">✦ MailMind</div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-nav">Add to Chrome — Free</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">✦ Powered by Claude AI · 14 Languages · Any Tone</div>
+  <h1>Every email,<br><span class="pink">perfect.</span></h1>
+  <p class="hero-sub">
+    Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.
+  </p>
+  <div class="hero-cta">
+    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-primary">Add to Chrome — It's Free</a>
+    <a href="#demo" class="btn-secondary">See how it works ↓</a>
+  </div>
+  <div class="hero-trust">
+    <span><span class="dot">✓</span> Free trial, no card</span>
+    <span><span class="dot">✓</span> Emails never stored</span>
+    <span><span class="dot">✓</span> Works inside Gmail</span>
+    <span><span class="dot">✓</span> 14 languages</span>
+  </div>
+</section>
+
+<!-- PAIN POINTS -->
+<section class="pain">
+  <p class="section-label">Why MailMind</p>
+  <h2 class="section-title">Email is hard. We fix that.</h2>
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="pain-icon">🌍</div>
+      <h3>Foreign language email</h3>
+      <p>Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.</p>
+      <div class="solution">✓ Any language combination</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">✍️</div>
+      <h3>Don't know what to say</h3>
+      <p>Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.</p>
+      <div class="solution">✓ 8 tones for every situation</div>
+    </div>
+    <div class="pain-card">
+      <div class="pain-icon">⏱️</div>
+      <h3>No time to write</h3>
+      <p>The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.</p>
+      <div class="solution">✓ One click, done</div>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section class="demo-section" id="demo">
+  <p class="section-label">Live Demo</p>
+  <h2 class="section-title" style="margin-bottom:36px">What you see inside Gmail</h2>
+
+  <!-- 플랜별 탭 -->
+  <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px;flex-wrap:wrap">
+    <button class="demo-tab-btn active" data-tab="free" onclick="switchDemoTab('free',this)">🆓 Free</button>
+    <button class="demo-tab-btn" data-tab="basic" onclick="switchDemoTab('basic',this)">⚡ Basic <span style="font-size:11px;opacity:0.8">$15/mo</span></button>
+    <button class="demo-tab-btn" data-tab="pro" onclick="switchDemoTab('pro',this)">🚀 Pro <span style="font-size:11px;opacity:0.8">$25/mo</span></button>
+  </div>
+  <p style="text-align:center;font-size:12px;color:#9aa0a6;margin-bottom:20px">각 플랜을 클릭해서 기능을 직접 체험해보세요</p>
+
+  <!-- TAB 1: Free -->
+  <div class="demo-tab active" id="tab-free">
+  <div class="demo-wrap">
+    <div class="demo-email-bar">
+      <span class="demo-email-from">From: tanaka@jp-trading.co.jp</span> &nbsp;·&nbsp; Re: Q4 Partnership Proposal
+    </div>
+    <div class="demo-email-body">
+      Thank you for sending the proposal. We reviewed it internally and are generally interested, but have a few questions about the timeline and pricing. Could we schedule a call this week?
+    </div>
+    <div class="demo-panel">
+      <div class="demo-panel-header">
+        <span class="demo-logo">✦ MailMind</span>
+        <span class="demo-usage" style="color:#34a853">🆓 Free · 35회 체험</span>
+      </div>
+      <div class="demo-tones" id="demo-tones">
+        <div class="demo-tone active" data-tone="professional">Professional</div>
+        <div class="demo-tone" data-tone="friendly">Friendly</div>
+        <div class="demo-tone" data-tone="concise">Concise</div>
+        <div class="demo-tone" data-tone="decline">Decline</div>
+        <div class="demo-tone" data-tone="thankful">Thankful</div>
+      </div>
+      <button class="demo-btn" id="demo-gen-btn">✦ Generate AI Reply</button>
+      <div class="demo-reply" id="demo-reply-text" style="display:none"></div>
+      <div class="demo-actions" id="demo-actions" style="display:none">
+        <button class="demo-action demo-insert">Insert into reply</button>
+        <button class="demo-action demo-copy">Copy</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;">
+    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ AI 답장 생성</span>
+    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 8가지 톤</span>
+    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 14개 언어</span>
+    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 업종/문화 감지</span>
+    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 할 일 추출</span>
+    <span style="padding:6px 14px;background:#fce8e6;color:#c5221f;border-radius:20px;font-size:12px;font-weight:600">✓ 스팸/피싱 감지</span>
+    <span style="padding:6px 14px;background:#f1f3f4;color:#5f6368;border-radius:20px;font-size:12px;font-weight:600">35회 무료</span>
+  </div>
+  </div>
+
+  <!-- TAB 2: Basic -->
+  <div class="demo-tab" id="tab-basic">
+  <div class="demo-wrap">
+    <div class="demo-email-bar">
+      <span class="demo-email-from">From: sarah@techcorp.com</span> &nbsp;·&nbsp; Re: Project Deadline
+    </div>
+    <div class="demo-email-body">
+      Hi, I wanted to check in on the project status. We're getting close to the deadline and I want to make sure we're on track. Could you give me an update?
+    </div>
+    <div class="demo-panel">
+      <div class="demo-panel-header">
+        <span class="demo-logo">✦ MailMind</span>
+        <span class="demo-usage" style="color:#1a73e8">⚡ Basic · 3가지 비교</span>
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="ver-tab-row" id="triple-tabs">
+          <button class="ver-tab active" data-idx="0" onclick="switchVer(0)">Version 1</button>
+          <button class="ver-tab" data-idx="1" onclick="switchVer(1)">Version 2</button>
+          <button class="ver-tab" data-idx="2" onclick="switchVer(2)">Version 3</button>
+        </div>
+      </div>
+      <div class="demo-reply" id="triple-reply" style="display:block">
+        Hi Sarah,<br><br>Thank you for checking in. I'm pleased to confirm that the project is progressing as planned and we remain on track to meet the deadline.<br><br>I will send you a detailed status report by end of day tomorrow.<br><br>Best regards,
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;color:#5f6368">언어 전환:</span>
+        <button onclick="switchTripleLang('Korean')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇰🇷 한국어</button>
+        <button onclick="switchTripleLang('Japanese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇯🇵 日本語</button>
+        <button onclick="switchTripleLang('Portuguese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇧🇷 Português</button>
+        <button onclick="switchTripleLang('German')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇩🇪 Deutsch</button>
+      </div>
+      <div class="demo-actions" style="display:flex;margin-top:8px">
+        <button class="demo-action demo-insert" style="flex:1">Insert into reply</button>
+        <button class="demo-action demo-copy" style="flex:1">Copy</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;">
+    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ Free 모든 기능</span>
+    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 3가지 답변 비교</span>
+    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 언어 전환 🇰🇷🇯🇵🇧🇷🇩🇪</span>
+    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 서명/템플릿 저장</span>
+    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 스레드 요약</span>
+    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 스타일 학습</span>
+    <span style="padding:6px 14px;background:#fce8e6;color:#c5221f;border-radius:20px;font-size:12px;font-weight:600">✓ 스팸/피싱 감지</span>
+    <span style="padding:6px 14px;background:#f1f3f4;color:#5f6368;border-radius:20px;font-size:12px;font-weight:600">200회/월 $15</span>
+  </div>
+  </div>
+
+  <!-- TAB 3: Pro -->
+  <div class="demo-tab" id="tab-pro">
+  <div class="demo-wrap">
+    <div class="demo-email-bar">
+      <span class="demo-email-from">From: mueller@berlin-gmbh.de</span> &nbsp;·&nbsp; Vertrag Verlängerung
+    </div>
+    <div class="demo-email-body" style="font-size:13px">
+      Sehr geehrte Damen und Herren, wir möchten unseren Vertrag mit Ihnen um weitere 12 Monate verlängern. Könnten Sie uns bitte ein aktualisiertes Angebot zusenden?
+    </div>
+    <div class="demo-panel">
+      <div class="demo-panel-header">
+        <span class="demo-logo">✦ MailMind</span>
+        <span class="demo-usage" style="color:#e91e8c">🚀 Pro · 스마트 답장</span>
+      </div>
+      <div class="smart-summary" id="smart-summary">
+        📋 <strong>Summary (Korean):</strong><br>
+        베를린 GmbH에서 계약을 12개월 연장하고 싶다며 업데이트된 견적서를 요청하고 있습니다.
+      </div>
+      <div class="demo-reply" id="smart-reply" style="display:block" data-korean="안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>추가 문의사항이 있으시면 언제든지 연락해 주세요.<br><br>감사합니다." data-german="Sehr geehrte Damen und Herren,<br><br>vielen Dank für Ihr Interesse an einer Vertragsverlängerung. Wir werden Ihnen das aktualisierte Angebot bis Ende dieser Woche zusenden.<br><br>Bei weiteren Fragen stehen wir Ihnen gerne zur Verfügung.<br><br>Mit freundlichen Grüßen,">
+        안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>추가 문의사항이 있으시면 언제든지 연락해 주세요.<br><br>감사합니다.
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:11px;color:#5f6368">언어 전환:</span>
+        <button onclick="switchSmartLang('Korean')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇰🇷 한국어</button>
+        <button onclick="switchSmartLang('German')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇩🇪 Deutsch</button>
+        <button onclick="switchSmartLang('Japanese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇯🇵 日本語</button>
+        <button onclick="switchSmartLang('Portuguese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇧🇷 Português</button>
+        <button onclick="switchSmartLang('Arabic')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇸🇦 العربية</button>
+      </div>
+      <div class="demo-actions" style="display:flex;margin-top:8px">
+        <button class="demo-action demo-insert" style="flex:1">Insert into reply</button>
+        <button class="demo-action demo-copy" style="flex:1">Copy</button>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;">
+    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ Basic 모든 기능</span>
+    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 스마트 답장</span>
+    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 요약 + 번역</span>
+    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 15개 업종 전문지식</span>
+    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 우선 지원</span>
+    <span style="padding:6px 14px;background:#fce8e6;color:#c5221f;border-radius:20px;font-size:12px;font-weight:600">✓ 스팸/피싱 감지</span>
+    <span style="padding:6px 14px;background:#f1f3f4;color:#5f6368;border-radius:20px;font-size:12px;font-weight:600">300회/월 $25</span>
+  </div>
+  </div>
+
+  <script>
+  const DEMO_REPLIES = {
+    professional: `Dear Mr. Tanaka,<br><br>Thank you for reviewing our proposal. I would be happy to walk you through the timeline and pricing structure in detail.<br><br>Would Tuesday or Wednesday afternoon this week work for a call? Please let me know your availability and I will arrange accordingly.<br><br>Best regards,`,
+    friendly: `Hi Tanaka-san!<br><br>Thanks so much for getting back to us — really glad to hear you're interested! 😊<br><br>I'd love to chat about the timeline and pricing. How about a quick call this week? Tuesday or Wednesday afternoon works great on my end — let me know what suits you!<br><br>Looking forward to connecting!`,
+    concise: `Dear Mr. Tanaka,<br><br>Thank you for your interest.<br><br>Available this week: Tuesday 2pm or Wednesday 10am. Please confirm which works for you.<br><br>Best regards,`,
+    decline: `Dear Mr. Tanaka,<br><br>Thank you for sending over the proposal — we appreciate the effort your team put into it.<br><br>After careful consideration, we've decided not to move forward at this time as it doesn't align with our current priorities. We hope to have the opportunity to collaborate in the future.<br><br>Best regards,`,
+    thankful: `Dear Mr. Tanaka,<br><br>Thank you so much for this detailed proposal — I can see a great deal of thought went into it, and we truly appreciate it.<br><br>We'd love to discuss the timeline and pricing further. Would you be available for a call this week?<br><br>Thank you again for this opportunity.<br><br>Best regards,`
+  };
+
+  let currentTone = 'professional';
+  let isGenerating = false;
+
+  document.querySelectorAll('#demo-tones .demo-tone').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#demo-tones .demo-tone').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentTone = this.dataset.tone;
+      const replyEl = document.getElementById('demo-reply-text');
+      if (replyEl.style.display !== 'none') {
+        replyEl.style.opacity = '0';
+        setTimeout(() => {
+          replyEl.innerHTML = DEMO_REPLIES[currentTone];
+          replyEl.style.opacity = '1';
+        }, 200);
+      }
+    });
+  });
+
+  document.getElementById('demo-gen-btn').addEventListener('click', function() {
+    if (isGenerating) return;
+    isGenerating = true;
+    const btn = this;
+    const replyEl = document.getElementById('demo-reply-text');
+    const actionsEl = document.getElementById('demo-actions');
+
+    btn.textContent = '⏳ Generating...';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      replyEl.innerHTML = DEMO_REPLIES[currentTone];
+      replyEl.style.display = 'block';
+      replyEl.style.opacity = '0';
+      actionsEl.style.display = 'flex';
+      setTimeout(() => { replyEl.style.opacity = '1'; replyEl.style.transition = 'opacity 0.4s'; }, 50);
+      btn.textContent = '✦ Generate AI Reply';
+      btn.disabled = false;
+      isGenerating = false;
+    }, 1200);
+  });
+  </script>
+
+  <script>
+  // 탭 전환
+  function switchDemoTab(tab, btn) {
+    document.querySelectorAll('.demo-tab').forEach(function(t) {
+      t.style.display = 'none';
+      t.classList.remove('active');
+    });
+    document.querySelectorAll('.demo-tab-btn').forEach(function(b) {
+      b.classList.remove('active');
+      b.style.background = '#fff';
+      b.style.color = '';
+      b.style.borderColor = '';
+    });
+    var target = document.getElementById('tab-' + tab);
+    if (target) {
+      target.style.display = 'block';
+      target.classList.add('active');
+    }
+    btn.classList.add('active');
+    btn.style.background = '#e91e8c';
+    btn.style.color = '#fff';
+    btn.style.borderColor = '#e91e8c';
+  }
+
+  // 페이지 로드 시 초기화
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.demo-tab').forEach(function(t) {
+      t.style.display = 'none';
+    });
+    var freeTab = document.getElementById('tab-free');
+    if (freeTab) freeTab.style.display = 'block';
+  });
+
+  // 3가지 버전 전환
+  const TRIPLE_REPLIES = [
+    `Hi Sarah,<br><br>Thank you for checking in. I'm pleased to confirm that the project is progressing as planned and we remain on track to meet the deadline.<br><br>I will send you a detailed status report by end of day tomorrow. Please let me know if you need any specific information in the meantime.<br><br>Best regards,`,
+    `Hi Sarah,<br><br>Thanks for the follow-up! Everything is moving along well — we're on schedule and I don't foresee any issues with the deadline.<br><br>I'll put together a full update for you by tomorrow. Is there anything specific you'd like me to focus on?<br><br>Best,`,
+    `Hi Sarah,<br><br>Quick update: we're on track. No blockers at the moment and the team is confident we'll hit the deadline.<br><br>Full report coming your way by EOD tomorrow.<br><br>Best regards,`
+  ];
+  let currentVer = 0;
+  function switchVer(idx) {
+    currentVer = idx;
+    document.querySelectorAll('.ver-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.ver-tab')[idx].classList.add('active');
+    document.getElementById('triple-reply').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('triple-reply').innerHTML = TRIPLE_REPLIES[idx];
+      document.getElementById('triple-reply').style.opacity = '1';
+      document.getElementById('triple-reply').style.transition = 'opacity 0.3s';
+    }, 150);
+  }
+
+  // Pro 탭 언어 전환
+  const SMART_LANG = {
+    Korean: '안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>추가 문의사항이 있으시면 언제든지 연락해 주세요.<br><br>감사합니다.',
+    German: 'Sehr geehrte Damen und Herren,<br><br>vielen Dank für Ihr Interesse an einer Vertragsverlängerung. Wir werden Ihnen das aktualisierte Angebot bis Ende dieser Woche zusenden.<br><br>Bei weiteren Fragen stehen wir Ihnen gerne zur Verfügung.<br><br>Mit freundlichen Grüßen,',
+    Japanese: '拝啓、<br><br>契約延長へのご関心をありがとうございます。更新されたお見積りを今週中にお送りいたします。<br><br>ご不明な点がございましたら、お気軽にご連絡ください。<br><br>敬具',
+    Portuguese: 'Prezados Senhores,<br><br>Obrigado pelo interesse na renovação do contrato. Enviaremos a proposta atualizada até o final desta semana.<br><br>Caso tenham dúvidas, estamos à disposição.<br><br>Atenciosamente,',
+    Arabic: 'السادة الأفاضل،<br><br>شكراً لاهتمامكم بتجديد العقد. سنرسل لكم العرض المحدث خلال هذا الأسبوع.<br><br>لا تترددوا في التواصل معنا إذا كان لديكم أي استفسارات.<br><br>مع خالص التحيات,'
+  };
+
+  function switchSmartLang(lang) {
+    const el = document.getElementById('smart-reply');
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.innerHTML = SMART_LANG[lang] || SMART_LANG['Korean'];
+      el.style.opacity = '1';
+      el.style.transition = 'opacity 0.3s';
+      el.style.direction = lang === 'Arabic' ? 'rtl' : 'ltr';
+    }, 150);
+  }
+
+  // Basic 탭 언어 전환
+  const TRIPLE_LANG = {
+    Korean: `안녕하세요 Sarah,<br><br>확인해주셔서 감사합니다. 프로젝트는 계획대로 진행 중이며 마감일을 맞출 수 있을 것입니다.<br><br>내일 오전까지 상세 진행 보고서를 보내드리겠습니다.<br><br>감사합니다,`,
+    Japanese: `Sarah様、<br><br>ご確認いただきありがとうございます。プロジェクトは予定通り進んでおり、期限内に完了できる見込みです。<br><br>明日中に詳細な進捗報告書をお送りします。<br><br>よろしくお願いいたします。`,
+    Portuguese: `Olá Sarah,<br><br>Obrigado pelo acompanhamento. O projeto está progredindo conforme planejado e estamos no caminho certo para cumprir o prazo.<br><br>Enviarei um relatório detalhado até amanhã de manhã.<br><br>Atenciosamente,`,
+    German: `Liebe Sarah,<br><br>Vielen Dank für Ihre Nachfrage. Das Projekt läuft planmäßig und wir sind zuversichtlich, den Termin einzuhalten.<br><br>Ich werde Ihnen morgen früh einen detaillierten Statusbericht zusenden.<br><br>Mit freundlichen Grüßen,`
+  };
+
+  function switchTripleLang(lang) {
+    document.getElementById('triple-reply').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('triple-reply').innerHTML = TRIPLE_LANG[lang] || TRIPLE_REPLIES[0];
+      document.getElementById('triple-reply').style.opacity = '1';
+      document.getElementById('triple-reply').style.transition = 'opacity 0.3s';
+    }, 150);
+  }
+
+  // 스마트 답장 언어 전환
+  let isKorean = true;
+  function toggleSmartLang() {
+    const replyEl = document.getElementById('smart-reply');
+    const btn = document.getElementById('smart-lang-btn');
+    replyEl.style.opacity = '0';
+    setTimeout(() => {
+      if (isKorean) {
+        replyEl.innerHTML = replyEl.dataset.german;
+        btn.textContent = '🔄 한국어로 돌아가기';
+        btn.style.background = '#1a73e8';
+        btn.style.color = '#fff';
+        btn.style.borderColor = '#1a73e8';
+      } else {
+        replyEl.innerHTML = replyEl.dataset.korean;
+        btn.textContent = '🌐 독일어로 보내기';
+        btn.style.background = '#fff';
+        btn.style.color = '#34a853';
+        btn.style.borderColor = '#34a853';
+      }
+      isKorean = !isKorean;
+      replyEl.style.opacity = '1';
+      replyEl.style.transition = 'opacity 0.3s';
+    }, 150);
+  }
+  </script>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <p class="section-label">Features</p>
+  <h2 class="section-title">Everything your inbox needs</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🌍</div>
+      <h3>Any language combination</h3>
+      <p>Japanese to Korean, Arabic to German, Portuguese to English — any direction, any pair. MailMind handles it all.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <h3>8 tones, your situation</h3>
+      <p>Professional, Friendly, Concise, Detailed, Decline, Thankful, Apologetic, Acknowledge. One tap, perfect tone.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✨</div>
+      <h3>Smart Reply — reads & writes</h3>
+      <p>Get a summary in your language first, then choose from 3 reply versions with one-click translation into the sender's language.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>Your data stays yours</h3>
+      <p>Email content is processed in real-time and immediately discarded. Never stored, never used for training.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Lives inside Gmail</h3>
+      <p>No tab switching. MailMind appears right inside Gmail when you open an email. Click, read, reply, done.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏭</div>
+      <h3>Industry & culture detection</h3>
+      <p>Detects trade, legal, IT, finance and 15 more industries. Applies Japanese keigo, Arabic formalities, Brazilian warmth — automatically.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Quick language switch</h3>
+      <p>Generated your reply in Korean? Switch to Japanese, Arabic, or Italian in one click — no re-generation needed, no usage deducted.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✍️</div>
+      <h3>Signature & templates</h3>
+      <p>Save your signature once, auto-append to every reply. Store your most-used phrases as templates — insert with one click.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📝</div>
+      <h3>Thread summary</h3>
+      <p>Long email chain? Summarize the whole thread in your language in seconds. Know exactly what to reply before you type a word.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>Style learning</h3>
+      <p>MailMind learns your preferred tone and reply length over time. After 3 replies, it automatically defaults to your style.</p>
+    </div>
+    <div class="feature-card" style="opacity:0.7">
+      <div class="feature-icon">📎</div>
+      <h3>🛡️ Spam & phishing detection</h3>
+      <p>MailMind automatically detects spam, phishing, fake install schemes, and financial scams — warning you before you reply.</p>
+
+      <h3>PDF & image attachments <span style="font-size:11px;background:#f1f3f4;color:#5f6368;padding:2px 8px;border-radius:10px;font-weight:500;vertical-align:middle">Coming Soon</span></h3>
+      <p>MailMind will read your attachments too — contracts, invoices, photos — and factor them into the reply. (Pro+)</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <p class="section-label">Pricing</p>
+  <h2 class="section-title">Simple, transparent pricing</h2>
+  <div class="pricing-grid">
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">$0 <span>/ trial</span></div>
+      <div class="plan-limit">35 replies to try it out</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 35 AI replies total</li>
+        <li><span class="check">✓</span> 14 languages supported</li>
+        <li><span class="check">✓</span> 8 tone options</li>
+        <li><span class="check">✓</span> Culture & industry detection</li>
+        <li><span class="check">✓</span> Spam & phishing detection</li>
+        <li><span class="check">✓</span> No credit card required</li>
+      </ul>
+      <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-plan outline">Start Free</a>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Basic</div>
+      <div class="plan-price">$15 <span>/ month</span></div>
+      <div class="plan-limit">200 replies / month</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 200 AI replies / month</li>
+        <li><span class="check">✓</span> 14 languages supported</li>
+        <li><span class="check">✓</span> 8 tone options</li>
+        <li><span class="check">✓</span> Quick language switch</li>
+        <li><span class="check">✓</span> Signature & templates</li>
+        <li><span class="check">✓</span> Thread summary</li>
+        <li><span class="check">✓</span> Style learning</li>
+        <li><span class="check">✓</span> Spam & phishing detection</li>
+        <li><span class="check">✓</span> Cancel anytime</li>
+      </ul>
+      <a href="#" onclick="alert('Basic 결제 시스템 준비 중입니다. 곧 오픈됩니다! 지금은 Free 플랜으로 체험해보세요 😊');return false;" class="btn-plan outline" style="background:#f5f5f5;color:#9aa0a6;border-color:#e0e0e0;cursor:default;">⏳ 결제 준비 중</a>
+    </div>
+    <div class="plan-card featured">
+      <div class="plan-badge-top">Most Popular</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$25 <span>/ month</span></div>
+      <div class="plan-limit">300 replies / month</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 300 AI replies / month</li>
+        <li><span class="check">✓</span> Everything in Basic</li>
+        <li><span class="check">✓</span> 3 versions to compare</li>
+        <li><span class="check">✓</span> Smart Reply (summary + translate)</li>
+        <li><span class="check">✓</span> Industry expertise (15 fields)</li>
+        <li><span class="check">✓</span> Priority support</li>
+        <li><span class="check">✓</span> Spam & phishing detection</li>
+        <li><span class="check">✓</span> Cancel anytime</li>
+      </ul>
+      <a href="#" onclick="alert('Pro 결제 시스템 준비 중입니다. 곧 오픈됩니다! 지금은 Free 플랜으로 체험해보세요 😊');return false;" class="btn-plan filled" style="background:#e0e0e0;color:#9aa0a6;border-color:#e0e0e0;cursor:default;">⏳ 결제 준비 중</a>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARE -->
+<section class="compare">
+  <p class="section-label">Comparison</p>
+  <h2 class="section-title">Why MailMind wins</h2>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th class="ours">MailMind</th>
+        <th>Tool A ($27–47)</th>
+        <th>Tool B ($19)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Any language combination (14 languages)</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>Cultural knowledge (business customs)</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>3-version reply comparison</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>Thread summary</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>Style learning</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>PDF & image reading <span style="font-size:11px;background:#f1f3f4;color:#5f6368;padding:1px 6px;border-radius:8px">Soon</span></td>
+        <td>⏳</td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>Spam & phishing detection</td>
+          <td>✓</td><td>✗</td><td>✗</td>
+        </tr>
+        <tr>
+          <td>Powered by Claude AI</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>Price</td>
+        <td style="color:var(--green);font-weight:700">$15–25/mo</td>
+        <td>$27–47/mo</td>
+        <td>$19/mo</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <p class="section-label">FAQ</p>
+  <h2 class="section-title">Common questions</h2>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q">Does MailMind read all my emails? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">No. MailMind only reads the email you currently have open, and only when you click "Generate." It never scans your inbox in the background.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Which languages are supported? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">MailMind supports 14 languages including Korean, English, Japanese, Chinese, Spanish, French, German, Portuguese, Arabic, Vietnamese, Thai, and Indonesian. Any combination works — Japanese to Portuguese, Arabic to Korean, anything.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What if I don't speak the language at all? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">That's exactly what MailMind is for. The Smart Reply feature reads the email, shows you a summary in your language, then writes a perfect reply in the sender's language. You never need to understand the original email.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What AI model does it use? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">MailMind uses Claude by Anthropic — one of the most capable AI models available. This is why replies feel natural, culturally appropriate, and not "AI-generated."</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Is my email data safe? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">Yes. Email content is processed in real-time and immediately discarded after generating your reply. We never store, share, or use your emails to train AI models.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Can I cancel anytime? <span class="faq-arrow">+</span></div>
+      <div class="faq-a">Yes, cancel anytime with one click. No hidden fees, no lock-in, no questions asked.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Your inbox is waiting.</h2>
+  <p>Any language. Any tone. Any situation. One click.</p>
+  <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-cta-white">Add to Chrome — Free</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">✦ MailMind</div>
+  <div class="footer-links">
+    <a href="https://mailmind.yongcha.app/privacy.html">Privacy</a>
+    <a href="https://mailmind.yongcha.app/terms.html">Terms</a>
+    <a href="mailto:hello@mailmind.yongcha.app">Contact</a>
+  </div>
+</footer>
+
+<script>
+  // FAQ toggle
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      q.parentElement.classList.toggle('open');
+    });
+  });
+</script>
+</body>
+</html>
