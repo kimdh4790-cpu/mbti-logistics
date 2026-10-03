@@ -1,0 +1,777 @@
+{
+  "product": "mailmind",
+  "url": "mailmind.yongcha.app",
+  "rotationOrder": ["EN","KR","JP","ZH","ES","DE","PT","FR","IT","VN","NL","PL","TR","HI"],
+  "languages": {
+    "EN": {
+      "name": "English",
+      "ttsVoice": "en-US-Neural2-D",
+      "ttsLang": "en-US",
+      "variants": {
+        "A": {
+          "hook": "Struggling with emails in foreign languages?",
+          "tagline": "Reply in 14 Languages with AI",
+          "sub": "MailMind — AI Assistant for Gmail",
+          "cta": "Start for free",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Struggling with emails in foreign languages?",
+            "MailMind is your AI assistant built directly into Gmail.",
+            "One click — and you get a culturally perfect reply in 14 languages.",
+            "English, Korean, Japanese, Chinese, Spanish, and more.",
+            "Industry-aware. Three reply versions to compare.",
+            "Start for free at mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Reply to Emails in 14 Languages with AI — MailMind Gmail Chrome Extension",
+            "description": "MailMind is your AI assistant built directly into Gmail.\nUnderstand emails in any language and generate culturally perfect replies in 14 languages.\n\n✦ Key features\n• 14 languages: EN / KR / JP / ZH / ES / DE / PT / AR / IT / FR / VN / NL / PL / TR\n• Native-level replies — original expression, not translation\n• Auto industry detection — applies IT, finance and legal terminology\n• Tone adjustment — professional, detailed, friendly, concise\n• Compare 3 versions + smart reply\n• Email summary — catch up on long threads in seconds\n• Task extraction — detect deadlines and to-dos\n• Direct Gmail integration — insert reply with one click\n• Custom signatures and email templates\n\n🔰 Pro Plan: 300 uses/month\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #GmailExtension #EmailAutomation #MultilingualEmail",
+            "tags": ["MailMind","AI email reply","Gmail extension","email automation","multilingual email","Chrome extension","productivity","AI assistant","email productivity"]
+          },
+          "instagram": {
+            "caption": "Stop struggling with foreign language emails ✦\n\nMailMind — AI Assistant for Gmail\nmailmind.yongcha.app\n\n✅ 1 click → perfect reply in 14 languages\n✅ Native-level (not translation)\n✅ IT, finance & legal terminology auto-applied\n✅ Compare 3 versions → pick the best\n✅ Email summary + task extraction\n✅ Insert directly into Gmail\n✅ Pro 300 uses/month\n\n#MailMind #AIEmail #GmailExtension #EmailAutomation #MultilingualEmail #ChromeExtension #Productivity #AIAssistant #GmailAI",
+            "hashtags": ["#MailMind","#AIEmail","#GmailExtension","#EmailAutomation","#MultilingualEmail","#ChromeExtension","#Productivity","#AIAssistant","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "Stop wasting time on email replies.",
+          "tagline": "AI Handles Your Emails in 14 Languages",
+          "sub": "MailMind — Gmail AI Extension",
+          "cta": "Try free today",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Stop wasting time on email replies.",
+            "MailMind drafts the perfect reply for you — instantly.",
+            "Works in 14 languages. Detects your industry. Matches your tone.",
+            "Compare three AI-generated versions and insert with one click.",
+            "Summarize long threads. Extract tasks. Stay on top of your inbox.",
+            "Try free at mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "AI Writes Your Email Replies in 14 Languages — MailMind for Gmail",
+            "description": "MailMind drafts perfect email replies for you — in any of 14 languages, instantly.\n\n✦ Key features\n• Instant AI reply drafting in 14 languages\n• Industry-aware: IT, finance, legal terminology\n• Tone control: professional, friendly, concise\n• 3 reply versions to compare\n• Email summary & task extraction\n• One-click insert into Gmail\n• Custom signatures & templates\n\n🔰 Pro Plan: 300 uses/month\n🌐 mailmind.yongcha.app\n\n#MailMind #EmailProductivity #AIAssistant #GmailExtension #EmailAutomation",
+            "tags": ["MailMind","email productivity","AI email","Gmail AI","Chrome extension","email automation","AI assistant","inbox management"]
+          },
+          "instagram": {
+            "caption": "Your inbox is draining your day. Fix it. ✦\n\nMailMind — Gmail AI Extension\nmailmind.yongcha.app\n\n✅ Instant reply drafts in 14 languages\n✅ Industry & tone aware\n✅ Compare 3 AI replies → insert best\n✅ Summarize threads in seconds\n✅ Extract deadlines & to-dos\n✅ Pro 300 uses/month\n\n#MailMind #EmailProductivity #AIAssistant #GmailExtension #EmailAutomation #ChromeExtension #InboxZero #AIEmail",
+            "hashtags": ["#MailMind","#EmailProductivity","#AIAssistant","#GmailExtension","#EmailAutomation","#ChromeExtension","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "KR": {
+      "name": "한국어",
+      "ttsVoice": "ko-KR-Neural2-B",
+      "ttsLang": "ko-KR",
+      "variants": {
+        "A": {
+          "hook": "외국어 이메일, 어떻게 답해야 할지 막막하신가요?",
+          "tagline": "AI로 14개 언어 이메일 답장",
+          "sub": "MailMind — Gmail AI 어시스턴트",
+          "cta": "무료로 시작하기",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "외국어 이메일, 어떻게 답해야 할지 막막하신가요?",
+            "MailMind는 Gmail에 바로 연동된 AI 어시스턴트입니다.",
+            "클릭 한 번으로 14개 언어로 완벽한 답장을 생성합니다.",
+            "한국어, 영어, 일본어, 중국어, 스페인어 등 다양한 언어를 지원합니다.",
+            "업종을 자동 감지하고, 3가지 답장 버전을 비교할 수 있습니다.",
+            "mailmind.yongcha.app에서 무료로 시작하세요"
+          ],
+          "youtube": {
+            "title": "AI로 14개 언어 이메일 답장 — MailMind Gmail 크롬 확장",
+            "description": "MailMind는 Gmail에 직접 통합된 AI 어시스턴트입니다.\n어떤 언어의 이메일도 이해하고, 14개 언어로 문화적으로 완벽한 답장을 생성합니다.\n\n✦ 주요 기능\n• 14개 언어: 한국어/영어/일본어/중국어/스페인어/독일어 등\n• 아나모국어 수준 답장 — 번역이 아닌 자연스러운 표현\n• 업종 자동 감지 — IT, 금융, 법률 용어 적용\n• 톤 조절 — 전문적/상세한/친근한/간결한\n• 3가지 버전 비교 + 스마트 답장\n• 이메일 요약 — 긴 대화 스레드를 빠르게 파악\n• 할일 추출 — 마감일과 할일 자동 감지\n• Gmail에 바로 삽입 — 클릭 한 번으로\n\n🔰 Pro 플랜: 월 300회\n🌐 mailmind.yongcha.app\n\n#MailMind #AI이메일 #Gmail확장 #이메일자동화 #다국어이메일",
+            "tags": ["MailMind","AI이메일","Gmail확장","이메일자동화","다국어이메일","크롬확장","업무생산성","AI어시스턴트","이메일생산성"]
+          },
+          "instagram": {
+            "caption": "영어 이메일? 이제 어렵지 않아요 ✦\n\nMailMind — Gmail AI 어시스턴트\nmailmind.yongcha.app\n\n✅ 클릭 1번 → 14개 언어 완벽 답장\n✅ 아나모국어 수준 (번역 아닌 자연스러운 표현)\n✅ IT, 금융, 법률 용어 자동 적용\n✅ 3가지 버전 비교 → 최고 답장 선택\n✅ 이메일 요약 + 할일 추출\n✅ Gmail에 바로 삽입\n✅ Pro 월 300회\n\n#MailMind #AI이메일 #Gmail확장 #이메일자동화 #다국어이메일 #크롬확장 #업무생산성",
+            "hashtags": ["#MailMind","#AI이메일","#Gmail확장","#이메일자동화","#다국어이메일","#크롬확장","#업무생산성","#AI어시스턴트","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "이메일 답장에 시간 낭비하고 계신가요?",
+          "tagline": "AI가 14개 언어로 이메일을 대신 써드립니다",
+          "sub": "MailMind — Gmail AI 확장",
+          "cta": "오늘 무료 체험",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "이메일 답장에 시간 낭비하고 계신가요?",
+            "MailMind가 완벽한 답장을 즉시 작성해 드립니다.",
+            "14개 언어 지원. 업종 자동 감지. 톤 맞춤 설정.",
+            "3가지 AI 답장 버전을 비교하고 클릭 한 번으로 삽입하세요.",
+            "긴 이메일 요약, 할일 추출로 받은편지함을 완벽하게 관리하세요.",
+            "mailmind.yongcha.app에서 무료 체험을 시작하세요"
+          ],
+          "youtube": {
+            "title": "AI가 이메일 답장을 14개 언어로 써드립니다 — MailMind for Gmail",
+            "description": "MailMind가 14개 언어로 완벽한 이메일 답장을 즉시 작성해 드립니다.\n\n✦ 주요 기능\n• 14개 언어 즉각 답장 생성\n• 업종 인식: IT, 금융, 법률 용어\n• 톤 조절: 전문적/친근한/간결한\n• 3가지 버전 비교\n• 이메일 요약 & 할일 추출\n• Gmail 한 번에 삽입\n\n🔰 Pro 플랜: 월 300회\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","이메일생산성","AI이메일","GmailAI","크롬확장","이메일자동화","AI어시스턴트","받은편지함관리"]
+          },
+          "instagram": {
+            "caption": "받은편지함이 하루를 잡아먹고 있나요? ✦\n\nMailMind — Gmail AI 확장\nmailmind.yongcha.app\n\n✅ 14개 언어 즉각 답장 초안\n✅ 업종 & 톤 자동 인식\n✅ AI 답장 3개 비교 → 최고 선택\n✅ 스레드 요약 (몇 초 만에)\n✅ 마감일 & 할일 자동 추출\n✅ Pro 월 300회\n\n#MailMind #이메일생산성 #AI어시스턴트 #Gmail확장 #이메일자동화 #InboxZero",
+            "hashtags": ["#MailMind","#이메일생산성","#AI어시스턴트","#Gmail확장","#이메일자동화","#크롬확장","#InboxZero","#AI이메일"]
+          }
+        }
+      }
+    },
+    "JP": {
+      "name": "日本語",
+      "ttsVoice": "ja-JP-Neural2-B",
+      "ttsLang": "ja-JP",
+      "variants": {
+        "A": {
+          "hook": "外国語のメール、どう返信すればいいか悩んでいませんか？",
+          "tagline": "AIで14言語のメール返信",
+          "sub": "MailMind — Gmail AIアシスタント",
+          "cta": "無料で始める",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "外国語のメール、どう返信すればいいか悩んでいませんか？",
+            "MailMindはGmailに直接統合されたAIアシスタントです。",
+            "ワンクリックで14言語に対応した完璧な返信を生成します。",
+            "英語、日本語、韓国語、中国語など多様な言語をサポート。",
+            "業種を自動認識し、3種類の返信文を比較できます。",
+            "mailmind.yongcha.appで無料でお試しください"
+          ],
+          "youtube": {
+            "title": "AIで14言語のメールに返信 — MailMind Gmail Chrome拡張機能",
+            "description": "MailMindはGmailに直接統合されたAIアシスタントです。\nどんな言語のメールも理解し、14言語で文化的に完璧な返信を生成します。\n\n✦ 主な機能\n• 14言語対応: 日本語/英語/韓国語/中国語/スペイン語/ドイツ語など\n• ネイティブレベルの返信 — 翻訳ではなく自然な表現\n• 業種自動認識 — IT・金融・法律用語を適用\n• トーン調整 — プロフェッショナル/詳細/友好的/簡潔\n• 3種類のバージョン比較 + スマート返信\n• メール要約 — 長いスレッドを数秒でキャッチアップ\n• タスク抽出 — 締め切りやTODOを自動検出\n\n🔰 Proプラン: 月300回\n🌐 mailmind.yongcha.app\n\n#MailMind #AIメール #Gmail拡張 #メール自動化 #多言語メール",
+            "tags": ["MailMind","AIメール","Gmail拡張","メール自動化","多言語メール","Chrome拡張","業務効率化","AIアシスタント","メール生産性"]
+          },
+          "instagram": {
+            "caption": "英語メールに困っていませんか？ ✦\n\nMailMind — Gmail AIアシスタント\nmailmind.yongcha.app\n\n✅ 1クリック → 14言語で完璧な返信\n✅ ネイティブレベル（翻訳ではなく自然な表現）\n✅ IT・金融・法律用語を自動適用\n✅ 3種類のバージョンを比較→最良を選択\n✅ メール要約 + タスク抽出\n✅ Gmailに直接挿入\n✅ Pro 月300回\n\n#MailMind #AIメール #Gmail拡張 #メール自動化 #多言語メール #Chrome拡張 #業務効率化",
+            "hashtags": ["#MailMind","#AIメール","#Gmail拡張","#メール自動化","#多言語メール","#Chrome拡張","#業務効率化","#AIアシスタント","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "メール返信に時間を使いすぎていませんか？",
+          "tagline": "AIが14言語でメールを代わりに書きます",
+          "sub": "MailMind — Gmail AI拡張機能",
+          "cta": "今すぐ無料体験",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "メール返信に時間を使いすぎていませんか？",
+            "MailMindが完璧な返信文を即座に作成します。",
+            "14言語対応。業種を自動認識。トーンもカスタマイズ可能。",
+            "3種類のAI返信を比較して、ワンクリックで挿入。",
+            "長いメールの要約、タスク抽出で受信トレイを完全管理。",
+            "mailmind.yongcha.appで無料体験を開始しましょう"
+          ],
+          "youtube": {
+            "title": "AIがメールを14言語で代わりに書きます — MailMind for Gmail",
+            "description": "MailMindが14言語で完璧なメール返信を即座に作成します。\n\n✦ 主な機能\n• 14言語の即時返信生成\n• 業種認識: IT・金融・法律用語\n• トーン調整: プロフェッショナル/友好的/簡潔\n• 3種類のバージョン比較\n• メール要約 & タスク抽出\n• Gmailへワンクリック挿入\n\n🔰 Proプラン: 月300回\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","メール生産性","AIメール","GmailAI","Chrome拡張","メール自動化","AIアシスタント","受信トレイ管理"]
+          },
+          "instagram": {
+            "caption": "受信トレイが一日を食いつぶしていませんか？ ✦\n\nMailMind — Gmail AI拡張機能\nmailmind.yongcha.app\n\n✅ 14言語の即時返信下書き\n✅ 業種 & トーン自動認識\n✅ AI返信3種比較 → 最良を選択\n✅ スレッドを数秒で要約\n✅ 締め切り & タスク自動抽出\n✅ Pro 月300回\n\n#MailMind #メール生産性 #AIアシスタント #Gmail拡張 #メール自動化 #InboxZero",
+            "hashtags": ["#MailMind","#メール生産性","#AIアシスタント","#Gmail拡張","#メール自動化","#Chrome拡張","#InboxZero","#AIメール"]
+          }
+        }
+      }
+    },
+    "ZH": {
+      "name": "中文",
+      "ttsVoice": "cmn-CN-Neural2-D",
+      "ttsLang": "zh-CN",
+      "variants": {
+        "A": {
+          "hook": "收到外语邮件，不知道该如何回复？",
+          "tagline": "AI一键回复14种语言邮件",
+          "sub": "MailMind — Gmail AI助手",
+          "cta": "免费开始使用",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "收到外语邮件，不知道该如何回复？",
+            "MailMind是直接集成到Gmail的AI助手。",
+            "一键生成14种语言的完美回复。",
+            "支持中文、英文、日语、韩语、西班牙语等多种语言。",
+            "自动识别行业，提供3个版本的回复供您比较。",
+            "立即前往mailmind.yongcha.app免费体验"
+          ],
+          "youtube": {
+            "title": "AI一键回复14种语言邮件 — MailMind Gmail Chrome扩展",
+            "description": "MailMind是直接集成到Gmail的AI助手。\n理解任何语言的邮件，并以14种语言生成文化上完美的回复。\n\n✦ 主要功能\n• 14种语言: 中文/英文/日语/韩语/西班牙语/德语等\n• 母语级别回复 — 原生表达，而非翻译\n• 行业自动识别 — 应用IT、金融和法律术语\n• 语气调整 — 专业/详细/友好/简洁\n• 比较3个版本 + 智能回复\n• 邮件摘要 — 秒速了解长邮件串\n• 任务提取 — 检测截止日期和待办事项\n\n🔰 Pro方案: 每月300次\n🌐 mailmind.yongcha.app\n\n#MailMind #AI邮件 #Gmail扩展 #邮件自动化 #多语言邮件",
+            "tags": ["MailMind","AI邮件回复","Gmail扩展","邮件自动化","多语言邮件","Chrome扩展","办公效率","AI助手","邮件效率"]
+          },
+          "instagram": {
+            "caption": "外语邮件不再是难题 ✦\n\nMailMind — Gmail AI助手\nmailmind.yongcha.app\n\n✅ 1键 → 14种语言完美回复\n✅ 母语级别（原生表达，非翻译）\n✅ IT、金融、法律术语自动应用\n✅ 比较3个版本→选择最佳\n✅ 邮件摘要 + 任务提取\n✅ 直接插入Gmail\n✅ Pro 每月300次\n\n#MailMind #AI邮件 #Gmail扩展 #邮件自动化 #多语言邮件 #Chrome扩展 #办公效率",
+            "hashtags": ["#MailMind","#AI邮件","#Gmail扩展","#邮件自动化","#多语言邮件","#Chrome扩展","#办公效率","#AI助手","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "邮件回复占用了您太多时间？",
+          "tagline": "AI代您撰写14种语言的邮件",
+          "sub": "MailMind — Gmail AI扩展",
+          "cta": "立即免费体验",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "邮件回复占用了您太多时间？",
+            "MailMind即时为您起草完美回复。",
+            "支持14种语言，自动识别行业，匹配您的语气。",
+            "比较三个AI生成的版本，一键插入。",
+            "摘要长邮件，提取任务，轻松管理收件箱。",
+            "立即前往mailmind.yongcha.app免费体验"
+          ],
+          "youtube": {
+            "title": "AI代您撰写14种语言邮件 — MailMind for Gmail",
+            "description": "MailMind即时为您生成14种语言的完美邮件回复。\n\n✦ 主要功能\n• 14种语言即时回复生成\n• 行业识别: IT、金融、法律术语\n• 语气调整: 专业/友好/简洁\n• 3个版本比较\n• 邮件摘要 & 任务提取\n• 一键插入Gmail\n\n🔰 Pro方案: 每月300次\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","邮件效率","AI邮件","GmailAI","Chrome扩展","邮件自动化","AI助手","收件箱管理"]
+          },
+          "instagram": {
+            "caption": "收件箱在吞噬您的一天？ ✦\n\nMailMind — Gmail AI扩展\nmailmind.yongcha.app\n\n✅ 14种语言即时回复草稿\n✅ 行业 & 语气自动识别\n✅ AI回复3版比较→选最佳\n✅ 秒速摘要邮件串\n✅ 自动提取截止日期 & 待办\n✅ Pro 每月300次\n\n#MailMind #邮件效率 #AI助手 #Gmail扩展 #邮件自动化 #InboxZero",
+            "hashtags": ["#MailMind","#邮件效率","#AI助手","#Gmail扩展","#邮件自动化","#Chrome扩展","#InboxZero","#AI邮件"]
+          }
+        }
+      }
+    },
+    "ES": {
+      "name": "Español",
+      "ttsVoice": "es-ES-Neural2-B",
+      "ttsLang": "es-ES",
+      "variants": {
+        "A": {
+          "hook": "¿Te cuesta responder correos en idiomas extranjeros?",
+          "tagline": "Responde correos en 14 idiomas con IA",
+          "sub": "MailMind — Asistente IA para Gmail",
+          "cta": "Empieza gratis",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "¿Te cuesta responder correos en idiomas extranjeros?",
+            "MailMind es tu asistente de IA integrado directamente en Gmail.",
+            "Un clic y obtienes una respuesta culturalmente perfecta en 14 idiomas.",
+            "Inglés, español, japonés, chino, coreano y mucho más.",
+            "Detecta tu sector. Tres versiones para comparar.",
+            "Empieza gratis en mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Responde correos en 14 idiomas con IA — MailMind extensión Chrome para Gmail",
+            "description": "MailMind es tu asistente de IA integrado directamente en Gmail.\nComprende correos en cualquier idioma y genera respuestas culturalmente perfectas en 14 idiomas.\n\n✦ Características principales\n• 14 idiomas: ES / EN / KR / JP / ZH / DE / PT / AR / IT / FR y más\n• Respuestas de nivel nativo — expresión original, no traducción\n• Detección automática de sector — terminología IT, finanzas y legal\n• Ajuste de tono — profesional, detallado, amigable, conciso\n• Compara 3 versiones + respuesta inteligente\n• Resumen de correo — ponte al día con hilos largos en segundos\n• Extracción de tareas — detecta plazos y tareas pendientes\n\n🔰 Plan Pro: 300 usos/mes\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #ExtensionGmail #AutomatizacionEmail #EmailMultilingue",
+            "tags": ["MailMind","respuesta AI email","extensión Gmail","automatización email","email multilingüe","extensión Chrome","productividad","asistente IA","productividad email"]
+          },
+          "instagram": {
+            "caption": "Los correos en inglés ya no son un problema ✦\n\nMailMind — Asistente IA para Gmail\nmailmind.yongcha.app\n\n✅ 1 clic → respuesta perfecta en 14 idiomas\n✅ Nivel nativo (expresión original, no traducción)\n✅ Terminología IT, finanzas y legal automática\n✅ Compara 3 versiones → elige la mejor\n✅ Resumen de correo + extracción de tareas\n✅ Inserta directamente en Gmail\n✅ Pro 300 usos/mes\n\n#MailMind #AIEmail #ExtensionGmail #AutomatizacionEmail #EmailMultilingue #ExtensionChrome #Productividad",
+            "hashtags": ["#MailMind","#AIEmail","#ExtensionGmail","#AutomatizacionEmail","#EmailMultilingue","#ExtensionChrome","#Productividad","#AsistenteIA","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "¿Pierdes demasiado tiempo respondiendo correos?",
+          "tagline": "La IA escribe tus correos en 14 idiomas",
+          "sub": "MailMind — Extensión IA para Gmail",
+          "cta": "Pruébalo gratis hoy",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "¿Pierdes demasiado tiempo respondiendo correos?",
+            "MailMind redacta la respuesta perfecta por ti, al instante.",
+            "Funciona en 14 idiomas. Detecta tu sector. Se adapta a tu tono.",
+            "Compara tres versiones generadas por IA e insértalas con un clic.",
+            "Resume hilos largos. Extrae tareas. Domina tu bandeja de entrada.",
+            "Pruébalo gratis en mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "La IA escribe tus correos en 14 idiomas — MailMind para Gmail",
+            "description": "MailMind redacta respuestas de correo perfectas por ti — en cualquiera de 14 idiomas, al instante.\n\n✦ Características principales\n• Generación instantánea de respuestas en 14 idiomas\n• Reconocimiento de sector: IT, finanzas, legal\n• Control de tono: profesional, amigable, conciso\n• 3 versiones para comparar\n• Resumen de correo & extracción de tareas\n• Inserción con un clic en Gmail\n\n🔰 Plan Pro: 300 usos/mes\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","productividad email","AI email","Gmail AI","extensión Chrome","automatización email","asistente IA","gestión bandeja entrada"]
+          },
+          "instagram": {
+            "caption": "Tu bandeja de entrada está consumiendo tu día. Arréglalo. ✦\n\nMailMind — Extensión IA para Gmail\nmailmind.yongcha.app\n\n✅ Borradores de respuesta instantáneos en 14 idiomas\n✅ Reconocimiento de sector y tono\n✅ Compara 3 respuestas IA → elige la mejor\n✅ Resume hilos en segundos\n✅ Extrae plazos y tareas automáticamente\n✅ Pro 300 usos/mes\n\n#MailMind #ProductividadEmail #AsistenteIA #ExtensionGmail #AutomatizacionEmail #InboxZero",
+            "hashtags": ["#MailMind","#ProductividadEmail","#AsistenteIA","#ExtensionGmail","#AutomatizacionEmail","#ExtensionChrome","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "DE": {
+      "name": "Deutsch",
+      "ttsVoice": "de-DE-Neural2-B",
+      "ttsLang": "de-DE",
+      "variants": {
+        "A": {
+          "hook": "Probleme beim Beantworten fremdsprachiger E-Mails?",
+          "tagline": "E-Mails in 14 Sprachen mit KI beantworten",
+          "sub": "MailMind — KI-Assistent für Gmail",
+          "cta": "Kostenlos starten",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Probleme beim Beantworten fremdsprachiger E-Mails?",
+            "MailMind ist Ihr KI-Assistent, direkt in Gmail integriert.",
+            "Ein Klick und Sie erhalten eine kulturell perfekte Antwort in 14 Sprachen.",
+            "Englisch, Deutsch, Japanisch, Chinesisch, Koreanisch und mehr.",
+            "Erkennt automatisch Ihre Branche. Drei Versionen zum Vergleich.",
+            "Kostenlos starten auf mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "E-Mails in 14 Sprachen mit KI beantworten — MailMind Gmail Chrome-Erweiterung",
+            "description": "MailMind ist Ihr KI-Assistent, direkt in Gmail integriert.\nVersteht E-Mails in jeder Sprache und generiert kulturell perfekte Antworten in 14 Sprachen.\n\n✦ Hauptfunktionen\n• 14 Sprachen: DE / EN / KR / JP / ZH / ES / PT / AR / IT / FR und mehr\n• Antworten auf Muttersprachlerniveau — originaler Ausdruck, keine Übersetzung\n• Automatische Branchenerkennung — IT-, Finanz- und Rechtsterminologie\n• Ton-Anpassung — professionell, detailliert, freundlich, prägnant\n• 3 Versionen vergleichen + intelligente Antwort\n• E-Mail-Zusammenfassung — lange Threads in Sekunden erfassen\n• Aufgabenextraktion — Fristen und Aufgaben erkennen\n\n🔰 Pro-Plan: 300 Nutzungen/Monat\n🌐 mailmind.yongcha.app\n\n#MailMind #KIEmail #GmailErweiterung #EmailAutomatisierung #MehrsprachigeEmail",
+            "tags": ["MailMind","KI E-Mail Antwort","Gmail Erweiterung","E-Mail Automatisierung","mehrsprachige E-Mail","Chrome Erweiterung","Produktivität","KI Assistent"]
+          },
+          "instagram": {
+            "caption": "Englische E-Mails? Kein Problem mehr ✦\n\nMailMind — KI-Assistent für Gmail\nmailmind.yongcha.app\n\n✅ 1 Klick → perfekte Antwort in 14 Sprachen\n✅ Muttersprachlerniveau (originaler Ausdruck)\n✅ IT-, Finanz- und Rechtsterminologie automatisch\n✅ 3 Versionen vergleichen → beste wählen\n✅ E-Mail-Zusammenfassung + Aufgabenextraktion\n✅ Direkt in Gmail einfügen\n✅ Pro 300 Nutzungen/Monat\n\n#MailMind #KIEmail #GmailErweiterung #EmailAutomatisierung #MehrsprachigeEmail #ChromeErweiterung #Produktivität",
+            "hashtags": ["#MailMind","#KIEmail","#GmailErweiterung","#EmailAutomatisierung","#MehrsprachigeEmail","#ChromeErweiterung","#Produktivität","#KIAssistent","#GmailKI"]
+          }
+        },
+        "B": {
+          "hook": "Verschwenden Sie zu viel Zeit mit E-Mail-Antworten?",
+          "tagline": "KI schreibt Ihre E-Mails in 14 Sprachen",
+          "sub": "MailMind — KI-Erweiterung für Gmail",
+          "cta": "Heute kostenlos testen",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Verschwenden Sie zu viel Zeit mit E-Mail-Antworten?",
+            "MailMind entwirft die perfekte Antwort sofort für Sie.",
+            "14 Sprachen. Automatische Branchenerkennung. Ton-Anpassung.",
+            "Drei KI-generierte Versionen vergleichen und mit einem Klick einfügen.",
+            "Lange Threads zusammenfassen. Aufgaben extrahieren. Posteingang meistern.",
+            "Kostenlos testen auf mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "KI schreibt Ihre E-Mails in 14 Sprachen — MailMind für Gmail",
+            "description": "MailMind entwirft perfekte E-Mail-Antworten sofort — in einer von 14 Sprachen.\n\n✦ Hauptfunktionen\n• Sofortige Antwortgenerierung in 14 Sprachen\n• Branchenerkennung: IT, Finanzen, Recht\n• Ton-Kontrolle: professionell, freundlich, prägnant\n• 3 Versionen zum Vergleichen\n• E-Mail-Zusammenfassung & Aufgabenextraktion\n• Ein-Klick-Einfügen in Gmail\n\n🔰 Pro-Plan: 300 Nutzungen/Monat\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","E-Mail Produktivität","KI E-Mail","Gmail KI","Chrome Erweiterung","E-Mail Automatisierung","KI Assistent","Posteingang Management"]
+          },
+          "instagram": {
+            "caption": "Ihr Posteingang frisst Ihren Tag? Lösen Sie es. ✦\n\nMailMind — KI-Erweiterung für Gmail\nmailmind.yongcha.app\n\n✅ Sofortige Antwort-Entwürfe in 14 Sprachen\n✅ Branche & Ton automatisch erkannt\n✅ 3 KI-Antworten vergleichen → beste wählen\n✅ Threads in Sekunden zusammenfassen\n✅ Fristen & Aufgaben automatisch extrahieren\n✅ Pro 300 Nutzungen/Monat\n\n#MailMind #EmailProduktivität #KIAssistent #GmailErweiterung #EmailAutomatisierung #InboxZero",
+            "hashtags": ["#MailMind","#EmailProduktivität","#KIAssistent","#GmailErweiterung","#EmailAutomatisierung","#ChromeErweiterung","#InboxZero","#KIEmail"]
+          }
+        }
+      }
+    },
+    "PT": {
+      "name": "Português",
+      "ttsVoice": "pt-BR-Neural2-B",
+      "ttsLang": "pt-BR",
+      "variants": {
+        "A": {
+          "hook": "Dificuldade em responder e-mails em idiomas estrangeiros?",
+          "tagline": "Responda e-mails em 14 idiomas com IA",
+          "sub": "MailMind — Assistente IA para Gmail",
+          "cta": "Comece grátis",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Dificuldade em responder e-mails em idiomas estrangeiros?",
+            "MailMind é seu assistente de IA integrado diretamente ao Gmail.",
+            "Um clique e você obtém uma resposta culturalmente perfeita em 14 idiomas.",
+            "Inglês, português, japonês, chinês, coreano e muito mais.",
+            "Detecta seu setor automaticamente. Três versões para comparar.",
+            "Comece grátis em mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Responda e-mails em 14 idiomas com IA — MailMind extensão Chrome para Gmail",
+            "description": "MailMind é seu assistente de IA integrado diretamente ao Gmail.\nEntende e-mails em qualquer idioma e gera respostas culturalmente perfeitas em 14 idiomas.\n\n✦ Principais recursos\n• 14 idiomas: PT / EN / KR / JP / ZH / ES / DE / AR / IT / FR e mais\n• Respostas em nível nativo — expressão original, não tradução\n• Detecção automática de setor — terminologia de TI, finanças e jurídico\n• Ajuste de tom — profissional, detalhado, amigável, conciso\n• Compare 3 versões + resposta inteligente\n• Resumo de e-mail — atualize-se em threads longos em segundos\n• Extração de tarefas — detecte prazos e pendências\n\n🔰 Plano Pro: 300 usos/mês\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #ExtensaoGmail #AutomacaoEmail #EmailMultilingue",
+            "tags": ["MailMind","resposta AI email","extensão Gmail","automação email","email multilíngue","extensão Chrome","produtividade","assistente IA"]
+          },
+          "instagram": {
+            "caption": "E-mails em inglês? Não é mais problema ✦\n\nMailMind — Assistente IA para Gmail\nmailmind.yongcha.app\n\n✅ 1 clique → resposta perfeita em 14 idiomas\n✅ Nível nativo (expressão original, não tradução)\n✅ Terminologia de TI, finanças e jurídico automática\n✅ Compare 3 versões → escolha a melhor\n✅ Resumo de e-mail + extração de tarefas\n✅ Insira diretamente no Gmail\n✅ Pro 300 usos/mês\n\n#MailMind #AIEmail #ExtensaoGmail #AutomacaoEmail #EmailMultilingue #ExtensaoChrome #Produtividade",
+            "hashtags": ["#MailMind","#AIEmail","#ExtensaoGmail","#AutomacaoEmail","#EmailMultilingue","#ExtensaoChrome","#Produtividade","#AssistenteIA","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "Está perdendo tempo demais respondendo e-mails?",
+          "tagline": "IA escreve seus e-mails em 14 idiomas",
+          "sub": "MailMind — Extensão IA para Gmail",
+          "cta": "Experimente grátis hoje",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Está perdendo tempo demais respondendo e-mails?",
+            "MailMind rascunha a resposta perfeita por você, instantaneamente.",
+            "Funciona em 14 idiomas. Detecta seu setor. Adapta-se ao seu tom.",
+            "Compare três versões geradas por IA e insira com um clique.",
+            "Resuma threads longos. Extraia tarefas. Domine sua caixa de entrada.",
+            "Experimente grátis em mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "IA escreve seus e-mails em 14 idiomas — MailMind para Gmail",
+            "description": "MailMind rascunha respostas de e-mail perfeitas por você — em qualquer um dos 14 idiomas, instantaneamente.\n\n✦ Principais recursos\n• Geração instantânea de respostas em 14 idiomas\n• Reconhecimento de setor: TI, finanças, jurídico\n• Controle de tom: profissional, amigável, conciso\n• 3 versões para comparar\n• Resumo de e-mail & extração de tarefas\n• Inserção com um clique no Gmail\n\n🔰 Plano Pro: 300 usos/mês\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","produtividade email","AI email","Gmail AI","extensão Chrome","automação email","assistente IA","gerenciamento caixa entrada"]
+          },
+          "instagram": {
+            "caption": "Sua caixa de entrada está consumindo seu dia? Resolva. ✦\n\nMailMind — Extensão IA para Gmail\nmailmind.yongcha.app\n\n✅ Rascunhos de resposta instantâneos em 14 idiomas\n✅ Reconhecimento de setor e tom\n✅ Compare 3 respostas IA → escolha a melhor\n✅ Resuma threads em segundos\n✅ Extraia prazos e tarefas automaticamente\n✅ Pro 300 usos/mês\n\n#MailMind #ProdutividadeEmail #AssistenteIA #ExtensaoGmail #AutomacaoEmail #InboxZero",
+            "hashtags": ["#MailMind","#ProdutividadeEmail","#AssistenteIA","#ExtensaoGmail","#AutomacaoEmail","#ExtensaoChrome","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "FR": {
+      "name": "Français",
+      "ttsVoice": "fr-FR-Neural2-B",
+      "ttsLang": "fr-FR",
+      "variants": {
+        "A": {
+          "hook": "Du mal à répondre aux e-mails en langues étrangères?",
+          "tagline": "Répondez aux e-mails en 14 langues avec l'IA",
+          "sub": "MailMind — Assistant IA pour Gmail",
+          "cta": "Commencer gratuitement",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Du mal à répondre aux e-mails en langues étrangères?",
+            "MailMind est votre assistant IA intégré directement dans Gmail.",
+            "Un clic et vous obtenez une réponse culturellement parfaite en 14 langues.",
+            "Anglais, français, japonais, chinois, coréen et bien plus.",
+            "Détecte votre secteur automatiquement. Trois versions à comparer.",
+            "Commencez gratuitement sur mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Répondez aux e-mails en 14 langues avec l'IA — MailMind extension Chrome pour Gmail",
+            "description": "MailMind est votre assistant IA intégré directement dans Gmail.\nComprend les e-mails dans n'importe quelle langue et génère des réponses culturellement parfaites en 14 langues.\n\n✦ Fonctionnalités principales\n• 14 langues: FR / EN / KR / JP / ZH / ES / DE / PT / IT / AR et plus\n• Réponses de niveau natif — expression originale, pas de traduction\n• Détection automatique du secteur — terminologie IT, finance et juridique\n• Ajustement du ton — professionnel, détaillé, amical, concis\n• Comparer 3 versions + réponse intelligente\n• Résumé d'e-mail — rattrapez-vous sur les longs fils en secondes\n• Extraction de tâches — détectez les délais et les to-dos\n\n🔰 Plan Pro: 300 utilisations/mois\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #ExtensionGmail #AutomatisationEmail #EmailMultilingue",
+            "tags": ["MailMind","réponse IA email","extension Gmail","automatisation email","email multilingue","extension Chrome","productivité","assistant IA"]
+          },
+          "instagram": {
+            "caption": "Les e-mails en anglais? Plus de problème ✦\n\nMailMind — Assistant IA pour Gmail\nmailmind.yongcha.app\n\n✅ 1 clic → réponse parfaite en 14 langues\n✅ Niveau natif (expression originale, pas de traduction)\n✅ Terminologie IT, finance et juridique automatique\n✅ Comparer 3 versions → choisir la meilleure\n✅ Résumé d'e-mail + extraction de tâches\n✅ Insérer directement dans Gmail\n✅ Pro 300 utilisations/mois\n\n#MailMind #AIEmail #ExtensionGmail #AutomatisationEmail #EmailMultilingue #ExtensionChrome #Productivité",
+            "hashtags": ["#MailMind","#AIEmail","#ExtensionGmail","#AutomatisationEmail","#EmailMultilingue","#ExtensionChrome","#Productivité","#AssistantIA","#GmailIA"]
+          }
+        },
+        "B": {
+          "hook": "Vous perdez trop de temps à répondre aux e-mails?",
+          "tagline": "L'IA rédige vos e-mails en 14 langues",
+          "sub": "MailMind — Extension IA pour Gmail",
+          "cta": "Essayez gratuitement aujourd'hui",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Vous perdez trop de temps à répondre aux e-mails?",
+            "MailMind rédige la réponse parfaite pour vous, instantanément.",
+            "Fonctionne en 14 langues. Détecte votre secteur. S'adapte à votre ton.",
+            "Comparez trois versions générées par IA et insérez-les en un clic.",
+            "Résumez les longs fils. Extrayez les tâches. Maîtrisez votre boîte de réception.",
+            "Essayez gratuitement sur mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "L'IA rédige vos e-mails en 14 langues — MailMind pour Gmail",
+            "description": "MailMind rédige des réponses d'e-mail parfaites pour vous — dans l'une des 14 langues, instantanément.\n\n✦ Fonctionnalités principales\n• Génération instantanée de réponses en 14 langues\n• Reconnaissance du secteur: IT, finance, juridique\n• Contrôle du ton: professionnel, amical, concis\n• 3 versions à comparer\n• Résumé d'e-mail & extraction de tâches\n• Insertion en un clic dans Gmail\n\n🔰 Plan Pro: 300 utilisations/mois\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","productivité email","IA email","Gmail IA","extension Chrome","automatisation email","assistant IA","gestion boîte réception"]
+          },
+          "instagram": {
+            "caption": "Votre boîte de réception dévore votre journée? Réglez ça. ✦\n\nMailMind — Extension IA pour Gmail\nmailmind.yongcha.app\n\n✅ Brouillons de réponse instantanés en 14 langues\n✅ Secteur & ton reconnus automatiquement\n✅ Comparez 3 réponses IA → choisissez la meilleure\n✅ Résumez les fils en secondes\n✅ Extrayez délais & tâches automatiquement\n✅ Pro 300 utilisations/mois\n\n#MailMind #ProductivitéEmail #AssistantIA #ExtensionGmail #AutomatisationEmail #InboxZero",
+            "hashtags": ["#MailMind","#ProductivitéEmail","#AssistantIA","#ExtensionGmail","#AutomatisationEmail","#ExtensionChrome","#InboxZero","#IAEmail"]
+          }
+        }
+      }
+    },
+    "IT": {
+      "name": "Italiano",
+      "ttsVoice": "it-IT-Neural2-B",
+      "ttsLang": "it-IT",
+      "variants": {
+        "A": {
+          "hook": "Difficoltà a rispondere alle email in lingue straniere?",
+          "tagline": "Rispondi alle email in 14 lingue con l'IA",
+          "sub": "MailMind — Assistente IA per Gmail",
+          "cta": "Inizia gratis",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Difficoltà a rispondere alle email in lingue straniere?",
+            "MailMind è il tuo assistente IA integrato direttamente in Gmail.",
+            "Un clic e ottieni una risposta culturalmente perfetta in 14 lingue.",
+            "Inglese, italiano, giapponese, cinese, coreano e molto altro.",
+            "Rileva automaticamente il tuo settore. Tre versioni da confrontare.",
+            "Inizia gratis su mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Rispondi alle email in 14 lingue con l'IA — MailMind estensione Chrome per Gmail",
+            "description": "MailMind è il tuo assistente IA integrato direttamente in Gmail.\nCapisce le email in qualsiasi lingua e genera risposte culturalmente perfette in 14 lingue.\n\n✦ Funzionalità principali\n• 14 lingue: IT / EN / KR / JP / ZH / ES / DE / PT / AR / FR e altro\n• Risposte a livello madrelingua — espressione originale, non traduzione\n• Rilevamento automatico del settore — terminologia IT, finanziaria e legale\n• Regolazione del tono — professionale, dettagliato, amichevole, conciso\n• Confronta 3 versioni + risposta intelligente\n• Riepilogo email — aggiornati su lunghe conversazioni in secondi\n• Estrazione attività — rileva scadenze e cose da fare\n\n🔰 Piano Pro: 300 utilizzi/mese\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #EstensioneGmail #AutomazioneEmail #EmailMultilingue",
+            "tags": ["MailMind","risposta IA email","estensione Gmail","automazione email","email multilingue","estensione Chrome","produttività","assistente IA"]
+          },
+          "instagram": {
+            "caption": "Le email in inglese? Non più un problema ✦\n\nMailMind — Assistente IA per Gmail\nmailmind.yongcha.app\n\n✅ 1 clic → risposta perfetta in 14 lingue\n✅ Livello madrelingua (espressione originale)\n✅ Terminologia IT, finanziaria e legale automatica\n✅ Confronta 3 versioni → scegli la migliore\n✅ Riepilogo email + estrazione attività\n✅ Inserisci direttamente in Gmail\n✅ Pro 300 utilizzi/mese\n\n#MailMind #AIEmail #EstensioneGmail #AutomazioneEmail #EmailMultilingue #EstensioneChrome #Produttività",
+            "hashtags": ["#MailMind","#AIEmail","#EstensioneGmail","#AutomazioneEmail","#EmailMultilingue","#EstensioneChrome","#Produttività","#AssistenteIA","#GmailIA"]
+          }
+        },
+        "B": {
+          "hook": "Stai perdendo troppo tempo a rispondere alle email?",
+          "tagline": "L'IA scrive le tue email in 14 lingue",
+          "sub": "MailMind — Estensione IA per Gmail",
+          "cta": "Provalo gratis oggi",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Stai perdendo troppo tempo a rispondere alle email?",
+            "MailMind redige la risposta perfetta per te, all'istante.",
+            "Funziona in 14 lingue. Rileva il tuo settore. Si adatta al tuo tono.",
+            "Confronta tre versioni generate dall'IA e inseriscile con un clic.",
+            "Riassumi lunghe conversazioni. Estrai attività. Domina la tua posta in arrivo.",
+            "Provalo gratis su mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "L'IA scrive le tue email in 14 lingue — MailMind per Gmail",
+            "description": "MailMind redige risposte email perfette per te — in una delle 14 lingue, all'istante.\n\n✦ Funzionalità principali\n• Generazione istantanea di risposte in 14 lingue\n• Riconoscimento del settore: IT, finanza, legale\n• Controllo del tono: professionale, amichevole, conciso\n• 3 versioni da confrontare\n• Riepilogo email & estrazione attività\n• Inserimento con un clic in Gmail\n\n🔰 Piano Pro: 300 utilizzi/mese\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","produttività email","IA email","Gmail IA","estensione Chrome","automazione email","assistente IA","gestione posta in arrivo"]
+          },
+          "instagram": {
+            "caption": "La tua posta in arrivo sta divorando la tua giornata? Risolvilo. ✦\n\nMailMind — Estensione IA per Gmail\nmailmind.yongcha.app\n\n✅ Bozze di risposta istantanee in 14 lingue\n✅ Settore & tono riconosciuti automaticamente\n✅ Confronta 3 risposte IA → scegli la migliore\n✅ Riassumi conversazioni in secondi\n✅ Estrai scadenze & attività automaticamente\n✅ Pro 300 utilizzi/mese\n\n#MailMind #ProduttivitàEmail #AssistenteIA #EstensioneGmail #AutomazioneEmail #InboxZero",
+            "hashtags": ["#MailMind","#ProduttivitàEmail","#AssistenteIA","#EstensioneGmail","#AutomazioneEmail","#EstensioneChrome","#InboxZero","#IAEmail"]
+          }
+        }
+      }
+    },
+    "VN": {
+      "name": "Tiếng Việt",
+      "ttsVoice": "vi-VN-Neural2-A",
+      "ttsLang": "vi-VN",
+      "variants": {
+        "A": {
+          "hook": "Gặp khó khăn khi trả lời email ngoại ngữ?",
+          "tagline": "Trả lời email bằng 14 ngôn ngữ với AI",
+          "sub": "MailMind — Trợ lý AI cho Gmail",
+          "cta": "Bắt đầu miễn phí",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Gặp khó khăn khi trả lời email ngoại ngữ?",
+            "MailMind là trợ lý AI tích hợp trực tiếp vào Gmail của bạn.",
+            "Một cú nhấp chuột và bạn có câu trả lời hoàn hảo về mặt văn hóa bằng 14 ngôn ngữ.",
+            "Tiếng Anh, Việt Nam, Nhật, Trung, Hàn và nhiều hơn nữa.",
+            "Tự động phát hiện ngành của bạn. Ba phiên bản để so sánh.",
+            "Bắt đầu miễn phí tại mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Trả lời email bằng 14 ngôn ngữ với AI — MailMind tiện ích Chrome cho Gmail",
+            "description": "MailMind là trợ lý AI tích hợp trực tiếp vào Gmail.\nHiểu email bằng bất kỳ ngôn ngữ nào và tạo câu trả lời hoàn hảo về mặt văn hóa bằng 14 ngôn ngữ.\n\n✦ Tính năng chính\n• 14 ngôn ngữ: VN / EN / KR / JP / ZH / ES / DE / PT / IT / FR và hơn thế nữa\n• Câu trả lời ở cấp độ bản ngữ — biểu đạt gốc, không phải dịch thuật\n• Tự động phát hiện ngành — thuật ngữ IT, tài chính và pháp lý\n• Điều chỉnh giọng điệu — chuyên nghiệp, chi tiết, thân thiện, súc tích\n• So sánh 3 phiên bản + câu trả lời thông minh\n• Tóm tắt email — bắt kịp các chuỗi dài trong vài giây\n• Trích xuất nhiệm vụ — phát hiện thời hạn và việc cần làm\n\n🔰 Gói Pro: 300 lần sử dụng/tháng\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #TiệnÍchGmail #TựĐộngHóaEmail #EmailĐaНgônNgữ",
+            "tags": ["MailMind","trả lời AI email","tiện ích Gmail","tự động hóa email","email đa ngôn ngữ","tiện ích Chrome","năng suất","trợ lý AI"]
+          },
+          "instagram": {
+            "caption": "Email tiếng Anh? Không còn là vấn đề nữa ✦\n\nMailMind — Trợ lý AI cho Gmail\nmailmind.yongcha.app\n\n✅ 1 nhấp → câu trả lời hoàn hảo bằng 14 ngôn ngữ\n✅ Cấp độ bản ngữ (biểu đạt gốc, không phải dịch)\n✅ Thuật ngữ IT, tài chính & pháp lý tự động\n✅ So sánh 3 phiên bản → chọn tốt nhất\n✅ Tóm tắt email + trích xuất nhiệm vụ\n✅ Chèn trực tiếp vào Gmail\n✅ Pro 300 lần sử dụng/tháng\n\n#MailMind #AIEmail #TiệnÍchGmail #TựĐộngHóaEmail #EmailĐaНgônNgữ #TiệnÍchChrome #NăngSuất",
+            "hashtags": ["#MailMind","#AIEmail","#TiệnÍchGmail","#TựĐộngHóaEmail","#EmailĐaНgônNgữ","#TiệnÍchChrome","#NăngSuất","#TrợLýAI","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "Bạn đang lãng phí quá nhiều thời gian để trả lời email?",
+          "tagline": "AI viết email của bạn bằng 14 ngôn ngữ",
+          "sub": "MailMind — Tiện ích AI cho Gmail",
+          "cta": "Dùng thử miễn phí hôm nay",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Bạn đang lãng phí quá nhiều thời gian để trả lời email?",
+            "MailMind soạn thảo câu trả lời hoàn hảo cho bạn ngay lập tức.",
+            "Hoạt động bằng 14 ngôn ngữ. Phát hiện ngành của bạn. Phù hợp với giọng điệu của bạn.",
+            "So sánh ba phiên bản do AI tạo ra và chèn bằng một cú nhấp chuột.",
+            "Tóm tắt các chuỗi dài. Trích xuất nhiệm vụ. Làm chủ hộp thư đến của bạn.",
+            "Dùng thử miễn phí tại mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "AI viết email của bạn bằng 14 ngôn ngữ — MailMind cho Gmail",
+            "description": "MailMind soạn thảo câu trả lời email hoàn hảo cho bạn — bằng một trong 14 ngôn ngữ, ngay lập tức.\n\n✦ Tính năng chính\n• Tạo câu trả lời tức thì bằng 14 ngôn ngữ\n• Nhận dạng ngành: IT, tài chính, pháp lý\n• Kiểm soát giọng điệu: chuyên nghiệp, thân thiện, súc tích\n• 3 phiên bản để so sánh\n• Tóm tắt email & trích xuất nhiệm vụ\n• Chèn một cú nhấp vào Gmail\n\n🔰 Gói Pro: 300 lần sử dụng/tháng\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","năng suất email","AI email","Gmail AI","tiện ích Chrome","tự động hóa email","trợ lý AI","quản lý hộp thư"]
+          },
+          "instagram": {
+            "caption": "Hộp thư đến đang nuốt chửng ngày của bạn? Giải quyết ngay. ✦\n\nMailMind — Tiện ích AI cho Gmail\nmailmind.yongcha.app\n\n✅ Bản nháp trả lời tức thì bằng 14 ngôn ngữ\n✅ Ngành & giọng điệu được nhận dạng tự động\n✅ So sánh 3 câu trả lời AI → chọn tốt nhất\n✅ Tóm tắt chuỗi trong vài giây\n✅ Trích xuất thời hạn & nhiệm vụ tự động\n✅ Pro 300 lần sử dụng/tháng\n\n#MailMind #NăngSuấtEmail #TrợLýAI #TiệnÍchGmail #TựĐộngHóaEmail #InboxZero",
+            "hashtags": ["#MailMind","#NăngSuấtEmail","#TrợLýAI","#TiệnÍchGmail","#TựĐộngHóaEmail","#TiệnÍchChrome","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "NL": {
+      "name": "Nederlands",
+      "ttsVoice": "nl-NL-Neural2-B",
+      "ttsLang": "nl-NL",
+      "variants": {
+        "A": {
+          "hook": "Moeite met het beantwoorden van e-mails in vreemde talen?",
+          "tagline": "Beantwoord e-mails in 14 talen met AI",
+          "sub": "MailMind — AI-assistent voor Gmail",
+          "cta": "Start gratis",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Moeite met het beantwoorden van e-mails in vreemde talen?",
+            "MailMind is uw AI-assistent, direct geïntegreerd in Gmail.",
+            "Één klik en u krijgt een cultureel perfect antwoord in 14 talen.",
+            "Engels, Nederlands, Japans, Chinees, Koreaans en meer.",
+            "Detecteert automatisch uw sector. Drie versies om te vergelijken.",
+            "Start gratis op mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Beantwoord e-mails in 14 talen met AI — MailMind Gmail Chrome-extensie",
+            "description": "MailMind is uw AI-assistent, direct geïntegreerd in Gmail.\nBegrapt e-mails in elke taal en genereert cultureel perfecte antwoorden in 14 talen.\n\n✦ Hoofdfuncties\n• 14 talen: NL / EN / KR / JP / ZH / ES / DE / PT / IT / FR en meer\n• Antwoorden op moedertaalniveau — originele expressie, geen vertaling\n• Automatische sectordetectie — IT-, financiële en juridische terminologie\n• Toonaanpassing — professioneel, gedetailleerd, vriendelijk, beknopt\n• Vergelijk 3 versies + slim antwoord\n• E-mailsamenvatting — bijpraten over lange threads in seconden\n• Taakextractie — deadlines en to-dos detecteren\n\n🔰 Pro-abonnement: 300 gebruiksgevallen/maand\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #GmailExtensie #EmailAutomatisering #MeertaligEmail",
+            "tags": ["MailMind","AI e-mail antwoord","Gmail extensie","e-mail automatisering","meertalig e-mail","Chrome extensie","productiviteit","AI assistent"]
+          },
+          "instagram": {
+            "caption": "Engelse e-mails? Geen probleem meer ✦\n\nMailMind — AI-assistent voor Gmail\nmailmind.yongcha.app\n\n✅ 1 klik → perfect antwoord in 14 talen\n✅ Moedertaalniveau (originele expressie)\n✅ IT-, financiële & juridische terminologie automatisch\n✅ Vergelijk 3 versies → kies de beste\n✅ E-mailsamenvatting + taakextractie\n✅ Direct in Gmail invoegen\n✅ Pro 300 gebruiksgevallen/maand\n\n#MailMind #AIEmail #GmailExtensie #EmailAutomatisering #MeertaligEmail #ChromeExtensie #Productiviteit",
+            "hashtags": ["#MailMind","#AIEmail","#GmailExtensie","#EmailAutomatisering","#MeertaligEmail","#ChromeExtensie","#Productiviteit","#AIAssistent","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "Verspilt u te veel tijd aan het beantwoorden van e-mails?",
+          "tagline": "AI schrijft uw e-mails in 14 talen",
+          "sub": "MailMind — AI-extensie voor Gmail",
+          "cta": "Probeer vandaag gratis",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Verspilt u te veel tijd aan het beantwoorden van e-mails?",
+            "MailMind stelt het perfecte antwoord onmiddellijk voor u op.",
+            "Werkt in 14 talen. Detecteert uw sector. Past zich aan uw toon aan.",
+            "Vergelijk drie door AI gegenereerde versies en voeg ze in met één klik.",
+            "Vat lange threads samen. Extraheer taken. Beheers uw inbox.",
+            "Probeer gratis op mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "AI schrijft uw e-mails in 14 talen — MailMind voor Gmail",
+            "description": "MailMind stelt perfecte e-mailantwoorden voor u op — in een van 14 talen, onmiddellijk.\n\n✦ Hoofdfuncties\n• Onmiddellijke antwoordgeneratie in 14 talen\n• Sectorherkenning: IT, financiën, juridisch\n• Tooncontrole: professioneel, vriendelijk, beknopt\n• 3 versies om te vergelijken\n• E-mailsamenvatting & taakextractie\n• Met één klik in Gmail invoegen\n\n🔰 Pro-abonnement: 300 gebruiksgevallen/maand\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","e-mail productiviteit","AI e-mail","Gmail AI","Chrome extensie","e-mail automatisering","AI assistent","inboxbeheer"]
+          },
+          "instagram": {
+            "caption": "Uw inbox verslindt uw dag? Los het op. ✦\n\nMailMind — AI-extensie voor Gmail\nmailmind.yongcha.app\n\n✅ Onmiddellijke antwoordconcepten in 14 talen\n✅ Sector & toon automatisch herkend\n✅ Vergelijk 3 AI-antwoorden → kies de beste\n✅ Vat threads samen in seconden\n✅ Extraheer deadlines & taken automatisch\n✅ Pro 300 gebruiksgevallen/maand\n\n#MailMind #EmailProductiviteit #AIAssistent #GmailExtensie #EmailAutomatisering #InboxZero",
+            "hashtags": ["#MailMind","#EmailProductiviteit","#AIAssistent","#GmailExtensie","#EmailAutomatisering","#ChromeExtensie","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "PL": {
+      "name": "Polski",
+      "ttsVoice": "pl-PL-Neural2-B",
+      "ttsLang": "pl-PL",
+      "variants": {
+        "A": {
+          "hook": "Masz problem z odpowiadaniem na e-maile w obcych językach?",
+          "tagline": "Odpowiadaj na e-maile w 14 językach z AI",
+          "sub": "MailMind — Asystent AI dla Gmail",
+          "cta": "Zacznij za darmo",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Masz problem z odpowiadaniem na e-maile w obcych językach?",
+            "MailMind to Twój asystent AI zintegrowany bezpośrednio z Gmail.",
+            "Jedno kliknięcie i otrzymujesz kulturowo idealną odpowiedź w 14 językach.",
+            "Angielski, polski, japoński, chiński, koreański i wiele więcej.",
+            "Automatycznie wykrywa Twój sektor. Trzy wersje do porównania.",
+            "Zacznij za darmo na mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "Odpowiadaj na e-maile w 14 językach z AI — MailMind rozszerzenie Chrome dla Gmail",
+            "description": "MailMind to Twój asystent AI zintegrowany bezpośrednio z Gmail.\nRozumie e-maile w każdym języku i generuje kulturowo idealne odpowiedzi w 14 językach.\n\n✦ Główne funkcje\n• 14 języków: PL / EN / KR / JP / ZH / ES / DE / PT / IT / FR i więcej\n• Odpowiedzi na poziomie native speakera — oryginalne wyrażenie, nie tłumaczenie\n• Automatyczne wykrywanie branży — terminologia IT, finansowa i prawna\n• Regulacja tonu — profesjonalny, szczegółowy, przyjazny, zwięzły\n• Porównaj 3 wersje + inteligentna odpowiedź\n• Podsumowanie e-maila — nadrabiaj długie wątki w sekundy\n• Ekstrakcja zadań — wykrywaj terminy i zadania\n\n🔰 Plan Pro: 300 użyć/miesiąc\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #RozszerzenieGmail #AutomatyzacjaEmail #WielojezykowyEmail",
+            "tags": ["MailMind","odpowiedź AI email","rozszerzenie Gmail","automatyzacja email","wielojęzyczny email","rozszerzenie Chrome","produktywność","asystent AI"]
+          },
+          "instagram": {
+            "caption": "E-maile po angielsku? To już nie problem ✦\n\nMailMind — Asystent AI dla Gmail\nmailmind.yongcha.app\n\n✅ 1 klik → idealna odpowiedź w 14 językach\n✅ Poziom native speakera (oryginalne wyrażenie)\n✅ Terminologia IT, finansowa i prawna automatycznie\n✅ Porównaj 3 wersje → wybierz najlepszą\n✅ Podsumowanie e-maila + ekstrakcja zadań\n✅ Wstaw bezpośrednio do Gmail\n✅ Pro 300 użyć/miesiąc\n\n#MailMind #AIEmail #RozszerzenieGmail #AutomatyzacjaEmail #WielojezykowyEmail #RozszerzenieChrome #Produktywnosc",
+            "hashtags": ["#MailMind","#AIEmail","#RozszerzenieGmail","#AutomatyzacjaEmail","#WielojezykowyEmail","#RozszerzenieChrome","#Produktywnosc","#AsystentAI","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "Tracisz zbyt dużo czasu na odpowiadanie na e-maile?",
+          "tagline": "AI pisze Twoje e-maile w 14 językach",
+          "sub": "MailMind — Rozszerzenie AI dla Gmail",
+          "cta": "Wypróbuj za darmo dziś",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Tracisz zbyt dużo czasu na odpowiadanie na e-maile?",
+            "MailMind natychmiast tworzy dla Ciebie idealną odpowiedź.",
+            "Działa w 14 językach. Wykrywa Twoją branżę. Dopasowuje się do Twojego tonu.",
+            "Porównaj trzy wersje wygenerowane przez AI i wstaw je jednym kliknięciem.",
+            "Podsumuj długie wątki. Wyodrębnij zadania. Opanuj swoją skrzynkę odbiorczą.",
+            "Wypróbuj za darmo na mailmind.yongcha.app"
+          ],
+          "youtube": {
+            "title": "AI pisze Twoje e-maile w 14 językach — MailMind dla Gmail",
+            "description": "MailMind natychmiast tworzy idealne odpowiedzi e-mail dla Ciebie — w jednym z 14 języków.\n\n✦ Główne funkcje\n• Natychmiastowe generowanie odpowiedzi w 14 językach\n• Rozpoznawanie branży: IT, finanse, prawo\n• Kontrola tonu: profesjonalny, przyjazny, zwięzły\n• 3 wersje do porównania\n• Podsumowanie e-maila & ekstrakcja zadań\n• Wstawianie jednym kliknięciem do Gmail\n\n🔰 Plan Pro: 300 użyć/miesiąc\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","produktywność email","AI email","Gmail AI","rozszerzenie Chrome","automatyzacja email","asystent AI","zarządzanie skrzynką"]
+          },
+          "instagram": {
+            "caption": "Twoja skrzynka pożera Twój dzień? Rozwiąż to. ✦\n\nMailMind — Rozszerzenie AI dla Gmail\nmailmind.yongcha.app\n\n✅ Natychmiastowe szkice odpowiedzi w 14 językach\n✅ Branża & ton rozpoznawane automatycznie\n✅ Porównaj 3 odpowiedzi AI → wybierz najlepszą\n✅ Podsumuj wątki w sekundy\n✅ Automatycznie wyodrębnij terminy & zadania\n✅ Pro 300 użyć/miesiąc\n\n#MailMind #ProduktywnoscEmail #AsystentAI #RozszerzenieGmail #AutomatyzacjaEmail #InboxZero",
+            "hashtags": ["#MailMind","#ProduktywnoscEmail","#AsystentAI","#RozszerzenieGmail","#AutomatyzacjaEmail","#RozszerzenieChrome","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "TR": {
+      "name": "Türkçe",
+      "ttsVoice": "tr-TR-Neural2-B",
+      "ttsLang": "tr-TR",
+      "variants": {
+        "A": {
+          "hook": "Yabancı dildeki e-postalara nasıl yanıt vereceğinizi biliyor musunuz?",
+          "tagline": "14 Dilde E-postalara AI ile Yanıt Verin",
+          "sub": "MailMind — Gmail için AI Asistanı",
+          "cta": "Ücretsiz başlayın",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "Yabancı dildeki e-postalara nasıl yanıt vereceğinizi biliyor musunuz?",
+            "MailMind, doğrudan Gmail'inize entegre edilmiş AI asistanınızdır.",
+            "Tek tıkla 14 dilde kültürel açıdan mükemmel bir yanıt alırsınız.",
+            "İngilizce, Türkçe, Japonca, Çince, Korece ve daha fazlası.",
+            "Sektörünüzü otomatik olarak algılar. Karşılaştırma için üç versiyon.",
+            "mailmind.yongcha.app adresinde ücretsiz başlayın"
+          ],
+          "youtube": {
+            "title": "14 Dilde AI ile E-postalara Yanıt Verin — MailMind Gmail Chrome Uzantısı",
+            "description": "MailMind, doğrudan Gmail'inize entegre edilmiş AI asistanınızdır.\nHerhangi bir dilde e-postaları anlar ve 14 dilde kültürel bağlama uygun mükemmel yanıtlar oluşturur.\n\n✦ Ana özellikler\n• 14 dil: TR / EN / KR / JP / CN / ES / DE / PT / AR / IT / FR ve daha fazlası\n• Anadil düzeyinde yanıtlar — çeviri değil, özgün ifade\n• Otomatik sektör algılama — BT, finans ve hukuk terminolojisi uygular\n• Ton ayarı — profesyonel, ayrıntılı, arkadaşça, öz\n• 3 versiyonu karşılaştırın + akıllı yanıt\n• E-posta özeti — uzun e-posta dizilerini saniyeler içinde yakalayın\n• Görev çıkarma — son tarihleri ve yapılacakları tespit edin\n\n🔰 Pro Plan: 300 kullanım/ay\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #GmailUzantısı #EmailOtomasyonu #ÇokDilliEmail",
+            "tags": ["MailMind","AI e-posta yanıtı","Gmail uzantısı","e-posta otomasyonu","çok dilli e-posta","Chrome uzantısı","verimlilik","AI asistanı"]
+          },
+          "instagram": {
+            "caption": "İngilizce e-posta? Artık çok kolay ✦\n\nMailMind — Gmail için AI Asistanı\nmailmind.yongcha.app\n\n✅ 1 tık → 14 dilde mükemmel yanıt\n✅ Anadil düzeyi (çeviri değil, özgün ifade)\n✅ BT, finans ve hukuk terminolojisi otomatik\n✅ 3 versiyonu karşılaştırın → en iyisini seçin\n✅ E-posta özeti + görev çıkarma\n✅ Doğrudan Gmail'e ekleyin\n✅ Pro 300 kullanım/ay\n\n#MailMind #AIEmail #GmailUzantısı #EmailOtomasyonu #ÇokDilliEmail #ChromeUzantısı #OfisVerimliliği",
+            "hashtags": ["#MailMind","#AIEmail","#GmailUzantısı","#EmailOtomasyonu","#ÇokDilliEmail","#ChromeUzantısı","#OfisVerimliliği","#AIAsistanı","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "E-posta yanıtlamak için çok fazla zaman mı harcıyorsunuz?",
+          "tagline": "AI, E-postalarınızı 14 Dilde Sizin İçin Yazar",
+          "sub": "MailMind — Gmail için AI Uzantısı",
+          "cta": "Bugün ücretsiz deneyin",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "E-posta yanıtlamak için çok fazla zaman mı harcıyorsunuz?",
+            "MailMind mükemmel yanıtı sizin için anında hazırlar.",
+            "14 dilde çalışır. Sektörünüzü algılar. Tonunuza uyum sağlar.",
+            "AI tarafından oluşturulan üç versiyonu karşılaştırın ve tek tıkla ekleyin.",
+            "Uzun e-posta dizilerini özetleyin. Görevleri çıkarın. Gelen kutunuza hakim olun.",
+            "mailmind.yongcha.app adresinde ücretsiz deneyin"
+          ],
+          "youtube": {
+            "title": "AI E-postalarınızı 14 Dilde Sizin İçin Yazar — MailMind for Gmail",
+            "description": "MailMind sizin için mükemmel e-posta yanıtları oluşturur — 14 dilden birinde, anında.\n\n✦ Ana özellikler\n• 14 dilde anlık yanıt oluşturma\n• Sektör tanıma: BT, finans, hukuk\n• Ton kontrolü: profesyonel, arkadaşça, öz\n• Karşılaştırma için 3 versiyon\n• E-posta özeti & görev çıkarma\n• Gmail'e tek tıkla ekleme\n\n🔰 Pro Plan: 300 kullanım/ay\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","e-posta verimliliği","AI e-posta","Gmail AI","Chrome uzantısı","e-posta otomasyonu","AI asistanı","gelen kutusu yönetimi"]
+          },
+          "instagram": {
+            "caption": "Gelen kutunuz gününüzü bitiriyor mu? Çözün. ✦\n\nMailMind — Gmail için AI Uzantısı\nmailmind.yongcha.app\n\n✅ 14 dilde anlık yanıt taslakları\n✅ Sektör & ton otomatik algılanır\n✅ 3 AI yanıtını karşılaştırın → en iyisini seçin\n✅ Dizileri saniyeler içinde özetleyin\n✅ Son tarihleri & görevleri otomatik çıkarın\n✅ Pro 300 kullanım/ay\n\n#MailMind #EmailVerimliliği #AIAsistanı #GmailUzantısı #EmailOtomasyonu #InboxZero",
+            "hashtags": ["#MailMind","#EmailVerimliliği","#AIAsistanı","#GmailUzantısı","#EmailOtomasyonu","#ChromeUzantısı","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    },
+    "HI": {
+      "name": "हिंदी",
+      "ttsVoice": "hi-IN-Neural2-B",
+      "ttsLang": "hi-IN",
+      "variants": {
+        "A": {
+          "hook": "विदेशी भाषाओं में ईमेल का जवाब देने में परेशानी?",
+          "tagline": "AI से 14 भाषाओं में ईमेल का जवाब दें",
+          "sub": "MailMind — Gmail AI असिस्टेंट",
+          "cta": "मुफ्त में शुरू करें",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "विदेशी भाषाओं में ईमेल का जवाब देने में परेशानी?",
+            "MailMind आपका AI असिस्टेंट है जो सीधे Gmail में इंटीग्रेटेड है।",
+            "एक क्लिक में 14 भाषाओं में सांस्कृतिक रूप से परफेक्ट जवाब पाएं।",
+            "अंग्रेजी, हिंदी, जापानी, चीनी, कोरियाई और बहुत कुछ।",
+            "आपकी इंडस्ट्री को ऑटोमेटिकली डिटेक्ट करता है। तुलना के लिए 3 वर्जन।",
+            "mailmind.yongcha.app पर मुफ्त में शुरू करें"
+          ],
+          "youtube": {
+            "title": "AI से 14 भाषाओं में ईमेल का जवाब दें — MailMind Gmail Chrome एक्सटेंशन",
+            "description": "MailMind आपका AI असिस्टेंट है जो सीधे Gmail में इंटीग्रेटेड है।\nकिसी भी भाषा में ईमेल समझता है और 14 भाषाओं में सांस्कृतिक रूप से परफेक्ट जवाब बनाता है।\n\n✦ मुख्य विशेषताएं\n• 14 भाषाएं: HI / EN / KR / JP / ZH / ES / DE / PT / IT / FR और अधिक\n• नेटिव-लेवल जवाब — अनुवाद नहीं, मौलिक अभिव्यक्ति\n• ऑटो इंडस्ट्री डिटेक्शन — IT, फाइनेंस और लीगल टर्मिनोलॉजी\n• टोन एडजस्टमेंट — प्रोफेशनल, डिटेल्ड, फ्रेंडली, कॉन्साइज\n• 3 वर्जन कॉम्पेयर करें + स्मार्ट रिप्लाई\n• ईमेल समरी — लंबी ईमेल चेन को सेकंड में समझें\n• टास्क एक्सट्रैक्शन — डेडलाइन और टू-डू डिटेक्ट करें\n\n🔰 Pro Plan: 300 uses/month\n🌐 mailmind.yongcha.app\n\n#MailMind #AIEmail #GmailExtension #EmailAutomation #MultilingualEmail",
+            "tags": ["MailMind","AI ईमेल","Gmail एक्सटेंशन","ईमेल ऑटोमेशन","बहुभाषी ईमेल","Chrome एक्सटेंशन","प्रोडक्टिविटी","AI असिस्टेंट"]
+          },
+          "instagram": {
+            "caption": "अंग्रेजी ईमेल? अब कोई दिक्कत नहीं ✦\n\nMailMind — Gmail AI असिस्टेंट\nmailmind.yongcha.app\n\n✅ 1 क्लिक → 14 भाषाओं में परफेक्ट जवाब\n✅ नेटिव-लेवल (अनुवाद नहीं, मौलिक अभिव्यक्ति)\n✅ IT, फाइनेंस & लीगल टर्मिनोलॉजी ऑटो\n✅ 3 वर्जन कॉम्पेयर करें → बेस्ट चुनें\n✅ ईमेल समरी + टास्क एक्सट्रैक्शन\n✅ सीधे Gmail में इन्सर्ट करें\n✅ Pro 300 uses/month\n\n#MailMind #AIEmail #GmailExtension #EmailAutomation #MultilingualEmail #ChromeExtension #Productivity",
+            "hashtags": ["#MailMind","#AIEmail","#GmailExtension","#EmailAutomation","#MultilingualEmail","#ChromeExtension","#Productivity","#AIAssistant","#GmailAI"]
+          }
+        },
+        "B": {
+          "hook": "ईमेल जवाब देने में बहुत समय बर्बाद हो रहा है?",
+          "tagline": "AI आपके ईमेल 14 भाषाओं में लिखता है",
+          "sub": "MailMind — Gmail AI एक्सटेंशन",
+          "cta": "आज मुफ्त में ट्राई करें",
+          "ctaSub": "mailmind.yongcha.app",
+          "narration": [
+            "ईमेल जवाब देने में बहुत समय बर्बाद हो रहा है?",
+            "MailMind आपके लिए परफेक्ट जवाब तुरंत तैयार करता है।",
+            "14 भाषाओं में काम करता है। इंडस्ट्री डिटेक्ट करता है। आपके टोन से मैच करता है।",
+            "AI से बने तीन वर्जन कॉम्पेयर करें और एक क्लिक में इन्सर्ट करें।",
+            "लंबी ईमेल चेन समराइज करें। टास्क एक्सट्रैक्ट करें। इनबॉक्स मैनेज करें।",
+            "mailmind.yongcha.app पर मुफ्त में ट्राई करें"
+          ],
+          "youtube": {
+            "title": "AI आपके ईमेल 14 भाषाओं में लिखता है — MailMind for Gmail",
+            "description": "MailMind आपके लिए परफेक्ट ईमेल जवाब तुरंत बनाता है — 14 भाषाओं में से किसी में भी।\n\n✦ मुख्य विशेषताएं\n• 14 भाषाओं में तुरंत जवाब जनरेशन\n• इंडस्ट्री रिकग्निशन: IT, फाइनेंस, लीगल\n• टोन कंट्रोल: प्रोफेशनल, फ्रेंडली, कॉन्साइज\n• कॉम्पेयर करने के लिए 3 वर्जन\n• ईमेल समरी & टास्क एक्सट्रैक्शन\n• Gmail में वन-क्लिक इन्सर्शन\n\n🔰 Pro Plan: 300 uses/month\n🌐 mailmind.yongcha.app",
+            "tags": ["MailMind","ईमेल प्रोडक्टिविटी","AI ईमेल","Gmail AI","Chrome एक्सटेंशन","ईमेल ऑटोमेशन","AI असिस्टेंट","इनबॉक्स मैनेजमेंट"]
+          },
+          "instagram": {
+            "caption": "आपका इनबॉक्स आपका दिन खा रहा है? इसे ठीक करें। ✦\n\nMailMind — Gmail AI एक्सटेंशन\nmailmind.yongcha.app\n\n✅ 14 भाषाओं में तुरंत जवाब ड्राफ्ट\n✅ इंडस्ट्री & टोन ऑटो-डिटेक्टेड\n✅ 3 AI जवाब कॉम्पेयर करें → बेस्ट चुनें\n✅ चेन को सेकंड में समराइज करें\n✅ डेडलाइन & टास्क ऑटो-एक्सट्रैक्ट\n✅ Pro 300 uses/month\n\n#MailMind #EmailProductivity #AIAssistant #GmailExtension #EmailAutomation #InboxZero",
+            "hashtags": ["#MailMind","#EmailProductivity","#AIAssistant","#GmailExtension","#EmailAutomation","#ChromeExtension","#InboxZero","#AIEmail"]
+          }
+        }
+      }
+    }
+  }
+}

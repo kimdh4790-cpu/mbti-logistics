@@ -45,16 +45,50 @@ const ROOT = path.join(__dirname, '../..');
   }
 })();
 const args = process.argv.slice(2);
-const productArg = args.indexOf('--product');
-const PRODUCT = productArg !== -1 ? args[productArg + 1] : 'filo';
+const productArg  = args.indexOf('--product');
+const langArg     = args.indexOf('--lang');
+const variantArg  = args.indexOf('--variant');
+const PRODUCT  = productArg  !== -1 ? args[productArg  + 1] : 'filo';
+const MM_LANG    = (langArg    !== -1 ? args[langArg    + 1] : process.env.MAILMIND_LANG    || 'EN').toUpperCase();
+const MM_VARIANT = (variantArg !== -1 ? args[variantArg + 1] : process.env.MAILMIND_VARIANT || 'A').toUpperCase();
 
-const scriptFile = path.join(ROOT, `scripts/content/${PRODUCT}-narration.json`);
-if (!fs.existsSync(scriptFile)) {
-  console.error(`[TTS] 나레이션 스크립트 없음: ${scriptFile}`);
-  process.exit(1);
+// MailMind: mailmind-variants.json에서 언어·변형별 나레이션 로드
+let script;
+if (PRODUCT === 'mailmind') {
+  const variantsFile = path.join(ROOT, 'scripts/content/mailmind-variants.json');
+  if (!fs.existsSync(variantsFile)) {
+    console.error('[TTS] mailmind-variants.json 없음:', variantsFile);
+    process.exit(1);
+  }
+  const allVariants = require(variantsFile);
+  const langData = allVariants[MM_LANG];
+  if (!langData) {
+    console.error(`[TTS] mailmind-variants.json에 언어 없음: ${MM_LANG}`);
+    process.exit(1);
+  }
+  const variantData = langData.variants && langData.variants[MM_VARIANT];
+  if (!variantData) {
+    console.error(`[TTS] 변형 없음: ${MM_LANG}/${MM_VARIANT}`);
+    process.exit(1);
+  }
+  // narration 배열을 lines 형식으로 변환 (6줄, 각 10초 간격)
+  const narration = variantData.narration || [];
+  script = {
+    voice: langData.ttsVoice || 'en-US-Neural2-D',
+    ttsLang: langData.ttsLang || 'en-US',
+    speedRate: 1.0,
+    lines: narration.map((text, i) => ({ text, startSec: i * 10 })),
+  };
+  console.log(`[TTS] MailMind ${MM_LANG}/${MM_VARIANT} — ${narration.length}개 라인 로드`);
+} else {
+  const scriptFile = path.join(ROOT, `scripts/content/${PRODUCT}-narration.json`);
+  if (!fs.existsSync(scriptFile)) {
+    console.error(`[TTS] 나레이션 스크립트 없음: ${scriptFile}`);
+    process.exit(1);
+  }
+  script = require(scriptFile);
 }
-
-const script = require(scriptFile);
+const PRODUCT_KEY = PRODUCT === 'mailmind' ? `mailmind-${MM_LANG}-${MM_VARIANT}` : PRODUCT;
 const OUTPUT_DIR = path.join(ROOT, 'output');
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
@@ -110,9 +144,11 @@ async function googleTTS(text, outFile) {
   const apiKey = process.env.GOOGLE_TTS_API_KEY;
   if (!apiKey) throw new Error('GOOGLE_TTS_API_KEY 환경변수 필요');
 
+  const voiceName = script.voice || 'ko-KR-Neural2-C';
+  const langCode  = script.ttsLang || voiceName.slice(0, 5);
   const bodyStr = JSON.stringify({
     input: { text },
-    voice: { languageCode: 'ko-KR', name: script.voice || 'ko-KR-Neural2-C' },
+    voice: { languageCode: langCode, name: voiceName },
     audioConfig: { audioEncoding: 'MP3', speakingRate: script.speedRate || 1.0, pitch: 0, sampleRateHertz: 44100 },
   });
 
@@ -259,7 +295,7 @@ async function buildFinalAudio(lines, segments, outFile) {
   // silence 길이 = startSec[n] - (startSec[n-1] + duration[n-1])
   // duration은 실측 어렵기 때문에 단순히 순서대로 concat하고 각 라인 앞에 패딩 silence 삽입
 
-  const tmpDir = path.join(OUTPUT_DIR, `nar-tmp-${PRODUCT}`);
+  const tmpDir = path.join(OUTPUT_DIR, `nar-tmp-${PRODUCT_KEY}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
   // 각 세그먼트 앞 silence 생성 (startSec 기준)
@@ -326,12 +362,12 @@ async function main() {
   }
 
   const engine = useFishAudio ? 'Fish Audio (내 목소리)' : useGoogle ? 'Google TTS' : useClova ? 'CLOVA' : 'ElevenLabs';
-  console.log(`[TTS] ${PRODUCT} 나레이션 생성 중... (${engine})`);
+  console.log(`[TTS] ${PRODUCT_KEY} 나레이션 생성 중... (${engine})`);
 
   const segments = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const segFile = path.join(OUTPUT_DIR, `${PRODUCT}-nar-${i}.mp3`);
+    const segFile = path.join(OUTPUT_DIR, `${PRODUCT_KEY}-nar-${i}.mp3`);
     console.log(`  [${i + 1}/${lines.length}] "${line.text.slice(0, 30)}..."`);
 
     if (useFishAudio) {
@@ -349,7 +385,7 @@ async function main() {
     await new Promise(r => setTimeout(r, 300));
   }
 
-  const finalFile = path.join(OUTPUT_DIR, `${PRODUCT}-narration.mp3`);
+  const finalFile = path.join(OUTPUT_DIR, `${PRODUCT_KEY}-narration.mp3`);
   await buildFinalAudio(lines, segments, finalFile);
 
   // 구간별 mp3 삭제
