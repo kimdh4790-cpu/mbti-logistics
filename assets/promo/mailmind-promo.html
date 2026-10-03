@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1080, initial-scale=1">
@@ -92,21 +92,16 @@
     text-align: center; background: transparent;
   }
   .ui-btn-sec.active { border-color: var(--green); color: var(--green); }
-  .ui-summary {
-    background: #161B22; border: 1px solid var(--border); border-radius: 12px;
-    padding: 24px; font-size: 22px; color: var(--muted);
-    line-height: 1.6; margin-bottom: 20px;
-  }
   .ui-todo { background: rgba(251,191,36,0.1); border-left: 3px solid var(--gold);
     border-radius: 8px; padding: 16px 20px; font-size: 22px; color: var(--gold);
     display: flex; align-items: center; gap: 10px; }
 
-  /* ── Slide 3: 10 Languages ── */
+  /* ── Slide 3: Languages ── */
   #s3 { background: var(--dark); gap: 0; padding: 80px 60px; }
   #s3 .section-title { font-size: 48px; font-weight: 900; text-align: center; margin-bottom: 20px; }
   #s3 .section-title span { color: var(--pink); }
   #s3 .subtitle { font-size: 30px; color: var(--muted); text-align: center; margin-bottom: 64px; }
-  .lang-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; width: 940px; }
+  .lang-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 16px; width: 960px; }
   .lang-pill {
     background: var(--card); border: 1.5px solid var(--border);
     border-radius: 16px; padding: 28px 16px;
@@ -191,114 +186,103 @@
 <div class="slide active" id="s1">
   <div class="sparkle">✦</div>
   <div class="brand">MailMind</div>
-  <div class="tagline">Gmail AI 답장 어시스턴트</div>
-  <div class="hook">이메일 답장,<br><em>AI가 대신합니다</em></div>
-  <div class="sub">10개 국어 · 업종 자동 감지 · 3가지 비교</div>
+  <div class="tagline" id="t-tagline"></div>
+  <div class="hook" id="t-hook"></div>
+  <div class="sub" id="t-sub"></div>
 </div>
 
 <!-- Slide 2: UI Demo -->
 <div class="slide" id="s2">
-  <div style="font-size:40px;font-weight:800;margin-bottom:40px;">Gmail 안에서 바로 사용</div>
+  <div style="font-size:40px;font-weight:800;margin-bottom:40px;" id="t-s2-header"></div>
   <div class="ui-card">
     <div class="ui-header">
       <div class="ui-brand"><span class="star">✦</span> MailMind</div>
-      <div class="ui-pro">Pro · 이번 달 249/300회</div>
+      <div class="ui-pro" id="t-s2-pro"></div>
     </div>
-    <div class="ui-badge">💻 IT 업종 감지 · 기술 용어 적용</div>
+    <div class="ui-badge" id="t-s2-badge"></div>
     <div class="ui-tone-row">
-      <div class="ui-select">답장 톤: 업무적</div>
-      <div class="ui-select">내 언어: KR 한국어</div>
+      <div class="ui-select" id="t-s2-tone"></div>
+      <div class="ui-select" id="t-s2-lang-sel"></div>
     </div>
-    <div class="ui-btn-main">✦ AI 답장 생성</div>
+    <div class="ui-btn-main" id="t-s2-btn-main"></div>
     <div class="ui-btn-row">
-      <div class="ui-btn-sec">🔀 답변 3가지 비교</div>
-      <div class="ui-btn-sec active">● 스마트 답장</div>
+      <div class="ui-btn-sec" id="t-s2-compare"></div>
+      <div class="ui-btn-sec active" id="t-s2-smart"></div>
     </div>
     <div class="ui-btn-row">
-      <div class="ui-btn-sec" style="border-color:#30363D;">📋 스레드 요약</div>
+      <div class="ui-btn-sec" style="border-color:#30363D;" id="t-s2-summary"></div>
     </div>
-    <div class="ui-todo">📅 날짜/일정 언급됨 → 캘린더 확인 필요</div>
+    <div class="ui-todo" id="t-s2-todo"></div>
   </div>
 </div>
 
 <!-- Slide 3: Languages -->
 <div class="slide" id="s3">
-  <div class="section-title">한 번에 <span>10개 국어</span> 전환</div>
-  <div class="subtitle">영어 답장을 클릭 한 번으로 일본어·중국어로</div>
-  <div class="lang-grid">
-    <div class="lang-pill hi"><div class="flag">🇰🇷</div><div class="code">KR</div><div class="name">한국어</div></div>
-    <div class="lang-pill"><div class="flag">🇺🇸</div><div class="code">US</div><div class="name">English</div></div>
-    <div class="lang-pill hi"><div class="flag">🇯🇵</div><div class="code">JP</div><div class="name">日本語</div></div>
-    <div class="lang-pill"><div class="flag">🇨🇳</div><div class="code">CN</div><div class="name">中文</div></div>
-    <div class="lang-pill"><div class="flag">🇪🇸</div><div class="code">ES</div><div class="name">Español</div></div>
-    <div class="lang-pill"><div class="flag">🇩🇪</div><div class="code">DE</div><div class="name">Deutsch</div></div>
-    <div class="lang-pill"><div class="flag">🇧🇷</div><div class="code">BR</div><div class="name">Português</div></div>
-    <div class="lang-pill"><div class="flag">🇸🇦</div><div class="code">SA</div><div class="name">العربية</div></div>
-    <div class="lang-pill"><div class="flag">🇮🇹</div><div class="code">IT</div><div class="name">Italiano</div></div>
-    <div class="lang-pill"><div class="flag">🇫🇷</div><div class="code">FR</div><div class="name">Français</div></div>
-  </div>
+  <div class="section-title" id="t-s3-title"></div>
+  <div class="subtitle" id="t-s3-sub"></div>
+  <div class="lang-grid" id="lang-grid"></div>
 </div>
 
 <!-- Slide 4: 3 answers compare -->
 <div class="slide" id="s4">
-  <div class="section-title">답변 <span>3가지 비교</span></div>
-  <div class="section-sub">같은 이메일, 다른 톤 — 최적을 선택하세요</div>
+  <div class="section-title" id="t-s4-title"></div>
+  <div class="section-sub" id="t-s4-sub"></div>
   <div class="answer-cards">
     <div class="answer-card best">
       <div class="ac-header">
         <div class="ac-num">1</div>
-        <div class="ac-tone">업무적 · 간결</div>
-        <div class="ac-best">✦ 추천</div>
+        <div class="ac-tone" id="t-s4-tone1"></div>
+        <div class="ac-best" id="t-s4-rec"></div>
       </div>
-      <div class="ac-body"><strong>안녕하세요,</strong> 말씀하신 일정 확인하였습니다. 다음 주 화요일 오후 2시에 맞춰 진행하겠습니다...</div>
+      <div class="ac-body" id="t-s4-body1"></div>
     </div>
     <div class="answer-card">
       <div class="ac-header">
         <div class="ac-num">2</div>
-        <div class="ac-tone">상세하게 · 정중</div>
+        <div class="ac-tone" id="t-s4-tone2"></div>
       </div>
-      <div class="ac-body">전달 주신 내용 꼼꼼히 검토하였습니다. Headless Dashboard 완료 및 Stripe, SSO 통합 진행에 감사드리며...</div>
+      <div class="ac-body" id="t-s4-body2"></div>
     </div>
     <div class="answer-card">
       <div class="ac-header">
         <div class="ac-num">3</div>
-        <div class="ac-tone">친근하게 · 캐주얼</div>
+        <div class="ac-tone" id="t-s4-tone3"></div>
       </div>
-      <div class="ac-body">내용 잘 받았어요! 다음 주 일정 맞춰드릴게요. Q4 아이디어 관련해서 저도 몇 가지 생각해봤는데...</div>
+      <div class="ac-body" id="t-s4-body3"></div>
     </div>
   </div>
 </div>
 
 <!-- Slide 5: Smart Features -->
 <div class="slide" id="s5">
-  <div class="section-title"><span>스마트</span> 기능 모음</div>
+  <div class="section-title" id="t-s5-title"></div>
   <div class="feature-list">
     <div class="feature-item">
       <div class="feature-icon">🏭</div>
       <div class="feature-text">
-        <div class="ft-title">업종 자동 감지</div>
-        <div class="ft-desc">IT·금융·법무 업종 자동 인식 → 전문 용어 자동 적용</div>
+        <div class="ft-title" id="t-f1-title"></div>
+        <div class="ft-desc" id="t-f1-desc"></div>
       </div>
     </div>
     <div class="feature-item">
       <div class="feature-icon">📋</div>
       <div class="feature-text">
-        <div class="ft-title">스레드 요약</div>
-        <div class="ft-desc">긴 이메일 대화를 핵심만 요약 — 맥락 파악 10초</div>
+        <div class="ft-title" id="t-f2-title"></div>
+        <div class="ft-desc" id="t-f2-desc"></div>
       </div>
     </div>
     <div class="feature-item">
       <div class="feature-icon">✅</div>
       <div class="feature-text">
-        <div class="ft-title">할 일 자동 추출</div>
-        <div class="ft-desc">날짜·마감·후속 조치를 이메일에서 자동으로 감지</div>
+        <div class="ft-title" id="t-f3-title"></div>
+        <div class="ft-desc" id="t-f3-desc"></div>
       </div>
     </div>
     <div class="feature-item">
       <div class="feature-icon">✍️</div>
       <div class="feature-text">
-        <div class="ft-title">서명 · 템플릿</div>
-        <div class="ft-desc">자주 쓰는 인사말·서명 저장 → 한 번 설정, 평생 사용</div>
+        <div class="ft-title" id="t-f4-title"></div>
+        <div class="ft-desc" id="t-f4-desc"></div>
       </div>
     </div>
   </div>
@@ -307,12 +291,10 @@
 <!-- Slide 6: CTA -->
 <div class="slide" id="s6">
   <div class="cta-brand">MailMind</div>
-  <div class="cta-headline">이메일에 더 이상<br>시간 낭비하지 마세요</div>
-  <div class="cta-sub">Gmail 크롬 확장 · 설치 30초</div>
-  <div class="cta-btn">지금 무료로 시작하기</div>
-  <div class="cta-pro">
-    <span>✦</span> Pro 300회/월 &nbsp;·&nbsp; <span>✦</span> 10개 국어 &nbsp;·&nbsp; <span>✦</span> 업종 자동 감지
-  </div>
+  <div class="cta-headline" id="t-cta-headline"></div>
+  <div class="cta-sub" id="t-cta-sub"></div>
+  <div class="cta-btn" id="t-cta-btn"></div>
+  <div class="cta-pro" id="t-cta-pro"></div>
 </div>
 
 <!-- Navigation dots -->
@@ -326,26 +308,679 @@
 </div>
 
 <script>
-  const slides = document.querySelectorAll('.slide');
-  const dots = document.querySelectorAll('.dot');
-  let cur = 0;
-  const SLIDE_DURATION = 10000;
+/* ── Translation data ─────────────────────────────────────── */
+const LANGS = {
+  EN: {
+    flag:'🇺🇸', code:'EN', name:'English',
+    taglineA:'AI Email Assistant for Gmail',
+    taglineB:'AI Email Assistant for Gmail',
+    hookA:'Reply to Emails in<br><em>14 Languages with AI</em>',
+    hookB:'Stop Wasting Time<br><em>on Email Replies</em>',
+    subA:'14 languages · Industry detection · Compare 3 replies',
+    subB:'Instant AI drafts · Insert to Gmail in 1 click',
+    s2Header:'Integrated directly into Gmail',
+    s2Pro:'Pro · 249/300 this month',
+    s2Badge:'💻 IT industry detected · Technical terminology applied',
+    s2Tone:'Tone: Professional',
+    s2LangSel:'Language: EN English',
+    s2BtnMain:'✦ Generate AI Reply',
+    s2Compare:'🔀 Compare 3 versions',
+    s2Smart:'● Smart reply',
+    s2Summary:'📋 Summarize email',
+    s2Todo:'📅 Date detected in email → View calendar',
+    s3Title:'Switch between <span>14 languages</span>',
+    s3Sub:'Reply like a native speaker in any language with one click',
+    s4Title:'Compare <span>3 replies</span>',
+    s4Sub:'Same email, different tones — pick the best option',
+    s4Tone1:'Professional · Concise',
+    s4Body1:'<strong>Thank you for your message.</strong> I confirm the proposed date. Tuesday 2pm works perfectly for me...',
+    s4Tone2:'Detailed · Formal',
+    s4Body2:'Thank you for the detailed update. Regarding the dashboard and Stripe & SSO integration...',
+    s4Tone3:'Warm · Friendly',
+    s4Body3:'Sounds great! Next week works for me. I have a few ideas for the Q4 roadmap I\'d love to share...',
+    s4Rec:'✦ Recommended',
+    s5Title:'Smart <span>features</span>',
+    f1T:'Auto industry detection',f1D:'Detects IT, finance, legal → auto-applies sector terminology',
+    f2T:'Email summary',f2D:'Summarizes long email threads to key points in seconds',
+    f3T:'Auto task extraction',f3D:'Detects deadlines and to-dos from every email',
+    f4T:'Signatures & templates',f4D:'Save greetings and signatures — set once, use always',
+    ctaHeadlineA:'Stop spending time<br>replying to emails',
+    ctaHeadlineB:'Your AI email writer<br>in 14 languages',
+    ctaSub:'Chrome extension for Gmail · Set up in 30 seconds',
+    ctaBtnA:'Start for free',
+    ctaBtnB:'Try free today',
+    ctaPro:'<span>✦</span> Pro 300/month &nbsp;·&nbsp; <span>✦</span> 14 languages &nbsp;·&nbsp; <span>✦</span> Industry detection',
+  },
+  KR: {
+    flag:'🇰🇷', code:'KR', name:'한국어',
+    taglineA:'Gmail AI 이메일 어시스턴트',
+    taglineB:'Gmail AI 이메일 어시스턴트',
+    hookA:'AI로 14개 언어로<br><em>이메일에 답장하세요</em>',
+    hookB:'이메일 답장에<br><em>시간 낭비하지 마세요</em>',
+    subA:'14개 언어 · 업종 감지 · 3가지 답장 비교',
+    subB:'즉시 AI 초안 · 1번의 클릭으로 Gmail에 삽입',
+    s2Header:'Gmail에 직접 통합됨',
+    s2Pro:'Pro · 이번 달 249/300',
+    s2Badge:'💻 IT 업종 감지됨 · 기술 용어 적용됨',
+    s2Tone:'톤: 전문적',
+    s2LangSel:'언어: KR 한국어',
+    s2BtnMain:'✦ AI 답장 생성',
+    s2Compare:'🔀 3가지 버전 비교',
+    s2Smart:'● 스마트 답장',
+    s2Summary:'📋 이메일 요약',
+    s2Todo:'📅 이메일에서 날짜 감지됨 → 캘린더 보기',
+    s3Title:'<span>14개 언어</span> 사이를 전환하세요',
+    s3Sub:'클릭 한 번으로 어떤 언어로든 원어민처럼 답장하세요',
+    s4Title:'<span>3가지 답장</span>을 비교하세요',
+    s4Sub:'같은 이메일, 다른 톤 — 최선의 옵션을 선택하세요',
+    s4Tone1:'전문적 · 간결한',
+    s4Body1:'<strong>메시지 감사합니다.</strong> 제안된 날짜를 확인합니다. 화요일 오후 2시가 저에게 완벽하게 맞습니다...',
+    s4Tone2:'상세한 · 공식적',
+    s4Body2:'상세한 업데이트 감사합니다. 대시보드와 Stripe & SSO 통합에 대해서...',
+    s4Tone3:'따뜻한 · 친근한',
+    s4Body3:'좋습니다! 다음 주가 저에게 맞습니다. Q4 로드맵에 대한 몇 가지 아이디어가 있어 공유하고 싶습니다...',
+    s4Rec:'✦ 추천',
+    s5Title:'스마트 <span>기능</span>',
+    f1T:'자동 업종 감지',f1D:'IT, 금융, 법률 감지 → 업종별 용어 자동 적용',
+    f2T:'이메일 요약',f2D:'긴 이메일 스레드를 핵심 포인트로 빠르게 요약',
+    f3T:'자동 작업 추출',f3D:'모든 이메일에서 마감일과 할일을 감지',
+    f4T:'서명 & 템플릿',f4D:'인사말과 서명을 저장 — 한 번 설정하고 항상 사용',
+    ctaHeadlineA:'이메일 답장에<br>시간 낭비를 멈추세요',
+    ctaHeadlineB:'14개 언어로<br>AI가 이메일을 써드립니다',
+    ctaSub:'Gmail Chrome 확장 · 30초 설치',
+    ctaBtnA:'무료로 시작하기',
+    ctaBtnB:'오늘 무료 체험',
+    ctaPro:'<span>✦</span> Pro 300/월 &nbsp;·&nbsp; <span>✦</span> 14개 언어 &nbsp;·&nbsp; <span>✦</span> 업종 감지',
+  },
+  JP: {
+    flag:'🇯🇵', code:'JP', name:'日本語',
+    taglineA:'Gmail AIメールアシスタント',
+    taglineB:'Gmail AIメールアシスタント',
+    hookA:'14言語でメールに<br><em>AIで返信する</em>',
+    hookB:'メール返信に<br><em>時間を無駄にしない</em>',
+    subA:'14言語 · 業種検出 · 3つの返信を比較',
+    subB:'即時AI下書き · 1クリックでGmailに挿入',
+    s2Header:'Gmailに直接統合',
+    s2Pro:'Pro · 今月249/300',
+    s2Badge:'💻 IT業種検出 · 技術用語適用済み',
+    s2Tone:'トーン：プロフェッショナル',
+    s2LangSel:'言語：JP 日本語',
+    s2BtnMain:'✦ AI返信を生成',
+    s2Compare:'🔀 3つのバージョンを比較',
+    s2Smart:'● スマート返信',
+    s2Summary:'📋 メールを要約',
+    s2Todo:'📅 メールで日付が検出されました → カレンダーを見る',
+    s3Title:'<span>14言語</span>の切り替え',
+    s3Sub:'ワンクリックでどの言語でもネイティブのように返信',
+    s4Title:'<span>3つの返信</span>を比較',
+    s4Sub:'同じメール、異なるトーン — 最良のオプションを選択',
+    s4Tone1:'プロフェッショナル · 簡潔',
+    s4Body1:'<strong>メッセージありがとうございます。</strong>提案された日程を確認します。火曜日14時が完璧に合います...',
+    s4Tone2:'詳細 · フォーマル',
+    s4Body2:'詳細な更新ありがとうございます。ダッシュボードとStripe & SSO統合について...',
+    s4Tone3:'温かい · フレンドリー',
+    s4Body3:'素晴らしい！来週がいいです。Q4ロードマップについていくつかアイデアがあり、共有したいです...',
+    s4Rec:'✦ おすすめ',
+    s5Title:'スマート<span>機能</span>',
+    f1T:'業種自動検出',f1D:'IT・金融・法律を検出 → 業種別用語を自動適用',
+    f2T:'メール要約',f2D:'長いメールスレッドを数秒で要点に要約',
+    f3T:'タスク自動抽出',f3D:'すべてのメールから締め切りとTODOを検出',
+    f4T:'署名 & テンプレート',f4D:'挨拶と署名を保存 — 一度設定して常に使用',
+    ctaHeadlineA:'メール返信に時間を<br>費やすのをやめましょう',
+    ctaHeadlineB:'14言語でAIが<br>メールを書きます',
+    ctaSub:'Gmail Chrome拡張 · 30秒でセットアップ',
+    ctaBtnA:'無料で始める',
+    ctaBtnB:'今日無料体験',
+    ctaPro:'<span>✦</span> Pro 300/月 &nbsp;·&nbsp; <span>✦</span> 14言語 &nbsp;·&nbsp; <span>✦</span> 業種検出',
+  },
+  ZH: {
+    flag:'🇨🇳', code:'ZH', name:'中文',
+    taglineA:'Gmail AI邮件助手',
+    taglineB:'Gmail AI邮件助手',
+    hookA:'用AI回复<br><em>14种语言的邮件</em>',
+    hookB:'停止浪费时间<br><em>在邮件回复上</em>',
+    subA:'14种语言 · 行业检测 · 比较3个回复',
+    subB:'即时AI草稿 · 1键插入Gmail',
+    s2Header:'直接集成到Gmail',
+    s2Pro:'Pro · 本月249/300',
+    s2Badge:'💻 IT行业已检测 · 技术术语已应用',
+    s2Tone:'语气：专业',
+    s2LangSel:'语言：ZH 中文',
+    s2BtnMain:'✦ 生成AI回复',
+    s2Compare:'🔀 比较3个版本',
+    s2Smart:'● 智能回复',
+    s2Summary:'📋 总结邮件',
+    s2Todo:'📅 邮件中检测到日期 → 查看日历',
+    s3Title:'在<span>14种语言</span>之间切换',
+    s3Sub:'一键用任何语言像母语者一样回复',
+    s4Title:'比较<span>3个回复</span>',
+    s4Sub:'同一封邮件，不同语气 — 选择最佳选项',
+    s4Tone1:'专业 · 简洁',
+    s4Body1:'<strong>感谢您的消息。</strong>我确认提议的日期。周二下午2点对我来说完全合适...',
+    s4Tone2:'详细 · 正式',
+    s4Body2:'感谢详细的更新。关于仪表板和Stripe & SSO集成...',
+    s4Tone3:'温暖 · 友好',
+    s4Body3:'太好了！下周对我来说合适。我有一些关于Q4路线图的想法，很乐意分享...',
+    s4Rec:'✦ 推荐',
+    s5Title:'智能<span>功能</span>',
+    f1T:'自动行业检测',f1D:'检测IT、金融、法律 → 自动应用行业术语',
+    f2T:'邮件摘要',f2D:'秒速将长邮件线程摘要为要点',
+    f3T:'自动任务提取',f3D:'从每封邮件中检测截止日期和待办事项',
+    f4T:'签名 & 模板',f4D:'保存问候语和签名 — 设置一次，始终使用',
+    ctaHeadlineA:'停止花时间<br>回复邮件',
+    ctaHeadlineB:'AI用14种语言<br>为您撰写邮件',
+    ctaSub:'Gmail Chrome扩展 · 30秒安装',
+    ctaBtnA:'免费开始',
+    ctaBtnB:'今天免费试用',
+    ctaPro:'<span>✦</span> Pro 300/月 &nbsp;·&nbsp; <span>✦</span> 14种语言 &nbsp;·&nbsp; <span>✦</span> 行业检测',
+  },
+  ES: {
+    flag:'🇪🇸', code:'ES', name:'Español',
+    taglineA:'Asistente de IA para Gmail',
+    taglineB:'Asistente de IA para Gmail',
+    hookA:'Responde correos en<br><em>14 idiomas con IA</em>',
+    hookB:'Deja de perder tiempo<br><em>respondiendo correos</em>',
+    subA:'14 idiomas · Detección de sector · Compara 3 respuestas',
+    subB:'Borradores IA instantáneos · Inserta en Gmail con 1 clic',
+    s2Header:'Integrado directamente en Gmail',
+    s2Pro:'Pro · 249/300 este mes',
+    s2Badge:'💻 Sector IT detectado · Terminología técnica aplicada',
+    s2Tone:'Tono: Profesional',
+    s2LangSel:'Idioma: ES Español',
+    s2BtnMain:'✦ Generar respuesta IA',
+    s2Compare:'🔀 Comparar 3 versiones',
+    s2Smart:'● Respuesta inteligente',
+    s2Summary:'📋 Resumir correo',
+    s2Todo:'📅 Fecha detectada en correo → Ver calendario',
+    s3Title:'Cambia entre <span>14 idiomas</span>',
+    s3Sub:'Responde como nativo en cualquier idioma con un clic',
+    s4Title:'Compara <span>3 respuestas</span>',
+    s4Sub:'El mismo correo, tonos diferentes — elige la mejor opción',
+    s4Tone1:'Profesional · Conciso',
+    s4Body1:'<strong>Gracias por tu mensaje.</strong> Confirmo la fecha propuesta. El martes a las 14h me va perfecto...',
+    s4Tone2:'Detallado · Formal',
+    s4Body2:'Gracias por la actualización detallada. Respecto al dashboard y la integración con Stripe y SSO...',
+    s4Tone3:'Cálido · Amigable',
+    s4Body3:'¡Perfecto! La próxima semana me viene bien. Tengo algunas ideas para el roadmap Q4 que me encantaría compartir...',
+    s4Rec:'✦ Recomendado',
+    s5Title:'Funciones <span>inteligentes</span>',
+    f1T:'Detección automática de sector',f1D:'Detecta IT, finanzas, legal → aplica terminología del sector',
+    f2T:'Resumen de correo',f2D:'Resume hilos largos en puntos clave en segundos',
+    f3T:'Extracción automática de tareas',f3D:'Detecta plazos y tareas de cada correo',
+    f4T:'Firmas & plantillas',f4D:'Guarda saludos y firmas — configura una vez, usa siempre',
+    ctaHeadlineA:'Deja de gastar tiempo<br>respondiendo correos',
+    ctaHeadlineB:'La IA escribe tus correos<br>en 14 idiomas',
+    ctaSub:'Extensión Chrome para Gmail · Instala en 30 segundos',
+    ctaBtnA:'Empieza gratis',
+    ctaBtnB:'Prueba gratis hoy',
+    ctaPro:'<span>✦</span> Pro 300/mes &nbsp;·&nbsp; <span>✦</span> 14 idiomas &nbsp;·&nbsp; <span>✦</span> Detección de sector',
+  },
+  DE: {
+    flag:'🇩🇪', code:'DE', name:'Deutsch',
+    taglineA:'KI-E-Mail-Assistent für Gmail',
+    taglineB:'KI-E-Mail-Assistent für Gmail',
+    hookA:'E-Mails in 14 Sprachen<br><em>mit KI beantworten</em>',
+    hookB:'Hören Sie auf, Zeit mit<br><em>E-Mail-Antworten zu verschwenden</em>',
+    subA:'14 Sprachen · Branchenerkennung · 3 Antworten vergleichen',
+    subB:'Sofortige KI-Entwürfe · Mit 1 Klick in Gmail einfügen',
+    s2Header:'Direkt in Gmail integriert',
+    s2Pro:'Pro · 249/300 diesen Monat',
+    s2Badge:'💻 IT-Branche erkannt · Fachterminologie angewendet',
+    s2Tone:'Ton: Professionell',
+    s2LangSel:'Sprache: DE Deutsch',
+    s2BtnMain:'✦ KI-Antwort generieren',
+    s2Compare:'🔀 3 Versionen vergleichen',
+    s2Smart:'● Intelligente Antwort',
+    s2Summary:'📋 E-Mail zusammenfassen',
+    s2Todo:'📅 Datum in E-Mail erkannt → Kalender anzeigen',
+    s3Title:'Zwischen <span>14 Sprachen</span> wechseln',
+    s3Sub:'Mit einem Klick wie ein Muttersprachler in jeder Sprache antworten',
+    s4Title:'<span>3 Antworten</span> vergleichen',
+    s4Sub:'Dieselbe E-Mail, verschiedene Töne — wählen Sie die beste Option',
+    s4Tone1:'Professionell · Prägnant',
+    s4Body1:'<strong>Vielen Dank für Ihre Nachricht.</strong> Ich bestätige das vorgeschlagene Datum. Dienstag 14 Uhr passt mir perfekt...',
+    s4Tone2:'Detailliert · Formal',
+    s4Body2:'Vielen Dank für das ausführliche Update. Bezüglich des Dashboards und der Stripe & SSO-Integration...',
+    s4Tone3:'Warm · Freundlich',
+    s4Body3:'Klingt gut! Nächste Woche passt mir. Ich habe ein paar Ideen für die Q4-Roadmap, die ich gerne teilen würde...',
+    s4Rec:'✦ Empfohlen',
+    s5Title:'Smarte <span>Funktionen</span>',
+    f1T:'Automatische Branchenerkennung',f1D:'Erkennt IT, Finanzen, Recht → wendet Branchenterminologie an',
+    f2T:'E-Mail-Zusammenfassung',f2D:'Fasst lange E-Mail-Threads in Sekunden zusammen',
+    f3T:'Automatische Aufgabenextraktion',f3D:'Erkennt Fristen und To-dos aus jeder E-Mail',
+    f4T:'Signaturen & Vorlagen',f4D:'Grußformeln und Signaturen speichern — einmal einrichten, immer verwenden',
+    ctaHeadlineA:'Hören Sie auf, Zeit mit<br>E-Mail-Antworten zu verschwenden',
+    ctaHeadlineB:'KI schreibt Ihre E-Mails<br>in 14 Sprachen',
+    ctaSub:'Chrome-Erweiterung für Gmail · In 30 Sekunden eingerichtet',
+    ctaBtnA:'Kostenlos starten',
+    ctaBtnB:'Heute kostenlos testen',
+    ctaPro:'<span>✦</span> Pro 300/Monat &nbsp;·&nbsp; <span>✦</span> 14 Sprachen &nbsp;·&nbsp; <span>✦</span> Branchenerkennung',
+  },
+  PT: {
+    flag:'🇧🇷', code:'PT', name:'Português',
+    taglineA:'Assistente de IA para Gmail',
+    taglineB:'Assistente de IA para Gmail',
+    hookA:'Responda e-mails em<br><em>14 idiomas com IA</em>',
+    hookB:'Pare de desperdiçar tempo<br><em>respondendo e-mails</em>',
+    subA:'14 idiomas · Detecção de setor · Compare 3 respostas',
+    subB:'Rascunhos IA instantâneos · Insira no Gmail com 1 clique',
+    s2Header:'Integrado diretamente ao Gmail',
+    s2Pro:'Pro · 249/300 este mês',
+    s2Badge:'💻 Setor TI detectado · Terminologia técnica aplicada',
+    s2Tone:'Tom: Profissional',
+    s2LangSel:'Idioma: PT Português',
+    s2BtnMain:'✦ Gerar resposta IA',
+    s2Compare:'🔀 Comparar 3 versões',
+    s2Smart:'● Resposta inteligente',
+    s2Summary:'📋 Resumir e-mail',
+    s2Todo:'📅 Data detectada no e-mail → Ver calendário',
+    s3Title:'Alterne entre <span>14 idiomas</span>',
+    s3Sub:'Responda como nativo em qualquer idioma com um clique',
+    s4Title:'Compare <span>3 respostas</span>',
+    s4Sub:'O mesmo e-mail, tons diferentes — escolha a melhor opção',
+    s4Tone1:'Profissional · Conciso',
+    s4Body1:'<strong>Obrigado pela sua mensagem.</strong> Confirmo a data proposta. Terça-feira às 14h me funciona perfeitamente...',
+    s4Tone2:'Detalhado · Formal',
+    s4Body2:'Obrigado pela atualização detalhada. Em relação ao dashboard e à integração com Stripe e SSO...',
+    s4Tone3:'Caloroso · Amigável',
+    s4Body3:'Ótimo! A próxima semana funciona para mim. Tenho algumas ideias para o roadmap Q4 que adoraria compartilhar...',
+    s4Rec:'✦ Recomendado',
+    s5Title:'Recursos <span>inteligentes</span>',
+    f1T:'Detecção automática de setor',f1D:'Detecta TI, finanças, jurídico → aplica terminologia do setor',
+    f2T:'Resumo de e-mail',f2D:'Resume threads longos em pontos-chave em segundos',
+    f3T:'Extração automática de tarefas',f3D:'Detecta prazos e tarefas de cada e-mail',
+    f4T:'Assinaturas & modelos',f4D:'Salve saudações e assinaturas — configure uma vez, use sempre',
+    ctaHeadlineA:'Pare de gastar tempo<br>respondendo e-mails',
+    ctaHeadlineB:'IA escreve seus e-mails<br>em 14 idiomas',
+    ctaSub:'Extensão Chrome para Gmail · Instale em 30 segundos',
+    ctaBtnA:'Comece grátis',
+    ctaBtnB:'Experimente grátis hoje',
+    ctaPro:'<span>✦</span> Pro 300/mês &nbsp;·&nbsp; <span>✦</span> 14 idiomas &nbsp;·&nbsp; <span>✦</span> Detecção de setor',
+  },
+  FR: {
+    flag:'🇫🇷', code:'FR', name:'Français',
+    taglineA:'Assistant IA pour Gmail',
+    taglineB:'Assistant IA pour Gmail',
+    hookA:'Répondez aux e-mails en<br><em>14 langues avec l\'IA</em>',
+    hookB:'Arrêtez de gaspiller du temps<br><em>à répondre aux e-mails</em>',
+    subA:'14 langues · Détection de secteur · Comparer 3 réponses',
+    subB:'Brouillons IA instantanés · Insérer dans Gmail en 1 clic',
+    s2Header:'Intégré directement dans Gmail',
+    s2Pro:'Pro · 249/300 ce mois',
+    s2Badge:'💻 Secteur IT détecté · Terminologie technique appliquée',
+    s2Tone:'Ton : Professionnel',
+    s2LangSel:'Langue : FR Français',
+    s2BtnMain:'✦ Générer une réponse IA',
+    s2Compare:'🔀 Comparer 3 versions',
+    s2Smart:'● Réponse intelligente',
+    s2Summary:'📋 Résumer l\'e-mail',
+    s2Todo:'📅 Date détectée dans l\'e-mail → Voir le calendrier',
+    s3Title:'Passez entre <span>14 langues</span>',
+    s3Sub:'Répondez comme un natif dans n\'importe quelle langue en un clic',
+    s4Title:'Comparer <span>3 réponses</span>',
+    s4Sub:'Le même e-mail, des tons différents — choisissez la meilleure option',
+    s4Tone1:'Professionnel · Concis',
+    s4Body1:'<strong>Merci pour votre message.</strong> Je confirme la date proposée. Mardi à 14h me convient parfaitement...',
+    s4Tone2:'Détaillé · Formel',
+    s4Body2:'Merci pour la mise à jour détaillée. Concernant le tableau de bord et l\'intégration avec Stripe et SSO...',
+    s4Tone3:'Chaleureux · Amical',
+    s4Body3:'Parfait ! La semaine prochaine me convient. J\'ai quelques idées pour la feuille de route Q4 que j\'aimerais partager...',
+    s4Rec:'✦ Recommandé',
+    s5Title:'Fonctionnalités <span>intelligentes</span>',
+    f1T:'Détection automatique du secteur',f1D:'Détecte IT, finance, juridique → applique la terminologie sectorielle',
+    f2T:'Résumé d\'e-mail',f2D:'Résume les longs fils en points clés en secondes',
+    f3T:'Extraction automatique de tâches',f3D:'Détecte les délais et les to-dos de chaque e-mail',
+    f4T:'Signatures & modèles',f4D:'Enregistrez les salutations et signatures — configurez une fois, utilisez toujours',
+    ctaHeadlineA:'Arrêtez de passer du temps<br>à répondre aux e-mails',
+    ctaHeadlineB:'L\'IA rédige vos e-mails<br>en 14 langues',
+    ctaSub:'Extension Chrome pour Gmail · Installez en 30 secondes',
+    ctaBtnA:'Commencer gratuitement',
+    ctaBtnB:'Essayer gratuitement aujourd\'hui',
+    ctaPro:'<span>✦</span> Pro 300/mois &nbsp;·&nbsp; <span>✦</span> 14 langues &nbsp;·&nbsp; <span>✦</span> Détection de secteur',
+  },
+  IT: {
+    flag:'🇮🇹', code:'IT', name:'Italiano',
+    taglineA:'Assistente IA per Gmail',
+    taglineB:'Assistente IA per Gmail',
+    hookA:'Rispondi alle email in<br><em>14 lingue con l\'IA</em>',
+    hookB:'Smetti di sprecare tempo<br><em>a rispondere alle email</em>',
+    subA:'14 lingue · Rilevamento settore · Confronta 3 risposte',
+    subB:'Bozze IA istantanee · Inserisci in Gmail con 1 clic',
+    s2Header:'Integrato direttamente in Gmail',
+    s2Pro:'Pro · 249/300 questo mese',
+    s2Badge:'💻 Settore IT rilevato · Terminologia tecnica applicata',
+    s2Tone:'Tono: Professionale',
+    s2LangSel:'Lingua: IT Italiano',
+    s2BtnMain:'✦ Genera risposta IA',
+    s2Compare:'🔀 Confronta 3 versioni',
+    s2Smart:'● Risposta intelligente',
+    s2Summary:'📋 Riassumi email',
+    s2Todo:'📅 Data rilevata nell\'email → Vedi calendario',
+    s3Title:'Passa tra <span>14 lingue</span>',
+    s3Sub:'Rispondi come un madrelingua in qualsiasi lingua con un clic',
+    s4Title:'Confronta <span>3 risposte</span>',
+    s4Sub:'La stessa email, toni diversi — scegli l\'opzione migliore',
+    s4Tone1:'Professionale · Conciso',
+    s4Body1:'<strong>Grazie per il tuo messaggio.</strong> Confermo la data proposta. Martedì alle 14 mi va perfettamente...',
+    s4Tone2:'Dettagliato · Formale',
+    s4Body2:'Grazie per l\'aggiornamento dettagliato. Riguardo alla dashboard e all\'integrazione con Stripe e SSO...',
+    s4Tone3:'Caldo · Amichevole',
+    s4Body3:'Ottimo! La prossima settimana va bene. Ho alcune idee per la roadmap Q4 che mi piacerebbe condividere...',
+    s4Rec:'✦ Consigliato',
+    s5Title:'Funzionalità <span>intelligenti</span>',
+    f1T:'Rilevamento automatico del settore',f1D:'Rileva IT, finanza, legale → applica terminologia di settore',
+    f2T:'Riepilogo email',f2D:'Riassume i thread lunghi in punti chiave in secondi',
+    f3T:'Estrazione automatica attività',f3D:'Rileva scadenze e to-do da ogni email',
+    f4T:'Firme & modelli',f4D:'Salva saluti e firme — imposta una volta, usa sempre',
+    ctaHeadlineA:'Smetti di passare tempo<br>a rispondere alle email',
+    ctaHeadlineB:'L\'IA scrive le tue email<br>in 14 lingue',
+    ctaSub:'Estensione Chrome per Gmail · Installa in 30 secondi',
+    ctaBtnA:'Inizia gratis',
+    ctaBtnB:'Prova gratis oggi',
+    ctaPro:'<span>✦</span> Pro 300/mese &nbsp;·&nbsp; <span>✦</span> 14 lingue &nbsp;·&nbsp; <span>✦</span> Rilevamento settore',
+  },
+  VN: {
+    flag:'🇻🇳', code:'VN', name:'Tiếng Việt',
+    taglineA:'Trợ lý AI cho Gmail',
+    taglineB:'Trợ lý AI cho Gmail',
+    hookA:'Trả lời email bằng<br><em>14 ngôn ngữ với AI</em>',
+    hookB:'Ngừng lãng phí thời gian<br><em>vào email</em>',
+    subA:'14 ngôn ngữ · Phát hiện ngành · So sánh 3 câu trả lời',
+    subB:'Bản nháp AI tức thì · Chèn vào Gmail bằng 1 cú nhấp',
+    s2Header:'Tích hợp trực tiếp vào Gmail',
+    s2Pro:'Pro · 249/300 tháng này',
+    s2Badge:'💻 Ngành IT được phát hiện · Thuật ngữ kỹ thuật được áp dụng',
+    s2Tone:'Giọng điệu: Chuyên nghiệp',
+    s2LangSel:'Ngôn ngữ: VN Tiếng Việt',
+    s2BtnMain:'✦ Tạo câu trả lời AI',
+    s2Compare:'🔀 So sánh 3 phiên bản',
+    s2Smart:'● Câu trả lời thông minh',
+    s2Summary:'📋 Tóm tắt email',
+    s2Todo:'📅 Ngày được phát hiện trong email → Xem lịch',
+    s3Title:'Chuyển đổi giữa <span>14 ngôn ngữ</span>',
+    s3Sub:'Trả lời như người bản ngữ bằng bất kỳ ngôn ngữ nào chỉ bằng một cú nhấp',
+    s4Title:'So sánh <span>3 câu trả lời</span>',
+    s4Sub:'Cùng một email, các giọng điệu khác nhau — chọn tùy chọn tốt nhất',
+    s4Tone1:'Chuyên nghiệp · Ngắn gọn',
+    s4Body1:'<strong>Cảm ơn tin nhắn của bạn.</strong> Tôi xác nhận ngày đề xuất. Thứ Ba lúc 14h hoàn toàn phù hợp với tôi...',
+    s4Tone2:'Chi tiết · Trang trọng',
+    s4Body2:'Cảm ơn bản cập nhật chi tiết. Về bảng điều khiển và tích hợp Stripe & SSO...',
+    s4Tone3:'Ấm áp · Thân thiện',
+    s4Body3:'Tuyệt vời! Tuần tới phù hợp với tôi. Tôi có một vài ý tưởng về lộ trình Q4 mà tôi muốn chia sẻ...',
+    s4Rec:'✦ Được đề xuất',
+    s5Title:'Tính năng <span>thông minh</span>',
+    f1T:'Phát hiện ngành tự động',f1D:'Phát hiện IT, tài chính, pháp lý → tự động áp dụng thuật ngữ ngành',
+    f2T:'Tóm tắt email',f2D:'Tóm tắt các chuỗi email dài thành điểm chính trong vài giây',
+    f3T:'Trích xuất nhiệm vụ tự động',f3D:'Phát hiện thời hạn và việc cần làm từ mỗi email',
+    f4T:'Chữ ký & mẫu',f4D:'Lưu lời chào và chữ ký — thiết lập một lần, sử dụng mãi',
+    ctaHeadlineA:'Ngừng dành thời gian<br>trả lời email',
+    ctaHeadlineB:'AI viết email của bạn<br>bằng 14 ngôn ngữ',
+    ctaSub:'Tiện ích Chrome cho Gmail · Cài đặt trong 30 giây',
+    ctaBtnA:'Bắt đầu miễn phí',
+    ctaBtnB:'Dùng thử miễn phí hôm nay',
+    ctaPro:'<span>✦</span> Pro 300/tháng &nbsp;·&nbsp; <span>✦</span> 14 ngôn ngữ &nbsp;·&nbsp; <span>✦</span> Phát hiện ngành',
+  },
+  NL: {
+    flag:'🇳🇱', code:'NL', name:'Nederlands',
+    taglineA:'AI-e-mailassistent voor Gmail',
+    taglineB:'AI-e-mailassistent voor Gmail',
+    hookA:'Beantwoord e-mails in<br><em>14 talen met AI</em>',
+    hookB:'Stop met tijd verspillen<br><em>aan e-mailantwoorden</em>',
+    subA:'14 talen · Sectordetectie · Vergelijk 3 antwoorden',
+    subB:'Directe AI-concepten · Voeg in Gmail in met 1 klik',
+    s2Header:'Direct geïntegreerd in Gmail',
+    s2Pro:'Pro · 249/300 deze maand',
+    s2Badge:'💻 IT-sector gedetecteerd · Technische terminologie toegepast',
+    s2Tone:'Toon: Professioneel',
+    s2LangSel:'Taal: NL Nederlands',
+    s2BtnMain:'✦ AI-antwoord genereren',
+    s2Compare:'🔀 3 versies vergelijken',
+    s2Smart:'● Slim antwoord',
+    s2Summary:'📋 E-mail samenvatten',
+    s2Todo:'📅 Datum gedetecteerd in e-mail → Kalender bekijken',
+    s3Title:'Schakel tussen <span>14 talen</span>',
+    s3Sub:'Antwoord als een moedertaalspreker in elke taal met één klik',
+    s4Title:'Vergelijk <span>3 antwoorden</span>',
+    s4Sub:'Dezelfde e-mail, verschillende tonen — kies de beste optie',
+    s4Tone1:'Professioneel · Beknopt',
+    s4Body1:'<strong>Dank u voor uw bericht.</strong> Ik bevestig de voorgestelde datum. Dinsdag 14 uur werkt perfect voor mij...',
+    s4Tone2:'Gedetailleerd · Formeel',
+    s4Body2:'Dank u voor de gedetailleerde update. Betreffende het dashboard en de Stripe & SSO-integratie...',
+    s4Tone3:'Warm · Vriendelijk',
+    s4Body3:'Klinkt goed! Volgende week werkt voor mij. Ik heb een paar ideeën voor de Q4-roadmap die ik graag wil delen...',
+    s4Rec:'✦ Aanbevolen',
+    s5Title:'Slimme <span>functies</span>',
+    f1T:'Automatische sectordetectie',f1D:'Detecteert IT, financiën, juridisch → past sectorterminologie toe',
+    f2T:'E-mailsamenvatting',f2D:'Vat lange e-mailthreads samen in seconden',
+    f3T:'Automatische taakextractie',f3D:'Detecteert deadlines en to-dos van elke e-mail',
+    f4T:'Handtekeningen & sjablonen',f4D:'Sla begroetingen en handtekeningen op — eenmalig instellen, altijd gebruiken',
+    ctaHeadlineA:'Stop met tijd besteden<br>aan e-mailantwoorden',
+    ctaHeadlineB:'AI schrijft uw e-mails<br>in 14 talen',
+    ctaSub:'Chrome-extensie voor Gmail · Installeer in 30 seconden',
+    ctaBtnA:'Start gratis',
+    ctaBtnB:'Probeer vandaag gratis',
+    ctaPro:'<span>✦</span> Pro 300/maand &nbsp;·&nbsp; <span>✦</span> 14 talen &nbsp;·&nbsp; <span>✦</span> Sectordetectie',
+  },
+  PL: {
+    flag:'🇵🇱', code:'PL', name:'Polski',
+    taglineA:'Asystent AI e-mail dla Gmail',
+    taglineB:'Asystent AI e-mail dla Gmail',
+    hookA:'Odpowiadaj na e-maile w<br><em>14 językach z AI</em>',
+    hookB:'Przestań marnować czas<br><em>na odpowiedzi e-mail</em>',
+    subA:'14 języków · Wykrywanie branży · Porównaj 3 odpowiedzi',
+    subB:'Natychmiastowe szkice AI · Wstaw do Gmail 1 kliknięciem',
+    s2Header:'Zintegrowany bezpośrednio z Gmail',
+    s2Pro:'Pro · 249/300 w tym miesiącu',
+    s2Badge:'💻 Branża IT wykryta · Terminologia techniczna zastosowana',
+    s2Tone:'Ton: Profesjonalny',
+    s2LangSel:'Język: PL Polski',
+    s2BtnMain:'✦ Generuj odpowiedź AI',
+    s2Compare:'🔀 Porównaj 3 wersje',
+    s2Smart:'● Inteligentna odpowiedź',
+    s2Summary:'📋 Podsumuj e-mail',
+    s2Todo:'📅 Data wykryta w e-mailu → Otwórz kalendarz',
+    s3Title:'Przełączaj między <span>14 językami</span>',
+    s3Sub:'Odpowiadaj jak native speaker w dowolnym języku jednym kliknięciem',
+    s4Title:'Porównaj <span>3 odpowiedzi</span>',
+    s4Sub:'Ten sam e-mail, różne tony — wybierz najlepszą opcję',
+    s4Tone1:'Profesjonalny · Zwięzły',
+    s4Body1:'<strong>Dziękuję za wiadomość.</strong> Potwierdzam proponowaną datę. Wtorek 14:00 jest dla mnie idealne...',
+    s4Tone2:'Szczegółowy · Formalny',
+    s4Body2:'Dziękuję za szczegółową aktualizację. W kwestii dashboardu i integracji Stripe & SSO...',
+    s4Tone3:'Ciepły · Przyjazny',
+    s4Body3:'Świetnie! Przyszły tydzień mi odpowiada. Mam kilka pomysłów na roadmapę Q4, którymi chętnie się podzielę...',
+    s4Rec:'✦ Zalecane',
+    s5Title:'Inteligentne <span>funkcje</span>',
+    f1T:'Automatyczne wykrywanie branży',f1D:'Wykrywa IT, finanse, prawo → automatycznie stosuje terminologię branżową',
+    f2T:'Podsumowanie e-mail',f2D:'Podsumowuje długie wątki do kluczowych punktów w sekundy',
+    f3T:'Automatyczna ekstrakcja zadań',f3D:'Wykrywa terminy i zadania z każdego e-maila',
+    f4T:'Podpisy & szablony',f4D:'Zapisz pozdrowienia i podpisy — skonfiguruj raz, używaj zawsze',
+    ctaHeadlineA:'Przestań tracić czas<br>na odpowiedzi e-mail',
+    ctaHeadlineB:'AI pisze Twoje e-maile<br>w 14 językach',
+    ctaSub:'Rozszerzenie Chrome dla Gmail · Zainstaluj w 30 sekund',
+    ctaBtnA:'Zacznij za darmo',
+    ctaBtnB:'Wypróbuj za darmo dziś',
+    ctaPro:'<span>✦</span> Pro 300/miesiąc &nbsp;·&nbsp; <span>✦</span> 14 języków &nbsp;·&nbsp; <span>✦</span> Wykrywanie branży',
+  },
+  TR: {
+    flag:'🇹🇷', code:'TR', name:'Türkçe',
+    taglineA:'Gmail AI E-posta Asistanı',
+    taglineB:'Gmail AI E-posta Asistanı',
+    hookA:'14 Dilde E-postalara<br><em>AI ile Yanıt Verin</em>',
+    hookB:'E-posta Yanıtlama Zamanını<br><em>Boşa Harcamayı Bırakın</em>',
+    subA:'14 dil · Sektör algılama · 3 yanıtı karşılaştır',
+    subB:'Anında AI taslakları · Gmail\'e 1 tıkla ekle',
+    s2Header:'Doğrudan Gmail\'e entegre edildi',
+    s2Pro:'Pro · Bu ay 249/300',
+    s2Badge:'💻 BT sektörü algılandı · Teknik terminoloji uygulandı',
+    s2Tone:'Ton: Profesyonel',
+    s2LangSel:'Dil: TR Türkçe',
+    s2BtnMain:'✦ AI Yanıtı Oluştur',
+    s2Compare:'🔀 3 versiyonu karşılaştır',
+    s2Smart:'● Akıllı yanıt',
+    s2Summary:'📋 E-postayı özetle',
+    s2Todo:'📅 E-postada tarih algılandı → Takvimi gör',
+    s3Title:'<span>14 dil</span> arasında geçiş yapın',
+    s3Sub:'Tek tıkla herhangi bir dilde anadil konuşucusu gibi yanıt verin',
+    s4Title:'<span>3 yanıtı</span> karşılaştırın',
+    s4Sub:'Aynı e-posta, farklı tonlar — en iyi seçeneği seçin',
+    s4Tone1:'Profesyonel · Öz',
+    s4Body1:'<strong>Mesajınız için teşekkürler.</strong> Önerilen tarihi onaylıyorum. Salı 14:00 benim için mükemmel...',
+    s4Tone2:'Ayrıntılı · Resmi',
+    s4Body2:'Ayrıntılı güncelleme için teşekkürler. Dashboard ve Stripe & SSO entegrasyonu konusunda...',
+    s4Tone3:'Samimi · Arkadaşça',
+    s4Body3:'Harika! Gelecek hafta uygun. Q4 yol haritası için birkaç fikrim var, seninle paylaşmak isterim...',
+    s4Rec:'✦ Önerilen',
+    s5Title:'Akıllı <span>özellikler</span>',
+    f1T:'Otomatik sektör algılama',f1D:'BT, finans, hukuk algılar → sektöre özgü terminoloji otomatik uygular',
+    f2T:'E-posta özeti',f2D:'Uzun e-posta dizilerini saniyeler içinde temel noktalara özetler',
+    f3T:'Otomatik görev çıkarma',f3D:'Her e-postadaki son tarihleri ve yapılacakları tespit eder',
+    f4T:'İmza & şablonlar',f4D:'Selamlama ve imzaları kaydedin — bir kez ayarlayın, her zaman kullanın',
+    ctaHeadlineA:'E-postalara yanıt vermek için<br>zaman harcamayı bırakın',
+    ctaHeadlineB:'AI 14 dilde e-postalarınızı<br>sizin için yazar',
+    ctaSub:'Gmail için Chrome uzantısı · 30 saniyede kurulum',
+    ctaBtnA:'Ücretsiz başlayın',
+    ctaBtnB:'Bugün ücretsiz deneyin',
+    ctaPro:'<span>✦</span> Pro 300/ay &nbsp;·&nbsp; <span>✦</span> 14 dil &nbsp;·&nbsp; <span>✦</span> Sektör algılama',
+  },
+  HI: {
+    flag:'🇮🇳', code:'HI', name:'हिंदी',
+    taglineA:'Gmail AI ईमेल असिस्टेंट',
+    taglineB:'Gmail AI ईमेल असिस्टेंट',
+    hookA:'14 भाषाओं में ईमेल का<br><em>AI से जवाब दें</em>',
+    hookB:'ईमेल जवाब में<br><em>समय बर्बाद करना बंद करें</em>',
+    subA:'14 भाषाएं · इंडस्ट्री डिटेक्शन · 3 जवाब कॉम्पेयर करें',
+    subB:'तुरंत AI ड्राफ्ट · 1 क्लिक में Gmail में इन्सर्ट',
+    s2Header:'Gmail में सीधे इंटीग्रेट',
+    s2Pro:'Pro · इस महीने 249/300',
+    s2Badge:'💻 IT इंडस्ट्री डिटेक्टेड · टेक्निकल टर्मिनोलॉजी अप्लाइड',
+    s2Tone:'टोन: प्रोफेशनल',
+    s2LangSel:'भाषा: HI हिंदी',
+    s2BtnMain:'✦ AI जवाब जनरेट करें',
+    s2Compare:'🔀 3 वर्जन कॉम्पेयर करें',
+    s2Smart:'● स्मार्ट रिप्लाई',
+    s2Summary:'📋 ईमेल समराइज करें',
+    s2Todo:'📅 ईमेल में डेट डिटेक्टेड → कैलेंडर देखें',
+    s3Title:'<span>14 भाषाओं</span> के बीच स्विच करें',
+    s3Sub:'एक क्लिक में किसी भी भाषा में नेटिव की तरह जवाब दें',
+    s4Title:'<span>3 जवाबों</span> को कॉम्पेयर करें',
+    s4Sub:'एक ही ईमेल, अलग टोन — बेस्ट ऑप्शन चुनें',
+    s4Tone1:'प्रोफेशनल · कॉन्साइज',
+    s4Body1:'<strong>आपके मैसेज के लिए धन्यवाद।</strong> मैं प्रस्तावित तारीख की पुष्टि करता हूं। मंगलवार 2 बजे मेरे लिए एकदम सही है...',
+    s4Tone2:'डिटेल्ड · फॉर्मल',
+    s4Body2:'विस्तृत अपडेट के लिए शुक्रिया। डैशबोर्ड और Stripe & SSO इंटीग्रेशन के बारे में...',
+    s4Tone3:'वार्म · फ्रेंडली',
+    s4Body3:'बढ़िया! अगले हफ्ते मुझे सूट करता है। Q4 रोडमैप के लिए कुछ आइडिया हैं जो मैं शेयर करना चाहूंगा...',
+    s4Rec:'✦ रेकमेंडेड',
+    s5Title:'स्मार्ट <span>फीचर्स</span>',
+    f1T:'ऑटो इंडस्ट्री डिटेक्शन',f1D:'IT, फाइनेंस, लीगल डिटेक्ट करता है → इंडस्ट्री टर्म्स अपने आप अप्लाई होते हैं',
+    f2T:'ईमेल समरी',f2D:'लंबे ईमेल थ्रेड को सेकंड में की पॉइंट्स में समराइज करता है',
+    f3T:'ऑटो टास्क एक्सट्रैक्शन',f3D:'हर ईमेल से डेडलाइन और टू-डू डिटेक्ट करता है',
+    f4T:'सिग्नेचर & टेम्पलेट्स',f4D:'ग्रीटिंग और सिग्नेचर सेव करें — एक बार सेट करें, हमेशा इस्तेमाल करें',
+    ctaHeadlineA:'ईमेल जवाब देने में<br>समय बर्बाद करना बंद करें',
+    ctaHeadlineB:'AI 14 भाषाओं में<br>आपके ईमेल लिखता है',
+    ctaSub:'Gmail के लिए Chrome एक्सटेंशन · 30 सेकंड में सेटअप',
+    ctaBtnA:'मुफ्त में शुरू करें',
+    ctaBtnB:'आज मुफ्त में ट्राई करें',
+    ctaPro:'<span>✦</span> Pro 300/महीना &nbsp;·&nbsp; <span>✦</span> 14 भाषाएं &nbsp;·&nbsp; <span>✦</span> इंडस्ट्री डिटेक्शन',
+  },
+};
 
-  function goTo(n) {
-    slides[cur].classList.remove('active');
-    dots[cur].classList.remove('on');
-    cur = (n + slides.length) % slides.length;
-    slides[cur].classList.add('active');
-    dots[cur].classList.add('on');
+const LANG_ORDER = ['EN','KR','JP','ZH','ES','DE','PT','AR','IT','FR','VN','NL','PL','TR'];
+// AR pill data (no TTS, but shown in grid)
+const AR_PILL = {flag:'🇸🇦', code:'AR', name:'العربية'};
+
+/* ── Init ─────────────────────────────────────── */
+(function() {
+  const params = new URLSearchParams(location.search);
+  const langCode = (params.get('lang') || 'EN').toUpperCase();
+  const variant = (params.get('variant') || 'A').toUpperCase();
+  const isB = variant === 'B';
+
+  const t = LANGS[langCode] || LANGS['EN'];
+
+  document.documentElement.lang = langCode.toLowerCase();
+
+  function set(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
   }
 
-  let timer = setInterval(() => goTo(cur + 1), SLIDE_DURATION);
+  // Slide 1
+  set('t-tagline', isB ? t.taglineB : t.taglineA);
+  set('t-hook', isB ? t.hookB : t.hookA);
+  set('t-sub', isB ? t.subB : t.subA);
 
-  dots.forEach((d, i) => d.addEventListener('click', () => {
-    clearInterval(timer);
-    goTo(i);
-    timer = setInterval(() => goTo(cur + 1), SLIDE_DURATION);
-  }));
+  // Slide 2
+  set('t-s2-header', t.s2Header);
+  set('t-s2-pro', t.s2Pro);
+  set('t-s2-badge', t.s2Badge);
+  set('t-s2-tone', t.s2Tone);
+  set('t-s2-lang-sel', t.s2LangSel);
+  set('t-s2-btn-main', t.s2BtnMain);
+  set('t-s2-compare', t.s2Compare);
+  set('t-s2-smart', t.s2Smart);
+  set('t-s2-summary', t.s2Summary);
+  set('t-s2-todo', t.s2Todo);
+
+  // Slide 3 – language grid
+  set('t-s3-title', t.s3Title);
+  set('t-s3-sub', t.s3Sub);
+  const grid = document.getElementById('lang-grid');
+  if (grid) {
+    grid.innerHTML = LANG_ORDER.map(code => {
+      const info = code === 'AR' ? AR_PILL : LANGS[code];
+      const hiClass = (code === langCode) ? ' hi' : '';
+      return `<div class="lang-pill${hiClass}"><div class="flag">${info.flag}</div><div class="code">${info.code}</div><div class="name">${info.name}</div></div>`;
+    }).join('');
+  }
+
+  // Slide 4
+  set('t-s4-title', t.s4Title);
+  set('t-s4-sub', t.s4Sub);
+  set('t-s4-tone1', t.s4Tone1);
+  set('t-s4-body1', t.s4Body1);
+  set('t-s4-tone2', t.s4Tone2);
+  set('t-s4-body2', t.s4Body2);
+  set('t-s4-tone3', t.s4Tone3);
+  set('t-s4-body3', t.s4Body3);
+  set('t-s4-rec', t.s4Rec);
+
+  // Slide 5
+  set('t-s5-title', t.s5Title);
+  set('t-f1-title', t.f1T); set('t-f1-desc', t.f1D);
+  set('t-f2-title', t.f2T); set('t-f2-desc', t.f2D);
+  set('t-f3-title', t.f3T); set('t-f3-desc', t.f3D);
+  set('t-f4-title', t.f4T); set('t-f4-desc', t.f4D);
+
+  // Slide 6
+  set('t-cta-headline', isB ? t.ctaHeadlineB : t.ctaHeadlineA);
+  set('t-cta-sub', t.ctaSub);
+  set('t-cta-btn', isB ? t.ctaBtnB : t.ctaBtnA);
+  set('t-cta-pro', t.ctaPro);
+})();
+
+/* ── Slideshow ─────────────────────────────────────── */
+const slides = document.querySelectorAll('.slide');
+const dots = document.querySelectorAll('.dot');
+let cur = 0;
+const SLIDE_DURATION = 10000;
+
+function goTo(n) {
+  slides[cur].classList.remove('active');
+  dots[cur].classList.remove('on');
+  cur = (n + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  dots[cur].classList.add('on');
+}
+
+let timer = setInterval(() => goTo(cur + 1), SLIDE_DURATION);
+
+dots.forEach((d, i) => d.addEventListener('click', () => {
+  clearInterval(timer);
+  goTo(i);
+  timer = setInterval(() => goTo(cur + 1), SLIDE_DURATION);
+}));
 </script>
 </body>
 </html>

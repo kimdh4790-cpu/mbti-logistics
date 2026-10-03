@@ -2,6 +2,10 @@
 /**
  * MailMind 홍보 슬라이드 녹화 (Playwright)
  * assets/promo/mailmind-promo.html → output/mailmind-raw.webm
+ *
+ * 환경변수:
+ *   MAILMIND_LANG    언어 코드 (EN|KR|JP|ZH|ES|DE|PT|FR|IT|VN|NL|PL|TR|HI), 기본 EN
+ *   MAILMIND_VARIANT A 또는 B, 기본 A
  */
 
 const { chromium } = require('playwright');
@@ -11,6 +15,9 @@ const fs = require('fs');
 const ROOT = path.join(__dirname, '../..');
 const HTML = path.join(ROOT, 'assets/promo/mailmind-promo.html');
 const OUT  = path.join(ROOT, 'output/mailmind-raw.webm');
+
+const LANG    = (process.env.MAILMIND_LANG    || 'EN').toUpperCase();
+const VARIANT = (process.env.MAILMIND_VARIANT || 'A').toUpperCase();
 
 (async () => {
   if (!fs.existsSync(HTML)) {
@@ -36,16 +43,16 @@ const OUT  = path.join(ROOT, 'output/mailmind-raw.webm');
   });
 
   const page = await ctx.newPage();
-  await page.goto(`file://${HTML}`);
-  console.log('[mailmind] 슬라이드 녹화 시작 (30초)...');
+  const url = `file://${HTML}?lang=${LANG}&variant=${VARIANT}`;
+  await page.goto(url);
+  console.log(`[mailmind] 녹화 시작 LANG=${LANG} VARIANT=${VARIANT}`);
 
-  // 6 slides × 5초 = 30초
+  // 6 slides × 10초 = 60초
   await page.waitForTimeout(62000);
 
   await ctx.close();
   await browser.close();
 
-  // playwright이 생성한 webm 파일을 mailmind-raw.webm으로 이동
   const files = fs.readdirSync(path.join(ROOT, 'output'))
     .filter(f => f.endsWith('.webm') && !f.includes('mailmind'));
   if (files.length > 0) {
