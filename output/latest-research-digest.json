@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-05",
+  "total": 2,
+  "byCategory": {
+    "수익창출": [
+      {
+        "category": "수익창출",
+        "channel": "hs_academy",
+        "instagram": "hs_academy",
+        "title": "제가 3년 전 들었던 한 문장이 21세기 투자법의 출발점이 됐습니다, 장기 성과를 가르는 기준은 수익률이 아니라 버틴 시간이었습니다",
+        "url": "https://youtu.be/XIEitZGI4dg",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-10-04T08:00:17+00:00",
+        "source": "YouTube"
+      }
+    ],
+    "AI기능업그레이드": [
+      {
+        "category": "AI기능업그레이드",
+        "channel": "hs_academy",
+        "instagram": "hs_academy",
+        "title": "“누가 이길까? 아니죠. 언제까지 싸울지가 중요합니다”…메타·구글·OpenAI가 싸울수록 전력·CPU·기판이 떼돈 버는 진짜 이유",
+        "url": "https://youtu.be/f1Z6B9NRpNA",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-04T00:00:12+00:00",
+        "source": "YouTube"
+      }
+    ]
+  }
+}
