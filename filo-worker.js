@@ -3580,26 +3580,12 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
-    // ── 긴급 PIN 로그인: POST /api/emergency-quick-login ──
+    // ── 긴급 로그인: POST /api/emergency-quick-login ──
     if (path === '/api/emergency-quick-login' && method === 'POST') {
       try {
         const body = await request.json();
-        const { driverName, pin } = body;
-        if (!driverName || !pin) return new Response(JSON.stringify({ok:false,error:'driverName·pin 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
-        // PIN은 Firestore settings/emergency_pins 문서에 pins 맵으로 등록
-        // Firebase 콘솔 > Firestore > settings > emergency_pins > pins 필드에 { 기사이름: PIN } 형태로 추가
-        let savedPin = '';
-        try {
-          const token = await getAccessToken(env);
-          const docRes = await fetch(`${FS_BASE}/settings/emergency_pins`, {headers:{'Authorization':'Bearer '+token}});
-          const docData = await docRes.json();
-          if (docData.fields) {
-            const pinsMap = docData.fields.pins?.mapValue?.fields || {};
-            if (pinsMap[driverName]?.stringValue) savedPin = pinsMap[driverName].stringValue;
-          }
-        } catch(_) {}
-        const pinMatch = Array.isArray(savedPin) ? savedPin.includes(pin) : (savedPin === pin);
-        if (!savedPin || !pinMatch) return new Response(JSON.stringify({ok:false,error:'이름 또는 쿠팡 ID가 맞지 않습니다'}),{status:401,headers:{'Content-Type':'application/json'}});
+        const { driverName } = body;
+        if (!driverName) return new Response(JSON.stringify({ok:false,error:'이름을 입력하세요'}),{status:400,headers:{'Content-Type':'application/json'}});
         return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
