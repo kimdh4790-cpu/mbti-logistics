@@ -566,12 +566,12 @@ function _emerDoLogin() {
   var did = new URLSearchParams(location.search).get('did')
           || localStorage.getItem('mbti_emer_dealerId')
           || (_auth.currentUser && _auth.currentUser.uid) || '';
-  // PIN 입력 시 → 서버에서 검증 후 프로필 등록 우회
-  if(pin && did) {
+  // PIN 입력 시 → 서버에서 검증 후 프로필 등록 우회 (회사 문서 불필요)
+  if(pin) {
     var btn = document.getElementById('emer-login-btn');
     if(btn) { btn.disabled = true; btn.style.opacity = '.5'; }
     fetch('/api/emergency-quick-login',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({dealerId:did,driverName:name,pin:pin})
+      body:JSON.stringify({driverName:name,pin:pin})
     }).then(function(r){return r.json();}).then(function(d){
       if(d.ok) {
         _CU = { uid: did, email: '', dealerId: did, driver: name, camp: _emerSelCamp };
