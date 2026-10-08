@@ -1838,7 +1838,32 @@ async function emerOcrScan(file, _statusOverride){
           if(code3 && code3.data){ resolve(code3.data); return; }
         }
 
-        resolve(null); // QR 없음 → Vision OCR로 폴백
+        // ⑤ jsQR — 90° 회전 (기울어진 사진 대응)
+        if(window.jsQR){
+          var cvR=document.createElement('canvas'); cvR.width=h; cvR.height=w;
+          var ctxR=cvR.getContext('2d'); ctxR.translate(h,0); ctxR.rotate(Math.PI/2); ctxR.drawImage(img,0,0,w,h);
+          var rawR=ctxR.getImageData(0,0,h,w);
+          var codeR=window.jsQR(rawR.data,rawR.width,rawR.height,{inversionAttempts:'attemptBoth'});
+          if(codeR&&codeR.data){ resolve(codeR.data); return; }
+        }
+
+        // ⑥ jsQR — 고대비 처리 (밝기 낮은 사진 대응)
+        if(window.jsQR){
+          var cvC=document.createElement('canvas'); cvC.width=w; cvC.height=h;
+          var ctxC=cvC.getContext('2d'); ctxC.drawImage(img,0,0,w,h);
+          var dC=ctxC.getImageData(0,0,w,h);
+          for(var _ci=0;_ci<dC.data.length;_ci+=4){
+            var _gr=Math.round(dC.data[_ci]*.299+dC.data[_ci+1]*.587+dC.data[_ci+2]*.114);
+            var _bw=_gr<110?0:255; // 임계값 이진화
+            dC.data[_ci]=dC.data[_ci+1]=dC.data[_ci+2]=_bw;
+          }
+          ctxC.putImageData(dC,0,0);
+          var rawC=ctxC.getImageData(0,0,w,h);
+          var codeC=window.jsQR(rawC.data,rawC.width,rawC.height,{inversionAttempts:'attemptBoth'});
+          if(codeC&&codeC.data){ resolve(codeC.data); return; }
+        }
+
+        resolve(null); // QR 없음 → AI OCR로 폴백
       };
       img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
       img.src = url;
@@ -2662,18 +2687,24 @@ function emerUnifiedScan(input){
         bd.detect(_detectTarget).then(function(codes){
           if(codes&&codes.length&&codes[0].rawValue){
             var raw=codes[0].rawValue;
-            if(raw.indexOf('V1|')===0){
+            // |V1|... 또는 V1|... 모두 처리 (쿠팡 QR은 앞에 파이프 있음)
+            if(/^\|?V1\|/.test(raw)){
               if(statusEl) statusEl.textContent='✅ QR 인식!';
               _emerHandleScan(raw, statusEl);
             } else if(_isBlueLabel && cvBlue){
               // 파란 전처리 실패 → 원본으로 재시도
               bd.detect(cv).then(function(c2){
-                if(c2&&c2.length&&c2[0].rawValue&&c2[0].rawValue.indexOf('V1|')===0){
+                if(c2&&c2.length&&c2[0].rawValue&&/^\|?V1\|/.test(c2[0].rawValue)){
                   if(statusEl) statusEl.textContent='✅ QR 인식!';
                   _emerHandleScan(c2[0].rawValue,statusEl);
                 } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
               }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
-            } else { goOCR(); }
+            } else {
+              // 비V1 QR: 운송장·주소 추출 가능하면 바로 처리, 아니면 OCR
+              var _bqp = _parseQrText(raw);
+              if(_bqp.tracking_no || _bqp.address){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(raw,statusEl); }
+              else { goOCR(); }
+            }
           } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
         }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
         return;
@@ -4461,10 +4492,15 @@ function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
     r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
   }
   if(r&&r.data){
-    if(r.data.indexOf('V1|')===0 || r.data.indexOf('V1\t')===0){
+    if(/^\|?V1\|/.test(r.data) || r.data.indexOf('V1\t')===0){
       if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl);
-    } else if(fallback){ fallback(); }
-    else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+    } else {
+      // 비V1 QR: 운송장·주소 파싱 가능하면 바로 처리, 아니면 OCR 폴백
+      var _jqp = _parseQrText(r.data);
+      if(_jqp.tracking_no || _jqp.address){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+      else if(fallback){ fallback(); }
+      else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+    }
   }
   else if(fallback){ fallback(); }
   else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — 다시 찍어주세요'; }
