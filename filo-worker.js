@@ -3580,6 +3580,24 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── 긴급 PIN 로그인: POST /api/emergency-quick-login ──
+    // companies/{dealerId}.emergencyPins = {이름: 쿠팡ID} 에서 검증
+    if (path === '/api/emergency-quick-login' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, driverName, pin } = body;
+        if (!dealerId || !driverName || !pin) return new Response(JSON.stringify({ok:false,error:'dealerId·driverName·pin 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const token = await getAccessToken(env);
+        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
+        const coDoc = await coRes.json();
+        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json'}});
+        const pinsMap = coDoc.fields.emergencyPins?.mapValue?.fields || {};
+        const savedPin = pinsMap[driverName]?.stringValue || '';
+        if (!savedPin || savedPin !== pin) return new Response(JSON.stringify({ok:false,error:'이름 또는 쿠팡 ID가 일치하지 않습니다'}),{status:401,headers:{'Content-Type':'application/json'}});
+        return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
+    }
+
     // ── 기사 앱 배정 수정 (관리자): POST /api/emergency-driver-apps ──
     if (path === '/api/emergency-driver-apps' && method === 'POST') {
       try {
