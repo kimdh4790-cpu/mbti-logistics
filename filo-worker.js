@@ -3597,11 +3597,13 @@ service cloud.firestore {
         const body = await request.json();
         const { dealerId, b64image } = body;
         if (!dealerId || !b64image) return new Response(JSON.stringify({ok:false,error:'dealerId·b64image 필수'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
-        // dealerId 유효성 확인
-        const token = await getAccessToken(env);
-        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
-        const coDoc = await coRes.json();
-        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // dealerId 유효성 확인 (FIREBASE_SA_KEY 있을 때만)
+        if (env.FIREBASE_SA_KEY) {
+          const token = await getAccessToken(env);
+          const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
+          const coDoc = await coRes.json();
+          if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        }
         const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
         if (!apiKey) return new Response(JSON.stringify({ok:false,error:'서버 API 키 미설정'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
         const ocrResp = await fetch('https://api.anthropic.com/v1/messages', {
