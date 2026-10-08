@@ -145,12 +145,12 @@ html,body{width:100%;min-height:100vh;background:var(--bg);color:var(--text);fon
       <div class="name">라벨</div>
       <div class="desc">라벨출력·AI번역</div>
     </a>
-    <a href="/emergency" class="menu-card">
+    <a id="menu-delivery" href="/emergency" class="menu-card">
       <div class="icon">🚚</div>
       <div class="name">배송관리</div>
       <div class="desc">배송기록·현황</div>
     </a>
-    <a href="/emergency" class="menu-card highlight">
+    <a id="menu-emergency" href="/emergency" class="menu-card highlight">
       <div class="icon">🚨</div>
       <div class="name">긴급배송</div>
       <div class="desc">실시간 배송</div>
@@ -275,6 +275,12 @@ function _loadApp(user){
 
     // 공지 로드
     _loadNotice();
+    // 배송앱 링크에 did 파라미터 자동 삽입
+    var did = doc.id || user.uid;
+    ['menu-delivery','menu-emergency'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.href = '/emergency?did=' + encodeURIComponent(did);
+    });
 
     // 3도메인 통합 계정 연결
     fetch('/api/link-account',{method:'POST',headers:{'Content-Type':'application/json'},
