@@ -3586,13 +3586,9 @@ service cloud.firestore {
         const body = await request.json();
         const { driverName, pin } = body;
         if (!driverName || !pin) return new Response(JSON.stringify({ok:false,error:'driverName·pin 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
-        // 하드코딩 PIN 맵 — Firestore settings/emergency_pins 우선, 없으면 여기서 폴백
-        // 추가 기사 PIN은 Firebase 콘솔 > Firestore > settings/emergency_pins 문서에 pins 맵으로 등록
-        const HARDCODED_PINS = {
-          '이찬혁':'lIch91','박성철':'pig13954','노병근':'lis0591','최성찬':'chsc10151015'
-        };
-        // Firestore settings/emergency_pins 우선 확인, 없으면 하드코딩 사용
-        let savedPin = HARDCODED_PINS[driverName] || '';
+        // PIN은 Firestore settings/emergency_pins 문서에 pins 맵으로 등록
+        // Firebase 콘솔 > Firestore > settings > emergency_pins > pins 필드에 { 기사이름: PIN } 형태로 추가
+        let savedPin = '';
         try {
           const token = await getAccessToken(env);
           const docRes = await fetch(`${FS_BASE}/settings/emergency_pins`, {headers:{'Authorization':'Bearer '+token}});
