@@ -1873,7 +1873,35 @@ async function emerOcrScan(file, _statusOverride){
   }
 
   if(!apiKey){
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
+    // Google Vision API 키 없음 → 서버 Claude OCR 폴백
+    var did = (_CU&&_CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
+    if(did){
+      if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 운송장 분석 중...</span>';
+      try{
+        // 이미지를 base64로 변환
+        var b64fb = await new Promise(function(resolve){
+          var r = new FileReader();
+          r.onload = function(e){ resolve((e.target.result||'').split(',')[1]||''); };
+          r.readAsDataURL(file);
+        });
+        var ocrRes = await fetch('/api/emer-ocr',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({dealerId:did,b64image:b64fb})});
+        var ocrJson = await ocrRes.json();
+        if(ocrJson.ok && ocrJson.parsed){
+          var p = ocrJson.parsed;
+          // 줄바꿈으로 이어서 _parseQrText 일반 텍스트 파서가 주소·수령인 추출하도록
+          var scanText = [p.address, p.recipientName, p.trackingNumber, p.routeCode, p.dong]
+            .filter(Boolean).join('\n');
+          _emerHandleScan(scanText || ocrJson.text, status);
+          return;
+        }
+        if(ocrJson.ok && ocrJson.text){
+          _emerHandleScan(ocrJson.text, status);
+          return;
+        }
+      }catch(e2){ console.warn('[emer-ocr]',e2); }
+    }
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패 — 다시 시도하세요</span>';
     return;
   }
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';

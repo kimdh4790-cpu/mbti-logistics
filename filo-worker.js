@@ -3590,6 +3590,40 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
 
+    // ── 긴급배송 이미지 OCR: POST /api/emer-ocr ──
+    // dealerId + b64image(base64 JPEG) → Claude Vision으로 운송장 정보 추출
+    if (path === '/api/emer-ocr' && method === 'POST') {
+      try {
+        const body = await request.json();
+        const { dealerId, b64image } = body;
+        if (!dealerId || !b64image) return new Response(JSON.stringify({ok:false,error:'dealerId·b64image 필수'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        // dealerId 유효성 확인
+        const token = await getAccessToken(env);
+        const coRes = await fetch(`${FS_BASE}/companies/${dealerId}`, {headers:{'Authorization':'Bearer '+token}});
+        const coDoc = await coRes.json();
+        if (!coDoc.fields) return new Response(JSON.stringify({ok:false,error:'유효하지 않은 dealerId'}),{status:400,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const apiKey = (env.ANTHROPIC_API_KEY || env.CLAUDE_API_KEY || '').trim();
+        if (!apiKey) return new Response(JSON.stringify({ok:false,error:'서버 API 키 미설정'}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+        const ocrResp = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5',
+            max_tokens: 512,
+            messages: [{role:'user',content:[
+              {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64image}},
+              {type:'text',text:'이 쿠팡 운송장에서 다음 정보를 추출해서 JSON으로만 답해. 다른 말 하지마:\n{"address":"배송지 전체주소","recipientName":"수령인 이름","trackingNumber":"운송장번호","routeCode":"라우트코드(예:508 B02)","dong":"동/호수"}'}
+            ]}]
+          })
+        });
+        const ocrData = await ocrResp.json();
+        const text = ocrData.content?.[0]?.text || '';
+        let parsed = null;
+        try { const m = text.match(/\{[\s\S]*\}/); if(m) parsed = JSON.parse(m[0]); } catch(_) {}
+        return new Response(JSON.stringify({ok:true,text,parsed}),{headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}}); }
+    }
+
     // ── 기사 앱 배정 수정 (관리자): POST /api/emergency-driver-apps ──
     if (path === '/api/emergency-driver-apps' && method === 'POST') {
       try {
