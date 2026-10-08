@@ -3581,18 +3581,24 @@ service cloud.firestore {
     }
 
     // ── 긴급 PIN 로그인: POST /api/emergency-quick-login ──
-    // settings/emergency_pins.pins = {이름: 쿠팡ID} 에서 검증 (회사 문서 불필요)
     if (path === '/api/emergency-quick-login' && method === 'POST') {
       try {
         const body = await request.json();
         const { driverName, pin } = body;
         if (!driverName || !pin) return new Response(JSON.stringify({ok:false,error:'driverName·pin 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
-        const token = await getAccessToken(env);
-        const docRes = await fetch(`${FS_BASE}/settings/emergency_pins`, {headers:{'Authorization':'Bearer '+token}});
-        const docData = await docRes.json();
-        if (!docData.fields) return new Response(JSON.stringify({ok:false,error:'긴급 PIN 설정이 없습니다'}),{status:404,headers:{'Content-Type':'application/json'}});
-        const pinsMap = docData.fields.pins?.mapValue?.fields || {};
-        const savedPin = pinsMap[driverName]?.stringValue || '';
+        // 하드코딩 PIN 맵 (긴급 임시 로그인용)
+        const HARDCODED_PINS = {'이찬혁':'lIch91','박성철':'pig13954','노병근':'lis0591','최성찬':'chsc10151015'};
+        // Firestore settings/emergency_pins 우선 확인, 없으면 하드코딩 사용
+        let savedPin = HARDCODED_PINS[driverName] || '';
+        try {
+          const token = await getAccessToken(env);
+          const docRes = await fetch(`${FS_BASE}/settings/emergency_pins`, {headers:{'Authorization':'Bearer '+token}});
+          const docData = await docRes.json();
+          if (docData.fields) {
+            const pinsMap = docData.fields.pins?.mapValue?.fields || {};
+            if (pinsMap[driverName]?.stringValue) savedPin = pinsMap[driverName].stringValue;
+          }
+        } catch(_) {}
         if (!savedPin || savedPin !== pin) return new Response(JSON.stringify({ok:false,error:'이름 또는 쿠팡 ID가 맞지 않습니다'}),{status:401,headers:{'Content-Type':'application/json'}});
         return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
