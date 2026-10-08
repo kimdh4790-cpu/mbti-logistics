@@ -775,14 +775,27 @@ select.inp option{background:#24243d;color:#f0f1f8}
   border-radius:var(--r-full);font-size:11.5px;font-weight:700;color:rgba(255,255,255,.9)}
 
 /* ── v2 소장 홈 ── */
-.agency-v2-hdr{background:linear-gradient(145deg,#1d4ed8,#1e40af 80%);
+.agency-v2-hdr{background:linear-gradient(145deg,#b45309,#92400e 80%);
   border:none;border-radius:var(--r2);padding:20px;margin-bottom:14px;
   position:relative;overflow:hidden;
-  box-shadow:0 12px 36px -8px rgba(37,99,235,.5)}
+  box-shadow:0 12px 36px -8px rgba(180,83,9,.5)}
 .agency-v2-hdr::before{content:'';position:absolute;top:-50px;right:-40px;width:200px;height:200px;
-  border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 65%);pointer-events:none}
+  border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.15),transparent 65%);pointer-events:none}
 .agency-v2-name{font-size:19px;font-weight:900;letter-spacing:-.5px;color:#fff}
-.agency-v2-sub{font-size:13px;color:rgba(255,255,255,.7);margin-top:3px}
+.agency-v2-sub{font-size:13px;color:rgba(255,255,255,.75);margin-top:3px}
+
+/* ── 배송사 카테고리 칩 ── */
+.dcat-chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:6px}
+.dcat-chips::-webkit-scrollbar{display:none}
+.dcat-chip{flex-shrink:0;min-height:36px;padding:0 14px;border-radius:var(--r-full);border:2px solid var(--bd);
+  background:var(--bg2);color:var(--t2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;
+  display:flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap}
+.dcat-chip.on{border-color:var(--ac);background:var(--ac);color:#fff}
+.dcat-chip-ck{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:9px}
+.dcat-chip.dcat-coupang.on{border-color:#0066ff;background:#0066ff}
+.dcat-chip.dcat-normal.on{border-color:#10b981;background:#10b981}
+.dcat-chip.dcat-kurly.on{border-color:#9333ea;background:#9333ea}
+.dcat-chip.dcat-yongcha.on{border-color:#f59e0b;background:#f59e0b;color:#1a0a00}
 .stat-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .stat3-item{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-lg);
   padding:14px 6px;text-align:center;
@@ -1930,6 +1943,13 @@ function _pgHomeDriver(el){
     '<span id="home-nearby-dist" style="font-size:11px;color:var(--t3);margin-left:6px"></span>'+
     '<button type="button" class="sec-count" onclick="_goPage(\'posts\')">전체보기 ›</button>'+
   '</div>'+
+  '<div class="dcat-chips" id="home-dcat-chips">'+
+    '<button type="button" class="dcat-chip'+(''===_homeDcatSel?' on':'')+'" onclick="_homeCatFilter(\'\')">전체</button>'+
+    '<button type="button" class="dcat-chip dcat-coupang'+('쿠팡'===_homeDcatSel?' on':'')+'" onclick="_homeCatFilter(\'쿠팡\')">쿠팡</button>'+
+    '<button type="button" class="dcat-chip dcat-normal'+('일반택배'===_homeDcatSel?' on':'')+'" onclick="_homeCatFilter(\'일반택배\')">일반택배</button>'+
+    '<button type="button" class="dcat-chip dcat-kurly'+('컬리'===_homeDcatSel?' on':'')+'" onclick="_homeCatFilter(\'컬리\')">컬리</button>'+
+    '<button type="button" class="dcat-chip dcat-yongcha'+('용차'===_homeDcatSel?' on':'')+'" onclick="_homeCatFilter(\'용차\')">용차</button>'+
+  '</div>'+
   '<div id="home-recent">'+_skeletonCards(2)+'</div>';
 
   // 오늘 수익 집계 (카운트업 애니메이션)
@@ -2062,13 +2082,24 @@ function _pgHomeDriver(el){
       var distLbl=document.getElementById('home-nearby-dist');
       if(distLbl)distLbl.textContent=_myGeo?'GPS 기준':'지역 기준';
       var baseQ=_CU.region
-        ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(20)
-        :_db.collection('yongcha_posts').where('status','==','open').limit(20);
+        ?_db.collection('yongcha_posts').where('status','==','open').where('region','==',_CU.region).limit(40)
+        :_db.collection('yongcha_posts').where('status','==','open').limit(40);
       baseQ.get().then(function(snap){
-        var el=document.getElementById('home-recent');if(!el)return; // 네비게이션 후 detach 방지
-        if(snap.empty){el.innerHTML=_emptyHtml('','아직 내 지역 공고가 없어요','조건을 넓혀 검색해보세요');return;}
+        var el=document.getElementById('home-recent');if(!el)return;
         var posts=[];
         snap.forEach(function(doc){posts.push(Object.assign({id:doc.id},doc.data()));});
+        // 카테고리 필터
+        if(_homeDcatSel&&_DELIVERY_CATS[_homeDcatSel]){
+          var cats=_DELIVERY_CATS[_homeDcatSel];
+          if(cats.length>0){
+            posts=posts.filter(function(p){return cats.indexOf(p.courier||p.company||'')>=0;});
+          } else {
+            // 용차: 위 4개 배송사 모두 제외
+            var allCouriers=['쿠팡로지스틱스','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','마켓컬리'];
+            posts=posts.filter(function(p){var c=p.courier||p.company||'';return allCouriers.indexOf(c)<0;});
+          }
+        }
+        if(snap.empty||posts.length===0){el.innerHTML=_emptyHtml('','아직 내 지역 공고가 없어요','조건을 넓혀 검색해보세요');return;}
         if(_myGeo){
           posts.sort(function(a,b){
             var da=_yPostDist(a),db2=_yPostDist(b);
@@ -2087,6 +2118,20 @@ function _pgHomeDriver(el){
     });
   }
   _loadNearbyPosts();
+
+  // 카테고리 칩 필터 핸들러
+  window._homeCatFilter=function(cat){
+    _homeDcatSel=cat;
+    // 칩 활성 상태 업데이트
+    var chips=document.querySelectorAll('#home-dcat-chips .dcat-chip');
+    chips.forEach(function(btn){
+      var isOn=(btn.textContent.trim()===(cat===''?'전체':cat));
+      btn.classList.toggle('on',isOn);
+    });
+    var el=document.getElementById('home-recent');
+    if(el)el.innerHTML=_skeletonCards(2);
+    _loadNearbyPosts();
+  };
 
   // 근처 주유소/충전소
   _yLoadGeo().then(function(g){
@@ -2474,8 +2519,15 @@ var _pf={courier:'전체',region:'전체',urgentOnly:false,verifiedOnly:false,pr
 var _allPosts=[];
 var _postsMainTab='route'; // 'route' | 'yongcha'
 var _myAppliedPosts={}; // {postId:true} — 로그인 기사의 지원 이력 캐시
-var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스'];
+var COURIERS=['전체','CJ대한통운','한진택배','롯데택배','우체국','로젠택배','쿠팡로지스틱스','마켓컬리'];
 var REGIONS=['전체','부산','대구','서울','경기','인천','광주','대전','울산','경남','경북','전남','전북','충남','충북','강원','제주'];
+var _DELIVERY_CATS={
+  '쿠팡':['쿠팡로지스틱스'],
+  '일반택배':['CJ대한통운','한진택배','롯데택배','우체국','로젠택배'],
+  '컬리':['마켓컬리'],
+  '용차':[]
+};
+var _homeDcatSel='';
 
 function _pgPosts(el){
   el.innerHTML=
