@@ -1899,9 +1899,15 @@ async function emerOcrScan(file, _statusOverride){
           _emerHandleScan(ocrJson.text, status);
           return;
         }
-      }catch(e2){ console.warn('[emer-ocr]',e2); }
+        if(status) status.innerHTML = '<span style="color:var(--red)">❌ ' + (ocrJson.error||'OCR 실패') + '</span>';
+        return;
+      }catch(e2){
+        console.warn('[emer-ocr]',e2);
+        if(status) status.innerHTML = '<span style="color:var(--red)">❌ 서버 연결 오류: ' + e2.message + '</span>';
+        return;
+      }
     }
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ OCR 실패 — 다시 시도하세요</span>';
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ 로그인 후 이용하세요</span>';
     return;
   }
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';

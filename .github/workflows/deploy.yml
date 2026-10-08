@@ -93,13 +93,16 @@ jobs:
         env:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
           CF_EMAIL: kimdh4790@gmail.com
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy --config wrangler.filo.toml 2>&1; then
             echo "✅ Filo Worker 배포 (API Token)"
+            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.filo.toml 2>&1 || echo "⚠️ ANTHROPIC_API_KEY filo 시크릿 설정 실패 (무시)"
           else
             echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
             CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.filo.toml 2>&1
+            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.filo.toml 2>&1 || echo "⚠️ ANTHROPIC_API_KEY filo 시크릿 설정 실패 (무시)"
           fi
 
       - name: Deploy Dine Worker
