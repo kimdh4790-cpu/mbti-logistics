@@ -159,6 +159,8 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-08 | **쿠팡 송장 OCR 정상화** — deploy.yml "Deploy Filo Worker" 스텝에 ANTHROPIC_API_KEY 시크릿 등록 추가 (2026-09-20 Worker 분리 후 누락). emergency.html OCR 오류 메시지 개선 (서버 실제 오류 표시). PR #177 머지 완료. |
+| 2026-10-08 | **배송기사 앱 이름만 로그인** — emergency.html PIN 입력 제거, 이름만 입력하면 로그인 가능. PR #175 머지 완료. |
 | 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `noisy-paper-8d01`에 `mailmind-pages/` 자동배포. `index.html`(51,770B) + `privacy.html` 업데이트. `deploy.yml`에 "Deploy MailMind Pages" 스텝 추가. 도메인: `mailmind.yongcha.app` |
 | 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — mailmind-variants.json(28세트) + 동적 mailmind-promo.html(?lang=XX&variant=A/B) + social-media-schedule.yml 09:05/15:00 KST 크론 추가. 14일 로테이션(EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI). PR #172 머지 완료. |
 | 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱(무음+자막가림 재업로드), 인프런(무음 재업로드), DONWAY(D변형: 세금계산서·전자서명 angle) 3개 동시 큐. steps=record,compose,youtube |
