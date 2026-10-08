@@ -590,24 +590,6 @@ function _emerDoLogin() {
   if(!_auth.currentUser){
     _auth.signInAnonymously().catch(function(e){ console.warn('[anon]',e.message); });
   }
-  if(!localStorage.getItem('mbti_emer_profile_done')) {
-    if(did) {
-      fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(name))
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if(d.ok && d.profile) {
-            localStorage.setItem('mbti_emer_profile_done','1');
-            _emerGoMain();
-          } else {
-            _emerShowRegister(name);
-          }
-        })
-        .catch(function(){ _emerShowRegister(name); });
-      return;
-    }
-    _emerShowRegister(name);
-    return;
-  }
   _emerGoMain();
 }
 
