@@ -3586,8 +3586,18 @@ service cloud.firestore {
         const body = await request.json();
         const { driverName, pin } = body;
         if (!driverName || !pin) return new Response(JSON.stringify({ok:false,error:'driverName·pin 필수'}),{status:400,headers:{'Content-Type':'application/json'}});
-        // 하드코딩 PIN 맵 (긴급 임시 로그인용)
-        const HARDCODED_PINS = {'이찬혁':'lIch91','박성철':'pig13954','노병근':'lis0591','최성찬':'chsc10151015'};
+        // 하드코딩 PIN 맵 (긴급 임시 로그인용) — 값이 배열이면 하나라도 일치하면 통과
+        const HARDCODED_PINS = {
+          '이찬혁':'lIch91','박성철':'pig13954','노병근':'lis0591','최성찬':'chsc10151015',
+          'hmklove888':'hmklove888','김정현':'kjhgm88','김강혁':'rkdgur0118','김성운':'kycandksh',
+          '조돌수':'rmsgur828','김민형':'cjstk200014','김기현':['kkh7948','gihyuntkd1'],
+          '김준포':'kim7475','장형욱':'wkdguddnr21','이종신':'teesin1201','구자경':'kjk',
+          '황제우':'hjw0486','김창남':'lucky93580781','김형우':'hyun83',
+          '하진구':'cma2370','손흥주':'son1500','하현호':'vmffkdl321','이종훈':'skiff7ldy',
+          'ghswk1890':'ghswk1890','조수웅':'ciontt10425','전승진':'sjsb0728','송철민':'min9355',
+          '정원국':'rnrd177','이정민':'jeongmin799082','전우현':'dnguaek','정대찬':'sak041004',
+          '강원삼':'kws0003','고병조':'joyasuk','정민욱':'jmu2789','정준영':'jeong2384'
+        };
         // Firestore settings/emergency_pins 우선 확인, 없으면 하드코딩 사용
         let savedPin = HARDCODED_PINS[driverName] || '';
         try {
@@ -3599,7 +3609,8 @@ service cloud.firestore {
             if (pinsMap[driverName]?.stringValue) savedPin = pinsMap[driverName].stringValue;
           }
         } catch(_) {}
-        if (!savedPin || savedPin !== pin) return new Response(JSON.stringify({ok:false,error:'이름 또는 쿠팡 ID가 맞지 않습니다'}),{status:401,headers:{'Content-Type':'application/json'}});
+        const pinMatch = Array.isArray(savedPin) ? savedPin.includes(pin) : (savedPin === pin);
+        if (!savedPin || !pinMatch) return new Response(JSON.stringify({ok:false,error:'이름 또는 쿠팡 ID가 맞지 않습니다'}),{status:401,headers:{'Content-Type':'application/json'}});
         return new Response(JSON.stringify({ok:true}),{headers:{'Content-Type':'application/json'}});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:{'Content-Type':'application/json'}}); }
     }
