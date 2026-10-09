@@ -339,7 +339,8 @@ function Scene6({ frame, logoSrc }) {
           mailmind.yongcha.app
         </div>
         <img src={QR_CODE_BASE64} style={{ width: 180, height: 180, background: '#fff', borderRadius: 18, padding: 10 }} />
-        <div style={{ marginTop: 12, color: 'rgba(255,255,255,0.7)', fontSize: 22, fontFamily: 'Pretendard, sans-serif' }}>스캔하여 바로 설치</div>
+        <div style={{ marginTop: 12, color: 'rgba(255,255,255,0.85)', fontSize: 22, fontFamily: 'Pretendard, sans-serif', fontWeight: 600 }}>스캔하여 바로 설치</div>
+        <div style={{ marginTop: 6, color: BRAND.cyan, fontSize: 18, fontFamily: 'Pretendard, monospace' }}>Chrome Web Store</div>
       </div>
 
       {/* 로고 */}
