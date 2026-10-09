@@ -6,7 +6,8 @@ const { YongchaPromo }        = require('./YongchaPromo');
 const { YongchaDriverPromo }  = require('./YongchaDriverPromo');
 const { YongchaDealerPromo }  = require('./YongchaDealerPromo');
 const { InflearnPromo }       = require('./InflearnPromo');
-const { ScanPromo }     = require('./ScanPromo');
+const { ScanPromo }       = require('./ScanPromo');
+const { MailMindPromo, DEFAULT_SUBTITLES } = require('./MailMindPromo');
 
 var defaultFiloProps     = { hasNarration: false, hasBgm: false, slides: null, lines: null };
 var defaultDonwayProps   = { hasNarration: false, hasBgm: false };
@@ -29,8 +30,10 @@ function Root() {
       <Composition id="YongchaDealerReels"  component={YongchaDealerPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultYongchaProps} />
       <Composition id="InflearnPromo" component={InflearnPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
       <Composition id="InflearnReels" component={InflearnPromo} durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultInflearnProps} />
-      <Composition id="ScanPromo"     component={ScanPromo}     durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
-      <Composition id="ScanReels"     component={ScanPromo}     durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
+      <Composition id="ScanPromo"       component={ScanPromo}       durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
+      <Composition id="ScanReels"       component={ScanPromo}       durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={defaultScanProps} />
+      <Composition id="MailMindPromo"   component={MailMindPromo}   durationInFrames={1800} fps={30} width={1080} height={1920} defaultProps={{ lang: 'JP', variant: 'A', subtitles: DEFAULT_SUBTITLES, logoSrc: null }} />
+      <Composition id="MailMindReels"   component={MailMindPromo}   durationInFrames={900}  fps={30} width={1080} height={1920} defaultProps={{ lang: 'JP', variant: 'A', subtitles: DEFAULT_SUBTITLES, logoSrc: null }} />
     </>
   );
 }

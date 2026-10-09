@@ -71,30 +71,33 @@
 - **업로드 스케줄: ✅ 설정 완료 (PR #172 머지, 2026-10-03)**
 
 **✅ 14개 언어 × 하루 2회 자동 업로드 시스템 완성 (2026-10-03, PR #172):**
-- 14일 로테이션: EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI
+- 14일 로테이션: JP→EN→PT→HI→ID→TH→VN→AR→DE→FR→ES→IT→TR→KR
 - **09:05 KST** → Variant A (다국어 각도: "14개 언어로 AI 이메일")
 - **15:00 KST** → Variant B (생산성 각도: "이메일 시간 낭비 그만")
 - 나레이션 각 해당 언어로 Google TTS Neural2 자동 생성
-- 기준일: 2026-10-04 (Day 0 = EN)
-- AR 아랍어: ⛔ 스킵 (사용자 요청)
+- 기준일: 2026-10-09 (Day 0 = JP)
+- 언어 변경 (2026-10-09): ZH·NL·PL 제거 → ID(인도네시아)·TH(태국)·AR(아랍어) 추가
 
-**지원 언어 (14개) — Google TTS Neural2 음성:**
-| 코드 | 언어 | TTS 음성 |
-|---|---|---|
-| EN | English | en-US-Neural2-D |
-| KR | 한국어 | ko-KR-Neural2-B |
-| JP | 日本語 | ja-JP-Neural2-B |
-| ZH | 中文 | cmn-CN-Neural2-D |
-| ES | Español | es-ES-Neural2-B |
-| DE | Deutsch | de-DE-Neural2-B |
-| PT | Português | pt-BR-Neural2-B |
-| FR | Français | fr-FR-Neural2-B |
-| IT | Italiano | it-IT-Neural2-C |
-| VN | Tiếng Việt | vi-VN-Neural2-A |
-| NL | Nederlands | nl-NL-Neural2-B |
-| PL | Polski | pl-PL-Neural2-A |
-| TR | Türkçe | tr-TR-Neural2-B |
-| HI | हिन्दी | hi-IN-Neural2-B |
+**지원 언어 (14개) — Google TTS Neural2 음성 (2026-10-09 로테이션 기준):**
+| 순서 | 코드 | 언어 | TTS 음성 |
+|---|---|---|---|
+| 1 | JP | 日本語 | ja-JP-Neural2-B |
+| 2 | EN | English | en-US-Neural2-D |
+| 3 | PT | Português | pt-BR-Neural2-B |
+| 4 | HI | हिन्दी | hi-IN-Neural2-B |
+| 5 | ID | Bahasa Indonesia | id-ID-Neural2-B |
+| 6 | TH | ภาษาไทย | th-TH-Neural2-A |
+| 7 | VN | Tiếng Việt | vi-VN-Neural2-A |
+| 8 | AR | العربية | ar-XA-Neural2-A |
+| 9 | DE | Deutsch | de-DE-Neural2-B |
+| 10 | FR | Français | fr-FR-Neural2-B |
+| 11 | ES | Español | es-ES-Neural2-B |
+| 12 | IT | Italiano | it-IT-Neural2-C |
+| 13 | TR | Türkçe | tr-TR-Neural2-B |
+| 14 | KR | 한국어 | ko-KR-Neural2-B |
+
+> 제거됨 (2026-10-09): ZH(中文)·NL(Nederlands)·PL(Polski)
+> 추가됨 (2026-10-09): ID(인도네시아)·TH(태국)·AR(아랍어)
 
 ---
 
