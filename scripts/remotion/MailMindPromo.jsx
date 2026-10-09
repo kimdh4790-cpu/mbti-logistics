@@ -22,6 +22,8 @@ const BRAND = {
   gold: '#FFB800',
 };
 
+const QR_CODE_BASE64 = 'data:image/png;base64,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AgAkiBIAIEGUAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACSIEgAgYWz7prYDMmXzb/7XthU2d21q71XbE6ltstQ2dGrf6ebx3HjvbP5m+v/i12r3siclAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkDC2fXOitlNworY5MmVzN2HzdWp7K29V++xv3W2Zsnmf1q6NG3eITtT25qY+uyclAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkLC6fVNT29k58da9gxM37nfcuMly431xonYOP3mT5cZr9cb7ovbbcsKTEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkCBKAIAEUQIAJIgSACBBlAAACaIEAEgY277Z/Nv4m+/Fjtr+wpTaMW9uYWxuhdx4nqde5+Q8176L2o5MbYun9r1v/j57UgIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJY9s3U38bf3Ob48TmlsGU2r7JjbskN37vNx7zibdez5u/mSc2P3vtGqtt8dSuw02elAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAEDC2PbNW9X2BWr7HVPeep5rezRTx1Pby6jt49TUvvfa78+J2m9vbW9uiiclAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkPD1PM/am9V2Ezb/nv/mvkBtV6K2R3Ojze/0xv2OG/eeTtx4fmobQ7XPVVP7XJ6UAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQMKV2zdTbtwTqe3I1LYeantGJ2q7JFNqx7x5zdd+607Ufg9P1O5B18/v86QEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEla3b6bUtkJqmxE37trUvtNNtc9V22CaUrt3brwHT9x4PZ/wu/Frtm8AgFcRJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEr4336z2N/Zv3LC4cZujtmtz455IbXdjSu1z+b5+X+13/sQn/9Ztbl2d8KQEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEr6e51l7s82/n7+5LzCltokw9V5TNrcwptgB+f3XOXHj5lFtc+TG34QTbz3PJ2r3xQlPSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkCBKAIAEUQIAJIgSACDhe+qFansHm5sjtY2PmqlzWNsTOXmvt372E7V7Z1Ptu5hS+6176zV247UxxZMSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASPh6nuenj+FPaps1Uza3FWqf68bjqe13TKltamx+Xzd+72895hM37tHceH5qv1GelAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAEDC2PbNjX/P/8SN+xRTasd840bMW/cpTtTO4YnavsmJG+/T2rXh/vr995o6P56UAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQMLY9s2JzV2JG/cpalsGU+914sbvoraFMWXzu6j55O+0di/XjufEjcd8YvO+8KQEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEnLbN1M2/1b/WzdransZbz0/b90KufF4bnyvTbXvdErt+7rxeKZ4UgIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJY9s3N+5lvHUL48bdn7d664ZF7f46UTueTbXNmrf+Hp546+ea4kkJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkCBKAIAEUQIAJHxPvdDUlsHUpsaUzc815cb9jqnzXNuDuHEjpqb223Lj65y4cZOltulzorZNVvvt9aQEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEsa2b2o7DjfuidR2HGrn8K27Nidu3MuoqW181PZxatfY1OvcuMUz5cZrw5MSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJogQASPh6nmfkhWo7MidqWzMnbtwyOHHjxkftmv/k7/REbdvlxuuwdsy1/aATN57DTZ6UAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQMLY9s1b1fYFapsRb32v2h7ElNpez4nNe+fG+3RKbUOn9ptwo9p5PuFJCQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACTYvlly445DbXPEPkXndabc+Llq99eJG+8d39eO2v3lSQkAkCBKAIAEUQIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkfE+90I3bClNO/ub/5m7CidquRG3rYcqNm0cnahs6U2obOpvnsPZ93XjvbH6nU5+rdh16UgIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkiBIAIEGUAAAJY9s3J2rbCidu3PSZ2kSo7W7UjvlE7Xim3Pi5ajtNb73mT7z1c924q1XjSQkAkCBKAIAEUQIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQIEoAgARRAgAkfD3PM/JCU1sGm3/Pf3N7YnMvY8rmZ6/tXNz4fZ14617Gibdeq5tuvC/ees1PncPad+pJCQCQIEoAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACR8//QB8N+p7RRsunEX6ZO3VDa3OW7ctbnxet58r6nv4saNmM3fltrvjyclAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkGD7ht9y435HbVNjyid/Fyc2j3nzdU7c+F2c2LzmT7z1t2WTJyUAQIIoAQASRAkAkCBKAIAEUQIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQ8PU8z8gL1bYVptz4uW7cg7hxt6Wmtkdz4zmsufG3ZfP+qp2fE7V9pRpPSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkCBKAIAEUQIAJIgSACBhdfvmrTa3Qmq7Ejd+75t7ELXzU9u1qV3PU9zLv3bjdzH1XlNq188UT0oAgARRAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACSIEgAgYWz7BgDgd3hSAgAkiBIAIEGUAAAJogQASBAlAECCKAEAEkQJAJAgSgCABFECACSIEgAgQZQAAAmiBABIECUAQIIoAQASRAkAkCBKAIAEUQIAJIgSACBBlAAACaIEAEgQJQBAgigBABJECQCQ8E80EkEstoqDEgAAAABJRU5ErkJggg==';
+
 // 언어별 샘플 이메일 (Scene 1용)
 const FOREIGN_EMAILS = [
   { lang: 'JP', flag: '🇯🇵', subject: '重要なお知らせについて', body: '先日のお問い合わせの件でご連絡をさせていただきます。詳細については以下をご確認ください…', from: 'tanaka@corp.jp' },
@@ -330,40 +332,39 @@ function Scene6({ frame, logoSrc }) {
   const logoScale = spring({ frame: localFrame, fps: 30, config: { damping: 14, mass: 0.8, stiffness: 120 } });
 
   return (
-    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${BRAND.blue} 0%, ${BRAND.blueDark} 60%, #030d20 100%)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80 }}>
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${BRAND.blue} 0%, ${BRAND.blueDark} 60%, #030d20 100%)`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 90, paddingLeft: 80, paddingRight: 80 }}>
+      {/* 상단 고정: URL + QR코드 */}
+      <div style={{ opacity: fadeIn(localFrame, 20), textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '18px 52px', fontSize: 36, color: BRAND.white, fontFamily: 'Pretendard, monospace', fontWeight: 700, letterSpacing: 1, marginBottom: 20 }}>
+          mailmind.yongcha.app
+        </div>
+        <img src={QR_CODE_BASE64} style={{ width: 180, height: 180, background: '#fff', borderRadius: 18, padding: 10 }} />
+        <div style={{ marginTop: 12, color: 'rgba(255,255,255,0.7)', fontSize: 22, fontFamily: 'Pretendard, sans-serif' }}>스캔하여 바로 설치</div>
+      </div>
+
       {/* 로고 */}
-      <div style={{ transform: `scale(${logoScale})`, marginBottom: 48 }}>
+      <div style={{ transform: `scale(${logoScale})`, marginBottom: 28 }}>
         {logoSrc ? (
-          <img src={logoSrc} style={{ width: 220, height: 220, borderRadius: 44 }} />
+          <img src={logoSrc} style={{ width: 160, height: 160, borderRadius: 32 }} />
         ) : (
-          <div style={{ width: 220, height: 220, background: BRAND.blue, borderRadius: 44, border: `4px solid ${BRAND.cyan}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>✉️</div>
+          <div style={{ width: 160, height: 160, background: BRAND.blue, borderRadius: 32, border: `4px solid ${BRAND.cyan}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64 }}>✉️</div>
         )}
       </div>
 
-      <div style={{ opacity: fadeIn(localFrame, 10), textAlign: 'center', marginBottom: 60 }}>
-        <div style={{ color: BRAND.white, fontSize: 56, fontWeight: 900, fontFamily: 'Pretendard, sans-serif', letterSpacing: -1 }}>MailMind AI</div>
-        <div style={{ color: BRAND.cyan, fontSize: 30, fontFamily: 'Pretendard, sans-serif', marginTop: 12 }}>AI Gmail 이메일 답장 Chrome 확장</div>
+      <div style={{ opacity: fadeIn(localFrame, 10), textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ color: BRAND.white, fontSize: 50, fontWeight: 900, fontFamily: 'Pretendard, sans-serif', letterSpacing: -1 }}>MailMind AI</div>
+        <div style={{ color: BRAND.cyan, fontSize: 26, fontFamily: 'Pretendard, sans-serif', marginTop: 10 }}>AI Gmail 이메일 답장 Chrome 확장</div>
       </div>
 
       {/* 플랜 카드 */}
-      <div style={{ display: 'flex', gap: 32, marginBottom: 60, opacity: fadeIn(localFrame, 40) }}>
+      <div style={{ display: 'flex', gap: 28, opacity: fadeIn(localFrame, 40) }}>
         {PLANS.map((plan) => (
-          <div key={plan.name} style={{ background: plan.highlight ? BRAND.white : 'rgba(255,255,255,0.1)', borderRadius: 24, padding: '36px 48px', textAlign: 'center', border: plan.highlight ? `3px solid ${BRAND.cyan}` : '3px solid rgba(255,255,255,0.15)', minWidth: 240 }}>
-            <div style={{ fontSize: 26, fontWeight: 700, color: plan.highlight ? BRAND.blue : 'rgba(255,255,255,0.7)', fontFamily: 'Pretendard, sans-serif', marginBottom: 12 }}>{plan.name}</div>
-            <div style={{ fontSize: 44, fontWeight: 900, color: plan.highlight ? BRAND.blue : BRAND.white, fontFamily: 'Pretendard, sans-serif', marginBottom: 8 }}>{plan.price}</div>
-            <div style={{ fontSize: 24, color: plan.highlight ? BRAND.textMid : 'rgba(255,255,255,0.6)', fontFamily: 'Pretendard, sans-serif' }}>{plan.desc}</div>
+          <div key={plan.name} style={{ background: plan.highlight ? BRAND.white : 'rgba(255,255,255,0.1)', borderRadius: 20, padding: '28px 40px', textAlign: 'center', border: plan.highlight ? `3px solid ${BRAND.cyan}` : '3px solid rgba(255,255,255,0.15)', minWidth: 200 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: plan.highlight ? BRAND.blue : 'rgba(255,255,255,0.7)', fontFamily: 'Pretendard, sans-serif', marginBottom: 10 }}>{plan.name}</div>
+            <div style={{ fontSize: 40, fontWeight: 900, color: plan.highlight ? BRAND.blue : BRAND.white, fontFamily: 'Pretendard, sans-serif', marginBottom: 6 }}>{plan.price}</div>
+            <div style={{ fontSize: 20, color: plan.highlight ? BRAND.textMid : 'rgba(255,255,255,0.6)', fontFamily: 'Pretendard, sans-serif' }}>{plan.desc}</div>
           </div>
         ))}
-      </div>
-
-      {/* URL */}
-      <div style={{ opacity: fadeIn(localFrame, 80), textAlign: 'center' }}>
-        <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 20, padding: '24px 60px', fontSize: 38, color: BRAND.white, fontFamily: 'Pretendard, monospace', fontWeight: 700, letterSpacing: 1 }}>
-          mailmind.yongcha.app
-        </div>
-        <div style={{ marginTop: 24, color: 'rgba(255,255,255,0.6)', fontSize: 26, fontFamily: 'Pretendard, sans-serif' }}>
-          Chrome 웹 스토어에서 무료 설치
-        </div>
       </div>
     </AbsoluteFill>
   );
