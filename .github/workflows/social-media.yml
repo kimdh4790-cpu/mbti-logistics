@@ -141,6 +141,14 @@ jobs:
             for p in filo dine donway yongcha mbtico; do
               node scripts/audio/generate-narration.js --product $p || echo "[$p] 나레이션 건너뜀"
             done
+            # mailmind: lang/variant 파일명 생성 후 표준 파일명으로 복사
+            node scripts/audio/generate-narration.js --product mailmind --lang EN --variant A || echo "[mailmind] 나레이션 건너뜀"
+            [ -f "output/mailmind-EN-A-narration.mp3" ] && cp output/mailmind-EN-A-narration.mp3 output/mailmind-narration.mp3 || true
+          elif [ "$PRODUCT" = "mailmind" ]; then
+            MM_LANG="${MAILMIND_LANG:-EN}"
+            MM_VARIANT="${MAILMIND_VARIANT:-A}"
+            node scripts/audio/generate-narration.js --product mailmind --lang "$MM_LANG" --variant "$MM_VARIANT" || echo "[mailmind] 나레이션 건너뜀"
+            [ -f "output/mailmind-${MM_LANG}-${MM_VARIANT}-narration.mp3" ] && cp "output/mailmind-${MM_LANG}-${MM_VARIANT}-narration.mp3" output/mailmind-narration.mp3 || true
           else
             node scripts/audio/generate-narration.js --product $PRODUCT || echo "[$PRODUCT] 나레이션 건너뜀"
           fi
