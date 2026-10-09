@@ -16,8 +16,8 @@ name: 소셜미디어 자동 스케줄 업로드
 #   토 09:00 KST → 인프런 YouTube
 #
 # MailMind 14일 로테이션:
-#   기준일 2026-10-04 (day0=EN)
-#   EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI (반복)
+#   기준일 2026-10-09 (day0=JP)
+#   JP→EN→PT→HI→ID→TH→VN→AR→DE→FR→ES→IT→TR→KR (반복)
 #
 # [보류]
 #   화 → FILO (보류)
@@ -123,9 +123,9 @@ jobs:
           MANUAL_VARIANT="${{ github.event.inputs.mailmind_variant }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
 
-          # MailMind 14일 로테이션 계산 (기준일 2026-10-04 = day0 = EN)
-          ROTATION=(EN KR JP ZH ES DE PT FR IT VN NL PL TR HI)
-          REF_EPOCH=$(date -d "2026-10-04" +%s 2>/dev/null || python3 -c "import datetime; print(int(datetime.datetime(2026,10,4).timestamp()))")
+          # MailMind 14일 로테이션 계산 (기준일 2026-10-09 = day0 = JP)
+          ROTATION=(JP EN PT HI ID TH VN AR DE FR ES IT TR KR)
+          REF_EPOCH=$(date -d "2026-10-09" +%s 2>/dev/null || python3 -c "import datetime; print(int(datetime.datetime(2026,10,9).timestamp()))")
           TODAY_EPOCH=$(date -u +%s)
           DAY_INDEX=$(( (TODAY_EPOCH - REF_EPOCH) / 86400 % 14 ))
           [ $DAY_INDEX -lt 0 ] && DAY_INDEX=0
@@ -215,7 +215,7 @@ jobs:
             echo "[$PRODUCT] Remotion 스크립트 없음 — 건너뜀"
           fi
 
-      - name: MailMind Playwright 녹화
+      - name: MailMind Remotion 영상 렌더링
         if: steps.target.outputs.PRODUCT == 'mailmind'
         env:
           MAILMIND_LANG: ${{ steps.target.outputs.MAILMIND_LANG }}
@@ -224,16 +224,20 @@ jobs:
           mkdir -p output
           LANG="${{ steps.target.outputs.MAILMIND_LANG }}"
           VARIANT="${{ steps.target.outputs.MAILMIND_VARIANT }}"
-          echo "[mailmind] Playwright 녹화 LANG=$LANG VARIANT=$VARIANT"
-          node scripts/capture/record-mailmind.js
-
-      - name: MailMind FFmpeg 편집
-        if: steps.target.outputs.PRODUCT == 'mailmind'
-        run: |
-          LANG="${{ steps.target.outputs.MAILMIND_LANG }}"
-          VARIANT="${{ steps.target.outputs.MAILMIND_VARIANT }}"
-          echo "[mailmind] FFmpeg 편집 LANG=$LANG VARIANT=$VARIANT"
-          bash scripts/compose/compose-video.sh mailmind
+          CHROMIUM=$(ls /opt/pw-browsers/chromium-*/chrome-linux/chrome 2>/dev/null | head -1 || which chromium 2>/dev/null || echo "")
+          [ -n "$CHROMIUM" ] && export CHROMIUM_PATH="$CHROMIUM"
+          echo "[mailmind] Remotion 본영상 렌더링 LANG=$LANG VARIANT=$VARIANT"
+          node scripts/remotion/render-mailmind.js --lang="$LANG" --variant="$VARIANT" \
+            || echo "[mailmind] Remotion 본영상 실패 — Playwright 녹화로 폴백"
+          echo "[mailmind] Remotion Reels 렌더링..."
+          node scripts/remotion/render-mailmind.js --lang="$LANG" --variant="$VARIANT" --reels \
+            || echo "[mailmind] Reels 렌더링 실패"
+          # Playwright 녹화 폴백 (Remotion 실패 시)
+          if [ ! -f output/mailmind-promo.mp4 ]; then
+            echo "[mailmind] Playwright 폴백 녹화"
+            node scripts/capture/record-mailmind.js || echo "[mailmind] Playwright 녹화도 실패"
+            bash scripts/compose/compose-video.sh mailmind || echo "[mailmind] FFmpeg 편집 실패"
+          fi
 
       - name: 화면 녹화 (Playwright)
         if: >-
