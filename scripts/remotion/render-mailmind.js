@@ -18,14 +18,19 @@ let subtitles = null;
 try {
   const variantsPath = path.join(__dirname, '../content/mailmind-variants.json');
   const variants = JSON.parse(fs.readFileSync(variantsPath, 'utf8'));
-  const langData = variants.languages && variants.languages[lang];
+  // 신구 구조 모두 지원
+  const langMap = variants.languages || variants;
+  const langData = langMap[lang];
   if (langData) {
-    const variantData = langData[`variant${variant}`] || langData.variantA;
-    if (variantData && variantData.narration) {
-      subtitles = variantData.narration.map((line, i) => ({
-        start: line.startSec,
-        end: line.endSec || (line.startSec + 10),
-        text: line.text,
+    const variantData = (langData.variants && langData.variants[variant]) || langData[`variant${variant}`];
+    const narration = variantData && variantData.narration;
+    if (narration && narration.length) {
+      // narration: string[] 또는 {text, startSec, endSec}[]
+      const SCENE_ENDS = [10, 20, 35, 45, 55, 60];
+      subtitles = narration.map((line, i) => ({
+        start: typeof line === 'string' ? (i === 0 ? 0 : SCENE_ENDS[i - 1] || i * 10) : (line.startSec || i * 10),
+        end:   typeof line === 'string' ? (SCENE_ENDS[i] || (i + 1) * 10) : (line.endSec || (i + 1) * 10),
+        text:  typeof line === 'string' ? line : line.text,
       }));
     }
   }

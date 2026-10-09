@@ -61,12 +61,14 @@ if (PRODUCT === 'mailmind') {
     process.exit(1);
   }
   const allVariants = require(variantsFile);
-  const langData = allVariants[MM_LANG];
+  // 신구 구조 모두 지원: { languages: { JP: ... } } 또는 { JP: ... }
+  const langMap = allVariants.languages || allVariants;
+  const langData = langMap[MM_LANG];
   if (!langData) {
     console.error(`[TTS] mailmind-variants.json에 언어 없음: ${MM_LANG}`);
     process.exit(1);
   }
-  const variantData = langData.variants && langData.variants[MM_VARIANT];
+  const variantData = (langData.variants && langData.variants[MM_VARIANT]) || langData[`variant${MM_VARIANT}`];
   if (!variantData) {
     console.error(`[TTS] 변형 없음: ${MM_LANG}/${MM_VARIANT}`);
     process.exit(1);
