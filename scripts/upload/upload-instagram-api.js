@@ -44,11 +44,23 @@ function getArg(name) {
 
 const product = getArg('product') || 'filo';
 const dryRun = args.includes('--dry-run');
+const langArg = getArg('lang');
+const variantArg = getArg('variant');
 
 let meta = require(`../content/${product}-meta.json`);
 
-// 주차 기반 variant 선택
-if (meta.variants && meta.variants.length > 0) {
+// MailMind: 언어별 캡션·해시태그 적용
+if (product === 'mailmind' && langArg) {
+  const variants = require(`../content/mailmind-variants.json`);
+  const langData = variants.languages && variants.languages[langArg];
+  const vKey = variantArg || 'A';
+  const vData = langData && langData.variants && langData.variants[vKey];
+  if (vData && vData.instagram) {
+    meta = { ...meta, instagram: { ...meta.instagram, ...vData.instagram } };
+    console.log(`[Instagram] MailMind 언어=${langArg} Variant=${vKey} 캡션 적용`);
+  }
+} else if (meta.variants && meta.variants.length > 0) {
+  // 기타 제품: 주차 기반 variant 선택
   const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % meta.variants.length;
   const variant = meta.variants[weekIdx];
   if (variant.instagram) {
