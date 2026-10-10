@@ -123,13 +123,15 @@ jobs:
           MANUAL_VARIANT="${{ github.event.inputs.mailmind_variant }}"
           DRY_RUN="${{ github.event.inputs.dry_run }}"
 
-          # MailMind 14일 로테이션 계산 (기준일 2026-10-09 = day0 = JP)
+          # MailMind 7일 로테이션 — 하루 2개(오전/오후 다른 언어), 주 14개
+          # 월:JP+EN 화:PT+HI 수:ID+TH 목:VN+AR 금:DE+FR 토:ES+IT 일:TR+KR
           ROTATION=(JP EN PT HI ID TH VN AR DE FR ES IT TR KR)
           REF_EPOCH=$(date -d "2026-10-09" +%s 2>/dev/null || python3 -c "import datetime; print(int(datetime.datetime(2026,10,9).timestamp()))")
           TODAY_EPOCH=$(date -u +%s)
-          DAY_INDEX=$(( (TODAY_EPOCH - REF_EPOCH) / 86400 % 14 ))
+          DAY_INDEX=$(( (TODAY_EPOCH - REF_EPOCH) / 86400 % 7 ))
           [ $DAY_INDEX -lt 0 ] && DAY_INDEX=0
-          AUTO_LANG="${ROTATION[$DAY_INDEX]}"
+          AUTO_LANG_AM="${ROTATION[$DAY_INDEX * 2]}"
+          AUTO_LANG_PM="${ROTATION[$DAY_INDEX * 2 + 1]}"
 
           if [ -n "$MANUAL_PRODUCT" ]; then
             # 수동 실행
@@ -138,16 +140,16 @@ jobs:
             DRY_FLAG=$([ "$DRY_RUN" = "true" ] && echo "--dry-run" || echo "")
             REASON="수동 실행"
             if [ "$PRODUCT" = "mailmind" ]; then
-              MAILMIND_LANG="${MANUAL_LANG:-$AUTO_LANG}"
+              MAILMIND_LANG="${MANUAL_LANG:-$AUTO_LANG_AM}"
               MAILMIND_VARIANT="${MANUAL_VARIANT:-A}"
             fi
           else
             # 스케줄 기반 — github.event.schedule 값으로 정확히 매칭
             SCHEDULE="${{ github.event.schedule }}"
-            echo "실행 스케줄: $SCHEDULE / 오늘 MailMind 언어: $AUTO_LANG (day $DAY_INDEX)"
+            echo "실행 스케줄: $SCHEDULE / 오늘 오전=$AUTO_LANG_AM 오후=$AUTO_LANG_PM (day $DAY_INDEX)"
             case "$SCHEDULE" in
-              "5 0 * * *")  PRODUCT="mailmind"; PLATFORMS="youtube,instagram"; MAILMIND_LANG="$AUTO_LANG"; MAILMIND_VARIANT="A"; REASON="매일 09:05 KST MailMind Variant A ($AUTO_LANG)" ;;
-              "0 6 * * *")  PRODUCT="mailmind"; PLATFORMS="youtube,instagram"; MAILMIND_LANG="$AUTO_LANG"; MAILMIND_VARIANT="B"; REASON="매일 15:00 KST MailMind Variant B ($AUTO_LANG)" ;;
+              "5 0 * * *")  PRODUCT="mailmind"; PLATFORMS="youtube,instagram"; MAILMIND_LANG="$AUTO_LANG_AM"; MAILMIND_VARIANT="A"; REASON="매일 09:05 KST MailMind ($AUTO_LANG_AM)" ;;
+              "0 6 * * *")  PRODUCT="mailmind"; PLATFORMS="youtube,instagram"; MAILMIND_LANG="$AUTO_LANG_PM"; MAILMIND_VARIANT="A"; REASON="매일 15:00 KST MailMind ($AUTO_LANG_PM)" ;;
               "0 0 * * 0")  PRODUCT="inflearn";  PLATFORMS="youtube";   REASON="일 09:00 KST 인프런 YouTube" ;;
               "30 1 * * 0") PRODUCT="inflearn";  PLATFORMS="instagram"; REASON="일 10:30 KST 인프런 Instagram" ;;
               "0 0 * * 1")  PRODUCT="yongcha";   PLATFORMS="youtube";   REASON="월 09:00 KST 용차앱 YouTube" ;;
