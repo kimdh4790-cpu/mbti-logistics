@@ -448,6 +448,20 @@
     }
     .hero-qr-label .arrow { font-size: 16px; color: var(--pink); }
 
+    /* LANG PICKER */
+    .lang-picker { position: relative; margin-left: 8px; }
+    .lang-select {
+      appearance: none; -webkit-appearance: none;
+      background: #fff; border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 5px 26px 5px 10px;
+      font-size: 13px; font-weight: 600; color: var(--text-2);
+      cursor: pointer; transition: border-color 0.15s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      font-family: inherit;
+    }
+    .lang-select:hover, .lang-select:focus { border-color: var(--pink); outline: none; }
+
     /* RESPONSIVE */
     @media (max-width: 640px) {
       nav .nav-links a:not(.btn-nav) { display: none; }
@@ -462,34 +476,52 @@
 <nav>
   <div class="nav-logo">✦ MailMind</div>
   <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#pricing">Pricing</a>
-    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-nav">Add to Chrome — Free</a>
+    <a href="#features" data-i18n="nav_features">Features</a>
+    <a href="#pricing" data-i18n="nav_pricing">Pricing</a>
+    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-nav" data-i18n="nav_cta">Add to Chrome — Free</a>
+  </div>
+  <div class="lang-picker">
+    <select class="lang-select" id="lang-select" onchange="applyLang(this.value)">
+      <option value="EN">🇺🇸 EN</option>
+      <option value="JP">🇯🇵 JP</option>
+      <option value="KR">🇰🇷 KR</option>
+      <option value="PT">🇧🇷 PT</option>
+      <option value="HI">🇮🇳 HI</option>
+      <option value="ID">🇮🇩 ID</option>
+      <option value="TH">🇹🇭 TH</option>
+      <option value="VN">🇻🇳 VN</option>
+      <option value="AR">🇸🇦 AR</option>
+      <option value="DE">🇩🇪 DE</option>
+      <option value="FR">🇫🇷 FR</option>
+      <option value="ES">🇪🇸 ES</option>
+      <option value="IT">🇮🇹 IT</option>
+      <option value="TR">🇹🇷 TR</option>
+    </select>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">✦ Powered by Claude AI · 14 Languages · Any Tone</div>
-  <h1>Every email,<br><span class="pink">perfect.</span></h1>
-  <p class="hero-sub">
+  <div class="hero-badge" data-i18n="hero_badge">✦ Powered by Claude AI · 14 Languages · Any Tone</div>
+  <h1 data-i18n-html="hero_h1">Every email,<br><span class="pink">perfect.</span></h1>
+  <p class="hero-sub" data-i18n="hero_sub">
     Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.
   </p>
   <div class="hero-cta">
-    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-primary">Add to Chrome — It's Free</a>
-    <a href="#demo" class="btn-secondary">See how it works ↓</a>
+    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-primary" data-i18n="hero_cta_primary">Add to Chrome — It's Free</a>
+    <a href="#demo" class="btn-secondary" data-i18n="hero_cta_secondary">See how it works ↓</a>
   </div>
   <div class="hero-trust">
-    <span><span class="dot">✓</span> Free trial, no card</span>
-    <span><span class="dot">✓</span> Emails never stored</span>
-    <span><span class="dot">✓</span> Works inside Gmail</span>
-    <span><span class="dot">✓</span> 14 languages</span>
+    <span><span class="dot">✓</span> <span data-i18n="trust_1">Free trial, no card</span></span>
+    <span><span class="dot">✓</span> <span data-i18n="trust_2">Emails never stored</span></span>
+    <span><span class="dot">✓</span> <span data-i18n="trust_3">Works inside Gmail</span></span>
+    <span><span class="dot">✓</span> <span data-i18n="trust_4">14 languages</span></span>
   </div>
   <div class="hero-qr">
     <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" target="_blank" style="text-decoration:none">
       <div class="hero-qr-box" id="qr-code"></div>
     </a>
-    <div class="hero-qr-label"><span class="arrow">↑</span> Scan to install · Chrome Extension</div>
+    <div class="hero-qr-label" data-i18n="qr_label"><span class="arrow">↑</span> Scan to install · Chrome Extension</div>
   </div>
 </section>
 <script>
@@ -509,26 +541,26 @@
 
 <!-- PAIN POINTS -->
 <section class="pain">
-  <p class="section-label">Why MailMind</p>
-  <h2 class="section-title">Email is hard. We fix that.</h2>
+  <p class="section-label" data-i18n="pain_label">Why MailMind</p>
+  <h2 class="section-title" data-i18n="pain_title">Email is hard. We fix that.</h2>
   <div class="pain-grid">
     <div class="pain-card">
       <div class="pain-icon">🌍</div>
-      <h3>Foreign language email</h3>
-      <p>Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.</p>
-      <div class="solution">✓ Any language combination</div>
+      <h3 data-i18n="pain1_h">Foreign language email</h3>
+      <p data-i18n="pain1_p">Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.</p>
+      <div class="solution" data-i18n="pain1_sol">✓ Any language combination</div>
     </div>
     <div class="pain-card">
       <div class="pain-icon">✍️</div>
-      <h3>Don't know what to say</h3>
-      <p>Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.</p>
-      <div class="solution">✓ 8 tones for every situation</div>
+      <h3 data-i18n="pain2_h">Don't know what to say</h3>
+      <p data-i18n="pain2_p">Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.</p>
+      <div class="solution" data-i18n="pain2_sol">✓ 8 tones for every situation</div>
     </div>
     <div class="pain-card">
       <div class="pain-icon">⏱️</div>
-      <h3>No time to write</h3>
-      <p>The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.</p>
-      <div class="solution">✓ One click, done</div>
+      <h3 data-i18n="pain3_h">No time to write</h3>
+      <p data-i18n="pain3_p">The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.</p>
+      <div class="solution" data-i18n="pain3_sol">✓ One click, done</div>
     </div>
   </div>
 </section>
@@ -851,8 +883,8 @@
 
 <!-- FEATURES -->
 <section class="features" id="features">
-  <p class="section-label">Features</p>
-  <h2 class="section-title">Everything your inbox needs</h2>
+  <p class="section-label" data-i18n="feat_label">Features</p>
+  <h2 class="section-title" data-i18n="feat_title">Everything your inbox needs</h2>
   <div class="features-grid">
     <div class="feature-card">
       <div class="feature-icon">🌍</div>
@@ -917,12 +949,12 @@
 
 <!-- PRICING -->
 <section class="pricing" id="pricing">
-  <p class="section-label">Pricing</p>
-  <h2 class="section-title">Simple, transparent pricing</h2>
-  <div style="background:#e8f5e9;border:1.5px solid #34a853;border-radius:12px;padding:14px 20px;max-width:600px;margin:0 auto 16px;text-align:center;font-size:14px;">
+  <p class="section-label" data-i18n="price_label">Pricing</p>
+  <h2 class="section-title" data-i18n="price_title">Simple, transparent pricing</h2>
+  <div style="background:#e8f5e9;border:1.5px solid #34a853;border-radius:12px;padding:14px 20px;max-width:600px;margin:0 auto 16px;text-align:center;font-size:14px;" data-i18n-html="price_free_banner">
     ✅ <strong style="color:#137333">Free 플랜은 지금 바로 사용 가능합니다!</strong> 35회 무료 · 카드 불필요
   </div>
-  <div style="background:#fff8e1;border:1.5px solid #f9a825;border-radius:12px;padding:14px 20px;max-width:600px;margin:0 auto 32px;text-align:center;font-size:14px;">
+  <div style="background:#fff8e1;border:1.5px solid #f9a825;border-radius:12px;padding:14px 20px;max-width:600px;margin:0 auto 32px;text-align:center;font-size:14px;" data-i18n-html="price_paid_banner">
     ⏳ <strong style="color:#f57f17">Basic / Pro 결제 시스템 준비 중</strong> — 곧 오픈됩니다!
   </div>
   <div class="pricing-grid">
@@ -979,8 +1011,8 @@
 
 <!-- COMPARE -->
 <section class="compare">
-  <p class="section-label">Comparison</p>
-  <h2 class="section-title">Why MailMind wins</h2>
+  <p class="section-label" data-i18n="compare_label">Comparison</p>
+  <h2 class="section-title" data-i18n="compare_title">Why MailMind wins</h2>
   <table class="compare-table">
     <thead>
       <tr>
@@ -1049,8 +1081,8 @@
 
 <!-- FAQ -->
 <section class="faq">
-  <p class="section-label">FAQ</p>
-  <h2 class="section-title">Common questions</h2>
+  <p class="section-label" data-i18n="faq_label">FAQ</p>
+  <h2 class="section-title" data-i18n="faq_title">Common questions</h2>
   <div class="faq-list">
     <div class="faq-item">
       <div class="faq-q">Does MailMind read all my emails? <span class="faq-arrow">+</span></div>
@@ -1081,14 +1113,14 @@
 
 <!-- CTA -->
 <section class="cta-section">
-  <h2>Your inbox is waiting.</h2>
-  <p>Any language. Any tone. Any situation. One click.</p>
-  <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-cta-white">Add to Chrome — Free</a>
+  <h2 data-i18n="cta_h2">Your inbox is waiting.</h2>
+  <p data-i18n="cta_p">Any language. Any tone. Any situation. One click.</p>
+  <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-cta-white" data-i18n="cta_btn">Add to Chrome — Free</a>
   <div style="margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:10px">
     <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" target="_blank" style="text-decoration:none">
       <div style="background:#fff;border-radius:16px;padding:14px;display:inline-block;box-shadow:0 4px 20px rgba(0,0,0,0.15)" id="qr-code-cta"></div>
     </a>
-    <p style="font-size:13px;color:rgba(255,255,255,0.7)">↑ Scan QR to install</p>
+    <p style="font-size:13px;color:rgba(255,255,255,0.7)" data-i18n="cta_qr">↑ Scan QR to install</p>
   </div>
 </section>
 <script>
@@ -1123,6 +1155,604 @@
       q.parentElement.classList.toggle('open');
     });
   });
+</script>
+
+<script>
+// ===== i18n TRANSLATIONS =====
+var TRANSLATIONS = {
+  EN: {
+    nav_features: `Features`,
+    nav_pricing: `Pricing`,
+    nav_cta: `Add to Chrome — Free`,
+    hero_badge: `✦ Powered by Claude AI · 14 Languages · Any Tone`,
+    hero_h1: `Every email,<br><span class="pink">perfect.</span>`,
+    hero_sub: `Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.`,
+    hero_cta_primary: `Add to Chrome — It's Free`,
+    hero_cta_secondary: `See how it works ↓`,
+    trust_1: `Free trial, no card`,
+    trust_2: `Emails never stored`,
+    trust_3: `Works inside Gmail`,
+    trust_4: `14 languages`,
+    qr_label: `↑ Scan to install · Chrome Extension`,
+    pain_label: `Why MailMind`,
+    pain_title: `Email is hard. We fix that.`,
+    pain1_h: `Foreign language email`,
+    pain1_p: `Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.`,
+    pain1_sol: `✓ Any language combination`,
+    pain2_h: `Don't know what to say`,
+    pain2_p: `Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.`,
+    pain2_sol: `✓ 8 tones for every situation`,
+    pain3_h: `No time to write`,
+    pain3_p: `The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.`,
+    pain3_sol: `✓ One click, done`,
+    feat_label: `Features`,
+    feat_title: `Everything your inbox needs`,
+    price_label: `Pricing`,
+    price_title: `Simple, transparent pricing`,
+    price_free_banner: `✅ <strong style="color:#137333">Free plan is now available!</strong> 35 replies · No card required`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro payment system coming soon</strong> — Opening soon!`,
+    compare_label: `Comparison`,
+    compare_title: `Why MailMind wins`,
+    faq_label: `FAQ`,
+    faq_title: `Common questions`,
+    cta_h2: `Your inbox is waiting.`,
+    cta_p: `Any language. Any tone. Any situation. One click.`,
+    cta_btn: `Add to Chrome — Free`,
+    cta_qr: `↑ Scan QR to install`
+  },
+  JP: {
+    nav_features: `機能`,
+    nav_pricing: `料金`,
+    nav_cta: `Chromeに追加 — 無料`,
+    hero_badge: `✦ Claude AI搭載 · 14言語対応 · あらゆるトーン`,
+    hero_h1: `すべてのメール、<br><span class="pink">完璧に。</span>`,
+    hero_sub: `言語がわからない？何を書けばいい？MailMindがプロフェッショナルで自然なメール返信をワンクリックで作成します。`,
+    hero_cta_primary: `Chromeに追加 — 無料`,
+    hero_cta_secondary: `使い方を見る ↓`,
+    trust_1: `無料トライアル・カード不要`,
+    trust_2: `メール内容は保存されません`,
+    trust_3: `Gmail内で動作`,
+    trust_4: `14言語対応`,
+    qr_label: `↑ スキャンしてインストール · Chrome拡張機能`,
+    pain_label: `MailMindとは`,
+    pain_title: `メールは大変。私たちが解決します。`,
+    pain1_h: `外国語のメール`,
+    pain1_p: `日本語、ポルトガル語、アラビア語のメールが届いた？MailMindが読んで、あなたの言語で説明し、相手の言語で完璧な返信を書きます。`,
+    pain1_sol: `✓ あらゆる言語の組み合わせに対応`,
+    pain2_h: `何を書けばいいかわからない`,
+    pain2_p: `自国語でも難しいメールがあります — クレーム、断り、謝罪。MailMindが瞬時に適切な言葉を見つけます。`,
+    pain2_sol: `✓ 8つのトーンであらゆる場面に対応`,
+    pain3_h: `書く時間がない`,
+    pain3_p: `ビジネスパーソンは平均1日3時間メールに費やします。MailMindはそれを数秒に短縮します。`,
+    pain3_sol: `✓ ワンクリックで完了`,
+    feat_label: `機能`,
+    feat_title: `受信トレイに必要なすべて`,
+    price_label: `料金プラン`,
+    price_title: `シンプルで明確な料金`,
+    price_free_banner: `✅ <strong style="color:#137333">無料プランは今すぐご利用いただけます！</strong> 35回無料 · カード不要`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro 決済システム準備中</strong> — もうすぐオープン！`,
+    compare_label: `比較`,
+    compare_title: `MailMindが選ばれる理由`,
+    faq_label: `よくある質問`,
+    faq_title: `よくある質問`,
+    cta_h2: `あなたの受信トレイが待っています。`,
+    cta_p: `どんな言語でも。どんなトーンでも。どんな場面でも。ワンクリック。`,
+    cta_btn: `Chromeに追加 — 無料`,
+    cta_qr: `↑ QRコードをスキャンしてインストール`
+  },
+  KR: {
+    nav_features: `기능`,
+    nav_pricing: `요금`,
+    nav_cta: `Chrome에 추가 — 무료`,
+    hero_badge: `✦ Claude AI 탑재 · 14개 언어 · 모든 톤`,
+    hero_h1: `모든 이메일,<br><span class="pink">완벽하게.</span>`,
+    hero_sub: `언어를 못 읽겠다고요? 뭐라고 써야 할지 모르겠다고요? MailMind가 전문적이고 자연스러운 이메일 답장을 대신 써드립니다 — 클릭 한 번으로.`,
+    hero_cta_primary: `Chrome에 추가 — 무료`,
+    hero_cta_secondary: `어떻게 작동하는지 보기 ↓`,
+    trust_1: `무료 체험, 카드 불필요`,
+    trust_2: `이메일 내용 저장 안 함`,
+    trust_3: `Gmail 안에서 작동`,
+    trust_4: `14개 언어 지원`,
+    qr_label: `↑ QR 스캔으로 설치 · Chrome 확장 프로그램`,
+    pain_label: `MailMind란`,
+    pain_title: `이메일은 어렵습니다. 우리가 해결합니다.`,
+    pain1_h: `외국어 이메일`,
+    pain1_p: `일본어, 포르투갈어, 아랍어 이메일이 왔나요? MailMind가 읽고, 당신의 언어로 설명하고, 상대방 언어로 완벽한 답장을 작성합니다.`,
+    pain1_sol: `✓ 모든 언어 조합 지원`,
+    pain2_h: `뭐라고 써야 할지 모르겠을 때`,
+    pain2_p: `모국어로도 어려운 이메일이 있습니다 — 불만 처리, 거절, 사과. MailMind가 즉시 적절한 표현을 찾아드립니다.`,
+    pain2_sol: `✓ 8가지 톤으로 모든 상황 대응`,
+    pain3_h: `쓸 시간이 없을 때`,
+    pain3_p: `직장인은 하루 평균 3시간을 이메일에 씁니다. MailMind는 그것을 몇 초로 줄여드립니다.`,
+    pain3_sol: `✓ 클릭 한 번으로 완료`,
+    feat_label: `기능`,
+    feat_title: `받은 편지함에 필요한 모든 것`,
+    price_label: `요금제`,
+    price_title: `심플하고 투명한 요금`,
+    price_free_banner: `✅ <strong style="color:#137333">Free 플랜은 지금 바로 사용 가능합니다!</strong> 35회 무료 · 카드 불필요`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro 결제 시스템 준비 중</strong> — 곧 오픈됩니다!`,
+    compare_label: `비교`,
+    compare_title: `MailMind가 이기는 이유`,
+    faq_label: `자주 묻는 질문`,
+    faq_title: `자주 묻는 질문`,
+    cta_h2: `받은 편지함이 기다립니다.`,
+    cta_p: `어떤 언어든. 어떤 톤이든. 어떤 상황이든. 클릭 한 번.`,
+    cta_btn: `Chrome에 추가 — 무료`,
+    cta_qr: `↑ QR 스캔으로 설치`
+  },
+  PT: {
+    nav_features: `Recursos`,
+    nav_pricing: `Preços`,
+    nav_cta: `Adicionar ao Chrome — Grátis`,
+    hero_badge: `✦ Powered by Claude AI · 14 Idiomas · Qualquer Tom`,
+    hero_h1: `Todo e-mail,<br><span class="pink">perfeito.</span>`,
+    hero_sub: `Não consegue ler o idioma? Não sabe o que dizer? O MailMind escreve respostas profissionais e naturais para você — em um clique.`,
+    hero_cta_primary: `Adicionar ao Chrome — Grátis`,
+    hero_cta_secondary: `Ver como funciona ↓`,
+    trust_1: `Teste grátis, sem cartão`,
+    trust_2: `E-mails nunca armazenados`,
+    trust_3: `Funciona no Gmail`,
+    trust_4: `14 idiomas`,
+    qr_label: `↑ Escaneie para instalar · Extensão do Chrome`,
+    pain_label: `Por que MailMind`,
+    pain_title: `E-mail é difícil. A gente resolve.`,
+    pain1_h: `E-mail em idioma estrangeiro`,
+    pain1_p: `Recebeu um e-mail em japonês, árabe ou coreano? O MailMind lê, explica no seu idioma e escreve a resposta perfeita no idioma deles.`,
+    pain1_sol: `✓ Qualquer combinação de idiomas`,
+    pain2_h: `Não sabe o que escrever`,
+    pain2_p: `Até no seu próprio idioma, alguns e-mails são difíceis — reclamações, recusas, desculpas. O MailMind encontra as palavras certas instantaneamente.`,
+    pain2_sol: `✓ 8 tons para cada situação`,
+    pain3_h: `Sem tempo para escrever`,
+    pain3_p: `O profissional médio gasta 3 horas por dia com e-mails. O MailMind reduz isso a segundos — sem soar como robô.`,
+    pain3_sol: `✓ Um clique, pronto`,
+    feat_label: `Recursos`,
+    feat_title: `Tudo o que sua caixa de entrada precisa`,
+    price_label: `Preços`,
+    price_title: `Preços simples e transparentes`,
+    price_free_banner: `✅ <strong style="color:#137333">Plano Gratuito disponível agora!</strong> 35 respostas · Sem cartão`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistema de pagamento Basic/Pro em breve</strong> — Abrindo em breve!`,
+    compare_label: `Comparação`,
+    compare_title: `Por que o MailMind vence`,
+    faq_label: `FAQ`,
+    faq_title: `Perguntas frequentes`,
+    cta_h2: `Sua caixa de entrada está esperando.`,
+    cta_p: `Qualquer idioma. Qualquer tom. Qualquer situação. Um clique.`,
+    cta_btn: `Adicionar ao Chrome — Grátis`,
+    cta_qr: `↑ Escaneie o QR para instalar`
+  },
+  HI: {
+    nav_features: `सुविधाएं`,
+    nav_pricing: `मूल्य`,
+    nav_cta: `Chrome में जोड़ें — मुफ़्त`,
+    hero_badge: `✦ Claude AI द्वारा संचालित · 14 भाषाएं · कोई भी टोन`,
+    hero_h1: `हर ईमेल,<br><span class="pink">परफेक्ट।</span>`,
+    hero_sub: `भाषा समझ नहीं आती? क्या लिखें नहीं पता? MailMind आपके लिए पेशेवर और स्वाभाविक ईमेल उत्तर लिखता है — एक क्लिक में।`,
+    hero_cta_primary: `Chrome में जोड़ें — मुफ़्त`,
+    hero_cta_secondary: `देखें यह कैसे काम करता है ↓`,
+    trust_1: `मुफ़्त ट्रायल, कार्ड नहीं`,
+    trust_2: `ईमेल स्टोर नहीं होते`,
+    trust_3: `Gmail में काम करता है`,
+    trust_4: `14 भाषाएं`,
+    qr_label: `↑ इंस्टॉल के लिए स्कैन करें · Chrome एक्सटेंशन`,
+    pain_label: `MailMind क्यों`,
+    pain_title: `ईमेल मुश्किल है। हम इसे ठीक करते हैं।`,
+    pain1_h: `विदेशी भाषा का ईमेल`,
+    pain1_p: `जापानी, पुर्तगाली या अरबी में ईमेल आया? MailMind इसे पढ़ता है, आपकी भाषा में समझाता है और उनकी भाषा में परफेक्ट जवाब लिखता है।`,
+    pain1_sol: `✓ कोई भी भाषा संयोजन`,
+    pain2_h: `क्या लिखें नहीं पता`,
+    pain2_p: `अपनी भाषा में भी कुछ ईमेल मुश्किल होते हैं — शिकायतें, अस्वीकृतियां, माफ़ी। MailMind तुरंत सही शब्द ढूंढता है।`,
+    pain2_sol: `✓ हर स्थिति के लिए 8 टोन`,
+    pain3_h: `लिखने का समय नहीं`,
+    pain3_p: `औसत पेशेवर रोज़ 3 घंटे ईमेल पर बिताता है। MailMind इसे सेकंड में बदल देता है।`,
+    pain3_sol: `✓ एक क्लिक, हो गया`,
+    feat_label: `सुविधाएं`,
+    feat_title: `आपके इनबॉक्स को जो चाहिए सब कुछ`,
+    price_label: `मूल्य`,
+    price_title: `सरल और पारदर्शी मूल्य`,
+    price_free_banner: `✅ <strong style="color:#137333">फ्री प्लान अभी उपलब्ध है!</strong> 35 रिप्लाई · कोई कार्ड नहीं`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro भुगतान प्रणाली जल्द आ रही है</strong> — जल्द खुलेगा!`,
+    compare_label: `तुलना`,
+    compare_title: `MailMind क्यों जीतता है`,
+    faq_label: `FAQ`,
+    faq_title: `सामान्य प्रश्न`,
+    cta_h2: `आपका इनबॉक्स इंतज़ार कर रहा है।`,
+    cta_p: `कोई भी भाषा। कोई भी टोन। कोई भी स्थिति। एक क्लिक।`,
+    cta_btn: `Chrome में जोड़ें — मुफ़्त`,
+    cta_qr: `↑ इंस्टॉल के लिए QR स्कैन करें`
+  },
+  ID: {
+    nav_features: `Fitur`,
+    nav_pricing: `Harga`,
+    nav_cta: `Tambah ke Chrome — Gratis`,
+    hero_badge: `✦ Didukung Claude AI · 14 Bahasa · Semua Nada`,
+    hero_h1: `Setiap email,<br><span class="pink">sempurna.</span>`,
+    hero_sub: `Tidak bisa membaca bahasanya? Tidak tahu harus menulis apa? MailMind menulis balasan email yang profesional dan alami untuk Anda — satu klik.`,
+    hero_cta_primary: `Tambah ke Chrome — Gratis`,
+    hero_cta_secondary: `Lihat cara kerjanya ↓`,
+    trust_1: `Trial gratis, tanpa kartu`,
+    trust_2: `Email tidak pernah disimpan`,
+    trust_3: `Bekerja di dalam Gmail`,
+    trust_4: `14 bahasa`,
+    qr_label: `↑ Scan untuk instal · Ekstensi Chrome`,
+    pain_label: `Kenapa MailMind`,
+    pain_title: `Email itu sulit. Kami mengatasinya.`,
+    pain1_h: `Email bahasa asing`,
+    pain1_p: `Menerima email dalam bahasa Jepang, Portugis, atau Arab? MailMind membacanya, menjelaskan dalam bahasa Anda, dan menulis balasan sempurna dalam bahasa mereka.`,
+    pain1_sol: `✓ Kombinasi bahasa apapun`,
+    pain2_h: `Tidak tahu harus menulis apa`,
+    pain2_p: `Bahkan dalam bahasa sendiri, beberapa email sulit — keluhan, penolakan, permintaan maaf. MailMind menemukan kata yang tepat secara instan.`,
+    pain2_sol: `✓ 8 nada untuk setiap situasi`,
+    pain3_h: `Tidak ada waktu untuk menulis`,
+    pain3_p: `Rata-rata profesional menghabiskan 3 jam sehari untuk email. MailMind mempersingkatnya menjadi detik.`,
+    pain3_sol: `✓ Satu klik, selesai`,
+    feat_label: `Fitur`,
+    feat_title: `Semua yang dibutuhkan kotak masuk Anda`,
+    price_label: `Harga`,
+    price_title: `Harga sederhana dan transparan`,
+    price_free_banner: `✅ <strong style="color:#137333">Paket Gratis tersedia sekarang!</strong> 35 balasan · Tanpa kartu`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistem pembayaran Basic/Pro segera hadir</strong> — Segera dibuka!`,
+    compare_label: `Perbandingan`,
+    compare_title: `Mengapa MailMind menang`,
+    faq_label: `FAQ`,
+    faq_title: `Pertanyaan umum`,
+    cta_h2: `Kotak masuk Anda sedang menunggu.`,
+    cta_p: `Bahasa apapun. Nada apapun. Situasi apapun. Satu klik.`,
+    cta_btn: `Tambah ke Chrome — Gratis`,
+    cta_qr: `↑ Scan QR untuk instal`
+  },
+  TH: {
+    nav_features: `ฟีเจอร์`,
+    nav_pricing: `ราคา`,
+    nav_cta: `เพิ่มใน Chrome — ฟรี`,
+    hero_badge: `✦ ขับเคลื่อนด้วย Claude AI · 14 ภาษา · ทุกโทน`,
+    hero_h1: `ทุกอีเมล,<br><span class="pink">สมบูรณ์แบบ.</span>`,
+    hero_sub: `อ่านภาษาไม่ออก? ไม่รู้จะเขียนว่าอะไร? MailMind เขียนอีเมลตอบกลับที่เป็นมืออาชีพและเป็นธรรมชาติให้คุณ — คลิกเดียว`,
+    hero_cta_primary: `เพิ่มใน Chrome — ฟรี`,
+    hero_cta_secondary: `ดูวิธีใช้งาน ↓`,
+    trust_1: `ทดลองฟรี ไม่ต้องใช้บัตร`,
+    trust_2: `อีเมลไม่ถูกเก็บข้อมูล`,
+    trust_3: `ทำงานใน Gmail`,
+    trust_4: `14 ภาษา`,
+    qr_label: `↑ สแกนเพื่อติดตั้ง · ส่วนขยาย Chrome`,
+    pain_label: `ทำไมต้อง MailMind`,
+    pain_title: `อีเมลยาก เราแก้ปัญหาให้`,
+    pain1_h: `อีเมลภาษาต่างประเทศ`,
+    pain1_p: `ได้รับอีเมลภาษาญี่ปุ่น โปรตุเกส หรืออาหรับ? MailMind อ่าน อธิบายเป็นภาษาของคุณ และเขียนตอบกลับสมบูรณ์แบบในภาษาของพวกเขา`,
+    pain1_sol: `✓ รองรับทุกภาษาผสมกัน`,
+    pain2_h: `ไม่รู้จะเขียนว่าอะไร`,
+    pain2_p: `แม้แต่ในภาษาของคุณเอง บางอีเมลก็ยาก — การร้องเรียน การปฏิเสธ การขอโทษ MailMind หาคำพูดที่ถูกต้องในทันที`,
+    pain2_sol: `✓ 8 โทนสำหรับทุกสถานการณ์`,
+    pain3_h: `ไม่มีเวลาเขียน`,
+    pain3_p: `คนทำงานทั่วไปใช้เวลา 3 ชั่วโมงต่อวันกับอีเมล MailMind ลดเวลานั้นเหลือเพียงไม่กี่วินาที`,
+    pain3_sol: `✓ คลิกเดียว เสร็จ`,
+    feat_label: `ฟีเจอร์`,
+    feat_title: `ทุกอย่างที่กล่องจดหมายของคุณต้องการ`,
+    price_label: `ราคา`,
+    price_title: `ราคาเรียบง่ายและโปร่งใส`,
+    price_free_banner: `✅ <strong style="color:#137333">แพ็คเกจฟรีพร้อมใช้งานแล้ว!</strong> 35 ครั้ง · ไม่ต้องใช้บัตร`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">ระบบชำระเงิน Basic/Pro กำลังเตรียมพร้อม</strong> — เปิดเร็วๆ นี้!`,
+    compare_label: `เปรียบเทียบ`,
+    compare_title: `ทำไม MailMind ชนะ`,
+    faq_label: `FAQ`,
+    faq_title: `คำถามที่พบบ่อย`,
+    cta_h2: `กล่องจดหมายของคุณรอคุณอยู่`,
+    cta_p: `ทุกภาษา ทุกโทน ทุกสถานการณ์ คลิกเดียว`,
+    cta_btn: `เพิ่มใน Chrome — ฟรี`,
+    cta_qr: `↑ สแกน QR เพื่อติดตั้ง`
+  },
+  VN: {
+    nav_features: `Tính năng`,
+    nav_pricing: `Giá cả`,
+    nav_cta: `Thêm vào Chrome — Miễn phí`,
+    hero_badge: `✦ Được hỗ trợ bởi Claude AI · 14 Ngôn ngữ · Mọi Giọng văn`,
+    hero_h1: `Mỗi email,<br><span class="pink">hoàn hảo.</span>`,
+    hero_sub: `Không đọc được ngôn ngữ? Không biết nói gì? MailMind viết email trả lời chuyên nghiệp, tự nhiên cho bạn — chỉ một cú nhấp.`,
+    hero_cta_primary: `Thêm vào Chrome — Miễn phí`,
+    hero_cta_secondary: `Xem cách hoạt động ↓`,
+    trust_1: `Dùng thử miễn phí, không cần thẻ`,
+    trust_2: `Email không được lưu trữ`,
+    trust_3: `Hoạt động trong Gmail`,
+    trust_4: `14 ngôn ngữ`,
+    qr_label: `↑ Quét để cài đặt · Tiện ích Chrome`,
+    pain_label: `Tại sao MailMind`,
+    pain_title: `Email thật khó. Chúng tôi giải quyết điều đó.`,
+    pain1_h: `Email ngôn ngữ nước ngoài`,
+    pain1_p: `Nhận email bằng tiếng Nhật, Bồ Đào Nha hay Ả Rập? MailMind đọc, giải thích bằng ngôn ngữ của bạn và viết phản hồi hoàn hảo bằng ngôn ngữ của họ.`,
+    pain1_sol: `✓ Mọi kết hợp ngôn ngữ`,
+    pain2_h: `Không biết nên nói gì`,
+    pain2_p: `Ngay cả trong ngôn ngữ của bạn, một số email rất khó — khiếu nại, từ chối, xin lỗi. MailMind tìm ngay những từ ngữ phù hợp.`,
+    pain2_sol: `✓ 8 giọng văn cho mọi tình huống`,
+    pain3_h: `Không có thời gian để viết`,
+    pain3_p: `Người chuyên nghiệp trung bình dành 3 giờ mỗi ngày cho email. MailMind rút ngắn điều đó xuống còn vài giây.`,
+    pain3_sol: `✓ Một cú nhấp, xong`,
+    feat_label: `Tính năng`,
+    feat_title: `Mọi thứ hộp thư đến của bạn cần`,
+    price_label: `Giá cả`,
+    price_title: `Giá đơn giản, minh bạch`,
+    price_free_banner: `✅ <strong style="color:#137333">Gói Miễn phí có sẵn ngay bây giờ!</strong> 35 lần trả lời · Không cần thẻ`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Hệ thống thanh toán Basic/Pro sắp ra mắt</strong> — Sắp mở!`,
+    compare_label: `So sánh`,
+    compare_title: `Tại sao MailMind thắng`,
+    faq_label: `FAQ`,
+    faq_title: `Câu hỏi thường gặp`,
+    cta_h2: `Hộp thư đến của bạn đang chờ.`,
+    cta_p: `Bất kỳ ngôn ngữ nào. Bất kỳ giọng văn nào. Bất kỳ tình huống nào. Một cú nhấp.`,
+    cta_btn: `Thêm vào Chrome — Miễn phí`,
+    cta_qr: `↑ Quét QR để cài đặt`
+  },
+  AR: {
+    nav_features: `الميزات`,
+    nav_pricing: `الأسعار`,
+    nav_cta: `أضف إلى Chrome — مجانًا`,
+    hero_badge: `✦ مدعوم بـ Claude AI · 14 لغة · أي نبرة`,
+    hero_h1: `كل بريد إلكتروني،<br><span class="pink">مثالي.</span>`,
+    hero_sub: `لا تستطيع قراءة اللغة؟ لا تعرف ماذا تقول؟ يكتب MailMind ردودًا مهنية وطبيعية على رسائلك الإلكترونية — بنقرة واحدة.`,
+    hero_cta_primary: `أضف إلى Chrome — مجانًا`,
+    hero_cta_secondary: `شاهد كيف يعمل ↓`,
+    trust_1: `تجربة مجانية، لا بطاقة`,
+    trust_2: `رسائلك لا تُخزَّن`,
+    trust_3: `يعمل داخل Gmail`,
+    trust_4: `14 لغة`,
+    qr_label: `↑ امسح للتثبيت · إضافة Chrome`,
+    pain_label: `لماذا MailMind`,
+    pain_title: `البريد الإلكتروني صعب. نحن نحل ذلك.`,
+    pain1_h: `رسائل بلغة أجنبية`,
+    pain1_p: `تلقيت بريدًا بالياباني أو البرتغالي أو العربي؟ يقرأه MailMind ويشرحه بلغتك ويكتب ردًا مثاليًا بلغتهم.`,
+    pain1_sol: `✓ أي مزيج من اللغات`,
+    pain2_h: `لا تعرف ماذا تكتب`,
+    pain2_p: `حتى بلغتك، بعض الرسائل صعبة — الشكاوى، الرفض، الاعتذار. يجد MailMind الكلمات المناسبة فورًا.`,
+    pain2_sol: `✓ 8 نبرات لكل موقف`,
+    pain3_h: `لا وقت للكتابة`,
+    pain3_p: `يقضي المحترف المتوسط 3 ساعات يوميًا في البريد الإلكتروني. يختصر MailMind ذلك إلى ثوانٍ.`,
+    pain3_sol: `✓ نقرة واحدة، انتهى`,
+    feat_label: `الميزات`,
+    feat_title: `كل ما يحتاجه صندوق بريدك`,
+    price_label: `الأسعار`,
+    price_title: `أسعار بسيطة وشفافة`,
+    price_free_banner: `✅ <strong style="color:#137333">الخطة المجانية متاحة الآن!</strong> 35 ردًا · لا بطاقة مطلوبة`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">نظام دفع Basic/Pro قادم قريبًا</strong> — افتتاح قريب!`,
+    compare_label: `مقارنة`,
+    compare_title: `لماذا يفوز MailMind`,
+    faq_label: `FAQ`,
+    faq_title: `أسئلة شائعة`,
+    cta_h2: `صندوق بريدك ينتظرك.`,
+    cta_p: `أي لغة. أي نبرة. أي موقف. نقرة واحدة.`,
+    cta_btn: `أضف إلى Chrome — مجانًا`,
+    cta_qr: `↑ امسح رمز QR للتثبيت`
+  },
+  DE: {
+    nav_features: `Funktionen`,
+    nav_pricing: `Preise`,
+    nav_cta: `Zu Chrome hinzufügen — Kostenlos`,
+    hero_badge: `✦ Powered by Claude AI · 14 Sprachen · Jeder Ton`,
+    hero_h1: `Jede E-Mail,<br><span class="pink">perfekt.</span>`,
+    hero_sub: `Können Sie die Sprache nicht lesen? Wissen Sie nicht, was Sie schreiben sollen? MailMind schreibt professionelle, natürliche E-Mail-Antworten für Sie — mit einem Klick.`,
+    hero_cta_primary: `Zu Chrome hinzufügen — Kostenlos`,
+    hero_cta_secondary: `Sehen Sie wie es funktioniert ↓`,
+    trust_1: `Kostenlose Testversion, keine Karte`,
+    trust_2: `E-Mails werden nie gespeichert`,
+    trust_3: `Funktioniert in Gmail`,
+    trust_4: `14 Sprachen`,
+    qr_label: `↑ Scannen zum Installieren · Chrome-Erweiterung`,
+    pain_label: `Warum MailMind`,
+    pain_title: `E-Mails sind schwer. Wir lösen das.`,
+    pain1_h: `Fremdsprachige E-Mails`,
+    pain1_p: `Eine E-Mail auf Japanisch, Portugiesisch oder Arabisch erhalten? MailMind liest sie, erklärt sie in Ihrer Sprache und schreibt eine perfekte Antwort in ihrer Sprache.`,
+    pain1_sol: `✓ Jede Sprachkombination`,
+    pain2_h: `Wissen Sie nicht was Sie schreiben sollen`,
+    pain2_p: `Auch in Ihrer eigenen Sprache sind manche E-Mails schwierig — Beschwerden, Ablehnungen, Entschuldigungen. MailMind findet sofort die richtigen Worte.`,
+    pain2_sol: `✓ 8 Töne für jede Situation`,
+    pain3_h: `Keine Zeit zum Schreiben`,
+    pain3_p: `Der durchschnittliche Berufstätige verbringt 3 Stunden täglich mit E-Mails. MailMind reduziert das auf Sekunden.`,
+    pain3_sol: `✓ Ein Klick, fertig`,
+    feat_label: `Funktionen`,
+    feat_title: `Alles, was Ihr Posteingang braucht`,
+    price_label: `Preise`,
+    price_title: `Einfache, transparente Preise`,
+    price_free_banner: `✅ <strong style="color:#137333">Kostenloser Plan jetzt verfügbar!</strong> 35 Antworten · Keine Karte`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic/Pro Zahlungssystem kommt bald</strong> — Bald verfügbar!`,
+    compare_label: `Vergleich`,
+    compare_title: `Warum MailMind gewinnt`,
+    faq_label: `FAQ`,
+    faq_title: `Häufige Fragen`,
+    cta_h2: `Ihr Posteingang wartet.`,
+    cta_p: `Jede Sprache. Jeder Ton. Jede Situation. Ein Klick.`,
+    cta_btn: `Zu Chrome hinzufügen — Kostenlos`,
+    cta_qr: `↑ QR-Code scannen zum Installieren`
+  },
+  FR: {
+    nav_features: `Fonctionnalités`,
+    nav_pricing: `Tarifs`,
+    nav_cta: `Ajouter à Chrome — Gratuit`,
+    hero_badge: `✦ Propulsé par Claude AI · 14 Langues · N'importe quel Ton`,
+    hero_h1: `Chaque email,<br><span class="pink">parfait.</span>`,
+    hero_sub: `Vous ne lisez pas la langue ? Vous ne savez pas quoi dire ? MailMind rédige des réponses professionnelles et naturelles pour vous — en un clic.`,
+    hero_cta_primary: `Ajouter à Chrome — Gratuit`,
+    hero_cta_secondary: `Voir comment ça marche ↓`,
+    trust_1: `Essai gratuit, sans carte`,
+    trust_2: `Emails jamais stockés`,
+    trust_3: `Fonctionne dans Gmail`,
+    trust_4: `14 langues`,
+    qr_label: `↑ Scanner pour installer · Extension Chrome`,
+    pain_label: `Pourquoi MailMind`,
+    pain_title: `Les emails sont difficiles. On règle ça.`,
+    pain1_h: `Email en langue étrangère`,
+    pain1_p: `Vous recevez un email en japonais, portugais ou arabe ? MailMind le lit, l'explique dans votre langue et rédige une réponse parfaite dans la leur.`,
+    pain1_sol: `✓ N'importe quelle combinaison de langues`,
+    pain2_h: `Vous ne savez pas quoi écrire`,
+    pain2_p: `Même dans votre propre langue, certains emails sont difficiles — plaintes, refus, excuses. MailMind trouve les bons mots instantanément.`,
+    pain2_sol: `✓ 8 tons pour chaque situation`,
+    pain3_h: `Pas le temps d'écrire`,
+    pain3_p: `Le professionnel moyen passe 3 heures par jour sur ses emails. MailMind réduit ça à quelques secondes.`,
+    pain3_sol: `✓ Un clic, c'est fait`,
+    feat_label: `Fonctionnalités`,
+    feat_title: `Tout ce dont votre boîte mail a besoin`,
+    price_label: `Tarifs`,
+    price_title: `Tarifs simples et transparents`,
+    price_free_banner: `✅ <strong style="color:#137333">Plan Gratuit disponible maintenant !</strong> 35 réponses · Sans carte`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Système de paiement Basic/Pro bientôt disponible</strong> — Ouverture prochaine !`,
+    compare_label: `Comparaison`,
+    compare_title: `Pourquoi MailMind gagne`,
+    faq_label: `FAQ`,
+    faq_title: `Questions fréquentes`,
+    cta_h2: `Votre boîte mail vous attend.`,
+    cta_p: `N'importe quelle langue. N'importe quel ton. N'importe quelle situation. Un clic.`,
+    cta_btn: `Ajouter à Chrome — Gratuit`,
+    cta_qr: `↑ Scanner le QR pour installer`
+  },
+  ES: {
+    nav_features: `Funciones`,
+    nav_pricing: `Precios`,
+    nav_cta: `Agregar a Chrome — Gratis`,
+    hero_badge: `✦ Impulsado por Claude AI · 14 Idiomas · Cualquier Tono`,
+    hero_h1: `Cada correo,<br><span class="pink">perfecto.</span>`,
+    hero_sub: `¿No puedes leer el idioma? ¿No sabes qué decir? MailMind escribe respuestas de correo profesionales y naturales para ti — con un clic.`,
+    hero_cta_primary: `Agregar a Chrome — Gratis`,
+    hero_cta_secondary: `Ver cómo funciona ↓`,
+    trust_1: `Prueba gratis, sin tarjeta`,
+    trust_2: `Correos nunca guardados`,
+    trust_3: `Funciona dentro de Gmail`,
+    trust_4: `14 idiomas`,
+    qr_label: `↑ Escanear para instalar · Extensión de Chrome`,
+    pain_label: `Por qué MailMind`,
+    pain_title: `El correo es difícil. Lo solucionamos.`,
+    pain1_h: `Correo en idioma extranjero`,
+    pain1_p: `¿Recibiste un correo en japonés, portugués o árabe? MailMind lo lee, lo explica en tu idioma y escribe la respuesta perfecta en el idioma del remitente.`,
+    pain1_sol: `✓ Cualquier combinación de idiomas`,
+    pain2_h: `No sabes qué escribir`,
+    pain2_p: `Incluso en tu propio idioma, algunos correos son difíciles — quejas, rechazos, disculpas. MailMind encuentra las palabras correctas al instante.`,
+    pain2_sol: `✓ 8 tonos para cada situación`,
+    pain3_h: `Sin tiempo para escribir`,
+    pain3_p: `El profesional promedio pasa 3 horas al día en correos. MailMind lo reduce a segundos.`,
+    pain3_sol: `✓ Un clic, listo`,
+    feat_label: `Funciones`,
+    feat_title: `Todo lo que tu bandeja de entrada necesita`,
+    price_label: `Precios`,
+    price_title: `Precios simples y transparentes`,
+    price_free_banner: `✅ <strong style="color:#137333">¡Plan Gratuito disponible ahora!</strong> 35 respuestas · Sin tarjeta`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistema de pago Basic/Pro próximamente</strong> — ¡Abriendo pronto!`,
+    compare_label: `Comparación`,
+    compare_title: `Por qué MailMind gana`,
+    faq_label: `FAQ`,
+    faq_title: `Preguntas frecuentes`,
+    cta_h2: `Tu bandeja de entrada está esperando.`,
+    cta_p: `Cualquier idioma. Cualquier tono. Cualquier situación. Un clic.`,
+    cta_btn: `Agregar a Chrome — Gratis`,
+    cta_qr: `↑ Escanear QR para instalar`
+  },
+  IT: {
+    nav_features: `Funzionalità`,
+    nav_pricing: `Prezzi`,
+    nav_cta: `Aggiungi a Chrome — Gratis`,
+    hero_badge: `✦ Powered by Claude AI · 14 Lingue · Qualsiasi Tono`,
+    hero_h1: `Ogni email,<br><span class="pink">perfetta.</span>`,
+    hero_sub: `Non riesci a leggere la lingua? Non sai cosa dire? MailMind scrive risposte email professionali e naturali per te — con un clic.`,
+    hero_cta_primary: `Aggiungi a Chrome — Gratis`,
+    hero_cta_secondary: `Guarda come funziona ↓`,
+    trust_1: `Prova gratuita, nessuna carta`,
+    trust_2: `Email mai memorizzate`,
+    trust_3: `Funziona in Gmail`,
+    trust_4: `14 lingue`,
+    qr_label: `↑ Scansiona per installare · Estensione Chrome`,
+    pain_label: `Perché MailMind`,
+    pain_title: `Le email sono difficili. Noi le risolviamo.`,
+    pain1_h: `Email in lingua straniera`,
+    pain1_p: `Hai ricevuto un'email in giapponese, portoghese o arabo? MailMind la legge, la spiega nella tua lingua e scrive una risposta perfetta nella loro lingua.`,
+    pain1_sol: `✓ Qualsiasi combinazione di lingue`,
+    pain2_h: `Non sai cosa scrivere`,
+    pain2_p: `Anche nella tua lingua, alcune email sono difficili — reclami, rifiuti, scuse. MailMind trova le parole giuste all'istante.`,
+    pain2_sol: `✓ 8 toni per ogni situazione`,
+    pain3_h: `Non hai tempo per scrivere`,
+    pain3_p: `Il professionista medio trascorre 3 ore al giorno sulle email. MailMind riduce questo a pochi secondi.`,
+    pain3_sol: `✓ Un clic, fatto`,
+    feat_label: `Funzionalità`,
+    feat_title: `Tutto ciò di cui la tua casella di posta ha bisogno`,
+    price_label: `Prezzi`,
+    price_title: `Prezzi semplici e trasparenti`,
+    price_free_banner: `✅ <strong style="color:#137333">Piano Gratuito disponibile ora!</strong> 35 risposte · Nessuna carta`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistema di pagamento Basic/Pro in arrivo</strong> — Apertura prossima!`,
+    compare_label: `Confronto`,
+    compare_title: `Perché MailMind vince`,
+    faq_label: `FAQ`,
+    faq_title: `Domande frequenti`,
+    cta_h2: `La tua casella di posta ti aspetta.`,
+    cta_p: `Qualsiasi lingua. Qualsiasi tono. Qualsiasi situazione. Un clic.`,
+    cta_btn: `Aggiungi a Chrome — Gratis`,
+    cta_qr: `↑ Scansiona QR per installare`
+  },
+  TR: {
+    nav_features: `Özellikler`,
+    nav_pricing: `Fiyatlar`,
+    nav_cta: `Chrome'a Ekle — Ücretsiz`,
+    hero_badge: `✦ Claude AI Tarafından Destekleniyor · 14 Dil · Her Ton`,
+    hero_h1: `Her e-posta,<br><span class="pink">mükemmel.</span>`,
+    hero_sub: `Dili okuyamıyor musunuz? Ne söyleyeceğinizi bilmiyor musunuz? MailMind sizin için profesyonel, doğal e-posta yanıtları yazar — tek tıklamayla.`,
+    hero_cta_primary: `Chrome'a Ekle — Ücretsiz`,
+    hero_cta_secondary: `Nasıl çalıştığını gör ↓`,
+    trust_1: `Ücretsiz deneme, kart yok`,
+    trust_2: `E-postalar hiç kaydedilmez`,
+    trust_3: `Gmail içinde çalışır`,
+    trust_4: `14 dil`,
+    qr_label: `↑ Yüklemek için tara · Chrome Uzantısı`,
+    pain_label: `Neden MailMind`,
+    pain_title: `E-posta zor. Biz çözüyoruz.`,
+    pain1_h: `Yabancı dilde e-posta`,
+    pain1_p: `Japonca, Portekizce veya Arapça bir e-posta mı aldınız? MailMind onu okur, dilinizde açıklar ve onların dilinde mükemmel bir yanıt yazar.`,
+    pain1_sol: `✓ Herhangi bir dil kombinasyonu`,
+    pain2_h: `Ne yazacağınızı bilmiyorsunuz`,
+    pain2_p: `Kendi dilinizde bile bazı e-postalar zordur — şikayetler, redler, özürler. MailMind anında doğru kelimeleri bulur.`,
+    pain2_sol: `✓ Her durum için 8 ton`,
+    pain3_h: `Yazacak zamanınız yok`,
+    pain3_p: `Ortalama bir profesyonel günde 3 saat e-postaya harcıyor. MailMind bunu saniyelere indiriyor.`,
+    pain3_sol: `✓ Tek tıklama, bitti`,
+    feat_label: `Özellikler`,
+    feat_title: `Gelen kutunuzun ihtiyacı olan her şey`,
+    price_label: `Fiyatlar`,
+    price_title: `Basit, şeffaf fiyatlar`,
+    price_free_banner: `✅ <strong style="color:#137333">Ücretsiz Plan şimdi mevcut!</strong> 35 yanıt · Kart gerekmez`,
+    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic/Pro ödeme sistemi yakında</strong> — Yakında açılıyor!`,
+    compare_label: `Karşılaştırma`,
+    compare_title: `Neden MailMind kazanır`,
+    faq_label: `FAQ`,
+    faq_title: `Sık sorulan sorular`,
+    cta_h2: `Gelen kutunuz sizi bekliyor.`,
+    cta_p: `Her dil. Her ton. Her durum. Tek tıklama.`,
+    cta_btn: `Chrome'a Ekle — Ücretsiz`,
+    cta_qr: `↑ Yüklemek için QR tara`
+  }
+};
+
+var LANG_MAP = {
+  ja:'JP', en:'EN', pt:'PT', hi:'HI', id:'ID', th:'TH', vi:'VN',
+  ar:'AR', de:'DE', fr:'FR', es:'ES', it:'IT', tr:'TR', ko:'KR'
+};
+
+function applyLang(lang) {
+  var t = TRANSLATIONS[lang] || TRANSLATIONS['EN'];
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-html');
+    if (t[key] !== undefined) el.innerHTML = t[key];
+  });
+  var sel = document.getElementById('lang-select');
+  if (sel) sel.value = lang;
+  document.documentElement.dir = (lang === 'AR') ? 'rtl' : 'ltr';
+  try { localStorage.setItem('mm_lang', lang); } catch(e) {}
+}
+
+(function() {
+  var saved, urlLang;
+  try { saved = localStorage.getItem('mm_lang'); } catch(e) {}
+  var m = location.search.match(/[?&]lang=([A-Z]{2})/);
+  if (m) urlLang = m[1].toUpperCase();
+  var browserLang = (navigator.language || '').toLowerCase().split('-')[0];
+  var lang = urlLang || saved || LANG_MAP[browserLang] || 'EN';
+  if (!TRANSLATIONS[lang]) lang = 'EN';
+  applyLang(lang);
+})();
 </script>
 </body>
 </html>
