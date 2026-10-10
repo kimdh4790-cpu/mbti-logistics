@@ -249,16 +249,18 @@ jobs:
             echo "[mailmind] 나레이션 오디오 합성 LANG=$LANG VARIANT=$VARIANT"
             if [ -f "output/mailmind-promo.mp4" ]; then
               ffmpeg -y -i output/mailmind-promo.mp4 -i "$NAR" \
-                -map 0:v -map 1:a \
-                -c:v copy -c:a aac -b:a 192k \
+                -filter_complex "[1:a]apad[a]" \
+                -map 0:v -map "[a]" \
+                -c:v copy -c:a aac -b:a 192k -shortest \
                 output/mailmind-promo-with-audio.mp4 \
                 && mv output/mailmind-promo-with-audio.mp4 output/mailmind-promo.mp4 \
                 && echo "[mailmind] 본영상 나레이션 합성 완료"
             fi
             if [ -f "output/mailmind-reels.mp4" ]; then
               ffmpeg -y -i output/mailmind-reels.mp4 -i "$NAR" \
-                -map 0:v -map 1:a \
-                -c:v copy -c:a aac -b:a 192k \
+                -filter_complex "[1:a]apad[a]" \
+                -map 0:v -map "[a]" \
+                -c:v copy -c:a aac -b:a 192k -shortest \
                 output/mailmind-reels-with-audio.mp4 \
                 && mv output/mailmind-reels-with-audio.mp4 output/mailmind-reels.mp4 \
                 && echo "[mailmind] Reels 나레이션 합성 완료"
