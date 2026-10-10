@@ -159,6 +159,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — `mailmind-pages/index.html` 전 섹션 data-i18n 다국어화. TRANSLATIONS 14개 언어 × 35키. 언어 드롭다운 nav. URL param/localStorage/브라우저 언어 자동감지. AR RTL. `yongcha-worker.js` MAILMIND_INDEX_HTML 갱신. PR #182 |
 | 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `noisy-paper-8d01`에 `mailmind-pages/` 자동배포. `index.html`(51,770B) + `privacy.html` 업데이트. `deploy.yml`에 "Deploy MailMind Pages" 스텝 추가. 도메인: `mailmind.yongcha.app` |
 | 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — mailmind-variants.json(28세트) + 동적 mailmind-promo.html(?lang=XX&variant=A/B) + social-media-schedule.yml 09:05/15:00 KST 크론 추가. 14일 로테이션(EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI). PR #172 머지 완료. |
 | 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱(무음+자막가림 재업로드), 인프런(무음 재업로드), DONWAY(D변형: 세금계산서·전자서명 angle) 3개 동시 큐. steps=record,compose,youtube |
