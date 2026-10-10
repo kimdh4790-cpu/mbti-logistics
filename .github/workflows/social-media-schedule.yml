@@ -250,7 +250,7 @@ jobs:
             if [ -f "output/mailmind-promo.mp4" ]; then
               ffmpeg -y -i output/mailmind-promo.mp4 -i "$NAR" \
                 -map 0:v -map 1:a \
-                -c:v copy -c:a aac -b:a 192k -shortest \
+                -c:v copy -c:a aac -b:a 192k \
                 output/mailmind-promo-with-audio.mp4 \
                 && mv output/mailmind-promo-with-audio.mp4 output/mailmind-promo.mp4 \
                 && echo "[mailmind] 본영상 나레이션 합성 완료"
@@ -258,7 +258,7 @@ jobs:
             if [ -f "output/mailmind-reels.mp4" ]; then
               ffmpeg -y -i output/mailmind-reels.mp4 -i "$NAR" \
                 -map 0:v -map 1:a \
-                -c:v copy -c:a aac -b:a 192k -shortest \
+                -c:v copy -c:a aac -b:a 192k \
                 output/mailmind-reels-with-audio.mp4 \
                 && mv output/mailmind-reels-with-audio.mp4 output/mailmind-reels.mp4 \
                 && echo "[mailmind] Reels 나레이션 합성 완료"
