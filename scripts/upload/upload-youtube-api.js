@@ -36,12 +36,24 @@ const product = getArg('product') || 'filo';
 const dryRun = args.includes('--dry-run');
 const getToken = args.includes('--get-token');
 const reelsMode = args.includes('--reels');
+const langArg = getArg('lang');
+const variantArg = getArg('variant');
 
 const ROOT = path.join(__dirname, '../..');
 let meta = require(`../content/${product}-meta.json`);
 
-// 주차 기반 variant 선택
-if (meta.variants && meta.variants.length > 0) {
+// MailMind: 언어별 제목·설명·태그 적용
+if (product === 'mailmind' && langArg) {
+  const variants = require(`../content/mailmind-variants.json`);
+  const langData = variants.languages && variants.languages[langArg];
+  const vKey = variantArg || 'A';
+  const vData = langData && langData.variants && langData.variants[vKey];
+  if (vData && vData.youtube) {
+    meta = { ...meta, youtube: { ...meta.youtube, ...vData.youtube } };
+    console.log(`[YouTube] MailMind 언어=${langArg} Variant=${vKey} 메타 적용`);
+  }
+} else if (meta.variants && meta.variants.length > 0) {
+  // 기타 제품: 주차 기반 variant 선택
   const weekIdx = Math.floor(Date.now() / (7 * 24 * 3600 * 1000)) % meta.variants.length;
   const variant = meta.variants[weekIdx];
   if (variant.youtube) meta = { ...meta, youtube: { ...meta.youtube, ...variant.youtube } };
