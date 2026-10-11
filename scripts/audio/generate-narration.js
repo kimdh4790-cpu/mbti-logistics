@@ -142,12 +142,7 @@ async function fishAudioTTS(text, outFile) {
 }
 
 // ─── Google Cloud TTS ──────────────────────────────────────────────
-async function googleTTS(text, outFile) {
-  const apiKey = process.env.GOOGLE_TTS_API_KEY;
-  if (!apiKey) throw new Error('GOOGLE_TTS_API_KEY 환경변수 필요');
-
-  const voiceName = script.voice || 'ko-KR-Neural2-C';
-  const langCode  = script.ttsLang || voiceName.slice(0, 5);
+async function googleTTSSingle(text, outFile, voiceName, langCode, apiKey) {
   const bodyStr = JSON.stringify({
     input: { text },
     voice: { languageCode: langCode, name: voiceName },
@@ -181,6 +176,37 @@ async function googleTTS(text, outFile) {
     req.write(bodyStr);
     req.end();
   });
+}
+
+async function googleTTS(text, outFile) {
+  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  if (!apiKey) throw new Error('GOOGLE_TTS_API_KEY 환경변수 필요');
+
+  const primaryVoice = script.voice || 'ko-KR-Neural2-C';
+  const langCode = script.ttsLang || primaryVoice.slice(0, 5);
+
+  // Neural2 미지원 언어용 폴백: Neural2 → Wavenet → Standard
+  const voices = [primaryVoice];
+  if (primaryVoice.includes('Neural2')) {
+    voices.push(primaryVoice.replace('Neural2', 'Wavenet'));
+    voices.push(primaryVoice.replace('Neural2', 'Standard'));
+  } else if (primaryVoice.includes('Wavenet')) {
+    voices.push(primaryVoice.replace('Wavenet', 'Standard'));
+  }
+
+  for (let i = 0; i < voices.length; i++) {
+    try {
+      await googleTTSSingle(text, outFile, voices[i], langCode, apiKey);
+      if (i > 0) console.log(`[TTS] ${voices[0]} 미지원 → ${voices[i]} 폴백 성공`);
+      return;
+    } catch (err) {
+      if (i < voices.length - 1) {
+        console.log(`[TTS] ${voices[i]} 실패(${err.message.slice(0, 60)}), ${voices[i + 1]} 시도...`);
+      } else {
+        throw err;
+      }
+    }
+  }
 }
 
 // ─── CLOVA Voice TTS ───────────────────────────────────────────────
