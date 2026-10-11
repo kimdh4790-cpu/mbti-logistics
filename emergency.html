@@ -98,8 +98,16 @@ label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bot
       기사 이름
     </div>
     <input id="emer-driver-name" type="text" placeholder="이름 입력 (예: 홍길동)"
-      style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:15px;font-weight:700;outline:none;margin-bottom:16px;box-sizing:border-box"
+      style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:15px;font-weight:700;outline:none;margin-bottom:12px;box-sizing:border-box"
       oninput="document.getElementById('emer-login-btn').disabled=!this.value.trim()">
+    <div id="emer-pin-row" style="display:block;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.1em;margin-bottom:8px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        쿠팡 ID
+      </div>
+      <input id="emer-driver-pin" type="text" placeholder="쿠팡 ID 입력"
+        style="width:100%;padding:13px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:15px;font-weight:700;outline:none;box-sizing:border-box">
+    </div>
     <button id="emer-login-btn" disabled onclick="_emerDoLogin()"
       style="width:100%;padding:15px;background:#c9a84c;border:none;border-radius:10px;color:#08101f;font-size:16px;font-weight:800;cursor:pointer;opacity:.5;display:flex;align-items:center;justify-content:center;gap:8px">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -332,7 +340,7 @@ var _CO_EMER_APP_NAME = (typeof _pwaAppName!=='undefined'&&_pwaAppName) ? _pwaAp
 
 // 구역 버튼 렌더링 (독립 함수 — _emerLoadCoName 콜백에서도 호출)
 function _renderCampButtons() {
-  var camps = window._CO_EMER_CAMPS || ['강서구','금정구','기장군','남구','동구','동래구','부산진구','북구','사상구','사하구','서구','수영구','연제구','영도구','중구','해운대구'];
+  var camps = window._CO_EMER_CAMPS || ['대구','부산2','부산3','진주'];
   var row = document.getElementById('emer-camp-row');
   if(!row) return;
   row.innerHTML = '';
@@ -531,21 +539,47 @@ function _emerLoadCoName() {
   }).catch(function(){ _coNameLoaded=false; }); // 오류 시 재시도 허용
 }
 
+
 function _emerDoLogin() {
   var name = (document.getElementById('emer-driver-name')||{}).value.trim();
   if(!name) { _emerToast('이름을 입력하세요'); return; }
   if(!_emerSelCamp) { _emerToast('배송 구역을 선택하세요'); return; }
+  var pinEl = document.getElementById('emer-driver-pin');
+  var pin = pinEl ? pinEl.value.trim() : '';
   _emerSelDriver = name;
   localStorage.setItem('mbti_emer_driver', name);
   localStorage.setItem('mbti_emer_camp', _emerSelCamp);
-  // 앱 명칭 설정 (URL 잠금 우선)
   var appName = _CO_EMER_APP_NAME || localStorage.getItem('mbti_emer_app') || '';
   if(appName) localStorage.setItem('mbti_emer_app', appName);
-  // _CU 설정 (기존 코드와 호환)
   var did = new URLSearchParams(location.search).get('did')
           || localStorage.getItem('mbti_emer_dealerId')
           || (_auth.currentUser && _auth.currentUser.uid) || '';
-  // 첫 로그인 시 기사 자동 등록 (앱명칭 있을 때만)
+  // PIN 입력 시 → 서버에서 검증 후 프로필 등록 우회 (회사 문서 불필요)
+  if(pin) {
+    var btn = document.getElementById('emer-login-btn');
+    if(btn) { btn.disabled = true; btn.style.opacity = '.5'; }
+    fetch('/api/emergency-quick-login',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({driverName:name,pin:pin})
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d.ok) {
+        _CU = { uid: did, email: '', dealerId: did, driver: name, camp: _emerSelCamp };
+        window._CU = _CU;
+        localStorage.setItem('mbti_emer_profile_done','1');
+        if(!_auth.currentUser){
+          _auth.signInAnonymously().catch(function(e){ console.warn('[anon]',e.message); });
+        }
+        _emerGoMain();
+      } else {
+        _emerToast(d.error || '이름 또는 쿠팡 ID가 맞지 않습니다');
+        if(btn) { btn.disabled = false; btn.style.opacity = ''; }
+      }
+    }).catch(function(){
+      _emerToast('네트워크 오류. 다시 시도해주세요');
+      if(btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+    return;
+  }
+  // 기존 일반 로그인 흐름
   if(appName && did) {
     fetch('/api/emergency-register',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({dealerId:did,driverName:name,appName:appName})
@@ -553,29 +587,8 @@ function _emerDoLogin() {
   }
   _CU = { uid: did, email: (_auth.currentUser&&_auth.currentUser.email)||'', dealerId: did, driver: name, camp: _emerSelCamp };
   window._CU = _CU;
-  // Firestore 보안규칙 통과를 위해 익명 로그인 (실패해도 무시)
   if(!_auth.currentUser){
     _auth.signInAnonymously().catch(function(e){ console.warn('[anon]',e.message); });
-  }
-  // 프로필 등록 필요 여부 확인 (localStorage 플래그 우선, 없으면 API 확인)
-  if(!localStorage.getItem('mbti_emer_profile_done')) {
-    if(did) {
-      fetch('/api/emergency-driver-profile?dealerId='+encodeURIComponent(did)+'&driverName='+encodeURIComponent(name))
-        .then(function(r){return r.json();})
-        .then(function(d){
-          if(d.ok && d.profile) {
-            // 이미 등록된 기사 → 플래그 복원 후 메인으로
-            localStorage.setItem('mbti_emer_profile_done','1');
-            _emerGoMain();
-          } else {
-            _emerShowRegister(name);
-          }
-        })
-        .catch(function(){ _emerShowRegister(name); });
-      return;
-    }
-    _emerShowRegister(name);
-    return;
   }
   _emerGoMain();
 }
@@ -1825,7 +1838,32 @@ async function emerOcrScan(file, _statusOverride){
           if(code3 && code3.data){ resolve(code3.data); return; }
         }
 
-        resolve(null); // QR 없음 → Vision OCR로 폴백
+        // ⑤ jsQR — 90° 회전 (기울어진 사진 대응)
+        if(window.jsQR){
+          var cvR=document.createElement('canvas'); cvR.width=h; cvR.height=w;
+          var ctxR=cvR.getContext('2d'); ctxR.translate(h,0); ctxR.rotate(Math.PI/2); ctxR.drawImage(img,0,0,w,h);
+          var rawR=ctxR.getImageData(0,0,h,w);
+          var codeR=window.jsQR(rawR.data,rawR.width,rawR.height,{inversionAttempts:'attemptBoth'});
+          if(codeR&&codeR.data){ resolve(codeR.data); return; }
+        }
+
+        // ⑥ jsQR — 고대비 처리 (밝기 낮은 사진 대응)
+        if(window.jsQR){
+          var cvC=document.createElement('canvas'); cvC.width=w; cvC.height=h;
+          var ctxC=cvC.getContext('2d'); ctxC.drawImage(img,0,0,w,h);
+          var dC=ctxC.getImageData(0,0,w,h);
+          for(var _ci=0;_ci<dC.data.length;_ci+=4){
+            var _gr=Math.round(dC.data[_ci]*.299+dC.data[_ci+1]*.587+dC.data[_ci+2]*.114);
+            var _bw=_gr<110?0:255; // 임계값 이진화
+            dC.data[_ci]=dC.data[_ci+1]=dC.data[_ci+2]=_bw;
+          }
+          ctxC.putImageData(dC,0,0);
+          var rawC=ctxC.getImageData(0,0,w,h);
+          var codeC=window.jsQR(rawC.data,rawC.width,rawC.height,{inversionAttempts:'attemptBoth'});
+          if(codeC&&codeC.data){ resolve(codeC.data); return; }
+        }
+
+        resolve(null); // QR 없음 → AI OCR로 폴백
       };
       img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
       img.src = url;
@@ -1860,7 +1898,41 @@ async function emerOcrScan(file, _statusOverride){
   }
 
   if(!apiKey){
-    if(status) status.innerHTML = '<span style="color:var(--red)">❌ API 키 없음 — 관리자에게 문의하세요</span>';
+    // Google Vision API 키 없음 → 서버 Claude OCR 폴백
+    var did = (_CU&&_CU.dealerId) || localStorage.getItem('mbti_emer_dealerId') || '';
+    if(did){
+      if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 운송장 분석 중...</span>';
+      try{
+        // 이미지를 base64로 변환
+        var b64fb = await new Promise(function(resolve){
+          var r = new FileReader();
+          r.onload = function(e){ resolve((e.target.result||'').split(',')[1]||''); };
+          r.readAsDataURL(file);
+        });
+        var ocrRes = await fetch('/api/emer-ocr',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({dealerId:did,b64image:b64fb})});
+        var ocrJson = await ocrRes.json();
+        if(ocrJson.ok && ocrJson.parsed){
+          var p = ocrJson.parsed;
+          // 줄바꿈으로 이어서 _parseQrText 일반 텍스트 파서가 주소·수령인 추출하도록
+          var scanText = [p.address, p.recipientName, p.trackingNumber, p.routeCode, p.dong]
+            .filter(Boolean).join('\n');
+          _emerHandleScan(scanText || ocrJson.text, status);
+          return;
+        }
+        if(ocrJson.ok && ocrJson.text){
+          _emerHandleScan(ocrJson.text, status);
+          return;
+        }
+        if(status) status.innerHTML = '<span style="color:var(--red)">❌ ' + (ocrJson.error||'OCR 실패') + '</span>';
+        return;
+      }catch(e2){
+        console.warn('[emer-ocr]',e2);
+        if(status) status.innerHTML = '<span style="color:var(--red)">❌ 서버 연결 오류: ' + e2.message + '</span>';
+        return;
+      }
+    }
+    if(status) status.innerHTML = '<span style="color:var(--red)">❌ 로그인 후 이용하세요</span>';
     return;
   }
   if(status) status.innerHTML = '<span style="color:var(--blue)">🤖 AI 분석 중...</span>';
@@ -2615,18 +2687,24 @@ function emerUnifiedScan(input){
         bd.detect(_detectTarget).then(function(codes){
           if(codes&&codes.length&&codes[0].rawValue){
             var raw=codes[0].rawValue;
-            if(raw.indexOf('V1|')===0){
+            // |V1|... 또는 V1|... 모두 처리 (쿠팡 QR은 앞에 파이프 있음)
+            if(/^\|?V1\|/.test(raw)){
               if(statusEl) statusEl.textContent='✅ QR 인식!';
               _emerHandleScan(raw, statusEl);
             } else if(_isBlueLabel && cvBlue){
               // 파란 전처리 실패 → 원본으로 재시도
               bd.detect(cv).then(function(c2){
-                if(c2&&c2.length&&c2[0].rawValue&&c2[0].rawValue.indexOf('V1|')===0){
+                if(c2&&c2.length&&c2[0].rawValue&&/^\|?V1\|/.test(c2[0].rawValue)){
                   if(statusEl) statusEl.textContent='✅ QR 인식!';
                   _emerHandleScan(c2[0].rawValue,statusEl);
                 } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
               }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
-            } else { goOCR(); }
+            } else {
+              // 비V1 QR: 운송장·주소 추출 가능하면 바로 처리, 아니면 OCR
+              var _bqp = _parseQrText(raw);
+              if(_bqp.tracking_no || _bqp.address){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(raw,statusEl); }
+              else { goOCR(); }
+            }
           } else { _nativeCamJsQR(_isBlueLabel&&cvBlue?cvBlue:cv,cw,ch,statusEl,goOCR); }
         }).catch(function(){ _nativeCamJsQR(cv,cw,ch,statusEl,goOCR); });
         return;
@@ -4414,10 +4492,15 @@ function _nativeCamJsQR(cv, cw, ch, statusEl, fallback){
     r=scan(0,0,cw,ch,false)||scan(rx,0,cw-rx,ch,false)||scan(Math.floor(cw*.14),cy2,cw2,ch2,false)||scan(0,0,cw,ch,true);
   }
   if(r&&r.data){
-    if(r.data.indexOf('V1|')===0 || r.data.indexOf('V1\t')===0){
+    if(/^\|?V1\|/.test(r.data) || r.data.indexOf('V1\t')===0){
       if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl);
-    } else if(fallback){ fallback(); }
-    else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+    } else {
+      // 비V1 QR: 운송장·주소 파싱 가능하면 바로 처리, 아니면 OCR 폴백
+      var _jqp = _parseQrText(r.data);
+      if(_jqp.tracking_no || _jqp.address){ if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+      else if(fallback){ fallback(); }
+      else { if(statusEl) statusEl.textContent='✅ QR 인식!'; _emerHandleScan(r.data,statusEl); }
+    }
   }
   else if(fallback){ fallback(); }
   else { if(statusEl) statusEl.innerHTML='❌ 인식 실패 — 다시 찍어주세요'; }
