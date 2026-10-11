@@ -159,6 +159,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — `MailMindPromo.jsx` UI_LABELS 14개 언어(JP/EN/KR/PT/HI/ID/TH/VN/AR/DE/FR/ES/IT/TR), FOREIGN_EMAIL_MAP, getLabels() + EN 폴백, lang prop Scene1~6 전달, AR RTL 지원. `generate-narration.js` Neural2→Wavenet→Standard 폴백 체인(TH/VN/AR/TR 나레이션 미생성 버그 수정). PR #185 |
 | 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — `mailmind-pages/index.html` 전 섹션 data-i18n 다국어화. TRANSLATIONS 14개 언어 × 35키. 언어 드롭다운 nav. URL param/localStorage/브라우저 언어 자동감지. AR RTL. `yongcha-worker.js` MAILMIND_INDEX_HTML 갱신. PR #182 |
 | 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `noisy-paper-8d01`에 `mailmind-pages/` 자동배포. `index.html`(51,770B) + `privacy.html` 업데이트. `deploy.yml`에 "Deploy MailMind Pages" 스텝 추가. 도메인: `mailmind.yongcha.app` |
 | 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — mailmind-variants.json(28세트) + 동적 mailmind-promo.html(?lang=XX&variant=A/B) + social-media-schedule.yml 09:05/15:00 KST 크론 추가. 14일 로테이션(EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI). PR #172 머지 완료. |

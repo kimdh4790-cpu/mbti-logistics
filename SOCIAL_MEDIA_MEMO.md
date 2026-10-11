@@ -784,6 +784,7 @@ scripts/content/variants/{product}-variants.json  ← A/B/C/D 변형
 ## 수정 이력
 | 날짜 | 작업 내용 |
 |---|---|
+| 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — `MailMindPromo.jsx`: UI_LABELS 14개 언어 전체 추가(JP/EN/KR/PT/HI/ID/TH/VN/AR/DE/FR/ES/IT/TR), FOREIGN_EMAIL_MAP 14개 언어별 외국어 이메일 샘플, getLabels() 헬퍼 + EN 폴백, lang prop 모든 Scene1~Scene6에 전달, 아랍어 RTL 지원. `generate-narration.js`: TH/VN/AR/TR Neural2 미지원 대응 — googleTTSSingle() 분리 + Neural2→Wavenet→Standard 자동 폴백 체인. PR #185 |
 | 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — `mailmind-pages/index.html`: `data-i18n`/`data-i18n-html` 속성으로 nav·hero·pain·features·pricing·compare·faq·cta 전 섹션 다국어화. TRANSLATIONS 객체 14개 언어(EN/JP/KR/PT/HI/ID/TH/VN/AR/DE/FR/ES/IT/TR) × 35키. 언어 선택 드롭다운 nav 우측. URL `?lang=XX` → localStorage → 브라우저 언어 자동감지. AR RTL 자동 전환. `yongcha-worker.js` MAILMIND_INDEX_HTML 상수 갱신. PR #182 |
 | 2026-09-25 | **용차앱 기사·소장 관점 영상 파이프라인 추가** — YongchaDriverPromo.jsx(5씬: 수수료0원후크/홈화면/공고목록/그리드메뉴/CTA, 60초), YongchaDealerPromo.jsx(5씬: 10초기사연결후크/대시보드+관제/공고등록/공고발송/CTA, 60초). render-yongcha-driver.js·render-yongcha-dealer.js 신규. yongcha-driver-meta.json·yongcha-dealer-meta.json 신규(YouTube/Instagram 메타). index.jsx에 YongchaDriverPromo·YongchaDriverReels·YongchaDealerPromo·YongchaDealerReels 4개 컴포지션 등록. social-media.yml PRODUCT=yongcha 시 driver+dealer 자동 렌더·업로드. 앱 실제 화면 기반 폰 목업 JSX로 구현(스크린샷 4장+3장 참조) |
 | 2026-09-22 | **후크 플레이북 신규** — `scripts/content/hooks-playbook.md`: 바이럴 후킹 18원칙 4카테고리 요약 + 스토리텔링 7단계 60초 타임라인 + 용차앱/DONWAY/인프런/FILO 제품별 후크 테이블 + 프롬프트 템플릿. social-planner 에이전트 영상 스크립트 작성 전 참조 |
