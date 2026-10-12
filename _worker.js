@@ -1171,14 +1171,21 @@ export default {
       }
       // /contract/download/{token} → 서명 완료 계약서 HTML 파일 다운로드
       if (path.startsWith('/contract/download/') && path.length > 19 && method === 'GET') {
+        try {
         const _dlToken = path.slice(19).split('/')[0];
         const _dlInline = new URL(request.url).searchParams.get('inline')==='1';
-        const _dlFsToken = await getAccessToken(env);
+        let _dlFsToken;
+        try { _dlFsToken = await getAccessToken(env); } catch(_gte) {
+          return new Response('서비스 인증 오류 — 잠시 후 다시 시도하세요.',{status:503,headers:{'Content-Type':'text/plain;charset=utf-8'}});
+        }
         const _dlQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_dlToken}}},limit:1}});
         const _dlRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_dlFsToken,'Content-Type':'application/json'},body:_dlQ});
         const _dlData = await _dlRes.json();
         const _dlDoc = Array.isArray(_dlData) && _dlData[0]?.document;
-        if (!_dlDoc) return new Response('계약서를 찾을 수 없습니다.',{status:404});
+        if (!_dlDoc) {
+          const _dlErrDetail = !Array.isArray(_dlData) ? ('Firestore 오류: '+JSON.stringify(_dlData).slice(0,200)) : '계약서를 찾을 수 없습니다.';
+          return new Response(_dlErrDetail,{status:404,headers:{'Content-Type':'text/plain;charset=utf-8'}});
+        }
         const _df = _dlDoc.fields||{};
         const _dg = k => _df[k]?.stringValue||'';
         const _dd = k => _df[k]?.stringValue||'미기재';
@@ -1283,6 +1290,9 @@ ${_dlDrSig?`<div class="sig-box"><img src="${_dlDrSig}"></div>`:'<div style="col
           return new Response(_dlHtmlI,{headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}});
         }
         return new Response(_dlHtml,{headers:{'Content-Type':'text/html;charset=utf-8','Content-Disposition':`attachment; filename*=UTF-8''${encodeURIComponent(_dlTypeName+'-'+_dlDriver+'.html')}`,'Cache-Control':'no-store'}});
+        } catch(_dle) {
+          return new Response('계약서 처리 오류: '+_dle.message,{status:500,headers:{'Content-Type':'text/plain;charset=utf-8'}});
+        }
       }
 
       // /contract/sign/{token} → 기사 전자서명 페이지 (GET) / 서명 저장 (POST)
@@ -7476,7 +7486,22 @@ service cloud.firestore {
     // ── 카카오 알림톡 (/api/send-alimtalk) — Aligo ──
     if (path === '/api/send-alimtalk' && method === 'POST') {
       const _atUser = await verifyFirebaseToken(request, env);
-      if (!_atUser) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
+      let _atAllowed = !!_atUser;
+      // Firebase 차단 환경(기업 Chrome 정책 등) 대응: signToken으로 대체 인증
+      if (!_atAllowed) {
+        try {
+          const _atBodyClone = await request.clone().json();
+          const _atST = _atBodyClone.signToken;
+          if (_atST && _atST.length > 10) {
+            const _atFT = await getAccessToken(env);
+            const _atQ = JSON.stringify({structuredQuery:{from:[{collectionId:'contracts'}],where:{fieldFilter:{field:{fieldPath:'signToken'},op:'EQUAL',value:{stringValue:_atST}}},limit:1}});
+            const _atR = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents:runQuery`,{method:'POST',headers:{Authorization:'Bearer '+_atFT,'Content-Type':'application/json'},body:_atQ});
+            const _atD = await _atR.json();
+            if (Array.isArray(_atD) && _atD[0]?.document) _atAllowed = true;
+          }
+        } catch(_ate) {}
+      }
+      if (!_atAllowed) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'}});
       try {
         const body = await request.json();
         const { to, templateCode, variables, fallbackText } = body;
