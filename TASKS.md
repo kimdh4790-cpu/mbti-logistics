@@ -159,6 +159,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-16 | **MailMind Flutter 앱 버그 4종 수정 + CI 키스토어 수정** — 발신자 이메일 주소 탭 불가(`HitTestBehavior.opaque`), 인코딩 깨짐(QP/EUC-KR·base64 HTML 바디 디코딩), 파일 다운로드 실패, CID 인라인 이미지 미표시(data: URI 변환) — 5개 메일(Naver·iCloud·Yahoo·Yahoo Japan·Outlook) 전체 적용. CI PKCS12→JKS 키스토어 변환 스텝 추가(`KeytoolException: Tag number over 30` 해결). mailmind 레포 main 머지 완료(commit `b9db713`, `e4e5dd7`). `KEYSTORE_BASE64` Secret 재등록 필요(사용자 직접). |
 | 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — `MailMindPromo.jsx` UI_LABELS 14개 언어(JP/EN/KR/PT/HI/ID/TH/VN/AR/DE/FR/ES/IT/TR), FOREIGN_EMAIL_MAP, getLabels() + EN 폴백, lang prop Scene1~6 전달, AR RTL 지원. `generate-narration.js` Neural2→Wavenet→Standard 폴백 체인(TH/VN/AR/TR 나레이션 미생성 버그 수정). PR #183 |
 | 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — `mailmind-pages/index.html` 전 섹션 data-i18n 다국어화. TRANSLATIONS 14개 언어 × 35키. 언어 드롭다운 nav. URL param/localStorage/브라우저 언어 자동감지. AR RTL. `yongcha-worker.js` MAILMIND_INDEX_HTML 갱신. PR #182 |
 | 2026-10-08 | **쿠팡 송장 OCR 정상화** — deploy.yml "Deploy Filo Worker" 스텝에 ANTHROPIC_API_KEY 시크릿 등록 추가 (2026-09-20 Worker 분리 후 누락). emergency.html OCR 오류 메시지 개선 (서버 실제 오류 표시). PR #177 머지 완료. |
