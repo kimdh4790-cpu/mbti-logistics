@@ -1,5 +1,70 @@
 {
-  "date": "2026-10-12",
-  "total": 0,
-  "byCategory": {}
+  "date": "2026-10-19",
+  "total": 6,
+  "byCategory": {
+    "AI기능업그레이드": [
+      {
+        "category": "AI기능업그레이드",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "AI부업으로 돈 못버는 사람들의 공통점",
+        "url": "https://youtu.be/diuJ2l1Zj1E",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-17T09:00:27+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "퇴근하고 하루 30분, 1분 AI 영상으로 100만원 버는 부업 2탄 (+프롬프트까지 모두 드림)",
+        "url": "https://youtu.be/d80p0ZfrqQY",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-17T08:00:24+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "현시점 가장 효율적인 AI 영상 제작법",
+        "url": "https://youtu.be/ULxwtwX9XKM",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-16T23:00:25+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "코딩못하는중개사",
+        "instagram": "코딩못하는중개사",
+        "title": "쇼츠로만 카드뉴스 공장만들기 #카드뉴스자동화",
+        "url": "https://youtu.be/VWzvy9-mZ5c",
+        "reason": "키워드 기반: 자동화 관련",
+        "published": "2026-09-11T08:43:07+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "호랑웨이브",
+        "instagram": "horangwave",
+        "title": "이제 한국 차에 이게 들어간다구요? 현대차가 띄운 승부수, 글레오 AI 압박 면접 후기",
+        "url": "https://youtu.be/OrdqGD5sV88",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-09-28T12:00:39+00:00",
+        "source": "YouTube"
+      }
+    ],
+    "수익창출": [
+      {
+        "category": "수익창출",
+        "channel": "스튜디오경향",
+        "instagram": "STUDIO경향",
+        "title": "기자들은 투자 잘하나요? 🎉 10만 구독 기념 댓글읽기 이벤트 🎉 I 스튜디오경향",
+        "url": "https://youtu.be/DOsIQbCfRyc",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-10-17T11:00:29+00:00",
+        "source": "YouTube"
+      }
+    ]
+  }
 }
