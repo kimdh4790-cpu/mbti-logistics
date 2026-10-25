@@ -170,6 +170,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-25 | **MailMind 비용마진 분석 완료** — 전체 기능별 AI API 비용 대비 요금제 수익 마진 분석. 가중평균 $0.002/호출, Basic 97.3%·Pro 97.6% 마진 확인. Team 플랜 설계 전(미정). Artifact 작성 완료. |
 | 2026-10-25 | **MailMind 언어 처리 버그 6종 수정** — Bug #2: 사용자 편집 덮어쓰기 방지(`_replyController.addListener` in `initState`). Bug #3: 독일어 서명 중복 제거(`HONORIFIC_INSTRUCTIONS.German.polite` Closing 제거). Bug #4: `myLanguage='auto'` 시 `country` 파라미터 우선 적용(handleGenerate·Refine·Smart·Triple 4개 핸들러). Bug #5: 작성 모드 이름 임의 생성 방지(NAME RULE 추가). Bug #6: 뉴스레터 이메일에서 메일 요약 차단 해제(`isSummaryOnly` 플래그 추가). 수정 파일: `worker/worker.js`, `lib/screens/email_detail_screen.dart`, `lib/services/api_service.dart`. 커밋 `3fc2959`, main 머지 완료. 웹세션에 Chrome 확장 동일 패턴 적용 요청 완료. |
 | 2026-10-16 | **MailMind Flutter 앱 버그 4종 수정 + CI 키스토어 수정** — 발신자 이메일 주소 탭 불가(`HitTestBehavior.opaque`), 인코딩 깨짐(QP/EUC-KR·base64 HTML 바디 디코딩), 파일 다운로드 실패, CID 인라인 이미지 미표시(data: URI 변환) — 5개 메일(Naver·iCloud·Yahoo·Yahoo Japan·Outlook) 전체 적용. CI PKCS12→JKS 키스토어 변환 스텝 추가(`KeytoolException: Tag number over 30` 해결). mailmind 레포 main 머지 완료(commit `b9db713`, `e4e5dd7`). `KEYSTORE_BASE64` Secret 재등록 필요(사용자 직접). |
 | 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — `MailMindPromo.jsx` UI_LABELS 14개 언어(JP/EN/KR/PT/HI/ID/TH/VN/AR/DE/FR/ES/IT/TR), FOREIGN_EMAIL_MAP, getLabels() + EN 폴백, lang prop Scene1~6 전달, AR RTL 지원. `generate-narration.js` Neural2→Wavenet→Standard 폴백 체인(TH/VN/AR/TR 나레이션 미생성 버그 수정). PR #183 |
