@@ -8,6 +8,14 @@
 
 ---
 
+## 🔗 세션 분업 원칙 (2026-10-25 확정)
+- **MailMind 웹 content script 파일 수정은 웹세션(MailMind Web/Worker Agent)에서 담당**
+- 앱세션에서 웹 파일 수정이 필요할 때: `send_message`로 웹세션에 소통 → 웹세션이 직접 수정
+- 앱세션이 먼저 파악한 수정 내역(파일명·변경사항·컨텍스트)은 반드시 웹세션에 전달
+- 웹세션 ID: `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent)
+
+---
+
 ## ⚡ 자율 적용 원칙 (2026-09-09 확정)
 - **무료 + 유용한 도구·라이브러리·기법은 발견 즉시 허락 없이 바로 적용**
 - 적용 후 무엇을 왜 썼는지 한 줄 보고만 하면 됨
