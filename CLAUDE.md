@@ -12,7 +12,7 @@
 - **웹세션(MailMind Web/Worker Agent)**: 브라우저 확장프로그램 코드만 담당
   - 대상: `mailmind/extension/` 등 크롬 확장 content script·background script·manifest 관련 파일
 - **앱세션**: 나머지 전부 담당 (Flutter `lib/`, `worker/worker.js`, `pubspec.yaml` 등)
-- 웹세션 ID: `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent)
+- 웹세션 ID: `session_01NWDyoBnJzvbjC8xuwmphSp` (멜마인드 웹)
 
 ---
 
