@@ -171,6 +171,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | 날짜 | 항목 |
 |---|---|
 | 2026-10-26 | **MailMind Flutter OOM 크래시 방지 + 홈화면 일본어 하드코딩 제거** — 이미지 많은 이메일 열 때 앱 OOM 크래시 수정: 6개 이메일 상세화면(email/naver/icloud/outlook/yahoo/yahoo_japan)에 `_stripLargeBase64Images()`(100KB 초과 base64 이미지 → 1px SVG), `loading="lazy"` JS 주입, 500KB HTML 사이즈 캡 3중 방어 적용. 홈화면 AI 브리프 `_aiLang='ja'` 하드코딩 → 설정 언어 동기화로 수정. PR #196, commit `fd9a612`·`86618e1`. |
+| 2026-10-26 | **MailMind 중국어 출력 시 한국어 브랜드명 영문화** — AI 답장/번역 결과에서 "쿠팡物流" 등 한국어 브랜드명이 그대로 섞여 나오는 문제 수정. `worker/worker.js` 3개 위치(답장 프롬프트, 중국어 번역 블록, 공통 번역 블록)에 KOREAN BRAND NAME RULE 추가: 쿠팡→Coupang, 쿠팡 로지스틱스→Coupang Logistics, 삼성→Samsung, 현대→Hyundai 등 주요 브랜드 매핑. commit `777d324`. |
 | 2026-10-25 | **MailMind Flutter 답변 언어 '자동 감지' 버그 수정** — `_selectedLanguage` 초기값을 `languageNotifier.value`(내 언어 추적, 서버 동기화 후 'Korean') 대신 `replyLanguageCached`('auto' 기본값, 실제 답변 언어)로 변경. Gmail·Naver·Yahoo·Yahoo Japan·iCloud·Outlook 6개 화면 전체 적용. 영문 이메일(Product Hunt 등)에서 자동 감지 설정 무시하고 한국어 답변 생성되던 근본 버그 해결. PR #257, commit `a534ce9`. |
 | 2026-10-25 | **MailMind 글로벌 시장성 분석 Artifact 완료** — TAM $2.8B·SAM $800M·SOM $100M+ 퍼널 / 경쟁사 포지셔닝 맵(Superhuman·SaneBox·Grammarly·Google AI) / 성공 가능성 스코어카드 7.7/10 / 글로벌 6개 타깃 지역 / 1,000만 유료 유저 5년 로드맵(2026 3만→2031 1000만, ARR $1.2B+) / 주요 리스크 5종. Artifact: https://claude.ai/artifact/6ZGaySXH6x96Vip3jcBJA9 |
 | 2026-10-25 | **MailMind 비용마진 분석 완료** — 전체 기능별 AI API 비용 대비 요금제 수익 마진 분석. 가중평균 $0.002/호출, Basic 97.3%·Pro 97.6% 마진 확인. Team 플랜 설계 전(미정). Artifact: https://claude.ai/artifact/Xw4eJnt8Ect9m1MFCWP68L |
