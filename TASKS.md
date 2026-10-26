@@ -18,20 +18,6 @@
 | **구 기능 (폐기예정)** | POS·주문·메뉴·재고·직원근태·급여 (filo-auth.js, filo-pos.js 등) |
 | **주의** | filo-worker.js 대규모 수정 금지 / emergency.html 수정 전 배송앱_변경내역.md 필독 |
 
-### 🟢 DINE (dine.ne.kr) — SCAN 문서분석 서비스
-| 항목 | 내용 |
-|---|---|
-| **Worker 파일** | `dine-worker.js` |
-| **wrangler config** | `wrangler.dine.toml` |
-| **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy --config wrangler.dine.toml` |
-| **KV 업로드** | scan.html: `npx wrangler kv key put --remote --namespace-id=... scan.html --path scan.html` |
-| **핵심 파일** | `scan.html` (프론트), `dine-worker.js` (라우터+API) |
-| **주요 기능** | 공문서 AI 분석 / 등기부등본(전세사기 분석) / 자소서·이력서·계약서 분석 / 다국어 번역 / 포인트 충전 |
-| **API 경로** | `/api/seolyuhana/analyze·result·download·points·point-request·point-approve` |
-| **포인트 요금** | 면접 19,900P / 이력서·계약서 29,900P / 자소서·번역 39,900P / 충전 30,000~200,000원 |
-| **authDomain** | `dine.ne.kr` (변경 금지) |
-| **주의** | `/api/seolyuhana/*` 핸들러 구조 변경 금지 / scan.html authDomain 변경 금지 |
-
 ### 🔵 DONWAY (donway.ai.kr) — 물류 정산 SaaS
 | 항목 | 내용 |
 |---|---|
@@ -160,9 +146,8 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | # | 상태 | 항목 | 담당 파일 | 메모 |
 |---|---|---|---|---|
-| 9 | `[ ]` | SCAN 제조 견적 기능 | scan.html, dine-worker.js | /api/scan/quote, Oracle oracle-server.js 활용 (multer·Puppeteer·PaddleOCR 이미 설치됨) |
 | 10 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | mbtico-worker.js | 루틴상태+오류현황+소셜스케줄 한눈에 |
-| 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | scan.html, mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
+| 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
 
 ---
 
@@ -170,6 +155,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. 삭제 파일: `dine-worker.js`, `wrangler.dine.toml`, `wrangler.seolyuhana.toml`, `seolyuhana_worker.js`, `seolyuhana/` 전체, `scan.html`, `scan-icon-*.png`, `dine-*.png`. deploy.yml에서 Dine/Seolyuhana Worker 배포 스텝, KV 업로드 항목, dine.ne.kr 캐시 퍼지 모두 제거. commit `c50dab38`. |
 | 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — `worker/worker.js` `_koCompanyFix` 2차 안전장치: 원본 draft에서 발신자 본인 한글 회사명을 사전 추출(`_draftKoNames`)하여 후처리 변환 스킵. PR #262 머지 완료, commit `66ed09b`. CI: Jest ✅ / Regression Tests ✅. 레이어 1(PR #261 refinePrompt SENDER SIGNATURE LOCK) + 레이어 2(PR #262 _draftKoNames) 2중 방어 완성. |
 | 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — `worker/worker.js` `handleRefineCompose` 경로: (1) `buildSignOffInstruction(_rfSo)` 주입 제거 — refine 프롬프트의 userInfoSection·businessCardSection에 "엠비티아이→MBTI 변환" 지시 제거, "기존 서명 블록 그대로 보존" 지시로 교체. (2) dead code 제거 — `const _rfSo = buildSignOffInstruction` 미사용 변수·`incrementCount` 미정의 함수 호출 제거. (3) `_koCompanyFix` 후처리기 버그 수정 — draft 스캔으로 발신자 본인 회사명 감지(`_draftKoNames`) 후 해당 이름은 변환 건너뜀. `handleTranslate`의 "HARDCODED: 엠비티아이=MBTI" 동작은 올바른 것으로 확인·유지. commits `7c5e933`, `d6353b2`, PR #261 (`kimdh4790-cpu/mailmind`). |
 | 2026-10-26 | **MailMind 답변 언어를 이메일 본문 언어로 결정 (핵심 수정)** — `worker/worker.js` 3개 엔드포인트(generate-single/smart/triple) `effectiveReplyLanguage`/`effectiveMyLanguage` 로직 변경: `detectEmailLanguage(emailContent)`를 항상 우선 적용. 이전: `myLanguage='한국어'` → 무조건 한국어 답변. 이후: 한국 도메인(.kr) + 일본어 본문 → 일본어 답변 + 한국 문화 성향. user의 언어 설정은 감지 실패 시 폴백으로만 사용. PR #260, commit `6df0487`. |
