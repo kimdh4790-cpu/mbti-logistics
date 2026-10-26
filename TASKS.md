@@ -170,6 +170,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-26 | **MailMind 발신자 문화 지식 우선순위 개선** — `worker/worker.js` 3개 엔드포인트(generate-single/triple/smart) culture 주입 로직 수정: (1) 발신자 country 기반 문화 지식을 답변 언어 문화 지식보다 우선 적용 (`senderCulture || replyLangCulture` 순서로 변경). (2) country='auto'일 때 이메일 본문 Unicode 스크립트로 발신자 언어 감지 → culture fallback. (3) generate-smart에 `smartCountry` 기반 culture 감지 추가(기존: email body Unicode만 사용). 예) 한국어로 일본인에게 답변 시 → 일본 문화 지식 주입. commit `346ee14`. |
 | 2026-10-26 | **CLAUDE.md 웹세션 ID 업데이트** — 기존 보관된 웹세션 ID `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent, archived) → 활성 세션 `session_01NWDyoBnJzvbjC8xuwmphSp` (멜마인드 웹)으로 변경. 사용자 직접 확인 제공. |
 | 2026-10-26 | **CLAUDE.md 세션 분업 원칙 명확화** — 기존 "웹 content script 파일 수정은 웹세션" 규칙을 구체화: 웹세션 = 브라우저 확장프로그램 코드(`mailmind/extension/` 등)만 담당 / 앱세션 = 나머지 전부(Flutter lib/, worker/worker.js 등). commit `21a925e1`, PR #197 머지. 웹세션(`session_01NWDyoBnJzvbjC8xuwmphSp`)에 확장프로그램 17개 언어 수정(substituteRefine·dualRe·SPELLING MANDATE) 요청 전달 완료. |
 | 2026-10-26 | **MailMind outlook 비교/스마트 모드 3개 답변 생성 버그 수정** — `outlook_detail_screen.dart` `_generateReply(mode)` 파라미터 무시 버그: compare/smart/single 모드 무관하게 항상 `generateSingle` 호출하던 문제 수정. `compare` → `generateTriple`(3개 답변: Direct/Warm/Detailed) / `smart` → `generateSmart`(3버전+요약) / `single` → 기존 유지. naver 화면 패턴 참조하여 수정. `_smartSummary`·`_isSmartMode` 미사용 경고 제거. commit `0613a15`, PR #198. |
