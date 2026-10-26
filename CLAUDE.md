@@ -8,10 +8,10 @@
 
 ---
 
-## 🔗 세션 분업 원칙 (2026-10-25 확정)
-- **MailMind 웹 content script 파일 수정은 웹세션(MailMind Web/Worker Agent)에서 담당**
-- 앱세션에서 웹 파일 수정이 필요할 때: `send_message`로 웹세션에 소통 → 웹세션이 직접 수정
-- 앱세션이 먼저 파악한 수정 내역(파일명·변경사항·컨텍스트)은 반드시 웹세션에 전달
+## 🔗 세션 분업 원칙 (2026-10-26 확정)
+- **웹세션(MailMind Web/Worker Agent)**: 브라우저 확장프로그램 코드만 담당
+  - 대상: `mailmind/extension/` 등 크롬 확장 content script·background script·manifest 관련 파일
+- **앱세션**: 나머지 전부 담당 (Flutter `lib/`, `worker/worker.js`, `pubspec.yaml` 등)
 - 웹세션 ID: `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent)
 
 ---
