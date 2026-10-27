@@ -141,6 +141,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A4 | `[~]` | **Apple Developer Program 등록 신청 완료** (2026-10-27) | 등록 ID: **5G5PA8D7B7** / Apple ID: kimdh4790@gmail.com / 업무용 이메일: mailmind@yongcha.app / Apple이 서명 권한 검토 후 $99 결제 링크 이메일 발송 예정 (1~5 영업일). kimdh4790@gmail.com 확인 대기 |
 | A5 | `[~]` | **MailMind Play Store 스토어 등록정보 작성 중** (2026-10-27) | 앱 만들기 완료 (package: app.yongcha.mailmind, 무료). 아이콘(512×512 squircle) 업로드 완료. 그래픽 이미지(1024×500) 준비 완료. 스크린샷 5장 준비 완료(앱 실제 화면). 자세한 설명 입력 완료. 스크린샷+그래픽이미지 업로드 후 "다음" → 앱 콘텐츠 정보 입력 남음 |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) `google-services.json` 패키지명 불일치(`com.mbtico.mailmind` → `app.yongcha.mailmind` 수정) (2) `hook_service.dart` QuickActions에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 제거. PR #265 머지 완료(commit `63b0f5d`). Build #256 자동 트리거됨 → GitHub Release `v1.0.256` 생성 예정. **다음 단계**: `v1.0.256` AAB를 Play Console → 내부 테스트 트랙에 업로드 |
+| A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | 원인: Google Play App Signing이 AAB를 Play 서명 키로 재서명 → 해당 SHA-1(`81:04:2E:...`)이 Firebase에 미등록 → `google-services.json`에 type-1 OAuth 클라이언트 누락 → 로그인 DEVELOPER_ERROR. 수정: Firebase Console에 Play 앱 서명 SHA-1 추가 후 `android/app/google-services.json` 재적용. PR #267(`fix-google-services-v2`) squash merge(commit `b5e4be2`). **확인 완료**: v263 빌드 Play Console 내부 테스트 업로드 후 실 기기 Google 로그인 성공(kimdh4790@gmail.com PRO 계정). |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료, 본인 확인 완료. Apple은 $99 결제 링크 대기 중. MailMind Play Store 등록정보 작성 진행 중. v254/255 크래시 수정 완료(PR #265), Build #256 진행 중.
 
@@ -159,6 +160,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1(`81:04:2E:22:...`)을 Firebase Console에 추가 후 `android/app/google-services.json` 재다운로드·적용. `app.yongcha.mailmind` type-1 OAuth 클라이언트 2개(업로드키 `68f67f...` + Play서명키 `81042e...`)로 업데이트. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
 | 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — 원인 (1) `google-services.json` 두 번째 클라이언트 `package_name`이 `com.mbtico.mailmind`로 잘못 등록돼 있어 Firebase 초기화 실패 → `app.yongcha.mailmind`로 수정. 원인 (2) `hook_service.dart` `setupQuickActions()`에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 → `icon:` 파라미터 완전 제거. PR #265 squash merge(commit `63b0f5d`). GitHub Actions Build #256 자동 트리거됨. 완료 시 Release `v1.0.256`에 AAB 첨부. |
 | 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. 삭제 파일: `dine-worker.js`, `wrangler.dine.toml`, `wrangler.seolyuhana.toml`, `seolyuhana_worker.js`, `seolyuhana/` 전체, `scan.html`, `scan-icon-*.png`, `dine-*.png`. deploy.yml에서 Dine/Seolyuhana Worker 배포 스텝, KV 업로드 항목, dine.ne.kr 캐시 퍼지 모두 제거. commit `c50dab38`. |
 | 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — `worker/worker.js` `_koCompanyFix` 2차 안전장치: 원본 draft에서 발신자 본인 한글 회사명을 사전 추출(`_draftKoNames`)하여 후처리 변환 스킵. PR #262 머지 완료, commit `66ed09b`. CI: Jest ✅ / Regression Tests ✅. 레이어 1(PR #261 refinePrompt SENDER SIGNATURE LOCK) + 레이어 2(PR #262 _draftKoNames) 2중 방어 완성. |
