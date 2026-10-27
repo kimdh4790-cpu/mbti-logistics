@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="canonical" href="https://mailmind.yongcha.app/">
   <title>MailMind AI — Perfect Email Replies in One Click</title>
   <meta name="description" content="Any language, any tone, any situation. MailMind writes professional email replies for you — whether you can't read the language or just don't know what to say.">
-  <link rel="canonical" href="https://mailmind.yongcha.app">
-  <meta property="og:url" content="https://mailmind.yongcha.app">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -174,22 +173,6 @@
       padding: 80px 24px;
       background: var(--white);
     }
-    .demo-tab { display: none; }
-    .demo-tab.active { display: block; }
-    .demo-tab-btn {
-      padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
-      cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-2);
-      transition: all 0.15s; font-family: inherit;
-    }
-    .demo-tab-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
-    .ver-tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
-    .ver-tab { padding: 5px 14px; border-radius: 16px; font-size: 12px; font-weight: 600;
-      cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-2); font-family: inherit; }
-    .ver-tab.active { background: var(--pink-light); border-color: var(--pink); color: var(--pink); }
-    .smart-summary { background: #e8f5e9; border-radius: 8px; padding: 12px; font-size: 13px; color: #2e7d32; margin-bottom: 10px; line-height: 1.6; }
-    .smart-lang-btn { width: 100%; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600;
-      cursor: pointer; border: 1.5px solid #34a853; background: #fff; color: #34a853; margin-top: 8px; font-family: inherit; transition: all 0.15s; }
-    .smart-lang-btn:hover { background: #34a853; color: #fff; }
     .demo-wrap {
       max-width: 680px; margin: 0 auto;
       background: var(--white);
@@ -430,47 +413,12 @@
     .footer-links a { color: rgba(255,255,255,0.6); text-decoration: none; font-size: 13px; }
     .footer-links a:hover { color: #fff; }
 
-    /* QR CODE */
-    .hero-qr {
-      margin-top: 32px;
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
-    }
-    .hero-qr-box {
-      background: #fff;
-      border: 2px solid var(--sky-deep);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      display: inline-block;
-    }
-    .hero-qr-box canvas, .hero-qr-box img { display: block; border-radius: 4px; }
-    .hero-qr-label {
-      font-size: 13px; font-weight: 600; color: var(--text-3);
-      display: flex; align-items: center; gap: 6px;
-    }
-    .hero-qr-label .arrow { font-size: 16px; color: var(--pink); }
-
-    /* LANG PICKER */
-    .lang-picker { position: relative; margin-left: 8px; }
-    .lang-select {
-      appearance: none; -webkit-appearance: none;
-      background: #fff; border: 1.5px solid var(--border);
-      border-radius: 20px; padding: 5px 26px 5px 10px;
-      font-size: 13px; font-weight: 600; color: var(--text-2);
-      cursor: pointer; transition: border-color 0.15s;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23718096'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 8px center;
-      font-family: inherit;
-    }
-    .lang-select:hover, .lang-select:focus { border-color: var(--pink); outline: none; }
-
     /* RESPONSIVE */
     @media (max-width: 640px) {
       nav .nav-links a:not(.btn-nav) { display: none; }
       .hero { padding: 60px 20px 60px; }
     }
   </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -478,101 +426,53 @@
 <nav>
   <div class="nav-logo">✦ MailMind</div>
   <div class="nav-links">
-    <a href="#features" data-i18n="nav_features">Features</a>
-    <a href="#pricing" data-i18n="nav_pricing">Pricing</a>
-    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-nav" data-i18n="nav_cta">Add to Chrome — Free</a>
-  </div>
-  <div class="lang-picker">
-    <select class="lang-select" id="lang-select" onchange="applyLang(this.value)">
-      <option value="EN">🇺🇸 EN</option>
-      <option value="JP">🇯🇵 JP</option>
-      <option value="KR">🇰🇷 KR</option>
-      <option value="PT">🇧🇷 PT</option>
-      <option value="HI">🇮🇳 HI</option>
-      <option value="ID">🇮🇩 ID</option>
-      <option value="TH">🇹🇭 TH</option>
-      <option value="VN">🇻🇳 VN</option>
-      <option value="AR">🇸🇦 AR</option>
-      <option value="DE">🇩🇪 DE</option>
-      <option value="FR">🇫🇷 FR</option>
-      <option value="ES">🇪🇸 ES</option>
-      <option value="IT">🇮🇹 IT</option>
-      <option value="TR">🇹🇷 TR</option>
-    </select>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="https://chromewebstore.google.com" class="btn-nav">Add to Chrome — Free</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge" data-i18n="hero_badge">✦ Powered by Claude AI · 17 Languages · Gmail &amp; Outlook · Mobile App</div>
-  <h1 data-i18n-html="hero_h1">Every email,<br><span class="pink">perfect.</span></h1>
-  <p class="hero-sub" data-i18n="hero_sub">
+  <div class="hero-badge">✦ Powered by Claude AI · 19 Languages · Gmail & Outlook</div>
+  <h1>Every email,<br><span class="pink">perfect.</span></h1>
+  <p class="hero-sub">
     Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.
   </p>
   <div class="hero-cta">
-    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-primary" data-i18n="hero_cta_primary">Add to Chrome — It's Free</a>
-    <a href="#demo" class="btn-secondary" data-i18n="hero_cta_secondary">See how it works ↓</a>
-  </div>
-  <div class="hero-app-download" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
-    <a href="https://play.google.com/store/apps/details?id=app.yongcha.mailmind" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#1A1A2E;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:500;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3.18 23.76c.36.2.78.2 1.14 0l11.5-6.63-2.5-2.5L3.18 23.76zm15.32-9.6L5.41 6.82l9.63 9.63 3.46-2 .01-.01c.57-.33.57-1.16 0-1.49zM2.5.24A1 1 0 002 1.12v21.76c0 .37.2.7.5.88l.14.08 12.19-12.19L2.64.16 2.5.24zm18.32 10.1L17.5 8.5l-2.5 2.5 2.5 2.5 3.32-1.92c.95-.55.95-1.99 0-2.54z"/></svg>
-      <span>Google Play</span>
-    </a>
-    <a href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#1A1A2E;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:500;opacity:0.6;cursor:not-allowed;" onclick="return false;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98l-.09.06c-.22.15-2.17 1.28-2.15 3.8.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-      <span>App Store (Coming Soon)</span>
-    </a>
+    <a href="https://chromewebstore.google.com" class="btn-primary">Add to Chrome — It's Free</a>
+    <a href="#demo" class="btn-secondary">See how it works ↓</a>
   </div>
   <div class="hero-trust">
-    <span><span class="dot">✓</span> <span data-i18n="trust_1">Free trial, no card</span></span>
-    <span><span class="dot">✓</span> <span data-i18n="trust_2">Emails never stored</span></span>
-    <span><span class="dot">✓</span> <span data-i18n="trust_3">Gmail &amp; Outlook Web</span></span>
-    <span><span class="dot">✓</span> <span data-i18n="trust_4">17 languages</span></span>
-  </div>
-  <div class="hero-qr">
-    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" target="_blank" style="text-decoration:none">
-      <div class="hero-qr-box" id="qr-code"></div>
-    </a>
-    <div class="hero-qr-label" data-i18n="qr_label"><span class="arrow">↑</span> Scan to install · Chrome Extension</div>
+    <span><span class="dot">✓</span> Free trial, no card</span>
+    <span><span class="dot">✓</span> Emails never stored</span>
+    <span><span class="dot">✓</span> Gmail & Outlook Web</span>
+    <span><span class="dot">✓</span> 19 languages</span>
   </div>
 </section>
-<script>
-(function() {
-  var el = document.getElementById('qr-code');
-  if (!el || typeof QRCode === 'undefined') return;
-  new QRCode(el, {
-    text: 'https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo',
-    width: 140,
-    height: 140,
-    colorDark: '#1A1A2E',
-    colorLight: '#FFFFFF',
-    correctLevel: QRCode.CorrectLevel.M
-  });
-})();
-</script>
 
 <!-- PAIN POINTS -->
 <section class="pain">
-  <p class="section-label" data-i18n="pain_label">Why MailMind</p>
-  <h2 class="section-title" data-i18n="pain_title">Email is hard. We fix that.</h2>
+  <p class="section-label">Why MailMind</p>
+  <h2 class="section-title">Email is hard. We fix that.</h2>
   <div class="pain-grid">
     <div class="pain-card">
       <div class="pain-icon">🌍</div>
-      <h3 data-i18n="pain1_h">Foreign language email</h3>
-      <p data-i18n="pain1_p">Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.</p>
-      <div class="solution" data-i18n="pain1_sol">✓ Any language combination</div>
+      <h3>Foreign language email</h3>
+      <p>Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.</p>
+      <div class="solution">✓ Any language combination</div>
     </div>
     <div class="pain-card">
       <div class="pain-icon">✍️</div>
-      <h3 data-i18n="pain2_h">Don't know what to say</h3>
-      <p data-i18n="pain2_p">Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.</p>
-      <div class="solution" data-i18n="pain2_sol">✓ 8 tones for every situation</div>
+      <h3>Don't know what to say</h3>
+      <p>Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.</p>
+      <div class="solution">✓ 8 tones for every situation</div>
     </div>
     <div class="pain-card">
       <div class="pain-icon">⏱️</div>
-      <h3 data-i18n="pain3_h">No time to write</h3>
-      <p data-i18n="pain3_p">The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.</p>
-      <div class="solution" data-i18n="pain3_sol">✓ One click, done</div>
+      <h3>No time to write</h3>
+      <p>The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.</p>
+      <div class="solution">✓ One click, done</div>
     </div>
   </div>
 </section>
@@ -580,18 +480,49 @@
 <!-- DEMO -->
 <section class="demo-section" id="demo">
   <p class="section-label">Live Demo</p>
-  <h2 class="section-title" style="margin-bottom:36px">What you see inside Gmail</h2>
+  <h2 class="section-title" style="margin-bottom:8px">What you see inside Gmail & Outlook</h2>
+  <p style="text-align:center;color:var(--text-3);font-size:14px;margin-bottom:16px">Try it — choose your plan, generate a reply in your language</p>
 
-  <!-- 플랜별 탭 -->
-  <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px;flex-wrap:wrap">
-    <button class="demo-tab-btn active" data-tab="free" onclick="switchDemoTab('free',this)">🆓 Free</button>
-    <button class="demo-tab-btn" data-tab="basic" onclick="switchDemoTab('basic',this)">⚡ Basic <span style="font-size:11px;opacity:0.8">$15/mo</span></button>
-    <button class="demo-tab-btn" data-tab="pro" onclick="switchDemoTab('pro',this)">🚀 Pro <span style="font-size:11px;opacity:0.8">$25/mo</span></button>
+  <!-- 플랜 선택 -->
+  <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">
+    <button id="plan-btn-free" onclick="switchDemoPlan('free')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #dadce0;background:#f1f3f4;color:#5f6368;font-family:inherit">Free</button>
+    <button id="plan-btn-basic" onclick="switchDemoPlan('basic')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #1a73e8;background:#fff;color:#1a73e8;font-family:inherit">Basic · $15/mo</button>
+    <button id="plan-btn-pro" onclick="switchDemoPlan('pro')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #e91e8c;background:#e91e8c;color:#fff;font-family:inherit">✦ Pro · $25/mo</button>
   </div>
-  <p style="text-align:center;font-size:12px;color:#9aa0a6;margin-bottom:20px">각 플랜을 클릭해서 기능을 직접 체험해보세요</p>
+  <p id="plan-desc-text" style="text-align:center;font-size:12px;color:#5f6368;margin-bottom:10px">✦ Pro: All features unlocked — 3 versions, Smart Reply, Guard</p>
+  <div id="demo-lock-msg" style="display:none;max-width:480px;margin:0 auto 12px;padding:10px;background:#fff8e1;border-radius:8px;text-align:center;font-size:12px;color:#b8860b">
+    <span id="demo-lock-text">🔒 3 Versions &amp; Smart Reply require Basic or Pro</span><br>
+    <a href="#pricing" style="font-size:12px;color:#e91e8c;font-weight:600;text-decoration:none">View Plans →</a>
+  </div>
 
-  <!-- TAB 1: Free -->
-  <div class="demo-tab active" id="tab-free">
+  <!-- 데모 탭 -->
+  <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap">
+    <button class="demo-tab-btn active" data-tab="single" onclick="switchDemoTab('single',this)">✦ AI Reply</button>
+    <button class="demo-tab-btn" data-tab="triple" onclick="switchDemoTab('triple',this)">🔀 3 Versions</button>
+    <button class="demo-tab-btn" data-tab="smart" onclick="switchDemoTab('smart',this)">🌍 Smart Reply</button>
+  </div>
+
+  <style>
+  .demo-tab-btn {
+    padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-2);
+    transition: all 0.15s; font-family: inherit;
+  }
+  .demo-tab-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+  .demo-tab { display: none; }
+  .demo-tab.active { display: block; }
+  .ver-tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
+  .ver-tab { padding: 5px 14px; border-radius: 16px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid var(--border); background: #fff; color: var(--text-2); font-family: inherit; }
+  .ver-tab.active { background: var(--pink-light); border-color: var(--pink); color: var(--pink); }
+  .smart-summary { background: #e8f5e9; border-radius: 8px; padding: 12px; font-size: 13px; color: #2e7d32; margin-bottom: 10px; line-height: 1.6; }
+  .smart-lang-btn { width: 100%; padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    cursor: pointer; border: 1.5px solid #34a853; background: #fff; color: #34a853; margin-top: 8px; font-family: inherit; transition: all 0.15s; }
+  .smart-lang-btn:hover { background: #34a853; color: #fff; }
+  </style>
+
+  <!-- TAB 1: AI Reply -->
+  <div class="demo-tab active" id="tab-single">
   <div class="demo-wrap">
     <div class="demo-email-bar">
       <span class="demo-email-from">From: tanaka@jp-trading.co.jp</span> &nbsp;·&nbsp; Re: Q4 Partnership Proposal
@@ -600,38 +531,122 @@
       Thank you for sending the proposal. We reviewed it internally and are generally interested, but have a few questions about the timeline and pricing. Could we schedule a call this week?
     </div>
     <div class="demo-panel">
+      <!-- 헤더 -->
       <div class="demo-panel-header">
         <span class="demo-logo">✦ MailMind</span>
-        <span class="demo-usage" style="color:#34a853">🆓 Free · 35회 체험</span>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#5f6368;margin-bottom:3px">Pro · 13/300 replies left</div>
+          <div style="width:100px;height:4px;background:#f1f3f4;border-radius:2px;overflow:hidden;display:inline-block">
+            <div style="height:100%;background:#e91e8c;border-radius:2px;width:4%"></div>
+          </div>
+        </div>
       </div>
-      <div class="demo-tones" id="demo-tones">
-        <div class="demo-tone active" data-tone="professional">Professional</div>
-        <div class="demo-tone" data-tone="friendly">Friendly</div>
-        <div class="demo-tone" data-tone="concise">Concise</div>
-        <div class="demo-tone" data-tone="decline">Decline</div>
-        <div class="demo-tone" data-tone="thankful">Thankful</div>
+
+      <!-- 감정/긴급 배지 -->
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <span id="demo-urgency-badge" style="font-size:11px;background:#fce4ec;color:#c62828;padding:2px 10px;border-radius:20px;font-weight:600">🔴 Urgent</span>
+        <span id="demo-emotion-badge" style="font-size:11px;background:#fff3e0;color:#e65100;padding:2px 10px;border-radius:20px;font-weight:600">🤝 Negotiation</span>
       </div>
+      <!-- 감지 배너 -->
+      <div id="demo-detect-banner" style="margin-bottom:8px;padding:7px 10px;background:#f0f7ff;border-radius:8px;font-size:11px;color:#1a73e8;line-height:1.5">
+        🇯🇵 Japan business culture · Keigo applied &nbsp;|&nbsp; 🤝 Negotiation context detected
+      </div>
+
+      <!-- 드롭다운 3개 -->
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <div style="flex:1">
+          <div style="font-size:10px;color:#9aa0a6;margin-bottom:3px">Reply Tone</div>
+          <select id="demo-tone-select" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer;font-family:inherit">
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly</option>
+            <option value="concise">Concise</option>
+            <option value="detailed">Detailed</option>
+            <option value="decline">Decline</option>
+            <option value="thankful">Thankful</option>
+            <option value="apologetic">Apologetic</option>
+            <option value="acknowledge">Acknowledge</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:#9aa0a6;margin-bottom:3px">Sender's Country</div>
+          <select style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer;font-family:inherit">
+            <option>🇯🇵 Japan (Keigo)</option>
+            <option>🌐 Auto Detect</option>
+            <option>🇺🇸 USA</option>
+            <option>🇩🇪 Germany</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;color:#9aa0a6;margin-bottom:3px">My Language</div>
+          <select id="demo-mylang-select" onchange="switchDemoUILang(this.value)" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer;font-family:inherit">
+            <option value="English">🇺🇸 English</option>
+            <option value="Korean">🇰🇷 한국어</option>
+            <option value="Japanese">🇯🇵 日本語</option>
+            <option value="Chinese">🇨🇳 中文</option>
+            <option value="Spanish">🇪🇸 Español</option>
+            <option value="French">🇫🇷 Français</option>
+            <option value="German">🇩🇪 Deutsch</option>
+            <option value="Portuguese">🇧🇷 Português</option>
+            <option value="Arabic">🇸🇦 العربية</option>
+            <option value="Turkish">🇹🇷 Türkçe</option>
+            <option value="Italian">🇮🇹 Italiano</option>
+            <option value="Vietnamese">🇻🇳 Tiếng Việt</option>
+            <option value="Thai">🇹🇭 ภาษาไทย</option>
+            <option value="Indonesian">🇮🇩 Bahasa Indonesia</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 생성 버튼 -->
       <button class="demo-btn" id="demo-gen-btn">✦ Generate AI Reply</button>
-      <div class="demo-reply" id="demo-reply-text" style="display:none"></div>
-      <div class="demo-actions" id="demo-actions" style="display:none">
-        <button class="demo-action demo-insert">Insert into reply</button>
-        <button class="demo-action demo-copy">Copy</button>
+
+      <!-- 스레드 요약 -->
+      <button id="demo-summary-btn" onclick="toggleDemoSummary()" style="width:100%;padding:6px;background:#fff;color:#5f6368;border:1px solid #dadce0;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;margin-top:6px;font-family:inherit">📝 Thread Summary</button>
+      <div id="demo-summary-box" style="display:none;margin-top:6px;padding:10px;background:#f8f9fa;border-radius:8px;font-size:12px;color:#202124;line-height:1.6">
+        <span id="demo-summary-text">📋 <strong>Summary:</strong><br>Tanaka from JP Trading reviewed your Q4 proposal. They are generally interested but want to discuss timeline and pricing before committing. They're suggesting a call this week.</span>
       </div>
+
+      <!-- 결과 -->
+      <div id="demo-reply-text" style="display:none;margin-top:8px"></div>
+
+      <!-- 감지된 할 일 -->
+      <div id="demo-tasks" style="display:none;margin-top:8px">
+        <div id="tasks-title" style="font-weight:600;font-size:11px;margin-bottom:6px;color:#5f6368">📌 Detected Actions</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#e8f0fe;border-radius:8px;padding:7px 10px;font-size:11px;margin-bottom:4px">
+          <span id="tasks-meeting">📅 Wed, Oct 7, 3:00 PM — Meeting</span>
+          <a id="tasks-calendar" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Meeting&dates=20261007T060000Z%2F20261007T070000Z" target="_blank" style="font-size:10px;color:#1a73e8;font-weight:600;text-decoration:none">+ Calendar →</a>
+        </div>
+        <div id="tasks-send" style="background:#f3e5f5;border-radius:8px;padding:7px 10px;font-size:11px;color:#6a1b9a;margin-bottom:4px">
+          📎 Send: <strong>updated proposal</strong> (by the deadline)
+        </div>
+        <div id="tasks-commit" style="background:#e8f0fe;border-radius:8px;padding:7px 10px;font-size:11px;color:#1a73e8">
+          📋 Your Commitments:<br>• I'll ensure the updated proposal is sent prior to our meeting
+        </div>
+      </div>
+
+
+
+      <!-- Smart Reply Guard -->
+      <div id="demo-guard" style="display:none;margin-top:8px;padding:8px 10px;background:#fff3e0;border-radius:8px;border-left:3px solid #f57c00;font-size:11px;color:#e65100">
+        🛡️ <strong>Pre-send Check</strong><br>
+        ⚠️ Date mismatch: email mentions Oct 15 (Sunday) — confirm before sending
+      </div>
+
+      <!-- 액션 버튼 -->
+      <div class="demo-actions" id="demo-actions" style="display:none;margin-top:8px">
+        <button class="demo-action demo-insert" style="flex:2" onclick="showDemoToast('✅ Inserted into reply!')">✉️ Insert into Gmail</button>
+        <button class="demo-action demo-copy" style="flex:1" onclick="showDemoToast('📋 Copied!')">📋 Copy</button>
+        <button style="padding:8px 10px;background:#f8f9fa;color:#5f6368;border:1px solid #dadce0;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit" onclick="regenerateDemo()">🔄</button>
+      </div>
+
+      <!-- 토스트 -->
+      <div id="demo-toast" style="display:none;margin-top:8px;padding:8px 12px;background:#202124;color:#fff;border-radius:8px;font-size:12px;text-align:center"></div>
     </div>
-  </div>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;">
-    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ AI 답장 생성</span>
-    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 8가지 톤</span>
-    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 17개 언어</span>
-    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 업종/문화 감지</span>
-    <span style="padding:6px 14px;background:#e6f4ea;color:#137333;border-radius:20px;font-size:12px;font-weight:600">✓ 할 일 추출</span>
-    <span style="padding:6px 14px;background:#fce8e6;color:#c5221f;border-radius:20px;font-size:12px;font-weight:600">✓ 스팸/피싱 감지</span>
-    <span style="padding:6px 14px;background:#f1f3f4;color:#5f6368;border-radius:20px;font-size:12px;font-weight:600">35회 무료</span>
   </div>
   </div>
 
-  <!-- TAB 2: Basic -->
-  <div class="demo-tab" id="tab-basic">
+  <!-- TAB 2: 3 Versions -->
+  <div class="demo-tab" id="tab-triple">
   <div class="demo-wrap">
     <div class="demo-email-bar">
       <span class="demo-email-from">From: sarah@techcorp.com</span> &nbsp;·&nbsp; Re: Project Deadline
@@ -642,45 +657,32 @@
     <div class="demo-panel">
       <div class="demo-panel-header">
         <span class="demo-logo">✦ MailMind</span>
-        <span class="demo-usage" style="color:#1a73e8">⚡ Basic · 3가지 비교</span>
-      </div>
-      <div style="margin-bottom:10px">
-        <div class="ver-tab-row" id="triple-tabs">
-          <button class="ver-tab active" data-idx="0" onclick="switchVer(0)">Version 1</button>
-          <button class="ver-tab" data-idx="1" onclick="switchVer(1)">Version 2</button>
-          <button class="ver-tab" data-idx="2" onclick="switchVer(2)">Version 3</button>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#5f6368;margin-bottom:3px">Basic · 113/200 replies left</div>
+          <div style="width:100px;height:4px;background:#f1f3f4;border-radius:2px;overflow:hidden;display:inline-block">
+            <div style="height:100%;background:#e91e8c;border-radius:2px;width:44%"></div>
+          </div>
         </div>
       </div>
+      <div class="ver-tab-row" id="triple-tabs">
+        <button class="ver-tab active" data-idx="0" onclick="switchVer(0)">Professional 1</button>
+        <button class="ver-tab" data-idx="1" onclick="switchVer(1)">Friendly 2</button>
+        <button class="ver-tab" data-idx="2" onclick="switchVer(2)">Concise 3</button>
+      </div>
       <div class="demo-reply" id="triple-reply" style="display:block">
-        Hi Sarah,<br><br>Thank you for checking in. I'm pleased to confirm that the project is progressing as planned and we remain on track to meet the deadline.<br><br>I will send you a detailed status report by end of day tomorrow.<br><br>Best regards,
+        Hi Sarah,<br><br>Thank you for checking in. I'm pleased to confirm that the project is progressing as planned and we remain on track to meet the deadline.<br><br>I will send you a detailed status report by end of day tomorrow. Please let me know if you need any specific information in the meantime.<br><br>Best regards,
       </div>
-      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
-        <span style="font-size:11px;color:#5f6368">언어 전환:</span>
-        <button onclick="switchTripleLang('Korean')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇰🇷 한국어</button>
-        <button onclick="switchTripleLang('Japanese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇯🇵 日本語</button>
-        <button onclick="switchTripleLang('Portuguese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇧🇷 Português</button>
-        <button onclick="switchTripleLang('German')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇩🇪 Deutsch</button>
-      </div>
-      <div class="demo-actions" style="display:flex;margin-top:8px">
-        <button class="demo-action demo-insert" style="flex:1">Insert into reply</button>
-        <button class="demo-action demo-copy" style="flex:1">Copy</button>
+      <button class="smart-lang-btn" id="triple-lang-btn" onclick="toggleTripleLang()" style="margin-top:8px">🌐 Send in Korean</button>
+      <div class="demo-actions" style="display:flex;margin-top:8px;gap:6px">
+        <button class="demo-action demo-insert" style="flex:2" onclick="this.textContent='✅ Inserted!';setTimeout(()=>this.textContent='✉️ Insert into Gmail',1500)">✉️ Insert into Gmail</button>
+        <button class="demo-action demo-copy" style="flex:1" onclick="this.textContent='📋 Copied!';setTimeout(()=>this.textContent='📋 Copy',1500)">📋 Copy</button>
       </div>
     </div>
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;">
-    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ Free 모든 기능</span>
-    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 3가지 답변 비교</span>
-    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 언어 전환 🇰🇷🇯🇵🇧🇷🇩🇪</span>
-    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 서명/템플릿 저장</span>
-    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 스레드 요약</span>
-    <span style="padding:6px 14px;background:#e8f0fe;color:#1a73e8;border-radius:20px;font-size:12px;font-weight:600">✓ 스타일 학습</span>
-    <span style="padding:6px 14px;background:#fce8e6;color:#c5221f;border-radius:20px;font-size:12px;font-weight:600">✓ 스팸/피싱 감지</span>
-    <span style="padding:6px 14px;background:#f1f3f4;color:#5f6368;border-radius:20px;font-size:12px;font-weight:600">200회/월 $15</span>
-  </div>
   </div>
 
-  <!-- TAB 3: Pro -->
-  <div class="demo-tab" id="tab-pro">
+  <!-- TAB 3: Smart Reply -->
+  <div class="demo-tab" id="tab-smart">
   <div class="demo-wrap">
     <div class="demo-email-bar">
       <span class="demo-email-from">From: mueller@berlin-gmbh.de</span> &nbsp;·&nbsp; Vertrag Verlängerung
@@ -691,203 +693,598 @@
     <div class="demo-panel">
       <div class="demo-panel-header">
         <span class="demo-logo">✦ MailMind</span>
-        <span class="demo-usage" style="color:#e91e8c">🚀 Pro · 스마트 답장</span>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:#5f6368;margin-bottom:3px">Pro · 234/300 replies left</div>
+          <div style="width:100px;height:4px;background:#f1f3f4;border-radius:2px;overflow:hidden;display:inline-block">
+            <div style="height:100%;background:#e91e8c;border-radius:2px;width:22%"></div>
+          </div>
+        </div>
       </div>
+      <!-- 문화 감지 -->
+      <div style="margin-bottom:8px;padding:7px 10px;background:#f0f7ff;border-radius:8px;font-size:11px;color:#1a73e8;line-height:1.5">
+        🇩🇪 German business culture applied &nbsp;|&nbsp; ⚖️ Contract/Legal context detected
+      </div>
+      <!-- 버전 탭 -->
+      <div class="ver-tab-row">
+        <button class="ver-tab active" onclick="switchSmartVer(0,this)">v1</button>
+        <button class="ver-tab" onclick="switchSmartVer(1,this)">v2</button>
+        <button class="ver-tab" onclick="switchSmartVer(2,this)">v3</button>
+      </div>
+      <!-- 요약 -->
       <div class="smart-summary" id="smart-summary">
-        📋 <strong>Summary (Korean):</strong><br>
-        베를린 GmbH에서 계약을 12개월 연장하고 싶다며 업데이트된 견적서를 요청하고 있습니다.
+        📋 <strong>Summary (English):</strong><br>
+        Berlin GmbH wants to extend the contract by 12 months and is requesting an updated quote. They need a response this week.
       </div>
       <div class="demo-reply" id="smart-reply" style="display:block" data-korean="안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>추가 문의사항이 있으시면 언제든지 연락해 주세요.<br><br>감사합니다." data-german="Sehr geehrte Damen und Herren,<br><br>vielen Dank für Ihr Interesse an einer Vertragsverlängerung. Wir werden Ihnen das aktualisierte Angebot bis Ende dieser Woche zusenden.<br><br>Bei weiteren Fragen stehen wir Ihnen gerne zur Verfügung.<br><br>Mit freundlichen Grüßen,">
-        안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>추가 문의사항이 있으시면 언제든지 연락해 주세요.<br><br>감사합니다.
+        Dear Sir/Madam,<br><br>Thank you for your interest in renewing our contract. We will send you an updated quote by end of this week.<br><br>Please do not hesitate to contact us if you have any further questions.<br><br>Best regards,
       </div>
-      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
-        <span style="font-size:11px;color:#5f6368">언어 전환:</span>
-        <button onclick="switchSmartLang('Korean')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇰🇷 한국어</button>
-        <button onclick="switchSmartLang('German')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇩🇪 Deutsch</button>
-        <button onclick="switchSmartLang('Japanese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇯🇵 日本語</button>
-        <button onclick="switchSmartLang('Portuguese')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇧🇷 Português</button>
-        <button onclick="switchSmartLang('Arabic')" style="padding:3px 8px;border-radius:12px;border:1px solid #dadce0;background:#fff;font-size:12px;cursor:pointer">🇸🇦 العربية</button>
+      <button class="smart-lang-btn" id="smart-lang-btn" onclick="toggleSmartLang()">🌐 Send in German</button>
+      <!-- 약속 추출 -->
+      <div style="margin-top:8px;padding:8px 10px;background:#e8f0fe;border-radius:8px;font-size:11px;color:#1a73e8;line-height:1.8">
+        <div style="font-weight:600;margin-bottom:3px">📋 Your Commitments</div>
+        <div>• Send updated quote by end of this week</div>
       </div>
-      <div class="demo-actions" style="display:flex;margin-top:8px">
-        <button class="demo-action demo-insert" style="flex:1">Insert into reply</button>
-        <button class="demo-action demo-copy" style="flex:1">Copy</button>
+      <div class="demo-actions" style="display:flex;margin-top:8px;gap:6px">
+        <button class="demo-action demo-insert" style="flex:2" onclick="this.textContent='✅ Inserted!';setTimeout(()=>this.textContent='✉️ Insert into Gmail',1500)">✉️ Insert into Gmail</button>
+        <button class="demo-action demo-copy" style="flex:1" onclick="this.textContent='📋 Copied!';setTimeout(()=>this.textContent='📋 Copy',1500)">📋 Copy</button>
       </div>
     </div>
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px;">
-    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ Basic 모든 기능</span>
-    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 스마트 답장</span>
-    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 요약 + 번역</span>
-    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 15개 업종 전문지식</span>
-    <span style="padding:6px 14px;background:#fce4ec;color:#e91e8c;border-radius:20px;font-size:12px;font-weight:600">✓ 우선 지원</span>
-    <span style="padding:6px 14px;background:#fce8e6;color:#c5221f;border-radius:20px;font-size:12px;font-weight:600">✓ 스팸/피싱 감지</span>
-    <span style="padding:6px 14px;background:#f1f3f4;color:#5f6368;border-radius:20px;font-size:12px;font-weight:600">300회/월 $25</span>
   </div>
-  </div>
+
+  <style>
+  .demo-lang-flag {
+    padding: 3px 8px; border: 1px solid #dadce0; border-radius: 12px;
+    font-size: 14px; cursor: pointer; background: #fff; font-family: inherit; transition: all 0.15s;
+  }
+  .demo-lang-flag:hover { background: #fce4ec; border-color: #e91e8c; }
+  .demo-lang-flag.active-flag { background: #fce4ec; border-color: #e91e8c; }
+  </style>
 
   <script>
-  const DEMO_REPLIES = {
-    professional: `Dear Mr. Tanaka,<br><br>Thank you for reviewing our proposal. I would be happy to walk you through the timeline and pricing structure in detail.<br><br>Would Tuesday or Wednesday afternoon this week work for a call? Please let me know your availability and I will arrange accordingly.<br><br>Best regards,`,
-    friendly: `Hi Tanaka-san!<br><br>Thanks so much for getting back to us — really glad to hear you're interested! 😊<br><br>I'd love to chat about the timeline and pricing. How about a quick call this week? Tuesday or Wednesday afternoon works great on my end — let me know what suits you!<br><br>Looking forward to connecting!`,
-    concise: `Dear Mr. Tanaka,<br><br>Thank you for your interest.<br><br>Available this week: Tuesday 2pm or Wednesday 10am. Please confirm which works for you.<br><br>Best regards,`,
-    decline: `Dear Mr. Tanaka,<br><br>Thank you for sending over the proposal — we appreciate the effort your team put into it.<br><br>After careful consideration, we've decided not to move forward at this time as it doesn't align with our current priorities. We hope to have the opportunity to collaborate in the future.<br><br>Best regards,`,
-    thankful: `Dear Mr. Tanaka,<br><br>Thank you so much for this detailed proposal — I can see a great deal of thought went into it, and we truly appreciate it.<br><br>We'd love to discuss the timeline and pricing further. Would you be available for a call this week?<br><br>Thank you again for this opportunity.<br><br>Best regards,`
+  // ===== 전역 변수 =====
+  let demoCurrentLang = 'English';
+  let demoCurrentTone = 'professional';
+  let demoIsGenerating = false;
+  let demoReplyShown = false;
+  let demoPlan = 'pro';
+
+  // ===== UI 다국어 문자열 =====
+  const UI = {
+    English:    { gen:'✦ Generate AI Reply', summary:'📝 Thread Summary', insert:'✉️ Insert into Gmail', copy:'📋 Copy', urgency:'🔴 Urgent', negotiation:'🤝 Negotiation', detected:'📌 Detected Actions', commitments:'📋 Your Commitments', guard:'🛡️ Pre-send Check', guardMsg:'⚠️ Date mismatch: Oct 15 (Sunday) — confirm before sending', toneLabel:'Reply Tone', countryLabel:"Sender's Country", langLabel:'My Language', lockBasic:'🔒 3 Versions & Smart Reply require Basic or Pro', lockPro:'🔒 Smart Reply requires Pro' },
+    Korean:     { gen:'✦ AI 답장 생성', summary:'📝 스레드 요약', insert:'✉️ Gmail에 삽입', copy:'📋 복사', urgency:'🔴 긴급', negotiation:'🤝 협상', detected:'📌 감지된 할 일', commitments:'📋 내 약속', guard:'🛡️ 전송 전 확인', guardMsg:'⚠️ 날짜 불일치: 10월 15일(일요일) — 전송 전 확인 필요', toneLabel:'답장 톤', countryLabel:'발신자 국가', langLabel:'내 언어', lockBasic:'🔒 3가지 버전 & 스마트 답장은 Basic 이상 필요', lockPro:'🔒 스마트 답장은 Pro 필요' },
+    Japanese:   { gen:'✦ AI返信を生成', summary:'📝 スレッド要約', insert:'✉️ Gmailに挿入', copy:'📋 コピー', urgency:'🔴 緊急', negotiation:'🤝 交渉', detected:'📌 検出されたアクション', commitments:'📋 コミットメント', guard:'🛡️ 送信前確認', guardMsg:'⚠️ 日付不一致: 10月15日(日曜日) — 送信前に確認', toneLabel:'返信トーン', countryLabel:'送信者の国', langLabel:'使用言語', lockBasic:'🔒 3バージョン & スマート返信はBasic以上', lockPro:'🔒 スマート返信はPro必要' },
+    Chinese:    { gen:'✦ 生成AI回复', summary:'📝 邮件摘要', insert:'✉️ 插入Gmail', copy:'📋 复制', urgency:'🔴 紧急', negotiation:'🤝 谈判', detected:'📌 检测到的操作', commitments:'📋 我的承诺', guard:'🛡️ 发送前检查', guardMsg:'⚠️ 日期不匹配：10月15日（周日）— 发送前确认', toneLabel:'回复语气', countryLabel:'发件人国家', langLabel:'我的语言', lockBasic:'🔒 3个版本需要Basic或更高', lockPro:'🔒 智能回复需要Pro' },
+    Spanish:    { gen:'✦ Generar respuesta IA', summary:'📝 Resumen del hilo', insert:'✉️ Insertar en Gmail', copy:'📋 Copiar', urgency:'🔴 Urgente', negotiation:'🤝 Negociación', detected:'📌 Acciones detectadas', commitments:'📋 Mis compromisos', guard:'🛡️ Verificación previa', guardMsg:'⚠️ Fecha incorrecta: 15 oct (domingo) — confirmar antes de enviar', toneLabel:'Tono de respuesta', countryLabel:'País del remitente', langLabel:'Mi idioma', lockBasic:'🔒 3 versiones requieren Basic o superior', lockPro:'🔒 Smart Reply requiere Pro' },
+    French:     { gen:'✦ Générer une réponse IA', summary:'📝 Résumé du fil', insert:'✉️ Insérer dans Gmail', copy:'📋 Copier', urgency:'🔴 Urgent', negotiation:'🤝 Négociation', detected:'📌 Actions détectées', commitments:'📋 Mes engagements', guard:'🛡️ Vérification avant envoi', guardMsg:'⚠️ Date incorrecte : 15 oct (dimanche) — vérifier avant envoi', toneLabel:'Ton de réponse', countryLabel:'Pays expéditeur', langLabel:'Ma langue', lockBasic:'🔒 3 versions nécessitent Basic ou supérieur', lockPro:'🔒 Smart Reply nécessite Pro' },
+    German:     { gen:'✦ KI-Antwort generieren', summary:'📝 Thread-Zusammenfassung', insert:'✉️ In Gmail einfügen', copy:'📋 Kopieren', urgency:'🔴 Dringend', negotiation:'🤝 Verhandlung', detected:'📌 Erkannte Aktionen', commitments:'📋 Meine Zusagen', guard:'🛡️ Vor dem Senden prüfen', guardMsg:'⚠️ Datumsfehler: 15. Okt. (Sonntag) — bestätigen', toneLabel:'Antwortton', countryLabel:'Land des Absenders', langLabel:'Meine Sprache', lockBasic:'🔒 3 Versionen erfordern Basic oder höher', lockPro:'🔒 Smart Reply erfordert Pro' },
+    Portuguese: { gen:'✦ Gerar resposta IA', summary:'📝 Resumo do tópico', insert:'✉️ Inserir no Gmail', copy:'📋 Copiar', urgency:'🔴 Urgente', negotiation:'🤝 Negociação', detected:'📌 Ações detectadas', commitments:'📋 Meus compromissos', guard:'🛡️ Verificação antes de enviar', guardMsg:'⚠️ Data incorreta: 15 out (domingo) — confirmar', toneLabel:'Tom de resposta', countryLabel:'País do remetente', langLabel:'Meu idioma', lockBasic:'🔒 3 versões requerem Basic ou superior', lockPro:'🔒 Smart Reply requer Pro' },
+    Arabic:     { gen:'✦ إنشاء رد AI', summary:'📝 ملخص المحادثة', insert:'✉️ إدراج في Gmail', copy:'📋 نسخ', urgency:'🔴 عاجل', negotiation:'🤝 تفاوض', detected:'📌 الإجراءات', commitments:'📋 التزاماتي', guard:'🛡️ فحص قبل الإرسال', guardMsg:'⚠️ تناقض في التاريخ: 15 أكتوبر (أحد) — تحقق', toneLabel:'نبرة الرد', countryLabel:'بلد المرسل', langLabel:'لغتي', lockBasic:'🔒 3 إصدارات تتطلب Basic أو أعلى', lockPro:'🔒 الرد الذكي يتطلب Pro' },
+    Turkish:    { gen:"✦ AI yanıtı oluştur", summary:'📝 Konu özeti', insert:"✉️ Gmail'e ekle", copy:'📋 Kopyala', urgency:'🔴 Acil', negotiation:'🤝 Müzakere', detected:'📌 Tespit edilen eylemler', commitments:'📋 Taahhütlerim', guard:'🛡️ Göndermeden önce kontrol', guardMsg:'⚠️ Tarih uyuşmazlığı: 15 Ekim (Pazar) — onaylayın', toneLabel:'Yanıt tonu', countryLabel:'Gönderenin ülkesi', langLabel:'Dilim', lockBasic:'🔒 3 Versiyon Basic veya üstü gerektirir', lockPro:'🔒 Akıllı Yanıt Pro gerektirir' },
+    Italian:    { gen:'✦ Genera risposta IA', summary:'📝 Riepilogo thread', insert:'✉️ Inserisci in Gmail', copy:'📋 Copia', urgency:'🔴 Urgente', negotiation:'🤝 Trattativa', detected:'📌 Azioni rilevate', commitments:'📋 I miei impegni', guard:'🛡️ Controllo pre-invio', guardMsg:'⚠️ Data errata: 15 ott (domenica) — confermare', toneLabel:'Tono risposta', countryLabel:'Paese mittente', langLabel:'La mia lingua', lockBasic:'🔒 3 versioni richiedono Basic o superiore', lockPro:'🔒 Smart Reply richiede Pro' },
+    Vietnamese: { gen:'✦ Tạo trả lời AI', summary:'📝 Tóm tắt chuỗi', insert:'✉️ Chèn vào Gmail', copy:'📋 Sao chép', urgency:'🔴 Khẩn cấp', negotiation:'🤝 Đàm phán', detected:'📌 Hành động phát hiện', commitments:'📋 Cam kết của tôi', guard:'🛡️ Kiểm tra trước khi gửi', guardMsg:'⚠️ Ngày không khớp: 15 tháng 10 (Chủ nhật) — xác nhận', toneLabel:'Giọng điệu', countryLabel:'Quốc gia người gửi', langLabel:'Ngôn ngữ của tôi', lockBasic:'🔒 3 phiên bản yêu cầu Basic trở lên', lockPro:'🔒 Smart Reply yêu cầu Pro' },
+    Thai:       { gen:'✦ สร้างการตอบกลับ AI', summary:'📝 สรุปเธรด', insert:'✉️ แทรกใน Gmail', copy:'📋 คัดลอก', urgency:'🔴 เร่งด่วน', negotiation:'🤝 การเจรจา', detected:'📌 การดำเนินการ', commitments:'📋 ข้อผูกมัด', guard:'🛡️ ตรวจสอบก่อนส่ง', guardMsg:'⚠️ วันที่ไม่ตรงกัน: 15 ต.ค. (วันอาทิตย์) — ยืนยัน', toneLabel:'โทน', countryLabel:'ประเทศผู้ส่ง', langLabel:'ภาษาของฉัน', lockBasic:'🔒 3 เวอร์ชันต้องการ Basic ขึ้นไป', lockPro:'🔒 Smart Reply ต้องการ Pro' },
+    Indonesian: { gen:'✦ Buat balasan AI', summary:'📝 Ringkasan utas', insert:'✉️ Masukkan ke Gmail', copy:'📋 Salin', urgency:'🔴 Mendesak', negotiation:'🤝 Negosiasi', detected:'📌 Tindakan terdeteksi', commitments:'📋 Komitmen saya', guard:'🛡️ Periksa sebelum kirim', guardMsg:'⚠️ Tanggal tidak cocok: 15 Okt (Minggu) — konfirmasi', toneLabel:'Nada balasan', countryLabel:'Negara pengirim', langLabel:'Bahasa saya', lockBasic:'🔒 3 Versi memerlukan Basic atau lebih tinggi', lockPro:'🔒 Smart Reply memerlukan Pro' },
   };
 
-  let currentTone = 'professional';
-  let isGenerating = false;
+  // ===== 답장 데이터 =====
+  const REPLIES = {
+    Korean: {
+      professional: `다나카 님,<br><br>제안서를 검토해 주셔서 감사합니다. 타임라인과 가격에 대해 자세히 설명드리겠습니다.<br><br>이번 주 화요일 또는 수요일 오후에 통화 가능하신가요? 편하신 시간 알려주시면 일정을 조정하겠습니다.<br><br>감사합니다.`,
+      friendly: `안녕하세요 다나카상! 😊<br><br>피드백 주셔서 정말 감사해요! 타임라인이랑 가격 부분 자세히 설명 드릴게요.<br><br>이번 주 화요일이나 수요일 오후에 통화 어떠세요?<br><br>감사합니다!`,
+      concise: `다나카 님,<br><br>감사합니다. 화요일 오후 2시 또는 수요일 오전 10시 통화 가능합니다. 확인 부탁드립니다.<br><br>감사합니다.`,
+      detailed: `다나카 님,<br><br>제안서를 검토해 주셔서 감사합니다.<br><br>1) 타임라인: 계약 후 2주 내 착수, 8주 내 완료<br>2) 가격: 기본 $X + 월 유지 $Y (협의 가능)<br><br>이번 주 통화로 자세히 논의하고 싶습니다. 편하신 시간 알려주세요.<br><br>감사합니다.`,
+      decline: `다나카 님,<br><br>제안서를 검토해 주셔서 감사합니다. 내부 검토 결과 현시점에서는 진행이 어렵습니다. 향후 기회에 협력하기를 바랍니다.<br><br>감사합니다.`,
+      thankful: `다나카 님,<br><br>이렇게 상세한 피드백을 주셔서 진심으로 감사드립니다. 타임라인과 가격에 대해 이번 주 통화로 논의하고 싶습니다.<br><br>감사합니다.`,
+      apologetic: `다나카 님,<br><br>불편을 드려 진심으로 사과드립니다. 이번 주 내로 수정된 제안서를 준비하겠습니다.<br><br>감사합니다.`,
+      acknowledge: `다나카 님,<br><br>메일 잘 받았습니다. 타임라인과 가격 관련 질문 확인했습니다. 이번 주 내로 답변 드리겠습니다.<br><br>감사합니다.`
+    },
+    English: {
+      professional: `Dear Mr. Tanaka,<br><br>Thank you for reviewing our proposal. I would be happy to walk you through the timeline and pricing in detail.<br><br>Would Tuesday or Wednesday afternoon this week work for a call? Please let me know your availability and I will arrange accordingly.<br><br>Best regards,`,
+      friendly: `Hi Tanaka-san! 😊<br><br>Thanks so much for getting back to us — really glad to hear you're interested!<br><br>I'd love to chat about the timeline and pricing. How about a call this week — Tuesday or Wednesday afternoon?<br><br>Looking forward to it!`,
+      concise: `Dear Mr. Tanaka,<br><br>Thank you. Available: Tuesday 2pm or Wednesday 10am (KST). Please confirm.<br><br>Best regards,`,
+      detailed: `Dear Mr. Tanaka,<br><br>Thank you for your thorough review.<br><br>Timeline: Start within 2 weeks of signing, delivery in 8 weeks.<br>Pricing: Base $X + monthly $Y — negotiable.<br><br>Let's discuss on a call this week. Tuesday or Wednesday afternoon works for me.<br><br>Best regards,`,
+      decline: `Dear Mr. Tanaka,<br><br>Thank you for considering our proposal. After careful consideration, we've decided not to move forward at this time. We hope to collaborate in the future.<br><br>Best regards,`,
+      thankful: `Dear Mr. Tanaka,<br><br>Thank you so much for this detailed feedback. We'd love to discuss the timeline and pricing on a call this week.<br><br>Best regards,`,
+      apologetic: `Dear Mr. Tanaka,<br><br>I sincerely apologize for any concern. I will prepare a revised proposal by end of this week.<br><br>Sincerely,`,
+      acknowledge: `Dear Mr. Tanaka,<br><br>Thank you for your message. I've noted your questions. I'll get back to you by end of this week.<br><br>Best regards,`
+    },
+    Japanese: {
+      professional: `田中様<br><br>ご提案内容をご確認いただき、誠にありがとうございます。タイムラインと価格体系についてご説明させていただければ幸いです。<br><br>今週の火曜日または水曜日の午後にお電話のお時間をいただけますでしょうか。<br><br>何卒よろしくお願い申し上げます。`,
+      friendly: `田中さん、<br><br>ご連絡ありがとうございます！ぜひタイムラインと価格についてお話ししましょう。<br><br>今週、火曜か水曜はいかがでしょうか？<br><br>よろしくお願いします！`,
+      concise: `田中様<br><br>ありがとうございます。火曜14時または水曜10時はいかがでしょうか。<br><br>よろしくお願いいたします。`,
+      detailed: `田中様<br><br>タイムライン：契約後2週間以内に開始、8週間で完了。<br>価格：基本$X＋月次$Y（交渉可能）。<br><br>今週お電話できればと思います。<br><br>よろしくお願い申し上げます。`,
+      decline: `田中様<br><br>ありがとうございました。現時点では見送らせていただきます。またの機会にお願いできれば幸いです。<br><br>よろしくお願い申し上げます。`,
+      thankful: `田中様<br><br>詳細なフィードバックをいただき、誠にありがとうございます。今週お電話できますでしょうか。<br><br>よろしくお願いいたします。`,
+      apologetic: `田中様<br><br>ご不便をおかけし、誠に申し訳ございません。今週中に修正案をご提出いたします。<br><br>よろしくお願い申し上げます。`,
+      acknowledge: `田中様<br><br>ご連絡ありがとうございます。今週中にご回答いたします。<br><br>よろしくお願いいたします。`
+    },
+    Chinese: {
+      professional: `亲爱的田中先生，<br><br>感谢您审阅我们的提案。我很乐意详细介绍时间表和价格结构。<br><br>这周二或周三下午方便通话吗？请告知您的时间，我会安排好。<br><br>此致，`,
+      friendly: `田中先生，您好！😊<br><br>非常感谢您的回复！很高兴听到您感兴趣。<br><br>我想聊聊时间表和价格，这周二或三下午方便吗？<br><br>期待与您交流！`,
+      concise: `田中先生，<br><br>谢谢。可用时间：周二下午2点或周三上午10点（KST）。请确认。<br><br>此致，`,
+      detailed: `田中先生，<br><br>时间表：签约后2周内开始，8周内完成。<br>价格：基础费$X + 月维护$Y（可协商）。<br><br>希望这周通话详谈。<br><br>此致，`,
+      decline: `田中先生，<br><br>感谢您考虑我们的提案。经过慎重考虑，我们目前无法推进。希望未来有合作机会。<br><br>此致，`,
+      thankful: `田中先生，<br><br>非常感谢您详细的反馈。希望这周能通话进一步讨论。<br><br>此致，`,
+      apologetic: `田中先生，<br><br>对于造成的困扰，我真诚地道歉。我将在本周内准备修改后的提案。<br><br>诚挚地，`,
+      acknowledge: `田中先生，<br><br>感谢您的消息。我已记录您的问题，本周内回复。<br><br>此致，`
+    }
+  };
 
-  document.querySelectorAll('#demo-tones .demo-tone').forEach(btn => {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('#demo-tones .demo-tone').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      currentTone = this.dataset.tone;
+  // 나머지 언어 답장 데이터
+  REPLIES.Spanish = {
+    professional: `Estimado Sr. Tanaka,<br><br>Gracias por revisar nuestra propuesta. Estaré encantado de explicarle el cronograma y la estructura de precios en detalle.<br><br>¿Le vendría bien una llamada el martes o miércoles por la tarde? Por favor, dígame su disponibilidad.<br><br>Atentamente,`,
+    friendly: `¡Hola Tanaka-san! 😊<br><br>Muchas gracias por ponerse en contacto con nosotros. Me encantaría hablar sobre el cronograma y los precios.<br><br>¿Le parece bien una llamada esta semana?<br><br>¡Hasta pronto!`,
+    concise: `Estimado Sr. Tanaka,<br><br>Gracias. Disponible: martes 14h o miércoles 10h (KST). Por favor confirme.<br><br>Atentamente,`,
+    detailed: `Estimado Sr. Tanaka,<br><br>Cronograma: inicio en 2 semanas, entrega en 8 semanas.<br>Precio: tarifa base $X + mantenimiento $Y (negociable).<br><br>Atentamente,`,
+    decline: `Estimado Sr. Tanaka,<br><br>Gracias por considerar nuestra propuesta. Tras reflexión, hemos decidido no seguir adelante en este momento.<br><br>Atentamente,`,
+    thankful: `Estimado Sr. Tanaka,<br><br>Muchas gracias por sus comentarios detallados. Nos gustaría hablar sobre el cronograma y los precios esta semana.<br><br>Atentamente,`,
+    apologetic: `Estimado Sr. Tanaka,<br><br>Le pido disculpas sinceras. Prepararé una propuesta revisada antes del final de la semana.<br><br>Sinceramente,`,
+    acknowledge: `Estimado Sr. Tanaka,<br><br>Gracias por su mensaje. He tomado nota de sus preguntas. Responderé antes del final de la semana.<br><br>Atentamente,`
+  };
+  REPLIES.Arabic = {
+    professional: `عزيزي السيد تاناكا،<br><br>شكراً لمراجعتكم مقترحنا. يسعدني شرح الجدول الزمني وهيكل الأسعار بالتفصيل.<br><br>هل يناسبكم مكالمة يوم الثلاثاء أو الأربعاء بعد الظهر هذا الأسبوع؟ يرجى إخباري بموعد مناسب.<br><br>مع تحياتي،`,
+    friendly: `مرحباً تاناكا-سان! 😊<br><br>شكراً جزيلاً على تواصلكم! يسعدني مناقشة الجدول الزمني والأسعار.<br><br>هل يمكننا مكالمة هذا الأسبوع؟<br><br>في انتظار ردكم!`,
+    concise: `عزيزي السيد تاناكا،<br><br>شكراً. المواعيد المتاحة: الثلاثاء 2م أو الأربعاء 10ص. يرجى التأكيد.<br><br>مع تحياتي،`,
+    detailed: `عزيزي السيد تاناكا،<br><br>الجدول الزمني: البدء خلال أسبوعين من التوقيع، التسليم في 8 أسابيع.<br>السعر: رسوم أساسية $X + صيانة شهرية $Y (قابل للتفاوض).<br><br>مع تحياتي،`,
+    decline: `عزيزي السيد تاناكا،<br><br>شكراً لاهتمامكم بمقترحنا. بعد دراسة متأنية، قررنا عدم المضي قدماً في الوقت الحالي. نأمل في التعاون مستقبلاً.<br><br>مع تحياتي،`,
+    thankful: `عزيزي السيد تاناكا،<br><br>شكراً جزيلاً على ملاحظاتكم القيمة. نود مناقشة الجدول الزمني والأسعار هذا الأسبوع.<br><br>مع تحياتي،`,
+    apologetic: `عزيزي السيد تاناكا،<br><br>أعتذر بصدق عن أي قلق. سأقدم مقترحاً معدلاً بنهاية هذا الأسبوع.<br><br>بإخلاص،`,
+    acknowledge: `عزيزي السيد تاناكا،<br><br>شكراً على رسالتكم. تلقيت أسئلتكم حول الجدول الزمني والأسعار. سأرد بنهاية الأسبوع.<br><br>مع تحياتي،`
+  };
+  REPLIES.French = {
+    professional: `Cher Monsieur Tanaka,<br><br>Je vous remercie d'avoir examiné notre proposition. Je serais ravi de vous détailler le calendrier et la structure tarifaire.<br><br>Seriez-vous disponible pour un appel mardi ou mercredi après-midi ? N'hésitez pas à me faire part de vos disponibilités.<br><br>Cordialement,`,
+    friendly: `Bonjour Tanaka-san ! 😊<br><br>Merci beaucoup pour votre retour ! J'aimerais discuter du calendrier et des prix.<br><br>Une réunion cette semaine vous conviendrait-elle ?<br><br>À bientôt !`,
+    concise: `Cher M. Tanaka,<br><br>Merci. Disponible : mardi 14h ou mercredi 10h (KST). Merci de confirmer.<br><br>Cordialement,`,
+    detailed: `Cher M. Tanaka,<br><br>Calendrier : début sous 2 semaines, livraison en 8 semaines.<br>Prix : frais de base $X + maintenance $Y (négociable).<br><br>Cordialement,`,
+    decline: `Cher M. Tanaka,<br><br>Merci de l'intérêt porté à notre proposition. Après réflexion, nous avons décidé de ne pas donner suite pour le moment.<br><br>Cordialement,`,
+    thankful: `Cher M. Tanaka,<br><br>Merci infiniment pour ces commentaires détaillés. Nous aimerions discuter du calendrier et des prix cette semaine.<br><br>Cordialement,`,
+    apologetic: `Cher M. Tanaka,<br><br>Je vous présente mes sincères excuses. Je préparerai une proposition révisée avant la fin de la semaine.<br><br>Sincèrement,`,
+    acknowledge: `Cher M. Tanaka,<br><br>Merci pour votre message. J'ai bien noté vos questions. Je vous répondrai avant la fin de la semaine.<br><br>Cordialement,`
+  };
+  REPLIES.German = {
+    professional: `Sehr geehrter Herr Tanaka,<br><br>vielen Dank für die Prüfung unseres Angebots. Gerne erläutere ich Ihnen den Zeitplan und die Preisstruktur im Detail.<br><br>Wären Sie Dienstag- oder Mittwochnachmittag für ein Gespräch verfügbar?<br><br>Mit freundlichen Grüßen,`,
+    friendly: `Hallo Tanaka-san! 😊<br><br>Vielen Dank für Ihre Rückmeldung! Ich würde gerne über den Zeitplan und die Preise sprechen.<br><br>Wie wäre es mit einem Anruf diese Woche?<br><br>Viele Grüße,`,
+    concise: `Sehr geehrter Herr Tanaka,<br><br>Danke. Verfügbar: Dienstag 14 Uhr oder Mittwoch 10 Uhr (KST). Bitte bestätigen.<br><br>Mit freundlichen Grüßen,`,
+    detailed: `Sehr geehrter Herr Tanaka,<br><br>Zeitplan: Start innerhalb von 2 Wochen, Lieferung in 8 Wochen.<br>Preis: Grundgebühr $X + monatl. Wartung $Y (verhandelbar).<br><br>Mit freundlichen Grüßen,`,
+    decline: `Sehr geehrter Herr Tanaka,<br><br>vielen Dank für Ihr Interesse. Nach reiflicher Überlegung haben wir entschieden, derzeit nicht fortzufahren.<br><br>Mit freundlichen Grüßen,`,
+    thankful: `Sehr geehrter Herr Tanaka,<br><br>vielen herzlichen Dank für Ihr ausführliches Feedback. Wir würden diese Woche gerne über Zeitplan und Preise sprechen.<br><br>Mit freundlichen Grüßen,`,
+    apologetic: `Sehr geehrter Herr Tanaka,<br><br>ich entschuldige mich aufrichtig. Ich werde bis Ende dieser Woche ein überarbeitetes Angebot vorlegen.<br><br>Mit freundlichen Grüßen,`,
+    acknowledge: `Sehr geehrter Herr Tanaka,<br><br>vielen Dank für Ihre Nachricht. Ich habe Ihre Fragen notiert und werde bis Ende der Woche antworten.<br><br>Mit freundlichen Grüßen,`
+  };
+  REPLIES.Portuguese = {
+    professional: `Prezado Sr. Tanaka,<br><br>Obrigado por revisar nossa proposta. Ficaria feliz em explicar o cronograma e a estrutura de preços em detalhes.<br><br>Terça ou quarta-feira à tarde esta semana seria possível para uma ligação?<br><br>Atenciosamente,`,
+    friendly: `Olá, Tanaka-san! 😊<br><br>Muito obrigado pelo retorno! Adoraria conversar sobre o cronograma e os preços.<br><br>Que tal uma ligação esta semana?<br><br>Até logo!`,
+    concise: `Prezado Sr. Tanaka,<br><br>Obrigado. Disponível: terça 14h ou quarta 10h (KST). Por favor confirme.<br><br>Atenciosamente,`,
+    detailed: `Prezado Sr. Tanaka,<br><br>Cronograma: início em 2 semanas, entrega em 8 semanas.<br>Preço: taxa base $X + manutenção $Y (negociável).<br><br>Atenciosamente,`,
+    decline: `Prezado Sr. Tanaka,<br><br>Obrigado pelo interesse. Após consideração, decidimos não avançar no momento.<br><br>Atenciosamente,`,
+    thankful: `Prezado Sr. Tanaka,<br><br>Muito obrigado pelo feedback detalhado. Gostaríamos de discutir cronograma e preços esta semana.<br><br>Atenciosamente,`,
+    apologetic: `Prezado Sr. Tanaka,<br><br>Peço sinceras desculpas. Prepararei uma proposta revisada até o final desta semana.<br><br>Sinceramente,`,
+    acknowledge: `Prezado Sr. Tanaka,<br><br>Obrigado pela mensagem. Anotei suas dúvidas e responderei até o final da semana.<br><br>Atenciosamente,`
+  };
+  REPLIES.Turkish = {
+    professional: `Sayın Tanaka,<br><br>Teklifimizi incelediğiniz için teşekkür ederiz. Zaman çizelgesi ve fiyatlandırma hakkında detaylı bilgi vermekten memnuniyet duyarım.<br><br>Bu hafta Salı veya Çarşamba öğleden sonra görüşebilir miyiz?<br><br>Saygılarımla,`,
+    friendly: `Merhaba Tanaka-san! 😊<br><br>Geri dönüşünüz için çok teşekkürler! Zaman çizelgesi ve fiyat hakkında konuşmak isterim.<br><br>Bu hafta nasılsınız?<br><br>İyi günler!`,
+    concise: `Sayın Tanaka,<br><br>Teşekkürler. Müsait: Salı 14:00 veya Çarşamba 10:00. Lütfen onaylayın.<br><br>Saygılarımla,`,
+    detailed: `Sayın Tanaka,<br><br>Zaman çizelgesi: 2 hafta içinde başlangıç, 8 haftada teslim.<br>Fiyat: Temel $X + aylık $Y (müzakere edilebilir).<br><br>Saygılarımla,`,
+    decline: `Sayın Tanaka,<br><br>İlginiz için teşekkürler. Değerlendirmemiz sonucunda şu an ilerlememaya karar verdik.<br><br>Saygılarımla,`,
+    thankful: `Sayın Tanaka,<br><br>Detaylı geri bildiriminiz için çok teşekkür ederiz. Bu hafta görüşmek isteriz.<br><br>Saygılarımla,`,
+    apologetic: `Sayın Tanaka,<br><br>Yaşanan aksaklık için özür dilerim. Bu hafta sonuna kadar revize teklif sunacağım.<br><br>Saygılarımla,`,
+    acknowledge: `Sayın Tanaka,<br><br>Mesajınız için teşekkürler. Sorularınızı aldım, bu hafta sonuna kadar yanıtlayacağım.<br><br>Saygılarımla,`
+  };
+  REPLIES.Italian = {
+    professional: `Gentile Sig. Tanaka,<br><br>La ringrazio per aver esaminato la nostra proposta. Sarò lieto di illustrarle la tempistica e i prezzi in dettaglio.<br><br>Sarebbe disponibile martedì o mercoledì pomeriggio per una chiamata?<br><br>Cordiali saluti,`,
+    friendly: `Ciao Tanaka-san! 😊<br><br>Grazie mille per il riscontro! Vorrei parlare di tempi e prezzi.<br><br>Una chiamata questa settimana le va bene?<br><br>A presto!`,
+    concise: `Gentile Sig. Tanaka,<br><br>Grazie. Disponibile: martedì 14h o mercoledì 10h (KST). Confermi per favore.<br><br>Cordiali saluti,`,
+    detailed: `Gentile Sig. Tanaka,<br><br>Tempistica: inizio in 2 settimane, consegna in 8 settimane.<br>Prezzo: costo base $X + manutenzione $Y (trattabile).<br><br>Cordiali saluti,`,
+    decline: `Gentile Sig. Tanaka,<br><br>Grazie per l'interesse. Dopo attenta valutazione, abbiamo deciso di non procedere al momento.<br><br>Cordiali saluti,`,
+    thankful: `Gentile Sig. Tanaka,<br><br>La ringrazio per il feedback dettagliato. Vorremmo parlare di tempi e prezzi questa settimana.<br><br>Cordiali saluti,`,
+    apologetic: `Gentile Sig. Tanaka,<br><br>Mi scuso sinceramente. Presenterò una proposta rivista entro fine settimana.<br><br>Cordiali saluti,`,
+    acknowledge: `Gentile Sig. Tanaka,<br><br>Grazie per il messaggio. Ho preso nota delle domande e risponderò entro fine settimana.<br><br>Cordiali saluti,`
+  };
+  REPLIES.Vietnamese = {
+    professional: `Kính gửi ông Tanaka,<br><br>Cảm ơn ông đã xem xét đề xuất của chúng tôi. Tôi rất vui được trình bày chi tiết về lịch trình và cấu trúc giá.<br><br>Ông có thể dành thời gian cho một cuộc gọi vào chiều thứ Ba hoặc thứ Tư tuần này không?<br><br>Trân trọng,`,
+    friendly: `Xin chào Tanaka-san! 😊<br><br>Cảm ơn rất nhiều vì đã phản hồi! Tôi muốn thảo luận về lịch trình và giá cả.<br><br>Tuần này có thể gọi điện không?<br><br>Hẹn gặp lại!`,
+    concise: `Kính gửi ông Tanaka,<br><br>Cảm ơn. Thời gian trống: Thứ Ba 14h hoặc Thứ Tư 10h. Vui lòng xác nhận.<br><br>Trân trọng,`,
+    detailed: `Kính gửi ông Tanaka,<br><br>Lịch trình: bắt đầu trong 2 tuần, hoàn thành trong 8 tuần.<br>Giá: phí cơ bản $X + bảo trì $Y (có thể thương lượng).<br><br>Trân trọng,`,
+    decline: `Kính gửi ông Tanaka,<br><br>Cảm ơn vì sự quan tâm. Sau khi cân nhắc, chúng tôi quyết định chưa tiến hành vào lúc này.<br><br>Trân trọng,`,
+    thankful: `Kính gửi ông Tanaka,<br><br>Cảm ơn rất nhiều về phản hồi chi tiết. Chúng tôi muốn thảo luận về lịch trình và giá cả tuần này.<br><br>Trân trọng,`,
+    apologetic: `Kính gửi ông Tanaka,<br><br>Tôi thành thật xin lỗi. Tôi sẽ chuẩn bị đề xuất sửa đổi trước cuối tuần này.<br><br>Chân thành,`,
+    acknowledge: `Kính gửi ông Tanaka,<br><br>Cảm ơn tin nhắn của ông. Tôi đã ghi nhận các câu hỏi và sẽ trả lời trước cuối tuần.<br><br>Trân trọng,`
+  };
+  REPLIES.Thai = {
+    professional: `เรียน คุณทานากะ,<br><br>ขอบคุณที่ตรวจสอบข้อเสนอของเรา ยินดีที่จะอธิบายรายละเอียดเรื่องกำหนดการและโครงสร้างราคา<br><br>คุณว่างสำหรับการโทรวันอังคารหรือพุธบ่ายสัปดาห์นี้ไหม?<br><br>ด้วยความนับถือ,`,
+    friendly: `สวัสดี ทานากะ-ซัง! 😊<br><br>ขอบคุณมากสำหรับการตอบกลับ! อยากพูดคุยเรื่องกำหนดการและราคา<br><br>สัปดาห์นี้โทรคุยได้ไหม?<br><br>ลาก่อน!`,
+    concise: `เรียน คุณทานากะ,<br><br>ขอบคุณ ว่างวันอังคาร 14:00 หรือพุธ 10:00 กรุณายืนยัน<br><br>ด้วยความนับถือ,`,
+    detailed: `เรียน คุณทานากะ,<br><br>กำหนดการ: เริ่มภายใน 2 สัปดาห์ ส่งมอบใน 8 สัปดาห์<br>ราคา: ค่าพื้นฐาน $X + บำรุงรักษา $Y (ต่อรองได้)<br><br>ด้วยความนับถือ,`,
+    decline: `เรียน คุณทานากะ,<br><br>ขอบคุณสำหรับความสนใจ หลังจากพิจารณาแล้ว เราตัดสินใจไม่ดำเนินการในขณะนี้<br><br>ด้วยความนับถือ,`,
+    thankful: `เรียน คุณทานากะ,<br><br>ขอบคุณมากสำหรับความคิดเห็นโดยละเอียด อยากพูดคุยเรื่องกำหนดการและราคาสัปดาห์นี้<br><br>ด้วยความนับถือ,`,
+    apologetic: `เรียน คุณทานากะ,<br><br>ขอโทษจริงๆ จะเตรียมข้อเสนอที่แก้ไขแล้วให้ภายในสิ้นสัปดาห์นี้<br><br>ด้วยความจริงใจ,`,
+    acknowledge: `เรียน คุณทานากะ,<br><br>ขอบคุณสำหรับข้อความ ได้รับคำถามแล้วและจะตอบกลับภายในสิ้นสัปดาห์<br><br>ด้วยความนับถือ,`
+  };
+  REPLIES.Indonesian = {
+    professional: `Yth. Bapak Tanaka,<br><br>Terima kasih telah meninjau proposal kami. Dengan senang hati saya akan menjelaskan jadwal dan struktur harga secara rinci.<br><br>Apakah Bapak tersedia untuk panggilan Selasa atau Rabu sore minggu ini?<br><br>Hormat saya,`,
+    friendly: `Halo, Tanaka-san! 😊<br><br>Terima kasih atas balasannya! Saya ingin membahas jadwal dan harga.<br><br>Bisa telepon minggu ini?<br><br>Sampai jumpa!`,
+    concise: `Yth. Bapak Tanaka,<br><br>Terima kasih. Tersedia: Selasa 14.00 atau Rabu 10.00. Mohon konfirmasi.<br><br>Hormat saya,`,
+    detailed: `Yth. Bapak Tanaka,<br><br>Jadwal: mulai dalam 2 minggu, selesai dalam 8 minggu.<br>Harga: biaya dasar $X + pemeliharaan $Y (dapat dinegosiasikan).<br><br>Hormat saya,`,
+    decline: `Yth. Bapak Tanaka,<br><br>Terima kasih atas minat Bapak. Setelah pertimbangan, kami memutuskan untuk tidak melanjutkan saat ini.<br><br>Hormat saya,`,
+    thankful: `Yth. Bapak Tanaka,<br><br>Terima kasih banyak atas masukan yang rinci. Kami ingin mendiskusikan jadwal dan harga minggu ini.<br><br>Hormat saya,`,
+    apologetic: `Yth. Bapak Tanaka,<br><br>Saya memohon maaf yang tulus. Saya akan menyiapkan proposal revisi sebelum akhir minggu ini.<br><br>Dengan tulus,`,
+    acknowledge: `Yth. Bapak Tanaka,<br><br>Terima kasih atas pesannya. Pertanyaan Bapak sudah saya catat dan akan saya jawab sebelum akhir minggu.<br><br>Hormat saya,`
+  };
+
+  // 나머지 언어는 English로 폴백
+  function getReply(lang, tone) {
+    const langData = REPLIES[lang] || REPLIES['English'];
+    return langData[tone] || langData['professional'];
+  }
+
+  // ===== UI 업데이트 =====
+  // 톤 다국어 데이터
+  const TONES = {
+    English:    ['Professional','Friendly','Concise','Detailed','Decline','Thankful','Apologetic','Acknowledge'],
+    Korean:     ['업무적','친근하게','간결하게','상세하게','거절하기','감사하게','사과하기','확인하기'],
+    Japanese:   ['ビジネス','フレンドリー','簡潔に','詳しく','お断り','感謝','お詫び','確認'],
+    Chinese:    ['专业','友好','简洁','详细','拒绝','感谢','道歉','确认'],
+    Spanish:    ['Profesional','Amigable','Conciso','Detallado','Rechazar','Agradecido','Disculpa','Confirmar'],
+    French:     ['Professionnel','Amical','Concis','Détaillé','Refus','Reconnaissant','Apologétique','Accusé'],
+    German:     ['Professionell','Freundlich','Prägnant','Detailliert','Ablehnen','Dankend','Entschuldigend','Bestätigend'],
+    Portuguese: ['Profissional','Amigável','Conciso','Detalhado','Recusar','Grato','Apologético','Confirmar'],
+    Arabic:     ['احترافي','ودي','موجز','مفصل','رفض','شكر','اعتذار','تأكيد'],
+    Turkish:    ['Profesyonel','Samimi','Kısa','Detaylı','Reddet','Teşekkür','Özür','Onayla'],
+    Italian:    ['Professionale','Amichevole','Conciso','Dettagliato','Rifiuto','Grato','Scuse','Conferma'],
+    Vietnamese: ['Chuyên nghiệp','Thân thiện','Ngắn gọn','Chi tiết','Từ chối','Cảm ơn','Xin lỗi','Xác nhận'],
+    Thai:       ['เป็นมืออาชีพ','เป็นกันเอง','กระชับ','ละเอียด','ปฏิเสธ','ขอบคุณ','ขอโทษ','ยืนยัน'],
+    Indonesian: ['Profesional','Ramah','Singkat','Rinci','Menolak','Berterima kasih','Meminta maaf','Konfirmasi'],
+  };
+  const TONE_KEYS = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
+
+  // 감지 배너 다국어
+  // Tasks 다국어
+  const SUMMARY_I18N = {
+    English:    `📋 <strong>Summary:</strong><br>Tanaka from JP Trading reviewed your Q4 proposal. Generally interested but wants to discuss timeline and pricing first.`,
+    Korean:     `📋 <strong>요약:</strong><br>JP Trading 다나카씨가 Q4 제안서를 검토했습니다. 관심은 있으나 타임라인과 가격 논의를 원합니다. 이번 주 통화를 제안합니다.`,
+    Japanese:   `📋 <strong>要約:</strong><br>JP TradingのTanaka様がQ4提案書を確認されました。全般的にご興味があり、タイムラインと価格について協議を希望されています。`,
+    Chinese:    `📋 <strong>摘要:</strong><br>JP Trading的田中先生审阅了Q4提案。总体感兴趣，但希望先讨论时间表和价格。建议本周通话。`,
+    Spanish:    `📋 <strong>Resumen:</strong><br>Tanaka de JP Trading revisó la propuesta Q4. Hay interés general, pero quiere discutir el cronograma y los precios primero.`,
+    French:     `📋 <strong>Résumé:</strong><br>Tanaka de JP Trading a examiné la proposition Q4. Intérêt général, mais souhaite discuter calendrier et prix avant de s'engager.`,
+    German:     `📋 <strong>Zusammenfassung:</strong><br>Tanaka von JP Trading hat den Q4-Vorschlag geprüft. Grundsätzlich interessiert, möchte aber Zeitplan und Preise besprechen.`,
+    Portuguese: `📋 <strong>Resumo:</strong><br>Tanaka da JP Trading analisou a proposta Q4. Há interesse geral, mas quer discutir cronograma e preços antes de se comprometer.`,
+    Arabic:     `📋 <strong>ملخص:</strong><br>راجع تاناكا اقتراح Q4. هناك اهتمام عام لكنه يريد مناقشة الجدول الزمني والأسعار أولاً.`,
+    Turkish:    `📋 <strong>Özet:</strong><br>JP Trading'den Tanaka Q4 teklifini inceledi. Genel ilgi var ancak önce zaman çizelgesi ve fiyatları görüşmek istiyor.`,
+    Italian:    `📋 <strong>Riepilogo:</strong><br>Tanaka di JP Trading ha esaminato la proposta Q4. Interesse generale, ma vuole discutere tempi e prezzi prima di impegnarsi.`,
+    Vietnamese: `📋 <strong>Tóm tắt:</strong><br>Tanaka từ JP Trading đã xem xét đề xuất Q4. Có quan tâm chung nhưng muốn thảo luận về thời gian và giá cả trước.`,
+    Thai:       `📋 <strong>สรุป:</strong><br>ทานากะจาก JP Trading ตรวจสอบข้อเสนอ Q4 แล้ว มีความสนใจทั่วไป แต่ต้องการหารือเรื่องเวลาและราคาก่อน`,
+    Indonesian: `📋 <strong>Ringkasan:</strong><br>Tanaka dari JP Trading telah meninjau proposal Q4. Ada minat umum, tapi ingin mendiskusikan jadwal dan harga terlebih dahulu.`,
+  };
+
+
+  const TASKS_I18N = {
+    English:    { title:'📌 Detected Actions', meeting:'📅 Wed, Oct 7, 3:00 PM — Meeting', calendar:'+ Calendar →', send:'📎 Send: <strong>updated proposal</strong> (by the deadline)', commit:"📋 Your Commitments:<br>• I'll ensure the updated proposal is sent prior to our meeting" },
+    Korean:     { title:'📌 감지된 할 일', meeting:'📅 10월 7일(수) 오후 3:00 — 미팅', calendar:'+ 캘린더 →', send:'📎 보내기: <strong>업데이트된 제안서</strong> (마감일 전)', commit:'📋 내 약속:<br>• 미팅 전까지 업데이트된 제안서를 보내겠습니다' },
+    Japanese:   { title:'📌 検出されたアクション', meeting:'📅 10月7日(水) 15:00 — ミーティング', calendar:'+ カレンダー →', send:'📎 送信: <strong>更新された提案書</strong>（締め切りまでに）', commit:'📋 コミットメント:<br>• ミーティング前に更新された提案をお送りします' },
+    Chinese:    { title:'📌 检测到的操作', meeting:'📅 10月7日(周三) 15:00 — 会议', calendar:'+ 日历 →', send:'📎 发送: <strong>更新的提案书</strong>（截止日期前）', commit:'📋 我的承诺:<br>• 我将在会议前发送更新的提案' },
+    Spanish:    { title:'📌 Acciones detectadas', meeting:'📅 Mié 7 Oct, 15:00 — Reunión', calendar:'+ Calendario →', send:'📎 Enviar: <strong>propuesta actualizada</strong> (antes del plazo)', commit:'📋 Mis compromisos:<br>• Me aseguraré de enviar la propuesta antes de la reunión' },
+    French:     { title:'📌 Actions détectées', meeting:'📅 Mer 7 Oct, 15:00 — Réunion', calendar:'+ Agenda →', send:'📎 Envoyer: proposition mise à jour (avant la date limite)', commit:'📋 Mes engagements: Envoyer la proposition avant la réunion' },
+    German:     { title:'📌 Erkannte Aktionen', meeting:'📅 Mi. 7. Okt, 15:00 — Meeting', calendar:'+ Kalender →', send:'📎 Senden: <strong>aktualisiertes Angebot</strong> (vor Fristablauf)', commit:'📋 Meine Zusagen:<br>• Ich werde das aktualisierte Angebot vor dem Meeting senden' },
+    Portuguese: { title:'📌 Ações detectadas', meeting:'📅 Qua 7 Out, 15:00 — Reunião', calendar:'+ Calendário →', send:'📎 Enviar: <strong>proposta atualizada</strong> (antes do prazo)', commit:'📋 Meus compromissos:<br>• Enviarei a proposta atualizada antes da reunião' },
+    Arabic:     { title:'📌 الإجراءات المكتشفة', meeting:'📅 الأربعاء 7 أكتوبر 15:00 — اجتماع', calendar:'+ تقويم →', send:'📎 إرسال: <strong>الاقتراح المحدّث</strong> (قبل الموعد النهائي)', commit:'📋 التزاماتي:<br>• سأتأكد من إرسال الاقتراح قبل الاجتماع' },
+    Turkish:    { title:'📌 Tespit edilen eylemler', meeting:'📅 Çar 7 Eki, 15:00 — Toplantı', calendar:'+ Takvim →', send:'📎 Gönder: <strong>güncellenmiş teklif</strong> (son tarihe kadar)', commit:'📋 Taahhütlerim:<br>• Toplantıdan önce güncellenmiş teklifi göndereceğim' },
+    Italian:    { title:'📌 Azioni rilevate', meeting:'📅 Mer 7 Ott, 15:00 — Riunione', calendar:'+ Calendario →', send:'📎 Invia: <strong>proposta aggiornata</strong> (entro la scadenza)', commit:'📋 I miei impegni:<br>• Mi assicurerò di inviare la proposta aggiornata prima della riunione' },
+    Vietnamese: { title:'📌 Hành động phát hiện', meeting:'📅 Thứ 4, 7 Tháng 10, 15:00 — Cuộc họp', calendar:'+ Lịch →', send:'📎 Gửi: <strong>đề xuất đã cập nhật</strong> (trước hạn chót)', commit:'📋 Cam kết của tôi:<br>• Tôi sẽ đảm bảo gửi đề xuất trước cuộc họp' },
+    Thai:       { title:'📌 การดำเนินการที่ตรวจพบ', meeting:'📅 พุธ 7 ต.ค. 15:00 — การประชุม', calendar:'+ ปฏิทิน →', send:'📎 ส่ง: <strong>ข้อเสนอที่อัปเดต</strong> (ก่อนกำหนด)', commit:'📋 ข้อผูกมัดของฉัน:<br>• ฉันจะส่งข้อเสนอที่อัปเดตก่อนการประชุม' },
+    Indonesian: { title:'📌 Tindakan terdeteksi', meeting:'📅 Rab 7 Okt, 15:00 — Rapat', calendar:'+ Kalender →', send:'📎 Kirim: <strong>proposal yang diperbarui</strong> (sebelum tenggat)', commit:'📋 Komitmen saya:<br>• Saya akan memastikan mengirim proposal sebelum rapat' },
+  };
+
+  const DETECT_BANNER = {
+    English:    '🇯🇵 Japan business culture · Keigo applied &nbsp;|&nbsp; 🤝 Negotiation context detected',
+    Korean:     '🇯🇵 일본 비즈니스 문화 · 경어체 적용 &nbsp;|&nbsp; 🤝 협상 컨텍스트 감지',
+    Japanese:   '🇯🇵 日本ビジネス文化 · 敬語適用 &nbsp;|&nbsp; 🤝 交渉コンテキスト検出',
+    Chinese:    '🇯🇵 日本商务文化 · 敬语适用 &nbsp;|&nbsp; 🤝 检测到谈判背景',
+    Spanish:    '🇯🇵 Cultura japonesa · Keigo aplicado &nbsp;|&nbsp; 🤝 Negociación detectada',
+    French:     '🇯🇵 Culture japonaise · Keigo appliqué &nbsp;|&nbsp; 🤝 Négociation détectée',
+    German:     '🇯🇵 Japanische Geschäftskultur · Keigo &nbsp;|&nbsp; 🤝 Verhandlung erkannt',
+    Portuguese: '🇯🇵 Cultura japonesa · Keigo aplicado &nbsp;|&nbsp; 🤝 Negociação detectada',
+    Arabic:     '🇯🇵 الثقافة اليابانية · كيغو &nbsp;|&nbsp; 🤝 سياق تفاوضي',
+    Turkish:    '🇯🇵 Japon iş kültürü · Keigo &nbsp;|&nbsp; 🤝 Müzakere tespit edildi',
+    Italian:    '🇯🇵 Cultura giapponese · Keigo &nbsp;|&nbsp; 🤝 Negoziazione rilevata',
+    Vietnamese: '🇯🇵 Văn hóa Nhật Bản · Keigo &nbsp;|&nbsp; 🤝 Phát hiện đàm phán',
+    Thai:       '🇯🇵 วัฒนธรรมญี่ปุ่น · Keigo &nbsp;|&nbsp; 🤝 ตรวจพบการเจรจา',
+    Indonesian: '🇯🇵 Budaya Jepang · Keigo &nbsp;|&nbsp; 🤝 Negosiasi terdeteksi',
+  };
+
+  function updateUI(lang) {
+    const ui = UI[lang] || UI['English'];
+    const genBtn = document.getElementById('demo-gen-btn');
+    if (genBtn && !genBtn.disabled) genBtn.textContent = ui.gen;
+    const summaryBtn = document.getElementById('demo-summary-btn');
+    if (summaryBtn) summaryBtn.textContent = ui.summary;
+    const urgBadge = document.getElementById('demo-urgency-badge');
+    if (urgBadge) urgBadge.textContent = ui.urgency;
+    const negBadge = document.getElementById('demo-emotion-badge');
+    if (negBadge) negBadge.textContent = ui.negotiation;
+    const insertBtn = document.querySelector('.demo-action.demo-insert');
+    if (insertBtn) insertBtn.textContent = ui.insert;
+    const copyBtn = document.querySelector('.demo-action.demo-copy');
+    if (copyBtn) copyBtn.textContent = ui.copy;
+    const lockText = document.getElementById('demo-lock-text');
+    if (lockText) lockText.textContent = demoPlan === 'free' ? ui.lockBasic : ui.lockPro;
+    const guardDiv = document.getElementById('demo-guard');
+    if (guardDiv) guardDiv.innerHTML = `<strong>${ui.guard}</strong><br>${ui.guardMsg}`;
+    const labels = document.querySelectorAll('#tab-single .demo-panel div[style*="font-size:10px"]');
+    if (labels[0]) labels[0].textContent = ui.toneLabel;
+    if (labels[1]) labels[1].textContent = ui.countryLabel;
+    if (labels[2]) labels[2].textContent = ui.langLabel;
+    // 톤 드롭다운 옵션 다국어화
+    const toneSelect = document.getElementById('demo-tone-select');
+    if (toneSelect) {
+      const tones = TONES[lang] || TONES['English'];
+      Array.from(toneSelect.options).forEach((opt, i) => {
+        opt.textContent = tones[i] || opt.textContent;
+      });
+    }
+    // 감지 배너 다국어화
+    const detectBanner = document.getElementById('demo-detect-banner');
+    if (detectBanner) detectBanner.innerHTML = DETECT_BANNER[lang] || DETECT_BANNER['English'];
+    // Summary 다국어화
+    const summaryText = document.getElementById('demo-summary-text');
+    if (summaryText) summaryText.innerHTML = SUMMARY_I18N[lang] || SUMMARY_I18N['English'];
+    // Tasks 다국어화
+    const t = TASKS_I18N[lang] || TASKS_I18N['English'];
+    const tasksTitle = document.getElementById('tasks-title');
+    if (tasksTitle) tasksTitle.textContent = t.title;
+    const tasksMeeting = document.getElementById('tasks-meeting');
+    if (tasksMeeting) tasksMeeting.textContent = t.meeting;
+    const tasksCalendar = document.getElementById('tasks-calendar');
+    if (tasksCalendar) tasksCalendar.textContent = t.calendar;
+    const tasksSend = document.getElementById('tasks-send');
+    if (tasksSend) tasksSend.innerHTML = t.send;
+    const tasksCommit = document.getElementById('tasks-commit');
+    if (tasksCommit) tasksCommit.innerHTML = t.commit;
+  }
+
+  // ===== My Language 변경 =====
+  function switchDemoUILang(lang) {
+    demoCurrentLang = lang;
+    updateUI(lang);
+    // 답장 이미 생성된 경우 즉시 재생성
+    if (demoReplyShown) {
       const replyEl = document.getElementById('demo-reply-text');
-      if (replyEl.style.display !== 'none') {
+      if (replyEl) {
         replyEl.style.opacity = '0';
         setTimeout(() => {
-          replyEl.innerHTML = DEMO_REPLIES[currentTone];
+          replyEl.innerHTML = getReply(lang, demoCurrentTone);
           replyEl.style.opacity = '1';
-        }, 200);
+          replyEl.style.transition = 'opacity 0.3s';
+        }, 150);
       }
-    });
-  });
-
-  document.getElementById('demo-gen-btn').addEventListener('click', function() {
-    if (isGenerating) return;
-    isGenerating = true;
-    const btn = this;
-    const replyEl = document.getElementById('demo-reply-text');
-    const actionsEl = document.getElementById('demo-actions');
-
-    btn.textContent = '⏳ Generating...';
-    btn.disabled = true;
-
-    setTimeout(() => {
-      replyEl.innerHTML = DEMO_REPLIES[currentTone];
-      replyEl.style.display = 'block';
-      replyEl.style.opacity = '0';
-      actionsEl.style.display = 'flex';
-      setTimeout(() => { replyEl.style.opacity = '1'; replyEl.style.transition = 'opacity 0.4s'; }, 50);
-      btn.textContent = '✦ Generate AI Reply';
-      btn.disabled = false;
-      isGenerating = false;
-    }, 1200);
-  });
-  </script>
-
-  <script>
-  // 탭 전환
-  function switchDemoTab(tab, btn) {
-    document.querySelectorAll('.demo-tab').forEach(function(t) {
-      t.style.display = 'none';
-      t.classList.remove('active');
-    });
-    document.querySelectorAll('.demo-tab-btn').forEach(function(b) {
-      b.classList.remove('active');
-      b.style.background = '#fff';
-      b.style.color = '';
-      b.style.borderColor = '';
-    });
-    var target = document.getElementById('tab-' + tab);
-    if (target) {
-      target.style.display = 'block';
-      target.classList.add('active');
     }
-    btn.classList.add('active');
-    btn.style.background = '#e91e8c';
-    btn.style.color = '#fff';
-    btn.style.borderColor = '#e91e8c';
   }
 
-  // 페이지 로드 시 초기화
+  // ===== Tone 변경 =====
   document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.demo-tab').forEach(function(t) {
-      t.style.display = 'none';
-    });
-    var freeTab = document.getElementById('tab-free');
-    if (freeTab) freeTab.style.display = 'block';
+    const toneSelect = document.getElementById('demo-tone-select');
+    if (toneSelect) {
+      toneSelect.addEventListener('change', function() {
+        demoCurrentTone = this.value;
+        if (demoReplyShown) {
+          const replyEl = document.getElementById('demo-reply-text');
+          replyEl.style.opacity = '0';
+          setTimeout(() => {
+            replyEl.innerHTML = getReply(demoCurrentLang, demoCurrentTone);
+            replyEl.style.opacity = '1';
+            replyEl.style.transition = 'opacity 0.3s';
+          }, 200);
+        }
+      });
+    }
+
+    // Generate 버튼
+    const genBtn = document.getElementById('demo-gen-btn');
+    if (genBtn) {
+      genBtn.addEventListener('click', function() {
+        if (demoIsGenerating) return;
+        demoIsGenerating = true;
+        const btn = this;
+        // 현재 My Language 드롭다운 값 직접 읽기
+        const myLangSelect = document.getElementById('demo-mylang-select');
+        if (myLangSelect) demoCurrentLang = myLangSelect.value;
+        const ui = UI[demoCurrentLang] || UI['English'];
+        btn.textContent = '⏳ Generating...';
+        btn.disabled = true;
+        btn.style.background = '#c2185b';
+        setTimeout(() => {
+          const replyEl = document.getElementById('demo-reply-text');
+          const actionsEl = document.getElementById('demo-actions');
+          const tasksEl = document.getElementById('demo-tasks');
+          const guardDiv = document.getElementById('demo-guard');
+          const summaryBtn = document.getElementById('demo-summary-btn');
+          replyEl.innerHTML = getReply(demoCurrentLang, demoCurrentTone);
+          replyEl.style.display = 'block';
+          replyEl.style.opacity = '0';
+          actionsEl.style.display = 'flex';
+          tasksEl.style.display = 'block';
+          if (guardDiv) guardDiv.style.display = 'block';
+          setTimeout(() => { replyEl.style.opacity = '1'; replyEl.style.transition = 'opacity 0.4s'; }, 50);
+          btn.textContent = ui.gen;
+          btn.style.background = 'var(--pink)';
+          btn.disabled = false;
+          demoIsGenerating = false;
+          demoReplyShown = true;
+          updateUI(demoCurrentLang);
+        }, 1200);
+      });
+    }
   });
 
-  // 3가지 버전 전환
+  // ===== Thread Summary =====
+  function toggleDemoSummary() {
+    const box = document.getElementById('demo-summary-box');
+    const btn = document.getElementById('demo-summary-btn');
+    if (box.style.display === 'none') {
+      box.style.display = 'block';
+      btn.style.background = '#f0f7ff';
+      btn.style.color = '#1a73e8';
+      btn.style.borderColor = '#1a73e8';
+    } else {
+      box.style.display = 'none';
+      btn.style.background = '#fff';
+      btn.style.color = '#5f6368';
+      btn.style.borderColor = '#dadce0';
+    }
+  }
+
+  function showDemoToast(msg) {
+    const t = document.getElementById('demo-toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2000);
+  }
+
+  // ===== TAB 전환 =====
+  function switchDemoTab(tab, btn) {
+    document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.demo-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ===== 플랜 전환 =====
+  function switchDemoPlan(plan) {
+    demoPlan = plan;
+    const planBtns = {
+      free:  document.getElementById('plan-btn-free'),
+      basic: document.getElementById('plan-btn-basic'),
+      pro:   document.getElementById('plan-btn-pro')
+    };
+    Object.keys(planBtns).forEach(p => {
+      if (!planBtns[p]) return;
+      planBtns[p].style.opacity = p === plan ? '1' : '0.6';
+      planBtns[p].style.fontWeight = p === plan ? '700' : '500';
+    });
+    planBtns.free.style.background  = plan==='free'  ? '#5f6368' : '#f1f3f4';
+    planBtns.free.style.color       = plan==='free'  ? '#fff'    : '#5f6368';
+    planBtns.basic.style.background = plan==='basic' ? '#1a73e8' : '#fff';
+    planBtns.basic.style.color      = plan==='basic' ? '#fff'    : '#1a73e8';
+    planBtns.pro.style.background   = plan==='pro'   ? '#e91e8c' : '#fff';
+    planBtns.pro.style.color        = plan==='pro'   ? '#fff'    : '#e91e8c';
+
+    const badge = document.getElementById('demo-plan-badge');
+    const bar   = document.getElementById('demo-usage-bar');
+    const desc  = document.getElementById('plan-desc-text');
+    const lock  = document.getElementById('demo-lock-msg');
+    const tripleBtn = document.getElementById('tab-btn-triple');
+    const smartBtn  = document.getElementById('tab-btn-smart');
+
+    if (plan === 'free') {
+      if (badge) badge.textContent = 'Free · 28/35 replies left';
+      if (bar)   { bar.style.width='80%'; bar.style.background='#f29900'; }
+      if (desc)  desc.textContent = '🆓 Free: Basic AI reply only';
+      if (lock)  lock.style.display = 'block';
+      if (tripleBtn) { tripleBtn.style.opacity='0.4'; tripleBtn.style.pointerEvents='none'; }
+      if (smartBtn)  { smartBtn.style.opacity='0.4';  smartBtn.style.pointerEvents='none'; }
+      // Free면 single 탭으로
+      document.querySelectorAll('.demo-tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.demo-tab-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('tab-single').classList.add('active');
+      document.querySelector('[data-tab="single"]').classList.add('active');
+    } else if (plan === 'basic') {
+      if (badge) badge.textContent = 'Basic · 87/200 replies left';
+      if (bar)   { bar.style.width='44%'; bar.style.background='#1a73e8'; }
+      if (desc)  desc.textContent = '⚡ Basic: AI reply + 3 versions';
+      if (lock)  lock.style.display = 'block';
+      if (tripleBtn) { tripleBtn.style.opacity='1'; tripleBtn.style.pointerEvents='auto'; }
+      if (smartBtn)  { smartBtn.style.opacity='0.4'; smartBtn.style.pointerEvents='none'; }
+      // Smart Reply 탭에 있으면 single로
+      if (document.getElementById('tab-smart').classList.contains('active')) {
+        document.querySelectorAll('.demo-tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.demo-tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById('tab-single').classList.add('active');
+        document.querySelector('[data-tab="single"]').classList.add('active');
+      }
+    } else {
+      if (badge) badge.textContent = 'Pro · 13/300 replies left';
+      if (bar)   { bar.style.width='4%'; bar.style.background='#e91e8c'; }
+      if (desc)  desc.textContent = '✦ Pro: All features unlocked';
+      if (lock)  lock.style.display = 'none';
+      if (tripleBtn) { tripleBtn.style.opacity='1'; tripleBtn.style.pointerEvents='auto'; }
+      if (smartBtn)  { smartBtn.style.opacity='1';  smartBtn.style.pointerEvents='auto'; }
+    }
+    updateUI(demoCurrentLang);
+  }
+
+  // ===== TAB 2: 3 Versions =====
   const TRIPLE_REPLIES = [
-    `Hi Sarah,<br><br>Thank you for checking in. I'm pleased to confirm that the project is progressing as planned and we remain on track to meet the deadline.<br><br>I will send you a detailed status report by end of day tomorrow. Please let me know if you need any specific information in the meantime.<br><br>Best regards,`,
-    `Hi Sarah,<br><br>Thanks for the follow-up! Everything is moving along well — we're on schedule and I don't foresee any issues with the deadline.<br><br>I'll put together a full update for you by tomorrow. Is there anything specific you'd like me to focus on?<br><br>Best,`,
-    `Hi Sarah,<br><br>Quick update: we're on track. No blockers at the moment and the team is confident we'll hit the deadline.<br><br>Full report coming your way by EOD tomorrow.<br><br>Best regards,`
+    `Hi Sarah,<br><br>Thank you for checking in. I'm pleased to confirm the project is on track to meet the deadline.<br><br>I will send a detailed status report by EOD tomorrow.<br><br>Best regards,`,
+    `Hi Sarah,<br><br>Thanks for the follow-up! Everything is moving well — no blockers, on schedule.<br><br>Full update by tomorrow. Anything specific you'd like me to focus on?<br><br>Best,`,
+    `Hi Sarah,<br><br>On track, no blockers. Report by EOD tomorrow.<br><br>Best regards,`
   ];
-  let currentVer = 0;
+  let tripleCurrentVer = 0;
+  let tripleIsKR = false;
+
   function switchVer(idx) {
-    currentVer = idx;
+    tripleCurrentVer = idx;
     document.querySelectorAll('.ver-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.ver-tab')[idx].classList.add('active');
-    document.getElementById('triple-reply').style.opacity = '0';
-    setTimeout(() => {
-      document.getElementById('triple-reply').innerHTML = TRIPLE_REPLIES[idx];
-      document.getElementById('triple-reply').style.opacity = '1';
-      document.getElementById('triple-reply').style.transition = 'opacity 0.3s';
-    }, 150);
+    document.getElementById('triple-reply').innerHTML = TRIPLE_REPLIES[idx];
   }
 
-  // Pro 탭 언어 전환
-  const SMART_LANG = {
-    Korean: '안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>추가 문의사항이 있으시면 언제든지 연락해 주세요.<br><br>감사합니다.',
-    German: 'Sehr geehrte Damen und Herren,<br><br>vielen Dank für Ihr Interesse an einer Vertragsverlängerung. Wir werden Ihnen das aktualisierte Angebot bis Ende dieser Woche zusenden.<br><br>Bei weiteren Fragen stehen wir Ihnen gerne zur Verfügung.<br><br>Mit freundlichen Grüßen,',
-    Japanese: '拝啓、<br><br>契約延長へのご関心をありがとうございます。更新されたお見積りを今週中にお送りいたします。<br><br>ご不明な点がございましたら、お気軽にご連絡ください。<br><br>敬具',
-    Portuguese: 'Prezados Senhores,<br><br>Obrigado pelo interesse na renovação do contrato. Enviaremos a proposta atualizada até o final desta semana.<br><br>Caso tenham dúvidas, estamos à disposição.<br><br>Atenciosamente,',
-    Arabic: 'السادة الأفاضل،<br><br>شكراً لاهتمامكم بتجديد العقد. سنرسل لكم العرض المحدث خلال هذا الأسبوع.<br><br>لا تترددوا في التواصل معنا إذا كان لديكم أي استفسارات.<br><br>مع خالص التحيات,'
-  };
+  function toggleTripleLang() {
+    const btn = document.getElementById('triple-lang-btn');
+    const el = document.getElementById('triple-reply');
+    tripleIsKR = !tripleIsKR;
+    if (tripleIsKR) {
+      const KR = ['안녕하세요 Sarah님,<br><br>프로젝트는 마감일에 맞춰 순조롭게 진행 중입니다.<br><br>내일 EOD까지 상세 보고서를 보내드리겠습니다.<br><br>감사합니다,',
+                  '안녕하세요 Sarah님,<br><br>순조롭게 진행 중이며 블로커 없습니다. 내일까지 전체 업데이트 드릴게요.<br><br>감사합니다,',
+                  '안녕하세요 Sarah님,<br><br>순조롭습니다. 내일 EOD 보고서 드릴게요.<br><br>감사합니다,'];
+      el.innerHTML = KR[tripleCurrentVer];
+      btn.textContent = '🔄 Back to English';
+      btn.style.background = '#e91e8c'; btn.style.color = '#fff'; btn.style.borderColor = '#e91e8c';
+    } else {
+      el.innerHTML = TRIPLE_REPLIES[tripleCurrentVer];
+      btn.textContent = '🌐 Send in Korean';
+      btn.style.background = '#fff'; btn.style.color = '#34a853'; btn.style.borderColor = '#34a853';
+    }
+  }
 
-  function switchSmartLang(lang) {
+  // ===== TAB 3: Smart Reply =====
+  const SMART_V = [
+    '안녕하세요,<br><br>계약 연장에 관심을 가져주셔서 감사합니다. 업데이트된 견적서를 이번 주 내로 보내드리겠습니다.<br><br>감사합니다.',
+    '안녕하세요,<br><br>계약 연장 의사 감사합니다. 최신 견적서를 금주 중으로 전달드리겠습니다.<br><br>감사합니다.',
+    '네, 견적서는 이번 주 금요일까지 보내드리겠습니다. 감사합니다.'
+  ];
+  const SMART_DE = [
+    'Sehr geehrte Damen und Herren,<br><br>vielen Dank für Ihr Interesse. Wir senden Ihnen das Angebot bis Ende dieser Woche.<br><br>Mit freundlichen Grüßen,',
+    'Sehr geehrte Damen und Herren,<br><br>herzlichen Dank. Das überarbeitete Angebot folgt diese Woche.<br><br>Mit freundlichen Grüßen,',
+    'Das Angebot erhalten Sie bis Freitag. Mit freundlichen Grüßen,'
+  ];
+  let smartCurrentVer = 0;
+  let smartIsDE = false;
+
+  function switchSmartVer(idx, btn) {
+    smartCurrentVer = idx;
+    document.querySelectorAll('#tab-smart .ver-tab').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
     const el = document.getElementById('smart-reply');
     el.style.opacity = '0';
     setTimeout(() => {
-      el.innerHTML = SMART_LANG[lang] || SMART_LANG['Korean'];
-      el.style.opacity = '1';
-      el.style.transition = 'opacity 0.3s';
-      el.style.direction = lang === 'Arabic' ? 'rtl' : 'ltr';
+      el.innerHTML = smartIsDE ? SMART_DE[idx] : SMART_V[idx];
+      el.style.opacity = '1'; el.style.transition = 'opacity 0.3s';
     }, 150);
   }
 
-  // Basic 탭 언어 전환
-  const TRIPLE_LANG = {
-    Korean: `안녕하세요 Sarah,<br><br>확인해주셔서 감사합니다. 프로젝트는 계획대로 진행 중이며 마감일을 맞출 수 있을 것입니다.<br><br>내일 오전까지 상세 진행 보고서를 보내드리겠습니다.<br><br>감사합니다,`,
-    Japanese: `Sarah様、<br><br>ご確認いただきありがとうございます。プロジェクトは予定通り進んでおり、期限内に完了できる見込みです。<br><br>明日中に詳細な進捗報告書をお送りします。<br><br>よろしくお願いいたします。`,
-    Portuguese: `Olá Sarah,<br><br>Obrigado pelo acompanhamento. O projeto está progredindo conforme planejado e estamos no caminho certo para cumprir o prazo.<br><br>Enviarei um relatório detalhado até amanhã de manhã.<br><br>Atenciosamente,`,
-    German: `Liebe Sarah,<br><br>Vielen Dank für Ihre Nachfrage. Das Projekt läuft planmäßig und wir sind zuversichtlich, den Termin einzuhalten.<br><br>Ich werde Ihnen morgen früh einen detaillierten Statusbericht zusenden.<br><br>Mit freundlichen Grüßen,`
-  };
-
-  function switchTripleLang(lang) {
-    document.getElementById('triple-reply').style.opacity = '0';
-    setTimeout(() => {
-      document.getElementById('triple-reply').innerHTML = TRIPLE_LANG[lang] || TRIPLE_REPLIES[0];
-      document.getElementById('triple-reply').style.opacity = '1';
-      document.getElementById('triple-reply').style.transition = 'opacity 0.3s';
-    }, 150);
-  }
-
-  // 스마트 답장 언어 전환
-  let isKorean = true;
   function toggleSmartLang() {
-    const replyEl = document.getElementById('smart-reply');
     const btn = document.getElementById('smart-lang-btn');
-    replyEl.style.opacity = '0';
+    const el  = document.getElementById('smart-reply');
+    smartIsDE = !smartIsDE;
+    el.style.opacity = '0';
     setTimeout(() => {
-      if (isKorean) {
-        replyEl.innerHTML = replyEl.dataset.german;
-        btn.textContent = '🔄 한국어로 돌아가기';
-        btn.style.background = '#1a73e8';
-        btn.style.color = '#fff';
-        btn.style.borderColor = '#1a73e8';
-      } else {
-        replyEl.innerHTML = replyEl.dataset.korean;
-        btn.textContent = '🌐 독일어로 보내기';
-        btn.style.background = '#fff';
-        btn.style.color = '#34a853';
-        btn.style.borderColor = '#34a853';
-      }
-      isKorean = !isKorean;
-      replyEl.style.opacity = '1';
-      replyEl.style.transition = 'opacity 0.3s';
+      el.innerHTML = smartIsDE ? SMART_DE[smartCurrentVer] : SMART_V[smartCurrentVer];
+      btn.textContent = smartIsDE ? '🔄 Back to Korean' : '🌐 Send in German';
+      btn.style.background   = smartIsDE ? '#1a73e8' : '#fff';
+      btn.style.color        = smartIsDE ? '#fff'    : '#34a853';
+      btn.style.borderColor  = smartIsDE ? '#1a73e8' : '#34a853';
+      el.style.opacity = '1'; el.style.transition = 'opacity 0.3s';
     }, 150);
   }
   </script>
@@ -895,23 +1292,94 @@
 
 <!-- FEATURES -->
 <section class="features" id="features">
-  <p class="section-label" data-i18n="feat_label">Features</p>
-  <h2 class="section-title" data-i18n="feat_title">Everything your inbox needs</h2>
-  <div class="features-grid">
-    <div class="feature-card">
+  <p class="section-label">Features</p>
+  <h2 class="section-title">Everything your inbox needs</h2>
+
+  <!-- 핵심 3가지 크게 -->
+  <style>
+  .features-hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .feature-hero-card {
+    background: linear-gradient(135deg, #fff 0%, #f8f9ff 100%);
+    border: 2px solid var(--pink-light);
+    border-radius: 16px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--pink), var(--gold));
+    border-radius: 16px 16px 0 0;
+  }
+  .feature-hero-badge {
+    display: inline-block;
+    background: var(--pink-light);
+    color: var(--pink);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+  }
+  .feature-hero-card .feature-icon { font-size: 36px; margin-bottom: 14px; }
+  .feature-hero-card h3 { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+  .feature-hero-card p { font-size: 14px; color: var(--text-2); line-height: 1.7; }
+  .feature-hero-card ul { list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .feature-hero-card ul li { font-size: 13px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+  .feature-hero-card ul li::before { content: "✓"; color: var(--green); font-weight: 700; }
+  </style>
+
+  <div class="features-hero">
+    <div class="feature-hero-card">
+      <div class="feature-hero-badge">⭐ CORE</div>
       <div class="feature-icon">🌍</div>
-      <h3>Any language combination</h3>
-      <p>Japanese to Korean, Arabic to German, Portuguese to English — any direction, any pair. MailMind handles it all.</p>
+      <h3>19 Languages, any pair</h3>
+      <p>Japanese to Korean, Arabic to German, Portuguese to English — any direction, any combination. Replies sound like a native speaker.</p>
+      <ul>
+        <li>Culture & business customs auto-applied</li>
+        <li>Japanese Keigo, Arabic formalities, Brazilian warmth</li>
+        <li>19 languages: EN / KO / JA / ZH / ES / FR / DE / PT / AR + 10 more</li>
+      </ul>
     </div>
+    <div class="feature-hero-card">
+      <div class="feature-hero-badge">⭐ CORE</div>
+      <div class="feature-icon">✨</div>
+      <h3>Smart Reply</h3>
+      <p>Can't read the language at all? Smart Reply reads the email, shows you a summary in your language, then writes the perfect reply in theirs.</p>
+      <ul>
+        <li>Summary in your language first</li>
+        <li>3 reply versions to choose from</li>
+        <li>One-click translation into sender's language</li>
+      </ul>
+    </div>
+    <div class="feature-hero-card">
+      <div class="feature-hero-badge">⭐ CORE</div>
+      <div class="feature-icon">🏭</div>
+      <h3>Industry expertise</h3>
+      <p>MailMind detects your industry and applies the right terminology and tone — automatically, without any setup.</p>
+      <ul>
+        <li>Trade: Incoterms, LC, FOB — applied correctly</li>
+        <li>Legal: shall/may/will distinction</li>
+        <li>15+ fields: IT, finance, medical, crypto & more</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 나머지 기능 작게 -->
+  <div class="features-grid">
     <div class="feature-card">
       <div class="feature-icon">🎯</div>
       <h3>8 tones, your situation</h3>
       <p>Professional, Friendly, Concise, Detailed, Decline, Thankful, Apologetic, Acknowledge. One tap, perfect tone.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">✨</div>
-      <h3>Smart Reply — reads & writes</h3>
-      <p>Get a summary in your language first, then choose from 3 reply versions with one-click translation into the sender's language.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔒</div>
@@ -920,18 +1388,13 @@
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
-      <h3>Lives inside Gmail</h3>
-      <p>No tab switching. MailMind appears right inside Gmail when you open an email. Click, read, reply, done.</p>
+      <h3>Gmail & Outlook Web</h3>
+      <p>Works inside Gmail and Outlook Web — no tab switching. MailMind panel appears automatically when you open any email.</p>
     </div>
     <div class="feature-card">
-      <div class="feature-icon">🏭</div>
-      <h3>Industry & culture detection</h3>
-      <p>Detects trade, legal, IT, finance and 15 more industries. Applies Japanese keigo, Arabic formalities, Brazilian warmth — automatically.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
+      <div class="feature-icon">🔀</div>
       <h3>Quick language switch</h3>
-      <p>Generated your reply in Korean? Switch to Japanese, Arabic, or Italian in one click — no re-generation needed, no usage deducted.</p>
+      <p>Generated your reply in Korean? Switch to Japanese, Arabic, or Italian in one click — no re-generation, no usage deducted.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">✍️</div>
@@ -950,9 +1413,6 @@
     </div>
     <div class="feature-card" style="opacity:0.7">
       <div class="feature-icon">📎</div>
-      <h3>🛡️ Spam & phishing detection</h3>
-      <p>MailMind automatically detects spam, phishing, fake install schemes, and financial scams — warning you before you reply.</p>
-
       <h3>PDF & image attachments <span style="font-size:11px;background:#f1f3f4;color:#5f6368;padding:2px 8px;border-radius:10px;font-weight:500;vertical-align:middle">Coming Soon</span></h3>
       <p>MailMind will read your attachments too — contracts, invoices, photos — and factor them into the reply. (Pro+)</p>
     </div>
@@ -961,14 +1421,8 @@
 
 <!-- PRICING -->
 <section class="pricing" id="pricing">
-  <p class="section-label" data-i18n="price_label">Pricing</p>
-  <h2 class="section-title" data-i18n="price_title">Simple, transparent pricing</h2>
-  <div style="background:#e8f5e9;border:1.5px solid #34a853;border-radius:12px;padding:14px 20px;max-width:600px;margin:0 auto 16px;text-align:center;font-size:14px;" data-i18n-html="price_free_banner">
-    ✅ <strong style="color:#137333">Free 플랜은 지금 바로 사용 가능합니다!</strong> 35회 무료 · 카드 불필요
-  </div>
-  <div style="background:#fff8e1;border:1.5px solid #f9a825;border-radius:12px;padding:14px 20px;max-width:600px;margin:0 auto 32px;text-align:center;font-size:14px;" data-i18n-html="price_paid_banner">
-    ⏳ <strong style="color:#f57f17">Basic / Pro 결제 시스템 준비 중</strong> — 곧 오픈됩니다!
-  </div>
+  <p class="section-label">Pricing</p>
+  <h2 class="section-title">Simple, transparent pricing</h2>
   <div class="pricing-grid">
     <div class="plan-card">
       <div class="plan-name">Free</div>
@@ -976,13 +1430,13 @@
       <div class="plan-limit">35 replies to try it out</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> 35 AI replies total</li>
-        <li><span class="check">✓</span> 17 languages supported</li>
+        <li><span class="check">✓</span> 19 languages supported</li>
         <li><span class="check">✓</span> 8 tone options</li>
         <li><span class="check">✓</span> Culture & industry detection</li>
-        <li><span class="check">✓</span> Spam & phishing detection</li>
+        <li><span class="check">✓</span> Gmail & Outlook Web</li>
         <li><span class="check">✓</span> No credit card required</li>
       </ul>
-      <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-plan outline">Start Free</a>
+      <a href="https://chromewebstore.google.com" class="btn-plan outline">Start Free</a>
     </div>
     <div class="plan-card">
       <div class="plan-name">Basic</div>
@@ -990,16 +1444,16 @@
       <div class="plan-limit">200 replies / month</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> 200 AI replies / month</li>
-        <li><span class="check">✓</span> 17 languages supported</li>
+        <li><span class="check">✓</span> Gmail & Outlook Web</li>
+        <li><span class="check">✓</span> 19 languages supported</li>
         <li><span class="check">✓</span> 8 tone options</li>
         <li><span class="check">✓</span> Quick language switch</li>
         <li><span class="check">✓</span> Signature & templates</li>
         <li><span class="check">✓</span> Thread summary</li>
         <li><span class="check">✓</span> Style learning</li>
-        <li><span class="check">✓</span> Spam & phishing detection</li>
         <li><span class="check">✓</span> Cancel anytime</li>
       </ul>
-      <a href="#" onclick="alert('Basic 결제 시스템 준비 중입니다. 곧 오픈됩니다! 지금은 Free 플랜으로 체험해보세요 😊');return false;" class="btn-plan outline" style="background:#f5f5f5;color:#9aa0a6;border-color:#e0e0e0;cursor:default;">⏳ 결제 준비 중</a>
+      <button class="btn-plan outline" onclick="openCheckout('pri_01m3ve7jkhcnr2jmfwz02yby6e')">Get Basic</button>
     </div>
     <div class="plan-card featured">
       <div class="plan-badge-top">Most Popular</div>
@@ -1008,23 +1462,23 @@
       <div class="plan-limit">300 replies / month</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> 300 AI replies / month</li>
+        <li><span class="check">✓</span> Gmail & Outlook Web</li>
         <li><span class="check">✓</span> Everything in Basic</li>
         <li><span class="check">✓</span> 3 versions to compare</li>
         <li><span class="check">✓</span> Smart Reply (summary + translate)</li>
         <li><span class="check">✓</span> Industry expertise (15 fields)</li>
         <li><span class="check">✓</span> Priority support</li>
-        <li><span class="check">✓</span> Spam & phishing detection</li>
         <li><span class="check">✓</span> Cancel anytime</li>
       </ul>
-      <a href="#" onclick="alert('Pro 결제 시스템 준비 중입니다. 곧 오픈됩니다! 지금은 Free 플랜으로 체험해보세요 😊');return false;" class="btn-plan filled" style="background:#e0e0e0;color:#9aa0a6;border-color:#e0e0e0;cursor:default;">⏳ 결제 준비 중</a>
+      <button class="btn-plan filled" onclick="openCheckout('pri_01m3ves79fw6t8n5gdtxy860ks')">Get Pro</button>
     </div>
   </div>
 </section>
 
 <!-- COMPARE -->
 <section class="compare">
-  <p class="section-label" data-i18n="compare_label">Comparison</p>
-  <h2 class="section-title" data-i18n="compare_title">Why MailMind wins</h2>
+  <p class="section-label">Comparison</p>
+  <h2 class="section-title">Why MailMind wins</h2>
   <table class="compare-table">
     <thead>
       <tr>
@@ -1036,7 +1490,7 @@
     </thead>
     <tbody>
       <tr>
-        <td>Any language combination (17 languages)</td>
+        <td>Any language combination (19 languages)</td>
         <td><span class="yes">✓</span></td>
         <td><span class="no">✗</span></td>
         <td><span class="no">✗</span></td>
@@ -1072,11 +1526,7 @@
         <td><span class="no">✗</span></td>
       </tr>
       <tr>
-        <td>Spam & phishing detection</td>
-          <td>✓</td><td>✗</td><td>✗</td>
-        </tr>
-        <tr>
-          <td>Powered by Claude AI</td>
+        <td>Powered by Claude AI</td>
         <td><span class="yes">✓</span></td>
         <td><span class="no">✗</span></td>
         <td><span class="no">✗</span></td>
@@ -1093,8 +1543,8 @@
 
 <!-- FAQ -->
 <section class="faq">
-  <p class="section-label" data-i18n="faq_label">FAQ</p>
-  <h2 class="section-title" data-i18n="faq_title">Common questions</h2>
+  <p class="section-label">FAQ</p>
+  <h2 class="section-title">Common questions</h2>
   <div class="faq-list">
     <div class="faq-item">
       <div class="faq-q">Does MailMind read all my emails? <span class="faq-arrow">+</span></div>
@@ -1102,7 +1552,7 @@
     </div>
     <div class="faq-item">
       <div class="faq-q">Which languages are supported? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">MailMind supports 17 languages including Korean, English, Japanese, Chinese, Spanish, French, German, Portuguese, Arabic, Vietnamese, Thai, Indonesian, Italian, Turkish, Dutch, Polish, and Hindi. Any combination works — Japanese to Portuguese, Arabic to Korean, anything.</div>
+      <div class="faq-a">MailMind supports 19 languages including Korean, English, Japanese, Chinese, Spanish, French, German, Portuguese, Arabic, Vietnamese, Thai, Indonesian, Italian, Turkish, Dutch, Polish, Russian, Swedish, and Hebrew. Any combination works — Japanese to Portuguese, Arabic to Korean, anything.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">What if I don't speak the language at all? <span class="faq-arrow">+</span></div>
@@ -1125,30 +1575,10 @@
 
 <!-- CTA -->
 <section class="cta-section">
-  <h2 data-i18n="cta_h2">Your inbox is waiting.</h2>
-  <p data-i18n="cta_p">Any language. Any tone. Any situation. One click.</p>
-  <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" class="btn-cta-white" data-i18n="cta_btn">Add to Chrome — Free</a>
-  <div style="margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:10px">
-    <a href="https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo" target="_blank" style="text-decoration:none">
-      <div style="background:#fff;border-radius:16px;padding:14px;display:inline-block;box-shadow:0 4px 20px rgba(0,0,0,0.15)" id="qr-code-cta"></div>
-    </a>
-    <p style="font-size:13px;color:rgba(255,255,255,0.7)" data-i18n="cta_qr">↑ Scan QR to install</p>
-  </div>
+  <h2>Your inbox is waiting.</h2>
+  <p>Any language. Any tone. Any situation. One click.</p>
+  <a href="https://chromewebstore.google.com" class="btn-cta-white">Add to Chrome — Free</a>
 </section>
-<script>
-(function() {
-  var el = document.getElementById('qr-code-cta');
-  if (!el || typeof QRCode === 'undefined') return;
-  new QRCode(el, {
-    text: 'https://chromewebstore.google.com/detail/mailmind-ai-smart-email-replies/bbplaficbmmoaaogdoninbhlkhcemofo',
-    width: 120,
-    height: 120,
-    colorDark: '#1A1A2E',
-    colorLight: '#FFFFFF',
-    correctLevel: QRCode.CorrectLevel.M
-  });
-})();
-</script>
 
 <!-- FOOTER -->
 <footer>
@@ -1168,603 +1598,14 @@
     });
   });
 </script>
-
+<!-- Paddle Billing -->
 <script>
-// ===== i18n TRANSLATIONS =====
-var TRANSLATIONS = {
-  EN: {
-    nav_features: `Features`,
-    nav_pricing: `Pricing`,
-    nav_cta: `Add to Chrome — Free`,
-    hero_badge: `✦ Powered by Claude AI · 17 Languages · Any Tone`,
-    hero_h1: `Every email,<br><span class="pink">perfect.</span>`,
-    hero_sub: `Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.`,
-    hero_cta_primary: `Add to Chrome — It's Free`,
-    hero_cta_secondary: `See how it works ↓`,
-    trust_1: `Free trial, no card`,
-    trust_2: `Emails never stored`,
-    trust_3: `Works inside Gmail`,
-    trust_4: `17 languages`,
-    qr_label: `↑ Scan to install · Chrome Extension`,
-    pain_label: `Why MailMind`,
-    pain_title: `Email is hard. We fix that.`,
-    pain1_h: `Foreign language email`,
-    pain1_p: `Got an email in Japanese, Portuguese, or Arabic? MailMind reads it, explains it in your language, and writes a perfect reply in theirs.`,
-    pain1_sol: `✓ Any language combination`,
-    pain2_h: `Don't know what to say`,
-    pain2_p: `Even in your own language, some emails are hard — complaints, rejections, apologies. MailMind finds the right words instantly.`,
-    pain2_sol: `✓ 8 tones for every situation`,
-    pain3_h: `No time to write`,
-    pain3_p: `The average professional spends 3 hours a day on email. MailMind cuts that to seconds — without sounding like a robot.`,
-    pain3_sol: `✓ One click, done`,
-    feat_label: `Features`,
-    feat_title: `Everything your inbox needs`,
-    price_label: `Pricing`,
-    price_title: `Simple, transparent pricing`,
-    price_free_banner: `✅ <strong style="color:#137333">Free plan is now available!</strong> 35 replies · No card required`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro payment system coming soon</strong> — Opening soon!`,
-    compare_label: `Comparison`,
-    compare_title: `Why MailMind wins`,
-    faq_label: `FAQ`,
-    faq_title: `Common questions`,
-    cta_h2: `Your inbox is waiting.`,
-    cta_p: `Any language. Any tone. Any situation. One click.`,
-    cta_btn: `Add to Chrome — Free`,
-    cta_qr: `↑ Scan QR to install`
-  },
-  JP: {
-    nav_features: `機能`,
-    nav_pricing: `料金`,
-    nav_cta: `Chromeに追加 — 無料`,
-    hero_badge: `✦ Claude AI搭載 · 17言語対応 · あらゆるトーン`,
-    hero_h1: `すべてのメール、<br><span class="pink">完璧に。</span>`,
-    hero_sub: `言語がわからない？何を書けばいい？MailMindがプロフェッショナルで自然なメール返信をワンクリックで作成します。`,
-    hero_cta_primary: `Chromeに追加 — 無料`,
-    hero_cta_secondary: `使い方を見る ↓`,
-    trust_1: `無料トライアル・カード不要`,
-    trust_2: `メール内容は保存されません`,
-    trust_3: `Gmail内で動作`,
-    trust_4: `17言語対応`,
-    qr_label: `↑ スキャンしてインストール · Chrome拡張機能`,
-    pain_label: `MailMindとは`,
-    pain_title: `メールは大変。私たちが解決します。`,
-    pain1_h: `外国語のメール`,
-    pain1_p: `日本語、ポルトガル語、アラビア語のメールが届いた？MailMindが読んで、あなたの言語で説明し、相手の言語で完璧な返信を書きます。`,
-    pain1_sol: `✓ あらゆる言語の組み合わせに対応`,
-    pain2_h: `何を書けばいいかわからない`,
-    pain2_p: `自国語でも難しいメールがあります — クレーム、断り、謝罪。MailMindが瞬時に適切な言葉を見つけます。`,
-    pain2_sol: `✓ 8つのトーンであらゆる場面に対応`,
-    pain3_h: `書く時間がない`,
-    pain3_p: `ビジネスパーソンは平均1日3時間メールに費やします。MailMindはそれを数秒に短縮します。`,
-    pain3_sol: `✓ ワンクリックで完了`,
-    feat_label: `機能`,
-    feat_title: `受信トレイに必要なすべて`,
-    price_label: `料金プラン`,
-    price_title: `シンプルで明確な料金`,
-    price_free_banner: `✅ <strong style="color:#137333">無料プランは今すぐご利用いただけます！</strong> 35回無料 · カード不要`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro 決済システム準備中</strong> — もうすぐオープン！`,
-    compare_label: `比較`,
-    compare_title: `MailMindが選ばれる理由`,
-    faq_label: `よくある質問`,
-    faq_title: `よくある質問`,
-    cta_h2: `あなたの受信トレイが待っています。`,
-    cta_p: `どんな言語でも。どんなトーンでも。どんな場面でも。ワンクリック。`,
-    cta_btn: `Chromeに追加 — 無料`,
-    cta_qr: `↑ QRコードをスキャンしてインストール`
-  },
-  KR: {
-    nav_features: `기능`,
-    nav_pricing: `요금`,
-    nav_cta: `Chrome에 추가 — 무료`,
-    hero_badge: `✦ Claude AI 탑재 · 17개 언어 · 모든 톤`,
-    hero_h1: `모든 이메일,<br><span class="pink">완벽하게.</span>`,
-    hero_sub: `언어를 못 읽겠다고요? 뭐라고 써야 할지 모르겠다고요? MailMind가 전문적이고 자연스러운 이메일 답장을 대신 써드립니다 — 클릭 한 번으로.`,
-    hero_cta_primary: `Chrome에 추가 — 무료`,
-    hero_cta_secondary: `어떻게 작동하는지 보기 ↓`,
-    trust_1: `무료 체험, 카드 불필요`,
-    trust_2: `이메일 내용 저장 안 함`,
-    trust_3: `Gmail 안에서 작동`,
-    trust_4: `17개 언어 지원`,
-    qr_label: `↑ QR 스캔으로 설치 · Chrome 확장 프로그램`,
-    pain_label: `MailMind란`,
-    pain_title: `이메일은 어렵습니다. 우리가 해결합니다.`,
-    pain1_h: `외국어 이메일`,
-    pain1_p: `일본어, 포르투갈어, 아랍어 이메일이 왔나요? MailMind가 읽고, 당신의 언어로 설명하고, 상대방 언어로 완벽한 답장을 작성합니다.`,
-    pain1_sol: `✓ 모든 언어 조합 지원`,
-    pain2_h: `뭐라고 써야 할지 모르겠을 때`,
-    pain2_p: `모국어로도 어려운 이메일이 있습니다 — 불만 처리, 거절, 사과. MailMind가 즉시 적절한 표현을 찾아드립니다.`,
-    pain2_sol: `✓ 8가지 톤으로 모든 상황 대응`,
-    pain3_h: `쓸 시간이 없을 때`,
-    pain3_p: `직장인은 하루 평균 3시간을 이메일에 씁니다. MailMind는 그것을 몇 초로 줄여드립니다.`,
-    pain3_sol: `✓ 클릭 한 번으로 완료`,
-    feat_label: `기능`,
-    feat_title: `받은 편지함에 필요한 모든 것`,
-    price_label: `요금제`,
-    price_title: `심플하고 투명한 요금`,
-    price_free_banner: `✅ <strong style="color:#137333">Free 플랜은 지금 바로 사용 가능합니다!</strong> 35회 무료 · 카드 불필요`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro 결제 시스템 준비 중</strong> — 곧 오픈됩니다!`,
-    compare_label: `비교`,
-    compare_title: `MailMind가 이기는 이유`,
-    faq_label: `자주 묻는 질문`,
-    faq_title: `자주 묻는 질문`,
-    cta_h2: `받은 편지함이 기다립니다.`,
-    cta_p: `어떤 언어든. 어떤 톤이든. 어떤 상황이든. 클릭 한 번.`,
-    cta_btn: `Chrome에 추가 — 무료`,
-    cta_qr: `↑ QR 스캔으로 설치`
-  },
-  PT: {
-    nav_features: `Recursos`,
-    nav_pricing: `Preços`,
-    nav_cta: `Adicionar ao Chrome — Grátis`,
-    hero_badge: `✦ Powered by Claude AI · 17 Idiomas · Qualquer Tom`,
-    hero_h1: `Todo e-mail,<br><span class="pink">perfeito.</span>`,
-    hero_sub: `Não consegue ler o idioma? Não sabe o que dizer? O MailMind escreve respostas profissionais e naturais para você — em um clique.`,
-    hero_cta_primary: `Adicionar ao Chrome — Grátis`,
-    hero_cta_secondary: `Ver como funciona ↓`,
-    trust_1: `Teste grátis, sem cartão`,
-    trust_2: `E-mails nunca armazenados`,
-    trust_3: `Funciona no Gmail`,
-    trust_4: `17 idiomas`,
-    qr_label: `↑ Escaneie para instalar · Extensão do Chrome`,
-    pain_label: `Por que MailMind`,
-    pain_title: `E-mail é difícil. A gente resolve.`,
-    pain1_h: `E-mail em idioma estrangeiro`,
-    pain1_p: `Recebeu um e-mail em japonês, árabe ou coreano? O MailMind lê, explica no seu idioma e escreve a resposta perfeita no idioma deles.`,
-    pain1_sol: `✓ Qualquer combinação de idiomas`,
-    pain2_h: `Não sabe o que escrever`,
-    pain2_p: `Até no seu próprio idioma, alguns e-mails são difíceis — reclamações, recusas, desculpas. O MailMind encontra as palavras certas instantaneamente.`,
-    pain2_sol: `✓ 8 tons para cada situação`,
-    pain3_h: `Sem tempo para escrever`,
-    pain3_p: `O profissional médio gasta 3 horas por dia com e-mails. O MailMind reduz isso a segundos — sem soar como robô.`,
-    pain3_sol: `✓ Um clique, pronto`,
-    feat_label: `Recursos`,
-    feat_title: `Tudo o que sua caixa de entrada precisa`,
-    price_label: `Preços`,
-    price_title: `Preços simples e transparentes`,
-    price_free_banner: `✅ <strong style="color:#137333">Plano Gratuito disponível agora!</strong> 35 respostas · Sem cartão`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistema de pagamento Basic/Pro em breve</strong> — Abrindo em breve!`,
-    compare_label: `Comparação`,
-    compare_title: `Por que o MailMind vence`,
-    faq_label: `FAQ`,
-    faq_title: `Perguntas frequentes`,
-    cta_h2: `Sua caixa de entrada está esperando.`,
-    cta_p: `Qualquer idioma. Qualquer tom. Qualquer situação. Um clique.`,
-    cta_btn: `Adicionar ao Chrome — Grátis`,
-    cta_qr: `↑ Escaneie o QR para instalar`
-  },
-  HI: {
-    nav_features: `सुविधाएं`,
-    nav_pricing: `मूल्य`,
-    nav_cta: `Chrome में जोड़ें — मुफ़्त`,
-    hero_badge: `✦ Claude AI द्वारा संचालित · 17 भाषाएं · कोई भी टोन`,
-    hero_h1: `हर ईमेल,<br><span class="pink">परफेक्ट।</span>`,
-    hero_sub: `भाषा समझ नहीं आती? क्या लिखें नहीं पता? MailMind आपके लिए पेशेवर और स्वाभाविक ईमेल उत्तर लिखता है — एक क्लिक में।`,
-    hero_cta_primary: `Chrome में जोड़ें — मुफ़्त`,
-    hero_cta_secondary: `देखें यह कैसे काम करता है ↓`,
-    trust_1: `मुफ़्त ट्रायल, कार्ड नहीं`,
-    trust_2: `ईमेल स्टोर नहीं होते`,
-    trust_3: `Gmail में काम करता है`,
-    trust_4: `17 भाषाएं`,
-    qr_label: `↑ इंस्टॉल के लिए स्कैन करें · Chrome एक्सटेंशन`,
-    pain_label: `MailMind क्यों`,
-    pain_title: `ईमेल मुश्किल है। हम इसे ठीक करते हैं।`,
-    pain1_h: `विदेशी भाषा का ईमेल`,
-    pain1_p: `जापानी, पुर्तगाली या अरबी में ईमेल आया? MailMind इसे पढ़ता है, आपकी भाषा में समझाता है और उनकी भाषा में परफेक्ट जवाब लिखता है।`,
-    pain1_sol: `✓ कोई भी भाषा संयोजन`,
-    pain2_h: `क्या लिखें नहीं पता`,
-    pain2_p: `अपनी भाषा में भी कुछ ईमेल मुश्किल होते हैं — शिकायतें, अस्वीकृतियां, माफ़ी। MailMind तुरंत सही शब्द ढूंढता है।`,
-    pain2_sol: `✓ हर स्थिति के लिए 8 टोन`,
-    pain3_h: `लिखने का समय नहीं`,
-    pain3_p: `औसत पेशेवर रोज़ 3 घंटे ईमेल पर बिताता है। MailMind इसे सेकंड में बदल देता है।`,
-    pain3_sol: `✓ एक क्लिक, हो गया`,
-    feat_label: `सुविधाएं`,
-    feat_title: `आपके इनबॉक्स को जो चाहिए सब कुछ`,
-    price_label: `मूल्य`,
-    price_title: `सरल और पारदर्शी मूल्य`,
-    price_free_banner: `✅ <strong style="color:#137333">फ्री प्लान अभी उपलब्ध है!</strong> 35 रिप्लाई · कोई कार्ड नहीं`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic / Pro भुगतान प्रणाली जल्द आ रही है</strong> — जल्द खुलेगा!`,
-    compare_label: `तुलना`,
-    compare_title: `MailMind क्यों जीतता है`,
-    faq_label: `FAQ`,
-    faq_title: `सामान्य प्रश्न`,
-    cta_h2: `आपका इनबॉक्स इंतज़ार कर रहा है।`,
-    cta_p: `कोई भी भाषा। कोई भी टोन। कोई भी स्थिति। एक क्लिक।`,
-    cta_btn: `Chrome में जोड़ें — मुफ़्त`,
-    cta_qr: `↑ इंस्टॉल के लिए QR स्कैन करें`
-  },
-  ID: {
-    nav_features: `Fitur`,
-    nav_pricing: `Harga`,
-    nav_cta: `Tambah ke Chrome — Gratis`,
-    hero_badge: `✦ Didukung Claude AI · 17 Bahasa · Semua Nada`,
-    hero_h1: `Setiap email,<br><span class="pink">sempurna.</span>`,
-    hero_sub: `Tidak bisa membaca bahasanya? Tidak tahu harus menulis apa? MailMind menulis balasan email yang profesional dan alami untuk Anda — satu klik.`,
-    hero_cta_primary: `Tambah ke Chrome — Gratis`,
-    hero_cta_secondary: `Lihat cara kerjanya ↓`,
-    trust_1: `Trial gratis, tanpa kartu`,
-    trust_2: `Email tidak pernah disimpan`,
-    trust_3: `Bekerja di dalam Gmail`,
-    trust_4: `17 bahasa`,
-    qr_label: `↑ Scan untuk instal · Ekstensi Chrome`,
-    pain_label: `Kenapa MailMind`,
-    pain_title: `Email itu sulit. Kami mengatasinya.`,
-    pain1_h: `Email bahasa asing`,
-    pain1_p: `Menerima email dalam bahasa Jepang, Portugis, atau Arab? MailMind membacanya, menjelaskan dalam bahasa Anda, dan menulis balasan sempurna dalam bahasa mereka.`,
-    pain1_sol: `✓ Kombinasi bahasa apapun`,
-    pain2_h: `Tidak tahu harus menulis apa`,
-    pain2_p: `Bahkan dalam bahasa sendiri, beberapa email sulit — keluhan, penolakan, permintaan maaf. MailMind menemukan kata yang tepat secara instan.`,
-    pain2_sol: `✓ 8 nada untuk setiap situasi`,
-    pain3_h: `Tidak ada waktu untuk menulis`,
-    pain3_p: `Rata-rata profesional menghabiskan 3 jam sehari untuk email. MailMind mempersingkatnya menjadi detik.`,
-    pain3_sol: `✓ Satu klik, selesai`,
-    feat_label: `Fitur`,
-    feat_title: `Semua yang dibutuhkan kotak masuk Anda`,
-    price_label: `Harga`,
-    price_title: `Harga sederhana dan transparan`,
-    price_free_banner: `✅ <strong style="color:#137333">Paket Gratis tersedia sekarang!</strong> 35 balasan · Tanpa kartu`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistem pembayaran Basic/Pro segera hadir</strong> — Segera dibuka!`,
-    compare_label: `Perbandingan`,
-    compare_title: `Mengapa MailMind menang`,
-    faq_label: `FAQ`,
-    faq_title: `Pertanyaan umum`,
-    cta_h2: `Kotak masuk Anda sedang menunggu.`,
-    cta_p: `Bahasa apapun. Nada apapun. Situasi apapun. Satu klik.`,
-    cta_btn: `Tambah ke Chrome — Gratis`,
-    cta_qr: `↑ Scan QR untuk instal`
-  },
-  TH: {
-    nav_features: `ฟีเจอร์`,
-    nav_pricing: `ราคา`,
-    nav_cta: `เพิ่มใน Chrome — ฟรี`,
-    hero_badge: `✦ ขับเคลื่อนด้วย Claude AI · 17 ภาษา · ทุกโทน`,
-    hero_h1: `ทุกอีเมล,<br><span class="pink">สมบูรณ์แบบ.</span>`,
-    hero_sub: `อ่านภาษาไม่ออก? ไม่รู้จะเขียนว่าอะไร? MailMind เขียนอีเมลตอบกลับที่เป็นมืออาชีพและเป็นธรรมชาติให้คุณ — คลิกเดียว`,
-    hero_cta_primary: `เพิ่มใน Chrome — ฟรี`,
-    hero_cta_secondary: `ดูวิธีใช้งาน ↓`,
-    trust_1: `ทดลองฟรี ไม่ต้องใช้บัตร`,
-    trust_2: `อีเมลไม่ถูกเก็บข้อมูล`,
-    trust_3: `ทำงานใน Gmail`,
-    trust_4: `17 ภาษา`,
-    qr_label: `↑ สแกนเพื่อติดตั้ง · ส่วนขยาย Chrome`,
-    pain_label: `ทำไมต้อง MailMind`,
-    pain_title: `อีเมลยาก เราแก้ปัญหาให้`,
-    pain1_h: `อีเมลภาษาต่างประเทศ`,
-    pain1_p: `ได้รับอีเมลภาษาญี่ปุ่น โปรตุเกส หรืออาหรับ? MailMind อ่าน อธิบายเป็นภาษาของคุณ และเขียนตอบกลับสมบูรณ์แบบในภาษาของพวกเขา`,
-    pain1_sol: `✓ รองรับทุกภาษาผสมกัน`,
-    pain2_h: `ไม่รู้จะเขียนว่าอะไร`,
-    pain2_p: `แม้แต่ในภาษาของคุณเอง บางอีเมลก็ยาก — การร้องเรียน การปฏิเสธ การขอโทษ MailMind หาคำพูดที่ถูกต้องในทันที`,
-    pain2_sol: `✓ 8 โทนสำหรับทุกสถานการณ์`,
-    pain3_h: `ไม่มีเวลาเขียน`,
-    pain3_p: `คนทำงานทั่วไปใช้เวลา 3 ชั่วโมงต่อวันกับอีเมล MailMind ลดเวลานั้นเหลือเพียงไม่กี่วินาที`,
-    pain3_sol: `✓ คลิกเดียว เสร็จ`,
-    feat_label: `ฟีเจอร์`,
-    feat_title: `ทุกอย่างที่กล่องจดหมายของคุณต้องการ`,
-    price_label: `ราคา`,
-    price_title: `ราคาเรียบง่ายและโปร่งใส`,
-    price_free_banner: `✅ <strong style="color:#137333">แพ็คเกจฟรีพร้อมใช้งานแล้ว!</strong> 35 ครั้ง · ไม่ต้องใช้บัตร`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">ระบบชำระเงิน Basic/Pro กำลังเตรียมพร้อม</strong> — เปิดเร็วๆ นี้!`,
-    compare_label: `เปรียบเทียบ`,
-    compare_title: `ทำไม MailMind ชนะ`,
-    faq_label: `FAQ`,
-    faq_title: `คำถามที่พบบ่อย`,
-    cta_h2: `กล่องจดหมายของคุณรอคุณอยู่`,
-    cta_p: `ทุกภาษา ทุกโทน ทุกสถานการณ์ คลิกเดียว`,
-    cta_btn: `เพิ่มใน Chrome — ฟรี`,
-    cta_qr: `↑ สแกน QR เพื่อติดตั้ง`
-  },
-  VN: {
-    nav_features: `Tính năng`,
-    nav_pricing: `Giá cả`,
-    nav_cta: `Thêm vào Chrome — Miễn phí`,
-    hero_badge: `✦ Được hỗ trợ bởi Claude AI · 17 Ngôn ngữ · Mọi Giọng văn`,
-    hero_h1: `Mỗi email,<br><span class="pink">hoàn hảo.</span>`,
-    hero_sub: `Không đọc được ngôn ngữ? Không biết nói gì? MailMind viết email trả lời chuyên nghiệp, tự nhiên cho bạn — chỉ một cú nhấp.`,
-    hero_cta_primary: `Thêm vào Chrome — Miễn phí`,
-    hero_cta_secondary: `Xem cách hoạt động ↓`,
-    trust_1: `Dùng thử miễn phí, không cần thẻ`,
-    trust_2: `Email không được lưu trữ`,
-    trust_3: `Hoạt động trong Gmail`,
-    trust_4: `17 ngôn ngữ`,
-    qr_label: `↑ Quét để cài đặt · Tiện ích Chrome`,
-    pain_label: `Tại sao MailMind`,
-    pain_title: `Email thật khó. Chúng tôi giải quyết điều đó.`,
-    pain1_h: `Email ngôn ngữ nước ngoài`,
-    pain1_p: `Nhận email bằng tiếng Nhật, Bồ Đào Nha hay Ả Rập? MailMind đọc, giải thích bằng ngôn ngữ của bạn và viết phản hồi hoàn hảo bằng ngôn ngữ của họ.`,
-    pain1_sol: `✓ Mọi kết hợp ngôn ngữ`,
-    pain2_h: `Không biết nên nói gì`,
-    pain2_p: `Ngay cả trong ngôn ngữ của bạn, một số email rất khó — khiếu nại, từ chối, xin lỗi. MailMind tìm ngay những từ ngữ phù hợp.`,
-    pain2_sol: `✓ 8 giọng văn cho mọi tình huống`,
-    pain3_h: `Không có thời gian để viết`,
-    pain3_p: `Người chuyên nghiệp trung bình dành 3 giờ mỗi ngày cho email. MailMind rút ngắn điều đó xuống còn vài giây.`,
-    pain3_sol: `✓ Một cú nhấp, xong`,
-    feat_label: `Tính năng`,
-    feat_title: `Mọi thứ hộp thư đến của bạn cần`,
-    price_label: `Giá cả`,
-    price_title: `Giá đơn giản, minh bạch`,
-    price_free_banner: `✅ <strong style="color:#137333">Gói Miễn phí có sẵn ngay bây giờ!</strong> 35 lần trả lời · Không cần thẻ`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Hệ thống thanh toán Basic/Pro sắp ra mắt</strong> — Sắp mở!`,
-    compare_label: `So sánh`,
-    compare_title: `Tại sao MailMind thắng`,
-    faq_label: `FAQ`,
-    faq_title: `Câu hỏi thường gặp`,
-    cta_h2: `Hộp thư đến của bạn đang chờ.`,
-    cta_p: `Bất kỳ ngôn ngữ nào. Bất kỳ giọng văn nào. Bất kỳ tình huống nào. Một cú nhấp.`,
-    cta_btn: `Thêm vào Chrome — Miễn phí`,
-    cta_qr: `↑ Quét QR để cài đặt`
-  },
-  AR: {
-    nav_features: `الميزات`,
-    nav_pricing: `الأسعار`,
-    nav_cta: `أضف إلى Chrome — مجانًا`,
-    hero_badge: `✦ مدعوم بـ Claude AI · 17 لغة · أي نبرة`,
-    hero_h1: `كل بريد إلكتروني،<br><span class="pink">مثالي.</span>`,
-    hero_sub: `لا تستطيع قراءة اللغة؟ لا تعرف ماذا تقول؟ يكتب MailMind ردودًا مهنية وطبيعية على رسائلك الإلكترونية — بنقرة واحدة.`,
-    hero_cta_primary: `أضف إلى Chrome — مجانًا`,
-    hero_cta_secondary: `شاهد كيف يعمل ↓`,
-    trust_1: `تجربة مجانية، لا بطاقة`,
-    trust_2: `رسائلك لا تُخزَّن`,
-    trust_3: `يعمل داخل Gmail`,
-    trust_4: `17 لغة`,
-    qr_label: `↑ امسح للتثبيت · إضافة Chrome`,
-    pain_label: `لماذا MailMind`,
-    pain_title: `البريد الإلكتروني صعب. نحن نحل ذلك.`,
-    pain1_h: `رسائل بلغة أجنبية`,
-    pain1_p: `تلقيت بريدًا بالياباني أو البرتغالي أو العربي؟ يقرأه MailMind ويشرحه بلغتك ويكتب ردًا مثاليًا بلغتهم.`,
-    pain1_sol: `✓ أي مزيج من اللغات`,
-    pain2_h: `لا تعرف ماذا تكتب`,
-    pain2_p: `حتى بلغتك، بعض الرسائل صعبة — الشكاوى، الرفض، الاعتذار. يجد MailMind الكلمات المناسبة فورًا.`,
-    pain2_sol: `✓ 8 نبرات لكل موقف`,
-    pain3_h: `لا وقت للكتابة`,
-    pain3_p: `يقضي المحترف المتوسط 3 ساعات يوميًا في البريد الإلكتروني. يختصر MailMind ذلك إلى ثوانٍ.`,
-    pain3_sol: `✓ نقرة واحدة، انتهى`,
-    feat_label: `الميزات`,
-    feat_title: `كل ما يحتاجه صندوق بريدك`,
-    price_label: `الأسعار`,
-    price_title: `أسعار بسيطة وشفافة`,
-    price_free_banner: `✅ <strong style="color:#137333">الخطة المجانية متاحة الآن!</strong> 35 ردًا · لا بطاقة مطلوبة`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">نظام دفع Basic/Pro قادم قريبًا</strong> — افتتاح قريب!`,
-    compare_label: `مقارنة`,
-    compare_title: `لماذا يفوز MailMind`,
-    faq_label: `FAQ`,
-    faq_title: `أسئلة شائعة`,
-    cta_h2: `صندوق بريدك ينتظرك.`,
-    cta_p: `أي لغة. أي نبرة. أي موقف. نقرة واحدة.`,
-    cta_btn: `أضف إلى Chrome — مجانًا`,
-    cta_qr: `↑ امسح رمز QR للتثبيت`
-  },
-  DE: {
-    nav_features: `Funktionen`,
-    nav_pricing: `Preise`,
-    nav_cta: `Zu Chrome hinzufügen — Kostenlos`,
-    hero_badge: `✦ Powered by Claude AI · 17 Sprachen · Jeder Ton`,
-    hero_h1: `Jede E-Mail,<br><span class="pink">perfekt.</span>`,
-    hero_sub: `Können Sie die Sprache nicht lesen? Wissen Sie nicht, was Sie schreiben sollen? MailMind schreibt professionelle, natürliche E-Mail-Antworten für Sie — mit einem Klick.`,
-    hero_cta_primary: `Zu Chrome hinzufügen — Kostenlos`,
-    hero_cta_secondary: `Sehen Sie wie es funktioniert ↓`,
-    trust_1: `Kostenlose Testversion, keine Karte`,
-    trust_2: `E-Mails werden nie gespeichert`,
-    trust_3: `Funktioniert in Gmail`,
-    trust_4: `17 Sprachen`,
-    qr_label: `↑ Scannen zum Installieren · Chrome-Erweiterung`,
-    pain_label: `Warum MailMind`,
-    pain_title: `E-Mails sind schwer. Wir lösen das.`,
-    pain1_h: `Fremdsprachige E-Mails`,
-    pain1_p: `Eine E-Mail auf Japanisch, Portugiesisch oder Arabisch erhalten? MailMind liest sie, erklärt sie in Ihrer Sprache und schreibt eine perfekte Antwort in ihrer Sprache.`,
-    pain1_sol: `✓ Jede Sprachkombination`,
-    pain2_h: `Wissen Sie nicht was Sie schreiben sollen`,
-    pain2_p: `Auch in Ihrer eigenen Sprache sind manche E-Mails schwierig — Beschwerden, Ablehnungen, Entschuldigungen. MailMind findet sofort die richtigen Worte.`,
-    pain2_sol: `✓ 8 Töne für jede Situation`,
-    pain3_h: `Keine Zeit zum Schreiben`,
-    pain3_p: `Der durchschnittliche Berufstätige verbringt 3 Stunden täglich mit E-Mails. MailMind reduziert das auf Sekunden.`,
-    pain3_sol: `✓ Ein Klick, fertig`,
-    feat_label: `Funktionen`,
-    feat_title: `Alles, was Ihr Posteingang braucht`,
-    price_label: `Preise`,
-    price_title: `Einfache, transparente Preise`,
-    price_free_banner: `✅ <strong style="color:#137333">Kostenloser Plan jetzt verfügbar!</strong> 35 Antworten · Keine Karte`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic/Pro Zahlungssystem kommt bald</strong> — Bald verfügbar!`,
-    compare_label: `Vergleich`,
-    compare_title: `Warum MailMind gewinnt`,
-    faq_label: `FAQ`,
-    faq_title: `Häufige Fragen`,
-    cta_h2: `Ihr Posteingang wartet.`,
-    cta_p: `Jede Sprache. Jeder Ton. Jede Situation. Ein Klick.`,
-    cta_btn: `Zu Chrome hinzufügen — Kostenlos`,
-    cta_qr: `↑ QR-Code scannen zum Installieren`
-  },
-  FR: {
-    nav_features: `Fonctionnalités`,
-    nav_pricing: `Tarifs`,
-    nav_cta: `Ajouter à Chrome — Gratuit`,
-    hero_badge: `✦ Propulsé par Claude AI · 17 Langues · N'importe quel Ton`,
-    hero_h1: `Chaque email,<br><span class="pink">parfait.</span>`,
-    hero_sub: `Vous ne lisez pas la langue ? Vous ne savez pas quoi dire ? MailMind rédige des réponses professionnelles et naturelles pour vous — en un clic.`,
-    hero_cta_primary: `Ajouter à Chrome — Gratuit`,
-    hero_cta_secondary: `Voir comment ça marche ↓`,
-    trust_1: `Essai gratuit, sans carte`,
-    trust_2: `Emails jamais stockés`,
-    trust_3: `Fonctionne dans Gmail`,
-    trust_4: `17 langues`,
-    qr_label: `↑ Scanner pour installer · Extension Chrome`,
-    pain_label: `Pourquoi MailMind`,
-    pain_title: `Les emails sont difficiles. On règle ça.`,
-    pain1_h: `Email en langue étrangère`,
-    pain1_p: `Vous recevez un email en japonais, portugais ou arabe ? MailMind le lit, l'explique dans votre langue et rédige une réponse parfaite dans la leur.`,
-    pain1_sol: `✓ N'importe quelle combinaison de langues`,
-    pain2_h: `Vous ne savez pas quoi écrire`,
-    pain2_p: `Même dans votre propre langue, certains emails sont difficiles — plaintes, refus, excuses. MailMind trouve les bons mots instantanément.`,
-    pain2_sol: `✓ 8 tons pour chaque situation`,
-    pain3_h: `Pas le temps d'écrire`,
-    pain3_p: `Le professionnel moyen passe 3 heures par jour sur ses emails. MailMind réduit ça à quelques secondes.`,
-    pain3_sol: `✓ Un clic, c'est fait`,
-    feat_label: `Fonctionnalités`,
-    feat_title: `Tout ce dont votre boîte mail a besoin`,
-    price_label: `Tarifs`,
-    price_title: `Tarifs simples et transparents`,
-    price_free_banner: `✅ <strong style="color:#137333">Plan Gratuit disponible maintenant !</strong> 35 réponses · Sans carte`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Système de paiement Basic/Pro bientôt disponible</strong> — Ouverture prochaine !`,
-    compare_label: `Comparaison`,
-    compare_title: `Pourquoi MailMind gagne`,
-    faq_label: `FAQ`,
-    faq_title: `Questions fréquentes`,
-    cta_h2: `Votre boîte mail vous attend.`,
-    cta_p: `N'importe quelle langue. N'importe quel ton. N'importe quelle situation. Un clic.`,
-    cta_btn: `Ajouter à Chrome — Gratuit`,
-    cta_qr: `↑ Scanner le QR pour installer`
-  },
-  ES: {
-    nav_features: `Funciones`,
-    nav_pricing: `Precios`,
-    nav_cta: `Agregar a Chrome — Gratis`,
-    hero_badge: `✦ Impulsado por Claude AI · 17 Idiomas · Cualquier Tono`,
-    hero_h1: `Cada correo,<br><span class="pink">perfecto.</span>`,
-    hero_sub: `¿No puedes leer el idioma? ¿No sabes qué decir? MailMind escribe respuestas de correo profesionales y naturales para ti — con un clic.`,
-    hero_cta_primary: `Agregar a Chrome — Gratis`,
-    hero_cta_secondary: `Ver cómo funciona ↓`,
-    trust_1: `Prueba gratis, sin tarjeta`,
-    trust_2: `Correos nunca guardados`,
-    trust_3: `Funciona dentro de Gmail`,
-    trust_4: `17 idiomas`,
-    qr_label: `↑ Escanear para instalar · Extensión de Chrome`,
-    pain_label: `Por qué MailMind`,
-    pain_title: `El correo es difícil. Lo solucionamos.`,
-    pain1_h: `Correo en idioma extranjero`,
-    pain1_p: `¿Recibiste un correo en japonés, portugués o árabe? MailMind lo lee, lo explica en tu idioma y escribe la respuesta perfecta en el idioma del remitente.`,
-    pain1_sol: `✓ Cualquier combinación de idiomas`,
-    pain2_h: `No sabes qué escribir`,
-    pain2_p: `Incluso en tu propio idioma, algunos correos son difíciles — quejas, rechazos, disculpas. MailMind encuentra las palabras correctas al instante.`,
-    pain2_sol: `✓ 8 tonos para cada situación`,
-    pain3_h: `Sin tiempo para escribir`,
-    pain3_p: `El profesional promedio pasa 3 horas al día en correos. MailMind lo reduce a segundos.`,
-    pain3_sol: `✓ Un clic, listo`,
-    feat_label: `Funciones`,
-    feat_title: `Todo lo que tu bandeja de entrada necesita`,
-    price_label: `Precios`,
-    price_title: `Precios simples y transparentes`,
-    price_free_banner: `✅ <strong style="color:#137333">¡Plan Gratuito disponible ahora!</strong> 35 respuestas · Sin tarjeta`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistema de pago Basic/Pro próximamente</strong> — ¡Abriendo pronto!`,
-    compare_label: `Comparación`,
-    compare_title: `Por qué MailMind gana`,
-    faq_label: `FAQ`,
-    faq_title: `Preguntas frecuentes`,
-    cta_h2: `Tu bandeja de entrada está esperando.`,
-    cta_p: `Cualquier idioma. Cualquier tono. Cualquier situación. Un clic.`,
-    cta_btn: `Agregar a Chrome — Gratis`,
-    cta_qr: `↑ Escanear QR para instalar`
-  },
-  IT: {
-    nav_features: `Funzionalità`,
-    nav_pricing: `Prezzi`,
-    nav_cta: `Aggiungi a Chrome — Gratis`,
-    hero_badge: `✦ Powered by Claude AI · 17 Lingue · Qualsiasi Tono`,
-    hero_h1: `Ogni email,<br><span class="pink">perfetta.</span>`,
-    hero_sub: `Non riesci a leggere la lingua? Non sai cosa dire? MailMind scrive risposte email professionali e naturali per te — con un clic.`,
-    hero_cta_primary: `Aggiungi a Chrome — Gratis`,
-    hero_cta_secondary: `Guarda come funziona ↓`,
-    trust_1: `Prova gratuita, nessuna carta`,
-    trust_2: `Email mai memorizzate`,
-    trust_3: `Funziona in Gmail`,
-    trust_4: `17 lingue`,
-    qr_label: `↑ Scansiona per installare · Estensione Chrome`,
-    pain_label: `Perché MailMind`,
-    pain_title: `Le email sono difficili. Noi le risolviamo.`,
-    pain1_h: `Email in lingua straniera`,
-    pain1_p: `Hai ricevuto un'email in giapponese, portoghese o arabo? MailMind la legge, la spiega nella tua lingua e scrive una risposta perfetta nella loro lingua.`,
-    pain1_sol: `✓ Qualsiasi combinazione di lingue`,
-    pain2_h: `Non sai cosa scrivere`,
-    pain2_p: `Anche nella tua lingua, alcune email sono difficili — reclami, rifiuti, scuse. MailMind trova le parole giuste all'istante.`,
-    pain2_sol: `✓ 8 toni per ogni situazione`,
-    pain3_h: `Non hai tempo per scrivere`,
-    pain3_p: `Il professionista medio trascorre 3 ore al giorno sulle email. MailMind riduce questo a pochi secondi.`,
-    pain3_sol: `✓ Un clic, fatto`,
-    feat_label: `Funzionalità`,
-    feat_title: `Tutto ciò di cui la tua casella di posta ha bisogno`,
-    price_label: `Prezzi`,
-    price_title: `Prezzi semplici e trasparenti`,
-    price_free_banner: `✅ <strong style="color:#137333">Piano Gratuito disponibile ora!</strong> 35 risposte · Nessuna carta`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Sistema di pagamento Basic/Pro in arrivo</strong> — Apertura prossima!`,
-    compare_label: `Confronto`,
-    compare_title: `Perché MailMind vince`,
-    faq_label: `FAQ`,
-    faq_title: `Domande frequenti`,
-    cta_h2: `La tua casella di posta ti aspetta.`,
-    cta_p: `Qualsiasi lingua. Qualsiasi tono. Qualsiasi situazione. Un clic.`,
-    cta_btn: `Aggiungi a Chrome — Gratis`,
-    cta_qr: `↑ Scansiona QR per installare`
-  },
-  TR: {
-    nav_features: `Özellikler`,
-    nav_pricing: `Fiyatlar`,
-    nav_cta: `Chrome'a Ekle — Ücretsiz`,
-    hero_badge: `✦ Claude AI Tarafından Destekleniyor · 17 Dil · Her Ton`,
-    hero_h1: `Her e-posta,<br><span class="pink">mükemmel.</span>`,
-    hero_sub: `Dili okuyamıyor musunuz? Ne söyleyeceğinizi bilmiyor musunuz? MailMind sizin için profesyonel, doğal e-posta yanıtları yazar — tek tıklamayla.`,
-    hero_cta_primary: `Chrome'a Ekle — Ücretsiz`,
-    hero_cta_secondary: `Nasıl çalıştığını gör ↓`,
-    trust_1: `Ücretsiz deneme, kart yok`,
-    trust_2: `E-postalar hiç kaydedilmez`,
-    trust_3: `Gmail içinde çalışır`,
-    trust_4: `17 dil`,
-    qr_label: `↑ Yüklemek için tara · Chrome Uzantısı`,
-    pain_label: `Neden MailMind`,
-    pain_title: `E-posta zor. Biz çözüyoruz.`,
-    pain1_h: `Yabancı dilde e-posta`,
-    pain1_p: `Japonca, Portekizce veya Arapça bir e-posta mı aldınız? MailMind onu okur, dilinizde açıklar ve onların dilinde mükemmel bir yanıt yazar.`,
-    pain1_sol: `✓ Herhangi bir dil kombinasyonu`,
-    pain2_h: `Ne yazacağınızı bilmiyorsunuz`,
-    pain2_p: `Kendi dilinizde bile bazı e-postalar zordur — şikayetler, redler, özürler. MailMind anında doğru kelimeleri bulur.`,
-    pain2_sol: `✓ Her durum için 8 ton`,
-    pain3_h: `Yazacak zamanınız yok`,
-    pain3_p: `Ortalama bir profesyonel günde 3 saat e-postaya harcıyor. MailMind bunu saniyelere indiriyor.`,
-    pain3_sol: `✓ Tek tıklama, bitti`,
-    feat_label: `Özellikler`,
-    feat_title: `Gelen kutunuzun ihtiyacı olan her şey`,
-    price_label: `Fiyatlar`,
-    price_title: `Basit, şeffaf fiyatlar`,
-    price_free_banner: `✅ <strong style="color:#137333">Ücretsiz Plan şimdi mevcut!</strong> 35 yanıt · Kart gerekmez`,
-    price_paid_banner: `⏳ <strong style="color:#f57f17">Basic/Pro ödeme sistemi yakında</strong> — Yakında açılıyor!`,
-    compare_label: `Karşılaştırma`,
-    compare_title: `Neden MailMind kazanır`,
-    faq_label: `FAQ`,
-    faq_title: `Sık sorulan sorular`,
-    cta_h2: `Gelen kutunuz sizi bekliyor.`,
-    cta_p: `Her dil. Her ton. Her durum. Tek tıklama.`,
-    cta_btn: `Chrome'a Ekle — Ücretsiz`,
-    cta_qr: `↑ Yüklemek için QR tara`
+  function openCheckout(priceId) {
+    Paddle.Checkout.open({
+      items: [{ priceId: priceId, quantity: 1 }]
+    });
   }
-};
-
-var LANG_MAP = {
-  ja:'JP', en:'EN', pt:'PT', hi:'HI', id:'ID', th:'TH', vi:'VN',
-  ar:'AR', de:'DE', fr:'FR', es:'ES', it:'IT', tr:'TR', ko:'KR'
-};
-
-function applyLang(lang) {
-  var t = TRANSLATIONS[lang] || TRANSLATIONS['EN'];
-  document.querySelectorAll('[data-i18n]').forEach(function(el) {
-    var key = el.getAttribute('data-i18n');
-    if (t[key] !== undefined) el.textContent = t[key];
-  });
-  document.querySelectorAll('[data-i18n-html]').forEach(function(el) {
-    var key = el.getAttribute('data-i18n-html');
-    if (t[key] !== undefined) el.innerHTML = t[key];
-  });
-  var sel = document.getElementById('lang-select');
-  if (sel) sel.value = lang;
-  document.documentElement.dir = (lang === 'AR') ? 'rtl' : 'ltr';
-  try { localStorage.setItem('mm_lang', lang); } catch(e) {}
-}
-
-(function() {
-  var saved, urlLang;
-  try { saved = localStorage.getItem('mm_lang'); } catch(e) {}
-  var m = location.search.match(/[?&]lang=([A-Z]{2})/);
-  if (m) urlLang = m[1].toUpperCase();
-  var browserLang = (navigator.language || '').toLowerCase().split('-')[0];
-  var lang = urlLang || saved || LANG_MAP[browserLang] || 'EN';
-  if (!TRANSLATIONS[lang]) lang = 'EN';
-  applyLang(lang);
-})();
 </script>
+<script src="https://cdn.paddle.com/paddle/v2/paddle.js" onload="Paddle.Initialize({token:'live_e767677864707e10c6b2bf6e600'})"></script>
 </body>
 </html>
