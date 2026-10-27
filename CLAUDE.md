@@ -107,6 +107,12 @@ KV NS_ID:            7f0e90efaea64f3ab08ff00f8970b28b
 매장 dealerId:       9XD2K3W1tIhIs6XM74YT0xfRFEP2
 Oracle Cloud IP:     161.33.136.154 (2코어/12GB, opc 계정, filo-a1-2c12g)
 
+## 📱 MailMind 핵심 URL
+- **어드민 대시보드**: https://mailmind-api.kimdh4790.workers.dev/admin-ui (유저 관리·사용량·플랜 분포)
+- **랜딩 페이지**: https://mailmind.yongcha.app (14개 언어 i18n)
+- **Worker API**: https://mailmind-api.kimdh4790.workers.dev
+- **패키지명**: app.yongcha.mailmind
+
 ---
 
 ## 📱 앱별 구조 & 담당 파일 (세션 시작 시 담당 앱 확인 필수)

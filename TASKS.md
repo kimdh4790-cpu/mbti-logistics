@@ -133,12 +133,15 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | # | 상태 | 항목 | 메모 |
 |---|---|---|---|
-| A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우. 답변 1~3 영업일 내 예정 |
+| A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우 |
+| A1b | `[x]` | **D-U-N-S 번호 발급 완료** (2026-10-27) | **D-U-N-S: 695921476** (MBTI Ltd., 엠비티아이(유)). Apple Developer Relations 이메일로 즉시 수신. 구글·애플 앱스토어 조직 계정 등록에 모두 사용 가능 |
 | A2 | `[x]` | **Apple 계정 생성 완료** (2026-10-18) | kimdh4790@gmail.com / 이중 인증 설정됨 |
-| A3 | `[-]` | **Google Play Console 조직 계정 등록** | D-U-N-S 번호 필요. developer.android.com/distribute/console → 조직 선택 → $25 결제 |
-| A4 | `[-]` | **Apple App Store Connect 조직 계정 등록** | D-U-N-S 번호 필요. developer.apple.com/programs/enroll → Organization → kimdh4790@gmail.com 로그인 → $99/년 결제 |
+| A3 | `[x]` | **Google Play Console 조직 계정 등록 완료** (2026-10-27) | $25 KB국민카드 기업카드 8865 결제 완료. 개발자 계정 생성됨. D-U-N-S: 695921476, 결제 프로필: 엠비티아이(유) |
+| A3b | `[x]` | **Google Play 본인 확인(신원 인증) 완료** (2026-10-27) | 회사명 확인됨 + 권한을 부여받은 담당자(김형우) 확인됨. 엠비티아이(유) 인증 완료. 앱 배포 가능 상태 |
+| A4 | `[~]` | **Apple Developer Program 등록 신청 완료** (2026-10-27) | 등록 ID: **5G5PA8D7B7** / Apple ID: kimdh4790@gmail.com / 업무용 이메일: mailmind@yongcha.app / Apple이 서명 권한 검토 후 $99 결제 링크 이메일 발송 예정 (1~5 영업일). kimdh4790@gmail.com 확인 대기 |
+| A5 | `[~]` | **MailMind Play Store 스토어 등록정보 작성 중** (2026-10-27) | 앱 만들기 완료 (package: app.yongcha.mailmind, 무료). 아이콘(512×512 squircle) 업로드 완료. 그래픽 이미지(1024×500) 준비 완료. 스크린샷 5장 준비 완료(앱 실제 화면). 자세한 설명 입력 완료. 스크린샷+그래픽이미지 업로드 후 "다음" → 앱 콘텐츠 정보 입력 남음 |
 
-> D-U-N-S 번호는 하나로 구글·애플 둘 다 사용 가능. 나이스디앤비 답변 오면 A3·A4 즉시 진행.
+> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료, 본인 확인 완료. Apple은 $99 결제 링크 대기 중. MailMind Play Store 등록정보 작성 진행 중.
 
 ---
 
