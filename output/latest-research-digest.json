@@ -1,5 +1,28 @@
 {
-  "date": "2026-10-12",
-  "total": 0,
-  "byCategory": {}
+  "date": "2026-10-26",
+  "total": 2,
+  "byCategory": {
+    "AI기능업그레이드": [
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "클로드 코드 한 줄로 AI 뮤비 만들기 | 노래 저작권 확인까지",
+        "url": "https://youtu.be/40h_4_6TM40",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-25T09:23:19+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "블로그랑 사이트 주소를 줬더니, 이런 광고가 나왔습니다｜클로드 코드",
+        "url": "https://youtu.be/wQ1RdjPiKtE",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-24T09:30:27+00:00",
+        "source": "YouTube"
+      }
+    ]
+  }
 }
