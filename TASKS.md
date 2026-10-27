@@ -87,6 +87,7 @@ claude/* 브랜치 push
 | 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
 | 3 | `[x]` | **팝빌 키 발급 → Cloudflare Secret 등록 완료** (2026-09-22) | _worker.js | LINK_ID=MBTI / SecretKey 발급. Cloudflare Worker(mbti-logistics) 비밀에 POPBILL_LINK_ID·POPBILL_SECRET_KEY 등록 완료. POPBILL_TEST_MODE=true 추가 필요 → 테스트 진행 가능. |
 | 4 | `[-]` | **팝빌 역발행 테스트 → 운영전환 신청** | _worker.js | **2026-09-23 팝빌 기술지원 답변**: "링크아이디 오입력" — timestamp 형식 오류가 원인. **수정 완료**: `20260923T013000Z`(T/Z 포함 16자리) → `20260923013000`(yyyyMMddHHmmss 14자리). deploy.yml 자동 배포 완료 후 `/api/popbill-debug` 재확인 필요. 성공 시 POPBILL_TEST_MODE=false 운영전환. |
+| 5 | `[~]` | **MailMind Android Galaxy M44 Google 로그인 + 아이콘** | mailmind 레포 | google-services.json 수정(오류 10 해결) + AI 아이콘 + 어댑티브 아이콘 커밋 완료. 빌드 v262 진행 중. 완료 후 Play Console 내부테스트 업로드 필요. |
 
 ### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
 | 항목 | 값 |
@@ -170,50 +171,39 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리(mobilesdk_app_id `e028e97f6840e72ae949e8`) + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기(mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi) 적용. (3) `mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_foreground` (108dp 캔버스 기준 안전영역 중앙 배치) + `ic_launcher_background` (#1A6FD4) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양 적용. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. 빌드 v262 진행 중. |
 | 2026-10-26 | **MailMind 발신자 문화 지식 우선순위 개선** — `worker/worker.js` 3개 엔드포인트(generate-single/triple/smart) culture 주입 로직 수정: (1) 발신자 country 기반 문화 지식을 답변 언어 문화 지식보다 우선 적용 (`senderCulture || replyLangCulture` 순서로 변경). (2) country='auto'일 때 이메일 본문 Unicode 스크립트로 발신자 언어 감지 → culture fallback. (3) generate-smart에 `smartCountry` 기반 culture 감지 추가(기존: email body Unicode만 사용). 예) 한국어로 일본인에게 답변 시 → 일본 문화 지식 주입. commit `346ee14`. |
 | 2026-10-26 | **CLAUDE.md 웹세션 ID 업데이트** — 기존 보관된 웹세션 ID `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent, archived) → 활성 세션 `session_01NWDyoBnJzvbjC8xuwmphSp` (멜마인드 웹)으로 변경. 사용자 직접 확인 제공. |
 | 2026-10-26 | **CLAUDE.md 세션 분업 원칙 명확화** — 기존 "웹 content script 파일 수정은 웹세션" 규칙을 구체화: 웹세션 = 브라우저 확장프로그램 코드(`mailmind/extension/` 등)만 담당 / 앱세션 = 나머지 전부(Flutter lib/, worker/worker.js 등). commit `21a925e1`, PR #197 머지. 웹세션(`session_01NWDyoBnJzvbjC8xuwmphSp`)에 확장프로그램 17개 언어 수정(substituteRefine·dualRe·SPELLING MANDATE) 요청 전달 완료. |
 | 2026-10-26 | **MailMind outlook 비교/스마트 모드 3개 답변 생성 버그 수정** — `outlook_detail_screen.dart` `_generateReply(mode)` 파라미터 무시 버그: compare/smart/single 모드 무관하게 항상 `generateSingle` 호출하던 문제 수정. `compare` → `generateTriple`(3개 답변: Direct/Warm/Detailed) / `smart` → `generateSmart`(3버전+요약) / `single` → 기존 유지. naver 화면 패턴 참조하여 수정. `_smartSummary`·`_isSmartMode` 미사용 경고 제거. commit `0613a15`, PR #198. |
 | 2026-10-26 | **MailMind 수정보완 서명 회사명 보존 + 단일 문장 번호 추가 방지** — (1) `worker/worker.js` refinePrompt에 SIGNATURE COMPANY NAME EXCEPTION 추가: 서명 블록 내 "엠비티아이" 등 회사명을 MBTI로 변환하지 않도록 COMPANY NAME CONVERSION 규칙을 "EMAIL BODY ONLY"로 한정. (2) DO NOT ADD NUMBERING 규칙 추가: 원본 초안에 번호 목록 없으면 "1." 등 번호 절대 추가 금지. commit `a7213fe`. |
-| 2026-10-26 | **MailMind 17개 언어 수정보완(Refine) 품질 전면 개선** — (1) Flutter 5개 화면 `_refineReply()` `_userEdited=false` 누락 수정: naver/icloud/yahoo(이번 세션) + yahoo_japan/email/outlook(이전 커밋 b1be2cb). (2) worker.js `substituteRefine()` 날짜 치환 17개 언어 전체 커버: 프랑스어/독일어/아랍어/베트남어/태국어/인도네시아어/이탈리아어/터키어/네덜란드어/폴란드어/힌디어 11개 추가. (3) `refineGoalMap.grammar` + SPELLING MANDATE: 한국어 맞춤법·띄어쓰기 전용 → 17개 언어 native 규칙 일반화(아랍어 إملاء, 힌디어 वर्तनी 등). (4) `dualRe` 이중 이메일 제거 regex: 아랍어/태국어/힌디어/베트남어/네덜란드어/터키어/이탈리아어/폴란드어/인도네시아어 클로징 추가. commit `859535d`. |
-| 2026-10-26 | **MailMind 수정보완 후 번역 언어 버그 수정** — Refine(수정보완) 후 언어 전환 시 아랍어 등 타언어가 한국어로 나오는 버그 수정. (1) `_refineReply()` setState에 `_userEdited = false` 추가: 수정 후 상태 플래그 리셋으로 언어 전환이 `_originalReply` 번역 경로로 올바르게 진행. (2) `email_detail_screen.dart` `_refineReply()`에 누락된 `_originalReply`/`_originalReplyLang` 캐싱 추가. (3) `worker/worker.js` `handleRefineCompose` `langPrefixR`에 CROSS-LANGUAGE NOTE 추가: 초안이 다른 언어로 작성된 경우에도 `myLanguage`로 출력 강제. yahoo_japan/email/outlook 3개 화면 적용. commit `b1be2cb`. |
-| 2026-10-26 | **MailMind Flutter OOM 크래시 방지 + 홈화면 일본어 하드코딩 제거** — 이미지 많은 이메일 열 때 앱 OOM 크래시 수정: 6개 이메일 상세화면(email/naver/icloud/outlook/yahoo/yahoo_japan)에 `_stripLargeBase64Images()`(100KB 초과 base64 이미지 → 1px SVG), `loading="lazy"` JS 주입, 500KB HTML 사이즈 캡 3중 방어 적용. 홈화면 AI 브리프 `_aiLang='ja'` 하드코딩 → 설정 언어 동기화로 수정. PR #196, commit `fd9a612`·`86618e1`. |
-| 2026-10-26 | **MailMind 번역 시 전화번호 하이픈 보존** — 일본어 등 AI 번역 과정에서 `010-4790-3103` → `010-47903103` 으로 중간 하이픈이 탈락하는 버그 수정. placeholder 방식으로 해결: 번역 전 한국 전화번호 패턴(`\b\d{2,3}-\d{3,4}-\d{4}\b`) → `__PHONEn__` 치환, 번역 후 원본 복원. `worker/worker.js` `handleTranslate()` 함수의 sigBlock·general body 양쪽 경로에 적용. commit `223b71a`. |
-| 2026-10-26 | **MailMind AI 답장 수신자 이름(김형우) 인사에 붙는 버그 수정** — AI가 수신 이메일 개봉 인사("김형우님,")를 발신자 이름으로 오인해 답장 첫 줄에 사용자 본인 이름이 붙는 문제 수정. (1) 후처리: `handleGenerateSmart()` my1~tr3 파싱 후 `stripRecipientGreeting(result, recipientName2)` 적용 — Oracle path에는 있었으나 Anthropic path에 누락됐었음. (2) 프롬프트: GREETING RULE에 "개봉 인사의 이름 = 본인 이름 = 답장에 쓰면 CRITICAL ERROR" 명시 강화. commit `3b3a2a2`. |
-| 2026-10-26 | **MailMind 스마트 답장 퀄리티 3종 수정** — (1) `엠비티아이→MBTI` 변환: `handleGenerateSmart()` `_sg` 파이프라인에 `_fixKo2` 추가로 my1~tr3 전 버전 후처리 적용. (2) Direct(MY1) 버전 구체성 강화: 날짜·수수료·마감 등 핵심 사실 참조하도록 프롬프트 강화. (3) ECHO RULE 추가: 발신자 오프닝 문구("안녕해 주셔서 감사합니다" 등) 그대로 반복 금지. commit `9debc37`. |
-| 2026-10-26 | **MailMind AI 답장 복수 액션아이템 추출 개선** — 고지성 이메일(인프런 수수료 인상, 개인정보 동의 마감 등)에서 `[확인 요청 사항]`이 1개만 나오던 문제 수정. `[QUESTIONS]` 지시문에 암묵적 요청(동의 마감·수수료 결정·정책 수락 등)도 포함하도록 확장. `[SUMMARY]` bullet 3를 "The one specific action" → "ALL action items" 복수 열거로 변경. `worker/worker.js` `handleGenerateSmart()` 프롬프트 수정. commit `56646bd`. |
-| 2026-10-26 | **MailMind 중국어 출력 시 한국어 브랜드명 영문화** — AI 답장/번역 결과에서 "쿠팡物流" 등 한국어 브랜드명이 그대로 섞여 나오는 문제 수정. `worker/worker.js` 3개 위치(답장 프롬프트, 중국어 번역 블록, 공통 번역 블록)에 KOREAN BRAND NAME RULE 추가: 쿠팡→Coupang, 쿠팡 로지스틱스→Coupang Logistics, 삼성→Samsung, 현대→Hyundai 등 주요 브랜드 매핑. commit `777d324`. |
-| 2026-10-25 | **MailMind Flutter 답변 언어 '자동 감지' 버그 수정** — `_selectedLanguage` 초기값을 `languageNotifier.value`(내 언어 추적, 서버 동기화 후 'Korean') 대신 `replyLanguageCached`('auto' 기본값, 실제 답변 언어)로 변경. Gmail·Naver·Yahoo·Yahoo Japan·iCloud·Outlook 6개 화면 전체 적용. 영문 이메일(Product Hunt 등)에서 자동 감지 설정 무시하고 한국어 답변 생성되던 근본 버그 해결. PR #257, commit `a534ce9`. |
-| 2026-10-25 | **MailMind 글로벌 시장성 분석 Artifact 완료** — TAM $2.8B·SAM $800M·SOM $100M+ 퍼널 / 경쟁사 포지셔닝 맵(Superhuman·SaneBox·Grammarly·Google AI) / 성공 가능성 스코어카드 7.7/10 / 글로벌 6개 타깃 지역 / 1,000만 유료 유저 5년 로드맵(2026 3만→2031 1000만, ARR $1.2B+) / 주요 리스크 5종. Artifact: https://claude.ai/artifact/6ZGaySXH6x96Vip3jcBJA9 |
-| 2026-10-25 | **MailMind 비용마진 분석 완료** — 전체 기능별 AI API 비용 대비 요금제 수익 마진 분석. 가중평균 $0.002/호출, Basic 97.3%·Pro 97.6% 마진 확인. Team 플랜 설계 전(미정). Artifact: https://claude.ai/artifact/Xw4eJnt8Ect9m1MFCWP68L |
-| 2026-10-25 | **MailMind 번역 원본 훼손 방지 + 다듬기 자연스러움 강화** — `handleRefineCompose`에 `isTranslation=true` 전용 경로 추가(7가지 TRANSLATION LAWS: 충실·구조보존·원어민표현·사실잠금·추가금지·삭제금지·톤유지). 기존 REWRITE MANDATE가 번역 내용 변형하던 버그 해결. `refineGoalMap.grammar` 맞춤법·띄어쓰기 수정에서 자연스러움 전면 향상으로 확장(어색한 표현→자연스러운 인간 표현, 전문 연결어 추가, 사실은 절대 변경 안 함). Jest 38/38 통과. PR #256, branch ccr-7672c434-99f49v push 완료. |
-| 2026-10-25 | **MailMind 17개 언어 fixSenderGreeting 완성 + TR 번역 자연스러움 강화** — fixSenderGreeting에 Hindi/Arabic/Thai/Indonesian 4개 언어 패턴 추가(17개 전체 커버). handleGenerateSmart TR1/TR2/TR3 추출에 fixSenderGreeting 적용. EMAIL_TABOOS에 AI 클리셰 금지 규칙 추가("I hope this finds you well" 등 전 언어). langPrefixS/langPrefixT에 NATURALNESS RULE #3: TR 번역은 원어민 직접 작성처럼. 38개 Jest 테스트 전체 통과. 커밋 `2189eb8`, branch ccr-7672c434-99f49v push 완료. |
-| 2026-10-25 | **MailMind 언어 처리 버그 6종 수정** — Bug #2: 사용자 편집 덮어쓰기 방지(`_replyController.addListener` in `initState`). Bug #3: 독일어 서명 중복 제거(`HONORIFIC_INSTRUCTIONS.German.polite` Closing 제거). Bug #4: `myLanguage='auto'` 시 `country` 파라미터 우선 적용(handleGenerate·Refine·Smart·Triple 4개 핸들러). Bug #5: 작성 모드 이름 임의 생성 방지(NAME RULE 추가). Bug #6: 뉴스레터 이메일에서 메일 요약 차단 해제(`isSummaryOnly` 플래그 추가). 수정 파일: `worker/worker.js`, `lib/screens/email_detail_screen.dart`, `lib/services/api_service.dart`. 커밋 `3fc2959`, main 머지 완료. 웹세션에 Chrome 확장 동일 패턴 적용 요청 완료. |
-| 2026-10-16 | **MailMind Flutter 앱 버그 4종 수정 + CI 키스토어 수정** — 발신자 이메일 주소 탭 불가(`HitTestBehavior.opaque`), 인코딩 깨짐(QP/EUC-KR·base64 HTML 바디 디코딩), 파일 다운로드 실패, CID 인라인 이미지 미표시(data: URI 변환) — 5개 메일(Naver·iCloud·Yahoo·Yahoo Japan·Outlook) 전체 적용. CI PKCS12→JKS 키스토어 변환 스텝 추가(`KeytoolException: Tag number over 30` 해결). mailmind 레포 main 머지 완료(commit `b9db713`, `e4e5dd7`). `KEYSTORE_BASE64` Secret 재등록 필요(사용자 직접). |
-| 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — `MailMindPromo.jsx` UI_LABELS 14개 언어(JP/EN/KR/PT/HI/ID/TH/VN/AR/DE/FR/ES/IT/TR), FOREIGN_EMAIL_MAP, getLabels() + EN 폴백, lang prop Scene1~6 전달, AR RTL 지원. `generate-narration.js` Neural2→Wavenet→Standard 폴백 체인(TH/VN/AR/TR 나레이션 미생성 버그 수정). PR #183 |
-| 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — `mailmind-pages/index.html` 전 섹션 data-i18n 다국어화. TRANSLATIONS 14개 언어 × 35키. 언어 드롭다운 nav. URL param/localStorage/브라우저 언어 자동감지. AR RTL. `yongcha-worker.js` MAILMIND_INDEX_HTML 갱신. PR #182 |
-| 2026-10-08 | **쿠팡 송장 OCR 정상화** — deploy.yml "Deploy Filo Worker" 스텝에 ANTHROPIC_API_KEY 시크릿 등록 추가 (2026-09-20 Worker 분리 후 누락). emergency.html OCR 오류 메시지 개선 (서버 실제 오류 표시). PR #177 머지 완료. |
-| 2026-10-08 | **배송기사 앱 이름만 로그인** — emergency.html PIN 입력 제거, 이름만 입력하면 로그인 가능. PR #175 머지 완료. |
-| 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `noisy-paper-8d01`에 `mailmind-pages/` 자동배포. `index.html`(51,770B) + `privacy.html` 업데이트. `deploy.yml`에 "Deploy MailMind Pages" 스텝 추가. 도메인: `mailmind.yongcha.app` |
-| 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — mailmind-variants.json(28세트) + 동적 mailmind-promo.html(?lang=XX&variant=A/B) + social-media-schedule.yml 09:05/15:00 KST 크론 추가. 14일 로테이션(EN→KR→JP→ZH→ES→DE→PT→FR→IT→VN→NL→PL→TR→HI). PR #172 머지 완료. |
-| 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱(무음+자막가림 재업로드), 인프런(무음 재업로드), DONWAY(D변형: 세금계산서·전자서명 angle) 3개 동시 큐. steps=record,compose,youtube |
-| 2026-09-22 | **팝빌 기술문의 접수** — developers.popbill.com/customer-center/techinquiry 에 LINK_ID "MBTI" error 1016 문의. 답변 대기 중 |
-| 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 — /api/check-company-code(GET) + /api/driver-join(POST) 서버사이드 API 신규, _quickVerifyCode·checkCompanyCode·doQuickJoin 클라이언트 Firestore 직접 접근 제거, SHA-256 pw 해시 저장 |
-| 2026-09-21 | DONWAY 배달대행 기사 앱 탭 정리 — 입차(pni1)·정산(pni5) 탭 제거, 배달대행 기사는 홈·배송달력·내정보만 노출 (AI정산은 알림톡 전용, 앱 불필요) |
-| 2026-09-21 | DONWAY 배달대행 기사 일일 배송 달력 뷰 추가 — POST /api/delivery-daily-upload (대리점 엑셀업로드), GET /api/delivery-daily (기사 본인 데이터만 조회, uid+dealerId 검증), drivers.html 배송달력 탭(pni7) + 월별 캘린더 UI + 하단 누적 통계, donway-pages/index.html 📅 일일 배송 업로드 버튼 (_parseDailyDeliveryExcel) — PR #142 머지 완료 |
-| 2026-09-21 | DONWAY 배송달력 API 인증 방식 수정 — GET /api/delivery-daily를 Firebase Auth(uid 불일치)에서 phone+companyCode 파라미터 기반으로 교체, companies 컬렉션에서 dealerId 조회, drivers.html _loadDeliveryCal S.dealerId→ls('drivers') 캐시 phone/companyCode 사용, dDeliveryCal()에 _loadDeliveryCal 호출 추가 — PR #143 |
-| 2026-09-21 | DONWAY 계약서 대리점·기사 동일 계약서 공유 — "서명완료본 보기" 링크를 archiveUrl(구 Firebase Storage HTML) → /contract/download/{signToken}?inline=1 으로 변경, 기사가 보는 것과 동일한 페이지 제공 |
-| 2026-09-21 | DONWAY 계약서 빈칸 auto-fill 키워드 보강 — '종사자' 추가(택배종사자인___ 패턴), '계약기간'→시작일, '부터'→종료일, end-date entry 먼저 체크 (계약기간 2-blank 구조 정확 대응) |
-| 2026-09-21 | DONWAY 계약서 DOCX 빈칸 채우기 키워드 매핑 정밀도 강화 — '자동차' 키워드 제거(분류수수료 오삽입 버그), '차량내역' 추가, licenseNumber 폴백, '자격증'→'자격증번호' 변경 |
-| 2026-09-21 | DONWAY 계약서 전화번호→기사 자동조회 — ctr-driver-phone-input oninput 시 Firestore drivers 조회 → window._ctrDriver 세팅 → 차량번호·종사자격 auto-fill (하이픈 포함/미포함 두 포맷 지원) |
-| 2026-09-21 | DONWAY 대리점계약서 아카이브 빈칸 수정 — _ctrApplyTyped 계약기간 자동계산(오늘/1년후 한국어포맷), _ctrCollect startDate/endDate/carNum/licNum 하드코딩 '' 제거, dead code(비존재 DOM setTimeout) 제거 |
-| 2026-09-21 | DONWAY 계약서 DOCX 빈칸 채우기 키워드 매핑으로 전환 — _ctrApplyTyped 순서 기반→컨텍스트 키워드 기반 (수수료% 빈칸에 이름/전화번호 오삽입 버그 수정) |
-| 2026-09-21 | DONWAY 주민번호·사업자번호 검증 로직 강화 — replace(/-/g,'') → replace(/[^0-9]/g,'') (모바일 전각 하이픈 U+FF0D 등 처리) |
-| 2026-09-21 | DONWAY 카카오 로그인 후 동의 체크박스 초기화 버그 수정 — kakaoLogin() _allAgreed() 선검증 + sessionStorage 동의 상태 보존 (_worker.js lines 1668-1682) |
-| 2026-09-21 | DONWAY 계약서 서명 페이지 SyntaxError 수정 — signPage 백틱 템플릿 내 \n → \\n (rendered line 169:27, _worker.js lines 1661/1695/1698) |
-| 2026-09-21 | 동의 체크박스 모바일 탭 안 되는 버그 수정 (onclick 이중토글 → onchange 통일) + ③ 계약 주요 내용 폼 제거 (DOCX 직접 타이핑 방식 유지) |
-| 2026-09-20 | DONWAY 기사 주민등록번호 계약서 미표시 버그 수정 (_worker.js 서명 POST Firestore PATCH 응답 검증 추가) |
-| 2026-09-20 | DONWAY 계약서 주요내용 입력 필드 추가 (_ctrRenderWrite + _ctrCollect 수정) — 타이핑 내용 아카이브 반영 버그 수정, 기사 주민번호 부분 입력 차단 |
+| 2026-10-26 | **MailMind 17개 언어 수정보완(Refine) 품질 전면 개선** — (1) Flutter 5개 화면 `_refineReply()` `_userEdited=false` 누락 수정. (2) worker.js `substituteRefine()` 날짜 치환 17개 언어 전체 커버. (3) `refineGoalMap.grammar` + SPELLING MANDATE 17개 언어 일반화. (4) `dualRe` 이중 이메일 제거 regex 추가. commit `859535d`. |
+| 2026-10-26 | **MailMind 수정보완 후 번역 언어 버그 수정** — Refine 후 언어 전환 시 타언어가 한국어로 나오는 버그 수정. commit `b1be2cb`. |
+| 2026-10-26 | **MailMind Flutter OOM 크래시 방지 + 홈화면 일본어 하드코딩 제거** — 이미지 많은 이메일 OOM 크래시 3중 방어. 홈화면 AI 브리프 `_aiLang='ja'` 하드코딩 → 설정 언어 동기화. PR #196. |
+| 2026-10-26 | **MailMind 번역 시 전화번호 하이픈 보존** — placeholder 방식으로 한국 전화번호 하이픈 탈락 버그 수정. commit `223b71a`. |
+| 2026-10-26 | **MailMind AI 답장 수신자 이름 인사 붙는 버그 수정** — `handleGenerateSmart()` Anthropic path에 `stripRecipientGreeting()` 후처리 추가. commit `3b3a2a2`. |
+| 2026-10-26 | **MailMind 스마트 답장 퀄리티 3종 수정** — 엠비티아이→MBTI 변환, Direct 버전 구체성 강화, ECHO RULE 추가. commit `9debc37`. |
+| 2026-10-26 | **MailMind AI 답장 복수 액션아이템 추출 개선** — 고지성 이메일 암묵적 요청 포함. commit `56646bd`. |
+| 2026-10-26 | **MailMind 중국어 출력 시 한국어 브랜드명 영문화** — KOREAN BRAND NAME RULE 추가. commit `777d324`. |
+| 2026-10-25 | **MailMind Flutter 답변 언어 '자동 감지' 버그 수정** — `_selectedLanguage` 초기값 `replyLanguageCached`로 변경. PR #257. |
+| 2026-10-25 | **MailMind 글로벌 시장성 분석 Artifact 완료** — TAM $2.8B·SAM $800M·SOM $100M+ 퍼널. Artifact: https://claude.ai/artifact/6ZGaySXH6x96Vip3jcBJA9 |
+| 2026-10-25 | **MailMind 비용마진 분석 완료** — Basic 97.3%·Pro 97.6% 마진 확인. Artifact: https://claude.ai/artifact/Xw4eJnt8Ect9m1MFCWP68L |
+| 2026-10-25 | **MailMind 번역 원본 훼손 방지 + 다듬기 자연스러움 강화** — PR #256. |
+| 2026-10-25 | **MailMind 17개 언어 fixSenderGreeting 완성 + TR 번역 자연스러움 강화** — 커밋 `2189eb8`. |
+| 2026-10-25 | **MailMind 언어 처리 버그 6종 수정** — 커밋 `3fc2959`, main 머지 완료. |
+| 2026-10-16 | **MailMind Flutter 앱 버그 4종 수정 + CI 키스토어 수정** — PR #177~178. |
+| 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — PR #183 |
+| 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — PR #182 |
+| 2026-10-08 | **쿠팡 송장 OCR 정상화** — PR #177 머지 완료. |
+| 2026-10-08 | **배송기사 앱 이름만 로그인** — PR #175 머지 완료. |
+| 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `mailmind.yongcha.app` |
+| 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — PR #172 머지 완료. |
+| 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱·인프런·DONWAY 3개 동시 큐 |
+| 2026-09-22 | **팝빌 기술문의 접수** — developers.popbill.com 에 LINK_ID "MBTI" error 1016 문의 |
+| 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 |
+| 2026-09-21 | DONWAY 배달대행 기사 앱 탭 정리 |
+| 2026-09-21 | DONWAY 배달대행 기사 일일 배송 달력 뷰 추가 — PR #142·#143 |
+| 2026-09-21 | DONWAY 계약서 시스템 관련 다수 버그 수정 |
 | 2026-09-20 | mbtico.kr Worker 분리 (mbtico-worker.js + wrangler.mbtico.toml) — PR #128 |
 | 2026-09-20 | filo.ai.kr / dine.ne.kr Worker 분리 (filo-worker.js, dine-worker.js) |
 | 2026-09-20 | DONWAY 계약서 타이핑 방식 전환 + 탭 단일화 + 아카이브 버그 수정 |
@@ -228,6 +218,12 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ---
 
 ## 📝 세션별 작업 이력
+
+### 2026-10-27
+- MailMind Android Google 로그인 오류 10 수정 (google-services.json 복원)
+- MailMind AI 로고 아이콘 모든 mipmap 적용
+- 삼성 One UI 카카오톡 모양 어댑티브 아이콘 추가
+- TASKS.md 업데이트
 
 ### 2026-09-20
 - mbtico.kr Worker 분리 완료 (PR #128 수동 머지)
