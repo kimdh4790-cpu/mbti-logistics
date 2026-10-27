@@ -140,8 +140,9 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A3b | `[x]` | **Google Play 본인 확인(신원 인증) 완료** (2026-10-27) | 회사명 확인됨 + 권한을 부여받은 담당자(김형우) 확인됨. 엠비티아이(유) 인증 완료. 앱 배포 가능 상태 |
 | A4 | `[~]` | **Apple Developer Program 등록 신청 완료** (2026-10-27) | 등록 ID: **5G5PA8D7B7** / Apple ID: kimdh4790@gmail.com / 업무용 이메일: mailmind@yongcha.app / Apple이 서명 권한 검토 후 $99 결제 링크 이메일 발송 예정 (1~5 영업일). kimdh4790@gmail.com 확인 대기 |
 | A5 | `[~]` | **MailMind Play Store 스토어 등록정보 작성 중** (2026-10-27) | 앱 만들기 완료 (package: app.yongcha.mailmind, 무료). 아이콘(512×512 squircle) 업로드 완료. 그래픽 이미지(1024×500) 준비 완료. 스크린샷 5장 준비 완료(앱 실제 화면). 자세한 설명 입력 완료. 스크린샷+그래픽이미지 업로드 후 "다음" → 앱 콘텐츠 정보 입력 남음 |
+| A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) `google-services.json` 패키지명 불일치(`com.mbtico.mailmind` → `app.yongcha.mailmind` 수정) (2) `hook_service.dart` QuickActions에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 제거. PR #265 머지 완료(commit `63b0f5d`). Build #256 자동 트리거됨 → GitHub Release `v1.0.256` 생성 예정. **다음 단계**: `v1.0.256` AAB를 Play Console → 내부 테스트 트랙에 업로드 |
 
-> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료, 본인 확인 완료. Apple은 $99 결제 링크 대기 중. MailMind Play Store 등록정보 작성 진행 중.
+> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료, 본인 확인 완료. Apple은 $99 결제 링크 대기 중. MailMind Play Store 등록정보 작성 진행 중. v254/255 크래시 수정 완료(PR #265), Build #256 진행 중.
 
 ---
 
@@ -158,6 +159,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — 원인 (1) `google-services.json` 두 번째 클라이언트 `package_name`이 `com.mbtico.mailmind`로 잘못 등록돼 있어 Firebase 초기화 실패 → `app.yongcha.mailmind`로 수정. 원인 (2) `hook_service.dart` `setupQuickActions()`에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 → `icon:` 파라미터 완전 제거. PR #265 squash merge(commit `63b0f5d`). GitHub Actions Build #256 자동 트리거됨. 완료 시 Release `v1.0.256`에 AAB 첨부. |
 | 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. 삭제 파일: `dine-worker.js`, `wrangler.dine.toml`, `wrangler.seolyuhana.toml`, `seolyuhana_worker.js`, `seolyuhana/` 전체, `scan.html`, `scan-icon-*.png`, `dine-*.png`. deploy.yml에서 Dine/Seolyuhana Worker 배포 스텝, KV 업로드 항목, dine.ne.kr 캐시 퍼지 모두 제거. commit `c50dab38`. |
 | 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — `worker/worker.js` `_koCompanyFix` 2차 안전장치: 원본 draft에서 발신자 본인 한글 회사명을 사전 추출(`_draftKoNames`)하여 후처리 변환 스킵. PR #262 머지 완료, commit `66ed09b`. CI: Jest ✅ / Regression Tests ✅. 레이어 1(PR #261 refinePrompt SENDER SIGNATURE LOCK) + 레이어 2(PR #262 _draftKoNames) 2중 방어 완성. |
 | 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — `worker/worker.js` `handleRefineCompose` 경로: (1) `buildSignOffInstruction(_rfSo)` 주입 제거 — refine 프롬프트의 userInfoSection·businessCardSection에 "엠비티아이→MBTI 변환" 지시 제거, "기존 서명 블록 그대로 보존" 지시로 교체. (2) dead code 제거 — `const _rfSo = buildSignOffInstruction` 미사용 변수·`incrementCount` 미정의 함수 호출 제거. (3) `_koCompanyFix` 후처리기 버그 수정 — draft 스캔으로 발신자 본인 회사명 감지(`_draftKoNames`) 후 해당 이름은 변환 건너뜀. `handleTranslate`의 "HARDCODED: 엠비티아이=MBTI" 동작은 올바른 것으로 확인·유지. commits `7c5e933`, `d6353b2`, PR #261 (`kimdh4790-cpu/mailmind`). |
