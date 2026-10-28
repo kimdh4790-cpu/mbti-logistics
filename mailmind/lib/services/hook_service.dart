@@ -88,7 +88,7 @@ class HookService {
     );
   }
 
-  /// FCM 포그라운드 메시지 → AI 답장 버튼이 있는 로컈 알림으로 표시
+  /// FCM 포그라운드 메시지 → AI 답장 버튼이 있는 로컬 알림으로 표시
   Future<void> showMailNotification(RemoteMessage msg) async {
     final title = msg.notification?.title ?? msg.data['subject'] ?? '새 메일';
     final body = msg.notification?.body ?? msg.data['from'] ?? '';

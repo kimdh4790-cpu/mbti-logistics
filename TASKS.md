@@ -18,20 +18,6 @@
 | **구 기능 (폐기예정)** | POS·주문·메뉴·재고·직원근태·급여 (filo-auth.js, filo-pos.js 등) |
 | **주의** | filo-worker.js 대규모 수정 금지 / emergency.html 수정 전 배송앱_변경내역.md 필독 |
 
-### 🟢 DINE (dine.ne.kr) — SCAN 문서분석 서비스
-| 항목 | 내용 |
-|---|---|
-| **Worker 파일** | `dine-worker.js` |
-| **wrangler config** | `wrangler.dine.toml` |
-| **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy --config wrangler.dine.toml` |
-| **KV 업로드** | scan.html: `npx wrangler kv key put --remote --namespace-id=... scan.html --path scan.html` |
-| **핵심 파일** | `scan.html` (프론트), `dine-worker.js` (라우터+API) |
-| **주요 기능** | 공문서 AI 분석 / 등기부등본(전세사기 분석) / 자소서·이력서·계약서 분석 / 다국어 번역 / 포인트 충전 |
-| **API 경로** | `/api/seolyuhana/analyze·result·download·points·point-request·point-approve` |
-| **포인트 요금** | 면접 19,900P / 이력서·계약서 29,900P / 자소서·번역 39,900P / 충전 30,000~200,000원 |
-| **authDomain** | `dine.ne.kr` (변경 금지) |
-| **주의** | `/api/seolyuhana/*` 핸들러 구조 변경 금지 / scan.html authDomain 변경 금지 |
-
 ### 🔵 DONWAY (donway.ai.kr) — 물류 정산 SaaS
 | 항목 | 내용 |
 |---|---|
@@ -148,12 +134,17 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | # | 상태 | 항목 | 메모 |
 |---|---|---|---|
-| A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우. 답변 1~3 영업일 내 예정 |
+| A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우 |
+| A1b | `[x]` | **D-U-N-S 번호 발급 완료** (2026-10-27) | **D-U-N-S: 695921476** (MBTI Ltd., 엠비티아이(유)). Apple Developer Relations 이메일로 즉시 수신. 구글·애플 앱스토어 조직 계정 등록에 모두 사용 가능 |
 | A2 | `[x]` | **Apple 계정 생성 완료** (2026-10-18) | kimdh4790@gmail.com / 이중 인증 설정됨 |
-| A3 | `[-]` | **Google Play Console 조직 계정 등록** | D-U-N-S 번호 필요. developer.android.com/distribute/console → 조직 선택 → $25 결제 |
-| A4 | `[-]` | **Apple App Store Connect 조직 계정 등록** | D-U-N-S 번호 필요. developer.apple.com/programs/enroll → Organization → kimdh4790@gmail.com 로그인 → $99/년 결제 |
+| A3 | `[x]` | **Google Play Console 조직 계정 등록 완료** (2026-10-27) | $25 KB국민카드 기업카드 8865 결제 완료. 개발자 계정 생성됨. D-U-N-S: 695921476, 결제 프로필: 엠비티아이(유) |
+| A3b | `[x]` | **Google Play 본인 확인(신원 인증) 완료** (2026-10-27) | 회사명 확인됨 + 권한을 부여받은 담당자(김형우) 확인됨. 엠비티아이(유) 인증 완료. 앱 배포 가능 상태 |
+| A4 | `[~]` | **Apple Developer Program $99 결제 대기** (2026-10-28) | 등록 ID: **5G5PA8D7B7** / Apple Developer Program 수락 이메일 수신 완료(2026-10-28). **다음 단계**: developer.apple.com 로그인 → License Agreement 동의 → $99 결제 완료 → iOS 앱 제출 가능 |
+| A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 제출 항목: 공개 테스트 v263(177개국), 스토어 등록정보(en-US), 콘텐츠 등급, 타겟층, 개인정보처리방침(mailmind.yongcha.app/privacy), 광고 선언, 데이터 보안, 건강 앱 선언, 앱 카테고리(생산성). 검토 완료 예상: 2026-11-03~07. |
+| A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) `google-services.json` 패키지명 불일치(`com.mbtico.mailmind` → `app.yongcha.mailmind` 수정) (2) `hook_service.dart` QuickActions에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 제거. PR #265 머지 완료(commit `63b0f5d`). Build #256 자동 트리거됨 → GitHub Release `v1.0.256` 생성 예정. **다음 단계**: `v1.0.256` AAB를 Play Console → 내부 테스트 트랙에 업로드 |
+| A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | 원인: Google Play App Signing이 AAB를 Play 서명 키로 재서명 → 해당 SHA-1(`81:04:2E:...`)이 Firebase에 미등록 → `google-services.json`에 type-1 OAuth 클라이언트 누락 → 로그인 DEVELOPER_ERROR. 수정: Firebase Console에 Play 앱 서명 SHA-1 추가 후 `android/app/google-services.json` 재적용. PR #267(`fix-google-services-v2`) squash merge(commit `b5e4be2`). **확인 완료**: v263 빌드 Play Console 내부 테스트 업로드 후 실 기기 Google 로그인 성공(kimdh4790@gmail.com PRO 계정). |
 
-> D-U-N-S 번호는 하나로 구글·애플 둘 다 사용 가능. 나이스디앤비 답변 오면 A3·A4 즉시 진행.
+> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료, 본인 확인 완료. Apple은 $99 결제 링크 대기 중. MailMind Play Store 등록정보 작성 진행 중. v254/255 크래시 수정 완료(PR #265), Build #256 진행 중.
 
 ---
 
@@ -161,9 +152,8 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | # | 상태 | 항목 | 담당 파일 | 메모 |
 |---|---|---|---|---|
-| 9 | `[ ]` | SCAN 제조 견적 기능 | scan.html, dine-worker.js | /api/scan/quote, Oracle oracle-server.js 활용 (multer·Puppeteer·PaddleOCR 이미 설치됨) |
 | 10 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | mbtico-worker.js | 루틴상태+오류현황+소셜스케줄 한눈에 |
-| 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | scan.html, mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
+| 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
 
 ---
 
@@ -171,7 +161,15 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-28 | **Apple Developer Program 등록 완료** — 라이선스 동의 + ₩129,000 결제 완료(KG이니시스, 주문번호 W1543637896, 승인번호 30010555). 등록 ID: 5G5PA8D7B7. 이제 App Store Connect에서 iOS 앱 제출 가능. |
+| 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
 | 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리(mobilesdk_app_id `e028e97f6840e72ae949e8`) + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기(mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi) 적용. (3) `mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_foreground` (108dp 캔버스 기준 안전영역 중앙 배치) + `ic_launcher_background` (#1A6FD4) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양 적용. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. 빌드 v262 진행 중. |
+| 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1(`81:04:2E:22:...`)을 Firebase Console에 추가 후 `android/app/google-services.json` 재다운로드·적용. `app.yongcha.mailmind` type-1 OAuth 클라이언트 2개(업로드키 `68f67f...` + Play서명키 `81042e...`)로 업데이트. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
+| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — 원인 (1) `google-services.json` 두 번째 클라이언트 `package_name`이 `com.mbtico.mailmind`로 잘못 등록돼 있어 Firebase 초기화 실패 → `app.yongcha.mailmind`로 수정. 원인 (2) `hook_service.dart` `setupQuickActions()`에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 → `icon:` 파라미터 완전 제거. PR #265 squash merge(commit `63b0f5d`). GitHub Actions Build #256 자동 트리거됨. 완료 시 Release `v1.0.256`에 AAB 첨부. |
+| 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. 삭제 파일: `dine-worker.js`, `wrangler.dine.toml`, `wrangler.seolyuhana.toml`, `seolyuhana_worker.js`, `seolyuhana/` 전체, `scan.html`, `scan-icon-*.png`, `dine-*.png`. deploy.yml에서 Dine/Seolyuhana Worker 배포 스텝, KV 업로드 항목, dine.ne.kr 캐시 퍼지 모두 제거. commit `c50dab38`. |
+| 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — `worker/worker.js` `_koCompanyFix` 2차 안전장치: 원본 draft에서 발신자 본인 한글 회사명을 사전 추출(`_draftKoNames`)하여 후처리 변환 스킵. PR #262 머지 완료, commit `66ed09b`. CI: Jest ✅ / Regression Tests ✅. 레이어 1(PR #261 refinePrompt SENDER SIGNATURE LOCK) + 레이어 2(PR #262 _draftKoNames) 2중 방어 완성. |
+| 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — `worker/worker.js` `handleRefineCompose` 경로: (1) `buildSignOffInstruction(_rfSo)` 주입 제거 — refine 프롬프트의 userInfoSection·businessCardSection에 "엠비티아이→MBTI 변환" 지시 제거, "기존 서명 블록 그대로 보존" 지시로 교체. (2) dead code 제거 — `const _rfSo = buildSignOffInstruction` 미사용 변수·`incrementCount` 미정의 함수 호출 제거. (3) `_koCompanyFix` 후처리기 버그 수정 — draft 스캔으로 발신자 본인 회사명 감지(`_draftKoNames`) 후 해당 이름은 변환 건너뜀. `handleTranslate`의 "HARDCODED: 엠비티아이=MBTI" 동작은 올바른 것으로 확인·유지. commits `7c5e933`, `d6353b2`, PR #261 (`kimdh4790-cpu/mailmind`). |
+| 2026-10-26 | **MailMind 답변 언어를 이메일 본문 언어로 결정 (핵심 수정)** — `worker/worker.js` 3개 엔드포인트(generate-single/smart/triple) `effectiveReplyLanguage`/`effectiveMyLanguage` 로직 변경: `detectEmailLanguage(emailContent)`를 항상 우선 적용. 이전: `myLanguage='한국어'` → 무조건 한국어 답변. 이후: 한국 도메인(.kr) + 일본어 본문 → 일본어 답변 + 한국 문화 성향. user의 언어 설정은 감지 실패 시 폴백으로만 사용. PR #260, commit `6df0487`. |
 | 2026-10-26 | **MailMind 발신자 문화 지식 우선순위 개선** — `worker/worker.js` 3개 엔드포인트(generate-single/triple/smart) culture 주입 로직 수정: (1) 발신자 country 기반 문화 지식을 답변 언어 문화 지식보다 우선 적용 (`senderCulture || replyLangCulture` 순서로 변경). (2) country='auto'일 때 이메일 본문 Unicode 스크립트로 발신자 언어 감지 → culture fallback. (3) generate-smart에 `smartCountry` 기반 culture 감지 추가(기존: email body Unicode만 사용). 예) 한국어로 일본인에게 답변 시 → 일본 문화 지식 주입. commit `346ee14`. |
 | 2026-10-26 | **CLAUDE.md 웹세션 ID 업데이트** — 기존 보관된 웹세션 ID `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent, archived) → 활성 세션 `session_01NWDyoBnJzvbjC8xuwmphSp` (멜마인드 웹)으로 변경. 사용자 직접 확인 제공. |
 | 2026-10-26 | **CLAUDE.md 세션 분업 원칙 명확화** — 기존 "웹 content script 파일 수정은 웹세션" 규칙을 구체화: 웹세션 = 브라우저 확장프로그램 코드(`mailmind/extension/` 등)만 담당 / 앱세션 = 나머지 전부(Flutter lib/, worker/worker.js 등). commit `21a925e1`, PR #197 머지. 웹세션(`session_01NWDyoBnJzvbjC8xuwmphSp`)에 확장프로그램 17개 언어 수정(substituteRefine·dualRe·SPELLING MANDATE) 요청 전달 완료. |
