@@ -73,7 +73,7 @@ claude/* 브랜치 push
 | 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
 | 3 | `[x]` | **팝빌 키 발급 → Cloudflare Secret 등록 완료** (2026-09-22) | _worker.js | LINK_ID=MBTI / SecretKey 발급. Cloudflare Worker(mbti-logistics) 비밀에 POPBILL_LINK_ID·POPBILL_SECRET_KEY 등록 완료. POPBILL_TEST_MODE=true 추가 필요 → 테스트 진행 가능. |
 | 4 | `[-]` | **팝빌 역발행 테스트 → 운영전환 신청** | _worker.js | **2026-09-23 팝빌 기술지원 답변**: "링크아이디 오입력" — timestamp 형식 오류가 원인. **수정 완료**: `20260923T013000Z`(T/Z 포함 16자리) → `20260923013000`(yyyyMMddHHmmss 14자리). deploy.yml 자동 배포 완료 후 `/api/popbill-debug` 재확인 필요. 성공 시 POPBILL_TEST_MODE=false 운영전환. |
-| 5 | `[~]` | **MailMind Android Galaxy M44 Google 로그인 + 아이콘** | mailmind 레포 | google-services.json 수정(오류 10 해결) + AI 아이콘 + 어댑티브 아이콘 커밋 완료. 빌드 v262 진행 중. 완료 후 Play Console 내부테스트 업로드 필요. |
+| 5 | `[x]` | **MailMind Android Galaxy M44 Google 로그인 + 아이콘** | mailmind 레포 | google-services.json 수정(오류 10 해결) + AI 아이콘 + 어댑티브 아이콘 커밋 완료. v263 Play Console 내부테스트 업로드 + 실 기기 Google 로그인 성공 확인. |
 
 ### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
 | 항목 | 값 |
@@ -130,7 +130,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | 7 | `[ ]` | 용차앱 저작권 등록 | - | cros.or.kr 직접 신청. 코드 기반 저작물 |
 | 8 | `[ ]` | 벤처기업 인증 | - | 기보 부산지점 신청 |
 
-### 📱 앱스토어 계정 등록 (D-U-N-S 번호 대기 중)
+### 📱 앱스토어 계정 등록
 
 | # | 상태 | 항목 | 메모 |
 |---|---|---|---|
@@ -139,12 +139,13 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A2 | `[x]` | **Apple 계정 생성 완료** (2026-10-18) | kimdh4790@gmail.com / 이중 인증 설정됨 |
 | A3 | `[x]` | **Google Play Console 조직 계정 등록 완료** (2026-10-27) | $25 KB국민카드 기업카드 8865 결제 완료. 개발자 계정 생성됨. D-U-N-S: 695921476, 결제 프로필: 엠비티아이(유) |
 | A3b | `[x]` | **Google Play 본인 확인(신원 인증) 완료** (2026-10-27) | 회사명 확인됨 + 권한을 부여받은 담당자(김형우) 확인됨. 엠비티아이(유) 인증 완료. 앱 배포 가능 상태 |
-| A4 | `[~]` | **Apple Developer Program $99 결제 대기** (2026-10-28) | 등록 ID: **5G5PA8D7B7** / Apple Developer Program 수락 이메일 수신 완료(2026-10-28). **다음 단계**: developer.apple.com 로그인 → License Agreement 동의 → $99 결제 완료 → iOS 앱 제출 가능 |
-| A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 제출 항목: 공개 테스트 v263(177개국), 스토어 등록정보(en-US), 콘텐츠 등급, 타겟층, 개인정보처리방침(mailmind.yongcha.app/privacy), 광고 선언, 데이터 보안, 건강 앱 선언, 앱 카테고리(생산성). 검토 완료 예상: 2026-11-03~07. |
-| A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) `google-services.json` 패키지명 불일치(`com.mbtico.mailmind` → `app.yongcha.mailmind` 수정) (2) `hook_service.dart` QuickActions에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 제거. PR #265 머지 완료(commit `63b0f5d`). Build #256 자동 트리거됨 → GitHub Release `v1.0.256` 생성 예정. **다음 단계**: `v1.0.256` AAB를 Play Console → 내부 테스트 트랙에 업로드 |
-| A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | 원인: Google Play App Signing이 AAB를 Play 서명 키로 재서명 → 해당 SHA-1(`81:04:2E:...`)이 Firebase에 미등록 → `google-services.json`에 type-1 OAuth 클라이언트 누락 → 로그인 DEVELOPER_ERROR. 수정: Firebase Console에 Play 앱 서명 SHA-1 추가 후 `android/app/google-services.json` 재적용. PR #267(`fix-google-services-v2`) squash merge(commit `b5e4be2`). **확인 완료**: v263 빌드 Play Console 내부 테스트 업로드 후 실 기기 Google 로그인 성공(kimdh4790@gmail.com PRO 계정). |
+| A4 | `[x]` | **Apple Developer Program $99 결제 완료** (2026-10-28) | 등록 ID: **5G5PA8D7B7** / ₩129,000 결제 완료(KG이니시스, 주문번호 W1543637896, 승인번호 30010555). iOS 앱 제출 가능 상태. |
+| A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
+| A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
+| A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
+| A8 | `[-]` | **MailMind iOS TestFlight 빌드** | mailmind 레포 | **PR #273 오픈** (build-ios.yml + Fastfile + Appfile). **GitHub Secrets 3개 등록 필요**: `APP_STORE_CONNECT_API_KEY_ID`=H2M5GFA4BM / `APP_STORE_CONNECT_ISSUER_ID`=fb130061-a76b-42b4-87b6-ed5575dd3884 / `APP_STORE_CONNECT_PRIVATE_KEY`=.p8 파일 내용. kimdh4790-cpu/mailmind → Settings → Secrets → Actions. |
 
-> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료, 본인 확인 완료. Apple은 $99 결제 링크 대기 중. MailMind Play Store 등록정보 작성 진행 중. v254/255 크래시 수정 완료(PR #265), Build #256 진행 중.
+> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 완료 (Secrets 등록 후 동작).
 
 ---
 
@@ -161,34 +162,23 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
+| 2026-10-28 | **MailMind iOS TestFlight CI/CD 파이프라인 구축 (PR #273)** — `.github/workflows/build-ios.yml` + `ios/fastlane/Appfile` + `ios/fastlane/Fastfile` 신규. Fastlane `beta` lane: App Store Connect API key(H2M5GFA4BM)로 cert+sigh → IPA 빌드 → TestFlight 업로드. 실행하려면 GitHub Secrets 3개 등록 필요(A8 항목 참조). |
+| 2026-10-28 | **MailMind 언어 우선순위 3중 수정 완료 (PR #272 머지)** — (1) handleGenerateSmart: detectedBodyLangS 우선→myLanguage 우선으로 변경. (2) handleTriple: effectiveMyLanguage 로직 동일 패턴 적용. (3) 6개 핸들러 myLanguage 기본값 `'Korean'`→`'auto'` 변경(handleCompose/Refine/GenerateSmart/Triple/AiBrief/AiQuickCompose). handleAiBrief: briefLang 변수 추가로 'auto' 문자열이 Claude 프롬프트에 그대로 들어가는 문제 방지. |
 | 2026-10-28 | **Apple Developer Program 등록 완료** — 라이선스 동의 + ₩129,000 결제 완료(KG이니시스, 주문번호 W1543637896, 승인번호 30010555). 등록 ID: 5G5PA8D7B7. 이제 App Store Connect에서 iOS 앱 제출 가능. |
 | 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
-| 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리(mobilesdk_app_id `e028e97f6840e72ae949e8`) + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기(mdpi/hdpi/xhdpi/xxhdpi/xxxhdpi) 적용. (3) `mipmap-anydpi-v26/ic_launcher.xml` + `ic_launcher_foreground` (108dp 캔버스 기준 안전영역 중앙 배치) + `ic_launcher_background` (#1A6FD4) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양 적용. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. 빌드 v262 진행 중. |
-| 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1(`81:04:2E:22:...`)을 Firebase Console에 추가 후 `android/app/google-services.json` 재다운로드·적용. `app.yongcha.mailmind` type-1 OAuth 클라이언트 2개(업로드키 `68f67f...` + Play서명키 `81042e...`)로 업데이트. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
-| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — 원인 (1) `google-services.json` 두 번째 클라이언트 `package_name`이 `com.mbtico.mailmind`로 잘못 등록돼 있어 Firebase 초기화 실패 → `app.yongcha.mailmind`로 수정. 원인 (2) `hook_service.dart` `setupQuickActions()`에서 존재하지 않는 drawable(`ic_compose`, `ic_inbox`) 참조 → `icon:` 파라미터 완전 제거. PR #265 squash merge(commit `63b0f5d`). GitHub Actions Build #256 자동 트리거됨. 완료 시 Release `v1.0.256`에 AAB 첨부. |
-| 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. 삭제 파일: `dine-worker.js`, `wrangler.dine.toml`, `wrangler.seolyuhana.toml`, `seolyuhana_worker.js`, `seolyuhana/` 전체, `scan.html`, `scan-icon-*.png`, `dine-*.png`. deploy.yml에서 Dine/Seolyuhana Worker 배포 스텝, KV 업로드 항목, dine.ne.kr 캐시 퍼지 모두 제거. commit `c50dab38`. |
-| 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — `worker/worker.js` `_koCompanyFix` 2차 안전장치: 원본 draft에서 발신자 본인 한글 회사명을 사전 추출(`_draftKoNames`)하여 후처리 변환 스킵. PR #262 머지 완료, commit `66ed09b`. CI: Jest ✅ / Regression Tests ✅. 레이어 1(PR #261 refinePrompt SENDER SIGNATURE LOCK) + 레이어 2(PR #262 _draftKoNames) 2중 방어 완성. |
-| 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — `worker/worker.js` `handleRefineCompose` 경로: (1) `buildSignOffInstruction(_rfSo)` 주입 제거 — refine 프롬프트의 userInfoSection·businessCardSection에 "엠비티아이→MBTI 변환" 지시 제거, "기존 서명 블록 그대로 보존" 지시로 교체. (2) dead code 제거 — `const _rfSo = buildSignOffInstruction` 미사용 변수·`incrementCount` 미정의 함수 호출 제거. (3) `_koCompanyFix` 후처리기 버그 수정 — draft 스캔으로 발신자 본인 회사명 감지(`_draftKoNames`) 후 해당 이름은 변환 건너뜀. `handleTranslate`의 "HARDCODED: 엠비티아이=MBTI" 동작은 올바른 것으로 확인·유지. commits `7c5e933`, `d6353b2`, PR #261 (`kimdh4790-cpu/mailmind`). |
-| 2026-10-26 | **MailMind 답변 언어를 이메일 본문 언어로 결정 (핵심 수정)** — `worker/worker.js` 3개 엔드포인트(generate-single/smart/triple) `effectiveReplyLanguage`/`effectiveMyLanguage` 로직 변경: `detectEmailLanguage(emailContent)`를 항상 우선 적용. 이전: `myLanguage='한국어'` → 무조건 한국어 답변. 이후: 한국 도메인(.kr) + 일본어 본문 → 일본어 답변 + 한국 문화 성향. user의 언어 설정은 감지 실패 시 폴백으로만 사용. PR #260, commit `6df0487`. |
-| 2026-10-26 | **MailMind 발신자 문화 지식 우선순위 개선** — `worker/worker.js` 3개 엔드포인트(generate-single/triple/smart) culture 주입 로직 수정: (1) 발신자 country 기반 문화 지식을 답변 언어 문화 지식보다 우선 적용 (`senderCulture || replyLangCulture` 순서로 변경). (2) country='auto'일 때 이메일 본문 Unicode 스크립트로 발신자 언어 감지 → culture fallback. (3) generate-smart에 `smartCountry` 기반 culture 감지 추가(기존: email body Unicode만 사용). 예) 한국어로 일본인에게 답변 시 → 일본 문화 지식 주입. commit `346ee14`. |
-| 2026-10-26 | **CLAUDE.md 웹세션 ID 업데이트** — 기존 보관된 웹세션 ID `session_01C4JrrQpJNAeWwmpPCRS7YN` (MailMind Web/Worker Agent, archived) → 활성 세션 `session_01NWDyoBnJzvbjC8xuwmphSp` (멜마인드 웹)으로 변경. 사용자 직접 확인 제공. |
-| 2026-10-26 | **CLAUDE.md 세션 분업 원칙 명확화** — 기존 "웹 content script 파일 수정은 웹세션" 규칙을 구체화: 웹세션 = 브라우저 확장프로그램 코드(`mailmind/extension/` 등)만 담당 / 앱세션 = 나머지 전부(Flutter lib/, worker/worker.js 등). commit `21a925e1`, PR #197 머지. 웹세션(`session_01NWDyoBnJzvbjC8xuwmphSp`)에 확장프로그램 17개 언어 수정(substituteRefine·dualRe·SPELLING MANDATE) 요청 전달 완료. |
-| 2026-10-26 | **MailMind outlook 비교/스마트 모드 3개 답변 생성 버그 수정** — `outlook_detail_screen.dart` `_generateReply(mode)` 파라미터 무시 버그: compare/smart/single 모드 무관하게 항상 `generateSingle` 호출하던 문제 수정. `compare` → `generateTriple`(3개 답변: Direct/Warm/Detailed) / `smart` → `generateSmart`(3버전+요약) / `single` → 기존 유지. naver 화면 패턴 참조하여 수정. `_smartSummary`·`_isSmartMode` 미사용 경고 제거. commit `0613a15`, PR #198. |
-| 2026-10-26 | **MailMind 수정보완 서명 회사명 보존 + 단일 문장 번호 추가 방지** — (1) `worker/worker.js` refinePrompt에 SIGNATURE COMPANY NAME EXCEPTION 추가: 서명 블록 내 "엠비티아이" 등 회사명을 MBTI로 변환하지 않도록 COMPANY NAME CONVERSION 규칙을 "EMAIL BODY ONLY"로 한정. (2) DO NOT ADD NUMBERING 규칙 추가: 원본 초안에 번호 목록 없으면 "1." 등 번호 절대 추가 금지. commit `a7213fe`. |
-| 2026-10-26 | **MailMind 17개 언어 수정보완(Refine) 품질 전면 개선** — (1) Flutter 5개 화면 `_refineReply()` `_userEdited=false` 누락 수정. (2) worker.js `substituteRefine()` 날짜 치환 17개 언어 전체 커버. (3) `refineGoalMap.grammar` + SPELLING MANDATE 17개 언어 일반화. (4) `dualRe` 이중 이메일 제거 regex 추가. commit `859535d`. |
-| 2026-10-26 | **MailMind 수정보완 후 번역 언어 버그 수정** — Refine 후 언어 전환 시 타언어가 한국어로 나오는 버그 수정. commit `b1be2cb`. |
-| 2026-10-26 | **MailMind Flutter OOM 크래시 방지 + 홈화면 일본어 하드코딩 제거** — 이미지 많은 이메일 OOM 크래시 3중 방어. 홈화면 AI 브리프 `_aiLang='ja'` 하드코딩 → 설정 언어 동기화. PR #196. |
-| 2026-10-26 | **MailMind 번역 시 전화번호 하이픈 보존** — placeholder 방식으로 한국 전화번호 하이픈 탈락 버그 수정. commit `223b71a`. |
-| 2026-10-26 | **MailMind AI 답장 수신자 이름 인사 붙는 버그 수정** — `handleGenerateSmart()` Anthropic path에 `stripRecipientGreeting()` 후처리 추가. commit `3b3a2a2`. |
-| 2026-10-26 | **MailMind 스마트 답장 퀄리티 3종 수정** — 엠비티아이→MBTI 변환, Direct 버전 구체성 강화, ECHO RULE 추가. commit `9debc37`. |
-| 2026-10-26 | **MailMind AI 답장 복수 액션아이템 추출 개선** — 고지성 이메일 암묵적 요청 포함. commit `56646bd`. |
-| 2026-10-26 | **MailMind 중국어 출력 시 한국어 브랜드명 영문화** — KOREAN BRAND NAME RULE 추가. commit `777d324`. |
-| 2026-10-25 | **MailMind Flutter 답변 언어 '자동 감지' 버그 수정** — `_selectedLanguage` 초기값 `replyLanguageCached`로 변경. PR #257. |
-| 2026-10-25 | **MailMind 글로벌 시장성 분석 Artifact 완료** — TAM $2.8B·SAM $800M·SOM $100M+ 퍼널. Artifact: https://claude.ai/artifact/6ZGaySXH6x96Vip3jcBJA9 |
-| 2026-10-25 | **MailMind 비용마진 분석 완료** — Basic 97.3%·Pro 97.6% 마진 확인. Artifact: https://claude.ai/artifact/Xw4eJnt8Ect9m1MFCWP68L |
-| 2026-10-25 | **MailMind 번역 원본 훼손 방지 + 다듬기 자연스러움 강화** — PR #256. |
-| 2026-10-25 | **MailMind 17개 언어 fixSenderGreeting 완성 + TR 번역 자연스러움 강화** — 커밋 `2189eb8`. |
-| 2026-10-25 | **MailMind 언어 처리 버그 6종 수정** — 커밋 `3fc2959`, main 머지 완료. |
+| 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리 + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기 적용. (3) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. |
+| 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1 Firebase 추가 + google-services.json 재다운로드. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
+| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
+| 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. commit `c50dab38`. |
+| 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — PR #262 머지 완료, commit `66ed09b`. 2중 방어 완성. |
+| 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — PR #261 squash merge. |
+| 2026-10-26 | **MailMind 답변 언어를 이메일 본문 언어로 결정** — PR #260, commit `6df0487`. |
+| 2026-10-26 | **MailMind 발신자 문화 지식 우선순위 개선** — commit `346ee14`. |
+| 2026-10-26 | **CLAUDE.md 웹세션 ID 업데이트** — 활성 세션 `session_01NWDyoBnJzvbjC8xuwmphSp`으로 변경. |
+| 2026-10-26 | **MailMind outlook 비교/스마트 모드 3개 답변 생성 버그 수정** — PR #198. |
+| 2026-10-26 | **MailMind 17개 언어 수정보완(Refine) 품질 전면 개선** — commit `859535d`. |
+| 2026-10-25 | **MailMind Flutter 답변 언어 '자동 감지' 버그 수정** — PR #257. |
+| 2026-10-25 | **MailMind 번역 시 전화번호 하이픈 보존** — commit `223b71a`. |
 | 2026-10-16 | **MailMind Flutter 앱 버그 4종 수정 + CI 키스토어 수정** — PR #177~178. |
 | 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — PR #183 |
 | 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — PR #182 |
@@ -196,26 +186,20 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | 2026-10-08 | **배송기사 앱 이름만 로그인** — PR #175 머지 완료. |
 | 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `mailmind.yongcha.app` |
 | 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — PR #172 머지 완료. |
-| 2026-09-22 | **소셜미디어 영상 GitHub Actions 재실행** — 용차앱·인프런·DONWAY 3개 동시 큐 |
-| 2026-09-22 | **팝빌 기술문의 접수** — developers.popbill.com 에 LINK_ID "MBTI" error 1016 문의 |
+| 2026-09-22 | 소셜미디어 영상 GitHub Actions 재실행 |
 | 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 |
-| 2026-09-21 | DONWAY 배달대행 기사 앱 탭 정리 |
-| 2026-09-21 | DONWAY 배달대행 기사 일일 배송 달력 뷰 추가 — PR #142·#143 |
-| 2026-09-21 | DONWAY 계약서 시스템 관련 다수 버그 수정 |
-| 2026-09-20 | mbtico.kr Worker 분리 (mbtico-worker.js + wrangler.mbtico.toml) — PR #128 |
-| 2026-09-20 | filo.ai.kr / dine.ne.kr Worker 분리 (filo-worker.js, dine-worker.js) |
-| 2026-09-20 | DONWAY 계약서 타이핑 방식 전환 + 탭 단일화 + 아카이브 버그 수정 |
-| 2026-09-20 | SCAN dine.ne.kr 단일 운영 전환 |
-| 2026-09-18 | 팝빌 역발행 자동등록 플로우 코드 구현 (키 발급 대기) |
-| 2026-09-18 | DONWAY 카카오톡 인쇄 버튼 수정 (_dlPrint) |
-| 2026-09-15 | DONWAY 카카오 소셜 로그인/가입 |
-| 2026-09-14 | DONWAY 계약서 시스템 전면 구현 + 대시보드 정리 |
-| 2026-09-10 | ThreeUI constellation 파티클 효과 5개 랜딩 페이지 적용 |
-| 2026-09-09 | 전 제품 소셜미디어 영상 1분으로 확장 |
+| 2026-09-20 | mbtico.kr Worker 분리 완료 |
 
 ---
 
 ## 📝 세션별 작업 이력
+
+### 2026-10-28
+- MailMind handleGenerateSmart / handleTriple 언어 우선순위 수정 (PR #272 머지)
+- MailMind 6개 핸들러 myLanguage 기본값 'Korean'→'auto' 제거 (Korean 언어 편향 제거)
+- MailMind iOS TestFlight CI/CD 파이프라인 구축 (PR #273 오픈, Secrets 등록 필요)
+- Apple Developer Program $99 결제 완료 (등록 ID: 5G5PA8D7B7)
+- TASKS.md 업데이트
 
 ### 2026-10-27
 - MailMind Android Google 로그인 오류 10 수정 (google-services.json 복원)
@@ -227,7 +211,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 - mbtico.kr Worker 분리 완료 (PR #128 수동 머지)
 - CLAUDE.md 메모 업데이트 (PR #129 수동 머지)
 - TASKS.md 신규 생성 — 앱별 배포방식·기능 정리
-- 배송앱 도메인 주석 수정 (PR #131 자동 머지): filo-worker.js·배송앱_변경내역.md mbtico.kr → filo.ai.kr
+- 배송앱 도메인 주석 수정 (PR #131 자동 머지)
 
 ---
 
