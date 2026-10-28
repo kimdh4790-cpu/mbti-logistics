@@ -301,6 +301,13 @@ ANTHROPIC_API_KEY=sk-ant-... node scripts/monitor/content-monitor.js
 | `GOOGLE_TTS_API_KEY` | 등록완료 |
 | `ORACLE_SSH_KEY` | 등록완료 (2026-08-27, Oracle Cloud SSH 자동화용) |
 
+### MailMind iOS (kimdh4790-cpu/mailmind)
+| 시크릿명 | 값 | 설명 |
+|---|---|---|
+| `APP_STORE_CONNECT_API_KEY_ID` | `H2M5GFA4BM` | App Store Connect API Key ID |
+| `APP_STORE_CONNECT_ISSUER_ID` | `fb130061-a76b-42b4-87b6-ed5575dd3884` | App Store Connect Issuer ID |
+| `APP_STORE_CONNECT_PRIVATE_KEY` | GitHub Secret (.p8 파일 내용) | AuthKey_H2M5GFA4BM.p8 비밀키 |
+
 ### social-media.yml 실행 방법
 ```
 GitHub → Actions → 소셜미디어 홍보 영상 제작 → Run workflow
@@ -453,7 +460,6 @@ dash.cloudflare.com → Workers & Pages → mbti-logistics → Settings → Vari
 **미설치 (로컬 PC에서 수동 설치 필요)**:
 | 스킬 | 설치 명령 | 이유 |
 |---|---|---|
-| Awesome Design MD (57개 브랜드) | Claude Code에 `https://github.com/voltagent/awesome-design-md 이 저장소 설치해줘` 라고 말하기 | 57개 브랜드 파일 대용량 — 로컬에서 처리 |
 | Playwright CLI | `npm install -g @playwright/cli@latest && playwright-cli install --skills` | npm global 설치 필요 |
 
 ### ECC 추가 설치 (2026-08-30, 2차)
@@ -693,3 +699,4 @@ claude
 | 2026-10-04 | **로컬 PC Chrome 파일 다운로드 차단 해결법**: 시크릿 모드는 되는데 일반 모드에서 다운로드 실패("인터넷 연결 상태 확인") 시 → 한국 금융/공공기관 보안 프로그램이 원인. 제거 대상: ① AhnLab Safe Transaction ② AnySign4PC ③ Veraport G3 (보안모듈 관리 프로그램) ④ WIZVERA Process Manager. 제어판 → 앱 및 기능에서 검색 후 제거 → PC 재부팅. AhnLab V3 Lite도 의심 시 제거. 이 프로그램들은 Chrome HTTPS 통신을 가로채 비화이트리스트 URL 다운로드 차단함. 재설치 필요 시 해당 은행/공공기관 사이트 재방문하면 자동 안내. **[2026-10-06 추가 확인 및 최종 해결]** 보안 프로그램 제거 후에도 안 되면 단계별 시도: ① Windows 설정 → 네트워크 및 인터넷 → 프록시 → **"자동으로 설정 검색" 끔** ② V3 Lite 환경설정 → 네트워크 보안 → 웹 보안 → "유해 사이트 차단 사용" 해제 ③ V3 Lite 완전 제거 (제어판 → 프로그램 제거) ④ **관리자 CMD에서 `netsh winsock reset` → 재부팅** ← 이게 최종 해결. 보안 프로그램이 Winsock LSP(네트워크 후킹) 항목을 레지스트리에 남기면 프로그램 제거 후에도 HTTPS 트래픽 차단 지속됨. Windows Defender가 V3 대체 역할 충분히 수행. |
 | 2026-10-16 | **MailMind APK 빌드 키스토어 정보** (kimdh4790-cpu/mailmind 레포): 키스토어 파일 위치 `release_keystore_base64.txt` (UTF-16 LE 인코딩, .gitignore 제외). KEY_ALIAS=mailmind. STORE_PASSWORD=****(GitHub Secret), KEY_PASSWORD=****(GitHub Secret) (mailmind-worker/release.keystore keytool 직접 확인). 실제 키스토어 파일: C:\Users\82104\mailmind-worker\release.keystore (mailmind2는 비번 불일치). 2026-10-17 4개 Secret 모두 설정 완료 → 빌드 #105 진행 중. 빌드 #101 성공(비번 일치), #102~#104 실패(KEYSTORE_BASE64 빈값 or 잘못된 파일 읽기). 현재 워크플로우(main, 커밋 0322ea8): `echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore` 방식 사용, JKS 변환 스텝 포함. **KEYSTORE_BASE64 설정 방법**: Windows PowerShell에서 `$bytes = [System.IO.File]::ReadAllBytes("release_keystore_base64.txt"); $text = [System.Text.Encoding]::Unicode.GetString($bytes).Trim() -replace "\s",""; gh secret set KEYSTORE_BASE64 --body $text --repo kimdh4790-cpu/mailmind` → 설정 후 Actions → Build Android APK → Run workflow |
 | 2026-09-21 | **도메인별 Worker 분리 완료**: 각 도메인 전용 워커 파일 분리. `filo-pages/_worker.js`(slim proxy → mbti-logistics.kimdh4790.workers.dev), `seolyuhana_worker.js`(mbtico.kr/api/seolyuhana/* 전담, wrangler.seolyuhana.toml). `wrangler.toml`의 4개 도메인 라우트(filo·dine·donway·mbtico → `_worker.js`)는 유지. SCAN API 라우팅: mbtico.kr/api/seolyuhana/* → seolyuhana_worker.js → x-mbtico-host:mbtico.kr 헤더로 filo.ai.kr 경유 → _worker.js mbtico 블록 처리. |
+| 2026-10-28 | **MailMind iOS App Store Connect 키 ID 3개 기록** (kimdh4790-cpu/mailmind 레포): APP_STORE_CONNECT_API_KEY_ID=H2M5GFA4BM, APP_STORE_CONNECT_ISSUER_ID=fb130061-a76b-42b4-87b6-ed5575dd3884, APP_STORE_CONNECT_PRIVATE_KEY=GitHub Secret에 보관 (AuthKey_H2M5GFA4BM.p8). iOS CI/CD Fastlane 연동 완료 (key_filepath 방식). |
