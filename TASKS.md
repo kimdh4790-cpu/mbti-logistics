@@ -133,7 +133,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ### 📱 앱스토어 계정 등록
 
 | # | 상태 | 항목 | 메모 |
-|---|---|---|---|
+|---|---|---|
 | A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우 |
 | A1b | `[x]` | **D-U-N-S 번호 발급 완료** (2026-10-27) | **D-U-N-S: 695921476** (MBTI Ltd., 엠비티아이(유)). Apple Developer Relations 이메일로 즉시 수신. 구글·애플 앱스토어 조직 계정 등록에 모두 사용 가능 |
 | A2 | `[x]` | **Apple 계정 생성 완료** (2026-10-18) | kimdh4790@gmail.com / 이중 인증 설정됨 |
@@ -143,9 +143,9 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight 빌드 — PR #273 머지 대기** | mailmind 레포 | GitHub Secrets 3개 등록 완료. Fastfile key_filepath 방식(OpenSSL 파싱 오류 수정). 머지 컨플릭트 해결(9a6b80c). CI: Jest ✅ / Flutter ✅. main 머지 후 TestFlight 자동 배포 |
+| A8 | `[x]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축 완료** (2026-10-28) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). GitHub Secrets 3개 등록 완료: `APP_STORE_CONNECT_API_KEY_ID`=H2M5GFA4BM / `APP_STORE_CONNECT_ISSUER_ID`=fb130061-a76b-42b4-87b6-ed5575dd3884 / `APP_STORE_CONNECT_PRIVATE_KEY`=.p8. |
 
-> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 완료 (Secrets 등록 후 동작).
+> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 완료.
 
 ---
 
@@ -162,8 +162,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 
 | 날짜 | 항목 |
 |---|---|
-| 2026-10-28 | **MailMind 서명 원문 그대로 유지 수정 (PR #273 branch, commits aa09439·bde77d7)** — `worker/worker.js` 3곳: (1) `JP_SIGNATURE_PROMPT`: 한국어→일본어 음역 제거, "EXACTLY AS WRITTEN" 보존 지시. (2) `buildSignOffInstruction(lang)`: 클로징 문구만 현지어(`よろしくお願いいたします。` 등), 이름·회사·직함·전화·이메일은 원문 그대로. (3) `handleGenerate` 인라인: "TRANSLATE the sign-off" → "copy EXACTLY AS WRITTEN". |
-| 2026-10-28 | **MailMind iOS TestFlight CI/CD 파이프라인 구축 (PR #273)** — `.github/workflows/build-ios.yml` + `ios/fastlane/Appfile` + `ios/fastlane/Fastfile` 신규. Fastlane `beta` lane: App Store Connect API key(H2M5GFA4BM)로 cert+sigh → IPA 빌드 → TestFlight 업로드. 실행하려면 GitHub Secrets 3개 등록 필요(A8 항목 참조). |
+| 2026-10-28 | **MailMind iOS TestFlight CI/CD 파이프라인 완성 (PR #273)** — Fastfile `key_content`→`key_filepath` 수정으로 `OpenSSL::PKey::ECError` 해결. worker.js 서명 원문 유지 수정(답변언어 번역 제거): `JP_SIGNATURE_PROMPT`, `buildSignOffInstruction()`, `handleGenerate` 인라인 3곳 수정. INFRA_MEMO.md에 App Store Connect ID 영구 메모(H2M5GFA4BM / fb130061-a76b-42b4-87b6-ed5575dd3884). |
 | 2026-10-28 | **MailMind 언어 우선순위 3중 수정 완료 (PR #272 머지)** — (1) handleGenerateSmart: detectedBodyLangS 우선→myLanguage 우선으로 변경. (2) handleTriple: effectiveMyLanguage 로직 동일 패턴 적용. (3) 6개 핸들러 myLanguage 기본값 `'Korean'`→`'auto'` 변경(handleCompose/Refine/GenerateSmart/Triple/AiBrief/AiQuickCompose). handleAiBrief: briefLang 변수 추가로 'auto' 문자열이 Claude 프롬프트에 그대로 들어가는 문제 방지. |
 | 2026-10-28 | **Apple Developer Program 등록 완료** — 라이선스 동의 + ₩129,000 결제 완료(KG이니시스, 주문번호 W1543637896, 승인번호 30010555). 등록 ID: 5G5PA8D7B7. 이제 App Store Connect에서 iOS 앱 제출 가능. |
 | 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
@@ -198,7 +197,10 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ### 2026-10-28
 - MailMind handleGenerateSmart / handleTriple 언어 우선순위 수정 (PR #272 머지)
 - MailMind 6개 핸들러 myLanguage 기본값 'Korean'→'auto' 제거 (Korean 언어 편향 제거)
-- MailMind iOS TestFlight CI/CD 파이프라인 구축 (PR #273 오픈, Secrets 등록 필요)
+- MailMind iOS TestFlight CI/CD 파이프라인 구축 (PR #273)
+- MailMind Fastfile key_content→key_filepath 수정 (OpenSSL PKCS#8 오류 해결)
+- MailMind worker.js 서명 원문 유지 수정 — JP_SIGNATURE_PROMPT + buildSignOffInstruction + handleGenerate 3곳 수정 (PR #273)
+- INFRA_MEMO.md App Store Connect IDs 영구 메모 (H2M5GFA4BM / fb130061-a76b-42b4-87b6-ed5575dd3884)
 - Apple Developer Program $99 결제 완료 (등록 ID: 5G5PA8D7B7)
 - TASKS.md 업데이트
 
