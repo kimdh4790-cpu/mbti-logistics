@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | **Run #29 (commit `a149d3f`) 결과: CANCELLED** — timeout-minutes: 60 초과로 취소. 로그 분석: cert ✅ sigh ✅ update_code_signing_settings ✅ build_ios_app 시작 ✅, xcodebuild archive 컴파일 중 60분 타임아웃(codesign 단계, 거의 완료 시점). **Run #30 (commit `d9800ddd`) 트리거됨**: timeout-minutes 60→120으로 증가. 빌드 결과 대기 중. |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | **진행현황(2026-10-29)**: run#22~#27 sigh `App Identifier not found`→Spaceship BundleId.create 해결. run#24~#25 `cert` maximum certs→pre-revoke REST API 해결. run#26~#27 `filter[certificateType]` URL인코딩 + IOS_DISTRIBUTION→DISTRIBUTION 타입 해결. **run#28** `profile_path` invalid option → `profile_uuid: lane_context[SharedValues::SIGH_UUID]`로 수정(commit `a149d3f`). **run#29** cert ✅ sigh ✅ update_code_signing_settings ✅ 모두 통과 확인. 60분 timeout으로 xcodebuild archive codesign 단계에서 취소됨 → timeout-minutes 60→120 수정(commit `d9800ddd`). **run#30 현재 in_progress** (04:24 UTC step9 Build&Upload 시작, 120분 timeout). 05:41 UTC 자동 재확인 예약(trig_01AfWRPw5i11hsjKhsfBH5wH). |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -168,7 +168,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
 | 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리 + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기 적용. (3) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. |
 | 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1 Firebase 추가 + google-services.json 재다운로드. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
-| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
+| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 완료 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
 | 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. commit `c50dab38`. |
 | 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — PR #262 머지 완료, commit `66ed09b`. 2중 방어 완성. |
 | 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — PR #261 squash merge. |
@@ -195,17 +195,9 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
-- MailMind iOS build-ios.yml timeout-minutes 60→120 수정
-  - run #29(commit `a149d3f`) 취소 원인: timeout-minutes:60 초과
-  - 로그 분석: cert ✅ sigh ✅ update_code_signing_settings ✅ build_ios_app 진입 후 xcodebuild archive 컴파일 중 취소
-  - codesign 프로세스(pid 25724) 실행 중 종료 — archive 거의 완료 시점이었음
-  - mailmind main commit `d9800ddd` push → run #30 트리거
-  - TASKS.md A8 업데이트
-- MailMind iOS Fastfile `update_code_signing_settings` `profile_path` → `profile_uuid` 수정
-  - run #28(commit `d4db89f`) 실패 원인: `profile_path`는 유효한 파라미터가 아님
-  - 유효 파라미터: `profile_uuid` (SIGH_UUID lane context 사용)
-  - mailmind main `a149d3f` push 완료 → run #29 트리거
-  - run #28 진행상황: cert ✅ sigh ✅ → update_code_signing_settings ❌
+- iOS run#28: update_code_signing_settings `profile_path`→`profile_uuid: lane_context[SharedValues::SIGH_UUID]` 수정(commit `a149d3f`)
+- iOS run#29: cert ✅ sigh ✅ update_code_signing_settings ✅ 모두 통과 확인. 60분 timeout에 의해 xcodebuild archive codesign 단계에서 취소. timeout-minutes 60→120 수정(commit `d9800ddd`)
+- iOS run#30: 현재 in_progress (04:24 UTC step9 시작, 120분 timeout). 05:41 UTC 체크인 예약(trig_01AfWRPw5i11hsjKhsfBH5wH)
 - MailMind iOS Fastfile `produce` 완전 제거
   - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구 (`Missing password for user kimdh4790@gmail.com`)
   - Developer Portal 접근은 App Store Connect API key로 대체 불가 — 패스워드 없이는 사용 불가
