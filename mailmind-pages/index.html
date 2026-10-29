@@ -434,7 +434,7 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">✦ Powered by Claude AI · 19 Languages · Gmail & Outlook</div>
+  <div class="hero-badge">✦ Powered by Claude AI · 17 Languages · 6 Email Platforms</div>
   <h1>Every email,<br><span class="pink">perfect.</span></h1>
   <p class="hero-sub">
     Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.
@@ -446,8 +446,8 @@
   <div class="hero-trust">
     <span><span class="dot">✓</span> Free trial, no card</span>
     <span><span class="dot">✓</span> Emails never stored</span>
-    <span><span class="dot">✓</span> Gmail & Outlook Web</span>
-    <span><span class="dot">✓</span> 19 languages</span>
+    <span><span class="dot">✓</span> Gmail, Outlook, iCloud & more</span>
+    <span><span class="dot">✓</span> 17 languages</span>
   </div>
 </section>
 
@@ -480,18 +480,18 @@
 <!-- DEMO -->
 <section class="demo-section" id="demo">
   <p class="section-label">Live Demo</p>
-  <h2 class="section-title" style="margin-bottom:8px">What you see inside Gmail & Outlook</h2>
+  <h2 class="section-title" style="margin-bottom:8px">What you see inside Gmail, Outlook & more</h2>
   <p style="text-align:center;color:var(--text-3);font-size:14px;margin-bottom:16px">Try it — choose your plan, generate a reply in your language</p>
 
   <!-- 플랜 선택 -->
   <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">
-    <button id="plan-btn-free" onclick="switchDemoPlan('free')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #dadce0;background:#f1f3f4;color:#5f6368;font-family:inherit">Free</button>
+    <button id="plan-btn-free" onclick="switchDemoPlan('free')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #dadce0;background:#f1f3f4;color:#5f6368;font-family:inherit">Starter</button>
     <button id="plan-btn-basic" onclick="switchDemoPlan('basic')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #1a73e8;background:#fff;color:#1a73e8;font-family:inherit">Basic · $15/mo</button>
     <button id="plan-btn-pro" onclick="switchDemoPlan('pro')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #e91e8c;background:#e91e8c;color:#fff;font-family:inherit">✦ Pro · $25/mo</button>
   </div>
   <p id="plan-desc-text" style="text-align:center;font-size:12px;color:#5f6368;margin-bottom:10px">✦ Pro: All features unlocked — 3 versions, Smart Reply, Guard</p>
   <div id="demo-lock-msg" style="display:none;max-width:480px;margin:0 auto 12px;padding:10px;background:#fff8e1;border-radius:8px;text-align:center;font-size:12px;color:#b8860b">
-    <span id="demo-lock-text">🔒 3 Versions &amp; Smart Reply require Basic or Pro</span><br>
+    <span id="demo-lock-text">🔒 3 Versions require Basic or Pro · Smart Reply requires Pro</span><br>
     <a href="#pricing" style="font-size:12px;color:#e91e8c;font-weight:600;text-decoration:none">View Plans →</a>
   </div>
 
@@ -751,9 +751,9 @@
 
   // ===== UI 다국어 문자열 =====
   const UI = {
-    English:    { gen:'✦ Generate AI Reply', summary:'📝 Thread Summary', insert:'✉️ Insert into Gmail', copy:'📋 Copy', urgency:'🔴 Urgent', negotiation:'🤝 Negotiation', detected:'📌 Detected Actions', commitments:'📋 Your Commitments', guard:'🛡️ Pre-send Check', guardMsg:'⚠️ Date mismatch: Oct 15 (Sunday) — confirm before sending', toneLabel:'Reply Tone', countryLabel:"Sender's Country", langLabel:'My Language', lockBasic:'🔒 3 Versions & Smart Reply require Basic or Pro', lockPro:'🔒 Smart Reply requires Pro' },
-    Korean:     { gen:'✦ AI 답장 생성', summary:'📝 스레드 요약', insert:'✉️ Gmail에 삽입', copy:'📋 복사', urgency:'🔴 긴급', negotiation:'🤝 협상', detected:'📌 감지된 할 일', commitments:'📋 내 약속', guard:'🛡️ 전송 전 확인', guardMsg:'⚠️ 날짜 불일치: 10월 15일(일요일) — 전송 전 확인 필요', toneLabel:'답장 톤', countryLabel:'발신자 국가', langLabel:'내 언어', lockBasic:'🔒 3가지 버전 & 스마트 답장은 Basic 이상 필요', lockPro:'🔒 스마트 답장은 Pro 필요' },
-    Japanese:   { gen:'✦ AI返信を生成', summary:'📝 スレッド要約', insert:'✉️ Gmailに挿入', copy:'📋 コピー', urgency:'🔴 緊急', negotiation:'🤝 交渉', detected:'📌 検出されたアクション', commitments:'📋 コミットメント', guard:'🛡️ 送信前確認', guardMsg:'⚠️ 日付不一致: 10月15日(日曜日) — 送信前に確認', toneLabel:'返信トーン', countryLabel:'送信者の国', langLabel:'使用言語', lockBasic:'🔒 3バージョン & スマート返信はBasic以上', lockPro:'🔒 スマート返信はPro必要' },
+    English:    { gen:'✦ Generate AI Reply', summary:'📝 Thread Summary', insert:'✉️ Insert into Gmail', copy:'📋 Copy', urgency:'🔴 Urgent', negotiation:'🤝 Negotiation', detected:'📌 Detected Actions', commitments:'📋 Your Commitments', guard:'🛡️ Pre-send Check', guardMsg:'⚠️ Date mismatch: Oct 15 (Sunday) — confirm before sending', toneLabel:'Reply Tone', countryLabel:"Sender's Country", langLabel:'My Language', lockBasic:'🔒 3 Versions require Basic or Pro', lockPro:'🔒 Smart Reply requires Pro' },
+    Korean:     { gen:'✦ AI 답장 생성', summary:'📝 스레드 요약', insert:'✉️ Gmail에 삽입', copy:'📋 복사', urgency:'🔴 긴급', negotiation:'🤝 협상', detected:'📌 감지된 할 일', commitments:'📋 내 약속', guard:'🛡️ 전송 전 확인', guardMsg:'⚠️ 날짜 불일치: 10월 15일(일요일) — 전송 전 확인 필요', toneLabel:'답장 톤', countryLabel:'발신자 국가', langLabel:'내 언어', lockBasic:'🔒 3가지 버전은 Basic 이상 필요', lockPro:'🔒 스마트 답장은 Pro 필요' },
+    Japanese:   { gen:'✦ AI返信を生成', summary:'📝 スレッド要約', insert:'✉️ Gmailに挿入', copy:'📋 コピー', urgency:'🔴 緊急', negotiation:'🤝 交渉', detected:'📌 検出されたアクション', commitments:'📋 コミットメント', guard:'🛡️ 送信前確認', guardMsg:'⚠️ 日付不一致: 10月15日(日曜日) — 送信前に確認', toneLabel:'返信トーン', countryLabel:'送信者の国', langLabel:'使用言語', lockBasic:'🔒 3バージョンはBasic以上が必要', lockPro:'🔒 スマート返信はPro必要' },
     Chinese:    { gen:'✦ 生成AI回复', summary:'📝 邮件摘要', insert:'✉️ 插入Gmail', copy:'📋 复制', urgency:'🔴 紧急', negotiation:'🤝 谈判', detected:'📌 检测到的操作', commitments:'📋 我的承诺', guard:'🛡️ 发送前检查', guardMsg:'⚠️ 日期不匹配：10月15日（周日）— 发送前确认', toneLabel:'回复语气', countryLabel:'发件人国家', langLabel:'我的语言', lockBasic:'🔒 3个版本需要Basic或更高', lockPro:'🔒 智能回复需要Pro' },
     Spanish:    { gen:'✦ Generar respuesta IA', summary:'📝 Resumen del hilo', insert:'✉️ Insertar en Gmail', copy:'📋 Copiar', urgency:'🔴 Urgente', negotiation:'🤝 Negociación', detected:'📌 Acciones detectadas', commitments:'📋 Mis compromisos', guard:'🛡️ Verificación previa', guardMsg:'⚠️ Fecha incorrecta: 15 oct (domingo) — confirmar antes de enviar', toneLabel:'Tono de respuesta', countryLabel:'País del remitente', langLabel:'Mi idioma', lockBasic:'🔒 3 versiones requieren Basic o superior', lockPro:'🔒 Smart Reply requiere Pro' },
     French:     { gen:'✦ Générer une réponse IA', summary:'📝 Résumé du fil', insert:'✉️ Insérer dans Gmail', copy:'📋 Copier', urgency:'🔴 Urgent', negotiation:'🤝 Négociation', detected:'📌 Actions détectées', commitments:'📋 Mes engagements', guard:'🛡️ Vérification avant envoi', guardMsg:'⚠️ Date incorrecte : 15 oct (dimanche) — vérifier avant envoi', toneLabel:'Ton de réponse', countryLabel:'Pays expéditeur', langLabel:'Ma langue', lockBasic:'🔒 3 versions nécessitent Basic ou supérieur', lockPro:'🔒 Smart Reply nécessite Pro' },
@@ -1177,9 +1177,9 @@
     const smartBtn  = document.getElementById('tab-btn-smart');
 
     if (plan === 'free') {
-      if (badge) badge.textContent = 'Free · 28/35 replies left';
+      if (badge) badge.textContent = 'Starter · 28/35 replies left';
       if (bar)   { bar.style.width='80%'; bar.style.background='#f29900'; }
-      if (desc)  desc.textContent = '🆓 Free: Basic AI reply only';
+      if (desc)  desc.textContent = '🆓 Starter: Basic AI reply only';
       if (lock)  lock.style.display = 'block';
       if (tripleBtn) { tripleBtn.style.opacity='0.4'; tripleBtn.style.pointerEvents='none'; }
       if (smartBtn)  { smartBtn.style.opacity='0.4';  smartBtn.style.pointerEvents='none'; }
@@ -1342,12 +1342,12 @@
     <div class="feature-hero-card">
       <div class="feature-hero-badge">⭐ CORE</div>
       <div class="feature-icon">🌍</div>
-      <h3>19 Languages, any pair</h3>
+      <h3>17 Languages, any pair</h3>
       <p>Japanese to Korean, Arabic to German, Portuguese to English — any direction, any combination. Replies sound like a native speaker.</p>
       <ul>
         <li>Culture & business customs auto-applied</li>
         <li>Japanese Keigo, Arabic formalities, Brazilian warmth</li>
-        <li>19 languages: EN / KO / JA / ZH / ES / FR / DE / PT / AR + 10 more</li>
+        <li>17 languages: EN / KO / JA / ZH / ES / FR / DE / PT / AR + 8 more</li>
       </ul>
     </div>
     <div class="feature-hero-card">
@@ -1388,8 +1388,13 @@
     </div>
     <div class="feature-card">
       <div class="feature-icon">⚡</div>
-      <h3>Gmail & Outlook Web</h3>
-      <p>Works inside Gmail and Outlook Web — no tab switching. MailMind panel appears automatically when you open any email.</p>
+      <h3>6 Email Platforms</h3>
+      <p>Works inside Gmail, Outlook, iCloud Mail, Naver Mail, Yahoo Mail, and Yahoo Japan — no tab switching. MailMind panel appears automatically when you open any email.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">✨</div>
+      <h3>AI Compose (Write New)</h3>
+      <p>Blank canvas? Use AI Write to compose a full email from scratch. Describe what you want to say — MailMind writes the whole thing in any language and tone.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">🔀</div>
@@ -1425,15 +1430,15 @@
   <h2 class="section-title">Simple, transparent pricing</h2>
   <div class="pricing-grid">
     <div class="plan-card">
-      <div class="plan-name">Free</div>
+      <div class="plan-name">Starter</div>
       <div class="plan-price">$0 <span>/ trial</span></div>
       <div class="plan-limit">35 replies to try it out</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> 35 AI replies total</li>
-        <li><span class="check">✓</span> 19 languages supported</li>
+        <li><span class="check">✓</span> 17 languages supported</li>
         <li><span class="check">✓</span> 8 tone options</li>
         <li><span class="check">✓</span> Culture & industry detection</li>
-        <li><span class="check">✓</span> Gmail & Outlook Web</li>
+        <li><span class="check">✓</span> All 6 email platforms</li>
         <li><span class="check">✓</span> No credit card required</li>
       </ul>
       <a href="https://chromewebstore.google.com" class="btn-plan outline">Start Free</a>
@@ -1444,9 +1449,11 @@
       <div class="plan-limit">200 replies / month</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> 200 AI replies / month</li>
-        <li><span class="check">✓</span> Gmail & Outlook Web</li>
-        <li><span class="check">✓</span> 19 languages supported</li>
+        <li><span class="check">✓</span> All 6 email platforms</li>
+        <li><span class="check">✓</span> 17 languages supported</li>
         <li><span class="check">✓</span> 8 tone options</li>
+        <li><span class="check">✓</span> AI Compose (write from scratch)</li>
+        <li><span class="check">✓</span> Reply polish (Refine)</li>
         <li><span class="check">✓</span> Quick language switch</li>
         <li><span class="check">✓</span> Signature & templates</li>
         <li><span class="check">✓</span> Thread summary</li>
@@ -1462,7 +1469,7 @@
       <div class="plan-limit">300 replies / month</div>
       <ul class="plan-features">
         <li><span class="check">✓</span> 300 AI replies / month</li>
-        <li><span class="check">✓</span> Gmail & Outlook Web</li>
+        <li><span class="check">✓</span> All 6 email platforms</li>
         <li><span class="check">✓</span> Everything in Basic</li>
         <li><span class="check">✓</span> 3 versions to compare</li>
         <li><span class="check">✓</span> Smart Reply (summary + translate)</li>
@@ -1490,7 +1497,19 @@
     </thead>
     <tbody>
       <tr>
-        <td>Any language combination (19 languages)</td>
+        <td>6 email platforms (Gmail, Outlook, iCloud, Naver, Yahoo)</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>AI Compose (write emails from scratch)</td>
+        <td><span class="yes">✓</span></td>
+        <td><span class="no">✗</span></td>
+        <td><span class="no">✗</span></td>
+      </tr>
+      <tr>
+        <td>Any language combination (17 languages)</td>
         <td><span class="yes">✓</span></td>
         <td><span class="no">✗</span></td>
         <td><span class="no">✗</span></td>
@@ -1552,7 +1571,7 @@
     </div>
     <div class="faq-item">
       <div class="faq-q">Which languages are supported? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">MailMind supports 19 languages including Korean, English, Japanese, Chinese, Spanish, French, German, Portuguese, Arabic, Vietnamese, Thai, Indonesian, Italian, Turkish, Dutch, Polish, Russian, Swedish, and Hebrew. Any combination works — Japanese to Portuguese, Arabic to Korean, anything.</div>
+      <div class="faq-a">MailMind supports 17 languages including Korean, English, Japanese, Chinese, Spanish, French, German, Portuguese, Arabic, Vietnamese, Thai, Indonesian, Italian, Turkish, Dutch, Polish, and Hindi. Any combination works — Japanese to Portuguese, Arabic to Korean, anything.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">What if I don't speak the language at all? <span class="faq-arrow">+</span></div>
