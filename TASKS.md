@@ -133,7 +133,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ### 📱 앱스토어 계정 등록
 
 | # | 상태 | 항목 | 메모 |
-|---|---|---|
+|---|---|---|---|
 | A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우 |
 | A1b | `[x]` | **D-U-N-S 번호 발급 완료** (2026-10-27) | **D-U-N-S: 695921476** (MBTI Ltd., 엠비티아이(유)). Apple Developer Relations 이메일로 즉시 수신. 구글·애플 앱스토어 조직 계정 등록에 모두 사용 가능 |
 | A2 | `[x]` | **Apple 계정 생성 완료** (2026-10-18) | kimdh4790@gmail.com / 이중 인증 설정됨 |
@@ -143,9 +143,9 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[x]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축 완료** (2026-10-28) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). GitHub Secrets 3개 등록 완료: `APP_STORE_CONNECT_API_KEY_ID`=H2M5GFA4BM / `APP_STORE_CONNECT_ISSUER_ID`=fb130061-a76b-42b4-87b6-ed5575dd3884 / `APP_STORE_CONNECT_PRIVATE_KEY`=.p8. |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). produce App ID 등록 추가(PR #274). **2026-10-29: produce `api_key:` 파라미터 오류 수정** — produce는 api_key 파라미터 미지원, 전역 API key 자동 사용. mailmind main `32823e0` 직접 push. 다음 빌드 결과 확인 필요. |
 
-> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 완료.
+> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
 ---
 
@@ -193,6 +193,14 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ---
 
 ## 📝 세션별 작업 이력
+
+### 2026-10-29
+- MailMind iOS Fastfile `produce` `api_key:` 파라미터 오류 수정
+  - `produce` 액션은 `api_key:` 파라미터 미지원. `app_store_connect_api_key`로 설정한 전역 API key 자동 사용
+  - 이전 실패 run #40805002970: `Could not find option 'api_key'`
+  - mailmind main 브랜치 직접 push (commit `32823e0`)
+  - 다음 iOS Build 워크플로우 자동 트리거됨
+- TASKS.md A8 항목 `[~]` 진행중으로 업데이트
 
 ### 2026-10-28
 - MailMind handleGenerateSmart / handleTriple 언어 우선순위 수정 (PR #272 머지)
