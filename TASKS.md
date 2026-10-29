@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. **인증서 최대 개수(2개) 문제 해결 시도 중**: run #26(commit `9cfb1db`) — pre-revoke REST API URL의 `filter[certificateType]` 브래킷이 percent-encode 안 됨 → Apple API가 필터 무시 → 0건 반환 → cert 여전히 실패. **run #27(commit `b98660d`) fix**: `URI.encode_www_form`으로 `filter%5BcertificateType%5D` 인코딩 + HTTP 응답 로그 추가. 결과 확인 필요. |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. **run #27(commit `b98660d`) 실패 원인**: `filter[certificateType]=IOS_DISTRIBUTION` 으로 조회했으나 계정에 있는 인증서 2개(`5GUYJ77ASL`, `W8825CU46S`)는 `DISTRIBUTION` 타입(modern Apple Distribution). Apple API가 `IOS_DISTRIBUTION` 필터로 0건 반환 → pre-revoke 미실행 → `cert`가 기존 2개 발견 후 실패. **run #28(commit `d4db89f`) fix**: `IOS_DISTRIBUTION`·`DISTRIBUTION` 두 타입 모두 조회 후 결합, 2개 이상이면 가장 오래된 것 revoke. 빌드 결과 대기 중. |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -195,13 +195,16 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
-- MailMind iOS Fastfile run #26 진단 + run #27 fix
+- MailMind iOS Fastfile run #27 진단 + run #28 fix
+  - **run #27(commit `b98660d`) 실패 원인**: `filter[certificateType]=IOS_DISTRIBUTION` 조회로 0건 반환. 계정의 2개 인증서(`5GUYJ77ASL`, `W8825CU46S`)는 `DISTRIBUTION` 타입(modern Apple Distribution). Apple은 `IOS_DISTRIBUTION`(레거시)과 `DISTRIBUTION`(모던) 두 타입을 별도 관리하지만 cert 발급 한도는 합산 2개.
+  - **run #28(commit `d4db89f`) fix**: `["IOS_DISTRIBUTION", "DISTRIBUTION"]` 두 타입 반복 조회 후 결합 → 총 2개 이상이면 `expirationDate` 기준 가장 오래된 cert revoke + cert 타입 로그 추가
+  - mailmind main `d4db89f` push 완료. 빌드 결과 대기 중
+- MailMind iOS Fastfile run #26 진단 + run #27 fix (이전)
   - **run #26(commit `9cfb1db`) 실패 원인**: `filter[certificateType]` URL 브래킷(`[`,`]`)이 percent-encode 안 됨 → Apple API가 필터 파라미터 무시 → 0건 반환 → `cert`는 여전히 기존 2개 인증서를 발견하고 실패
-  - **run #27(commit `b98660d`) fix**: `URI.encode_www_form("filter[certificateType]" => "IOS_DISTRIBUTION")` → `filter%5BcertificateType%5D=IOS_DISTRIBUTION` 올바른 인코딩. 직접 hostname 문자열 사용(`Net::HTTP.new("api.appstoreconnect.apple.com", 443)`). HTTP 응답 status+body 로그 추가(`UI.message("Cert list API: #{resp.code}")`)
-  - mailmind main `b98660d` push 완료. 빌드 결과 대기 중
+  - **run #27(commit `b98660d`) fix**: `URI.encode_www_form("filter[certificateType]" => "IOS_DISTRIBUTION")` → `filter%5BcertificateType%5D=IOS_DISTRIBUTION` 올바른 인코딩. 직접 hostname 문자열 사용(`Net::HTTP.new("api.appstoreconnect.apple.com", 443)`). HTTP 응답 status+body 로그 추가
+  - mailmind main `b98660d` push 완료
 - MailMind iOS Fastfile `produce` 완전 제거 (이전 작업)
   - run 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구
-  - `sigh(api_key:)`가 App ID + 프로비저닝 프로파일 모두 처리
   - mailmind main `7bd790c` push 완료
 - MailMind iOS Fastfile `produce` `api_key:` 파라미터 오류 수정 (이전)
   - run: `Could not find option 'api_key'`
