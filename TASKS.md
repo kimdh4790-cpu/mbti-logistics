@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). **2026-10-29 run #23 (commit `7bd790c`) 실패**: sigh `[!] Could not find App with App Identifier 'app.yongcha.mailmind'` — App ID가 Developer Portal에 미등록. sigh는 App ID 생성 불가. **수정**: Fastfile에 `Spaceship::ConnectAPI::BundleId.create` 블록 추가 — App Store Connect API(JWT)로 bundle ID 등록. mailmind main `635fd3d` push 완료(run #24 대기중). |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). **run #24 (commit `635fd3d`) 실패**: cert `[!] Could not create another Distribution certificate, reached the maximum number of available Distribution certificates.` — Apple 계정에 기존 cert 2개(5GUYJ77ASL·W8825CU46S MBTI Ltd.) 존재하나 CI 키체인에 없고 추가 생성 불가(한도 초과). **수정**: cert에 `force: true` 추가 → 기존 cert 1개 revoke 후 신규 cert CI 키체인에 생성. mailmind main `1201fb4` push 완료(run #25 대기중). |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -195,13 +195,18 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
+- **MailMind iOS Fastfile `cert` `force: true` 추가 (run #25 트리거)**
+  - run #24 (commit `635fd3d`) 실패: `cert` → `[!] Could not create another Distribution certificate, reached the maximum number of available Distribution certificates.`
+  - 원인: Apple Developer 계정에 기존 Distribution cert 2개 존재(5GUYJ77ASL·W8825CU46S, 모두 MBTI Ltd.). CI 키체인은 매번 새 러너라 cert 없음. 한도(2개) 초과로 신규 생성 불가
+  - 수정: `cert(force: true)` 추가 → 기존 cert 1개 자동 revoke 후 신규 cert 생성·CI 키체인에 임포트
+  - mailmind main `1201fb4` push 완료 → run #25 트리거
 - MailMind iOS Fastfile Bundle ID 등록 수정 (run #24 대기)
   - run #23 (commit `7bd790c`) 실패: sigh `[!] Could not find App with App Identifier 'app.yongcha.mailmind'`
   - 원인: `app.yongcha.mailmind` Bundle ID가 Apple Developer Portal에 미등록. sigh는 프로비저닝 프로파일만 생성 가능, App ID 신규 생성 불가
-  - 수정: Fastfile에 `Spaceship::ConnectAPI::BundleId.create(name: "MailMind", identifier: "app.yongcha.mailmind", platform: "IOS")` 블록 추가 (`app_store_connect_api_key` 설정 직후, `cert` 호출 전)
+  - 수정: Fastfile에 `Spaceship::ConnectAPI::BundleId.create(name: "MailMind", identifier: "app.yongcha.mailmind", platform: "IOS")` 블록 추가
   - `Spaceship::ConnectAPI::Token.create(key_id:, issuer_id:, filepath:)` — JWT 인증(App Store Connect API key 사용, Apple ID 패스워드 불필요)
   - rescue 블록으로 이미 존재하는 경우 무시
-  - mailmind main `635fd3d` push 완료 → run #24 트리거
+  - mailmind main `635fd3d` push 완료
 - MailMind iOS Fastfile `produce` 완전 제거 (2026-10-29 이전)
   - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구
   - mailmind main `7bd790c` push 완료
