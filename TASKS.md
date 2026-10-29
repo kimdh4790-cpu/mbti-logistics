@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | **진행현황(2026-10-29)**: run#22~#27 sigh `App Identifier not found`→Spaceship BundleId.create 해결. run#24~#25 `cert` maximum certs→pre-revoke REST API 해결. run#26~#27 `filter[certificateType]` URL인코딩 + IOS_DISTRIBUTION→DISTRIBUTION 타입 해결. **run#28** `profile_path` invalid option → `profile_uuid: lane_context[SharedValues::SIGH_UUID]`로 수정(commit `a149d3f`). **run#29** cert ✅ sigh ✅ update_code_signing_settings ✅ 모두 통과 확인. 60분 timeout으로 xcodebuild archive codesign 단계에서 취소됨 → timeout-minutes 60→120 수정(commit `d9800ddd`). **run#30 현재 in_progress** (04:24 UTC step9 Build&Upload 시작, 120분 timeout). 05:41 UTC 자동 재확인 예약(trig_01AfWRPw5i11hsjKhsfBH5wH). |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #276 오픈. **Run #35 진행중 (2026-10-29)**: macos-15(Xcode 16) 전환으로 Firebase Swift `internal import` 컴파일 오류 수정. Run #34 실패 원인: macos-14(Xcode 15.4)가 firebase-ios-sdk Swift 6.0 `AccessLevelOnImport` 문법 미지원. commit `09b35a6`. |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -168,7 +168,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
 | 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리 + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기 적용. (3) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. |
 | 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1 Firebase 추가 + google-services.json 재다운로드. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
-| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 완료 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
+| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
 | 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. commit `c50dab38`. |
 | 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — PR #262 머지 완료, commit `66ed09b`. 2중 방어 완성. |
 | 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — PR #261 squash merge. |
@@ -195,15 +195,15 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
-- iOS run#28: update_code_signing_settings `profile_path`→`profile_uuid: lane_context[SharedValues::SIGH_UUID]` 수정(commit `a149d3f`)
-- iOS run#29: cert ✅ sigh ✅ update_code_signing_settings ✅ 모두 통과 확인. 60분 timeout에 의해 xcodebuild archive codesign 단계에서 취소. timeout-minutes 60→120 수정(commit `d9800ddd`)
-- iOS run#30: 현재 in_progress (04:24 UTC step9 시작, 120분 timeout). 05:41 UTC 체크인 예약(trig_01AfWRPw5i11hsjKhsfBH5wH)
-- MailMind iOS Fastfile `produce` 완전 제거
-  - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구 (`Missing password for user kimdh4790@gmail.com`)
-  - Developer Portal 접근은 App Store Connect API key로 대체 불가 — 패스워드 없이는 사용 불가
-  - `sigh(api_key:)`는 App Store Connect API를 통해 App ID(identifier) + 프로비저닝 프로파일 모두 처리 가능 → `produce` 불필요
-  - mailmind main `7bd790c` push 완료
+- **MailMind iOS CI/CD — macos-15(Xcode 16) 전환으로 Firebase Swift 컴파일 오류 수정**
+  - Run #34 실패 원인: `macos-14` = Xcode 15.4. firebase-ios-sdk가 Swift 6.0 `internal import`(`AccessLevelOnImport`) 문법 사용 → 빌드 exit 65
+  - 수정: `.github/workflows/build-ios.yml` `runs-on: macos-14` → `runs-on: macos-15`, timeout 120→180min
+  - commit `09b35a6` push 완료, Run #35 진행중
   - TASKS.md A8 항목 업데이트
+- MailMind iOS Fastfile `produce` 완전 제거 (이전 세션)
+  - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구
+  - `sigh(api_key:)`가 App ID(identifier) + 프로비저닝 프로파일 모두 처리 가능 → `produce` 불필요
+  - mailmind main `7bd790c` push 완료
 - MailMind iOS Fastfile `produce` `api_key:` 파라미터 오류 수정 (이전)
   - run #40805002970: `Could not find option 'api_key'`
   - mailmind main `32823e0` push 완료
