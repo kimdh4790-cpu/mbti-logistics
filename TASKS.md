@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | Run #28(commit `d4db89f`): cert ✅ 새 cert `77HJZS57TS` 생성 성공 / sigh ✅ 프로비저닝 프로파일 `c4730b94` 생성 성공 / update_code_signing_settings ❌ `profile_path` 파라미터 없음 (유효 옵션: profile_uuid 등). **Run #29 수정(commit `a149d3f`)**: `profile_path: lane_context[SharedValues::SIGH_PROFILE_PATH]` → `profile_uuid: lane_context[SharedValues::SIGH_UUID]`. 빌드 결과 대기 중. |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | **Run #29 (commit `a149d3f`) 결과: CANCELLED** — timeout-minutes: 60 초과로 취소. 로그 분석: cert ✅ sigh ✅ update_code_signing_settings ✅ build_ios_app 시작 ✅, xcodebuild archive 컴파일 중 60분 타임아웃(codesign 단계, 거의 완료 시점). **Run #30 (commit `d9800ddd`) 트리거됨**: timeout-minutes 60→120으로 증가. 빌드 결과 대기 중. |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -195,6 +195,12 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
+- MailMind iOS build-ios.yml timeout-minutes 60→120 수정
+  - run #29(commit `a149d3f`) 취소 원인: timeout-minutes:60 초과
+  - 로그 분석: cert ✅ sigh ✅ update_code_signing_settings ✅ build_ios_app 진입 후 xcodebuild archive 컴파일 중 취소
+  - codesign 프로세스(pid 25724) 실행 중 종료 — archive 거의 완료 시점이었음
+  - mailmind main commit `d9800ddd` push → run #30 트리거
+  - TASKS.md A8 업데이트
 - MailMind iOS Fastfile `update_code_signing_settings` `profile_path` → `profile_uuid` 수정
   - run #28(commit `d4db89f`) 실패 원인: `profile_path`는 유효한 파라미터가 아님
   - 유효 파라미터: `profile_uuid` (SIGH_UUID lane context 사용)
