@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. **run #25 (commit `1201fb4`) 실패**: `cert force:true`가 API key-only auth에서 동작하지 않음. `cert` 요약 테이블에서도 `username: kimdh4790@gmail.com` 표시 — revoke 경로가 Apple ID로 폴백, CI에 Apple ID 패스워드 없어 revoke 불가. **수정 (run #26)**: `cert` 호출 전 `jwt` gem + `Net::HTTP`로 App Store Connect REST API 직접 호출하여 가장 오래된 IOS_DISTRIBUTION cert DELETE(204) → 슬롯 확보 → `cert`(force 없음) 신규 생성. mailmind main `9cfb1db` push 완료 → run #26 트리거. |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. **인증서 최대 개수(2개) 문제 해결 시도 중**: run #26(commit `9cfb1db`) — pre-revoke REST API URL의 `filter[certificateType]` 브래킷이 percent-encode 안 됨 → Apple API가 필터 무시 → 0건 반환 → cert 여전히 실패. **run #27(commit `b98660d`) fix**: `URI.encode_www_form`으로 `filter%5BcertificateType%5D` 인코딩 + HTTP 응답 로그 추가. 결과 확인 필요. |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -168,7 +168,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
 | 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리 + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기 적용. (3) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. |
 | 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1 Firebase 추가 + google-services.json 재다운로드. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
-| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 완료 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
+| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
 | 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. commit `c50dab38`. |
 | 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — PR #262 머지 완료, commit `66ed09b`. 2중 방어 완성. |
 | 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — PR #261 squash merge. |
@@ -195,28 +195,16 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
-- **MailMind iOS Fastfile cert pre-revoke REST API 방식으로 변경 (run #26 트리거)**
-  - run #25 (commit `1201fb4`) 실패: `cert force:true`가 API key-only auth에서 동작 안 함
-  - 원인 확인: `cert` 요약 테이블에서 `username: kimdh4790@gmail.com` 표시 — revoke 경로가 Apple ID로 폴백, CI에 Apple ID 패스워드 없어 revoke 불가. Fastlane 2.241.2 버그
-  - 수정 내용 (commit `9cfb1db`): `cert` 호출 전 `jwt` gem으로 JWT 토큰 직접 생성 → `Net::HTTP`로 `GET /v1/certificates?filter[certificateType]=IOS_DISTRIBUTION` → 2개 이상이면 가장 오래된 cert `DELETE /v1/certificates/{id}` → 204 확인 후 5초 대기 → `cert` 호출(force 없음)
-  - mailmind main `9cfb1db` push → run #26 트리거
-- **MailMind iOS Fastfile `cert` `force: true` 추가 (run #25 트리거)**
-  - run #24 (commit `635fd3d`) 실패: `cert` → `[!] Could not create another Distribution certificate, reached the maximum number of available Distribution certificates.`
-  - 원인: Apple Developer 계정에 기존 Distribution cert 2개 존재(5GUYJ77ASL·W8825CU46S, 모두 MBTI Ltd.). CI 키체인은 매번 새 러너라 cert 없음. 한도(2개) 초과로 신규 생성 불가
-  - 수정: `cert(force: true)` 추가 → 기존 cert 1개 자동 revoke 후 신규 cert 생성·CI 키체인에 임포트
-  - mailmind main `1201fb4` push 완료 → run #25 트리거
-- MailMind iOS Fastfile Bundle ID 등록 수정 (run #24 대기)
-  - run #23 (commit `7bd790c`) 실패: sigh `[!] Could not find App with App Identifier 'app.yongcha.mailmind'`
-  - 원인: `app.yongcha.mailmind` Bundle ID가 Apple Developer Portal에 미등록. sigh는 프로비저닝 프로파일만 생성 가능, App ID 신규 생성 불가
-  - 수정: Fastfile에 `Spaceship::ConnectAPI::BundleId.create(name: "MailMind", identifier: "app.yongcha.mailmind", platform: "IOS")` 블록 추가
-  - `Spaceship::ConnectAPI::Token.create(key_id:, issuer_id:, filepath:)` — JWT 인증(App Store Connect API key 사용, Apple ID 패스워드 불필요)
-  - rescue 블록으로 이미 존재하는 경우 무시
-  - mailmind main `635fd3d` push 완료
-- MailMind iOS Fastfile `produce` 완전 제거 (2026-10-29 이전)
-  - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구
+- MailMind iOS Fastfile run #26 진단 + run #27 fix
+  - **run #26(commit `9cfb1db`) 실패 원인**: `filter[certificateType]` URL 브래킷(`[`,`]`)이 percent-encode 안 됨 → Apple API가 필터 파라미터 무시 → 0건 반환 → `cert`는 여전히 기존 2개 인증서를 발견하고 실패
+  - **run #27(commit `b98660d`) fix**: `URI.encode_www_form("filter[certificateType]" => "IOS_DISTRIBUTION")` → `filter%5BcertificateType%5D=IOS_DISTRIBUTION` 올바른 인코딩. 직접 hostname 문자열 사용(`Net::HTTP.new("api.appstoreconnect.apple.com", 443)`). HTTP 응답 status+body 로그 추가(`UI.message("Cert list API: #{resp.code}")`)
+  - mailmind main `b98660d` push 완료. 빌드 결과 대기 중
+- MailMind iOS Fastfile `produce` 완전 제거 (이전 작업)
+  - run 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구
+  - `sigh(api_key:)`가 App ID + 프로비저닝 프로파일 모두 처리
   - mailmind main `7bd790c` push 완료
 - MailMind iOS Fastfile `produce` `api_key:` 파라미터 오류 수정 (이전)
-  - run #40805002970: `Could not find option 'api_key'`
+  - run: `Could not find option 'api_key'`
   - mailmind main `32823e0` push 완료
 
 ### 2026-10-28
