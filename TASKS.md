@@ -143,7 +143,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). produce App ID 등록 추가(PR #274). **2026-10-29: produce `api_key:` 파라미터 오류 수정** — produce는 api_key 파라미터 미지원, 전역 API key 자동 사용. mailmind main `32823e0` 직접 push. 다음 빌드 결과 확인 필요. |
+| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #273 머지 완료. build-ios.yml + Fastfile + Appfile 신규. Fastfile `key_content`→`key_filepath` 수정(OpenSSL PKCS#8 오류 해결). produce App ID 등록 추가(PR #274). **2026-10-29: produce `api_key:` 파라미터 오류 수정(run #40805002970)** → produce 완전 제거. produce는 Developer Portal 접근 시 Apple ID 패스워드 필요 — CI에서 불가. sigh(api_key:)가 App ID 등록 + 프로비저닝 프로파일 생성 모두 처리. mailmind main `7bd790c` push 완료. 다음 빌드 결과 확인 필요. |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -195,12 +195,15 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 ## 📝 세션별 작업 이력
 
 ### 2026-10-29
-- MailMind iOS Fastfile `produce` `api_key:` 파라미터 오류 수정
-  - `produce` 액션은 `api_key:` 파라미터 미지원. `app_store_connect_api_key`로 설정한 전역 API key 자동 사용
-  - 이전 실패 run #40805002970: `Could not find option 'api_key'`
-  - mailmind main 브랜치 직접 push (commit `32823e0`)
-  - 다음 iOS Build 워크플로우 자동 트리거됨
-- TASKS.md A8 항목 `[~]` 진행중으로 업데이트
+- MailMind iOS Fastfile `produce` 완전 제거
+  - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구 (`Missing password for user kimdh4790@gmail.com`)
+  - Developer Portal 접근은 App Store Connect API key로 대체 불가 — 패스워드 없이는 사용 불가
+  - `sigh(api_key:)`는 App Store Connect API를 통해 App ID(identifier) + 프로비저닝 프로파일 모두 처리 가능 → `produce` 불필요
+  - mailmind main `7bd790c` push 완료
+  - TASKS.md A8 항목 업데이트
+- MailMind iOS Fastfile `produce` `api_key:` 파라미터 오류 수정 (이전)
+  - run #40805002970: `Could not find option 'api_key'`
+  - mailmind main `32823e0` push 완료
 
 ### 2026-10-28
 - MailMind handleGenerateSmart / handleTriple 언어 우선순위 수정 (PR #272 머지)
