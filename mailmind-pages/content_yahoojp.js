@@ -219,6 +219,20 @@ function updateBadgeYJ() {
 }
 
 
+// Strip sender's signature block from incoming email body before sending to Worker
+function _stripSenderSig(text) {
+  if (!text) return text;
+  const m = text.search(/\n--\s*\n|\n[-_]{3,}\s*\n/);
+  if (m !== -1) return text.slice(0, m).trim();
+  const lines = text.split('\n');
+  const cRe = /(?:전화|휴대|팩스|이메일|주소|phone|mobile|fax|e-?mail|tel\b|address|web)\s*[:：]|\+?[\d][\d\s\-\.]{8,}$|^[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}$/i;
+  let i = lines.length - 1;
+  while (i >= 0 && !lines[i].trim()) i--;
+  let cnt = 0; const end = i;
+  while (i >= 0 && i >= end - 8) { const l = lines[i].trim(); if (!l || cRe.test(l)) { cnt++; i--; } else break; }
+  return cnt >= 2 ? lines.slice(0, i + 1).join('\n').trim() : text;
+}
+
 // Strip Korean/English recipient salutation from reply text
 function _stripSalutationYJ(text) {
   if (!text) return text;
@@ -1110,7 +1124,7 @@ async function createYahooJPPanel() {
 
   // ===== Generate Reply =====
   async function generateReplyYJ() {
-    const emailContent = getYahooJPEmailThread();
+    const emailContent = _stripSenderSig(getYahooJPEmailThread());
     if (!emailContent) { showToastYJ('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataYJ();
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-yj-upgrade').style.display='block'; return; }
@@ -1168,7 +1182,7 @@ async function createYahooJPPanel() {
 
   // ===== Generate Triple (Compare) =====
   async function generateTripleYJ() {
-    const emailContent = getYahooJPEmailThread();
+    const emailContent = _stripSenderSig(getYahooJPEmailThread());
     if (!emailContent) { showToastYJ('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataYJ();
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-yj-upgrade').style.display='block'; return; }
@@ -1219,7 +1233,7 @@ async function createYahooJPPanel() {
 
   // ===== Smart Reply (Pro) =====
   async function generateSmartYJ() {
-    const emailContent = getYahooJPEmailThread();
+    const emailContent = _stripSenderSig(getYahooJPEmailThread());
     if (!emailContent) { showToastYJ('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataYJ();
     if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastYJ(getUILangYJ(yjSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }

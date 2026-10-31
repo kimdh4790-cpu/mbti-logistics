@@ -793,6 +793,20 @@ function autoDetectCountry(emailContent) {
 }
 let currentPanel = null;
 
+// Strip sender's signature block from incoming email body before sending to Worker
+function _stripSenderSig(text) {
+  if (!text) return text;
+  const m = text.search(/\n--\s*\n|\n[-_]{3,}\s*\n/);
+  if (m !== -1) return text.slice(0, m).trim();
+  const lines = text.split('\n');
+  const cRe = /(?:전화|휴대|팩스|이메일|주소|phone|mobile|fax|e-?mail|tel\b|address|web)\s*[:：]|\+?[\d][\d\s\-\.]{8,}$|^[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}$/i;
+  let i = lines.length - 1;
+  while (i >= 0 && !lines[i].trim()) i--;
+  let cnt = 0; const end = i;
+  while (i >= 0 && i >= end - 8) { const l = lines[i].trim(); if (!l || cRe.test(l)) { cnt++; i--; } else break; }
+  return cnt >= 2 ? lines.slice(0, i + 1).join('\n').trim() : text;
+}
+
 function getEmailThread() {
   const messages = document.querySelectorAll('.a3s.aiL, .ii.gt .a3s');
   if (messages.length > 1) {
@@ -1500,7 +1514,7 @@ function createPanel() {
 
   // 기본 답장 생성
   async function generateReply() {
-    const emailContent = getEmailThread();
+    const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
     const userData = await getUserData();
@@ -1692,7 +1706,7 @@ function createPanel() {
   let _replyOrigSingleBody = ''; // 단일버전 원본 (일반 모드)
 
   async function generateTriple(userData) {
-    const emailContent = getEmailThread();
+    const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
     if (userData.monthlyCount >= userData.monthlyLimit) {
@@ -1845,7 +1859,7 @@ function createPanel() {
 
   // 이중언어 생성
   async function generateSmart(userData) {
-    const emailContent = getEmailThread();
+    const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
     if (userData.plan !== 'pro' && userData.plan !== 'team') { showToast(getUILang(selectedMyLang).smartPlanMsg || 'Smart Reply requires Pro plan', 'error'); return; }

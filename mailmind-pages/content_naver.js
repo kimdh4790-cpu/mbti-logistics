@@ -195,6 +195,22 @@ function updateBadgeNV() {
 }
 
 
+// Strip sender's signature block from incoming email body before sending to Worker
+function _stripSenderSig(text) {
+  if (!text) return text;
+  // Standard sig delimiter (-- or --- on its own line)
+  const m = text.search(/\n--\s*\n|\n[-_]{3,}\s*\n/);
+  if (m !== -1) return text.slice(0, m).trim();
+  // Trailing contact block: 2+ consecutive contact-info lines at bottom
+  const lines = text.split('\n');
+  const cRe = /(?:전화|휴대|팩스|이메일|주소|phone|mobile|fax|e-?mail|tel\b|address|web)\s*[:：]|\+?[\d][\d\s\-\.]{8,}$|^[\w._%+\-]+@[\w.\-]+\.[a-z]{2,}$/i;
+  let i = lines.length - 1;
+  while (i >= 0 && !lines[i].trim()) i--;
+  let cnt = 0; const end = i;
+  while (i >= 0 && i >= end - 8) { const l = lines[i].trim(); if (!l || cRe.test(l)) { cnt++; i--; } else break; }
+  return cnt >= 2 ? lines.slice(0, i + 1).join('\n').trim() : text;
+}
+
 // Strip Korean/English recipient salutation from reply text
 function _stripSalutationNV(text) {
   if (!text) return text;
@@ -1156,7 +1172,7 @@ async function createNaverPanel() {
 
   // ===== Generate Reply =====
   async function generateReplyNV() {
-    const emailContent = getNaverEmailThread();
+    const emailContent = _stripSenderSig(getNaverEmailThread());
     if (!emailContent) { showToastNV('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataNV();
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-nv-upgrade').style.display='block'; return; }
@@ -1254,7 +1270,7 @@ async function createNaverPanel() {
 
   // ===== Generate Triple (Compare) =====
   async function generateTripleNV() {
-    const emailContent = getNaverEmailThread();
+    const emailContent = _stripSenderSig(getNaverEmailThread());
     if (!emailContent) { showToastNV('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataNV();
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-nv-upgrade').style.display='block'; return; }
@@ -1305,7 +1321,7 @@ async function createNaverPanel() {
 
   // ===== Smart Reply (Pro) =====
   async function generateSmartNV() {
-    const emailContent = getNaverEmailThread();
+    const emailContent = _stripSenderSig(getNaverEmailThread());
     if (!emailContent) { showToastNV('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataNV();
     if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastNV(getUILangNV(nvSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
