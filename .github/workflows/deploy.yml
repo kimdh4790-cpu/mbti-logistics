@@ -68,26 +68,6 @@ jobs:
             [ -n "$KAKAO_REST_KEY" ] && printf '%s' "$KAKAO_REST_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KAKAO_REST_KEY 2>&1 || echo "⚠️ KAKAO_REST_KEY 시크릿 설정 실패/미설정 (무시)"
             [ -n "$KAKAO_JS_KEY" ] && printf '%s' "$KAKAO_JS_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KAKAO_JS_KEY 2>&1 || echo "⚠️ KAKAO_JS_KEY 시크릿 설정 실패/미설정 (무시)"
           fi
-      - name: Deploy Seolyuhana Worker
-        continue-on-error: true
-        env:
-          CF_TOKEN: ${{ secrets.WORKERS_EDIT_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          ACCOUNT="02709cbec18d848913b4246015b9148f"
-          WORKER="seolyuhana"
-          CF_TOKEN="$(printf '%s' "$CF_TOKEN" | tr -d '\r\n\t ')"
-          # multipart/form-data로 ES Module Worker 업로드
-          RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/workers/scripts/$WORKER" \
-            -H "Authorization: Bearer $CF_TOKEN" \
-            -F "index.js=@seolyuhana_worker.js;type=application/javascript+module" \
-            -F 'metadata={"main_module":"index.js"};type=application/json')
-          echo "$RESULT" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✅ SUCCESS' if d.get('success') else '❌ FAIL:'+str(d.get('errors',''))[:200])" || echo "결과: $RESULT" | head -c 300
-          printf '%s' "$ANTHROPIC_API_KEY" | \
-            CLOUDFLARE_API_TOKEN="$CF_TOKEN" \
-            npx wrangler@4 secret put ANTHROPIC_API_KEY --name seolyuhana 2>&1 || true
-          echo "Worker 시크릿 등록 완료" 
-
       - name: Deploy Filo Worker
         continue-on-error: true
         env:
@@ -105,20 +85,6 @@ jobs:
             printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.filo.toml 2>&1 || echo "⚠️ ANTHROPIC_API_KEY filo 시크릿 설정 실패 (무시)"
           fi
 
-      - name: Deploy Dine Worker
-        continue-on-error: true
-        env:
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-          CF_EMAIL: kimdh4790@gmail.com
-        run: |
-          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy --config wrangler.dine.toml 2>&1; then
-            echo "✅ Dine Worker 배포 (API Token)"
-          else
-            echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
-            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.dine.toml 2>&1
-          fi
-
       - name: Deploy Yongcha Worker
         continue-on-error: true
         env:
@@ -131,20 +97,6 @@ jobs:
           else
             echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
             CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.yongcha.toml 2>&1
-          fi
-
-      - name: Deploy Seolyuhana Worker
-        continue-on-error: true
-        env:
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-          CF_EMAIL: kimdh4790@gmail.com
-        run: |
-          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1; then
-            echo "✅ Seolyuhana Worker 배포 (API Token)"
-          else
-            echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
-            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.seolyuhana.toml 2>&1
           fi
 
       - name: Deploy Mbtico Worker
@@ -196,22 +148,7 @@ jobs:
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          # seolyuhana 서비스 파일 업로드
-          for SFILE in seolyuhana/services/analyze.js seolyuhana/utils/parser.js seolyuhana/output/builder.js; do
-            [ -f "$SFILE" ] || continue
-            KV_KEY="${SFILE}"
-            RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$KV_KEY" \
-              -H "X-Auth-Email: kimdh4790@gmail.com" \
-              -H "X-Auth-Key: $CF_KEY_CLEAN" \
-              -H "Content-Type: text/plain; charset=utf-8" \
-              --data-binary @"$SFILE" || true)
-            if echo "$RESULT" | grep -q '"success":true'; then
-              echo "✅ $SFILE"
-            else
-              echo "❌ $SFILE: $RESULT"
-            fi
-          done
-          for FILE in donway_landing.js yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html contract.html contract-sign.html emergency.html drivers.html scan.html label.html mbtico_hub.html seolyuhana.html mbti_landing.html mbtico-manifest.json; do
+          for FILE in donway_landing.js yongcha.html yongcha-landing.html mbtico-ctrl.js wait.html wait-join.html join.html contract.html contract-sign.html emergency.html drivers.html label.html mbtico_hub.html mbti_landing.html mbtico-manifest.json; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
               -H "X-Auth-Email: kimdh4790@gmail.com" \
@@ -232,7 +169,7 @@ jobs:
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          for FILE in donway-icon-192.png donway-icon-512.png donway-apple-icon.png yongcha-icon-192.png yongcha-icon-512.png yongcha-apple-icon.png apple-touch-icon.png icon-192.png icon-512.png scan-icon-192.png scan-icon-512.png mbtico-icon-192.png mbtico-icon-512.png filo-icon-192.png filo-icon-512.png filo-apple-icon.png; do
+          for FILE in donway-icon-192.png donway-icon-512.png donway-apple-icon.png yongcha-icon-192.png yongcha-icon-512.png yongcha-apple-icon.png apple-touch-icon.png icon-192.png icon-512.png mbtico-icon-192.png mbtico-icon-512.png filo-icon-192.png filo-icon-512.png filo-apple-icon.png; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
               -H "X-Auth-Email: kimdh4790@gmail.com" \
@@ -279,7 +216,7 @@ jobs:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          for ZONE in donway.ai.kr mbtico.kr yongcha.app filo.ai.kr dine.ne.kr; do
+          for ZONE in donway.ai.kr mbtico.kr yongcha.app filo.ai.kr; do
             ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=$ZONE" -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY_CLEAN" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')" 2>/dev/null)
             [ -z "$ZONE_ID" ] && continue
             RES=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY_CLEAN" -H "Content-Type: application/json" -d '{"purge_everything":true}')
