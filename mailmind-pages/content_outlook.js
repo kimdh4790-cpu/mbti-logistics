@@ -1384,8 +1384,6 @@ async function openOutlookComposePanel() {
   // myLanguage를 직접 storage에서 다시 읽어 확실히 적용
   const storedLang = await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean')));
   let uiLang = storedLang;
-  console.log('[MailMind Compose] uiLang:', uiLang, '/ storedLang:', storedLang, '/ userData.myLanguage:', userData.myLanguage);
-
   // 작성 출력 언어: 이전 선택값 유지, 처음이면 UI언어 기본값
   if (!olComposeOutputLang) olComposeOutputLang = uiLang;
   if (!olTransLang) olTransLang = olComposeOutputLang;
