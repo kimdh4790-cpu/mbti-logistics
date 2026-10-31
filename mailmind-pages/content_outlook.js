@@ -367,7 +367,7 @@ async function createOutlookPanel() {
   olCurrentPanel = panel;
 
   panel.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div id="mm-ol-drag-handle" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:move;user-select:none">
       <span style="font-size:14px;font-weight:700;color:#e91e8c;letter-spacing:-0.3px">✦ MailMind</span>
       <div style="display:flex;align-items:center;gap:8px">
         <div style="text-align:right">
@@ -490,6 +490,29 @@ async function createOutlookPanel() {
   `;
 
   document.body.appendChild(panel);
+
+  // 드래그
+  (function() {
+    let _d = false, _sx, _sy, _sl, _st;
+    const _h = panel.querySelector('#mm-ol-drag-handle');
+    if (_h) {
+      panel.addEventListener('mousedown', (e) => {
+        if (!_h.contains(e.target) || e.target.closest('button,select')) return;
+        _d = true;
+        const r = panel.getBoundingClientRect();
+        _sx = e.clientX; _sy = e.clientY; _sl = r.left; _st = r.top;
+        panel.style.right = 'auto'; panel.style.bottom = 'auto';
+        panel.style.left = _sl + 'px'; panel.style.top = _st + 'px';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', (e) => {
+        if (!_d) return;
+        panel.style.left = Math.max(0, Math.min(window.innerWidth - panel.offsetWidth, _sl + e.clientX - _sx)) + 'px';
+        panel.style.top = Math.max(0, Math.min(window.innerHeight - 60, _st + e.clientY - _sy)) + 'px';
+      });
+      document.addEventListener('mouseup', () => { _d = false; });
+    }
+  })();
 
   // ===== initPanel =====
   async function initPanelOL() {
