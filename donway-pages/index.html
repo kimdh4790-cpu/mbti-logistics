@@ -26076,7 +26076,7 @@ function _showSEModal(s){
   var _cn=calcNet(s);
   if(_cn){
     // RPRICE 설정된 항목만 override (0이면 저장값 유지)
-    if(_cn.nocont>0) s=Object.assign({},s,{nocont:_cn.nocont});
+    if(_cn.nocont>0&&!s.nocontManual) s=Object.assign({},s,{nocont:_cn.nocont});
     if(_cn.finc>0&&!s.finc) s=Object.assign({},s,{finc:_cn.finc});
   }
   var old2=document.getElementById('mo-se');if(old2)old2.remove();
