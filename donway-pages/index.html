@@ -26200,6 +26200,8 @@ function _showSEModal(s){
     {ic:'⭐',n:'④ 프레시백 인센티브',id:'se-finc',val:(_cn&&_cn.finc>0?_cn.finc:s.finc)||0,sign:'+',editable:false,note:(_cn&&_cn._addIncNote)||((s.dcnt||0)+'건 × '+(s._fincPerUnit||Math.round((s.finc||0)/(s.dcnt||1)))+'원')},
     {ic:'➕',n:'⑤ 미계약건',id:'se-nocont',
       val:(function(){
+        // 수동 수정값 우선 사용
+        if(s.nocontManual) return +s.nocont||0;
         // RPRICE 기반 재계산 우선, 없으면 저장값
         var _cnt=+s.nocontCnt||0;
         var _isW2=(s.camp||'').includes('부산');
@@ -26207,7 +26209,8 @@ function _showSEModal(s){
         return _cnt>0&&_unit>0 ? _cnt*_unit : (+s.nocont||+s.nocontAmt||0);
       })(),
       sign:'+',editable:true,
-      note:(s.nocontCnt?s.nocontCnt+'건':'')+(s.nocontCnt?'':' 사유 입력')},
+      note:(s.nocontCnt?s.nocontCnt+'건'+(s.nocontManual?' (수동수정)':''):' 사유 입력'),
+      hasReason:true,reasonId:'se-nocont-reason',reasonVal:s.nocontReason||''},
     {ic:'⚠️',n:'⑥ 분실/파손 공제',id:'se-dmg',val:s.dmg||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-dmg-reason',reasonVal:s.dmgReason||''},
     {ic:'➕',n:'⑦ 기타(+)'+(s.etcPlusTL?'<span style="font-size:9px;color:#7c3aed;margin-left:4px">+팀장수수료 '+(s.etcPlusTL).toLocaleString()+'원</span>':''),id:'se-etc-plus',val:(s.etcPlus||0)+(s.etcPlusTL||0),sign:'+',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-plus-reason',reasonVal:(s.etcPlusTL?(s.etcPlusReason?s.etcPlusReason+' / ':'')+s.etcPlusTLReason:s.etcPlusReason||'')},
     {ic:'➖',n:'⑧ 기타(-)',id:'se-etc-minus',val:s.etcMinus||0,sign:'-',editable:true,note:'사유 입력',hasReason:true,reasonId:'se-etc-minus-reason',reasonVal:s.etcMinusReason||''},
@@ -26535,6 +26538,15 @@ function _saveSECurrent(){
   var etcMinus=gv('se-etc-minus'),adv=gv('se-adv');
   var finc=gv('se-finc');
   var nocont=gv('se-nocont');
+  var nocontReason=(document.getElementById('se-nocont-reason')||{value:''}).value.trim();
+  // 계산값과 다르면 수동 수정으로 표시
+  var _nocontCalc=(function(){
+    var _cnt=+(cached&&cached.nocontCnt)||0;
+    var _isW2=(cached&&(cached.camp||'').includes('부산'))||false;
+    var _unit=_isW2?(RPRICE['nocont_w2']||0):(RPRICE['nocont_w1']||0);
+    return _cnt>0&&_unit>0?_cnt*_unit:0;
+  })();
+  var nocontManual=(_nocontCalc>0&&nocont!==_nocontCalc)||!!(cached&&cached.nocontManual&&nocont===(cached&&cached.nocont));
   var dcnt=cached?cached.dcnt||0:0;
   var rcnt=cached?cached.rcnt||0:0;
   var status=(document.getElementById('se-status')||{value:'정산예정'}).value;
@@ -26570,7 +26582,7 @@ function _saveSECurrent(){
     etcPlus:etcPlus,etcPlusReason:etcPlusReason,
     etcMinus:etcMinus,etcMinusReason:etcMinusReason,
     dmg:dmg,dmgReason:dmgReason,
-    adv:adv,nocont:nocont,
+    adv:adv,nocont:nocont,nocontManual:nocontManual,nocontReason:nocontReason,
     totalAmt:taxBase,supplyAmt:supplyAmt,monthlyWage:monthlyWage,
     emp:empIns,work:workIns,deduct:deductTotal,net:netPay,
     status:status,dealerId:_CU.dealerId,
