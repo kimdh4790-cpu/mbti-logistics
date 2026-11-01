@@ -1,8 +1,21 @@
-// MailMind AI — Outlook Web content script v1.4.0 (Full feature parity with Gmail)
+// MailMind AI — Outlook Web content script v1.5.1 (Full feature parity with Gmail)
 // outlook.live.com / outlook.office.com / outlook.office365.com
 
 const WORKER_URL_OL = 'https://mailmind-api.kimdh4790.workers.dev';
 function escapeHtmlOL(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// Trusted Types helper — Outlook Web enforces TT and rejects bare .innerHTML = string
+let _mmOLTTPolicy = null;
+function _safeInnerHTML(el, html) {
+  if (typeof window.trustedTypes !== 'undefined') {
+    if (!_mmOLTTPolicy) {
+      try { _mmOLTTPolicy = window.trustedTypes.createPolicy('mailmind-ol', { createHTML: s => s }); }
+      catch (_) { try { _mmOLTTPolicy = window.trustedTypes.createPolicy('mailmind-ol-2', { createHTML: s => s }); } catch (__) {} }
+    }
+    if (_mmOLTTPolicy) { el.innerHTML = _mmOLTTPolicy.createHTML(html); return; }
+  }
+  el.innerHTML = html;
+}
 
 // ===== UI 문자열 (Gmail content.js와 동일) =====
 const UI_STRINGS_OL = {
@@ -380,7 +393,7 @@ async function createOutlookPanel() {
   panel.style.direction = olSelectedMyLang === 'Arabic' ? 'rtl' : 'ltr';
   olCurrentPanel = panel;
 
-  panel.innerHTML = `
+  _safeInnerHTML(panel, `
     <div id="mm-ol-drag-handle" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:move;user-select:none">
       <span style="font-size:14px;font-weight:700;color:#e91e8c;letter-spacing:-0.3px">✦ MailMind</span>
       <div style="display:flex;align-items:center;gap:8px">
@@ -501,7 +514,7 @@ async function createOutlookPanel() {
     </div>
 
     <button id="mm-ol-settings-toggle" style="width:100%;margin-top:8px;padding:6px;background:#f1f3f4;color:#202124;border:1px solid #bdc1c6;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer">${ui.settings}</button>
-  `;
+  `);
 
   document.body.appendChild(panel);
 
@@ -557,20 +570,20 @@ async function createOutlookPanel() {
     // 플랜별 버튼
     const container = panel.querySelector('#mm-ol-pro-btns');
     if (userData.plan === 'pro') {
-      container.innerHTML = `
+      _safeInnerHTML(container, `
         <button id="mm-ol-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-ol-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
-      `;
+      `);
       panel.querySelector('#mm-ol-triple').addEventListener('click', () => generateTripleOL());
       panel.querySelector('#mm-ol-smart').addEventListener('click', () => generateSmartOL());
     } else if (userData.plan === 'basic') {
-      container.innerHTML = `
+      _safeInnerHTML(container, `
         <button id="mm-ol-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <a href="https://mailmind.yongcha.app#pricing" target="_blank" style="flex:1;display:flex;align-items:center;justify-content:center;padding:8px;background:linear-gradient(135deg,#fff8e1,#fff3e0);color:#e65100;border:1px solid #ffb74d;border-radius:8px;font-size:11px;text-decoration:none;font-weight:600">👑 Smart Reply · Unlock Pro</a>
-      `;
+      `);
       panel.querySelector('#mm-ol-triple').addEventListener('click', () => generateTripleOL());
     } else {
-      container.innerHTML = `<a href="https://mailmind.yongcha.app#pricing" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:linear-gradient(135deg,#fff8e1,#fff3e0);color:#e65100;border:1px solid #ffb74d;border-radius:8px;font-size:11px;text-decoration:none;box-sizing:border-box;font-weight:600">👑 Compare & Smart Reply · Unlock Basic/Pro</a>`;
+      _safeInnerHTML(container, `<a href="https://mailmind.yongcha.app#pricing" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:8px;background:linear-gradient(135deg,#fff8e1,#fff3e0);color:#e65100;border:1px solid #ffb74d;border-radius:8px;font-size:11px;text-decoration:none;box-sizing:border-box;font-weight:600">👑 Compare & Smart Reply · Unlock Basic/Pro</a>`);
     }
 
     applyUILangOL(olSelectedMyLang);
@@ -634,7 +647,7 @@ async function createOutlookPanel() {
     if (tripleBtn) tripleBtn.textContent = ui.compare;
     if (smartBtn) smartBtn.textContent = ui.smartReply;
     const toneSelect = panel.querySelector('#mm-ol-tone');
-    if (toneSelect) { const cur = toneSelect.value; toneSelect.innerHTML = getToneOptionsOL(lang); toneSelect.value = cur; }
+    if (toneSelect) { const cur = toneSelect.value; _safeInnerHTML(toneSelect, getToneOptionsOL(lang)); toneSelect.value = cur; }
     const _olGuardTitleLabels = {Korean:'🛡️ 스마트 가드',Japanese:'🛡️ スマートガード',Chinese:'🛡️ 智能防护',Spanish:'🛡️ Guardia de respuesta',French:'🛡️ Garde de réponse',German:'🛡️ Antwort-Schutz',Portuguese:'🛡️ Guarda de resposta',Arabic:'🛡️ حارس الرد',Italian:'🛡️ Guardia risposta',Turkish:'🛡️ Yanıt Koruyucu',Vietnamese:'🛡️ Bộ bảo vệ',Thai:'🛡️ ตัวป้องกัน',Indonesian:'🛡️ Penjaga balasan'};
     const _olGuardTitleEl = panel.querySelector('#mm-ol-guard-title');
     if (_olGuardTitleEl) _olGuardTitleEl.textContent = _olGuardTitleLabels[lang] || '🛡️ Smart Reply Guard';
@@ -645,7 +658,7 @@ async function createOutlookPanel() {
     if (_olGuardEl2&&_olGuardEl2.style.display!=='none'&&_olGuardTxtEl&&_olGuardConditions.length>0) {
       const _olAW2={Korean:'⚠️ 첨부 파일 언급 — 전송 전 확인',Japanese:'⚠️ 添付ファイルの言及 — 送信前に確認',Chinese:'⚠️ 提及附件 — 发送前确认',Spanish:'⚠️ Se menciona adjunto — verifica antes de enviar',French:"⚠️ Pièce jointe mentionnée — vérifiez avant d'envoyer",German:'⚠️ Anhang erwähnt — vor dem Senden prüfen',Portuguese:'⚠️ Anexo mencionado — verifique antes de enviar',Arabic:'⚠️ تم ذكر مرفق — تحقق قبل الإرسال',Italian:'⚠️ Allegato menzionato — controlla prima di inviare',Turkish:'⚠️ Ek belirtildi — göndermeden önce kontrol et',Vietnamese:'⚠️ Đề cập tệp đính kèm — kiểm tra trước khi gửi',Thai:'⚠️ กล่าวถึงไฟล์แนบ — ตรวจสอบก่อนส่ง',Indonesian:'⚠️ Lampiran disebutkan — periksa sebelum mengirim'};
       const _olKN2={Korean:'💡 일본어 경어(敬語)가 적용되었습니다.',Chinese:'💡 已应用日语敬语（敬語）。',Spanish:'💡 Se aplicó el keigo japonés (敬語).',French:'💡 Le keigo japonais (敬語) a été appliqué.',German:'💡 Japanisches Keigo (敬語) wurde angewendet.'};
-      _olGuardTxtEl.innerHTML=_olGuardConditions.map(c=>c==='attach'?(_olAW2[lang]||'⚠️ Attachment mentioned — check before sending.'):(_olKN2[lang]||'💡 Japanese Keigo (敬語) applied.')).join('<br>');
+      _safeInnerHTML(_olGuardTxtEl, _olGuardConditions.map(c=>c==='attach'?(_olAW2[lang]||'⚠️ Attachment mentioned — check before sending.'):(_olKN2[lang]||'💡 Japanese Keigo (敬語) applied.')).join('<br>'));
     }
     panel.style.direction = lang === 'Arabic' ? 'rtl' : 'ltr';
   }
@@ -878,7 +891,7 @@ async function createOutlookPanel() {
     chrome.storage.sync.get(['templates'], data => {
       const tpls = data.templates || [];
       const list = panel.querySelector('#mm-ol-templates-list');
-      list.innerHTML = tpls.map((t,i) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#e8f0fe;border-radius:12px;font-size:11px;cursor:pointer" data-idx="${i}"><span class="mm-ol-tpl-use">${escapeHtmlOL(t)}</span><span class="mm-ol-tpl-del" data-idx="${i}" style="color:#e91e8c;font-weight:bold">×</span></span>`).join('');
+      _safeInnerHTML(list, tpls.map((t,i) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#e8f0fe;border-radius:12px;font-size:11px;cursor:pointer" data-idx="${i}"><span class="mm-ol-tpl-use">${escapeHtmlOL(t)}</span><span class="mm-ol-tpl-del" data-idx="${i}" style="color:#e91e8c;font-weight:bold">×</span></span>`).join(''));
       list.querySelectorAll('.mm-ol-tpl-use').forEach(el => { el.addEventListener('click', function() { panel.querySelector('#mm-ol-output').value += '\n'+this.textContent; showToastOL('템플릿 추가됐어요!', 'success'); }); });
       list.querySelectorAll('.mm-ol-tpl-del').forEach(el => { el.addEventListener('click', function(e) { e.stopPropagation(); chrome.storage.sync.get(['templates'], d => { const t2 = d.templates||[]; t2.splice(parseInt(this.dataset.idx),1); chrome.storage.sync.set({ templates: t2 }); renderTemplatesOL(); }); }); });
     });
@@ -946,7 +959,7 @@ async function createOutlookPanel() {
         const guards = _olGuardConditions.map(c=>c==='attach'?(_olAW[olSelectedMyLang]||'⚠️ Attachment mentioned — check before sending.'):(_olKN[olSelectedMyLang]||'💡 Japanese Keigo (敬語) applied.'));
         const guardEl = panel.querySelector('#mm-ol-guard');
         const guardText = panel.querySelector('#mm-ol-guard-text');
-        if (guards.length > 0) { guardText.innerHTML = guards.join('<br>'); guardEl.style.display='block'; } else guardEl.style.display='none';
+        if (guards.length > 0) { _safeInnerHTML(guardText, guards.join('<br>')); guardEl.style.display='block'; } else guardEl.style.display='none';
         // 약속 추출
         const promises = extractPromisesOL(replyWithSig, olSelectedMyLang);
         const promisesEl = panel.querySelector('#mm-ol-promises');
@@ -994,7 +1007,7 @@ async function createOutlookPanel() {
         // 탭 렌더링 (먼저 실행)
         const verTabs = panel.querySelector('#mm-ol-ver-tabs');
         const toneName = (TONES_I18N_OL[olSelectedMyLang]||TONES_I18N_OL['English'])[TONE_KEYS_OL.indexOf(olSelectedTone)] || olSelectedTone;
-        verTabs.innerHTML = versions.map((_,i) => `<button class="mm-ol-ver-btn" data-ver="${i}" style="font-size:11px;padding:4px 12px;border:1px solid ${i===0?'#e91e8c':'#dadce0'};border-radius:20px;background:${i===0?'#fce4ec':'#fff'};color:${i===0?'#e91e8c':'#5f6368'};cursor:pointer">${toneName} ${i+1}</button>`).join('') + `<button id="mm-ol-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`;
+        _safeInnerHTML(verTabs, versions.map((_,i) => `<button class="mm-ol-ver-btn" data-ver="${i}" style="font-size:11px;padding:4px 12px;border:1px solid ${i===0?'#e91e8c':'#dadce0'};border-radius:20px;background:${i===0?'#fce4ec':'#fff'};color:${i===0?'#e91e8c':'#5f6368'};cursor:pointer">${toneName} ${i+1}</button>`).join('') + `<button id="mm-ol-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`);
         panel.querySelector('#mm-ol-versions').style.display='block';
         // edit-bar / edit-btn (null-safety)
         const _ebOL = panel.querySelector('#mm-ol-edit-bar');
@@ -1077,7 +1090,7 @@ async function createOutlookPanel() {
         panel.querySelector('#mm-ol-upgrade').style.display='none';
         if (versions.length > 1) {
           const verTabs = panel.querySelector('#mm-ol-ver-tabs');
-          verTabs.innerHTML = versions.map((_,i) => `<button class="mm-ol-ver-tab${i===0?' active':''}" data-idx="${i}" style="font-size:11px;padding:4px 12px;border:1px solid ${i===0?'#e91e8c':'#dadce0'};border-radius:20px;background:${i===0?'#fce4ec':'#fff'};color:${i===0?'#e91e8c':'#5f6368'};cursor:pointer">v${i+1}</button>`).join('') + `<button id="mm-ol-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`;
+          _safeInnerHTML(verTabs, versions.map((_,i) => `<button class="mm-ol-ver-tab${i===0?' active':''}" data-idx="${i}" style="font-size:11px;padding:4px 12px;border:1px solid ${i===0?'#e91e8c':'#dadce0'};border-radius:20px;background:${i===0?'#fce4ec':'#fff'};color:${i===0?'#e91e8c':'#5f6368'};cursor:pointer">v${i+1}</button>`).join('') + `<button id="mm-ol-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`);
           panel.querySelector('#mm-ol-versions').style.display='block';
           verTabs.querySelectorAll('.mm-ol-ver-tab').forEach(tab => {
             tab.addEventListener('click', async function() {
@@ -1235,7 +1248,7 @@ function detectAndShowInfoOL(emailContent, lang) {
     if (olSelectedTone==='professional') { olSelectedTone='apologetic'; olCurrentPanel.querySelector('#mm-ol-tone').value='apologetic'; }
   } else if (/negotiate|price|discount|offer|proposal/.test(text)) { infos.push(d.negotiate); }
   const detectEl = olCurrentPanel.querySelector('#mm-ol-detect-info');
-  if (infos.length > 0) { detectEl.style.display='block'; detectEl.innerHTML=infos.join('<br>'); } else detectEl.style.display='none';
+  if (infos.length > 0) { detectEl.style.display='block'; _safeInnerHTML(detectEl, infos.join('<br>')); } else detectEl.style.display='none';
 }
 
 // ===== 태스크/일정 추출 =====
@@ -1297,7 +1310,7 @@ function extractTasksAndDatesOL(emailContent, lang) {
   if (tasksList) tasksList.innerHTML = '';
   if (taskItems.length > 0) {
     if (tasksEl) tasksEl.style.display='block';
-    if (tasksList) tasksList.innerHTML = taskItems.join('');
+    if (tasksList) _safeInnerHTML(tasksList, taskItems.join(''));
   } else {
     if (tasksEl) tasksEl.style.display='none';
   }
@@ -1420,9 +1433,9 @@ async function openOutlookComposePanel() {
         _vt.style.display = 'flex';
         const _fpTlRstOL = panel.querySelector('#mm-ol-tl-wrap');
         if (_fpTlRstOL) { _fpTlRstOL.style.pointerEvents = 'none'; _fpTlRstOL.style.opacity = '0.4'; }
-        _vt.innerHTML = _olCpVersions.map((v, i) =>
+        _safeInnerHTML(_vt, _olCpVersions.map((v, i) =>
           `<button class="mm-ol-cp-ver-btn" data-idx="${i}" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid ${i===_olCpCurrentVerIdx?'#f57c00':'#e0e0e0'};background:${i===_olCpCurrentVerIdx?'#fff3e0':'#f5f5f5'};color:${i===_olCpCurrentVerIdx?'#f57c00':'#666'};font-family:inherit">${toneLabelOL(v.tone)}</button>`
-        ).join('') + `<button id="mm-ol-cp-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`;
+        ).join('') + `<button id="mm-ol-cp-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`);
         _vt.querySelectorAll('.mm-ol-cp-ver-btn').forEach(vBtn => {
           vBtn.addEventListener('click', () => {
             _olCpCurrentVerIdx = parseInt(vBtn.dataset.idx);
@@ -1524,7 +1537,7 @@ async function openOutlookComposePanel() {
 
   function renderOLCompose() {
     const t = T();
-    panel.innerHTML = `
+    _safeInnerHTML(panel, `
       <div id="mm-ol-cp-header" style="padding:13px 16px 11px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:linear-gradient(135deg,#fff5fb,#fff);border-radius:13px 13px 0 0;cursor:move;user-select:none">
         <span style="font-weight:700;color:#e91e8c;font-size:14px">✦ MailMind</span>
         <button id="mm-ol-cp-close" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:18px;line-height:1;padding:2px 4px;border-radius:5px" onmouseenter="this.style.color='#e91e8c'" onmouseleave="this.style.color='#bbb'">✕</button>
@@ -1571,7 +1584,7 @@ async function openOutlookComposePanel() {
         </div>
         <div id="mm-ol-cp-usage" style="text-align:right;font-size:10px;color:#bbb;margin-top:9px"></div>
       </div>
-    `;
+    `);
     bindOLComposeEvents();
   }
 
@@ -1654,7 +1667,7 @@ async function openOutlookComposePanel() {
           return;
         }
         const origText = btn.innerHTML;
-        btn.innerHTML = '⏳';
+        _safeInnerHTML(btn, '⏳');
         btn.disabled = true;
         try {
           const subjectEl = panel.querySelector('#mm-ol-cp-subject');
@@ -1666,7 +1679,7 @@ async function openOutlookComposePanel() {
           if (bodyData.success) panel.querySelector('#mm-ol-cp-output').value = _stripSalutationOL(bodyData.translated || '');
           if (subjData?.success && subjectEl) subjectEl.value = subjData.translated || '';
         } catch(e) {}
-        btn.innerHTML = origText;
+        _safeInnerHTML(btn, origText);
         btn.disabled = false;
         // 드롭다운 닫기 + 트리거 라벨 업데이트
         transLangDropOpenOL = false;
@@ -1678,7 +1691,7 @@ async function openOutlookComposePanel() {
         if (arrow) arrow.style.transform = '';
         if (trg) {
           const selL = COMPOSE_LANGS_OL.find(l=>l.value===targetLang)||COMPOSE_LANGS_OL[0];
-          trg.innerHTML = `<span style="font-size:15px">${selL.flag}</span><span style="font-size:12px;color:#333;flex:1;text-align:left">${selL.label}</span><span id="mm-ol-tl-arrow" style="font-size:10px;color:#999;transition:transform .15s;">▾</span>`;
+          _safeInnerHTML(trg, `<span style="font-size:15px">${selL.flag}</span><span style="font-size:12px;color:#333;flex:1;text-align:left">${selL.label}</span><span id="mm-ol-tl-arrow" style="font-size:10px;color:#999;transition:transform .15s;">▾</span>`);
         }
         panel.querySelectorAll('.mm-ol-tl-btn').forEach(b => {
           b.style.background = b.dataset.val === targetLang ? '#fce4f3' : '#fff';
@@ -1851,7 +1864,7 @@ async function openOutlookComposePanel() {
         _vtOL.style.display = 'flex';
         const _fpTlOL = panel.querySelector('#mm-ol-tl-wrap');
         if (_fpTlOL) { _fpTlOL.style.pointerEvents = 'none'; _fpTlOL.style.opacity = '0.4'; }
-        _vtOL.innerHTML = _olCpVersions.map((v, i) => `<button class="mm-ol-cp-ver-btn" data-idx="${i}" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid ${i===0?'#f57c00':'#e0e0e0'};background:${i===0?'#fff3e0':'#f5f5f5'};color:${i===0?'#f57c00':'#666'};font-family:inherit">${tlMap[v.tone]||v.tone}</button>`).join('') + `<button id="mm-ol-cp-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`;
+        _safeInnerHTML(_vtOL, _olCpVersions.map((v, i) => `<button class="mm-ol-cp-ver-btn" data-idx="${i}" style="padding:5px 10px;border-radius:16px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid ${i===0?'#f57c00':'#e0e0e0'};background:${i===0?'#fff3e0':'#f5f5f5'};color:${i===0?'#f57c00':'#666'};font-family:inherit">${tlMap[v.tone]||v.tone}</button>`).join('') + `<button id="mm-ol-cp-ver-confirm" style="font-size:11px;padding:4px 14px;border:1.5px solid #4caf50;border-radius:20px;background:#e8f5e9;color:#2e7d32;cursor:pointer;font-family:inherit;font-weight:700;margin-left:4px;">✓ 이 버전 선택</button>`);
         _vtOL.querySelectorAll('.mm-ol-cp-ver-btn').forEach(btn => {
           btn.addEventListener('click', () => {
             _olCpCurrentVerIdx = parseInt(btn.dataset.idx);
