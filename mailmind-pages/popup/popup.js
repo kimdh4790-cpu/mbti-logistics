@@ -94,7 +94,7 @@ async function showLoggedOut() {
 
 async function getTokenViaWebAuthFlow() {
   const CLIENT_ID = '40761160761-dlbqacnspe2c89uf0uu06nf3omt0qof6.apps.googleusercontent.com';
-  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
+  const redirectUri = 'https://mailmind-api.kimdh4790.workers.dev/oauth/callback';
   const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,
