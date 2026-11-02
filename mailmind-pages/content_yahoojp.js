@@ -2,6 +2,7 @@
 // Pattern mirrors content_outlook.js
 
 const WORKER_URL_YJ = 'https://mailmind-api.kimdh4790.workers.dev';
+const API_KEY_content_yahoojp = 'mm-app-2026';
 
 const PLAN_LIMITS_YJ = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
@@ -176,7 +177,7 @@ async function incrementUsageYJ(serverCount) {
 
 async function syncUsageYJ(email) {
   try {
-    const res = await fetch(`${WORKER_URL_YJ}/status`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+    const res = await fetch(`${WORKER_URL_YJ}/status`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ email }) });
     const data = await res.json();
     if (data.plan) {
       const plan = data.plan;
@@ -1014,7 +1015,7 @@ async function createYahooJPPanel() {
         else { _yjVersions = [currentText]; _yjCurrentVerIdx = 0; }
       }
       try {
-        const res = await fetch(`${WORKER_URL_YJ}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
+        const res = await fetch(`${WORKER_URL_YJ}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
         const data = await res.json();
         if (data.success && data.translated) {
           panel.querySelector('#mm-yj-output').value = data.translated;
@@ -1045,7 +1046,7 @@ async function createYahooJPPanel() {
     btn.disabled = true; btn.textContent = ui3.translating; resultEl.style.display = 'none';
     try {
       const ud = await getUserDataYJ();
-      const res = await fetch(`${WORKER_URL_YJ}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: emailContent, targetLanguage: yjSelectedMyLang, email: ud.userEmail }) });
+      const res = await fetch(`${WORKER_URL_YJ}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: yjSelectedMyLang, email: ud.userEmail }) });
       const data = await res.json();
       if (data.success && data.translated) {
         resultEl.textContent = data.translated;
@@ -1071,7 +1072,7 @@ async function createYahooJPPanel() {
     btn.disabled = true; btn.textContent = getUILangYJ(yjSelectedMyLang).summarizing;
     try {
       const ud = await getUserDataYJ();
-      const res = await fetch(`${WORKER_URL_YJ}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${yjSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:yjSelectedMyLang, email:ud.userEmail, isSummary:true }) });
+      const res = await fetch(`${WORKER_URL_YJ}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${yjSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:yjSelectedMyLang, email:ud.userEmail, isSummary:true }) });
       const data = await res.json();
       if (data.success) {
         const summaryEl = panel.querySelector('#mm-yj-thread-summary');
@@ -1137,7 +1138,7 @@ async function createYahooJPPanel() {
       const storedYJ = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureYJ = storedYJ.signature || '';
       const userInfoYJ = storedYJ.userInfo || '';
-      const res = await fetch(`${WORKER_URL_YJ}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, language:yjSelectedMyLang, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureYJ && { signature: signatureYJ }), ...(userInfoYJ && { userInfo: userInfoYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await fetch(`${WORKER_URL_YJ}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, language:yjSelectedMyLang, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureYJ && { signature: signatureYJ }), ...(userInfoYJ && { userInfo: userInfoYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-yj-spam');
@@ -1195,7 +1196,7 @@ async function createYahooJPPanel() {
     try {
       const storedTripleYJ = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleYJ = storedTripleYJ.userInfo || '';
-      const res = await fetch(`${WORKER_URL_YJ}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYJ && { userInfo: userInfoTripleYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await fetch(`${WORKER_URL_YJ}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYJ && { userInfo: userInfoTripleYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1247,7 +1248,7 @@ async function createYahooJPPanel() {
     try {
       const storedSmartYJ = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartYJ = storedSmartYJ.userInfo || '';
-      const res = await fetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await fetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _yjVersions=(data.versions||[]).map(_stripSalutationYJ); _yjTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureYJ(t):t)); _yjCurrentVerIdx=0; _yjIsTranslated=false; _yjCurrentDisplayLang=yjSelectedMyLang; _yjOrigLang=yjSelectedMyLang;
@@ -1297,7 +1298,7 @@ async function createYahooJPPanel() {
     try {
       const stored = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const res = await fetch(`${WORKER_URL_YJ}/refine-compose`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
         body: JSON.stringify({ draft, refineGoal: 'enhance', tone: yjSelectedTone, myLanguage: _yjCurrentDisplayLang || yjSelectedMyLang, email: ud.userEmail, country: yjSelectedCountry, clientDate: new Date().toISOString(), ...(stored.userInfo ? { userInfo: stored.userInfo } : {}), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) })
       });
       const data = await res.json();
@@ -1752,11 +1753,11 @@ async function renderYJFloatPanel(panel) {
             const existingSubject = subjectEl?.value?.trim() || '';
             const [bodyData, subjData] = await Promise.all([
               fetch(`${WORKER_URL_YJ}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
                 body: JSON.stringify({ text: existingOutput, targetLanguage: targetLang })
               }).then(r => r.json()),
               existingSubject ? fetch(`${WORKER_URL_YJ}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
                 body: JSON.stringify({ text: existingSubject, targetLanguage: targetLang })
               }).then(r => r.json()) : Promise.resolve(null)
             ]);
@@ -2030,7 +2031,7 @@ async function renderYJFloatPanel(panel) {
 
     try {
       const res = await fetch(`${WORKER_URL_YJ}${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify(body)
       });
       const data = await res.json();
       if (data.success) {

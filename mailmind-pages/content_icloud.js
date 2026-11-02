@@ -4,6 +4,7 @@
 if (window.self !== window.top) { /* skip sub-frames */ } else {
 
 const WORKER_URL_IC = 'https://mailmind-api.kimdh4790.workers.dev';
+const API_KEY_content_icloud = 'mm-app-2026';
 
 const PLAN_LIMITS_IC = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
@@ -163,7 +164,7 @@ async function incrementUsageIC(serverCount) {
 
 async function syncUsageIC(email) {
   try {
-    const res = await fetch(`${WORKER_URL_IC}/status`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+    const res = await fetch(`${WORKER_URL_IC}/status`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ email }) });
     const data = await res.json();
     if (data.plan) {
       const plan = data.plan;
@@ -1006,7 +1007,7 @@ async function createiCloudPanel() {
         else { _icVersions = [currentText]; _icCurrentVerIdx = 0; }
       }
       try {
-        const res = await fetch(`${WORKER_URL_IC}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
+        const res = await fetch(`${WORKER_URL_IC}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
         const data = await res.json();
         if (data.success && data.translated) {
           panel.querySelector('#mm-ic-output').value = data.translated;
@@ -1037,7 +1038,7 @@ async function createiCloudPanel() {
     btn.disabled = true; btn.textContent = ui3.translating; resultEl.style.display = 'none';
     try {
       const ud = await getUserDataIC();
-      const res = await fetch(`${WORKER_URL_IC}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: emailContent, targetLanguage: icSelectedMyLang, email: ud.userEmail }) });
+      const res = await fetch(`${WORKER_URL_IC}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: icSelectedMyLang, email: ud.userEmail }) });
       const data = await res.json();
       if (data.success && data.translated) {
         resultEl.textContent = data.translated;
@@ -1063,7 +1064,7 @@ async function createiCloudPanel() {
     btn.disabled = true; btn.textContent = getUILangIC(icSelectedMyLang).summarizing;
     try {
       const ud = await getUserDataIC();
-      const res = await fetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${icSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:icSelectedMyLang, email:ud.userEmail, isSummary:true }) });
+      const res = await fetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${icSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:icSelectedMyLang, email:ud.userEmail, isSummary:true }) });
       const data = await res.json();
       if (data.success) {
         const summaryEl = panel.querySelector('#mm-ic-thread-summary');
@@ -1129,7 +1130,7 @@ async function createiCloudPanel() {
       const storedIC = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureIC = storedIC.signature || '';
       const userInfoIC = storedIC.userInfo || '';
-      const res = await fetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, language:icSelectedMyLang, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureIC && { signature: signatureIC }), ...(userInfoIC && { userInfo: userInfoIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await fetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, language:icSelectedMyLang, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureIC && { signature: signatureIC }), ...(userInfoIC && { userInfo: userInfoIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-ic-spam');
@@ -1187,7 +1188,7 @@ async function createiCloudPanel() {
     try {
       const storedTripleIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleIC = storedTripleIC.userInfo || '';
-      const res = await fetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await fetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1239,7 +1240,7 @@ async function createiCloudPanel() {
     try {
       const storedSmartIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartIC = storedSmartIC.userInfo || '';
-      const res = await fetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await fetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _icVersions=(data.versions||[]).map(_stripSalutationIC); _icTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureIC(t):t)); _icCurrentVerIdx=0; _icIsTranslated=false; _icCurrentDisplayLang=icSelectedMyLang; _icOrigLang=icSelectedMyLang;
@@ -1289,7 +1290,7 @@ async function createiCloudPanel() {
     try {
       const stored = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const res = await fetch(`${WORKER_URL_IC}/refine-compose`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
         body: JSON.stringify({ draft, refineGoal: 'enhance', tone: icSelectedTone, myLanguage: _icCurrentDisplayLang || icSelectedMyLang, email: ud.userEmail, country: icSelectedCountry, clientDate: new Date().toISOString(), ...(stored.userInfo ? { userInfo: stored.userInfo } : {}), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) })
       });
       const data = await res.json();
@@ -1744,11 +1745,11 @@ async function renderICFloatPanel(panel) {
             const existingSubject = subjectEl?.value?.trim() || '';
             const [bodyData, subjData] = await Promise.all([
               fetch(`${WORKER_URL_IC}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
                 body: JSON.stringify({ text: existingOutput, targetLanguage: targetLang })
               }).then(r => r.json()),
               existingSubject ? fetch(`${WORKER_URL_IC}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
                 body: JSON.stringify({ text: existingSubject, targetLanguage: targetLang })
               }).then(r => r.json()) : Promise.resolve(null)
             ]);
@@ -2031,7 +2032,7 @@ async function renderICFloatPanel(panel) {
 
     try {
       const res = await fetch(`${WORKER_URL_IC}${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify(body)
       });
       const data = await res.json();
       if (data.success) {

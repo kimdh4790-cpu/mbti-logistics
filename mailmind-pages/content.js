@@ -615,6 +615,7 @@ function getUILang(myLang) {
 }
 
 const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
+const API_KEY = 'mm-app-2026';
 
 // 서명·템플릿 인메모리 캐시 (extension context 재로드 시에도 유지)
 let _cachedSignature = '';
@@ -844,7 +845,7 @@ async function syncUsageFromServer(userEmail) {
   try {
     const res = await fetch(`${WORKER_URL}/status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ email: userEmail })
     });
     const data = await res.json();
@@ -1451,7 +1452,7 @@ function createPanel() {
     if (_sigElGM) {
       const _rawSigGM = _sigElGM.dataset.rawSig || _sigElGM.value;
       if (_rawSigGM && lang !== 'Korean') {
-        fetch(`${WORKER_URL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: _rawSigGM, targetLanguage: resolveAutoLang(lang), honorific: selectedHonorific }) }).then(r => r.json()).then(r => { if (r.success && r.translated) { _sigElGM.dataset.rawSig = _rawSigGM; _sigElGM.value = r.translated; } }).catch(() => {});
+        fetch(`${WORKER_URL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body: JSON.stringify({ text: _rawSigGM, targetLanguage: resolveAutoLang(lang), honorific: selectedHonorific }) }).then(r => r.json()).then(r => { if (r.success && r.translated) { _sigElGM.dataset.rawSig = _rawSigGM; _sigElGM.value = r.translated; } }).catch(() => {});
       } else if (lang === 'Korean') { _sigElGM.value = _rawSigGM; _sigElGM.dataset.rawSig = _rawSigGM; }
     }
 
@@ -1505,7 +1506,7 @@ function createPanel() {
       if (d.userEmail) {
         fetch(`${WORKER_URL}/set-language`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
           body: JSON.stringify({ email: d.userEmail, myLanguage: this.value })
         }).catch(() => {});
       }
@@ -1535,7 +1536,7 @@ function createPanel() {
       const storedSig = await new Promise(r => safeStorageGet(['signature'], r));
       const signature = storedSig.signature || '';
       const res = await fetch(`${WORKER_URL}/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({ emailContent, tone: selectedTone, honorific: selectedHonorific, language: selectedMyLang, myLanguage: selectedMyLang, country: selectedCountry, email: userData.userEmail, userId: userData.userId, ...(signature && { signature }) })
       });
       const data = await res.json();
@@ -1728,7 +1729,7 @@ function createPanel() {
 
     try {
       const res = await fetch(`${WORKER_URL}/generate-triple`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
           emailContent,
           tone: selectedTone,
@@ -1883,7 +1884,7 @@ function createPanel() {
 
     try {
       const res = await fetch(`${WORKER_URL}/generate-smart`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
           emailContent,
           tone: selectedTone,
@@ -2123,7 +2124,7 @@ function createPanel() {
     try {
       const stored = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const res = await fetch(`${WORKER_URL}/refine-compose`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({ draft, refineGoal: 'enhance', tone: selectedTone, honorific: selectedHonorific, myLanguage: _refineLang, email: ud.userEmail, country: selectedCountry, clientDate: new Date().toISOString(), ...(stored.userInfo ? { userInfo: stored.userInfo } : {}) })
       });
       const data = await res.json();
@@ -2889,7 +2890,7 @@ function createPanel() {
         if (_replySignature) {
           try {
             const sr = await fetch(`${WORKER_URL}/translate`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
               body: JSON.stringify({ text: _replySignature, targetLanguage: resolveAutoLang(targetLang), honorific: selectedHonorific })
             }).then(r => r.json());
             if (sr.success && sr.translated) _translatedSig = sr.translated;
@@ -2903,7 +2904,7 @@ function createPanel() {
         const allResults = await Promise.all(toTranslate.map((text, i) =>
           fetch(`${WORKER_URL}/translate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
             body: JSON.stringify({ text, targetLanguage: resolveAutoLang(targetLang), honorific: selectedHonorific })
           })
             .then(r => r.json())
@@ -3002,7 +3003,7 @@ function createPanel() {
       const ud = await getUserData();
       const res = await fetch(`${WORKER_URL}/translate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({ text: emailContent, targetLanguage: resolveAutoLang(selectedMyLang), honorific: selectedHonorific, email: ud.userEmail })
       });
       const data = await res.json();
@@ -3050,7 +3051,7 @@ function createPanel() {
     try {
       const res = await fetch(`${WORKER_URL}/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
           emailContent: `Summarize this email thread in 3-5 bullet points in ${selectedMyLang}. Be concise and focus on key points, action items, and decisions.\n\n${emailContent}`,
           tone: 'concise',
@@ -3118,7 +3119,7 @@ function createPanel() {
     if (selectedMyLang && selectedMyLang !== 'Korean') {
       try {
         const r = await fetch(`${WORKER_URL}/translate`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
           body: JSON.stringify({ text: data.signature, targetLanguage: resolveAutoLang(selectedMyLang), honorific: selectedHonorific })
         }).then(r => r.json());
         sigEl.value = (r.success && r.translated) ? r.translated : data.signature;
@@ -3157,7 +3158,7 @@ function createPanel() {
       templates.forEach((t, i) => {
         fetch(`${WORKER_URL}/translate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
           body: JSON.stringify({ text: t, targetLanguage: resolveAutoLang(lang), honorific: selectedHonorific })
         }).then(r => r.json()).then(d => {
           if (_tplRenderGen !== gen) return; // 구세대 결과 무시
@@ -3234,7 +3235,7 @@ function createPanel() {
         if (selectedMyLang && selectedMyLang !== 'Korean') {
           try {
             const r = await fetch(`${WORKER_URL}/translate`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
               body: JSON.stringify({ text: sig, targetLanguage: resolveAutoLang(selectedMyLang), honorific: selectedHonorific })
             }).then(r => r.json());
             resolve(text + '\n\n' + ((r.success && r.translated) ? r.translated : sig));
@@ -4042,13 +4043,13 @@ async function renderFloatPanel(panel) {
 
           const results = await Promise.all(versionsToTranslate.map(async ({ idx, draft, subject }) => {
             const bodyData = await fetch(`${WORKER_URL}/translate`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
               body: JSON.stringify({ text: draft, targetLanguage: resolveAutoLang(targetLang), honorific: selectedHonorific })
             }).then(r => r.json()).catch(() => null);
             let subjData = null;
             if (subject) {
               subjData = await fetch(`${WORKER_URL}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
                 body: JSON.stringify({ text: subject, targetLanguage: resolveAutoLang(targetLang), honorific: selectedHonorific })
               }).then(r => r.json()).catch(() => null);
             }
@@ -4219,7 +4220,7 @@ async function renderFloatPanel(panel) {
 
     try {
       const res = await fetch(`${WORKER_URL}${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify(bodyPayload)
       });
       const data = await res.json();
@@ -4314,7 +4315,7 @@ async function renderFloatPanel(panel) {
         const body = curMode === 'compose'
           ? { prompt: input, tone, myLanguage: curOutputLang, email: freshData.userEmail, country: selectedCountry, clientDate: new Date().toISOString(), ...(userInfo ? { userInfo } : {}), ...(freshData.businessCard ? { businessCard: freshData.businessCard } : {}), ...(freshData.phrases?.length ? { phrases: freshData.phrases } : {}) }
           : { draft: input, tone, myLanguage: curOutputLang, email: freshData.userEmail, country: selectedCountry, clientDate: new Date().toISOString(), ...(userInfo ? { userInfo } : {}), ...(freshData.businessCard ? { businessCard: freshData.businessCard } : {}), ...(freshData.phrases?.length ? { phrases: freshData.phrases } : {}) };
-        return fetch(`${WORKER_URL}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()).then(d => ({ tone, subject: d.subject||'', body: _stripSalutation(d.body||d.reply||'') })).catch(() => null);
+        return fetch(`${WORKER_URL}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':API_KEY}, body: JSON.stringify(body) }).then(r => r.json()).then(d => ({ tone, subject: d.subject||'', body: _stripSalutation(d.body||d.reply||'') })).catch(() => null);
       }));
       _gmFpVersions = results.filter(Boolean);
       _gmFpOrigVersions = _gmFpVersions.map(v => ({ ...v })); // 원본 보존 (번역 소스)
