@@ -1,0 +1,37 @@
+name: Delete filo-pages Project
+on:
+  workflow_dispatch:
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all deployments then project
+        env:
+          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
+          ACCOUNT: 02709cbec18d848913b4246015b9148f
+          PROJECT: filo-pages
+        run: |
+          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
+          echo "배포 목록 조회 중..."
+          PAGE=1
+          while true; do
+            RESP=$(curl -s "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/pages/projects/$PROJECT/deployments?per_page=25&page=$PAGE" \
+              -H "X-Auth-Email: kimdh4790@gmail.com" \
+              -H "X-Auth-Key: $CF_KEY")
+            IDS=$(echo "$RESP" | python3 -c "import json,sys; d=json.load(sys.stdin); ids=[r['id'] for r in d.get('result',[])] if d.get('result') else []; print('\n'.join(ids))" 2>/dev/null)
+            [ -z "$IDS" ] && break
+            while IFS= read -r ID; do
+              [ -z "$ID" ] && continue
+              RES=$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/pages/projects/$PROJECT/deployments/$ID?force=true" \
+                -H "X-Auth-Email: kimdh4790@gmail.com" \
+                -H "X-Auth-Key: $CF_KEY")
+              echo "$RES" | grep -q '"success":true' && echo "✅ 삭제: $ID" || echo "❌ 실패: $ID — $RES"
+            done <<< "$IDS"
+            PAGE=$((PAGE+1))
+          done
+          echo "프로젝트 삭제 중..."
+          RES=$(curl -s -X DELETE "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/pages/projects/$PROJECT" \
+            -H "X-Auth-Email: kimdh4790@gmail.com" \
+            -H "X-Auth-Key: $CF_KEY")
+          echo "$RES" | grep -q '"success":true' && echo "✅ filo-pages 프로젝트 삭제 완료" || echo "결과: $RES"
