@@ -29,8 +29,7 @@
     "https://mail.yahoo.com/*",
     "https://mail.yahoo.co.jp/*",
     "https://www.googleapis.com/*",
-    "https://gmail.googleapis.com/*",
-    "https://identitytoolkit.googleapis.com/*"
+    "https://gmail.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js"

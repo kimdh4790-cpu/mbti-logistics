@@ -1,5 +1,5 @@
 const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
-const FIREBASE_API_KEY = 'AIzaSyC9rrx1IYHjqVQkt_viGRxWH2IBateUlMw';
+const API_KEY = 'mm-app-2026';
 
 const PLAN_LIMITS = {
   pro:   { monthly: 300 },
@@ -93,55 +93,30 @@ async function showLoggedOut() {
   document.getElementById('user-section').style.display = 'none';
 }
 
-async function getGoogleToken() {
-  return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive: true }, (token) => {
-      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-      else if (!token) reject(new Error('No token returned'));
-      else resolve(token);
-    });
-  });
-}
-
-async function getFirebaseToken(googleAccessToken) {
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${FIREBASE_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        postBody: `access_token=${encodeURIComponent(googleAccessToken)}&providerId=google.com`,
-        requestUri: 'https://localhost',
-        returnSecureToken: true,
-      })
-    }
-  );
-  const data = await res.json();
-  if (!data.idToken) throw new Error('Firebase auth failed: ' + (data.error?.message || JSON.stringify(data)));
-  return data.idToken;
-}
-
 async function loginWithGoogle() {
   const btn = document.getElementById('btn-google-login');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Signing in…</span>'; }
   try {
-    const googleToken = await getGoogleToken();
+    const token = await new Promise((resolve, reject) => {
+      chrome.identity.getAuthToken({ interactive: true }, (t) => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else if (!t) reject(new Error('No token received'));
+        else resolve(t);
+      });
+    });
 
     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${googleToken}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     const userInfo = await res.json();
 
-    const firebaseToken = await getFirebaseToken(googleToken);
-
     const loginRes = await fetch(`${WORKER_URL}/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: firebaseToken, email: userInfo.email, name: userInfo.name })
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+      body: JSON.stringify({ token, email: userInfo.email, name: userInfo.name })
     });
     const loginData = await loginRes.json();
 
-    console.log('Worker login response:', JSON.stringify(loginData));
     if (loginData.success || loginData.plan) {
       const plan = loginData.plan || 'free';
       const monthlyLimit = PLAN_LIMITS[plan]?.monthly || 35;
@@ -175,12 +150,10 @@ async function loginWithGoogle() {
       btn.disabled = false;
       btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:18px;height:18px"> Sign in with Google';
       const errEl = document.createElement('p');
-      errEl.style.cssText = 'color:#c5221f;font-size:12px;margin-top:8px;text-align:center;white-space:pre-line;';
-      errEl.textContent = e.message === 'timeout'
-        ? 'Sign-in window may have appeared\nbehind this window. Please try again.'
-        : `Sign-in failed: ${e.message}`;
+      errEl.style.cssText = 'color:#c5221f;font-size:12px;margin-top:8px;text-align:center;';
+      errEl.textContent = 'Sign-in failed. Please try again.';
       btn.insertAdjacentElement('afterend', errEl);
-      setTimeout(() => errEl.remove(), 30000);
+      setTimeout(() => errEl.remove(), 3000);
     }
   }
 }
@@ -203,7 +176,7 @@ async function refreshStatus() {
   try {
     const res = await fetch(`${WORKER_URL}/status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ email: stored.userEmail })
     });
     const data = await res.json();
