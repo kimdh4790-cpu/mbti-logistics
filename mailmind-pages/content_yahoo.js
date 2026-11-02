@@ -1175,7 +1175,8 @@ async function createYahooPanel() {
         updateBadgeYH();
       } else if (data.error==='MONTHLY_LIMIT') {
         panel.querySelector('#mm-yh-upgrade').style.display='block';
-      } else { showToastYH('Failed: '+(data.error||'Try again.'), 'error'); }
+      } else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastYH(getUILangYH(yhSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
+      else { showToastYH('Failed: '+(data.error||'Try again.'), 'error'); }
     } catch(e) { showToastYH('Error: '+e.message, 'error'); }
     genBtn.disabled=false; genBtn.textContent=getUILangYH(yhSelectedMyLang).generate;
   }
@@ -1226,6 +1227,7 @@ async function createYahooPanel() {
         verTabs.querySelector('#mm-yh-ver-confirm')?.addEventListener('click', ()=>{ panel.querySelector('#mm-yh-versions').style.display='none'; });
         await incrementUsageYH(data.monthlyUsage); updateBadgeYH();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-yh-upgrade').style.display='block'; }
+      else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastYH(getUILangYH(yhSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
       else { showToastYH('Failed. Try again.', 'error'); }
     } catch(e) { showToastYH('Error: '+e.message, 'error'); }
     btn.disabled=false; btn.textContent=origText;
@@ -1275,6 +1277,7 @@ async function createYahooPanel() {
         if (_ebnYHS) _ebnYHS.style.display='none';
         await incrementUsageYH(data.monthlyUsage); updateBadgeYH();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-yh-upgrade').style.display='block'; }
+      else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastYH(getUILangYH(yhSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
       else { showToastYH('Failed. Try again.', 'error'); }
     } catch(e) { showToastYH('Error: '+e.message, 'error'); }
     btn.disabled=false; btn.textContent=getUILangYH(yhSelectedMyLang).smartReply;

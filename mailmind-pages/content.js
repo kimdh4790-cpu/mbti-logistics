@@ -1518,6 +1518,7 @@ function createPanel() {
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
     const userData = await getUserData();
+    if (!userData.userEmail) { showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error'); return; }
     if (userData.monthlyCount >= userData.monthlyLimit) {
       panel.querySelector('#mm-upgrade').style.display = 'block';
       return;
@@ -1681,6 +1682,8 @@ function createPanel() {
 
       } else if (data.error === 'MONTHLY_LIMIT') {
         panel.querySelector('#mm-upgrade').style.display = 'block';
+      } else if (data.error === 'Unauthorized' || data.error === 'unauthorized') {
+        showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error');
       } else {
         showToast((getUILang(selectedMyLang).errFailed || 'Failed') + ': ' + (data.error || ''), 'error');
       }
@@ -1706,6 +1709,7 @@ function createPanel() {
   let _replyOrigSingleBody = ''; // 단일버전 원본 (일반 모드)
 
   async function generateTriple(userData) {
+    if (!userData.userEmail) { showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error'); return; }
     const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
@@ -1846,6 +1850,8 @@ function createPanel() {
         updateBadge();
       } else if (data.error === 'MONTHLY_LIMIT') {
         panel.querySelector('#mm-upgrade').style.display = 'block';
+      } else if (data.error === 'Unauthorized' || data.error === 'unauthorized') {
+        showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error');
       } else {
         showToast((getUILang(selectedMyLang).errFailed || 'Failed') + ': ' + (data.error || ''), 'error');
       }
@@ -1859,6 +1865,7 @@ function createPanel() {
 
   // 이중언어 생성
   async function generateSmart(userData) {
+    if (!userData.userEmail) { showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error'); return; }
     const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
@@ -1985,6 +1992,8 @@ function createPanel() {
         updateBadge();
       } else if (data.error === 'MONTHLY_LIMIT') {
         panel.querySelector('#mm-upgrade').style.display = 'block';
+      } else if (data.error === 'Unauthorized' || data.error === 'unauthorized') {
+        showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error');
       } else {
         showToast((getUILang(selectedMyLang).errFailed || 'Failed') + ': ' + (data.error || ''), 'error');
       }
