@@ -92,50 +92,31 @@ async function showLoggedOut() {
   document.getElementById('user-section').style.display = 'none';
 }
 
-async function getTokenViaWebAuthFlow() {
-  const CLIENT_ID = '40761160761-dlbqacnspe2c89uf0uu06nf3omt0qof6.apps.googleusercontent.com';
-  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
-  const nonce = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: redirectUri,
-    response_type: 'token id_token',
-    scope: 'openid email profile',
-    prompt: 'select_account',
-    nonce
-  }).toString();
-
-  const redirectUrl = await new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (url) => {
+async function getGoogleToken() {
+  return new Promise((resolve, reject) => {
+    chrome.identity.getAuthToken({ interactive: true }, (token) => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-      else if (!url) reject(new Error('No redirect URL'));
-      else resolve(url);
+      else if (!token) reject(new Error('No token returned'));
+      else resolve(token);
     });
   });
-
-  const hash = new URL(redirectUrl).hash.slice(1);
-  const params = new URLSearchParams(hash);
-  const accessToken = params.get('access_token');
-  const idToken = params.get('id_token');
-  if (!accessToken) throw new Error(`No access token. URL: ${redirectUrl.substring(0, 200)}`);
-  return { accessToken, idToken };
 }
 
 async function loginWithGoogle() {
   const btn = document.getElementById('btn-google-login');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Signing in…</span>'; }
   try {
-    const { accessToken, idToken } = await getTokenViaWebAuthFlow();
+    const token = await getGoogleToken();
 
     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: `Bearer ${token}` }
     });
     const userInfo = await res.json();
 
     const loginRes = await fetch(`${WORKER_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: idToken || accessToken, email: userInfo.email, name: userInfo.name })
+      body: JSON.stringify({ token, email: userInfo.email, name: userInfo.name })
     });
     const loginData = await loginRes.json();
 
