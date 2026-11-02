@@ -114,7 +114,7 @@ async function getTokenViaWebAuthFlow() {
   const hash = new URL(redirectUrl).hash.slice(1);
   const params = new URLSearchParams(hash);
   const token = params.get('access_token');
-  if (!token) throw new Error('No access token');
+  if (!token) throw new Error(`No access token. URL: ${redirectUrl.substring(0, 200)}`);
   return token;
 }
 
@@ -170,9 +170,9 @@ async function loginWithGoogle() {
       errEl.style.cssText = 'color:#c5221f;font-size:12px;margin-top:8px;text-align:center;white-space:pre-line;';
       errEl.textContent = e.message === 'timeout'
         ? 'Sign-in window may have appeared\nbehind this window. Please try again.'
-        : 'Sign-in failed. Please try again.';
+        : `Sign-in failed: ${e.message}`;
       btn.insertAdjacentElement('afterend', errEl);
-      setTimeout(() => errEl.remove(), 4000);
+      setTimeout(() => errEl.remove(), 8000);
     }
   }
 }
