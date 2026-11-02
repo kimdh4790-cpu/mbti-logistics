@@ -92,39 +92,37 @@ async function showLoggedOut() {
   document.getElementById('user-section').style.display = 'none';
 }
 
-function getAuthTokenWithTimeout(interactive, timeoutMs = 25000) {
-  return Promise.race([
-    new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ interactive }, (t) => {
-        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-        else if (!t) reject(new Error('No token received'));
-        else resolve(t);
-      });
-    }),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('timeout')), timeoutMs)
-    )
-  ]);
+async function getTokenViaWebAuthFlow() {
+  const CLIENT_ID = '40761160761-31lvk1aqcitkf2ji3v9osipoanbagl7o.apps.googleusercontent.com';
+  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
+  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'token',
+    scope: 'openid email profile',
+    prompt: 'select_account'
+  }).toString();
+
+  const redirectUrl = await new Promise((resolve, reject) => {
+    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (url) => {
+      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+      else if (!url) reject(new Error('No redirect URL'));
+      else resolve(url);
+    });
+  });
+
+  const hash = new URL(redirectUrl).hash.slice(1);
+  const params = new URLSearchParams(hash);
+  const token = params.get('access_token');
+  if (!token) throw new Error('No access token');
+  return token;
 }
 
 async function loginWithGoogle() {
   const btn = document.getElementById('btn-google-login');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Signing in…</span>'; }
   try {
-    // 캐시된 토큰 제거 후 fresh 로그인 시도
-    await new Promise(resolve => {
-      chrome.identity.clearAllCachedAuthTokens(() => { void chrome.runtime.lastError; resolve(); });
-    });
-
-    let token;
-    try {
-      token = await getAuthTokenWithTimeout(true, 25000);
-    } catch (e) {
-      if (e.message === 'timeout') {
-        throw new Error('Sign-in window may have appeared behind this window.\nPlease check your taskbar and complete sign-in there.');
-      }
-      throw e;
-    }
+    const token = await getTokenViaWebAuthFlow();
 
     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${token}` }
