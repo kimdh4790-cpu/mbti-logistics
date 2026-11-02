@@ -914,6 +914,7 @@ async function createOutlookPanel() {
     const emailContent = _stripSenderSig(getOutlookEmailThread());
     if (!emailContent) { showToastOL('Email content not found.', 'error'); return; }
     const ud = await getUserDataOL();
+    if (!ud.userEmail) { showToastOL('Please sign in via the MailMind popup.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ol-upgrade').style.display='block'; return; }
     const genBtn = panel.querySelector('#mm-ol-gen');
     genBtn.disabled=true; genBtn.textContent=getUILangOL(olSelectedMyLang).generating;
@@ -970,6 +971,8 @@ async function createOutlookPanel() {
         learnStyleOL(olSelectedTone, emailContent, data.reply);
       } else if (data.error==='MONTHLY_LIMIT') {
         panel.querySelector('#mm-ol-upgrade').style.display='block';
+      } else if (data.error==='Unauthorized'||data.error==='unauthorized') {
+        showToastOL('Please sign in via the MailMind popup.', 'error');
       } else { showToastOL('Failed: '+(data.error||'Try again.'), 'error'); }
     } catch(e) { showToastOL('Error: '+e.message, 'error'); }
     genBtn.disabled=false; genBtn.textContent=getUILangOL(olSelectedMyLang).generate;
@@ -980,6 +983,7 @@ async function createOutlookPanel() {
     const emailContent = _stripSenderSig(getOutlookEmailThread());
     if (!emailContent) { showToastOL('Email not found.', 'error'); return; }
     const ud = await getUserDataOL();
+    if (!ud.userEmail) { showToastOL('Please sign in via the MailMind popup.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ol-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-ol-triple');
     const origText = btn.textContent;
@@ -1047,6 +1051,7 @@ async function createOutlookPanel() {
         await incrementUsageOL(data.monthlyUsage);
         updateBadgeOL();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-ol-upgrade').style.display='block'; }
+      else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastOL('Please sign in via the MailMind popup.', 'error'); }
       else { showToastOL('Failed. Try again.', 'error'); }
     } catch(e) { showToastOL('Error: '+e.message, 'error'); }
     btn.disabled=false; btn.textContent=origText;
@@ -1057,6 +1062,7 @@ async function createOutlookPanel() {
     const emailContent = _stripSenderSig(getOutlookEmailThread());
     if (!emailContent) { showToastOL('Email not found.', 'error'); return; }
     const ud = await getUserDataOL();
+    if (!ud.userEmail) { showToastOL('Please sign in via the MailMind popup.', 'error'); return; }
     if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastOL(getUILangOL(olSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ol-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-ol-smart');
@@ -1164,6 +1170,7 @@ async function createOutlookPanel() {
         await incrementUsageOL(data.monthlyUsage);
         updateBadgeOL();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-ol-upgrade').style.display='block'; }
+      else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastOL('Please sign in via the MailMind popup.', 'error'); }
       else { showToastOL('Failed. Try again.', 'error'); }
     } catch(e) { showToastOL('Error: '+e.message, 'error'); }
     btn.disabled=false; btn.textContent=getUILangOL(olSelectedMyLang).smartReply;
@@ -1174,6 +1181,7 @@ async function createOutlookPanel() {
     const draft = panel.querySelector('#mm-ol-output').value.trim();
     if (!draft) { showToastOL('수정할 답장이 없습니다.', 'info'); return; }
     const ud = await getUserDataOL();
+    if (!ud.userEmail) { showToastOL('Please sign in via the MailMind popup.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ol-upgrade').style.display='block'; return; }
     if (ud.plan === 'free') { showToastOL(getUILangOL(olSelectedMyLang).refinePlanMsg||'초안 다듬기는 Basic 이상 플랜에서 사용 가능합니다', 'error'); return; }
     const refineBtn = panel.querySelector('#mm-ol-refine-btn');
@@ -1198,6 +1206,8 @@ async function createOutlookPanel() {
         showToastOL(getUILangOL(olSelectedMyLang).refineDone||'✨ 다듬기 완료!', 'success');
       } else if (data.error === 'MONTHLY_LIMIT') {
         panel.querySelector('#mm-ol-upgrade').style.display = 'block';
+      } else if (data.error==='Unauthorized'||data.error==='unauthorized') {
+        showToastOL('Please sign in via the MailMind popup.', 'error');
       } else { showToastOL('Failed: ' + (data.error || 'Try again.'), 'error'); }
     } catch(e) { showToastOL('Error: ' + e.message, 'error'); }
     refineBtn.disabled = false; refineBtn.textContent = getUILangOL(olSelectedMyLang).refine||'✨ 다듬기';
