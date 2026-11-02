@@ -1,26 +1,36 @@
 {
-  "date": "2026-10-26",
-  "total": 2,
+  "date": "2026-11-02",
+  "total": 3,
   "byCategory": {
     "AI기능업그레이드": [
       {
         "category": "AI기능업그레이드",
-        "channel": "방구석컴퍼니",
-        "instagram": "방구석컴퍼니",
-        "title": "클로드 코드 한 줄로 AI 뮤비 만들기 | 노래 저작권 확인까지",
-        "url": "https://youtu.be/40h_4_6TM40",
+        "channel": "maker39",
+        "instagram": "maker39",
+        "title": "URL에서 정보 추출하고 숏츠까지 자동 생성! 무료 AI 영상 제작 프로그램",
+        "url": "https://youtu.be/LebcD6tYv3U",
         "reason": "키워드 기반: AI 관련",
-        "published": "2026-10-25T09:23:19+00:00",
+        "published": "2026-11-01T03:30:05+00:00",
         "source": "YouTube"
       },
       {
         "category": "AI기능업그레이드",
-        "channel": "방구석컴퍼니",
-        "instagram": "방구석컴퍼니",
-        "title": "블로그랑 사이트 주소를 줬더니, 이런 광고가 나왔습니다｜클로드 코드",
-        "url": "https://youtu.be/wQ1RdjPiKtE",
+        "channel": "maker39",
+        "instagram": "maker39",
+        "title": "드디어 URL 기반 영상 제작 가능! AI 숏츠 생성 프로그램 무료 업데이트",
+        "url": "https://youtu.be/M8laIEz_nRI",
         "reason": "키워드 기반: AI 관련",
-        "published": "2026-10-24T09:30:27+00:00",
+        "published": "2026-10-26T08:30:38+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "maker39",
+        "instagram": "maker39",
+        "title": "아직도 유료 결제하세요? 무료 ChatGPT로 숏폼 자동 생성",
+        "url": "https://youtu.be/e3ry_5jBz8Q",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-23T10:30:19+00:00",
         "source": "YouTube"
       }
     ]
