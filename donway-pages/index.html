@@ -32904,9 +32904,9 @@ function _promoImportFromExcel(file){
       var r=rows[i];
       r.forEach(function(v,ci){
         var s=String(v||'').replace(/\s/g,'').toLowerCase();
-        if(s==='wave') colWave=ci;
-        else if(s==='camp') colCamp=ci;
-        else if(s==='route'||s==='라우트') colRoute=ci;
+        if(s==='wave'&&colWave<0) colWave=ci;
+        else if(s==='camp'&&colCamp<0) colCamp=ci;
+        else if((s==='route'||s==='라우트')&&colRoute<0) colRoute=ci;
         else if(s.indexOf('가중요인1')>=0&&s.indexOf('%')>=0&&colP1<0) colP1=ci+1; // 해당/미해당 컬럼
         else if(s.indexOf('가중요인2')>=0&&s.indexOf('%')>=0&&colP2<0) colP2=ci+1;
       });
