@@ -136,6 +136,7 @@ async function loginWithGoogle() {
     });
     const loginData = await loginRes.json();
 
+    console.log('Worker login response:', JSON.stringify(loginData));
     if (loginData.success || loginData.plan) {
       const plan = loginData.plan || 'free';
       const monthlyLimit = PLAN_LIMITS[plan]?.monthly || 35;
@@ -160,6 +161,8 @@ async function loginWithGoogle() {
       }
       await chrome.storage.sync.set(loginSyncObj);
       await showLoggedIn({ ...loginSyncObj });
+    } else {
+      throw new Error(`Worker rejected login: ${JSON.stringify(loginData)}`);
     }
   } catch (e) {
     console.error('Login error:', e);
@@ -172,7 +175,7 @@ async function loginWithGoogle() {
         ? 'Sign-in window may have appeared\nbehind this window. Please try again.'
         : `Sign-in failed: ${e.message}`;
       btn.insertAdjacentElement('afterend', errEl);
-      setTimeout(() => errEl.remove(), 8000);
+      setTimeout(() => errEl.remove(), 30000);
     }
   }
 }
