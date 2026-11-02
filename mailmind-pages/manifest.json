@@ -1,0 +1,113 @@
+{
+  "manifest_version": 3,
+  "name": "MailMind AI — Smart Email Replies",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjOCdwP42Fv0drhnRlrGxQ/PZyoR/5pVI0zydPrnRpptw5PMNwY5tIIxyLE1TB8Rz9r3gxCsGzxOULkvFcZBuJvaUhLdzLxR1QxqzzG/cHfDiXKgojDgCGZ0oAMq2kHtIaUMr11HqslUkWtiIkCHB4m14vtMb5TJwdJHA9K7NhPn/91VZ3+anP1Qijb2qp0IQRvFIEa3Lt22TMqzwmvdDUG5Rmu3rKhqaFju8pbmXx9hWgY9piJDrWl4E1AIIudCHTXJcmJk5jL1FBOfKYiqIbkqEDHgOiobAgJwS0WWhb1PcmR7VS4lOsTllvMXqcWxXWZfVDNB4ucFIkRzEApNbTQIDAQAB",
+  "version": "1.5.1",
+  "description": "AI email replies in any language. Works on Gmail & Outlook. 8 tones, 17 languages, cultural expertise. One click, perfect reply.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "identity"
+  ],
+  "oauth2": {
+    "client_id": "40761160761-31lvk1aqcitkf2ji3v9osipoanbagl7o.apps.googleusercontent.com",
+    "scopes": [
+      "openid",
+      "email",
+      "profile"
+    ]
+  },
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://*.icloud.com/*",
+    "https://*.icloud-sandbox.com/*",
+    "https://outlook.live.com/*",
+    "https://outlook.office.com/*",
+    "https://outlook.office365.com/*",
+    "https://mailmind-api.kimdh4790.workers.dev/*",
+    "https://mail.naver.com/*",
+    "https://mail.yahoo.com/*",
+    "https://mail.yahoo.co.jp/*",
+    "https://www.googleapis.com/*",
+    "https://gmail.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://outlook.office365.com/*"
+      ],
+      "js": [
+        "content_outlook.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.icloud.com/*",
+        "https://*.icloud-sandbox.com/*"
+      ],
+      "js": [
+        "content_icloud.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.naver.com/*"
+      ],
+      "js": [
+        "content_naver.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.yahoo.com/*"
+      ],
+      "js": [
+        "content_yahoo.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://mail.yahoo.co.jp/*"
+      ],
+      "js": [
+        "content_yahoojp.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,179 @@
+#mailmind-panel {
+  font-family: 'Google Sans', Arial, sans-serif;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 12px 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  max-width: 600px;
+}
+
+.mm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mm-logo {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a73e8;
+  letter-spacing: -0.2px;
+}
+
+.mm-badge {
+  font-size: 11px;
+  background: #f1f3f4;
+  color: #5f6368;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.mm-tone-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.mm-tone {
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 1px solid #dadce0;
+  border-radius: 20px;
+  background: #fff;
+  color: #3c4043;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.mm-tone:hover {
+  background: #f1f3f4;
+}
+
+.mm-tone.active {
+  background: #e8f0fe;
+  border-color: #1a73e8;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+.mm-generate-btn {
+  width: 100%;
+  padding: 9px;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.mm-generate-btn:hover { background: #1557b0; }
+.mm-generate-btn:disabled { background: #8ab4f8; cursor: not-allowed; }
+
+.mm-result {
+  margin-top: 12px;
+}
+
+#mm-output {
+  width: 100%;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #202124;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+  background: #f8f9fa;
+}
+
+.mm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mm-action-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.mm-insert {
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+}
+.mm-insert:hover { background: #1557b0; }
+
+.mm-copy {
+  background: #fff;
+  color: #1a73e8;
+  border: 1px solid #1a73e8;
+}
+.mm-copy:hover { background: #e8f0fe; }
+
+.mm-upgrade {
+  margin-top: 12px;
+  text-align: center;
+  padding: 12px;
+  background: #fef7e0;
+  border-radius: 8px;
+}
+
+.mm-upgrade p {
+  font-size: 12px;
+  color: #5f6368;
+  margin: 0 0 8px;
+}
+
+.mm-upgrade-btn {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a73e8;
+  text-decoration: none;
+  padding: 6px 16px;
+  border: 1px solid #1a73e8;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.mm-upgrade-btn:hover { background: #e8f0fe; }
+
+.mailmind-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'Google Sans', Arial, sans-serif;
+  font-weight: 500;
+  z-index: 99999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: mmFadeIn 0.2s ease;
+}
+
+.mailmind-toast-info { background: #202124; color: #fff; }
+.mailmind-toast-success { background: #137333; color: #fff; }
+.mailmind-toast-error { background: #c5221f; color: #fff; }
+
+@keyframes mmFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
