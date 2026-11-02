@@ -32907,8 +32907,10 @@ function _promoImportFromExcel(file){
         if(s==='wave'&&colWave<0) colWave=ci;
         else if(s==='camp'&&colCamp<0) colCamp=ci;
         else if((s==='route'||s==='라우트')&&colRoute<0) colRoute=ci;
-        else if(s.indexOf('가중요인1')>=0&&s.indexOf('%')>=0&&colP1<0) colP1=ci+1; // 해당/미해당 컬럼
+        else if(s.indexOf('가중요인1')>=0&&s.indexOf('%')>=0&&colP1<0) colP1=ci+1; // Weekly: %(가중요인1) 다음 컬럼
+        else if(s==='가중요인1'&&colP1<0) colP1=ci; // Freshbag: 직접 해당/미해당
         else if(s.indexOf('가중요인2')>=0&&s.indexOf('%')>=0&&colP2<0) colP2=ci+1;
+        else if(s==='가중요인2'&&colP2<0) colP2=ci;
       });
       if(colRoute>=0&&colP1>=0){hdrIdx=i;break;}
     }
