@@ -695,7 +695,8 @@ const HONORIFIC_OPTIONS = {
 
 function getHonorificOptions(lang) {
   const opts = HONORIFIC_OPTIONS[lang] || HONORIFIC_OPTIONS['English'];
-  return opts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
+  const autoLabel = lang === 'Korean' ? '자동 감지' : lang === 'Japanese' ? '自動検出' : lang === 'Chinese' ? '自动检测' : 'Auto Detect';
+  return `<option value="auto">✨ ${autoLabel}</option>` + opts.map(o => `<option value="${o.v}">${o.l}</option>`).join('');
 }
 
 function getToneLabel(toneKey, lang) {
@@ -753,7 +754,7 @@ const COUNTRIES = [
 ];
 
 let selectedTone = 'professional';
-let selectedHonorific = 'polite';
+let selectedHonorific = 'auto';
 let selectedCountry = 'auto';
 let selectedMyLang = 'Korean';
 const resolveAutoLang = l => l === 'auto' ? 'English' : l;
