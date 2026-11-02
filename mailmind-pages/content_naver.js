@@ -1224,7 +1224,8 @@ async function createNaverPanel() {
         updateBadgeNV();
       } else if (data.error==='MONTHLY_LIMIT') {
         panel.querySelector('#mm-nv-upgrade').style.display='block';
-      } else { showToastNV('Failed: '+(data.error||'Try again.'), 'error'); }
+      } else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastNV(getUILangNV(nvSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
+      else { showToastNV('Failed: '+(data.error||'Try again.'), 'error'); }
     } catch(e) { showToastNV('Error: '+e.message, 'error'); }
     genBtn.disabled=false; genBtn.textContent=getUILangNV(nvSelectedMyLang).generate;
   }
@@ -1314,6 +1315,7 @@ async function createNaverPanel() {
         verTabs.querySelector('#mm-nv-ver-confirm')?.addEventListener('click', ()=>{ panel.querySelector('#mm-nv-versions').style.display='none'; });
         await incrementUsageNV(data.monthlyUsage); updateBadgeNV();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-nv-upgrade').style.display='block'; }
+      else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastNV(getUILangNV(nvSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
       else { showToastNV('Failed. Try again.', 'error'); }
     } catch(e) { showToastNV('Error: '+e.message, 'error'); }
     btn.disabled=false; btn.textContent=origText;
@@ -1362,6 +1364,7 @@ async function createNaverPanel() {
         if (_ebnNVS) _ebnNVS.style.display='none';
         await incrementUsageNV(data.monthlyUsage); updateBadgeNV();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-nv-upgrade').style.display='block'; }
+      else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastNV(getUILangNV(nvSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
       else { showToastNV('Failed. Try again.', 'error'); }
     } catch(e) { showToastNV('Error: '+e.message, 'error'); }
     btn.disabled=false; btn.textContent=getUILangNV(nvSelectedMyLang).smartReply;
