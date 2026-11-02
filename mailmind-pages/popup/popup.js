@@ -1,4 +1,5 @@
 const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
+const FIREBASE_API_KEY = 'AIzaSyC9rrx1IYHjqVQkt_viGRxWH2IBateUlMw';
 
 const PLAN_LIMITS = {
   pro:   { monthly: 300 },
@@ -102,21 +103,41 @@ async function getGoogleToken() {
   });
 }
 
+async function getFirebaseToken(googleAccessToken) {
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${FIREBASE_API_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postBody: `access_token=${encodeURIComponent(googleAccessToken)}&providerId=google.com`,
+        requestUri: 'https://localhost',
+        returnSecureToken: true,
+      })
+    }
+  );
+  const data = await res.json();
+  if (!data.idToken) throw new Error('Firebase auth failed: ' + (data.error?.message || JSON.stringify(data)));
+  return data.idToken;
+}
+
 async function loginWithGoogle() {
   const btn = document.getElementById('btn-google-login');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Signing in…</span>'; }
   try {
-    const token = await getGoogleToken();
+    const googleToken = await getGoogleToken();
 
     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${googleToken}` }
     });
     const userInfo = await res.json();
+
+    const firebaseToken = await getFirebaseToken(googleToken);
 
     const loginRes = await fetch(`${WORKER_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, email: userInfo.email, name: userInfo.name })
+      body: JSON.stringify({ token: firebaseToken, email: userInfo.email, name: userInfo.name })
     });
     const loginData = await loginRes.json();
 
