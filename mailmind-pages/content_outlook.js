@@ -122,6 +122,7 @@ function getToneOptionsOL(lang) {
 let olSelectedTone = 'professional';
 let olSelectedCountry = 'auto';
 let olSelectedMyLang = 'auto';
+let olSelectedReplyLang = 'auto';
 
 // 이메일 내용으로 발신자 국가 자동감지
 function autoDetectCountryOL(emailContent) {
@@ -231,7 +232,7 @@ function insertReplyOutlook(text) {
 
 // ===== 유저 데이터 =====
 async function getUserDataOL() {
-  const data = await new Promise(r => chrome.storage.sync.get(['userId','userEmail','userPlan','monthlyCount','monthlyMonth','monthlyLimit','myLanguage','translateCount','translateLimit','businessCard'], r));
+  const data = await new Promise(r => chrome.storage.sync.get(['userId','userEmail','userPlan','monthlyCount','monthlyMonth','monthlyLimit','myLanguage','replyLanguage','translateCount','translateLimit','businessCard'], r));
   const thisMonth = new Date().toISOString().slice(0,7);
   let monthlyCount = data.monthlyMonth === thisMonth ? (data.monthlyCount || 0) : 0;
   if (data.monthlyMonth !== thisMonth) { chrome.storage.sync.set({ monthlyMonth: thisMonth, monthlyCount: 0 }); monthlyCount = 0; }
@@ -246,7 +247,7 @@ async function getUserDataOL() {
       if (pr.ok) { const pd = await pr.json(); if (pd.success) phrases = (pd.phrases || []).map(p => p.text || p).filter(Boolean); }
     } catch (_) {}
   }
-  return { userId, userEmail: data.userEmail||null, plan, monthlyCount, monthlyLimit, thisMonth, myLanguage: data.myLanguage||'auto', translateCount: data.translateCount||0, translateLimit: data.translateLimit !== undefined ? data.translateLimit : 50, businessCard: data.businessCard || '', phrases };
+  return { userId, userEmail: data.userEmail||null, plan, monthlyCount, monthlyLimit, thisMonth, myLanguage: data.myLanguage||'auto', replyLanguage: data.replyLanguage||'auto', translateCount: data.translateCount||0, translateLimit: data.translateLimit !== undefined ? data.translateLimit : 50, businessCard: data.businessCard || '', phrases };
 }
 
 async function syncUsageOL(userEmail) {
@@ -393,6 +394,7 @@ async function createOutlookPanel() {
   removeOLPanel();
   const userData = await getUserDataOL();
   olSelectedMyLang = userData.myLanguage || 'auto';
+  olSelectedReplyLang = userData.replyLanguage || 'auto';
   const ui = getUILangOL(olSelectedMyLang);
   const toneOptions = getToneOptionsOL(olSelectedMyLang);
   const resolveAutoLangOL = l => l === 'auto' ? 'English' : l;
@@ -937,7 +939,7 @@ async function createOutlookPanel() {
       const storedSigOL = await new Promise(r => chrome.storage.sync.get(['signature','userInfo'], r));
       const signatureOL = storedSigOL.signature || '';
       const userInfoOL = storedSigOL.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_OL}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, language:olSelectedMyLang, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureOL && { signature: signatureOL }), ...(userInfoOL && { userInfo: userInfoOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, language:olSelectedMyLang, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureOL && { signature: signatureOL }), ...(userInfoOL && { userInfo: userInfoOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         // 스팸
@@ -1006,7 +1008,7 @@ async function createOutlookPanel() {
     try {
       const storedTripleOL = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleOL = storedTripleOL.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length > 0) {
         const _maxVer = userData.plan === 'pro' ? 3 : 2;
@@ -1084,7 +1086,7 @@ async function createOutlookPanel() {
     try {
       const storedSmartOL = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartOL = storedSmartOL.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _olVersions = (data.versions || []).map(_stripSalutationOL);

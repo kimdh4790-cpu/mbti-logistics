@@ -757,6 +757,7 @@ let selectedTone = 'professional';
 let selectedHonorific = 'auto';
 let selectedCountry = 'auto';
 let selectedMyLang = 'auto';
+let selectedReplyLang = 'auto';
 const resolveAutoLang = l => l === 'auto' ? 'English' : l;
 
 // 이메일 내용으로 발신자 국가 자동감지
@@ -888,7 +889,7 @@ async function getUserData() {
   const data = await new Promise(r => safeStorageGet([
     'userId', 'userEmail', 'userPlan',
     'monthlyCount', 'monthlyMonth',
-    'monthlyLimit', 'myLanguage',
+    'monthlyLimit', 'myLanguage', 'replyLanguage',
     'translateCount', 'translateLimit',
     'businessCard'
   ], r));
@@ -928,6 +929,7 @@ async function getUserData() {
     monthlyLimit,
     thisMonth,
     myLanguage: data.myLanguage || 'auto',
+    replyLanguage: data.replyLanguage || 'auto',
     translateCount: data.translateCount || 0,
     translateLimit: data.translateLimit || 10,
     businessCard: data.businessCard || '',
@@ -1212,9 +1214,10 @@ function createPanel() {
   async function initPanel() {
     const userData = await getUserData();
 
-    // ① selectedMyLang 제일 먼저 설정 (storage > 드롭다운 현재값 > 'Korean')
+    // ① selectedMyLang 제일 먼저 설정 (storage > 드롭다운 현재값 > 'auto')
     const currentDropdownLang = panel.querySelector('#mm-mylang-select')?.value;
     selectedMyLang = userData.myLanguage || currentDropdownLang || 'auto';
+    selectedReplyLang = userData.replyLanguage || 'auto';
     const myLangSelect = panel.querySelector('#mm-mylang-select');
     if (myLangSelect) myLangSelect.value = selectedMyLang;
 
@@ -1548,7 +1551,7 @@ function createPanel() {
       const signature = storedSig.signature || '';
       const res = await workerFetch(`${WORKER_URL}/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
-        body: JSON.stringify({ emailContent, tone: selectedTone, honorific: selectedHonorific, language: selectedMyLang, myLanguage: selectedMyLang, country: selectedCountry, email: userData.userEmail, userId: userData.userId, ...(signature && { signature }) })
+        body: JSON.stringify({ emailContent, tone: selectedTone, honorific: selectedHonorific, language: selectedMyLang, myLanguage: selectedReplyLang, country: selectedCountry, email: userData.userEmail, userId: userData.userId, ...(signature && { signature }) })
       });
       const data = await res.json();
 
@@ -1747,7 +1750,7 @@ function createPanel() {
           emailContent,
           tone: selectedTone,
           honorific: selectedHonorific,
-          myLanguage: selectedMyLang,
+          myLanguage: selectedReplyLang,
           country: selectedCountry,
           email: userData.userEmail,
           userId: userData.userId,
@@ -1905,7 +1908,7 @@ function createPanel() {
           emailContent,
           tone: selectedTone,
           honorific: selectedHonorific,
-          myLanguage: selectedMyLang,
+          myLanguage: selectedReplyLang,
           country: selectedCountry,
           email: userData.userEmail,
           userId: userData.userId,
