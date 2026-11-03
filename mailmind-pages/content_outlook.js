@@ -121,7 +121,7 @@ function getToneOptionsOL(lang) {
 // ===== 전역 상태 =====
 let olSelectedTone = 'professional';
 let olSelectedCountry = 'auto';
-let olSelectedMyLang = 'Korean';
+let olSelectedMyLang = 'auto';
 
 // 이메일 내용으로 발신자 국가 자동감지
 function autoDetectCountryOL(emailContent) {
@@ -246,7 +246,7 @@ async function getUserDataOL() {
       if (pr.ok) { const pd = await pr.json(); if (pd.success) phrases = (pd.phrases || []).map(p => p.text || p).filter(Boolean); }
     } catch (_) {}
   }
-  return { userId, userEmail: data.userEmail||null, plan, monthlyCount, monthlyLimit, thisMonth, myLanguage: data.myLanguage||'Korean', translateCount: data.translateCount||0, translateLimit: data.translateLimit !== undefined ? data.translateLimit : 50, businessCard: data.businessCard || '', phrases };
+  return { userId, userEmail: data.userEmail||null, plan, monthlyCount, monthlyLimit, thisMonth, myLanguage: data.myLanguage||'auto', translateCount: data.translateCount||0, translateLimit: data.translateLimit !== undefined ? data.translateLimit : 50, businessCard: data.businessCard || '', phrases };
 }
 
 async function syncUsageOL(userEmail) {
@@ -392,10 +392,11 @@ function removeOLPanel() {
 async function createOutlookPanel() {
   removeOLPanel();
   const userData = await getUserDataOL();
-  olSelectedMyLang = userData.myLanguage || 'Korean';
+  olSelectedMyLang = userData.myLanguage || 'auto';
   const ui = getUILangOL(olSelectedMyLang);
   const toneOptions = getToneOptionsOL(olSelectedMyLang);
-  const langOptions = LANGUAGES_OL.map(l => `<option value="${l.value}"${l.value===olSelectedMyLang?' selected':''}>${l.label}</option>`).join('');
+  const resolveAutoLangOL = l => l === 'auto' ? 'English' : l;
+  const langOptions = `<option value="auto"${olSelectedMyLang==='auto'?' selected':''}>🌐 Auto Detect</option>` + LANGUAGES_OL.map(l => `<option value="${l.value}"${l.value===olSelectedMyLang?' selected':''}>${l.label}</option>`).join('');
   const countryOptions = COUNTRIES_OL.map(c => `<option value="${c.value}">${c.label}</option>`).join('');
 
   const panel = document.createElement('div');
@@ -828,7 +829,7 @@ async function createOutlookPanel() {
       const res = await workerFetch(`${WORKER_URL_OL}/translate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
-        body: JSON.stringify({ text: emailContent, targetLanguage: olSelectedMyLang, email: ud.userEmail })
+        body: JSON.stringify({ text: emailContent, targetLanguage: resolveAutoLangOL(olSelectedMyLang), email: ud.userEmail })
       });
       const data = await res.json();
       if (data.success && data.translated) {
@@ -1416,7 +1417,7 @@ async function openOutlookComposePanel() {
   const userData = await getUserDataOL();
   const userInfo = await new Promise(r => chrome.storage.sync.get(['userInfo'], d => r(d.userInfo || '')));
   // myLanguage를 직접 storage에서 다시 읽어 확실히 적용
-  const storedLang = await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean')));
+  const storedLang = await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'auto')));
   let uiLang = storedLang;
   // 작성 출력 언어: 이전 선택값 유지, 처음이면 UI언어 기본값
   if (!olComposeOutputLang) olComposeOutputLang = uiLang;

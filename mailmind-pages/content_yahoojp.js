@@ -137,7 +137,7 @@ function learnStyleYJ(tone, emailContent, reply) {
 // ===== State =====
 let yjCurrentPanel = null;
 let yjSelectedTone = 'professional';
-let yjSelectedMyLang = 'Korean';
+let yjSelectedMyLang = 'auto';
 let yjSelectedCountry = 'auto';
 let yjCachedEmotion = 'neutral';
 let yjCachedUrgency = 'low';
@@ -616,13 +616,14 @@ async function createYahooJPPanel() {
   }
 
   const stored = await safeStorageGetYJ(['myLanguage','userPlan']);
-  yjSelectedMyLang = stored.myLanguage || 'Korean';
+  yjSelectedMyLang = stored.myLanguage || 'auto';
   const plan = stored.userPlan || 'free';
   const ui = getUILangYJ(yjSelectedMyLang);
 
   const toneOptions = getToneOptionsYJ(yjSelectedMyLang);
   const countryOptions = COUNTRIES_YJ.map(c=>`<option value="${c.value}">${c.label}</option>`).join('');
-  const langOptions = Object.keys(LANG_FLAGS_YJ).map(l=>`<option value="${l}"${l===yjSelectedMyLang?' selected':''}>${LANG_FLAGS_YJ[l]} ${l}</option>`).join('');
+  const resolveAutoLangYJ = l => l === 'auto' ? 'English' : l;
+  const langOptions = `<option value="auto"${yjSelectedMyLang==='auto'?' selected':''}>🌐 Auto Detect</option>` + Object.keys(LANG_FLAGS_YJ).map(l=>`<option value="${l}"${l===yjSelectedMyLang?' selected':''}>${LANG_FLAGS_YJ[l]} ${l}</option>`).join('');
 
   const panel = document.createElement('div');
   panel.id = 'mm-yj-panel';
@@ -1056,7 +1057,7 @@ async function createYahooJPPanel() {
     btn.disabled = true; btn.textContent = ui3.translating; resultEl.style.display = 'none';
     try {
       const ud = await getUserDataYJ();
-      const res = await workerFetch(`${WORKER_URL_YJ}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: yjSelectedMyLang, email: ud.userEmail }) });
+      const res = await workerFetch(`${WORKER_URL_YJ}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: resolveAutoLangYJ(yjSelectedMyLang), email: ud.userEmail }) });
       const data = await res.json();
       if (data.success && data.translated) {
         resultEl.textContent = data.translated;
@@ -1525,7 +1526,7 @@ function openYJFloatPanel() {
     renderYJFloatPanel(panel);
   } else {
     chrome.storage.sync.get(['myLanguage'], d => {
-      const savedLang = d.myLanguage || 'Korean';
+      const savedLang = d.myLanguage || 'auto';
       if (panel.__updateLang && panel.__curLang !== savedLang) panel.__updateLang(savedLang);
     });
   }
@@ -1535,7 +1536,7 @@ async function renderYJFloatPanel(panel) {
   const userData = await getUserDataYJ();
   const userInfo = await new Promise(r => chrome.storage.sync.get(['userInfo'], d => r(d.userInfo || '')));
 
-  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean'))));
+  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'auto'))));
   if (!VALID_COMPOSE_LANGS_YJ.includes(curLang)) curLang = 'Korean';
   let curOutputLang = curLang;
   let yjTransLang = curLang;

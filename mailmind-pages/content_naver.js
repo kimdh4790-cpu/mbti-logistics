@@ -113,7 +113,7 @@ function learnStyleNV(tone, emailContent, reply) {
 // ===== State =====
 let nvCurrentPanel = null;
 let nvSelectedTone = 'professional';
-let nvSelectedMyLang = 'Korean';
+let nvSelectedMyLang = 'auto';
 let nvSelectedCountry = 'auto';
 let nvCachedEmotion = 'neutral';
 let nvCachedUrgency = 'low';
@@ -636,13 +636,14 @@ async function createNaverPanel() {
   }
 
   const stored = await safeStorageGetNV(['myLanguage','userPlan']);
-  nvSelectedMyLang = stored.myLanguage || 'Korean';
+  nvSelectedMyLang = stored.myLanguage || 'auto';
   const plan = stored.userPlan || 'free';
   const ui = getUILangNV(nvSelectedMyLang);
 
   const toneOptions = getToneOptionsNV(nvSelectedMyLang);
   const countryOptions = COUNTRIES_NV.map(c=>`<option value="${c.value}">${c.label}</option>`).join('');
-  const langOptions = Object.keys(LANG_FLAGS_NV).map(l=>`<option value="${l}"${l===nvSelectedMyLang?' selected':''}>${LANG_FLAGS_NV[l]} ${l}</option>`).join('');
+  const resolveAutoLangNV = l => l === 'auto' ? 'English' : l;
+  const langOptions = `<option value="auto"${nvSelectedMyLang==='auto'?' selected':''}>🌐 Auto Detect</option>` + Object.keys(LANG_FLAGS_NV).map(l=>`<option value="${l}"${l===nvSelectedMyLang?' selected':''}>${LANG_FLAGS_NV[l]} ${l}</option>`).join('');
 
   const panel = document.createElement('div');
   panel.id = 'mm-nv-panel';
@@ -1103,7 +1104,7 @@ async function createNaverPanel() {
     btn.disabled = true; btn.textContent = ui3.translating; resultEl.style.display = 'none';
     try {
       const ud = await getUserDataNV();
-      const res = await workerFetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: nvSelectedMyLang, email: ud.userEmail }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: resolveAutoLangNV(nvSelectedMyLang), email: ud.userEmail }) });
       const data = await res.json();
       if (data.success && data.translated) {
         resultEl.textContent = data.translated;
@@ -1618,7 +1619,7 @@ function openNVFloatPanel() {
     renderNVFloatPanel(panel);
   } else {
     chrome.storage.sync.get(['myLanguage'], d => {
-      const savedLang = d.myLanguage || 'Korean';
+      const savedLang = d.myLanguage || 'auto';
       if (panel.__updateLang && panel.__curLang !== savedLang) panel.__updateLang(savedLang);
     });
   }
@@ -1628,7 +1629,7 @@ async function renderNVFloatPanel(panel) {
   const userData = await getUserDataNV();
   const userInfo = await new Promise(r => chrome.storage.sync.get(['userInfo'], d => r(d.userInfo || '')));
 
-  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean'))));
+  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'auto'))));
   if (!VALID_COMPOSE_LANGS_NV.includes(curLang)) curLang = 'Korean';
   let curOutputLang = curLang;
   let nvTransLang = curLang;
