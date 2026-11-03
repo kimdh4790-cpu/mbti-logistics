@@ -124,7 +124,7 @@ function learnStyleIC(tone, emailContent, reply) {
 // ===== State =====
 let icCurrentPanel = null;
 let icSelectedTone = 'professional';
-let icSelectedMyLang = 'Korean';
+let icSelectedMyLang = 'auto';
 let icSelectedCountry = 'auto';
 let icCachedEmotion = 'neutral';
 let icCachedUrgency = 'low';
@@ -608,13 +608,14 @@ async function createiCloudPanel() {
   }
 
   const stored = await safeStorageGetIC(['myLanguage','userPlan']);
-  icSelectedMyLang = stored.myLanguage || 'Korean';
+  icSelectedMyLang = stored.myLanguage || 'auto';
   const plan = stored.userPlan || 'free';
   const ui = getUILangIC(icSelectedMyLang);
 
   const toneOptions = getToneOptionsIC(icSelectedMyLang);
   const countryOptions = COUNTRIES_IC.map(c=>`<option value="${c.value}">${c.label}</option>`).join('');
-  const langOptions = Object.keys(LANG_FLAGS_IC).map(l=>`<option value="${l}"${l===icSelectedMyLang?' selected':''}>${LANG_FLAGS_IC[l]} ${l}</option>`).join('');
+  const resolveAutoLangIC = l => l === 'auto' ? 'English' : l;
+  const langOptions = `<option value="auto"${icSelectedMyLang==='auto'?' selected':''}>🌐 Auto Detect</option>` + Object.keys(LANG_FLAGS_IC).map(l=>`<option value="${l}"${l===icSelectedMyLang?' selected':''}>${LANG_FLAGS_IC[l]} ${l}</option>`).join('');
 
   const panel = document.createElement('div');
   panel.id = 'mm-ic-panel';
@@ -1048,7 +1049,7 @@ async function createiCloudPanel() {
     btn.disabled = true; btn.textContent = ui3.translating; resultEl.style.display = 'none';
     try {
       const ud = await getUserDataIC();
-      const res = await workerFetch(`${WORKER_URL_IC}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: icSelectedMyLang, email: ud.userEmail }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: resolveAutoLangIC(icSelectedMyLang), email: ud.userEmail }) });
       const data = await res.json();
       if (data.success && data.translated) {
         resultEl.textContent = data.translated;
@@ -1517,7 +1518,7 @@ function openICFloatPanel() {
     renderICFloatPanel(panel);
   } else {
     chrome.storage.sync.get(['myLanguage'], d => {
-      const savedLang = d.myLanguage || 'Korean';
+      const savedLang = d.myLanguage || 'auto';
       if (panel.__updateLang && panel.__curLang !== savedLang) panel.__updateLang(savedLang);
     });
   }
@@ -1527,7 +1528,7 @@ async function renderICFloatPanel(panel) {
   const userData = await getUserDataIC();
   const userInfo = await new Promise(r => chrome.storage.sync.get(['userInfo'], d => r(d.userInfo || '')));
 
-  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean'))));
+  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'auto'))));
   if (!VALID_COMPOSE_LANGS_IC.includes(curLang)) curLang = 'Korean';
   let curOutputLang = curLang;
   let icTransLang = curLang;
