@@ -638,7 +638,7 @@ async function createNaverPanel() {
         const lang = s.myLanguage || 'auto';
         if (lang !== nvSelectedMyLang) {
           nvSelectedMyLang = lang;
-          const sel = nvCurrentPanel.querySelector('#mm-nv-mylang-select');
+          const sel = nvCurrentPanel.querySelector('#mm-nv-lang');
           if (sel) sel.value = lang;
         }
       });
