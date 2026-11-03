@@ -17,6 +17,30 @@ function workerFetch(url, options) {
 const PLAN_LIMITS_YH = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_YH = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
+const HONORIFIC_OPTIONS = {
+  Korean:     [ { v:'formal', l:'하십시오체' }, { v:'polite', l:'해요체' },    { v:'casual', l:'해체·반말' } ],
+  Japanese:   [ { v:'formal', l:'敬語' },       { v:'polite', l:'丁寧語' },    { v:'casual', l:'タメ口' } ],
+  Chinese:    [ { v:'formal', l:'正式' },        { v:'polite', l:'礼貌' },      { v:'casual', l:'口语' } ],
+  German:     [ { v:'formal', l:'Sie' },         { v:'polite', l:'Höflich' },   { v:'casual', l:'Du' } ],
+  French:     [ { v:'formal', l:'Vous' },        { v:'polite', l:'Poli' },      { v:'casual', l:'Tu' } ],
+  Spanish:    [ { v:'formal', l:'Usted' },       { v:'polite', l:'Cortés' },    { v:'casual', l:'Tú' } ],
+  Portuguese: [ { v:'formal', l:'O Senhor/a' },  { v:'polite', l:'Você' },      { v:'casual', l:'Tu' } ],
+  Italian:    [ { v:'formal', l:'Lei' },         { v:'polite', l:'Gentile' },   { v:'casual', l:'Tu' } ],
+  Arabic:     [ { v:'formal', l:'رسمي' },        { v:'polite', l:'مهذب' },      { v:'casual', l:'عامي' } ],
+  Vietnamese: [ { v:'formal', l:'Quý vị' },      { v:'polite', l:'Bạn' },       { v:'casual', l:'Mày/Tao' } ],
+  Thai:       [ { v:'formal', l:'ราชาศัพท์' },   { v:'polite', l:'สุภาพ' },     { v:'casual', l:'ทั่วไป' } ],
+  Indonesian: [ { v:'formal', l:'Formal' },      { v:'polite', l:'Sopan' },     { v:'casual', l:'Santai' } ],
+  Turkish:    [ { v:'formal', l:'Siz' },         { v:'polite', l:'Nazik' },     { v:'casual', l:'Sen' } ],
+  Dutch:      [ { v:'formal', l:'U' },           { v:'polite', l:'Beleefd' },   { v:'casual', l:'Jij' } ],
+  Polish:     [ { v:'formal', l:'Pan/Pani' },    { v:'polite', l:'Uprzejmy' },  { v:'casual', l:'Ty' } ],
+  Hindi:      [ { v:'formal', l:'आप' },          { v:'polite', l:'तुम' },        { v:'casual', l:'तू' } ],
+  English:    [ { v:'formal', l:'Formal' },      { v:'polite', l:'Polite' },    { v:'casual', l:'Casual' } ],
+};
+function getHonorificOptions(lang) {
+  const opts = HONORIFIC_OPTIONS[lang] || HONORIFIC_OPTIONS['English'];
+  const autoLabel = lang === 'Korean' ? '자동 감지' : lang === 'Japanese' ? '自動検出' : lang === 'Chinese' ? '自动检测' : 'Auto Detect';
+  return '<option value="auto">✨ ' + autoLabel + '</option>' + opts.map(o => '<option value="' + o.v + '">' + o.l + '</option>').join('');
+}
 
 const TONES_I18N_YH = {
   Korean:     ['전문적','친근한','간결한','상세한','거절','감사','사과','확인'],
@@ -140,6 +164,7 @@ let yhSelectedTone = 'professional';
 let yhSelectedMyLang = 'auto';
 let yhSelectedReplyLang = 'auto';
 let yhSelectedCountry = 'auto';
+let yhSelectedHonorific = 'auto';
 let yhCachedEmotion = 'neutral';
 let yhCachedUrgency = 'low';
 
@@ -673,7 +698,11 @@ async function createYahooPanel() {
           <label id="mm-yh-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-yh-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:80px">
+          <label id="mm-yh-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-yh-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(yhSelectedMyLang)}</select>
+        </div>
+                <div style="flex:1;min-width:90px">
           <label id="mm-yh-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-yh-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
@@ -948,7 +977,8 @@ async function createYahooPanel() {
     removeYHPanel();
     showFabYH();
   });
-  panel.querySelector('#mm-yh-tone').addEventListener('change', function() { yhSelectedTone = this.value; });
+  panel.querySelector('#mm-yh-tone').addEventListener('change', function() { yhSelectedTone = this.value;
+  panel.querySelector('#mm-yh-honorific').addEventListener('change', function() { yhSelectedHonorific = this.value; }); });
 
   const yhCountrySelect = panel.querySelector('#mm-yh-country');
   if (yhCountrySelect) {
@@ -961,6 +991,8 @@ async function createYahooPanel() {
 
   panel.querySelector('#mm-yh-lang').addEventListener('change', function() {
     yhSelectedMyLang = this.value;
+    const honorificSelYH = panel.querySelector('#mm-yh-honorific');
+    if (honorificSelYH) { const curYH = honorificSelYH.value; honorificSelYH.innerHTML = getHonorificOptions(this.value); honorificSelYH.value = curYH; yhSelectedHonorific = honorificSelYH.value; }
     safeStorageSetYH({ myLanguage: this.value });
     applyUILangYH(this.value);
     const autoOptYH = panel.querySelector('#mm-yh-country option[value="auto"]');
@@ -1163,7 +1195,7 @@ async function createYahooPanel() {
       const storedYH = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureYH = storedYH.signature || '';
       const userInfoYH = storedYH.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YH}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, language:yhSelectedMyLang, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureYH && { signature: signatureYH }), ...(userInfoYH && { userInfo: userInfoYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_YH}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, honorific:yhSelectedHonorific, language:yhSelectedMyLang, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureYH && { signature: signatureYH }), ...(userInfoYH && { userInfo: userInfoYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-yh-spam');
@@ -1221,7 +1253,7 @@ async function createYahooPanel() {
     try {
       const storedTripleYH = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleYH = storedTripleYH.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YH}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYH && { userInfo: userInfoTripleYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_YH}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, honorific:yhSelectedHonorific, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYH && { userInfo: userInfoTripleYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1273,7 +1305,7 @@ async function createYahooPanel() {
     try {
       const storedSmartYH = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartYH = storedSmartYH.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YH}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYH && { userInfo: userInfoSmartYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_YH}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, honorific:yhSelectedHonorific, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYH && { userInfo: userInfoSmartYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _yhVersions=(data.versions||[]).map(_stripSalutationYH); _yhTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureYH(t):t)); _yhCurrentVerIdx=0; _yhIsTranslated=false; _yhCurrentDisplayLang=yhSelectedMyLang; _yhOrigLang=yhSelectedMyLang;

@@ -19,6 +19,30 @@ function workerFetch(url, options) {
 const PLAN_LIMITS_IC = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_IC = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
+const HONORIFIC_OPTIONS = {
+  Korean:     [ { v:'formal', l:'하십시오체' }, { v:'polite', l:'해요체' },    { v:'casual', l:'해체·반말' } ],
+  Japanese:   [ { v:'formal', l:'敬語' },       { v:'polite', l:'丁寧語' },    { v:'casual', l:'タメ口' } ],
+  Chinese:    [ { v:'formal', l:'正式' },        { v:'polite', l:'礼貌' },      { v:'casual', l:'口语' } ],
+  German:     [ { v:'formal', l:'Sie' },         { v:'polite', l:'Höflich' },   { v:'casual', l:'Du' } ],
+  French:     [ { v:'formal', l:'Vous' },        { v:'polite', l:'Poli' },      { v:'casual', l:'Tu' } ],
+  Spanish:    [ { v:'formal', l:'Usted' },       { v:'polite', l:'Cortés' },    { v:'casual', l:'Tú' } ],
+  Portuguese: [ { v:'formal', l:'O Senhor/a' },  { v:'polite', l:'Você' },      { v:'casual', l:'Tu' } ],
+  Italian:    [ { v:'formal', l:'Lei' },         { v:'polite', l:'Gentile' },   { v:'casual', l:'Tu' } ],
+  Arabic:     [ { v:'formal', l:'رسمي' },        { v:'polite', l:'مهذب' },      { v:'casual', l:'عامي' } ],
+  Vietnamese: [ { v:'formal', l:'Quý vị' },      { v:'polite', l:'Bạn' },       { v:'casual', l:'Mày/Tao' } ],
+  Thai:       [ { v:'formal', l:'ราชาศัพท์' },   { v:'polite', l:'สุภาพ' },     { v:'casual', l:'ทั่วไป' } ],
+  Indonesian: [ { v:'formal', l:'Formal' },      { v:'polite', l:'Sopan' },     { v:'casual', l:'Santai' } ],
+  Turkish:    [ { v:'formal', l:'Siz' },         { v:'polite', l:'Nazik' },     { v:'casual', l:'Sen' } ],
+  Dutch:      [ { v:'formal', l:'U' },           { v:'polite', l:'Beleefd' },   { v:'casual', l:'Jij' } ],
+  Polish:     [ { v:'formal', l:'Pan/Pani' },    { v:'polite', l:'Uprzejmy' },  { v:'casual', l:'Ty' } ],
+  Hindi:      [ { v:'formal', l:'आप' },          { v:'polite', l:'तुम' },        { v:'casual', l:'तू' } ],
+  English:    [ { v:'formal', l:'Formal' },      { v:'polite', l:'Polite' },    { v:'casual', l:'Casual' } ],
+};
+function getHonorificOptions(lang) {
+  const opts = HONORIFIC_OPTIONS[lang] || HONORIFIC_OPTIONS['English'];
+  const autoLabel = lang === 'Korean' ? '자동 감지' : lang === 'Japanese' ? '自動検出' : lang === 'Chinese' ? '自动检测' : 'Auto Detect';
+  return '<option value="auto">✨ ' + autoLabel + '</option>' + opts.map(o => '<option value="' + o.v + '">' + o.l + '</option>').join('');
+}
 
 const TONES_I18N_IC = {
   Korean:     ['전문적','친근한','간결한','상세한','거절','감사','사과','확인'],
@@ -127,6 +151,7 @@ let icSelectedTone = 'professional';
 let icSelectedMyLang = 'auto';
 let icSelectedReplyLang = 'auto';
 let icSelectedCountry = 'auto';
+let icSelectedHonorific = 'auto';
 let icCachedEmotion = 'neutral';
 let icCachedUrgency = 'low';
 
@@ -665,7 +690,11 @@ async function createiCloudPanel() {
           <label id="mm-ic-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-ic-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:80px">
+          <label id="mm-ic-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-ic-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(icSelectedMyLang)}</select>
+        </div>
+                <div style="flex:1;min-width:90px">
           <label id="mm-ic-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-ic-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
@@ -940,7 +969,8 @@ async function createiCloudPanel() {
     removeICPanel();
     showFabIC();
   });
-  panel.querySelector('#mm-ic-tone').addEventListener('change', function() { icSelectedTone = this.value; });
+  panel.querySelector('#mm-ic-tone').addEventListener('change', function() { icSelectedTone = this.value;
+  panel.querySelector('#mm-ic-honorific').addEventListener('change', function() { icSelectedHonorific = this.value; }); });
 
   const icCountrySelect = panel.querySelector('#mm-ic-country');
   if (icCountrySelect) {
@@ -953,6 +983,8 @@ async function createiCloudPanel() {
 
   panel.querySelector('#mm-ic-lang').addEventListener('change', function() {
     icSelectedMyLang = this.value;
+    const honorificSelIC = panel.querySelector('#mm-ic-honorific');
+    if (honorificSelIC) { const curIC = honorificSelIC.value; honorificSelIC.innerHTML = getHonorificOptions(this.value); honorificSelIC.value = curIC; icSelectedHonorific = honorificSelIC.value; }
     safeStorageSetIC({ myLanguage: this.value });
     applyUILangIC(this.value);
     const autoOptIC = panel.querySelector('#mm-ic-country option[value="auto"]');
@@ -1155,7 +1187,7 @@ async function createiCloudPanel() {
       const storedIC = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureIC = storedIC.signature || '';
       const userInfoIC = storedIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, language:icSelectedMyLang, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureIC && { signature: signatureIC }), ...(userInfoIC && { userInfo: userInfoIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, language:icSelectedMyLang, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureIC && { signature: signatureIC }), ...(userInfoIC && { userInfo: userInfoIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-ic-spam');
@@ -1213,7 +1245,7 @@ async function createiCloudPanel() {
     try {
       const storedTripleIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleIC = storedTripleIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1265,7 +1297,7 @@ async function createiCloudPanel() {
     try {
       const storedSmartIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartIC = storedSmartIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _icVersions=(data.versions||[]).map(_stripSalutationIC); _icTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureIC(t):t)); _icCurrentVerIdx=0; _icIsTranslated=false; _icCurrentDisplayLang=icSelectedMyLang; _icOrigLang=icSelectedMyLang;
