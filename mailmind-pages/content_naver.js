@@ -2,6 +2,17 @@
 // Pattern mirrors content_outlook.js
 
 const WORKER_URL_NV = 'https://mailmind-api.kimdh4790.workers.dev';
+const API_KEY_content_naver = 'mm-app-2026';
+
+function workerFetch(url, options) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options }, res => {
+      void chrome.runtime.lastError;
+      if (!res || !res.ok) { reject(new Error(res?.error || 'fetch failed')); return; }
+      resolve({ ok: true, json: () => Promise.resolve(res.data) });
+    });
+  });
+}
 
 const PLAN_LIMITS_NV = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
@@ -136,7 +147,7 @@ async function getUserDataNV() {
   let phrases = [];
   if (d.userEmail) {
     try {
-      const pr = await fetch(`${WORKER_URL_NV}/phrases?email=${encodeURIComponent(d.userEmail)}`);
+      const pr = await workerFetch(`${WORKER_URL_NV}/phrases?email=${encodeURIComponent(d.userEmail)}`);
       if (pr.ok) { const pd = await pr.json(); if (pd.success) phrases = (pd.phrases || []).map(p => p.text || p).filter(Boolean); }
     } catch (_) {}
   }
@@ -152,7 +163,7 @@ async function incrementUsageNV(serverCount) {
 
 async function syncUsageNV(email) {
   try {
-    const res = await fetch(`${WORKER_URL_NV}/status`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+    const res = await workerFetch(`${WORKER_URL_NV}/status`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ email }) });
     const data = await res.json();
     if (data.plan) {
       const plan = data.plan;
@@ -230,8 +241,8 @@ async function appendSignatureNV(reply) {
   const lang = nvSelectedMyLang || 'Korean';
   if (lang !== 'Korean') {
     try {
-      const r = await fetch(`${WORKER_URL_NV}/translate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const r = await workerFetch(`${WORKER_URL_NV}/translate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
         body: JSON.stringify({ text: d.signature.trim(), targetLanguage: lang })
       }).then(r => r.json());
       return reply + '\n\n--\n' + ((r.success && r.translated) ? r.translated : d.signature.trim());
@@ -873,8 +884,8 @@ async function createNaverPanel() {
       const _sigLangNV = nvSelectedMyLang || 'Korean';
       if (_sigLangNV !== 'Korean') {
         try {
-          const r = await fetch(`${WORKER_URL_NV}/translate`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+          const r = await workerFetch(`${WORKER_URL_NV}/translate`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
             body: JSON.stringify({ text: d.signature, targetLanguage: _sigLangNV })
           }).then(r => r.json());
           sigEl.value = (r.success && r.translated) ? r.translated : d.signature;
@@ -987,7 +998,7 @@ async function createNaverPanel() {
     if (_sigElNV) {
       const _rawSigNV = _sigElNV.dataset.rawSig || _sigElNV.value;
       if (_rawSigNV && this.value !== 'Korean') {
-        fetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: _rawSigNV, targetLanguage: this.value }) }).then(r => r.json()).then(r => { if (r.success && r.translated) { _sigElNV.dataset.rawSig = _rawSigNV; _sigElNV.value = r.translated; } }).catch(() => {});
+        workerFetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: _rawSigNV, targetLanguage: this.value }) }).then(r => r.json()).then(r => { if (r.success && r.translated) { _sigElNV.dataset.rawSig = _rawSigNV; _sigElNV.value = r.translated; } }).catch(() => {});
       } else if (this.value === 'Korean') { _sigElNV.value = _rawSigNV; _sigElNV.dataset.rawSig = _rawSigNV; }
     }
   });
@@ -1061,7 +1072,7 @@ async function createNaverPanel() {
         else { _nvVersions = [currentText]; _nvCurrentVerIdx = 0; }
       }
       try {
-        const res = await fetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
+        const res = await workerFetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
         const data = await res.json();
         if (data.success && data.translated) {
           panel.querySelector('#mm-nv-output').value = data.translated;
@@ -1092,7 +1103,7 @@ async function createNaverPanel() {
     btn.disabled = true; btn.textContent = ui3.translating; resultEl.style.display = 'none';
     try {
       const ud = await getUserDataNV();
-      const res = await fetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: emailContent, targetLanguage: nvSelectedMyLang, email: ud.userEmail }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: emailContent, targetLanguage: nvSelectedMyLang, email: ud.userEmail }) });
       const data = await res.json();
       if (data.success && data.translated) {
         resultEl.textContent = data.translated;
@@ -1118,7 +1129,7 @@ async function createNaverPanel() {
     btn.disabled = true; btn.textContent = getUILangNV(nvSelectedMyLang).summarizing;
     try {
       const ud = await getUserDataNV();
-      const res = await fetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${nvSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:nvSelectedMyLang, email:ud.userEmail, isSummary:true }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${nvSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:nvSelectedMyLang, email:ud.userEmail, isSummary:true }) });
       const data = await res.json();
       if (data.success) {
         const summaryEl = panel.querySelector('#mm-nv-thread-summary');
@@ -1185,7 +1196,7 @@ async function createNaverPanel() {
       const storedNV = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureNV = storedNV.signature || '';
       const userInfoNV = storedNV.userInfo || '';
-      const res = await fetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, language:nvSelectedMyLang, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureNV && { signature: signatureNV }), ...(userInfoNV && { userInfo: userInfoNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, language:nvSelectedMyLang, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureNV && { signature: signatureNV }), ...(userInfoNV && { userInfo: userInfoNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-nv-spam');
@@ -1244,8 +1255,8 @@ async function createNaverPanel() {
     btn.disabled = true; btn.textContent = getUILangNV(nvSelectedMyLang).refining||'✨ Refining...';
     try {
       const storedNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
-      const res = await fetch(`${WORKER_URL_NV}/refine-compose`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const res = await workerFetch(`${WORKER_URL_NV}/refine-compose`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
         body: JSON.stringify({ draft, refineGoal: 'enhance', tone: nvSelectedTone, myLanguage: _nvCurrentDisplayLang || nvSelectedMyLang, email: ud.userEmail, country: nvSelectedCountry, clientDate: new Date().toISOString(), ...(storedNV.userInfo ? { userInfo: storedNV.userInfo } : {}), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) })
       });
       const data = await res.json();
@@ -1283,7 +1294,7 @@ async function createNaverPanel() {
     try {
       const storedTripleNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleNV = storedTripleNV.userInfo || '';
-      const res = await fetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1335,7 +1346,7 @@ async function createNaverPanel() {
     try {
       const storedSmartNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartNV = storedSmartNV.userInfo || '';
-      const res = await fetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _nvVersions=(data.versions||[]).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;
@@ -1845,12 +1856,12 @@ async function renderNVFloatPanel(panel) {
             const subjectEl = panel.querySelector('#mm-nv-fp-subject');
             const existingSubject = subjectEl?.value?.trim() || '';
             const [bodyData, subjData] = await Promise.all([
-              fetch(`${WORKER_URL_NV}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+              workerFetch(`${WORKER_URL_NV}/translate`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
                 body: JSON.stringify({ text: existingOutput, targetLanguage: targetLang })
               }).then(r => r.json()),
-              existingSubject ? fetch(`${WORKER_URL_NV}/translate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+              existingSubject ? workerFetch(`${WORKER_URL_NV}/translate`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
                 body: JSON.stringify({ text: existingSubject, targetLanguage: targetLang })
               }).then(r => r.json()) : Promise.resolve(null)
             ]);
@@ -2193,8 +2204,8 @@ async function renderNVFloatPanel(panel) {
       : { draft: input, tone: curTone, myLanguage: curOutputLang, email: ud.userEmail, country: nvSelectedCountry, clientDate: new Date().toISOString(), ...(userInfo ? { userInfo } : {}), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) };
 
     try {
-      const res = await fetch(`${WORKER_URL_NV}${endpoint}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      const res = await workerFetch(`${WORKER_URL_NV}${endpoint}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify(body)
       });
       const data = await res.json();
       if (data.success) {
@@ -2233,7 +2244,7 @@ async function renderNVFloatPanel(panel) {
     if (verTabs) { verTabs.style.display = 'none'; verTabs.innerHTML = ''; }
     const tonePicks = [curTone, 'professional', 'friendly', 'concise'].filter((v,i,a) => a.indexOf(v) === i).slice(0, 3);
     const reqs = tonePicks.map(tone =>
-      fetch(`${WORKER_URL_NV}/generate-compose`, {
+      workerFetch(`${WORKER_URL_NV}/generate-compose`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ prompt: input, tone, myLanguage: curOutputLang, email: ud.userEmail, country: nvSelectedCountry, clientDate: new Date().toISOString(), ...(userInfo ? {userInfo} : {}), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) })
       }).then(r => r.json()).catch(() => ({ success: false }))
