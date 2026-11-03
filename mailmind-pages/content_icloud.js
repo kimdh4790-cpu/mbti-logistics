@@ -603,7 +603,19 @@ async function createiCloudPanel() {
     // 이미 패널이 있으면 토글
     const isHidden = icCurrentPanel.style.display === 'none';
     icCurrentPanel.style.display = isHidden ? 'flex' : 'none';
-    if (isHidden) hideFabIC(); else showFabIC();
+    if (isHidden) {
+      hideFabIC();
+      safeStorageGetIC(['myLanguage']).then(s => {
+        const lang = s.myLanguage || 'auto';
+        if (lang !== icSelectedMyLang) {
+          icSelectedMyLang = lang;
+          const sel = icCurrentPanel.querySelector('#mm-ic-lang');
+          if (sel) sel.value = lang;
+        }
+      });
+    } else {
+      showFabIC();
+    }
     return;
   }
 
