@@ -1362,8 +1362,16 @@ async function createYahooJPPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangYJ = _yjCurrentDisplayLang || yjSelectedMyLang;
-        ta.value = refined;
-        _yjVersions = [refined]; _yjTranslations = []; _yjCurrentVerIdx = 0; _yjIsTranslated = false; _yjCurrentDisplayLang = _refineLangYJ; _yjOrigLang = _refineLangYJ;
+        const _bcYJ = ud.businessCard || '';
+        let _finalYJ = refined;
+        if (_bcYJ) {
+          if (_finalYJ.includes(_bcYJ)) {
+            const _bodyYJ = _finalYJ.replace('\n\n' + _bcYJ, '').replace('\n' + _bcYJ, '').replace(_bcYJ, '').trimEnd();
+            _finalYJ = _bodyYJ ? _bodyYJ + '\n\n' + _bcYJ : _finalYJ;
+          } else { _finalYJ = _finalYJ + '\n\n' + _bcYJ; }
+        }
+        ta.value = _finalYJ;
+        _yjVersions = [_finalYJ]; _yjTranslations = []; _yjCurrentVerIdx = 0; _yjIsTranslated = false; _yjCurrentDisplayLang = _refineLangYJ; _yjOrigLang = _refineLangYJ;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-yj-edit-btn').style.display = '';
         panel.querySelector('#mm-yj-edit-bar').style.display = 'none';

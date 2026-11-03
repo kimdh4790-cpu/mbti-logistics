@@ -1354,8 +1354,16 @@ async function createiCloudPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangIC = _icCurrentDisplayLang || icSelectedMyLang;
-        ta.value = refined;
-        _icVersions = [refined]; _icTranslations = []; _icCurrentVerIdx = 0; _icIsTranslated = false; _icCurrentDisplayLang = _refineLangIC; _icOrigLang = _refineLangIC;
+        const _bcIC = ud.businessCard || '';
+        let _finalIC = refined;
+        if (_bcIC) {
+          if (_finalIC.includes(_bcIC)) {
+            const _bodyIC = _finalIC.replace('\n\n' + _bcIC, '').replace('\n' + _bcIC, '').replace(_bcIC, '').trimEnd();
+            _finalIC = _bodyIC ? _bodyIC + '\n\n' + _bcIC : _finalIC;
+          } else { _finalIC = _finalIC + '\n\n' + _bcIC; }
+        }
+        ta.value = _finalIC;
+        _icVersions = [_finalIC]; _icTranslations = []; _icCurrentVerIdx = 0; _icIsTranslated = false; _icCurrentDisplayLang = _refineLangIC; _icOrigLang = _refineLangIC;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-ic-edit-btn').style.display = '';
         panel.querySelector('#mm-ic-edit-bar').style.display = 'none';

@@ -1341,8 +1341,16 @@ async function createNaverPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangNV = _nvCurrentDisplayLang || nvSelectedMyLang;
-        ta.value = refined;
-        _nvVersions = [refined]; _nvTranslations = []; _nvCurrentVerIdx = 0; _nvIsTranslated = false; _nvCurrentDisplayLang = _refineLangNV; _nvOrigLang = _refineLangNV;
+        const _bcNV = ud.businessCard || '';
+        let _finalNV = refined;
+        if (_bcNV) {
+          if (_finalNV.includes(_bcNV)) {
+            const _bodyNV = _finalNV.replace('\n\n' + _bcNV, '').replace('\n' + _bcNV, '').replace(_bcNV, '').trimEnd();
+            _finalNV = _bodyNV ? _bodyNV + '\n\n' + _bcNV : _finalNV;
+          } else { _finalNV = _finalNV + '\n\n' + _bcNV; }
+        }
+        ta.value = _finalNV;
+        _nvVersions = [_finalNV]; _nvTranslations = []; _nvCurrentVerIdx = 0; _nvIsTranslated = false; _nvCurrentDisplayLang = _refineLangNV; _nvOrigLang = _refineLangNV;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-nv-edit-btn').style.display = '';
         panel.querySelector('#mm-nv-edit-bar').style.display = 'none';

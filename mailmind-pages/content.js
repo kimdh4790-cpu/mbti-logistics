@@ -2152,9 +2152,17 @@ function createPanel() {
         const refined = (data.body || data.reply || '').trim();
         if (!refined) { ta.value = backupText; showToast(ui.refineEmpty, 'error'); return; }
         // Diff 뷰 표시: 사용자가 확인 후 적용
-        _mmShowDiff(ta, backupText, refined, async () => {
-          ta.value = refined;
-          _versions = [refined]; _replyOrigVersions = [refined]; _replyOrigSingleBody = ''; _translations = []; _currentVerIdx = 0; _isTranslated = false; _replyTransCache = {}; _replyDisplayedLang = _refineLang; _replyOrigLang = _refineLang;
+        const _bcGM = ud.businessCard || '';
+        let _finalGM = refined;
+        if (_bcGM) {
+          if (_finalGM.includes(_bcGM)) {
+            const _bodyGM = _finalGM.replace('\n\n' + _bcGM, '').replace('\n' + _bcGM, '').replace(_bcGM, '').trimEnd();
+            _finalGM = _bodyGM ? _bodyGM + '\n\n' + _bcGM : _finalGM;
+          } else { _finalGM = _finalGM + '\n\n' + _bcGM; }
+        }
+        _mmShowDiff(ta, backupText, _finalGM, async () => {
+          ta.value = _finalGM;
+          _versions = [_finalGM]; _replyOrigVersions = [_finalGM]; _replyOrigSingleBody = ''; _translations = []; _currentVerIdx = 0; _isTranslated = false; _replyTransCache = {}; _replyDisplayedLang = _refineLang; _replyOrigLang = _refineLang;
           ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
           panel.querySelector('#mm-edit-btn').style.display = '';
           panel.querySelector('#mm-edit-bar').style.display = 'none';

@@ -1363,8 +1363,16 @@ async function createYahooPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangYH = _yhCurrentDisplayLang || yhSelectedMyLang;
-        ta.value = refined;
-        _yhVersions = [refined]; _yhTranslations = []; _yhCurrentVerIdx = 0; _yhIsTranslated = false; _yhCurrentDisplayLang = _refineLangYH; _yhOrigLang = _refineLangYH;
+        const _bcYH = ud.businessCard || '';
+        let _finalYH = refined;
+        if (_bcYH) {
+          if (_finalYH.includes(_bcYH)) {
+            const _bodyYH = _finalYH.replace('\n\n' + _bcYH, '').replace('\n' + _bcYH, '').replace(_bcYH, '').trimEnd();
+            _finalYH = _bodyYH ? _bodyYH + '\n\n' + _bcYH : _finalYH;
+          } else { _finalYH = _finalYH + '\n\n' + _bcYH; }
+        }
+        ta.value = _finalYH;
+        _yhVersions = [_finalYH]; _yhTranslations = []; _yhCurrentVerIdx = 0; _yhIsTranslated = false; _yhCurrentDisplayLang = _refineLangYH; _yhOrigLang = _refineLangYH;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-yh-edit-btn').style.display = '';
         panel.querySelector('#mm-yh-edit-bar').style.display = 'none';

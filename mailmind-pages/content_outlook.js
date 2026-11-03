@@ -1245,8 +1245,16 @@ async function createOutlookPanel() {
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-ol-edit-btn').style.display = '';
         panel.querySelector('#mm-ol-edit-bar').style.display = 'none';
-        ta.value = data.refined;
-        _olVersions = [data.refined]; _olTranslations = []; _olCurrentVerIdx = 0; _olIsTranslated = false; _olCurrentDisplayLang = _refineLangOL; _olOrigLang = _refineLangOL;
+        const _bcOL = ud.businessCard || '';
+        let _finalOL = (data.refined || '').trim();
+        if (_bcOL) {
+          if (_finalOL.includes(_bcOL)) {
+            const _bodyOL = _finalOL.replace('\n\n' + _bcOL, '').replace('\n' + _bcOL, '').replace(_bcOL, '').trimEnd();
+            _finalOL = _bodyOL ? _bodyOL + '\n\n' + _bcOL : _finalOL;
+          } else { _finalOL = _finalOL + '\n\n' + _bcOL; }
+        }
+        ta.value = _finalOL;
+        _olVersions = [_finalOL]; _olTranslations = []; _olCurrentVerIdx = 0; _olIsTranslated = false; _olCurrentDisplayLang = _refineLangOL; _olOrigLang = _refineLangOL;
         await incrementUsageOL(data.monthlyUsage);
         updateBadgeOL();
         showToastOL(getUILangOL(olSelectedMyLang).refineDone||'✨ 다듬기 완료!', 'success');
