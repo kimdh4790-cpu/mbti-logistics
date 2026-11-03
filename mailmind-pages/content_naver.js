@@ -114,6 +114,7 @@ function learnStyleNV(tone, emailContent, reply) {
 let nvCurrentPanel = null;
 let nvSelectedTone = 'professional';
 let nvSelectedMyLang = 'auto';
+let nvSelectedReplyLang = 'auto';
 let nvSelectedCountry = 'auto';
 let nvCachedEmotion = 'neutral';
 let nvCachedUrgency = 'low';
@@ -638,7 +639,7 @@ async function createNaverPanel() {
         const lang = s.myLanguage || 'auto';
         if (lang !== nvSelectedMyLang) {
           nvSelectedMyLang = lang;
-          const sel = nvCurrentPanel.querySelector('#mm-nv-mylang-select');
+          const sel = nvCurrentPanel.querySelector('#mm-nv-lang');
           if (sel) sel.value = lang;
         }
       });
@@ -648,8 +649,9 @@ async function createNaverPanel() {
     return;
   }
 
-  const stored = await safeStorageGetNV(['myLanguage','userPlan']);
+  const stored = await safeStorageGetNV(['myLanguage','replyLanguage','userPlan']);
   nvSelectedMyLang = stored.myLanguage || 'auto';
+  nvSelectedReplyLang = stored.replyLanguage || 'auto';
   const plan = stored.userPlan || 'free';
   const ui = getUILangNV(nvSelectedMyLang);
 
@@ -1210,7 +1212,7 @@ async function createNaverPanel() {
       const storedNV = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureNV = storedNV.signature || '';
       const userInfoNV = storedNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, language:nvSelectedMyLang, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureNV && { signature: signatureNV }), ...(userInfoNV && { userInfo: userInfoNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, language:nvSelectedMyLang, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureNV && { signature: signatureNV }), ...(userInfoNV && { userInfo: userInfoNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-nv-spam');
@@ -1308,7 +1310,7 @@ async function createNaverPanel() {
     try {
       const storedTripleNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleNV = storedTripleNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1360,7 +1362,7 @@ async function createNaverPanel() {
     try {
       const storedSmartNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartNV = storedSmartNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedMyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _nvVersions=(data.versions||[]).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;
