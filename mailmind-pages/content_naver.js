@@ -715,19 +715,19 @@ async function createNaverPanel() {
       <div id="mm-nv-spam" style="display:none;background:#fce8e6;border:1.5px solid #d93025;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#c5221f;line-height:1.6;white-space:pre-line"></div>
 
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-nv-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-nv-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:80px">
-          <label id="mm-nv-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
-          <select id="mm-nv-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(nvSelectedMyLang)}</select>
-        </div>
-                <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-nv-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-nv-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
+          <label id="mm-nv-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-nv-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(nvSelectedMyLang)}</select>
+        </div>
+        <div style="flex:1;min-width:140px">
           <label id="mm-nv-label-mylang" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.myLang}</label>
           <select id="mm-nv-lang" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${langOptions}</select>
         </div>
