@@ -1739,6 +1739,8 @@ function createPanel() {
     panel.querySelector('#mm-versions').style.display = 'none';
 
     try {
+      const _tripleSigData = await new Promise(r => safeStorageGet(['signature'], r));
+      const _tripleSig = _tripleSigData.signature || '';
       const res = await workerFetch(`${WORKER_URL}/generate-triple`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
@@ -1750,7 +1752,8 @@ function createPanel() {
           email: userData.userEmail,
           userId: userData.userId,
           ...(userData.businessCard ? { businessCard: userData.businessCard } : {}),
-          ...(userData.phrases?.length ? { phrases: userData.phrases } : {})
+          ...(userData.phrases?.length ? { phrases: userData.phrases } : {}),
+          ...(_tripleSig && { signature: _tripleSig })
         })
       });
       const data = await res.json();
@@ -1894,6 +1897,8 @@ function createPanel() {
     panel.querySelector('#mm-lang-btn').style.display = 'none';
 
     try {
+      const _smartSigData = await new Promise(r => safeStorageGet(['signature'], r));
+      const _smartSig = _smartSigData.signature || '';
       const res = await workerFetch(`${WORKER_URL}/generate-smart`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
@@ -1905,7 +1910,8 @@ function createPanel() {
           email: userData.userEmail,
           userId: userData.userId,
           ...(userData.businessCard ? { businessCard: userData.businessCard } : {}),
-          ...(userData.phrases?.length ? { phrases: userData.phrases } : {})
+          ...(userData.phrases?.length ? { phrases: userData.phrases } : {}),
+          ...(_smartSig && { signature: _smartSig })
         })
       });
       const data = await res.json();
