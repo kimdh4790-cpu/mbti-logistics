@@ -441,6 +441,36 @@ function getNaverEmailThread() {
   return null;
 }
 
+// ===== Read Naver Email Subject (제목만 읽기) =====
+function getNaverEmailSubjectNV() {
+  const subjectSelectors = [
+    '.mail_view_header .title',
+    '.mail_view_title',
+    '.mail_subject',
+    '.read_subject',
+    '[class*="mailTitle"]',
+    '[class*="mail_title"]',
+    '[class*="subjectArea"]',
+    '[class*="subject_area"]',
+    '[class*="read_header"] .title',
+    '[data-testid="mail-subject"]',
+    '[data-testid="message-subject"]',
+    '.nm-title',
+    '[class*="mailSubject"]',
+    '[class*="MailSubject"]',
+  ];
+  for (const sel of subjectSelectors) {
+    try {
+      const el = document.querySelector(sel);
+      if (el) {
+        const text = (el.innerText || el.textContent || '').trim();
+        if (text.length > 1) return text;
+      }
+    } catch(e) {}
+  }
+  return '';
+}
+
 // ===== 메일이 실제로 열려 있는지 감지 (Naver Mail) =====
 function isEmailOpenNV() {
   // Naver Mail에서 이메일이 선택되어 오른쪽에 내용이 표시될 때만 true
@@ -1463,9 +1493,12 @@ const DETECT_I18N_NV = {
 };
 function detectAndShowInfoNV(emailContent, lang) {
   if (!nvCurrentPanel) return;
-  const text = emailContent.toLowerCase();
+  // 제목(Subject)을 제외한 본문만 언어 감지에 사용 — 제목이 한국어여도 본문이 영어면 영어로 감지
+  const _subjectNV = getNaverEmailSubjectNV();
+  const _bodyForLang = _subjectNV ? emailContent.replace(_subjectNV, '').trim() : emailContent;
+  const text = emailContent.toLowerCase(); // 키워드 감지(무역/법률/IT 등)는 전체 내용 사용
   const keys = [];
-  const _ecNsNV = emailContent.replace(/\s+/g,''); const _ecLenNV = _ecNsNV.length||1;
+  const _ecNsNV = _bodyForLang.replace(/\s+/g,''); const _ecLenNV = _ecNsNV.length||1;
   const _hasLangNV = r => { const m = _ecNsNV.match(r); return m && m.length >= 5 && m.length/_ecLenNV >= 0.05; };
   if (_hasLangNV(/[\u3040-\u30ff]/g)) { keys.push('japan'); if (nvSelectedCountry === 'auto') { nvSelectedCountry = 'Japan'; const _csi=nvCurrentPanel.querySelector('#mm-nv-country'); if(_csi) _csi.value='Japan'; } }
   else if (_hasLangNV(/[\u4e00-\u9fff]/g)) { keys.push('china'); if (nvSelectedCountry === 'auto') { nvSelectedCountry = 'China'; const _csi=nvCurrentPanel.querySelector('#mm-nv-country'); if(_csi) _csi.value='China'; } }
