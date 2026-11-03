@@ -631,7 +631,20 @@ async function createNaverPanel() {
     // 이미 패널이 있으면 토글
     const isHidden = nvCurrentPanel.style.display === 'none';
     nvCurrentPanel.style.display = isHidden ? 'flex' : 'none';
-    if (isHidden) hideFabNV(); else showFabNV();
+    if (isHidden) {
+      hideFabNV();
+      // 패널을 다시 열 때 스토리지에서 최신 언어 설정 반영
+      safeStorageGetNV(['myLanguage']).then(s => {
+        const lang = s.myLanguage || 'auto';
+        if (lang !== nvSelectedMyLang) {
+          nvSelectedMyLang = lang;
+          const sel = nvCurrentPanel.querySelector('#mm-nv-mylang-select');
+          if (sel) sel.value = lang;
+        }
+      });
+    } else {
+      showFabNV();
+    }
     return;
   }
 
