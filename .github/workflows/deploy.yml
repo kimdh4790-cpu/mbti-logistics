@@ -7,7 +7,7 @@ name: Deploy
 #
 # 작업 순서:
 #   1) npx wrangler deploy — Cloudflare Worker 배포
-#   2) KV 업로드 — filo/dine/donway HTML·JS 파일 전체
+#   2) KV 업로드 — donway HTML·JS 파일 전체
 #   3) Firestore Rules 배포 (FIREBASE_SA_KEY 있을 때)
 #
 # ⚠️ 새 JS/HTML 파일 추가 시 KV for FILE in 목록에 반드시 추가
@@ -68,23 +68,6 @@ jobs:
             [ -n "$KAKAO_REST_KEY" ] && printf '%s' "$KAKAO_REST_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KAKAO_REST_KEY 2>&1 || echo "⚠️ KAKAO_REST_KEY 시크릿 설정 실패/미설정 (무시)"
             [ -n "$KAKAO_JS_KEY" ] && printf '%s' "$KAKAO_JS_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put KAKAO_JS_KEY 2>&1 || echo "⚠️ KAKAO_JS_KEY 시크릿 설정 실패/미설정 (무시)"
           fi
-      - name: Deploy Filo Worker
-        continue-on-error: true
-        env:
-          CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
-          CF_EMAIL: kimdh4790@gmail.com
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          CF_KEY="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          if CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler deploy --config wrangler.filo.toml 2>&1; then
-            echo "✅ Filo Worker 배포 (API Token)"
-            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_TOKEN="$CF_KEY" npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.filo.toml 2>&1 || echo "⚠️ ANTHROPIC_API_KEY filo 시크릿 설정 실패 (무시)"
-          else
-            echo "↩️ 토큰 인증 실패 — Global API Key 방식으로 재시도"
-            CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler deploy --config wrangler.filo.toml 2>&1
-            printf '%s' "$ANTHROPIC_API_KEY" | CLOUDFLARE_API_KEY="$CF_KEY" CLOUDFLARE_EMAIL="$CF_EMAIL" npx wrangler secret put ANTHROPIC_API_KEY --config wrangler.filo.toml 2>&1 || echo "⚠️ ANTHROPIC_API_KEY filo 시크릿 설정 실패 (무시)"
-          fi
-
       - name: Deploy Yongcha Worker
         continue-on-error: true
         env:
@@ -169,7 +152,7 @@ jobs:
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
           ACCOUNT="02709cbec18d848913b4246015b9148f"
           NS_ID="7f0e90efaea64f3ab08ff00f8970b28b"
-          for FILE in donway-icon-192.png donway-icon-512.png donway-apple-icon.png yongcha-icon-192.png yongcha-icon-512.png yongcha-apple-icon.png apple-touch-icon.png icon-192.png icon-512.png mbtico-icon-192.png mbtico-icon-512.png filo-icon-192.png filo-icon-512.png filo-apple-icon.png; do
+          for FILE in donway-icon-192.png donway-icon-512.png donway-apple-icon.png yongcha-icon-192.png yongcha-icon-512.png yongcha-apple-icon.png apple-touch-icon.png icon-192.png icon-512.png mbtico-icon-192.png mbtico-icon-512.png; do
             [ -f "$FILE" ] || continue
             RESULT=$(curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT/storage/kv/namespaces/$NS_ID/values/$FILE" \
               -H "X-Auth-Email: kimdh4790@gmail.com" \
@@ -216,7 +199,7 @@ jobs:
           CF_KEY: ${{ secrets.CF_GLOBAL_KEY }}
         run: |
           CF_KEY_CLEAN="$(printf '%s' "$CF_KEY" | tr -d '\r\n\t ')"
-          for ZONE in donway.ai.kr mbtico.kr yongcha.app filo.ai.kr; do
+          for ZONE in donway.ai.kr mbtico.kr yongcha.app; do
             ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=$ZONE" -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY_CLEAN" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['result'][0]['id'] if d.get('result') else '')" 2>/dev/null)
             [ -z "$ZONE_ID" ] && continue
             RES=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" -H "X-Auth-Email: kimdh4790@gmail.com" -H "X-Auth-Key: $CF_KEY_CLEAN" -H "Content-Type: application/json" -d '{"purge_everything":true}')

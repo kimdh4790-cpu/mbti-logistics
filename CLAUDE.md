@@ -107,6 +107,12 @@ KV NS_ID:            7f0e90efaea64f3ab08ff00f8970b28b
 매장 dealerId:       9XD2K3W1tIhIs6XM74YT0xfRFEP2
 Oracle Cloud IP:     161.33.136.154 (2코어/12GB, opc 계정, filo-a1-2c12g)
 
+## 📱 MailMind 앱 배포 현황 (2026-11-01 기준 — 절대 다시 진행하지 말 것)
+- **Android** ✅ Google Play 내부 테스트 `1.0.277` 배포 완료. GitHub Actions(`build-android.yml`) → Play Store 내부 테스트 자동화 이미 작동 중. 다시 설정할 필요 없음.
+- **iOS** ✅ Codemagic(`ios-workflow`) → App Store Connect 제출 완료. `PrivacyInfo.xcprivacy` 추가(PR #338), 빌드 261, 버전 1.1.0. 현재 Apple 심사 대기 중.
+- **빌드 인프라**: Android = GitHub Actions 자동, iOS = Codemagic 수동 트리거. 둘 다 이미 세팅 완료.
+- **Appetize.io** (안드로이드에서 iOS 테스트): 나중에 진행 예정. 아직 미착수.
+
 ## 📱 MailMind 핵심 URL
 - **어드민 대시보드**: https://mailmind-api.kimdh4790.workers.dev/admin-ui (유저 관리·사용량·플랜 분포)
 - **랜딩 페이지**: https://mailmind.yongcha.app (14개 언어 i18n)
