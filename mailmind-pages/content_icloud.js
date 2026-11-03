@@ -125,6 +125,7 @@ function learnStyleIC(tone, emailContent, reply) {
 let icCurrentPanel = null;
 let icSelectedTone = 'professional';
 let icSelectedMyLang = 'auto';
+let icSelectedReplyLang = 'auto';
 let icSelectedCountry = 'auto';
 let icCachedEmotion = 'neutral';
 let icCachedUrgency = 'low';
@@ -619,8 +620,9 @@ async function createiCloudPanel() {
     return;
   }
 
-  const stored = await safeStorageGetIC(['myLanguage','userPlan']);
+  const stored = await safeStorageGetIC(['myLanguage','replyLanguage','userPlan']);
   icSelectedMyLang = stored.myLanguage || 'auto';
+  icSelectedReplyLang = stored.replyLanguage || 'auto';
   const plan = stored.userPlan || 'free';
   const ui = getUILangIC(icSelectedMyLang);
 
@@ -1153,7 +1155,7 @@ async function createiCloudPanel() {
       const storedIC = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureIC = storedIC.signature || '';
       const userInfoIC = storedIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, language:icSelectedMyLang, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureIC && { signature: signatureIC }), ...(userInfoIC && { userInfo: userInfoIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, language:icSelectedMyLang, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureIC && { signature: signatureIC }), ...(userInfoIC && { userInfo: userInfoIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-ic-spam');
@@ -1211,7 +1213,7 @@ async function createiCloudPanel() {
     try {
       const storedTripleIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleIC = storedTripleIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1263,7 +1265,7 @@ async function createiCloudPanel() {
     try {
       const storedSmartIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartIC = storedSmartIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedMyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _icVersions=(data.versions||[]).map(_stripSalutationIC); _icTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureIC(t):t)); _icCurrentVerIdx=0; _icIsTranslated=false; _icCurrentDisplayLang=icSelectedMyLang; _icOrigLang=icSelectedMyLang;

@@ -138,6 +138,7 @@ function learnStyleYJ(tone, emailContent, reply) {
 let yjCurrentPanel = null;
 let yjSelectedTone = 'professional';
 let yjSelectedMyLang = 'auto';
+let yjSelectedReplyLang = 'auto';
 let yjSelectedCountry = 'auto';
 let yjCachedEmotion = 'neutral';
 let yjCachedUrgency = 'low';
@@ -627,8 +628,9 @@ async function createYahooJPPanel() {
     return;
   }
 
-  const stored = await safeStorageGetYJ(['myLanguage','userPlan']);
+  const stored = await safeStorageGetYJ(['myLanguage','replyLanguage','userPlan']);
   yjSelectedMyLang = stored.myLanguage || 'auto';
+  yjSelectedReplyLang = stored.replyLanguage || 'auto';
   const plan = stored.userPlan || 'free';
   const ui = getUILangYJ(yjSelectedMyLang);
 
@@ -1161,7 +1163,7 @@ async function createYahooJPPanel() {
       const storedYJ = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureYJ = storedYJ.signature || '';
       const userInfoYJ = storedYJ.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YJ}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, language:yjSelectedMyLang, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureYJ && { signature: signatureYJ }), ...(userInfoYJ && { userInfo: userInfoYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_YJ}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, language:yjSelectedMyLang, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureYJ && { signature: signatureYJ }), ...(userInfoYJ && { userInfo: userInfoYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-yj-spam');
@@ -1219,7 +1221,7 @@ async function createYahooJPPanel() {
     try {
       const storedTripleYJ = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleYJ = storedTripleYJ.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YJ}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYJ && { userInfo: userInfoTripleYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_YJ}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYJ && { userInfo: userInfoTripleYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1271,7 +1273,7 @@ async function createYahooJPPanel() {
     try {
       const storedSmartYJ = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartYJ = storedSmartYJ.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedMyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _yjVersions=(data.versions||[]).map(_stripSalutationYJ); _yjTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureYJ(t):t)); _yjCurrentVerIdx=0; _yjIsTranslated=false; _yjCurrentDisplayLang=yjSelectedMyLang; _yjOrigLang=yjSelectedMyLang;
