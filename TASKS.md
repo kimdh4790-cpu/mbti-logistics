@@ -119,6 +119,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 |---|---|---|---|---|
 | 4 | `[ ]` | mbtico-pages/_worker.js 경량화 | mbtico-pages/_worker.js | 515KB. 작업 전 별도 세션에서 설계 먼저 |
 | 5 | `[ ]` | emergency.html 재작성 | emergency.html | 461KB. 배송앱_변경내역.md 먼저 읽을 것 |
+| 6 | `[x]` | **MailMind generate.js → prompts.js 연결** (2026-11-03 완료) | mailmind/worker/generate.js | `prompts.js` 신규 생성 (8개 builder 함수 + 3개 시스템 메시지 상수). generate.js 1749줄 → 1130줄 (~35% 감소). PR #375 (draft). 브랜치 ccr-7672c434-99f49v 푸시 완료. |
 
 ---
 
