@@ -6,6 +6,15 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // Worker API fetch 프록시 (CORS 우회)
+  if (msg.type === 'MM_WORKER_FETCH') {
+    fetch(msg.url, msg.options)
+      .then(r => r.json())
+      .then(data => sendResponse({ ok: true, data }))
+      .catch(e => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+
   // compose frame 등록
   if (msg.type === 'MM_IC_REGISTER_COMPOSE') {
     if (sender.tab && sender.frameId !== undefined) {

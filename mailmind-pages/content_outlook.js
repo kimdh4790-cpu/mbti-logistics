@@ -2,6 +2,17 @@
 // outlook.live.com / outlook.office.com / outlook.office365.com
 
 const WORKER_URL_OL = 'https://mailmind-api.kimdh4790.workers.dev';
+const API_KEY_content_outlook = 'mm-app-2026';
+
+function workerFetch(url, options) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options }, res => {
+      void chrome.runtime.lastError;
+      if (!res || !res.ok) { reject(new Error(res?.error || 'fetch failed')); return; }
+      resolve({ ok: true, json: () => Promise.resolve(res.data) });
+    });
+  });
+}
 function escapeHtmlOL(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 // Trusted Types helper — Outlook Web enforces TT and rejects bare .innerHTML = string
@@ -231,7 +242,7 @@ async function getUserDataOL() {
   let phrases = [];
   if (data.userEmail) {
     try {
-      const pr = await fetch(`${WORKER_URL_OL}/phrases?email=${encodeURIComponent(data.userEmail)}`);
+      const pr = await workerFetch(`${WORKER_URL_OL}/phrases?email=${encodeURIComponent(data.userEmail)}`);
       if (pr.ok) { const pd = await pr.json(); if (pd.success) phrases = (pd.phrases || []).map(p => p.text || p).filter(Boolean); }
     } catch (_) {}
   }
@@ -241,7 +252,7 @@ async function getUserDataOL() {
 async function syncUsageOL(userEmail) {
   if (!userEmail) return;
   try {
-    const res = await fetch(`${WORKER_URL_OL}/status`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: userEmail }) });
+    const res = await workerFetch(`${WORKER_URL_OL}/status`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ email: userEmail }) });
     const data = await res.json();
     if (data.plan) {
       const thisMonth = new Date().toISOString().slice(0,7);
@@ -767,7 +778,7 @@ async function createOutlookPanel() {
         else { _olVersions = [currentText]; _olCurrentVerIdx = 0; }
       }
       try {
-        const res = await fetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
+        const res = await workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: currentText, targetLanguage: targetLang }) });
         const data = await res.json();
         if (data.success && data.translated) {
           panel.querySelector('#mm-ol-output').value = data.translated;
@@ -779,7 +790,7 @@ async function createOutlookPanel() {
           const otherIdxs = [...Array(_olVersions.length).keys()].filter(i => i !== _olCurrentVerIdx && _olVersions[i]);
           Promise.all(otherIdxs.map(async (i) => {
             try {
-              const r2 = await fetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: _olVersions[i], targetLanguage: targetLang }) });
+              const r2 = await workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: _olVersions[i], targetLanguage: targetLang }) });
               const d2 = await r2.json();
               if (d2.success && d2.translated) {
                 _olTranslations[i] = d2.translated;
@@ -814,9 +825,9 @@ async function createOutlookPanel() {
 
     try {
       const ud = await getUserDataOL();
-      const res = await fetch(`${WORKER_URL_OL}/translate`, {
+      const res = await workerFetch(`${WORKER_URL_OL}/translate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
         body: JSON.stringify({ text: emailContent, targetLanguage: olSelectedMyLang, email: ud.userEmail })
       });
       const data = await res.json();
@@ -850,7 +861,7 @@ async function createOutlookPanel() {
     btn.disabled = true; btn.textContent = getUILangOL(olSelectedMyLang).summarizing;
     try {
       const ud = await getUserDataOL();
-      const res = await fetch(`${WORKER_URL_OL}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${olSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:olSelectedMyLang, email:ud.userEmail, isSummary:true }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent: `Summarize this email thread in 3-5 bullet points in ${olSelectedMyLang}. Be concise.\n\n${emailContent}`, tone:'concise', language:olSelectedMyLang, email:ud.userEmail, isSummary:true }) });
       const data = await res.json();
       if (data.success) {
         const summaryEl = panel.querySelector('#mm-ol-thread-summary');
@@ -925,7 +936,7 @@ async function createOutlookPanel() {
       const storedSigOL = await new Promise(r => chrome.storage.sync.get(['signature','userInfo'], r));
       const signatureOL = storedSigOL.signature || '';
       const userInfoOL = storedSigOL.userInfo || '';
-      const res = await fetch(`${WORKER_URL_OL}/generate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, language:olSelectedMyLang, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureOL && { signature: signatureOL }), ...(userInfoOL && { userInfo: userInfoOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, language:olSelectedMyLang, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureOL && { signature: signatureOL }), ...(userInfoOL && { userInfo: userInfoOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         // 스팸
@@ -994,7 +1005,7 @@ async function createOutlookPanel() {
     try {
       const storedTripleOL = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleOL = storedTripleOL.userInfo || '';
-      const res = await fetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length > 0) {
         const _maxVer = userData.plan === 'pro' ? 3 : 2;
@@ -1072,7 +1083,7 @@ async function createOutlookPanel() {
     try {
       const storedSmartOL = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartOL = storedSmartOL.userInfo || '';
-      const res = await fetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, myLanguage:olSelectedMyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _olVersions = (data.versions || []).map(_stripSalutationOL);
@@ -1140,7 +1151,7 @@ async function createOutlookPanel() {
               } else {
                 this.textContent='⏳'; this.disabled=true;
                 try {
-                  const tr = await fetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: _olVersions[_olCurrentVerIdx], targetLanguage: targetLang }) });
+                  const tr = await workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: _olVersions[_olCurrentVerIdx], targetLanguage: targetLang }) });
                   const td = await tr.json();
                   if (td.success && td.translated) {
                     _olTranslations[_olCurrentVerIdx] = td.translated;
@@ -1150,7 +1161,7 @@ async function createOutlookPanel() {
                     const others = [...Array(_olVersions.length).keys()].filter(i => i !== _olCurrentVerIdx && _olVersions[i]);
                     Promise.all(others.map(async (i) => {
                       try {
-                        const r2 = await fetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: _olVersions[i], targetLanguage: targetLang }) });
+                        const r2 = await workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: _olVersions[i], targetLanguage: targetLang }) });
                         const d2 = await r2.json();
                         if (d2.success && d2.translated) {
                           _olTranslations[i] = d2.translated;
@@ -1187,9 +1198,9 @@ async function createOutlookPanel() {
     const refineBtn = panel.querySelector('#mm-ol-refine-btn');
     refineBtn.disabled = true; refineBtn.textContent = '⏳';
     try {
-      const res = await fetch(`${WORKER_URL_OL}/refine-compose`, {
+      const res = await workerFetch(`${WORKER_URL_OL}/refine-compose`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' },
         body: JSON.stringify({ draft, refineGoal: 'enhance', tone: olSelectedTone, myLanguage: _olCurrentDisplayLang || olSelectedMyLang, email: ud.userEmail, userId: ud.userId, ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) })
       });
       const data = await res.json();
@@ -1683,8 +1694,8 @@ async function openOutlookComposePanel() {
           const subjectEl = panel.querySelector('#mm-ol-cp-subject');
           const existingSubject = subjectEl?.value?.trim() || '';
           const [bodyData, subjData] = await Promise.all([
-            fetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: bodyText, targetLanguage: targetLang }) }).then(r => r.json()),
-            existingSubject ? fetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: existingSubject, targetLanguage: targetLang }) }).then(r => r.json()) : Promise.resolve(null)
+            workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: bodyText, targetLanguage: targetLang }) }).then(r => r.json()),
+            existingSubject ? workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: existingSubject, targetLanguage: targetLang }) }).then(r => r.json()) : Promise.resolve(null)
           ]);
           if (bodyData.success) panel.querySelector('#mm-ol-cp-output').value = _stripSalutationOL(bodyData.translated || '');
           if (subjData?.success && subjectEl) subjectEl.value = subjData.translated || '';
@@ -1745,7 +1756,7 @@ async function openOutlookComposePanel() {
       genBtn.disabled = true;
 
       try {
-        const res = await fetch(`${WORKER_URL_OL}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const res = await workerFetch(`${WORKER_URL_OL}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify(body) });
         const data = await res.json();
         if (data.success) {
           panel.querySelector('#mm-ol-cp-subject').value = data.subject || '';
@@ -1864,7 +1875,7 @@ async function openOutlookComposePanel() {
         const body = curMode === 'compose'
           ? { prompt: input, tone, myLanguage: olComposeOutputLang, email: userData.userEmail, country: olSelectedCountry, ...(userInfo ? { userInfo } : {}), ...(userData.businessCard ? { businessCard: userData.businessCard } : {}), ...(userData.phrases?.length ? { phrases: userData.phrases } : {}) }
           : { draft: input, tone, myLanguage: olComposeOutputLang, email: userData.userEmail, country: olSelectedCountry, ...(userInfo ? { userInfo } : {}), ...(userData.businessCard ? { businessCard: userData.businessCard } : {}), ...(userData.phrases?.length ? { phrases: userData.phrases } : {}) };
-        return fetch(`${WORKER_URL_OL}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()).then(d => ({ tone, subject: d.subject||'', body: d.body||d.reply||'' })).catch(() => null);
+        return workerFetch(`${WORKER_URL_OL}${endpoint}`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify(body) }).then(r => r.json()).then(d => ({ tone, subject: d.subject||'', body: d.body||d.reply||'' })).catch(() => null);
       }));
       _olCpVersions = results.filter(Boolean);
       _olCpCurrentVerIdx = 0;

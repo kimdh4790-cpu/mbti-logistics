@@ -1,4 +1,5 @@
 const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
+const API_KEY = 'mm-app-2026';
 
 const PLAN_LIMITS = {
   pro:   { monthly: 300 },
@@ -92,37 +93,17 @@ async function showLoggedOut() {
   document.getElementById('user-section').style.display = 'none';
 }
 
-async function getTokenViaWebAuthFlow() {
-  const CLIENT_ID = '40761160761-dlbqacnspe2c89uf0uu06nf3omt0qof6.apps.googleusercontent.com';
-  const redirectUri = `https://${chrome.runtime.id}.chromiumapp.org/`;
-  const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: redirectUri,
-    response_type: 'token',
-    scope: 'openid email profile',
-    prompt: 'select_account'
-  }).toString();
-
-  const redirectUrl = await new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, (url) => {
-      if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
-      else if (!url) reject(new Error('No redirect URL'));
-      else resolve(url);
-    });
-  });
-
-  const hash = new URL(redirectUrl).hash.slice(1);
-  const params = new URLSearchParams(hash);
-  const token = params.get('access_token');
-  if (!token) throw new Error('No access token');
-  return token;
-}
-
 async function loginWithGoogle() {
   const btn = document.getElementById('btn-google-login');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span style="opacity:.6">Signing in…</span>'; }
   try {
-    const token = await getTokenViaWebAuthFlow();
+    const token = await new Promise((resolve, reject) => {
+      chrome.identity.getAuthToken({ interactive: true }, (t) => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else if (!t) reject(new Error('No token received'));
+        else resolve(t);
+      });
+    });
 
     const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${token}` }
@@ -131,7 +112,7 @@ async function loginWithGoogle() {
 
     const loginRes = await fetch(`${WORKER_URL}/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ token, email: userInfo.email, name: userInfo.name })
     });
     const loginData = await loginRes.json();
@@ -160,6 +141,8 @@ async function loginWithGoogle() {
       }
       await chrome.storage.sync.set(loginSyncObj);
       await showLoggedIn({ ...loginSyncObj });
+    } else {
+      throw new Error(`Worker rejected login: ${JSON.stringify(loginData)}`);
     }
   } catch (e) {
     console.error('Login error:', e);
@@ -167,12 +150,10 @@ async function loginWithGoogle() {
       btn.disabled = false;
       btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:18px;height:18px"> Sign in with Google';
       const errEl = document.createElement('p');
-      errEl.style.cssText = 'color:#c5221f;font-size:12px;margin-top:8px;text-align:center;white-space:pre-line;';
-      errEl.textContent = e.message === 'timeout'
-        ? 'Sign-in window may have appeared\nbehind this window. Please try again.'
-        : 'Sign-in failed. Please try again.';
+      errEl.style.cssText = 'color:#c5221f;font-size:12px;margin-top:8px;text-align:center;';
+      errEl.textContent = 'Sign-in failed. Please try again.';
       btn.insertAdjacentElement('afterend', errEl);
-      setTimeout(() => errEl.remove(), 4000);
+      setTimeout(() => errEl.remove(), 3000);
     }
   }
 }
@@ -195,7 +176,7 @@ async function refreshStatus() {
   try {
     const res = await fetch(`${WORKER_URL}/status`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ email: stored.userEmail })
     });
     const data = await res.json();
