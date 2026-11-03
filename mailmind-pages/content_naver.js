@@ -17,6 +17,30 @@ function workerFetch(url, options) {
 const PLAN_LIMITS_NV = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_NV = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
+const HONORIFIC_OPTIONS = {
+  Korean:     [ { v:'formal', l:'하십시오체' }, { v:'polite', l:'해요체' },    { v:'casual', l:'해체·반말' } ],
+  Japanese:   [ { v:'formal', l:'敬語' },       { v:'polite', l:'丁寧語' },    { v:'casual', l:'タメ口' } ],
+  Chinese:    [ { v:'formal', l:'正式' },        { v:'polite', l:'礼貌' },      { v:'casual', l:'口语' } ],
+  German:     [ { v:'formal', l:'Sie' },         { v:'polite', l:'Höflich' },   { v:'casual', l:'Du' } ],
+  French:     [ { v:'formal', l:'Vous' },        { v:'polite', l:'Poli' },      { v:'casual', l:'Tu' } ],
+  Spanish:    [ { v:'formal', l:'Usted' },       { v:'polite', l:'Cortés' },    { v:'casual', l:'Tú' } ],
+  Portuguese: [ { v:'formal', l:'O Senhor/a' },  { v:'polite', l:'Você' },      { v:'casual', l:'Tu' } ],
+  Italian:    [ { v:'formal', l:'Lei' },         { v:'polite', l:'Gentile' },   { v:'casual', l:'Tu' } ],
+  Arabic:     [ { v:'formal', l:'رسمي' },        { v:'polite', l:'مهذب' },      { v:'casual', l:'عامي' } ],
+  Vietnamese: [ { v:'formal', l:'Quý vị' },      { v:'polite', l:'Bạn' },       { v:'casual', l:'Mày/Tao' } ],
+  Thai:       [ { v:'formal', l:'ราชาศัพท์' },   { v:'polite', l:'สุภาพ' },     { v:'casual', l:'ทั่วไป' } ],
+  Indonesian: [ { v:'formal', l:'Formal' },      { v:'polite', l:'Sopan' },     { v:'casual', l:'Santai' } ],
+  Turkish:    [ { v:'formal', l:'Siz' },         { v:'polite', l:'Nazik' },     { v:'casual', l:'Sen' } ],
+  Dutch:      [ { v:'formal', l:'U' },           { v:'polite', l:'Beleefd' },   { v:'casual', l:'Jij' } ],
+  Polish:     [ { v:'formal', l:'Pan/Pani' },    { v:'polite', l:'Uprzejmy' },  { v:'casual', l:'Ty' } ],
+  Hindi:      [ { v:'formal', l:'आप' },          { v:'polite', l:'तुम' },        { v:'casual', l:'तू' } ],
+  English:    [ { v:'formal', l:'Formal' },      { v:'polite', l:'Polite' },    { v:'casual', l:'Casual' } ],
+};
+function getHonorificOptions(lang) {
+  const opts = HONORIFIC_OPTIONS[lang] || HONORIFIC_OPTIONS['English'];
+  const autoLabel = lang === 'Korean' ? '자동 감지' : lang === 'Japanese' ? '自動検出' : lang === 'Chinese' ? '自动检测' : 'Auto Detect';
+  return '<option value="auto">✨ ' + autoLabel + '</option>' + opts.map(o => '<option value="' + o.v + '">' + o.l + '</option>').join('');
+}
 
 const TONES_I18N_NV = {
   Korean:     ['전문적','친근한','간결한','상세한','거절','감사','사과','확인'],
@@ -116,6 +140,7 @@ let nvSelectedTone = 'professional';
 let nvSelectedMyLang = 'auto';
 let nvSelectedReplyLang = 'auto';
 let nvSelectedCountry = 'auto';
+let nvSelectedHonorific = 'auto';
 let nvCachedEmotion = 'neutral';
 let nvCachedUrgency = 'low';
 
@@ -694,7 +719,11 @@ async function createNaverPanel() {
           <label id="mm-nv-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-nv-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:80px">
+          <label id="mm-nv-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-nv-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(nvSelectedMyLang)}</select>
+        </div>
+                <div style="flex:1;min-width:90px">
           <label id="mm-nv-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-nv-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
@@ -988,7 +1017,8 @@ async function createNaverPanel() {
     removeNVPanel();
     showFabNV();
   });
-  panel.querySelector('#mm-nv-tone').addEventListener('change', function() { nvSelectedTone = this.value; });
+  panel.querySelector('#mm-nv-tone').addEventListener('change', function() { nvSelectedTone = this.value;
+  panel.querySelector('#mm-nv-honorific').addEventListener('change', function() { nvSelectedHonorific = this.value; }); });
 
   const nvCountrySelect = panel.querySelector('#mm-nv-country');
   if (nvCountrySelect) {
@@ -1001,6 +1031,8 @@ async function createNaverPanel() {
 
   panel.querySelector('#mm-nv-lang').addEventListener('change', function() {
     nvSelectedMyLang = this.value;
+    const honorificSelNV = panel.querySelector('#mm-nv-honorific');
+    if (honorificSelNV) { const curNV = honorificSelNV.value; honorificSelNV.innerHTML = getHonorificOptions(this.value); honorificSelNV.value = curNV; nvSelectedHonorific = honorificSelNV.value; }
     safeStorageSetNV({ myLanguage: this.value });
     applyUILangNV(this.value);
     const emailContent = getNaverEmailThread();
@@ -1212,7 +1244,7 @@ async function createNaverPanel() {
       const storedNV = await new Promise(r => chrome.storage.sync.get(['signature', 'userInfo'], r));
       const signatureNV = storedNV.signature || '';
       const userInfoNV = storedNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, language:nvSelectedMyLang, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureNV && { signature: signatureNV }), ...(userInfoNV && { userInfo: userInfoNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, language:nvSelectedMyLang, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(signatureNV && { signature: signatureNV }), ...(userInfoNV && { userInfo: userInfoNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         const spamEl = panel.querySelector('#mm-nv-spam');
@@ -1310,7 +1342,7 @@ async function createNaverPanel() {
     try {
       const storedTripleNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoTripleNV = storedTripleNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
         const _maxVer = ud.plan === 'pro' ? 3 : 2;
@@ -1362,7 +1394,7 @@ async function createNaverPanel() {
     try {
       const storedSmartNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartNV = storedSmartNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success) {
         _nvVersions=(data.versions||[]).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;
