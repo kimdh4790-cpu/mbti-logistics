@@ -611,7 +611,19 @@ async function createYahooJPPanel() {
     // 이미 패널이 있으면 토글
     const isHidden = yjCurrentPanel.style.display === 'none';
     yjCurrentPanel.style.display = isHidden ? 'flex' : 'none';
-    if (isHidden) hideFabYJ(); else showFabYJ();
+    if (isHidden) {
+      hideFabYJ();
+      safeStorageGetYJ(['myLanguage']).then(s => {
+        const lang = s.myLanguage || 'auto';
+        if (lang !== yjSelectedMyLang) {
+          yjSelectedMyLang = lang;
+          const sel = yjCurrentPanel.querySelector('#mm-yj-lang');
+          if (sel) sel.value = lang;
+        }
+      });
+    } else {
+      showFabYJ();
+    }
     return;
   }
 
