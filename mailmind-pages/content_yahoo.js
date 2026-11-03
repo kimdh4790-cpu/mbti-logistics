@@ -1527,7 +1527,7 @@ function openYHFloatPanel() {
     renderYHFloatPanel(panel);
   } else {
     chrome.storage.sync.get(['myLanguage'], d => {
-      const savedLang = d.myLanguage || 'Korean';
+      const savedLang = d.myLanguage || 'auto';
       if (panel.__updateLang && panel.__curLang !== savedLang) panel.__updateLang(savedLang);
     });
   }
@@ -1537,7 +1537,7 @@ async function renderYHFloatPanel(panel) {
   const userData = await getUserDataYH();
   const userInfo = await new Promise(r => chrome.storage.sync.get(['userInfo'], d => r(d.userInfo || '')));
 
-  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean'))));
+  let curLang = (await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'auto'))));
   if (!VALID_COMPOSE_LANGS_YH.includes(curLang)) curLang = 'Korean';
   let curOutputLang = curLang;
   let yhTransLang = curLang;

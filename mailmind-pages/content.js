@@ -756,7 +756,7 @@ const COUNTRIES = [
 let selectedTone = 'professional';
 let selectedHonorific = 'auto';
 let selectedCountry = 'auto';
-let selectedMyLang = 'Korean';
+let selectedMyLang = 'auto';
 const resolveAutoLang = l => l === 'auto' ? 'English' : l;
 
 // 이메일 내용으로 발신자 국가 자동감지
@@ -927,7 +927,7 @@ async function getUserData() {
     monthlyCount,
     monthlyLimit,
     thisMonth,
-    myLanguage: data.myLanguage || 'Korean',
+    myLanguage: data.myLanguage || 'auto',
     translateCount: data.translateCount || 0,
     translateLimit: data.translateLimit || 10,
     businessCard: data.businessCard || '',
@@ -1214,7 +1214,7 @@ function createPanel() {
 
     // ① selectedMyLang 제일 먼저 설정 (storage > 드롭다운 현재값 > 'Korean')
     const currentDropdownLang = panel.querySelector('#mm-mylang-select')?.value;
-    selectedMyLang = userData.myLanguage || currentDropdownLang || 'Korean';
+    selectedMyLang = userData.myLanguage || currentDropdownLang || 'auto';
     const myLangSelect = panel.querySelector('#mm-mylang-select');
     if (myLangSelect) myLangSelect.value = selectedMyLang;
 

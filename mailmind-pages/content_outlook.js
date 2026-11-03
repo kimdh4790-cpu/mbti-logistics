@@ -1417,7 +1417,7 @@ async function openOutlookComposePanel() {
   const userData = await getUserDataOL();
   const userInfo = await new Promise(r => chrome.storage.sync.get(['userInfo'], d => r(d.userInfo || '')));
   // myLanguage를 직접 storage에서 다시 읽어 확실히 적용
-  const storedLang = await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'Korean')));
+  const storedLang = await new Promise(r => chrome.storage.sync.get(['myLanguage'], d => r(d.myLanguage || 'auto')));
   let uiLang = storedLang;
   // 작성 출력 언어: 이전 선택값 유지, 처음이면 UI언어 기본값
   if (!olComposeOutputLang) olComposeOutputLang = uiLang;
