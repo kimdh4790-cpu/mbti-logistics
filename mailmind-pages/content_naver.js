@@ -925,7 +925,7 @@ async function createNaverPanel() {
 
     // Plan-based pro buttons
     const container = panel.querySelector('#mm-nv-pro-btns');
-    if (ud.plan === 'pro') {
+    if (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') {
       container.innerHTML = `
         <button id="mm-nv-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-nv-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1383,7 +1383,7 @@ async function createNaverPanel() {
       const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
-        const _maxVer = ud.plan === 'pro' ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _nvVersions=data.versions.slice(0,_maxVer).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).slice(0,_maxVer).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;
         panel.querySelector('#mm-nv-output').value = await appendSignatureNV(_nvVersions[0]);
         panel.querySelector('#mm-nv-result').style.display='block'; panel.querySelector('#mm-nv-upgrade').style.display='none';
@@ -1423,7 +1423,7 @@ async function createNaverPanel() {
     const emailContent = _stripSenderSig(getNaverEmailThread());
     if (!emailContent) { showToastNV('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataNV();
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastNV(getUILangNV(nvSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastNV(getUILangNV(nvSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-nv-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-nv-smart');
     if (!btn) return;

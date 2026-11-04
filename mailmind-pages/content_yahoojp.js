@@ -876,7 +876,7 @@ async function createYahooJPPanel() {
 
     // Plan-based pro buttons
     const container = panel.querySelector('#mm-yj-pro-btns');
-    if (ud.plan === 'pro') {
+    if (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') {
       container.innerHTML = `
         <button id="mm-yj-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-yj-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1256,7 +1256,7 @@ async function createYahooJPPanel() {
       const res = await workerFetch(`${WORKER_URL_YJ}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, honorific:yjSelectedHonorific, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYJ && { userInfo: userInfoTripleYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
-        const _maxVer = ud.plan === 'pro' ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _yjVersions=data.versions.slice(0,_maxVer).map(_stripSalutationYJ); _yjTranslations=await Promise.all((data.translations||[]).slice(0,_maxVer).map(t=>t?appendSignatureYJ(t):t)); _yjCurrentVerIdx=0; _yjIsTranslated=false; _yjCurrentDisplayLang=yjSelectedMyLang; _yjOrigLang=yjSelectedMyLang;
         panel.querySelector('#mm-yj-output').value = await appendSignatureYJ(_yjVersions[0]);
         panel.querySelector('#mm-yj-result').style.display='block'; panel.querySelector('#mm-yj-upgrade').style.display='none';
@@ -1296,7 +1296,7 @@ async function createYahooJPPanel() {
     const emailContent = _stripSenderSig(getYahooJPEmailThread());
     if (!emailContent) { showToastYJ('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataYJ();
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastYJ(getUILangYJ(yjSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastYJ(getUILangYJ(yjSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-yj-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-yj-smart');
     if (!btn) return;

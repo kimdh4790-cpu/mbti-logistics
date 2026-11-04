@@ -612,7 +612,7 @@ async function createOutlookPanel() {
 
     // 플랜별 버튼
     const container = panel.querySelector('#mm-ol-pro-btns');
-    if (userData.plan === 'pro') {
+    if (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') {
       _safeInnerHTML(container, `
         <button id="mm-ol-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-ol-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1043,7 +1043,7 @@ async function createOutlookPanel() {
       const res = await workerFetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length > 0) {
-        const _maxVer = userData.plan === 'pro' ? 3 : 2;
+        const _maxVer = (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') ? 3 : 2;
         _olVersions = data.versions.slice(0, _maxVer).map(_stripSalutationOL);
         _olTranslations = await Promise.all((data.translations || []).slice(0, _maxVer).map(t => t ? appendSignatureOL(t) : t));
         _olCurrentVerIdx = 0;
@@ -1109,7 +1109,7 @@ async function createOutlookPanel() {
     if (!emailContent) { showToastOL('Email not found.', 'error'); return; }
     const ud = await getUserDataOL();
     if (!ud.userEmail) { showToastOL('Please sign in via the MailMind popup.', 'error'); return; }
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastOL(getUILangOL(olSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastOL(getUILangOL(olSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ol-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-ol-smart');
     btn.disabled=true; btn.textContent=getUILangOL(olSelectedMyLang).smartGenerating||'🌍 Analyzing...';

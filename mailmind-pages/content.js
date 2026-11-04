@@ -1262,7 +1262,7 @@ function createPanel() {
 
     // ⑤ 플랜별 버튼 생성
     const container = panel.querySelector('#mm-pro-btns');
-    if (userData.plan === 'pro' || userData.plan === 'team') {
+    if (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') {
       container.innerHTML = `
         <button id="mm-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1762,7 +1762,7 @@ function createPanel() {
       const data = await res.json();
 
       if (data.success && data.versions?.length > 0) {
-        const _maxVer = (userData.plan === 'pro' || userData.plan === 'team') ? 3 : 2;
+        const _maxVer = (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') ? 3 : 2;
         _versions = data.versions.slice(0, _maxVer).map(_stripSalutation);
         _replyOrigVersions = _versions.map(v => v); // 원본 보존 (번역 소스)
         _replyOrigSingleBody = '';
@@ -1887,7 +1887,7 @@ function createPanel() {
     const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
-    if (userData.plan !== 'pro' && userData.plan !== 'team') { showToast(getUILang(selectedMyLang).smartPlanMsg || 'Smart Reply requires Pro plan', 'error'); return; }
+    if (userData.plan !== 'pro' && userData.plan !== 'pro_plus' && userData.plan !== 'team') { showToast(getUILang(selectedMyLang).smartPlanMsg || 'Smart Reply requires Pro plan', 'error'); return; }
     if (userData.monthlyCount >= userData.monthlyLimit) {
       panel.querySelector('#mm-upgrade').style.display = 'block';
       return;
