@@ -3,7 +3,7 @@
 
 if (window.self !== window.top) { /* skip sub-frames */ } else {
 
-const WORKER_URL_IC = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL_IC = 'https://api.mailmind.yongcha.app';
 const API_KEY_content_icloud = 'mm-app-2026';
 
 function workerFetch(url, options) {
