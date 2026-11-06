@@ -454,19 +454,19 @@ async function createOutlookPanel() {
     <div id="mm-ol-spam" style="display:none;background:#fce8e6;border:1.5px solid #d93025;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#c5221f;line-height:1.6;white-space:pre-line"></div>
 
     <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-      <div style="flex:1;min-width:90px">
+      <div style="flex:1;min-width:140px">
         <label id="mm-ol-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
         <select id="mm-ol-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
       </div>
-      <div style="flex:1;min-width:80px">
-        <label id="mm-ol-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
-        <select id="mm-ol-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(olSelectedMyLang)}</select>
-      </div>
-      <div style="flex:1;min-width:90px">
+      <div style="flex:1;min-width:140px">
         <label id="mm-ol-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
         <select id="mm-ol-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
       </div>
-      <div id="mm-ol-mylang-wrap" style="flex:1;min-width:90px">
+      <div style="flex:1;min-width:140px">
+        <label id="mm-ol-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+        <select id="mm-ol-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(olSelectedMyLang)}</select>
+      </div>
+      <div id="mm-ol-mylang-wrap" style="flex:1;min-width:140px">
         <label id="mm-ol-label-mylang" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.myLang}</label>
         <select id="mm-ol-lang" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${langOptions}</select>
       </div>
@@ -612,7 +612,7 @@ async function createOutlookPanel() {
 
     // 플랜별 버튼
     const container = panel.querySelector('#mm-ol-pro-btns');
-    if (userData.plan === 'pro') {
+    if (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') {
       _safeInnerHTML(container, `
         <button id="mm-ol-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-ol-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1043,7 +1043,7 @@ async function createOutlookPanel() {
       const res = await workerFetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length > 0) {
-        const _maxVer = userData.plan === 'pro' ? 3 : 2;
+        const _maxVer = (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') ? 3 : 2;
         _olVersions = data.versions.slice(0, _maxVer).map(_stripSalutationOL);
         _olTranslations = await Promise.all((data.translations || []).slice(0, _maxVer).map(t => t ? appendSignatureOL(t) : t));
         _olCurrentVerIdx = 0;
@@ -1103,13 +1103,28 @@ async function createOutlookPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractOutlookAttachments() {
+    const parts = [], seen = new Set();
+    const SELS = ['[data-automation-id*="attachment"]','[data-tid*="attachment"]','[class*="AttachmentTile"]','.wppDU','[class*="attachment"] span'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const name = (el.querySelector('[class*="name"],[title]')?.textContent || el.getAttribute('title') || el.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== 스마트 답장 =====
   async function generateSmartOL() {
     const emailContent = _stripSenderSig(getOutlookEmailThread());
     if (!emailContent) { showToastOL('Email not found.', 'error'); return; }
     const ud = await getUserDataOL();
     if (!ud.userEmail) { showToastOL('Please sign in via the MailMind popup.', 'error'); return; }
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastOL(getUILangOL(olSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastOL(getUILangOL(olSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ol-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-ol-smart');
     btn.disabled=true; btn.textContent=getUILangOL(olSelectedMyLang).smartGenerating||'🌍 Analyzing...';
@@ -1118,7 +1133,8 @@ async function createOutlookPanel() {
     try {
       const storedSmartOL = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartOL = storedSmartOL.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractOutlookAttachments();
+      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _olVersions = (data.versions || []).map(_stripSalutationOL);
@@ -1245,8 +1261,16 @@ async function createOutlookPanel() {
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-ol-edit-btn').style.display = '';
         panel.querySelector('#mm-ol-edit-bar').style.display = 'none';
-        ta.value = data.refined;
-        _olVersions = [data.refined]; _olTranslations = []; _olCurrentVerIdx = 0; _olIsTranslated = false; _olCurrentDisplayLang = _refineLangOL; _olOrigLang = _refineLangOL;
+        const _bcOL = ud.businessCard || '';
+        let _finalOL = (data.refined || '').trim();
+        if (_bcOL) {
+          if (_finalOL.includes(_bcOL)) {
+            const _bodyOL = _finalOL.replace('\n\n' + _bcOL, '').replace('\n' + _bcOL, '').replace(_bcOL, '').trimEnd();
+            _finalOL = _bodyOL ? _bodyOL + '\n\n' + _bcOL : _finalOL;
+          } else { _finalOL = _finalOL + '\n\n' + _bcOL; }
+        }
+        ta.value = _finalOL;
+        _olVersions = [_finalOL]; _olTranslations = []; _olCurrentVerIdx = 0; _olIsTranslated = false; _olCurrentDisplayLang = _refineLangOL; _olOrigLang = _refineLangOL;
         await incrementUsageOL(data.monthlyUsage);
         updateBadgeOL();
         showToastOL(getUILangOL(olSelectedMyLang).refineDone||'✨ 다듬기 완료!', 'success');

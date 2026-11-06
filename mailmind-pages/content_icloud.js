@@ -686,19 +686,19 @@ async function createiCloudPanel() {
       <div id="mm-ic-spam" style="display:none;background:#fce8e6;border:1.5px solid #d93025;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#c5221f;line-height:1.6;white-space:pre-line"></div>
 
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-ic-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-ic-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:80px">
-          <label id="mm-ic-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
-          <select id="mm-ic-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(icSelectedMyLang)}</select>
-        </div>
-                <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-ic-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-ic-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
+          <label id="mm-ic-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-ic-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(icSelectedMyLang)}</select>
+        </div>
+        <div style="flex:1;min-width:140px">
           <label id="mm-ic-label-mylang" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.myLang}</label>
           <select id="mm-ic-lang" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${langOptions}</select>
         </div>
@@ -868,7 +868,7 @@ async function createiCloudPanel() {
 
     // Plan-based pro buttons
     const container = panel.querySelector('#mm-ic-pro-btns');
-    if (ud.plan === 'pro') {
+    if (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') {
       container.innerHTML = `
         <button id="mm-ic-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-ic-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1248,7 +1248,7 @@ async function createiCloudPanel() {
       const res = await workerFetch(`${WORKER_URL_IC}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleIC && { userInfo: userInfoTripleIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
-        const _maxVer = ud.plan === 'pro' ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _icVersions=data.versions.slice(0,_maxVer).map(_stripSalutationIC); _icTranslations=await Promise.all((data.translations||[]).slice(0,_maxVer).map(t=>t?appendSignatureIC(t):t)); _icCurrentVerIdx=0; _icIsTranslated=false; _icCurrentDisplayLang=icSelectedMyLang; _icOrigLang=icSelectedMyLang;
         panel.querySelector('#mm-ic-output').value = await appendSignatureIC(_icVersions[0]);
         panel.querySelector('#mm-ic-result').style.display='block'; panel.querySelector('#mm-ic-upgrade').style.display='none';
@@ -1283,12 +1283,28 @@ async function createiCloudPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractICloudAttachments() {
+    const parts = [], seen = new Set();
+    const SELS = ['.attachment-row', '[class*="attachment"] a', '[class*="Attachment"] a', '[class*="attach"] span'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const nameEl = el.querySelector('.attachment-name, [class*="name"]') || el;
+        const name = nameEl.textContent.trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartIC() {
     const emailContent = _stripSenderSig(getiCloudEmailThread());
     if (!emailContent) { showToastIC('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataIC();
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastIC(getUILangIC(icSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastIC(getUILangIC(icSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-ic-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-ic-smart');
     if (!btn) return;
@@ -1297,7 +1313,8 @@ async function createiCloudPanel() {
     try {
       const storedSmartIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartIC = storedSmartIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractICloudAttachments();
+      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _icVersions=(data.versions||[]).map(_stripSalutationIC); _icTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureIC(t):t)); _icCurrentVerIdx=0; _icIsTranslated=false; _icCurrentDisplayLang=icSelectedMyLang; _icOrigLang=icSelectedMyLang;
@@ -1354,8 +1371,16 @@ async function createiCloudPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangIC = _icCurrentDisplayLang || icSelectedMyLang;
-        ta.value = refined;
-        _icVersions = [refined]; _icTranslations = []; _icCurrentVerIdx = 0; _icIsTranslated = false; _icCurrentDisplayLang = _refineLangIC; _icOrigLang = _refineLangIC;
+        const _bcIC = ud.businessCard || '';
+        let _finalIC = refined;
+        if (_bcIC) {
+          if (_finalIC.includes(_bcIC)) {
+            const _bodyIC = _finalIC.replace('\n\n' + _bcIC, '').replace('\n' + _bcIC, '').replace(_bcIC, '').trimEnd();
+            _finalIC = _bodyIC ? _bodyIC + '\n\n' + _bcIC : _finalIC;
+          } else { _finalIC = _finalIC + '\n\n' + _bcIC; }
+        }
+        ta.value = _finalIC;
+        _icVersions = [_finalIC]; _icTranslations = []; _icCurrentVerIdx = 0; _icIsTranslated = false; _icCurrentDisplayLang = _refineLangIC; _icOrigLang = _refineLangIC;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-ic-edit-btn').style.display = '';
         panel.querySelector('#mm-ic-edit-bar').style.display = 'none';

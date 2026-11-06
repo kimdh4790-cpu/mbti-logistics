@@ -441,6 +441,36 @@ function getNaverEmailThread() {
   return null;
 }
 
+// ===== Read Naver Email Subject (제목만 읽기) =====
+function getNaverEmailSubjectNV() {
+  const subjectSelectors = [
+    '.mail_view_header .title',
+    '.mail_view_title',
+    '.mail_subject',
+    '.read_subject',
+    '[class*="mailTitle"]',
+    '[class*="mail_title"]',
+    '[class*="subjectArea"]',
+    '[class*="subject_area"]',
+    '[class*="read_header"] .title',
+    '[data-testid="mail-subject"]',
+    '[data-testid="message-subject"]',
+    '.nm-title',
+    '[class*="mailSubject"]',
+    '[class*="MailSubject"]',
+  ];
+  for (const sel of subjectSelectors) {
+    try {
+      const el = document.querySelector(sel);
+      if (el) {
+        const text = (el.innerText || el.textContent || '').trim();
+        if (text.length > 1) return text;
+      }
+    } catch(e) {}
+  }
+  return '';
+}
+
 // ===== 메일이 실제로 열려 있는지 감지 (Naver Mail) =====
 function isEmailOpenNV() {
   // Naver Mail에서 이메일이 선택되어 오른쪽에 내용이 표시될 때만 true
@@ -715,19 +745,19 @@ async function createNaverPanel() {
       <div id="mm-nv-spam" style="display:none;background:#fce8e6;border:1.5px solid #d93025;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#c5221f;line-height:1.6;white-space:pre-line"></div>
 
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-nv-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-nv-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:80px">
-          <label id="mm-nv-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
-          <select id="mm-nv-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(nvSelectedMyLang)}</select>
-        </div>
-                <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-nv-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-nv-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
+          <label id="mm-nv-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-nv-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(nvSelectedMyLang)}</select>
+        </div>
+        <div style="flex:1;min-width:140px">
           <label id="mm-nv-label-mylang" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.myLang}</label>
           <select id="mm-nv-lang" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${langOptions}</select>
         </div>
@@ -895,7 +925,7 @@ async function createNaverPanel() {
 
     // Plan-based pro buttons
     const container = panel.querySelector('#mm-nv-pro-btns');
-    if (ud.plan === 'pro') {
+    if (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') {
       container.innerHTML = `
         <button id="mm-nv-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-nv-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1311,8 +1341,16 @@ async function createNaverPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangNV = _nvCurrentDisplayLang || nvSelectedMyLang;
-        ta.value = refined;
-        _nvVersions = [refined]; _nvTranslations = []; _nvCurrentVerIdx = 0; _nvIsTranslated = false; _nvCurrentDisplayLang = _refineLangNV; _nvOrigLang = _refineLangNV;
+        const _bcNV = ud.businessCard || '';
+        let _finalNV = refined;
+        if (_bcNV) {
+          if (_finalNV.includes(_bcNV)) {
+            const _bodyNV = _finalNV.replace('\n\n' + _bcNV, '').replace('\n' + _bcNV, '').replace(_bcNV, '').trimEnd();
+            _finalNV = _bodyNV ? _bodyNV + '\n\n' + _bcNV : _finalNV;
+          } else { _finalNV = _finalNV + '\n\n' + _bcNV; }
+        }
+        ta.value = _finalNV;
+        _nvVersions = [_finalNV]; _nvTranslations = []; _nvCurrentVerIdx = 0; _nvIsTranslated = false; _nvCurrentDisplayLang = _refineLangNV; _nvOrigLang = _refineLangNV;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-nv-edit-btn').style.display = '';
         panel.querySelector('#mm-nv-edit-bar').style.display = 'none';
@@ -1345,7 +1383,7 @@ async function createNaverPanel() {
       const res = await workerFetch(`${WORKER_URL_NV}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleNV && { userInfo: userInfoTripleNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
-        const _maxVer = ud.plan === 'pro' ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _nvVersions=data.versions.slice(0,_maxVer).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).slice(0,_maxVer).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;
         panel.querySelector('#mm-nv-output').value = await appendSignatureNV(_nvVersions[0]);
         panel.querySelector('#mm-nv-result').style.display='block'; panel.querySelector('#mm-nv-upgrade').style.display='none';
@@ -1380,12 +1418,37 @@ async function createNaverPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractNaverAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const SELS = ['.mailread_attach a', '.attach_file_area a', '.mail_attach a', '[class*="attach"] a[href]'];
+    for (const sel of SELS) {
+      for (const a of document.querySelectorAll(sel)) {
+        const name = (a.download || a.querySelector('[class*="name"]')?.textContent || a.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100) continue;
+        seen.add(name);
+        const ext = name.split('.').pop().toLowerCase();
+        if (TEXT_EXTS.has(ext) && a.href && !a.href.startsWith('javascript')) {
+          try {
+            const r = await fetch(a.href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+            if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+              parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+            }
+          } catch {}
+        }
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartNV() {
     const emailContent = _stripSenderSig(getNaverEmailThread());
     if (!emailContent) { showToastNV('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataNV();
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastNV(getUILangNV(nvSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastNV(getUILangNV(nvSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-nv-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-nv-smart');
     if (!btn) return;
@@ -1394,7 +1457,8 @@ async function createNaverPanel() {
     try {
       const storedSmartNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartNV = storedSmartNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractNaverAttachments();
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _nvVersions=(data.versions||[]).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;
@@ -1463,9 +1527,12 @@ const DETECT_I18N_NV = {
 };
 function detectAndShowInfoNV(emailContent, lang) {
   if (!nvCurrentPanel) return;
-  const text = emailContent.toLowerCase();
+  // 제목(Subject)을 제외한 본문만 언어 감지에 사용 — 제목이 한국어여도 본문이 영어면 영어로 감지
+  const _subjectNV = getNaverEmailSubjectNV();
+  const _bodyForLang = _subjectNV ? emailContent.replace(_subjectNV, '').trim() : emailContent;
+  const text = emailContent.toLowerCase(); // 키워드 감지(무역/법률/IT 등)는 전체 내용 사용
   const keys = [];
-  const _ecNsNV = emailContent.replace(/\s+/g,''); const _ecLenNV = _ecNsNV.length||1;
+  const _ecNsNV = _bodyForLang.replace(/\s+/g,''); const _ecLenNV = _ecNsNV.length||1;
   const _hasLangNV = r => { const m = _ecNsNV.match(r); return m && m.length >= 5 && m.length/_ecLenNV >= 0.05; };
   if (_hasLangNV(/[\u3040-\u30ff]/g)) { keys.push('japan'); if (nvSelectedCountry === 'auto') { nvSelectedCountry = 'Japan'; const _csi=nvCurrentPanel.querySelector('#mm-nv-country'); if(_csi) _csi.value='Japan'; } }
   else if (_hasLangNV(/[\u4e00-\u9fff]/g)) { keys.push('china'); if (nvSelectedCountry === 'auto') { nvSelectedCountry = 'China'; const _csi=nvCurrentPanel.querySelector('#mm-nv-country'); if(_csi) _csi.value='China'; } }

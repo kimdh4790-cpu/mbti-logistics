@@ -2,9 +2,11 @@ const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
 const API_KEY = 'mm-app-2026';
 
 const PLAN_LIMITS = {
-  pro:   { monthly: 300 },
-  basic: { monthly: 200 },
-  free:  { monthly: 35  }
+  pro_plus: { monthly: 500 },
+  team:     { monthly: 1000 },
+  pro:      { monthly: 300 },
+  basic:    { monthly: 200 },
+  free:     { monthly: 35  }
 };
 
 const LANGUAGES = [
@@ -62,7 +64,7 @@ async function showLoggedIn(data) {
 
   const plan = data.userPlan || 'free';
   const badge = document.getElementById('plan-badge');
-  const planLabels = { free: 'Starter', basic: 'Basic', pro: 'Pro' };
+  const planLabels = { free: 'Starter', basic: 'Basic', pro: 'Pro', pro_plus: 'Pro Plus', team: 'Team' };
   badge.textContent = planLabels[plan] || plan;
   badge.className = `plan-badge ${plan}`;
 
@@ -83,7 +85,8 @@ async function showLoggedIn(data) {
   } else if (plan === 'basic') {
     upgradeSection.innerHTML = `<a href="https://mailmind.yongcha.app#pricing" target="_blank" class="btn-upgrade pro">🚀 Upgrade to Pro ($25/mo)</a>`;
   } else {
-    upgradeSection.innerHTML = `<div style="text-align:center;font-size:12px;color:#137333;padding:8px 0;">✅ You're on Pro</div>`;
+    const planName = { pro: 'Pro', pro_plus: 'Pro Plus', team: 'Team' }[plan] || 'Pro';
+    upgradeSection.innerHTML = `<div style="text-align:center;font-size:12px;color:#137333;padding:8px 0;">✅ You're on ${planName}</div>`;
   }
 }
 
