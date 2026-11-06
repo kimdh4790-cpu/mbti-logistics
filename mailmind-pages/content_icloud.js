@@ -1283,6 +1283,22 @@ async function createiCloudPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractICloudAttachments() {
+    const parts = [], seen = new Set();
+    const SELS = ['.attachment-row', '[class*="attachment"] a', '[class*="Attachment"] a', '[class*="attach"] span'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const nameEl = el.querySelector('.attachment-name, [class*="name"]') || el;
+        const name = nameEl.textContent.trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartIC() {
     const emailContent = _stripSenderSig(getiCloudEmailThread());
@@ -1297,7 +1313,8 @@ async function createiCloudPanel() {
     try {
       const storedSmartIC = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartIC = storedSmartIC.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractICloudAttachments();
+      const res = await workerFetch(`${WORKER_URL_IC}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:icSelectedTone, honorific:icSelectedHonorific, myLanguage:icSelectedReplyLang, country:icSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartIC && { userInfo: userInfoSmartIC }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _icVersions=(data.versions||[]).map(_stripSalutationIC); _icTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureIC(t):t)); _icCurrentVerIdx=0; _icIsTranslated=false; _icCurrentDisplayLang=icSelectedMyLang; _icOrigLang=icSelectedMyLang;

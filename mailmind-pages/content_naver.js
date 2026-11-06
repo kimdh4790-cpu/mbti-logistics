@@ -1418,6 +1418,31 @@ async function createNaverPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractNaverAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const SELS = ['.mailread_attach a', '.attach_file_area a', '.mail_attach a', '[class*="attach"] a[href]'];
+    for (const sel of SELS) {
+      for (const a of document.querySelectorAll(sel)) {
+        const name = (a.download || a.querySelector('[class*="name"]')?.textContent || a.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100) continue;
+        seen.add(name);
+        const ext = name.split('.').pop().toLowerCase();
+        if (TEXT_EXTS.has(ext) && a.href && !a.href.startsWith('javascript')) {
+          try {
+            const r = await fetch(a.href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+            if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+              parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+            }
+          } catch {}
+        }
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartNV() {
     const emailContent = _stripSenderSig(getNaverEmailThread());
@@ -1432,7 +1457,8 @@ async function createNaverPanel() {
     try {
       const storedSmartNV = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartNV = storedSmartNV.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractNaverAttachments();
+      const res = await workerFetch(`${WORKER_URL_NV}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:nvSelectedTone, honorific:nvSelectedHonorific, myLanguage:nvSelectedReplyLang, country:nvSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartNV && { userInfo: userInfoSmartNV }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _nvVersions=(data.versions||[]).map(_stripSalutationNV); _nvTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureNV(t):t)); _nvCurrentVerIdx=0; _nvIsTranslated=false; _nvCurrentDisplayLang=nvSelectedMyLang; _nvOrigLang=nvSelectedMyLang;

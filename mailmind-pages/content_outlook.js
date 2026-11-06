@@ -1103,6 +1103,21 @@ async function createOutlookPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractOutlookAttachments() {
+    const parts = [], seen = new Set();
+    const SELS = ['[data-automation-id*="attachment"]','[data-tid*="attachment"]','[class*="AttachmentTile"]','.wppDU','[class*="attachment"] span'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const name = (el.querySelector('[class*="name"],[title]')?.textContent || el.getAttribute('title') || el.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== 스마트 답장 =====
   async function generateSmartOL() {
     const emailContent = _stripSenderSig(getOutlookEmailThread());
@@ -1118,7 +1133,8 @@ async function createOutlookPanel() {
     try {
       const storedSmartOL = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartOL = storedSmartOL.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractOutlookAttachments();
+      const res = await workerFetch(`${WORKER_URL_OL}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartOL && { userInfo: userInfoSmartOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _olVersions = (data.versions || []).map(_stripSalutationOL);

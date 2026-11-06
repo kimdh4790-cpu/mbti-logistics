@@ -1291,6 +1291,32 @@ async function createYahooJPPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractYahooJPAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const SELS = ['.attach-list a', '.attch-files span', '[class*="attach"] a[href]', '[class*="Attach"] a'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const name = (el.download || el.querySelector('[class*="name"]')?.textContent || el.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        const ext = name.split('.').pop().toLowerCase();
+        const href = el.href;
+        if (TEXT_EXTS.has(ext) && href && href.includes('mail.yahoo.co.jp')) {
+          try {
+            const r = await fetch(href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+            if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+              parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+            }
+          } catch {}
+        }
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartYJ() {
     const emailContent = _stripSenderSig(getYahooJPEmailThread());
@@ -1305,7 +1331,8 @@ async function createYahooJPPanel() {
     try {
       const storedSmartYJ = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartYJ = storedSmartYJ.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, honorific:yjSelectedHonorific, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractYahooJPAttachments();
+      const res = await workerFetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, honorific:yjSelectedHonorific, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _yjVersions=(data.versions||[]).map(_stripSalutationYJ); _yjTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureYJ(t):t)); _yjCurrentVerIdx=0; _yjIsTranslated=false; _yjCurrentDisplayLang=yjSelectedMyLang; _yjOrigLang=yjSelectedMyLang;

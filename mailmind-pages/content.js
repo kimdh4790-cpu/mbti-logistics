@@ -1881,6 +1881,36 @@ function createPanel() {
     btn.textContent = origText;
   }
 
+  async function _mmExtractGmailAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const containers = document.querySelectorAll('.aZo');
+    for (const c of containers) {
+      const nameEl = c.querySelector('.aV3');
+      const name = nameEl ? nameEl.textContent.trim() : '';
+      if (!name || seen.has(name) || name.length > 100) continue;
+      seen.add(name);
+      const ext = name.split('.').pop().toLowerCase();
+      const link = c.querySelector('a[href*="mail.google.com"]');
+      if (TEXT_EXTS.has(ext) && link?.href) {
+        try {
+          const r = await fetch(link.href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+          if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+            parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+          }
+        } catch {}
+      }
+      parts.push(`[첨부파일: ${name}]`);
+    }
+    if (!parts.length) {
+      for (const a of document.querySelectorAll('a[download][href*="mail.google.com"]')) {
+        const name = a.download || a.textContent.trim();
+        if (name && !seen.has(name)) { seen.add(name); parts.push(`[첨부파일: ${name}]`); }
+      }
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // 이중언어 생성
   async function generateSmart(userData) {
     if (!userData.userEmail) { showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error'); return; }
@@ -1902,6 +1932,7 @@ function createPanel() {
     try {
       const _smartSigData = await new Promise(r => safeStorageGet(['signature'], r));
       const _smartSig = _smartSigData.signature || '';
+      const attachmentContent = await _mmExtractGmailAttachments();
       const res = await workerFetch(`${WORKER_URL}/generate-smart`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
@@ -1914,7 +1945,8 @@ function createPanel() {
           userId: userData.userId,
           ...(userData.businessCard ? { businessCard: userData.businessCard } : {}),
           ...(userData.phrases?.length ? { phrases: userData.phrases } : {}),
-          ...(_smartSig && { signature: _smartSig })
+          ...(_smartSig && { signature: _smartSig }),
+          ...(attachmentContent && { attachmentContent })
         })
       });
       const data = await res.json();
