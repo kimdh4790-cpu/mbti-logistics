@@ -1262,7 +1262,7 @@ function createPanel() {
 
     // ⑤ 플랜별 버튼 생성
     const container = panel.querySelector('#mm-pro-btns');
-    if (userData.plan === 'pro' || userData.plan === 'team') {
+    if (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') {
       container.innerHTML = `
         <button id="mm-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1762,7 +1762,7 @@ function createPanel() {
       const data = await res.json();
 
       if (data.success && data.versions?.length > 0) {
-        const _maxVer = (userData.plan === 'pro' || userData.plan === 'team') ? 3 : 2;
+        const _maxVer = (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') ? 3 : 2;
         _versions = data.versions.slice(0, _maxVer).map(_stripSalutation);
         _replyOrigVersions = _versions.map(v => v); // 원본 보존 (번역 소스)
         _replyOrigSingleBody = '';
@@ -1881,13 +1881,43 @@ function createPanel() {
     btn.textContent = origText;
   }
 
+  async function _mmExtractGmailAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const containers = document.querySelectorAll('.aZo');
+    for (const c of containers) {
+      const nameEl = c.querySelector('.aV3');
+      const name = nameEl ? nameEl.textContent.trim() : '';
+      if (!name || seen.has(name) || name.length > 100) continue;
+      seen.add(name);
+      const ext = name.split('.').pop().toLowerCase();
+      const link = c.querySelector('a[href*="mail.google.com"]');
+      if (TEXT_EXTS.has(ext) && link?.href) {
+        try {
+          const r = await fetch(link.href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+          if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+            parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+          }
+        } catch {}
+      }
+      parts.push(`[첨부파일: ${name}]`);
+    }
+    if (!parts.length) {
+      for (const a of document.querySelectorAll('a[download][href*="mail.google.com"]')) {
+        const name = a.download || a.textContent.trim();
+        if (name && !seen.has(name)) { seen.add(name); parts.push(`[첨부파일: ${name}]`); }
+      }
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // 이중언어 생성
   async function generateSmart(userData) {
     if (!userData.userEmail) { showToast(getUILang(selectedMyLang).errLogin || '로그인이 필요합니다.', 'error'); return; }
     const emailContent = _stripSenderSig(getEmailThread());
     if (!emailContent) { showToast(getUILang(selectedMyLang).errNotFound || 'Email content not found.', 'error'); return; }
 
-    if (userData.plan !== 'pro' && userData.plan !== 'team') { showToast(getUILang(selectedMyLang).smartPlanMsg || 'Smart Reply requires Pro plan', 'error'); return; }
+    if (userData.plan !== 'pro' && userData.plan !== 'pro_plus' && userData.plan !== 'team') { showToast(getUILang(selectedMyLang).smartPlanMsg || 'Smart Reply requires Pro plan', 'error'); return; }
     if (userData.monthlyCount >= userData.monthlyLimit) {
       panel.querySelector('#mm-upgrade').style.display = 'block';
       return;
@@ -1902,6 +1932,7 @@ function createPanel() {
     try {
       const _smartSigData = await new Promise(r => safeStorageGet(['signature'], r));
       const _smartSig = _smartSigData.signature || '';
+      const attachmentContent = await _mmExtractGmailAttachments();
       const res = await workerFetch(`${WORKER_URL}/generate-smart`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({
@@ -1914,7 +1945,8 @@ function createPanel() {
           userId: userData.userId,
           ...(userData.businessCard ? { businessCard: userData.businessCard } : {}),
           ...(userData.phrases?.length ? { phrases: userData.phrases } : {}),
-          ...(_smartSig && { signature: _smartSig })
+          ...(_smartSig && { signature: _smartSig }),
+          ...(attachmentContent && { attachmentContent })
         })
       });
       const data = await res.json();
@@ -2152,9 +2184,17 @@ function createPanel() {
         const refined = (data.body || data.reply || '').trim();
         if (!refined) { ta.value = backupText; showToast(ui.refineEmpty, 'error'); return; }
         // Diff 뷰 표시: 사용자가 확인 후 적용
-        _mmShowDiff(ta, backupText, refined, async () => {
-          ta.value = refined;
-          _versions = [refined]; _replyOrigVersions = [refined]; _replyOrigSingleBody = ''; _translations = []; _currentVerIdx = 0; _isTranslated = false; _replyTransCache = {}; _replyDisplayedLang = _refineLang; _replyOrigLang = _refineLang;
+        const _bcGM = ud.businessCard || '';
+        let _finalGM = refined;
+        if (_bcGM) {
+          if (_finalGM.includes(_bcGM)) {
+            const _bodyGM = _finalGM.replace('\n\n' + _bcGM, '').replace('\n' + _bcGM, '').replace(_bcGM, '').trimEnd();
+            _finalGM = _bodyGM ? _bodyGM + '\n\n' + _bcGM : _finalGM;
+          } else { _finalGM = _finalGM + '\n\n' + _bcGM; }
+        }
+        _mmShowDiff(ta, backupText, _finalGM, async () => {
+          ta.value = _finalGM;
+          _versions = [_finalGM]; _replyOrigVersions = [_finalGM]; _replyOrigSingleBody = ''; _translations = []; _currentVerIdx = 0; _isTranslated = false; _replyTransCache = {}; _replyDisplayedLang = _refineLang; _replyOrigLang = _refineLang;
           ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
           panel.querySelector('#mm-edit-btn').style.display = '';
           panel.querySelector('#mm-edit-bar').style.display = 'none';

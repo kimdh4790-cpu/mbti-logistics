@@ -694,19 +694,19 @@ async function createYahooJPPanel() {
       <div id="mm-yj-spam" style="display:none;background:#fce8e6;border:1.5px solid #d93025;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#c5221f;line-height:1.6;white-space:pre-line"></div>
 
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-yj-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-yj-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:80px">
-          <label id="mm-yj-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
-          <select id="mm-yj-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(yjSelectedMyLang)}</select>
-        </div>
-                <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-yj-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-yj-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
+          <label id="mm-yj-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-yj-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(yjSelectedMyLang)}</select>
+        </div>
+        <div style="flex:1;min-width:140px">
           <label id="mm-yj-label-mylang" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.myLang}</label>
           <select id="mm-yj-lang" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${langOptions}</select>
         </div>
@@ -876,7 +876,7 @@ async function createYahooJPPanel() {
 
     // Plan-based pro buttons
     const container = panel.querySelector('#mm-yj-pro-btns');
-    if (ud.plan === 'pro') {
+    if (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') {
       container.innerHTML = `
         <button id="mm-yj-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-yj-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1256,7 +1256,7 @@ async function createYahooJPPanel() {
       const res = await workerFetch(`${WORKER_URL_YJ}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, honorific:yjSelectedHonorific, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYJ && { userInfo: userInfoTripleYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
-        const _maxVer = ud.plan === 'pro' ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _yjVersions=data.versions.slice(0,_maxVer).map(_stripSalutationYJ); _yjTranslations=await Promise.all((data.translations||[]).slice(0,_maxVer).map(t=>t?appendSignatureYJ(t):t)); _yjCurrentVerIdx=0; _yjIsTranslated=false; _yjCurrentDisplayLang=yjSelectedMyLang; _yjOrigLang=yjSelectedMyLang;
         panel.querySelector('#mm-yj-output').value = await appendSignatureYJ(_yjVersions[0]);
         panel.querySelector('#mm-yj-result').style.display='block'; panel.querySelector('#mm-yj-upgrade').style.display='none';
@@ -1291,12 +1291,38 @@ async function createYahooJPPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractYahooJPAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const SELS = ['.attach-list a', '.attch-files span', '[class*="attach"] a[href]', '[class*="Attach"] a'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const name = (el.download || el.querySelector('[class*="name"]')?.textContent || el.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        const ext = name.split('.').pop().toLowerCase();
+        const href = el.href;
+        if (TEXT_EXTS.has(ext) && href && href.includes('mail.yahoo.co.jp')) {
+          try {
+            const r = await fetch(href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+            if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+              parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+            }
+          } catch {}
+        }
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartYJ() {
     const emailContent = _stripSenderSig(getYahooJPEmailThread());
     if (!emailContent) { showToastYJ('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataYJ();
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastYJ(getUILangYJ(yjSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastYJ(getUILangYJ(yjSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-yj-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-yj-smart');
     if (!btn) return;
@@ -1305,7 +1331,8 @@ async function createYahooJPPanel() {
     try {
       const storedSmartYJ = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartYJ = storedSmartYJ.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, honorific:yjSelectedHonorific, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractYahooJPAttachments();
+      const res = await workerFetch(`${WORKER_URL_YJ}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yjSelectedTone, honorific:yjSelectedHonorific, myLanguage:yjSelectedReplyLang, country:yjSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYJ && { userInfo: userInfoSmartYJ }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _yjVersions=(data.versions||[]).map(_stripSalutationYJ); _yjTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureYJ(t):t)); _yjCurrentVerIdx=0; _yjIsTranslated=false; _yjCurrentDisplayLang=yjSelectedMyLang; _yjOrigLang=yjSelectedMyLang;
@@ -1362,8 +1389,16 @@ async function createYahooJPPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangYJ = _yjCurrentDisplayLang || yjSelectedMyLang;
-        ta.value = refined;
-        _yjVersions = [refined]; _yjTranslations = []; _yjCurrentVerIdx = 0; _yjIsTranslated = false; _yjCurrentDisplayLang = _refineLangYJ; _yjOrigLang = _refineLangYJ;
+        const _bcYJ = ud.businessCard || '';
+        let _finalYJ = refined;
+        if (_bcYJ) {
+          if (_finalYJ.includes(_bcYJ)) {
+            const _bodyYJ = _finalYJ.replace('\n\n' + _bcYJ, '').replace('\n' + _bcYJ, '').replace(_bcYJ, '').trimEnd();
+            _finalYJ = _bodyYJ ? _bodyYJ + '\n\n' + _bcYJ : _finalYJ;
+          } else { _finalYJ = _finalYJ + '\n\n' + _bcYJ; }
+        }
+        ta.value = _finalYJ;
+        _yjVersions = [_finalYJ]; _yjTranslations = []; _yjCurrentVerIdx = 0; _yjIsTranslated = false; _yjCurrentDisplayLang = _refineLangYJ; _yjOrigLang = _refineLangYJ;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-yj-edit-btn').style.display = '';
         panel.querySelector('#mm-yj-edit-bar').style.display = 'none';

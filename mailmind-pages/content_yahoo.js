@@ -694,19 +694,19 @@ async function createYahooPanel() {
       <div id="mm-yh-spam" style="display:none;background:#fce8e6;border:1.5px solid #d93025;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#c5221f;line-height:1.6;white-space:pre-line"></div>
 
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-yh-label-tone" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.tone}</label>
           <select id="mm-yh-tone" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${toneOptions}</select>
         </div>
-        <div style="flex:1;min-width:80px">
-          <label id="mm-yh-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
-          <select id="mm-yh-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(yhSelectedMyLang)}</select>
-        </div>
-                <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
           <label id="mm-yh-label-country" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.country}</label>
           <select id="mm-yh-country" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${countryOptions}</select>
         </div>
-        <div style="flex:1;min-width:90px">
+        <div style="flex:1;min-width:140px">
+          <label id="mm-yh-label-honorific" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">존댓말</label>
+          <select id="mm-yh-honorific" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${getHonorificOptions(yhSelectedMyLang)}</select>
+        </div>
+        <div style="flex:1;min-width:140px">
           <label id="mm-yh-label-mylang" style="font-size:10px;color:#9aa0a6;display:block;margin-bottom:2px">${ui.myLang}</label>
           <select id="mm-yh-lang" style="width:100%;padding:6px 8px;border:1px solid #dadce0;border-radius:8px;font-size:12px;color:#202124;background:#fff;cursor:pointer">${langOptions}</select>
         </div>
@@ -876,7 +876,7 @@ async function createYahooPanel() {
 
     // Plan-based pro buttons
     const container = panel.querySelector('#mm-yh-pro-btns');
-    if (ud.plan === 'pro') {
+    if (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') {
       container.innerHTML = `
         <button id="mm-yh-triple" style="flex:1;padding:8px;background:#e8f5e9;color:#2e7d32;border:1px solid #4caf50;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"> </button>
         <button id="mm-yh-smart" style="flex:1;padding:8px;background:#fff8e1;color:#b8860b;border:1px solid #f9a825;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer"> </button>
@@ -1256,7 +1256,7 @@ async function createYahooPanel() {
       const res = await workerFetch(`${WORKER_URL_YH}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, honorific:yhSelectedHonorific, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleYH && { userInfo: userInfoTripleYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length>0) {
-        const _maxVer = ud.plan === 'pro' ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _yhVersions=data.versions.slice(0,_maxVer).map(_stripSalutationYH); _yhTranslations=await Promise.all((data.translations||[]).slice(0,_maxVer).map(t=>t?appendSignatureYH(t):t)); _yhCurrentVerIdx=0; _yhIsTranslated=false; _yhCurrentDisplayLang=yhSelectedMyLang; _yhOrigLang=yhSelectedMyLang;
         panel.querySelector('#mm-yh-output').value = await appendSignatureYH(_yhVersions[0]);
         panel.querySelector('#mm-yh-result').style.display='block'; panel.querySelector('#mm-yh-upgrade').style.display='none';
@@ -1291,12 +1291,38 @@ async function createYahooPanel() {
     btn.disabled=false; btn.textContent=origText;
   }
 
+  async function _mmExtractYahooAttachments() {
+    const TEXT_EXTS = new Set(['txt','csv','md','json','log','tsv','xml']);
+    const parts = [], seen = new Set();
+    const SELS = ['.attach-list a', '.attch-files span', '[class*="attach"] a[href]', '[class*="Attach"] a'];
+    for (const sel of SELS) {
+      for (const el of document.querySelectorAll(sel)) {
+        const name = (el.download || el.querySelector('[class*="name"]')?.textContent || el.textContent).trim();
+        if (!name || seen.has(name) || name.length > 100 || !name.includes('.')) continue;
+        seen.add(name);
+        const ext = name.split('.').pop().toLowerCase();
+        const href = el.href;
+        if (TEXT_EXTS.has(ext) && href && href.includes('mail.yahoo.com')) {
+          try {
+            const r = await fetch(href, { credentials: 'include', signal: AbortSignal.timeout(4000) });
+            if (r.ok && !(r.headers.get('content-type') || '').includes('html')) {
+              parts.push(`[첨부 ${name}]\n${(await r.text()).slice(0, 2000)}`); continue;
+            }
+          } catch {}
+        }
+        parts.push(`[첨부파일: ${name}]`);
+      }
+      if (parts.length) break;
+    }
+    return parts.join('\n').slice(0, 4000);
+  }
+
   // ===== Smart Reply (Pro) =====
   async function generateSmartYH() {
     const emailContent = _stripSenderSig(getYahooEmailThread());
     if (!emailContent) { showToastYH('이메일을 먼저 선택해주세요.', 'error'); return; }
     const ud = await getUserDataYH();
-    if (ud.plan !== 'pro' && ud.plan !== 'team') { showToastYH(getUILangYH(yhSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
+    if (ud.plan !== 'pro' && ud.plan !== 'pro_plus' && ud.plan !== 'team') { showToastYH(getUILangYH(yhSelectedMyLang).smartPlanMsg || 'Smart Reply is available on Pro plan or above.', 'error'); return; }
     if (ud.monthlyCount >= ud.monthlyLimit) { panel.querySelector('#mm-yh-upgrade').style.display='block'; return; }
     const btn = panel.querySelector('#mm-yh-smart');
     if (!btn) return;
@@ -1305,7 +1331,8 @@ async function createYahooPanel() {
     try {
       const storedSmartYH = await new Promise(r => chrome.storage.sync.get(['userInfo'], r));
       const userInfoSmartYH = storedSmartYH.userInfo || '';
-      const res = await workerFetch(`${WORKER_URL_YH}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, honorific:yhSelectedHonorific, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYH && { userInfo: userInfoSmartYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
+      const attachmentContent = await _mmExtractYahooAttachments();
+      const res = await workerFetch(`${WORKER_URL_YH}/generate-smart`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:yhSelectedTone, honorific:yhSelectedHonorific, myLanguage:yhSelectedReplyLang, country:yhSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoSmartYH && { userInfo: userInfoSmartYH }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}), ...(attachmentContent && { attachmentContent }) }) });
       const data = await res.json();
       if (data.success) {
         _yhVersions=(data.versions||[]).map(_stripSalutationYH); _yhTranslations=await Promise.all((data.translations||[]).map(t=>t?appendSignatureYH(t):t)); _yhCurrentVerIdx=0; _yhIsTranslated=false; _yhCurrentDisplayLang=yhSelectedMyLang; _yhOrigLang=yhSelectedMyLang;
@@ -1363,8 +1390,16 @@ async function createYahooPanel() {
       if (data.success) {
         const refined = (data.body || data.reply || '').trim();
         const _refineLangYH = _yhCurrentDisplayLang || yhSelectedMyLang;
-        ta.value = refined;
-        _yhVersions = [refined]; _yhTranslations = []; _yhCurrentVerIdx = 0; _yhIsTranslated = false; _yhCurrentDisplayLang = _refineLangYH; _yhOrigLang = _refineLangYH;
+        const _bcYH = ud.businessCard || '';
+        let _finalYH = refined;
+        if (_bcYH) {
+          if (_finalYH.includes(_bcYH)) {
+            const _bodyYH = _finalYH.replace('\n\n' + _bcYH, '').replace('\n' + _bcYH, '').replace(_bcYH, '').trimEnd();
+            _finalYH = _bodyYH ? _bodyYH + '\n\n' + _bcYH : _finalYH;
+          } else { _finalYH = _finalYH + '\n\n' + _bcYH; }
+        }
+        ta.value = _finalYH;
+        _yhVersions = [_finalYH]; _yhTranslations = []; _yhCurrentVerIdx = 0; _yhIsTranslated = false; _yhCurrentDisplayLang = _refineLangYH; _yhOrigLang = _refineLangYH;
         ta.readOnly = true; ta.style.background = '#f8f9fa'; ta.style.borderColor = '#dadce0';
         panel.querySelector('#mm-yh-edit-btn').style.display = '';
         panel.querySelector('#mm-yh-edit-bar').style.display = 'none';
