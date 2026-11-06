@@ -118,6 +118,10 @@ async function loginWithGoogle() {
       headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
       body: JSON.stringify({ token, email: userInfo.email, name: userInfo.name })
     });
+    const ct = loginRes.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      throw new Error(`Worker returned non-JSON (${loginRes.status}). Check worker deployment.`);
+    }
     const loginData = await loginRes.json();
 
     if (loginData.success || loginData.plan) {
