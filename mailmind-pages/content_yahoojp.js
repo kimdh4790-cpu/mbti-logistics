@@ -1,7 +1,7 @@
 // MailMind AI — Yahoo Japan Mail (mail.yahoo.co.jp) Content Script
 // Pattern mirrors content_outlook.js
 
-const WORKER_URL_YJ = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL_YJ = 'https://mailmind-api.yongcha.app';
 const API_KEY_content_yahoojp = 'mm-app-2026';
 
 function workerFetch(url, options) {
@@ -14,7 +14,7 @@ function workerFetch(url, options) {
   });
 }
 
-const PLAN_LIMITS_YJ = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
+const PLAN_LIMITS_YJ = { pro_plus: { monthly: 500 }, team: { monthly: 1000 }, pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_YJ = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
 const HONORIFIC_OPTIONS = {
@@ -1360,6 +1360,54 @@ async function createYahooJPPanel() {
         const _ebnYJS=panel.querySelector('#mm-yj-edit-btn');
         if (_ebYJS) _ebYJS.style.display='flex';
         if (_ebnYJS) _ebnYJS.style.display='none';
+        // 번역 버튼 (lazy)
+        {
+          const _detectedLangYJ = data.detected_language || 'English';
+          const langBtnElYJ = panel.querySelector('#mm-yj-lang-btn');
+          if (langBtnElYJ) {
+            langBtnElYJ.style.display = 'block';
+            const switchBtnYJ = panel.querySelector('#mm-yj-switch-lang');
+            const newBtnYJ = switchBtnYJ.cloneNode(true);
+            switchBtnYJ.parentNode.replaceChild(newBtnYJ, switchBtnYJ);
+            newBtnYJ.textContent = '🌐 Send in ' + _detectedLangYJ;
+            newBtnYJ.style.background = '#34a853';
+            let _yjLazyLoaded = false;
+            newBtnYJ.addEventListener('click', async function() {
+              if (_yjIsTranslated) {
+                panel.querySelector('#mm-yj-output').value = await appendSignatureYJ(_yjVersions[_yjCurrentVerIdx]);
+                this.textContent = '🌐 Send in ' + _detectedLangYJ;
+                this.style.background = '#34a853';
+                _yjIsTranslated = false;
+                return;
+              }
+              if (!_yjLazyLoaded) {
+                this.disabled = true; this.textContent = '🌐 번역 중...';
+                try {
+                  const tr = await workerFetch(`${WORKER_URL_YJ}/translate-lazy`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify({ versions: _yjVersions, replyLang: yjSelectedMyLang, senderLang: _detectedLangYJ, email: ud.userEmail }) });
+                  const trData = await tr.json();
+                  if (trData.success && trData.translations?.length) {
+                    _yjTranslations = await Promise.all(trData.translations.map(t => (t && t !== '(same)') ? appendSignatureYJ(t) : t));
+                    _yjLazyLoaded = true;
+                  } else if (trData.error) {
+                    showToastYJ('번역은 Pro 플랜부터 사용 가능합니다.', 'error');
+                    this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangYJ; return;
+                  }
+                } catch(e) {
+                  showToastYJ('번역 실패.', 'error');
+                  this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangYJ; return;
+                }
+                this.disabled = false;
+              }
+              const tr0 = _yjTranslations[_yjCurrentVerIdx];
+              if (tr0 && tr0 !== '(same)') {
+                panel.querySelector('#mm-yj-output').value = tr0;
+                this.textContent = '🔄 Back to ' + yjSelectedMyLang;
+                this.style.background = '#1a73e8';
+                _yjIsTranslated = true;
+              }
+            });
+          }
+        }
         await incrementUsageYJ(data.monthlyUsage); updateBadgeYJ();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-yj-upgrade').style.display='block'; }
       else { showToastYJ('Failed. Try again.', 'error'); }
