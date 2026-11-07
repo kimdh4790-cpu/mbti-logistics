@@ -646,9 +646,11 @@ function safeStorageLocalSet(data) {
 }
 
 const PLANS = {
-  free:  { monthly: 35,  label: '무료' },
-  basic: { monthly: 200, label: 'Basic' },
-  pro:   { monthly: 300, label: 'Pro' }
+  free:     { monthly: 35,   label: '무료' },
+  basic:    { monthly: 200,  label: 'Basic' },
+  pro:      { monthly: 300,  label: 'Pro' },
+  pro_plus: { monthly: 500,  label: 'Pro Plus' },
+  team:     { monthly: 1000, label: 'Team' }
 };
 
 const TONES_I18N = {

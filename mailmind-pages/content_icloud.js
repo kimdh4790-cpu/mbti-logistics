@@ -16,7 +16,7 @@ function workerFetch(url, options) {
   });
 }
 
-const PLAN_LIMITS_IC = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
+const PLAN_LIMITS_IC = { pro_plus: { monthly: 500 }, team: { monthly: 1000 }, pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_IC = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
 const HONORIFIC_OPTIONS = {

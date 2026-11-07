@@ -123,7 +123,7 @@ const AUTODETECT_LABELS_OL = {
   Dutch:'🌐 Automatisch detecteren', Polish:'🌐 Automatyczne wykrywanie', Hindi:'🌐 स्वचालित पहचान'
 };
 
-const PLANS_OL = { free: { monthly: 35, label: 'Starter' }, basic: { monthly: 200, label: 'Basic' }, pro: { monthly: 300, label: 'Pro' } };
+const PLANS_OL = { free: { monthly: 35, label: 'Starter' }, basic: { monthly: 200, label: 'Basic' }, pro: { monthly: 300, label: 'Pro' }, pro_plus: { monthly: 500, label: 'Pro Plus' }, team: { monthly: 1000, label: 'Team' } };
 
 const LANG_FLAGS = { Korean:'🇰🇷', English:'🇺🇸', Japanese:'🇯🇵', Chinese:'🇨🇳', Spanish:'🇪🇸', German:'🇩🇪', Portuguese:'🇧🇷', Arabic:'🇸🇦', Italian:'🇮🇹', Turkish:'🇹🇷', Vietnamese:'🇻🇳', Thai:'🇹🇭', Indonesian:'🇮🇩', Dutch:'🇳🇱', Polish:'🇵🇱', Hindi:'🇮🇳' };
 
