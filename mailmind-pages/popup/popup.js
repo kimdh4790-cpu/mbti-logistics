@@ -158,7 +158,7 @@ async function loginWithGoogle() {
       btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:18px;height:18px"> Sign in with Google';
       const errEl = document.createElement('p');
       errEl.style.cssText = 'color:#c5221f;font-size:12px;margin-top:8px;text-align:center;';
-      errEl.textContent = 'Sign-in failed. Please try again.';
+      errEl.textContent = e.message ? e.message.slice(0, 120) : 'Sign-in failed. Please try again.';
       btn.insertAdjacentElement('afterend', errEl);
       setTimeout(() => errEl.remove(), 3000);
     }
