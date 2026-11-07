@@ -2017,25 +2017,48 @@ function createPanel() {
         if (_ebS) _ebS.style.display = 'flex';
         if (_ebnS) _ebnS.style.display = 'none';
 
-        // 번역 버튼
-        if (translations.length > 0) {
+        // 번역 버튼 (lazy)
+        {
+          const _detectedLang = data.detected_language || 'English';
           const langBtnEl = panel.querySelector('#mm-lang-btn');
           langBtnEl.style.display = 'block';
           const switchBtn = panel.querySelector('#mm-switch-lang');
           const newBtn = switchBtn.cloneNode(true);
           switchBtn.parentNode.replaceChild(newBtn, switchBtn);
-          newBtn.textContent = getUILang(selectedMyLang).sendOriginal || `🌐 Send in ${data.detected_language || 'original language'}`;
+          newBtn.textContent = '🌐 Send in ' + _detectedLang;
           newBtn.style.background = '#34a853';
-
+          let _lazyLoaded = false;
           newBtn.addEventListener('click', async function() {
             if (_isTranslated) {
               panel.querySelector('#mm-output').value = await appendSignature(_versions[_currentVerIdx]);
-              this.textContent = getUILang(selectedMyLang).sendOriginal || `🌐 Send in ${data.detected_language || 'original language'}`;
+              this.textContent = '🌐 Send in ' + _detectedLang;
               this.style.background = '#34a853';
               _isTranslated = false;
-            } else {
-              panel.querySelector('#mm-output').value = _translations[_currentVerIdx] || _versions[_currentVerIdx];
-              this.textContent = `🔄 Back to ${selectedMyLang}`;
+              return;
+            }
+            if (!_lazyLoaded) {
+              this.disabled = true;
+              this.textContent = '🌐 번역 중...';
+              try {
+                const tr = await workerFetch(`${WORKER_URL}/translate-lazy`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY }, body: JSON.stringify({ versions: _versions, replyLang: selectedMyLang, senderLang: _detectedLang, email: userData.userEmail }) });
+                const trData = await tr.json();
+                if (trData.success && trData.translations?.length) {
+                  _translations = await Promise.all(trData.translations.map(t => (t && t !== '(same)') ? appendSignature(t) : t));
+                  _lazyLoaded = true;
+                } else if (trData.error) {
+                  showToast('번역은 Pro 플랜부터 사용 가능합니다.', 'error');
+                  this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLang; return;
+                }
+              } catch(e) {
+                showToast('번역 실패.', 'error');
+                this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLang; return;
+              }
+              this.disabled = false;
+            }
+            const tr0 = _translations[_currentVerIdx];
+            if (tr0 && tr0 !== '(same)') {
+              panel.querySelector('#mm-output').value = tr0;
+              this.textContent = '🔄 Back to ' + selectedMyLang;
               this.style.background = '#1a73e8';
               _isTranslated = true;
               _replyDisplayedLang = null;

@@ -1360,6 +1360,54 @@ async function createYahooPanel() {
         const _ebnYHS=panel.querySelector('#mm-yh-edit-btn');
         if (_ebYHS) _ebYHS.style.display='flex';
         if (_ebnYHS) _ebnYHS.style.display='none';
+        // 번역 버튼 (lazy)
+        {
+          const _detectedLangYH = data.detected_language || 'English';
+          const langBtnElYH = panel.querySelector('#mm-yh-lang-btn');
+          if (langBtnElYH) {
+            langBtnElYH.style.display = 'block';
+            const switchBtnYH = panel.querySelector('#mm-yh-switch-lang');
+            const newBtnYH = switchBtnYH.cloneNode(true);
+            switchBtnYH.parentNode.replaceChild(newBtnYH, switchBtnYH);
+            newBtnYH.textContent = '🌐 Send in ' + _detectedLangYH;
+            newBtnYH.style.background = '#34a853';
+            let _yhLazyLoaded = false;
+            newBtnYH.addEventListener('click', async function() {
+              if (_yhIsTranslated) {
+                panel.querySelector('#mm-yh-output').value = await appendSignatureYH(_yhVersions[_yhCurrentVerIdx]);
+                this.textContent = '🌐 Send in ' + _detectedLangYH;
+                this.style.background = '#34a853';
+                _yhIsTranslated = false;
+                return;
+              }
+              if (!_yhLazyLoaded) {
+                this.disabled = true; this.textContent = '🌐 번역 중...';
+                try {
+                  const tr = await workerFetch(`${WORKER_URL_YH}/translate-lazy`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify({ versions: _yhVersions, replyLang: yhSelectedMyLang, senderLang: _detectedLangYH, email: ud.userEmail }) });
+                  const trData = await tr.json();
+                  if (trData.success && trData.translations?.length) {
+                    _yhTranslations = await Promise.all(trData.translations.map(t => (t && t !== '(same)') ? appendSignatureYH(t) : t));
+                    _yhLazyLoaded = true;
+                  } else if (trData.error) {
+                    showToastYH('번역은 Pro 플랜부터 사용 가능합니다.', 'error');
+                    this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangYH; return;
+                  }
+                } catch(e) {
+                  showToastYH('번역 실패.', 'error');
+                  this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangYH; return;
+                }
+                this.disabled = false;
+              }
+              const tr0 = _yhTranslations[_yhCurrentVerIdx];
+              if (tr0 && tr0 !== '(same)') {
+                panel.querySelector('#mm-yh-output').value = tr0;
+                this.textContent = '🔄 Back to ' + yhSelectedMyLang;
+                this.style.background = '#1a73e8';
+                _yhIsTranslated = true;
+              }
+            });
+          }
+        }
         await incrementUsageYH(data.monthlyUsage); updateBadgeYH();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-yh-upgrade').style.display='block'; }
       else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastYH(getUILangYH(yhSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }

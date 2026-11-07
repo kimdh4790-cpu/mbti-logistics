@@ -1179,55 +1179,54 @@ async function createOutlookPanel() {
         const _ebnOLS = panel.querySelector('#mm-ol-edit-btn');
         if (_ebOLS) _ebOLS.style.display='flex';
         if (_ebnOLS) _ebnOLS.style.display='none';
-        if (translations.length > 0) {
-          const langBtnEl = panel.querySelector('#mm-ol-lang-btn');
-          langBtnEl.style.display='block';
-          const switchBtn = panel.querySelector('#mm-ol-switch-lang');
-          const newBtn = switchBtn.cloneNode(true);
-          switchBtn.parentNode.replaceChild(newBtn, switchBtn);
-          const _olSmartSendOrigLabel=(()=>{const m={Korean:'🌐 원문으로 전송',Japanese:'🌐 原文で送信',Chinese:'🌐 以原文发送',Spanish:'🌐 Enviar en original',French:'🌐 Envoyer en original',German:'🌐 Original senden',Portuguese:'🌐 Enviar original',Arabic:'🌐 إرسال النص الأصلي',Italian:'🌐 Invia in originale',Turkish:'🌐 Orijinal gönder',Vietnamese:'🌐 Gửi bản gốc',Thai:'🌐 ส่งต้นฉบับ',Indonesian:'🌐 Kirim asli'};return m[olSelectedMyLang]||'🌐 Send in original language';})();
-          newBtn.textContent=_olSmartSendOrigLabel; newBtn.style.background='#34a853';
-          newBtn.addEventListener('click', async function() {
-            if (_olIsTranslated) {
-              panel.querySelector('#mm-ol-output').value=await appendSignatureOL(_olVersions[_olCurrentVerIdx]);
-              this.textContent=_olSmartSendOrigLabel;
-              this.style.background='#34a853';
-              _olIsTranslated=false;
-            } else {
-              // 현재 버전 번역
-              const targetLang = data.detected_language || 'English';
-              if (_olTranslations[_olCurrentVerIdx]) {
-                panel.querySelector('#mm-ol-output').value = _olTranslations[_olCurrentVerIdx];
-                _olCurrentDisplayLang=null; _olIsTranslated=true;
-              } else {
-                this.textContent='⏳'; this.disabled=true;
-                try {
-                  const tr = await workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: _olVersions[_olCurrentVerIdx], targetLanguage: targetLang }) });
-                  const td = await tr.json();
-                  if (td.success && td.translated) {
-                    _olTranslations[_olCurrentVerIdx] = td.translated;
-                    panel.querySelector('#mm-ol-output').value = td.translated;
-                    _olCurrentDisplayLang=null; _olIsTranslated=true;
-                    // 나머지 버전 병렬 번역
-                    const others = [...Array(_olVersions.length).keys()].filter(i => i !== _olCurrentVerIdx && _olVersions[i]);
-                    Promise.all(others.map(async (i) => {
-                      try {
-                        const r2 = await workerFetch(`${WORKER_URL_OL}/translate`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ text: _olVersions[i], targetLanguage: targetLang }) });
-                        const d2 = await r2.json();
-                        if (d2.success && d2.translated) {
-                          _olTranslations[i] = d2.translated;
-                          if (_olCurrentVerIdx === i) panel.querySelector('#mm-ol-output').value = d2.translated;
-                        }
-                      } catch(e) {}
-                    }));
-                  }
-                } catch(e) {}
-                this.disabled=false;
+        // 번역 버튼 (lazy)
+        {
+          const _detectedLangOL = data.detected_language || 'English';
+          const langBtnElOL = panel.querySelector('#mm-ol-lang-btn');
+          if (langBtnElOL) {
+            langBtnElOL.style.display='block';
+            const switchBtnOL = panel.querySelector('#mm-ol-switch-lang');
+            const newBtnOL = switchBtnOL.cloneNode(true);
+            switchBtnOL.parentNode.replaceChild(newBtnOL, switchBtnOL);
+            newBtnOL.textContent = '🌐 Send in ' + _detectedLangOL;
+            newBtnOL.style.background = '#34a853';
+            let _olLazyLoaded = false;
+            newBtnOL.addEventListener('click', async function() {
+              if (_olIsTranslated) {
+                panel.querySelector('#mm-ol-output').value = await appendSignatureOL(_olVersions[_olCurrentVerIdx]);
+                this.textContent = '🌐 Send in ' + _detectedLangOL;
+                this.style.background = '#34a853';
+                _olIsTranslated = false;
+                return;
               }
-              this.textContent=`🔄 Back to ${olSelectedMyLang}`;
-              this.style.background='#1a73e8';
-            }
-          });
+              if (!_olLazyLoaded) {
+                this.disabled = true; this.textContent = '🌐 번역 중...';
+                try {
+                  const tr = await workerFetch(`${WORKER_URL_OL}/translate-lazy`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify({ versions: _olVersions, replyLang: olSelectedMyLang, senderLang: _detectedLangOL, email: ud.userEmail }) });
+                  const trData = await tr.json();
+                  if (trData.success && trData.translations?.length) {
+                    _olTranslations = await Promise.all(trData.translations.map(t => (t && t !== '(same)') ? appendSignatureOL(t) : t));
+                    _olLazyLoaded = true;
+                  } else if (trData.error) {
+                    showToastOL('번역은 Pro 플랜부터 사용 가능합니다.', 'error');
+                    this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangOL; return;
+                  }
+                } catch(e) {
+                  showToastOL('번역 실패.', 'error');
+                  this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangOL; return;
+                }
+                this.disabled = false;
+              }
+              const tr0 = _olTranslations[_olCurrentVerIdx];
+              if (tr0 && tr0 !== '(same)') {
+                panel.querySelector('#mm-ol-output').value = tr0;
+                this.textContent = '🔄 Back to ' + olSelectedMyLang;
+                this.style.background = '#1a73e8';
+                _olIsTranslated = true;
+                _olCurrentDisplayLang = null;
+              }
+            });
+          }
         }
         await incrementUsageOL(data.monthlyUsage);
         updateBadgeOL();
