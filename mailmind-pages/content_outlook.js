@@ -1,7 +1,7 @@
 // MailMind AI — Outlook Web content script v1.5.1 (Full feature parity with Gmail)
 // outlook.live.com / outlook.office.com / outlook.office365.com
 
-const WORKER_URL_OL = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL_OL = 'https://mailmind-api.yongcha.app';
 const API_KEY_content_outlook = 'mm-app-2026';
 
 function workerFetch(url, options) {

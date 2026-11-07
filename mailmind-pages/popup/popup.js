@@ -1,4 +1,4 @@
-const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL = 'https://mailmind-api.yongcha.app';
 const API_KEY = 'mm-app-2026';
 
 const PLAN_LIMITS = {

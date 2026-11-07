@@ -1,7 +1,7 @@
 // MailMind AI — Yahoo Japan Mail (mail.yahoo.co.jp) Content Script
 // Pattern mirrors content_outlook.js
 
-const WORKER_URL_YJ = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL_YJ = 'https://mailmind-api.yongcha.app';
 const API_KEY_content_yahoojp = 'mm-app-2026';
 
 function workerFetch(url, options) {
