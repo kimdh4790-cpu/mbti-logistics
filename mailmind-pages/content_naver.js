@@ -1,7 +1,7 @@
 // MailMind AI — Naver Mail (mail.naver.com) Content Script
 // Pattern mirrors content_outlook.js
 
-const WORKER_URL_NV = 'https://api.mailmind.yongcha.app';
+const WORKER_URL_NV = 'https://mailmind-api.kimdh4790.workers.dev';
 const API_KEY_content_naver = 'mm-app-2026';
 
 function workerFetch(url, options) {

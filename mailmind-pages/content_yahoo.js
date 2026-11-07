@@ -1,7 +1,7 @@
 // MailMind AI — Yahoo Mail (mail.yahoo.com) Content Script
 // Pattern mirrors content_outlook.js
 
-const WORKER_URL_YH = 'https://api.mailmind.yongcha.app';
+const WORKER_URL_YH = 'https://mailmind-api.kimdh4790.workers.dev';
 const API_KEY_content_yahoo = 'mm-app-2026';
 
 function workerFetch(url, options) {
