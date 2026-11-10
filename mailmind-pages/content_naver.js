@@ -1,7 +1,7 @@
 // MailMind AI — Naver Mail (mail.naver.com) Content Script
 // Pattern mirrors content_outlook.js
 
-const WORKER_URL_NV = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL_NV = 'https://mailmind-api.yongcha.app';
 const API_KEY_content_naver = 'mm-app-2026';
 
 function workerFetch(url, options) {
@@ -14,7 +14,7 @@ function workerFetch(url, options) {
   });
 }
 
-const PLAN_LIMITS_NV = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
+const PLAN_LIMITS_NV = { pro_plus: { monthly: 500 }, team: { monthly: 1000 }, pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_NV = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
 const HONORIFIC_OPTIONS = {
@@ -1485,6 +1485,54 @@ async function createNaverPanel() {
         const _ebnNVS=panel.querySelector('#mm-nv-edit-btn');
         if (_ebNVS) _ebNVS.style.display='flex';
         if (_ebnNVS) _ebnNVS.style.display='none';
+        // 번역 버튼 (lazy)
+        {
+          const _detectedLangNV = data.detected_language || 'English';
+          const langBtnElNV = panel.querySelector('#mm-nv-lang-btn');
+          if (langBtnElNV) {
+            langBtnElNV.style.display = 'block';
+            const switchBtnNV = panel.querySelector('#mm-nv-switch-lang');
+            const newBtnNV = switchBtnNV.cloneNode(true);
+            switchBtnNV.parentNode.replaceChild(newBtnNV, switchBtnNV);
+            newBtnNV.textContent = '🌐 Send in ' + _detectedLangNV;
+            newBtnNV.style.background = '#34a853';
+            let _nvLazyLoaded = false;
+            newBtnNV.addEventListener('click', async function() {
+              if (_nvIsTranslated) {
+                panel.querySelector('#mm-nv-output').value = await appendSignatureNV(_nvVersions[_nvCurrentVerIdx]);
+                this.textContent = '🌐 Send in ' + _detectedLangNV;
+                this.style.background = '#34a853';
+                _nvIsTranslated = false;
+                return;
+              }
+              if (!_nvLazyLoaded) {
+                this.disabled = true; this.textContent = '🌐 번역 중...';
+                try {
+                  const tr = await workerFetch(`${WORKER_URL_NV}/translate-lazy`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify({ versions: _nvVersions, replyLang: nvSelectedMyLang, senderLang: _detectedLangNV, email: ud.userEmail }) });
+                  const trData = await tr.json();
+                  if (trData.success && trData.translations?.length) {
+                    _nvTranslations = await Promise.all(trData.translations.map(t => (t && t !== '(same)') ? appendSignatureNV(t) : t));
+                    _nvLazyLoaded = true;
+                  } else if (trData.error) {
+                    showToastNV('번역은 Pro 플랜부터 사용 가능합니다.', 'error');
+                    this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangNV; return;
+                  }
+                } catch(e) {
+                  showToastNV('번역 실패.', 'error');
+                  this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangNV; return;
+                }
+                this.disabled = false;
+              }
+              const tr0 = _nvTranslations[_nvCurrentVerIdx];
+              if (tr0 && tr0 !== '(same)') {
+                panel.querySelector('#mm-nv-output').value = tr0;
+                this.textContent = '🔄 Back to ' + nvSelectedMyLang;
+                this.style.background = '#1a73e8';
+                _nvIsTranslated = true;
+              }
+            });
+          }
+        }
         await incrementUsageNV(data.monthlyUsage); updateBadgeNV();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-nv-upgrade').style.display='block'; }
       else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastNV(getUILangNV(nvSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }

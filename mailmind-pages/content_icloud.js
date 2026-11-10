@@ -3,7 +3,7 @@
 
 if (window.self !== window.top) { /* skip sub-frames */ } else {
 
-const WORKER_URL_IC = 'https://mailmind-api.kimdh4790.workers.dev';
+const WORKER_URL_IC = 'https://mailmind-api.yongcha.app';
 const API_KEY_content_icloud = 'mm-app-2026';
 
 function workerFetch(url, options) {
@@ -16,7 +16,7 @@ function workerFetch(url, options) {
   });
 }
 
-const PLAN_LIMITS_IC = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
+const PLAN_LIMITS_IC = { pro_plus: { monthly: 500 }, team: { monthly: 1000 }, pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_IC = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
 const HONORIFIC_OPTIONS = {
@@ -1341,6 +1341,54 @@ async function createiCloudPanel() {
         const _ebnICS=panel.querySelector('#mm-ic-edit-btn');
         if (_ebICS) _ebICS.style.display='flex';
         if (_ebnICS) _ebnICS.style.display='none';
+        // 번역 버튼 (lazy)
+        {
+          const _detectedLangIC = data.detected_language || 'English';
+          const langBtnElIC = panel.querySelector('#mm-ic-lang-btn');
+          if (langBtnElIC) {
+            langBtnElIC.style.display = 'block';
+            const switchBtnIC = panel.querySelector('#mm-ic-switch-lang');
+            const newBtnIC = switchBtnIC.cloneNode(true);
+            switchBtnIC.parentNode.replaceChild(newBtnIC, switchBtnIC);
+            newBtnIC.textContent = '🌐 Send in ' + _detectedLangIC;
+            newBtnIC.style.background = '#34a853';
+            let _icLazyLoaded = false;
+            newBtnIC.addEventListener('click', async function() {
+              if (_icIsTranslated) {
+                panel.querySelector('#mm-ic-output').value = await appendSignatureIC(_icVersions[_icCurrentVerIdx]);
+                this.textContent = '🌐 Send in ' + _detectedLangIC;
+                this.style.background = '#34a853';
+                _icIsTranslated = false;
+                return;
+              }
+              if (!_icLazyLoaded) {
+                this.disabled = true; this.textContent = '🌐 번역 중...';
+                try {
+                  const tr = await workerFetch(`${WORKER_URL_IC}/translate-lazy`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'mm-app-2026' }, body: JSON.stringify({ versions: _icVersions, replyLang: icSelectedMyLang, senderLang: _detectedLangIC, email: ud.userEmail }) });
+                  const trData = await tr.json();
+                  if (trData.success && trData.translations?.length) {
+                    _icTranslations = await Promise.all(trData.translations.map(t => (t && t !== '(same)') ? appendSignatureIC(t) : t));
+                    _icLazyLoaded = true;
+                  } else if (trData.error) {
+                    showToastIC('번역은 Pro 플랜부터 사용 가능합니다.', 'error');
+                    this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangIC; return;
+                  }
+                } catch(e) {
+                  showToastIC('번역 실패.', 'error');
+                  this.disabled = false; this.textContent = '🌐 Send in ' + _detectedLangIC; return;
+                }
+                this.disabled = false;
+              }
+              const tr0 = _icTranslations[_icCurrentVerIdx];
+              if (tr0 && tr0 !== '(same)') {
+                panel.querySelector('#mm-ic-output').value = tr0;
+                this.textContent = '🔄 Back to ' + icSelectedMyLang;
+                this.style.background = '#1a73e8';
+                _icIsTranslated = true;
+              }
+            });
+          }
+        }
         await incrementUsageIC(data.monthlyUsage); updateBadgeIC();
       } else if (data.error==='MONTHLY_LIMIT') { panel.querySelector('#mm-ic-upgrade').style.display='block'; }
       else if (data.error==='Unauthorized'||data.error==='unauthorized') { showToastIC(getUILangIC(icSelectedMyLang).errLogin||'로그인이 필요합니다.', 'error'); }
