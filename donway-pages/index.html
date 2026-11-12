@@ -28019,6 +28019,7 @@ function _renderDrivers(drivers,c){
   }).join('');
   c.innerHTML=html;
 }
+function closeMoById(id){var el=document.getElementById(id);if(el)el.remove();}
 function openAddDriver(){
   var mo=document.createElement('div');mo.className='mo show';mo.id='mo-add-dr';
   mo.innerHTML='<div class="md"><div class="mdt">👤 기사 추가 <button onclick="this.closest(\'.mo\').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3)">✕</button></div>'
