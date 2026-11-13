@@ -1606,6 +1606,11 @@ function _loadCompanyCfg(dealerId){
         // 관리자 이름 설정
         if(_CU && !_CU.name && doc.data().name) _CU.name = doc.data().name;
         if(_CU && !_CU.name && doc.data().companyName) _CU.name = doc.data().companyName;
+        // driver/member는 services 로드 후 nav 재빌드 (delivery 메뉴 반영)
+        if(_CU && (_CU.role==='driver'||_CU.role==='member')){
+          MENUS=_filterMenusByServices(MENUS_DRIVER);
+          if(typeof buildNav==='function') buildNav();
+        }
       }
     }).catch(function(){});
 }
@@ -6309,7 +6314,7 @@ function showApp(){
   if(_CU.role==='manager'){
     MENUS=MENUS_MANAGER;
   } else if(_CU.role==='driver'||_CU.role==='member'){
-    MENUS=MENUS_DRIVER;
+    MENUS=_filterMenusByServices(MENUS_DRIVER);
   } else {
     var sType = _CU.serviceType||'settle';
     // ★ sType 디버그 로그 (슈퍼어드민용)
@@ -22855,7 +22860,8 @@ var MENUS_DRIVER = [
   {s:'🏠 홈',    items:[{ic:'🏠',l:'내 홈',p:'emp_home',plan_key:'free'}]},
   {s:'내 정산',items:[
     {ic:'📊',l:'내 정산 현황',p:'my_settle',    plan_key:'free'},
-    {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'}
+    {ic:'📋',l:'정산 내역',  p:'my_statements', plan_key:'free'},
+    {ic:'🛵',l:'배달대행 정산',p:'delivery_input',plan_key:'delivery'}
   ]},
 ];
 var MENUS = MENUS_SETTLE; // 기본값
