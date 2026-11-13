@@ -14677,20 +14677,11 @@ function pageDeliveryInput(){
 
   window._dwDashUnsub=_db.collection('delivery_sessions').doc(sid)
     .onSnapshot(function(snap){
-      var s=snap.exists?snap.data():null;
-      if(!s){
-        // 아직 세션 없음 (관리자가 엑셀 업로드 전)
-        document.getElementById('dw-driver-dash').innerHTML=
-          '<div style="text-align:center;padding:40px 20px">'
-            +'<div style="font-size:64px;margin-bottom:16px">🛵</div>'
-            +'<div style="font-size:16px;font-weight:800;margin-bottom:8px">배달 현황 대기 중</div>'
-            +'<div style="font-size:13px;color:var(--text3);line-height:1.6">'
-              +'관리자가 정산 데이터를 업로드하면<br>실시간으로 현황이 표시됩니다.<br><br>'
-              +'<strong style="color:var(--brand)">트랙 달성 시 자동으로 알림이 옵니다! 🔔</strong>'
-            +'</div>'
-          +'</div>';
-        return;
-      }
+      var s=snap.exists?snap.data():{
+        companyName:(_CU&&_CU.name)||'',
+        period:_dwPeriodStr(),
+        totalCount:0,preTax:0,entries:[],_empty:true
+      };
       _dwRenderDriverDash(s);
     },function(){
       document.getElementById('dw-driver-dash').innerHTML=
@@ -14814,6 +14805,12 @@ function _dwRenderDriverDash(s){
           +'</div>'
         +'</div>'
       +'</div>';
+      if(s._empty){
+        html+='<div style="text-align:center;padding:28px 16px;color:var(--text3)">'
+          +'<div style="font-size:40px;margin-bottom:10px">🔔</div>'
+          +'<div style="font-size:13px;line-height:1.6">관리자가 정산 데이터를 업로드하면<br>실시간으로 현황이 표시됩니다.</div>'
+        +'</div>';
+      }
 
     } else if(tab==='delivery'){
       html+='<div style="background:var(--bg2);border-radius:16px;overflow:hidden">'
