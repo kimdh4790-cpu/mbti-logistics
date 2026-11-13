@@ -1043,7 +1043,7 @@ async function createOutlookPanel() {
       const res = await workerFetch(`${WORKER_URL_OL}/generate-triple`, { method:'POST', headers:{'Content-Type':'application/json','X-API-Key':'mm-app-2026'}, body: JSON.stringify({ emailContent, tone:olSelectedTone, honorific:olSelectedHonorific, myLanguage:olSelectedReplyLang, country:olSelectedCountry, email:ud.userEmail, userId:ud.userId, ...(userInfoTripleOL && { userInfo: userInfoTripleOL }), ...(ud.businessCard ? { businessCard: ud.businessCard } : {}), ...(ud.phrases?.length ? { phrases: ud.phrases } : {}) }) });
       const data = await res.json();
       if (data.success && data.versions?.length > 0) {
-        const _maxVer = (userData.plan === 'pro' || userData.plan === 'pro_plus' || userData.plan === 'team') ? 3 : 2;
+        const _maxVer = (ud.plan === 'pro' || ud.plan === 'pro_plus' || ud.plan === 'team') ? 3 : 2;
         _olVersions = data.versions.slice(0, _maxVer).map(_stripSalutationOL);
         _olTranslations = await Promise.all((data.translations || []).slice(0, _maxVer).map(t => t ? appendSignatureOL(t) : t));
         _olCurrentVerIdx = 0;
@@ -1466,6 +1466,8 @@ const COMPOSE_LANGS_OL = [
   { value:'Arabic',     flag:'🇸🇦', label:'العربية' },   { value:'Vietnamese', flag:'🇻🇳', label:'Tiếng Việt' },
   { value:'Thai',       flag:'🇹🇭', label:'ภาษาไทย' },  { value:'Indonesian', flag:'🇮🇩', label:'Indonesia' },
   { value:'Italian',    flag:'🇮🇹', label:'Italiano' },  { value:'Turkish',    flag:'🇹🇷', label:'Türkçe' },
+  { value:'Dutch',      flag:'🇳🇱', label:'Nederlands' }, { value:'Polish',     flag:'🇵🇱', label:'Polski' },
+  { value:'Hindi',      flag:'🇮🇳', label:'हिन्दी' },
 ];
 
 async function openOutlookComposePanel() {
@@ -1494,7 +1496,7 @@ async function openOutlookComposePanel() {
   function toneLabelOL(val) {
     const item = COMPOSE_TONES_OL.find(t => t.value === val);
     if (!item) return val;
-    const map = { Korean:'ko', English:'en', Japanese:'ja', Chinese:'zh', Spanish:'es', French:'fr', German:'de', Portuguese:'pt', Arabic:'ar', Vietnamese:'vi', Thai:'th', Indonesian:'id', Italian:'it', Turkish:'tr' };
+    const map = { Korean:'ko', English:'en', Japanese:'ja', Chinese:'zh', Spanish:'es', French:'fr', German:'de', Portuguese:'pt', Arabic:'ar', Vietnamese:'vi', Thai:'th', Indonesian:'id', Italian:'it', Turkish:'tr', Dutch:'nl', Polish:'pl', Hindi:'hi' };
     const key = map[uiLang] || 'en';
     return item[key] || item.en;
   }

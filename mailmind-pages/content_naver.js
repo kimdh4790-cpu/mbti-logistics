@@ -14,7 +14,7 @@ function workerFetch(url, options) {
   });
 }
 
-const PLAN_LIMITS_NV = { pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
+const PLAN_LIMITS_NV = { pro_plus: { monthly: 500 }, team: { monthly: 1000 }, pro: { monthly: 300 }, basic: { monthly: 200 }, free: { monthly: 35 } };
 
 const TONE_KEYS_NV = ['professional','friendly','concise','detailed','decline','thankful','apologetic','acknowledge'];
 const HONORIFIC_OPTIONS = {
@@ -1656,12 +1656,14 @@ const COMPOSE_I18N_NV = {
 };
 
 const COMPOSE_TONES_NV = [
-  { value:'professional', ko:'업무적',   en:'Professional', ja:'ビジネス', zh:'正式',    es:'Profesional', fr:'Professionnel', de:'Professionell', pt:'Profissional', ar:'رسمي',   vi:'Chuyên nghiệp', th:'เป็นทางการ',  id:'Profesional', it:'Professionale', tr:'Profesyonel' },
-  { value:'friendly',     ko:'친근하게', en:'Friendly',     ja:'フレンドリー', zh:'友好', es:'Amigable',    fr:'Amical',        de:'Freundlich',   pt:'Amigável',    ar:'ودي',    vi:'Thân thiện',    th:'เป็นกันเอง',  id:'Ramah',       it:'Amichevole',    tr:'Samimi' },
-  { value:'concise',      ko:'간결하게', en:'Concise',      ja:'簡潔',     zh:'简洁',    es:'Conciso',     fr:'Concis',        de:'Prägnant',     pt:'Conciso',     ar:'موجز',   vi:'Súc tích',      th:'กระชับ',      id:'Singkat',     it:'Conciso',       tr:'Kısa' },
-  { value:'detailed',     ko:'상세하게', en:'Detailed',     ja:'詳細',     zh:'详细',    es:'Detallado',   fr:'Détaillé',      de:'Detailliert',  pt:'Detalhado',   ar:'مفصل',   vi:'Chi tiết',      th:'ละเอียด',     id:'Terperinci',  it:'Dettagliato',   tr:'Ayrıntılı' },
-  { value:'decline',      ko:'거절하기', en:'Decline',      ja:'断り',     zh:'拒绝',    es:'Declinar',    fr:'Décliner',      de:'Ablehnen',     pt:'Recusar',     ar:'رفض',    vi:'Từ chối',       th:'ปฏิเสธ',      id:'Tolak',       it:'Rifiutare',     tr:'Reddet' },
-  { value:'thankful',     ko:'감사하게', en:'Thankful',     ja:'感謝',     zh:'感谢',    es:'Agradecido',  fr:'Reconnaissant', de:'Dankbar',      pt:'Grato',       ar:'ممتنن',  vi:'Cảm ơn',        th:'ขอบคุณ',      id:'Berterima kasih', it:'Grato', tr:'Teşekkür' },
+  { value:'professional', ko:'업무적',   en:'Professional', ja:'ビジネス', zh:'正式',    es:'Profesional', fr:'Professionnel', de:'Professionell', pt:'Profissional', ar:'رسمي',   vi:'Chuyên nghiệp', th:'เป็นทางการ',  id:'Profesional', it:'Professionale', tr:'Profesyonel', nl:'Professioneel',      pl:'Profesjonalny',  hi:'पेशेवर' },
+  { value:'friendly',     ko:'친근하게', en:'Friendly',     ja:'フレンドリー', zh:'友好', es:'Amigable',    fr:'Amical',        de:'Freundlich',   pt:'Amigável',    ar:'ودي',    vi:'Thân thiện',    th:'เป็นกันเอง',  id:'Ramah',       it:'Amichevole',    tr:'Samimi',   nl:'Vriendelijk',       pl:'Przyjazny',      hi:'मित्रवत' },
+  { value:'concise',      ko:'간결하게', en:'Concise',      ja:'簡潔',     zh:'简洁',    es:'Conciso',     fr:'Concis',        de:'Prägnant',     pt:'Conciso',     ar:'موجز',   vi:'Súc tích',      th:'กระชับ',      id:'Singkat',     it:'Conciso',       tr:'Kısa',     nl:'Beknopt',           pl:'Zwięzły',        hi:'संक्षिप्त' },
+  { value:'detailed',     ko:'상세하게', en:'Detailed',     ja:'詳細',     zh:'详细',    es:'Detallado',   fr:'Détaillé',      de:'Detailliert',  pt:'Detalhado',   ar:'مفصل',   vi:'Chi tiết',      th:'ละเอียด',     id:'Terperinci',  it:'Dettagliato',   tr:'Ayrıntılı', nl:'Gedetailleerd',     pl:'Szczegółowy',    hi:'विस्तृत' },
+  { value:'decline',      ko:'거절하기', en:'Decline',      ja:'断り',     zh:'拒绝',    es:'Declinar',    fr:'Décliner',      de:'Ablehnen',     pt:'Recusar',     ar:'رفض',    vi:'Từ chối',       th:'ปฏิเสธ',      id:'Tolak',       it:'Rifiutare',     tr:'Reddet',   nl:'Afwijzen',          pl:'Odmówić',        hi:'अस्वीकार करें' },
+  { value:'thankful',     ko:'감사하게', en:'Thankful',     ja:'感謝',     zh:'感谢',    es:'Agradecido',  fr:'Reconnaissant', de:'Dankbar',      pt:'Grato',       ar:'ممتنن',  vi:'Cảm ơn',        th:'ขอบคุณ',      id:'Berterima kasih', it:'Grato', tr:'Teşekkür', nl:'Dankbaar',       pl:'Wdzięczny',      hi:'आभारी' },
+  { value:'apologetic',   ko:'사과하기', en:'Apologetic',   ja:'謝罪',     zh:'道歉',    es:'Disculpa',    fr:'Excuse',        de:'Entschuldigend', pt:'Apologético', ar:'اعتذاري', vi:'Xin lỗi',      th:'ขอโทษ',       id:'Minta Maaf',  it:'Scusante',      tr:'Özür',     nl:'Verontschuldigend', pl:'Przepraszający', hi:'क्षमाप्रार्थी' },
+  { value:'acknowledge',  ko:'확인하기', en:'Acknowledge',  ja:'確認',     zh:'确认',    es:'Confirmar',   fr:'Accuser réception', de:'Bestätigen', pt:'Reconhecer', ar:'إقرار',  vi:'Xác nhận',      th:'รับทราบ',     id:'Mengakui',    it:'Prendere atto', tr:'Kabul Et', nl:'Bevestigen',        pl:'Potwierdzić',    hi:'स्वीकार करें' },
 ];
 
 const COMPOSE_LANGS_NV = [
@@ -1672,6 +1674,8 @@ const COMPOSE_LANGS_NV = [
   { value:'Arabic',     flag:'🇸🇦', label:'العربية' }, { value:'Vietnamese',flag:'🇻🇳', label:'Tiếng Việt' },
   { value:'Thai',       flag:'🇹🇭', label:'ภาษาไทย' }, { value:'Indonesian',flag:'🇮🇩', label:'Indonesia' },
   { value:'Italian',    flag:'🇮🇹', label:'Italiano' }, { value:'Turkish',  flag:'🇹🇷', label:'Türkçe' },
+  { value:'Dutch',      flag:'🇳🇱', label:'Nederlands' }, { value:'Polish', flag:'🇵🇱', label:'Polski' },
+  { value:'Hindi',      flag:'🇮🇳', label:'हिन्दी' },
 ];
 
 const VALID_COMPOSE_LANGS_NV = COMPOSE_LANGS_NV.map(l => l.value);
@@ -1761,7 +1765,7 @@ async function renderNVFloatPanel(panel) {
   function toneLabelNV(val) {
     const item = COMPOSE_TONES_NV.find(t => t.value === val);
     if (!item) return val;
-    const map = { Korean:'ko', English:'en', Japanese:'ja', Chinese:'zh', Spanish:'es', French:'fr', German:'de', Portuguese:'pt', Arabic:'ar', Vietnamese:'vi', Thai:'th', Indonesian:'id', Italian:'it', Turkish:'tr' };
+    const map = { Korean:'ko', English:'en', Japanese:'ja', Chinese:'zh', Spanish:'es', French:'fr', German:'de', Portuguese:'pt', Arabic:'ar', Vietnamese:'vi', Thai:'th', Indonesian:'id', Italian:'it', Turkish:'tr', Dutch:'nl', Polish:'pl', Hindi:'hi' };
     return item[map[curLang] || 'en'] || item.en;
   }
 

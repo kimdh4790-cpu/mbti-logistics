@@ -3519,6 +3519,9 @@ const COMPOSE_LANGS = [
   { value:'Indonesian', flag:'🇮🇩', label:'Indonesia' },
   { value:'Italian',    flag:'🇮🇹', label:'Italiano' },
   { value:'Turkish',    flag:'🇹🇷', label:'Türkçe' },
+  { value:'Dutch',      flag:'🇳🇱', label:'Nederlands' },
+  { value:'Polish',     flag:'🇵🇱', label:'Polski' },
+  { value:'Hindi',      flag:'🇮🇳', label:'हिन्दी' },
 ];
 
 // 드래그 가능 패널 생성 — 초기 위치: 우하단 (Gmail compose와 겹치지 않도록)
@@ -3677,7 +3680,7 @@ async function renderFloatPanel(panel) {
   function toneLabel(val) {
     const item = COMPOSE_TONES.find(t => t.value === val);
     if (!item) return val;
-    const map = { Korean:'ko', English:'en', Japanese:'ja', Chinese:'zh', Spanish:'es', French:'fr', German:'de', Portuguese:'pt', Arabic:'ar', Vietnamese:'vi', Thai:'th', Indonesian:'id', Italian:'it', Turkish:'tr' };
+    const map = { Korean:'ko', English:'en', Japanese:'ja', Chinese:'zh', Spanish:'es', French:'fr', German:'de', Portuguese:'pt', Arabic:'ar', Vietnamese:'vi', Thai:'th', Indonesian:'id', Italian:'it', Turkish:'tr', Dutch:'nl', Polish:'pl', Hindi:'hi' };
     const key = map[curLang] || 'en';
     return item[key] || item.en;
   }
