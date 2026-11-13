@@ -54,6 +54,8 @@ const UI_STRINGS = {
     limitMsg: 'Monthly limit reached.',
     errNotFound: 'Email content not found.',
     errFailed: 'Failed. Please try again.',
+    errTimeout: 'Request timed out. Please try again.',
+    cancel: 'Cancel',
     errSummaryFailed: 'Summary failed. Please try again.',
     errTranslate: 'Translation failed.',
     msgCopied: 'Copied!',
@@ -617,14 +619,33 @@ function getUILang(myLang) {
 const WORKER_URL = 'https://mailmind-api.kimdh4790.workers.dev';
 const API_KEY = 'mm-app-2026';
 
-function workerFetch(url, options) {
+let _mmReqCounter = 0;
+let _mmCurrentReqId = null;
+
+function workerFetch(url, options, reqId) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options }, res => {
+    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options, reqId }, res => {
       void chrome.runtime.lastError;
-      if (!res || !res.ok) { reject(new Error(res?.error || 'fetch failed')); return; }
+      if (!res || !res.ok) {
+        const err = res?.error || 'fetch failed';
+        reject(new Error(err === 'timeout' ? (getUILang(selectedMyLang)?.errTimeout || 'Request timed out. Please try again.') : err));
+        return;
+      }
       resolve({ ok: true, json: () => Promise.resolve(res.data) });
     });
   });
+}
+
+function _mmAbortCurrent() {
+  if (_mmCurrentReqId) {
+    chrome.runtime.sendMessage({ type: 'MM_ABORT_FETCH', reqId: _mmCurrentReqId }, () => { void chrome.runtime.lastError; });
+    _mmCurrentReqId = null;
+  }
+}
+
+function _mmNewReqId() {
+  _mmCurrentReqId = `req_${++_mmReqCounter}_${Date.now()}`;
+  return _mmCurrentReqId;
 }
 
 // 서명·템플릿 인메모리 캐시 (extension context 재로드 시에도 유지)
@@ -1540,11 +1561,35 @@ function createPanel() {
     }
 
     const genBtn = panel.querySelector('#mm-gen');
-    genBtn.disabled = true;
-    genBtn.textContent = getUILang(selectedMyLang).generating || '✦ Generating...';
+    const _origGenText = genBtn.textContent;
+    const _reqId = _mmNewReqId();
+    let _cancelled = false;
+    genBtn.disabled = false;
+    genBtn.textContent = '✕ ' + (getUILang(selectedMyLang).cancel || 'Cancel');
+    genBtn.style.background = '#e8eaed';
+    genBtn.style.color = '#5f6368';
+    genBtn.onclick = () => {
+      _cancelled = true;
+      _mmAbortCurrent();
+      genBtn.disabled = true;
+      genBtn.textContent = _origGenText;
+      genBtn.style.background = '';
+      genBtn.style.color = '';
+      genBtn.onclick = null;
+    };
     panel.querySelector('#mm-summary').style.display = 'none';
     panel.querySelector('#mm-lang-btn').style.display = 'none';
     panel.querySelector('#mm-versions').style.display = 'none';
+
+    const _resetGenBtn = () => {
+      if (!_cancelled) {
+        genBtn.disabled = false;
+        genBtn.textContent = _origGenText;
+        genBtn.style.background = '';
+        genBtn.style.color = '';
+        genBtn.onclick = null;
+      }
+    };
 
     try {
       const storedSig = await new Promise(r => safeStorageGet(['signature'], r));
@@ -1552,7 +1597,8 @@ function createPanel() {
       const res = await workerFetch(`${WORKER_URL}/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
         body: JSON.stringify({ emailContent, tone: selectedTone, honorific: selectedHonorific, language: selectedMyLang, myLanguage: selectedReplyLang, country: selectedCountry, email: userData.userEmail, userId: userData.userId, ...(signature && { signature }) })
-      });
+      }, _reqId);
+      if (_cancelled) return;
       const data = await res.json();
 
       if (data.success) {
@@ -1703,11 +1749,10 @@ function createPanel() {
         showToast((getUILang(selectedMyLang).errFailed || 'Failed') + ': ' + (data.error || ''), 'error');
       }
     } catch (e) {
-      showToast('Error: ' + e.message, 'error');
+      if (!_cancelled) showToast('Error: ' + e.message, 'error');
+    } finally {
+      _resetGenBtn();
     }
-
-    genBtn.disabled = false;
-    genBtn.textContent = getUILang(selectedMyLang).generate;
   }
 
   // 다중 답변 생성 (내 언어 → 원본 언어 번역)

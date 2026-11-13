@@ -4,11 +4,15 @@
 const WORKER_URL_NV = 'https://mailmind-api.kimdh4790.workers.dev';
 const API_KEY_content_naver = 'mm-app-2026';
 
-function workerFetch(url, options) {
+function workerFetch(url, options, reqId) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options }, res => {
+    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options, reqId }, res => {
       void chrome.runtime.lastError;
-      if (!res || !res.ok) { reject(new Error(res?.error || 'fetch failed')); return; }
+      if (!res || !res.ok) {
+        const err = res?.error || 'fetch failed';
+        reject(new Error(err === 'timeout' ? 'Request timed out. Please try again.' : err));
+        return;
+      }
       resolve({ ok: true, json: () => Promise.resolve(res.data) });
     });
   });

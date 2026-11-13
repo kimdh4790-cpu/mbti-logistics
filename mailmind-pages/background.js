@@ -1,5 +1,6 @@
-// MailMind AI - Background Service Worker v1.4.0
+// MailMind AI - Background Service Worker v1.4.1
 const composeFrames = {}; // tabId -> frameId (마지막으로 포커스된 compose frame)
+const _pendingRequests = {}; // reqId -> AbortController
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('MailMind AI installed');
@@ -8,10 +9,22 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // Worker API fetch 프록시 (CORS 우회)
   if (msg.type === 'MM_WORKER_FETCH') {
-    fetch(msg.url, msg.options)
+    const ctrl = new AbortController();
+    const reqId = msg.reqId;
+    if (reqId) _pendingRequests[reqId] = ctrl;
+    const tid = setTimeout(() => ctrl.abort(), 35000); // 35초 타임아웃
+    fetch(msg.url, { ...msg.options, signal: ctrl.signal })
       .then(r => r.json())
-      .then(data => sendResponse({ ok: true, data }))
-      .catch(e => sendResponse({ ok: false, error: e.message }));
+      .then(data => { clearTimeout(tid); if (reqId) delete _pendingRequests[reqId]; sendResponse({ ok: true, data }); })
+      .catch(e => { clearTimeout(tid); if (reqId) delete _pendingRequests[reqId]; sendResponse({ ok: false, error: e.name === 'AbortError' ? 'timeout' : e.message }); });
+    return true;
+  }
+
+  // 진행 중인 요청 취소
+  if (msg.type === 'MM_ABORT_FETCH') {
+    const ctrl = _pendingRequests[msg.reqId];
+    if (ctrl) { ctrl.abort(); delete _pendingRequests[msg.reqId]; }
+    sendResponse({ ok: true });
     return true;
   }
 
