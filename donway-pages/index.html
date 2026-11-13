@@ -13574,7 +13574,7 @@ function _dwDeliveryFileLoad(file){
 
       var parsed=Object.values(byDriver);
       if(!parsed.length){toast('❌ 파싱된 데이터 없음 (파일 형식 확인)');return;}
-      toast('✅ '+parsed.length+'명 파싱 완료');
+      toast('✅ '+parsed.length+'명 | col=날'+colDate+'성'+colName+'건'+colOrders+'금'+colAmount+' | hdr='+hdrRow);
       _dwDeliveryShowPreview(parsed, file.name);
     }catch(err){toast('❌ 파싱 오류: '+err.message);}
   };
