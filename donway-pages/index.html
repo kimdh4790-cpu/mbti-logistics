@@ -1614,6 +1614,23 @@ function _loadCompanyCfg(dealerId){
 // 배달대행 차액 정산법 (고정단가 / 앱실수령 차액)
 // 기사: 건수 × 고정단가 → 항상 이 금액 보장
 // 대리점: 앱실수령 - 기사지급 = 마진(+)손실(-)
+// 배달대행 초과분 방식 (tierMode==="excess"): 주간 건수 중 기준 초과분부터 구간 단가 적용
+// 기본: 1~200건 기본단가(기본 2,500), 201~250건 3,600, 251~300건 4,000, 301건↑ 4,300
+// cfg.excessTiers = [{from:200,price:3600},{from:250,price:4000},{from:300,price:4300}] (생략 시 기본값)
+// 시스템 이용료(건당 200원)는 쿠팡 자동 적용이므로 여기서 차감하지 않음
+function _calcExcessDriverPay(weekCount, cfg){
+  var base  = +(cfg&&cfg.excessBase)||2500;
+  var tiers = (cfg&&cfg.excessTiers&&cfg.excessTiers.length)
+    ? cfg.excessTiers.slice().sort(function(a,b){return a.from-b.from;})
+    : [{from:200,price:3600},{from:250,price:4000},{from:300,price:4300}];
+  var n = Math.max(0, Math.floor(+weekCount||0)), pay = 0, promo = 0;
+  for(var i=1;i<=n;i++){
+    var rate = base, k;
+    for(k=0;k<tiers.length;k++){ if(i>tiers[k].from) rate = tiers[k].price; }
+    pay += rate; promo += rate-base;
+  }
+  return {pay:pay, promo:promo, avgRate:n?pay/n:base};
+}
 function _getDeliveryTierPrice(weekTotal, tiers, basePrice){
   if(!tiers||!tiers.length) return basePrice||2900;
   var sorted=tiers.slice().sort(function(a,b){return b.minCnt-a.minCnt;});
@@ -1633,9 +1650,10 @@ function calcNet_delivery(x, cfg){
   var taxRate        = cfg.withhold==='3.3'?0.033:0;
 
   // 주간 건수 → 구간 단가 결정
-  var fixedPrice  = _getDeliveryTierPrice(weekTotal, tiers, basePrice);
+  var excess = (cfg&&cfg.tierMode==="excess") ? _calcExcessDriverPay(weekTotal, cfg) : null;
+  var fixedPrice  = excess ? Math.round(excess.avgRate) : _getDeliveryTierPrice(weekTotal, tiers, basePrice);
   // 기사 보장액 = 건수 × 고정단가
-  var driverGuarantee = weekTotal * fixedPrice;
+  var driverGuarantee = excess ? excess.pay : weekTotal * fixedPrice;
   // 심야 추가
   var nightAddAmt = nightCnt * nightSurcharge;
   var gross = driverGuarantee + nightAddAmt + missionAmt + eventAmt;
@@ -13602,17 +13620,36 @@ function _dwDeliveryShowPreview(parsed, fileName){
       +'<td style="padding:7px 10px;font-weight:700">'+esc(r.name)+'</td>';
     dateList.forEach(function(dt){
       var d=r.days[dt];
-      html+='<td style="padding:7px 6px;text-align:right">'+(d?Math.round(d.orders)+'건':'<span style="color:var(--text3)">−</span>')+'</td>';
+      if(d){
+        html+='<td style="padding:5px 6px;text-align:right;line-height:1.5">'
+          +'<div>'+Math.round(d.orders)+'건</div>'
+          +'<div style="font-size:10px;color:#10b981;white-space:nowrap">'+Math.round(d.amount||0).toLocaleString()+'원</div>'
+          +'</td>';
+      } else {
+        html+='<td style="padding:5px 6px;text-align:right"><span style="color:var(--text3)">−</span></td>';
+      }
     });
-    html+='<td style="padding:7px 10px;text-align:right;font-weight:800">'+Math.round(r.orders)+'건</td></tr>';
+    var rAmt=Math.round(r.amount||0);
+    html+='<td style="padding:5px 10px;text-align:right;font-weight:800;line-height:1.5">'
+      +'<div>'+Math.round(r.orders)+'건</div>'
+      +'<div style="font-size:10px;color:#10b981;white-space:nowrap">'+rAmt.toLocaleString()+'원</div>'
+      +'</td></tr>';
   });
   // 합계 행
   html+='<tr style="background:var(--bg3);font-weight:800"><td style="padding:7px 10px">일계</td>';
   dateList.forEach(function(dt){
     var cnt=parsed.reduce(function(s,r){return s+(r.days[dt]?Math.round(r.days[dt].orders):0);},0);
-    html+='<td style="padding:7px 6px;text-align:right;color:#10b981">'+cnt+'건</td>';
+    var amt=parsed.reduce(function(s,r){return s+(r.days[dt]?Math.round(r.days[dt].amount||0):0);},0);
+    html+='<td style="padding:5px 6px;text-align:right;line-height:1.5">'
+      +'<div style="color:#10b981">'+cnt+'건</div>'
+      +'<div style="font-size:10px;color:#f59e0b;white-space:nowrap">'+amt.toLocaleString()+'원</div>'
+      +'</td>';
   });
-  html+='<td style="padding:7px 10px;text-align:right;color:#10b981">'+Math.round(totalOrders)+'건</td></tr>';
+  var totalAmt=parsed.reduce(function(s,r){return s+Math.round(r.amount||0);},0);
+  html+='<td style="padding:5px 10px;text-align:right;line-height:1.5">'
+    +'<div style="color:#10b981">'+Math.round(totalOrders)+'건</div>'
+    +'<div style="font-size:10px;color:#f59e0b;white-space:nowrap">'+totalAmt.toLocaleString()+'원</div>'
+    +'</td></tr>';
   html+='</tbody></table></div>';
   res.innerHTML=html;
 }
