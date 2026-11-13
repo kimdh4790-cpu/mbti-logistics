@@ -13539,7 +13539,7 @@ function _dwDeliveryFileLoad(file){
         var hs=String(h||'').trim();
         if(hs.indexOf('날짜')>=0||hs.indexOf('일자')>=0) colDate=ci;
         else if(hs.indexOf('성함')>=0) colName=ci;
-        else if(hs.indexOf('오더수')>=0) colOrders=ci;
+        else if((hs.indexOf('총')>=0&&hs.indexOf('오더수')>=0)||hs==='오더수') colOrders=ci;
         else if((hs.indexOf('정산금액')>=0||hs.indexOf('정산예정')>=0)&&hs.indexOf('픽업')<0&&hs.indexOf('배달')<0) colAmount=ci;
       });
 
