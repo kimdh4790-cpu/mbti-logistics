@@ -21988,6 +21988,7 @@ function _filterMenusByServices(menus){
   services.forEach(function(s){
     (svcPlanMap[s]||[]).forEach(function(p){allowed.add(p);});
   });
+  if(cfg.deliveryPaid)allowed.add('delivery');
 
   return menus.map(function(section){
     var items = section.items.filter(function(item){
