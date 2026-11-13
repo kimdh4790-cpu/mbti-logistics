@@ -18,7 +18,7 @@
 
 | # | 상태 | 항목 | 메모 |
 |---|---|---|---|
-| A | `[~]` | **⚠️ iOS 앱 아이콘 교체** | mbti-logistics: assets/mailmind-icon-1024.png 추가 + mailmind/codemagic.yaml 아이콘 주입 스텝 추가 완료. **단, Codemagic은 private `kimdh4790-cpu/mailmind` repo의 codemagic.yaml을 읽음 → 그 repo에도 동일 변경 필요. 빌드 28 트리거 전 반드시 적용 확인** |
+| A | `[x]` | **⚠️ iOS 앱 아이콘 교체** | 2026-11-13 완료. `kimdh4790-cpu/mailmind` repo `ios/Runner/Assets.xcassets/AppIcon.appiconset/` 15개 사이즈 전부 MailMind AI 블루 아이콘으로 교체 (commit 350ec92). Codemagic Build 28 트리거 시 플레이스홀더 경고 사라짐. |
 | 4 | `[ ]` | **Android 프로덕션 단계 승격** | Play Console에서 공개 테스트 → 프로덕션 단계적 출시(10%→100%) |
 | 5 | `[ ]` | **iOS App Store 심사 통과 → 출시** | 현재 Apple 심사 대기 중. 앱 아이콘 교체 후 빌드 28 재제출 필요 |
 | 6 | `[ ]` | **랜딩 페이지 출시 링크 반영** | mailmind.yongcha.app — App Store / Play Store 다운로드 링크 추가 |
