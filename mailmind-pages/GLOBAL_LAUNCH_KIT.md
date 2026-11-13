@@ -6,7 +6,7 @@
 
 ### 짧은 설명 (132자 제한)
 ```
-AI email replies in 14 languages across Gmail, Outlook, Naver, Yahoo, iCloud & Yahoo Japan — one click, culturally perfect.
+AI email replies in 17 languages across Gmail, Outlook, Naver, Yahoo, iCloud & Yahoo Japan — one click, culturally perfect.
 ```
 
 ### 상세 설명 (스토어 본문)
@@ -16,7 +16,7 @@ MailMind turns any incoming email into a polished reply — in your language, in
 🌍 6 EMAIL SERVICES, ONE EXTENSION
 Works seamlessly on Gmail, Outlook, Naver Mail, Yahoo Mail, iCloud Mail, and Yahoo Japan — the only AI email assistant that covers all six.
 
-🗣️ 14 LANGUAGES, CULTURAL INTELLIGENCE
+🗣️ 17 LANGUAGES, CULTURAL INTELLIGENCE
 Not just translation. MailMind understands business tone in Korean, Japanese, Chinese, English, Spanish, French, German, Portuguese, Arabic, Italian, Turkish, Vietnamese, Thai, and Indonesian.
 
 ✍️ 8 WRITING TONES
@@ -62,12 +62,12 @@ MailMind AI
 
 ### 태그라인 (60자)
 ```
-AI email replies in 14 languages — Gmail, Outlook, Naver & more
+AI email replies in 17 languages — Gmail, Outlook, Naver & more
 ```
 
 ### 짧은 설명
 ```
-The only AI email assistant that works across 6 email services (Gmail, Outlook, Naver Mail, Yahoo Mail, iCloud, Yahoo Japan) in 14 languages. One click → 3 culturally-tuned reply options.
+The only AI email assistant that works across 6 email services (Gmail, Outlook, Naver Mail, Yahoo Mail, iCloud, Yahoo Japan) in 17 languages. One click → 3 culturally-tuned reply options.
 ```
 
 ### Maker 첫 댓글 (론칭 당일 직접 게시)
@@ -120,7 +120,7 @@ Been frustrated that every "AI email tool" only works on Gmail or Outlook.
 
 So I built MailMind — it works on **all 6 major email services**: Gmail, Outlook, Naver, Yahoo, iCloud, and Yahoo Japan.
 
-You get 3 reply options in seconds, in 14 languages with cultural tone matching (not just translation).
+You get 3 reply options in seconds, in 17 languages with cultural tone matching (not just translation).
 
 The Japanese business email problem was a big one for me — keigo is genuinely hard if it's not your first language. MailMind handles that.
 
@@ -149,7 +149,7 @@ I built MailMind to fix this. It's a Chrome extension that:
 
 For language learners especially — it's a great way to see how native-quality business emails are structured in your target language.
 
-14 languages supported. Free to try.
+17 languages supported. Free to try.
 ```
 
 ---
@@ -187,7 +187,7 @@ Built MailMind to solve this. Works directly in Yahoo Japan Mail (and Gmail, Out
 
 It's been trained on formal Japanese business correspondence, so the honorifics come out correctly. You can also pick the tone: 丁寧 (Formal), 簡潔 (Concise), etc.
 
-14 languages total. Free Chrome extension.
+17 languages total. Free Chrome extension.
 ```
 
 ---
@@ -205,7 +205,7 @@ MailMind strips the sender's signature block before processing. The AI sees the 
 
 It also works on Outlook, Naver Mail, Yahoo, iCloud, and Yahoo Japan — not just Gmail.
 
-14 languages, 8 tones, 3 reply options per click.
+17 languages, 8 tones, 3 reply options per click.
 
 Open source approach to privacy: sender signatures detected and removed locally before any API call.
 
@@ -218,7 +218,7 @@ Free to try: [Chrome Web Store link]
 
 **제목:**
 ```
-Show HN: MailMind – AI email replies for Gmail, Outlook, Naver, iCloud, Yahoo Japan (14 languages)
+Show HN: MailMind – AI email replies for Gmail, Outlook, Naver, iCloud, Yahoo Japan (17 languages)
 ```
 
 **본문:**
@@ -257,7 +257,7 @@ The only AI email assistant that works on ALL 6 major email services:
 → iCloud Mail
 → Yahoo Japan 🇯🇵
 
-14 languages. 8 tones. One click.
+17 languages. 8 tones. One click.
 
 [Chrome Web Store link]
 ```
