@@ -144,7 +144,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 | A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
 | A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
 | A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #276 오픈. **2026-10-29 Run #35**: macos-15(Xcode 16) 전환으로 Firebase Swift 6.0 빌드 성공. 그러나 xcodebuild "Running script Run Script" 단계에서 3h 무한 대기. **원인**: `ENABLE_BITCODE=YES`(기본값)로 인해 xcode_backend.sh가 Firebase 전체 프레임워크 bitcode stripping 시도. `compileBitcode: false`는 export 단계만 적용됨. **수정 완료** (commit `330bf1f`): `xcargs: "ENABLE_BITCODE=NO"` 추가 + timeout 180→90분. Run #36 자동 트리거됨. |
+| A8 | `[x]` | **MailMind iOS Codemagic CI/CD + App Store Connect 제출 완료** (2026-11-01) | Codemagic(`ios-workflow`) → App Store Connect 제출 완료. `PrivacyInfo.xcprivacy` 추가(PR #338), 빌드 261, 버전 1.1.0. 현재 Apple 심사 대기 중. |
 
 > D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
 
@@ -156,6 +156,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 |---|---|---|---|---|
 | 10 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | mbtico-worker.js | 루틴상태+오류현황+소셜스케줄 한눈에 |
 | 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
+| 12 | `[ ]` | **MailMind Play Store 스토어 등록정보 최적화 (정식 출시 전)** | Google Play Console | 현지화(14개 언어 설명·스크린샷), 국가별 맞춤 등록정보(최대 50개), 아이콘·스크린샷 템플릿, 키워드 최적화. Google Play 가이드: https://play.google.com/console |
 
 ---
 
