@@ -4,257 +4,75 @@
 
 ---
 
-## 🗺️ 앱별 구조·배포 방식·기능 현황 (2026-09-20 기준)
+## 🚀 MailMind 출시 선순위 (2026-11-13 기준)
 
-### 🟣 FILO (filo.ai.kr) — 배송앱
-| 항목 | 내용 |
-|---|---|
-| **Worker 파일** | `filo-worker.js` |
-| **wrangler config** | `wrangler.filo.toml` |
-| **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy --config wrangler.filo.toml` |
-| **KV 업로드** | `npx wrangler kv key put --remote --namespace-id=7f0e90efaea64f3ab08ff00f8970b28b [파일명] --path [경로]` |
-| **핵심 파일** | `emergency.html` (배송기사 앱), `filo-worker.js` (라우터) |
-| **주요 기능** | 배송 기사 앱 / 실시간 위치 공유 / 배차 요청 / 배달 완료 처리 |
-| **구 기능 (폐기예정)** | POS·주문·메뉴·재고·직원근태·급여 (filo-auth.js, filo-pos.js 등) |
-| **주의** | filo-worker.js 대규모 수정 금지 / emergency.html 수정 전 배송앱_변경내역.md 필독 |
-
-### 🔵 DONWAY (donway.ai.kr) — 물류 정산 SaaS
-| 항목 | 내용 |
-|---|---|
-| **Worker 파일** | `_worker.js` |
-| **wrangler config** | `wrangler.toml` |
-| **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy` |
-| **KV 업로드** | settle.html 예외: `--path donway-pages/index.html` |
-| **핵심 파일** | `donway-pages/index.html` (settle.html로 KV서빙), `donway_landing.js`, `drivers.html` |
-| **주요 기능** | 엑셀 업로드 → 수백명 기사 정산 / 정산명세서 알림톡 발송 / 계약서 시스템(위수탁·퀵플렉스·근로) / 카카오 소셜 로그인 / 팝빌 세금계산서 역발행(테스트 중) |
-| **요금** | 50명 ₩125,000 / 100명 ₩250,000 / 500명 ₩1,250,000 / 1000명+ 문의 |
-| **주의** | preFreshback/dateFresh 로직 수정 금지 / settle.html·drivers.html 리팩토링 금지 |
-
-### 🟠 용차앱 (yongcha.app) — 소장·기사 직접 거래 정보 서비스
-| 항목 | 내용 |
-|---|---|
-| **Worker 파일** | `yongcha-worker.js` |
-| **wrangler config** | `wrangler.yongcha.toml` |
-| **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy --config wrangler.yongcha.toml` |
-| **KV 업로드** | **효과 없음.** 반드시 wrangler deploy 사용 |
-| **핵심 파일** | `yongcha.html`, `yongcha-landing.html`, `yongcha-worker.js` |
-| **주요 기능** | 화물 공고 등록·조회 / AI 기사 추천 / 음성 공고 등록 / 캠프·상차지 다중 등록 / 법적 고지(부가통신사업자) |
-| **요금** | 기사 ₩150,000/월 / 소장 ₩50,000/월 / DONWAY 구독 소장 무료 |
-| **주의** | KV 업로드로 배포 불가 / yongcha.app/* 라우트는 wrangler.yongcha.toml 관리 |
-
-### ⚪ MBTICO 관제센터 (mbtico.kr)
-| 항목 | 내용 |
-|---|---|
-| **Worker 파일** | `mbtico-worker.js` (2026-09-20 분리) |
-| **wrangler config** | `wrangler.mbtico.toml` |
-| **배포 방식** | GitHub push → deploy.yml 자동실행 → `npx wrangler deploy --config wrangler.mbtico.toml` |
-| **mbtico-pages 별도** | `cd mbtico-pages && npx wrangler deploy` (수동 배포 별도) |
-| **핵심 파일** | `mbtico-ctrl.js` (슈퍼어드민), `mbtico-pages/_worker.js` (515KB) |
-| **주요 기능** | 슈퍼어드민 관제 / 가입 승인·거절 / 채팅·공지·결제 관리 / 신규가입 FCM 알림 / OOPS 오류 모니터링 |
-| **주의** | mbtico-pages/_worker.js 대규모 수정 금지 / 슈퍼어드민 UID·dealerId 변경 금지 |
-
----
-
-## 🚀 공통 배포 흐름 (자동)
-```
-claude/* 브랜치 push
-  → auto-merge.yml (main 자동 머지)
-  → deploy.yml (KV 업로드 + Worker 배포 + 캐시 퍼지)
-```
-> deploy.yml 수정 시 auto-merge 안 됨 → GitHub에서 수동 Merge 필요
-
----
-
-## 🔴 최우선 (즉시 처리)
-
-| # | 상태 | 항목 | 담당 파일 | 메모 |
-|---|---|---|---|---|
-| 1 | `[x]` | ~~FCM 영수증 푸시~~ (2026-10-25 삭제) | filo-pos-pay.js | 앱 코드에서 영수증 기능 제거됨 |
-| 2 | `[x]` | **팝빌 연동신청 접수** (2026-09-21) | — | 팝빌 개발자센터 연동신청 완료. 아이디: mbtico2026 / 이메일: kimdh4790@gmail.com. API Key 발급 후 이메일 안내 예정. |
-| 3 | `[x]` | **팝빌 키 발급 → Cloudflare Secret 등록 완료** (2026-09-22) | _worker.js | LINK_ID=MBTI / SecretKey 발급. Cloudflare Worker(mbti-logistics) 비밀에 POPBILL_LINK_ID·POPBILL_SECRET_KEY 등록 완료. POPBILL_TEST_MODE=true 추가 필요 → 테스트 진행 가능. |
-| 4 | `[-]` | **팝빌 역발행 테스트 → 운영전환 신청** | _worker.js | **2026-09-23 팝빌 기술지원 답변**: "링크아이디 오입력" — timestamp 형식 오류가 원인. **수정 완료**: `20260923T013000Z`(T/Z 포함 16자리) → `20260923013000`(yyyyMMddHHmmss 14자리). deploy.yml 자동 배포 완료 후 `/api/popbill-debug` 재확인 필요. 성공 시 POPBILL_TEST_MODE=false 운영전환. |
-| 5 | `[x]` | **MailMind Android Galaxy M44 Google 로그인 + 아이콘** | mailmind 레포 | google-services.json 수정(오류 10 해결) + AI 아이콘 + 어댑티브 아이콘 커밋 완료. v263 Play Console 내부테스트 업로드 + 실 기기 Google 로그인 성공 확인. |
-
-### 🔑 팝빌 테스트 계정 (2026-09-21 연동신청 시 등록)
-| 항목 | 값 |
-|---|---|
-| **테스트 계정 아이디** | `mbtico2026` |
-| **테스트 계정 비밀번호** | `Mbtico2026!` |
-| **담당자 이메일** | kimdh4790@gmail.com |
-| **API 상품** | 전자세금계산서 |
-| **연동신청일** | 2026-09-21 |
-| **키 발급 상태** | 대기 중 (신청 후 박주선 팀장 이메일 안내 예정) |
-
-> ⚠️ **발행 방식: 역발행 (기사 → 대리점)** — 공급자(기사)가 공급받는자(대리점/DONWAY)에게 발행 요청. 일반발행(대리점→기사) 아님. 팝빌 연동 시 반드시 역발행 API만 사용할 것.
->
-> 역발행 흐름: `RegistRequest(기사측)` → `Issue(대리점측 최종발행)` → Webhook(상태반영)
-
-### 💡 역발행 부가세 처리 방식 (2026-09-21 확인 필요)
-
-현재 코드(`_worker.js` L6922~6924)는 **부가세 포함** 방식으로 역산 처리 중:
-```
-vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급가액
-예) 정산 1,100,000원 → 공급가 1,000,000 + 세액 100,000
-```
-
-**배달대행/쿠팡플렉스 정산은 대부분 "부가세 별도"** — 정산금액이 공급가액이고 회사가 세액 10% 추가 지급하는 구조.
-
-> ⚠️ **확인 필요**: DONWAY가 기사에게 지급하는 정산금액이 부가세 포함인지 별도인지 확인 후 코드 수정 필요.
-> - 부가세 포함 → 현재 코드 유지 (`정산금액 / 1.1`)
-> - 부가세 별도 → `supplyAmt = vatInc`, `taxAmt = round(vatInc * 0.1)`, `totalAmt = vatInc + taxAmt` 로 변경
-
----
-
-## 🟡 중간 우선순위
-
-| # | 상태 | 항목 | 담당 파일 | 메모 |
-|---|---|---|---|---|
-| 3 | `[ ]` | 관제센터 채팅/공지/결제 탭 실사용 테스트 | mbtico-pages/_worker.js | soungkyekim@naver.com으로 실제 로그인 후 테스트 |
-
----
-
-## 🔵 파일 분리·경량화 (대형 작업 — 별도 세션 계획 필요)
-
-| # | 상태 | 항목 | 담당 파일 | 메모 |
-|---|---|---|---|---|
-| 4 | `[ ]` | mbtico-pages/_worker.js 경량화 | mbtico-pages/_worker.js | 515KB. 작업 전 별도 세션에서 설계 먼저 |
-| 5 | `[ ]` | emergency.html 재작성 | emergency.html | 461KB. 배송앱_변경내역.md 먼저 읽을 것 |
-| 6 | `[x]` | **MailMind generate.js → prompts.js 연결 + v3/my3 조건부 번호목록** (2026-11-03 완료) | mailmind/worker/generate.js, worker/prompts.js | `prompts.js` 신규 생성 (8개 builder 함수 + 3개 시스템 메시지). generate.js 1749줄 → 1130줄 (~35% 감소). v3/my3 번호목록 조건부: 이메일에 질문 2개+ 또는 목록 있을 때만 번호목록, 단일 주제 이메일은 단락 형식 허용. PR #375. |
-
----
-
-## 🟢 비즈니스·법무 (외부 절차 필요)
-
-| # | 상태 | 항목 | 담당 파일 | 메모 |
-|---|---|---|---|---|
-| 6 | `[ ]` | 네이버 POS 파트너 신청 | - | smartplace.naver.com B2B 파트너 문의. 승인 후 /api/naver-place-sync 구현 |
-| 7 | `[ ]` | 용차앱 저작권 등록 | - | cros.or.kr 직접 신청. 코드 기반 저작물 |
-| 8 | `[ ]` | 벤처기업 인증 | - | 기보 부산지점 신청 |
-
-### 📱 앱스토어 계정 등록
+### 🔴 즉시 처리
 
 | # | 상태 | 항목 | 메모 |
 |---|---|---|---|
-| A1 | `[x]` | **나이스디앤비 D-U-N-S 문의 접수** (2026-10-18) | kimdh4790@gmail.com / 01047903103 / 유한회사 엠비티아이 / 사업자번호 373-86-02536 / 대표 김형우 |
-| A1b | `[x]` | **D-U-N-S 번호 발급 완료** (2026-10-27) | **D-U-N-S: 695921476** (MBTI Ltd., 엠비티아이(유)). Apple Developer Relations 이메일로 즉시 수신. 구글·애플 앱스토어 조직 계정 등록에 모두 사용 가능 |
-| A2 | `[x]` | **Apple 계정 생성 완료** (2026-10-18) | kimdh4790@gmail.com / 이중 인증 설정됨 |
-| A3 | `[x]` | **Google Play Console 조직 계정 등록 완료** (2026-10-27) | $25 KB국민카드 기업카드 8865 결제 완료. 개발자 계정 생성됨. D-U-N-S: 695921476, 결제 프로필: 엠비티아이(유) |
-| A3b | `[x]` | **Google Play 본인 확인(신원 인증) 완료** (2026-10-27) | 회사명 확인됨 + 권한을 부여받은 담당자(김형우) 확인됨. 엠비티아이(유) 인증 완료. 앱 배포 가능 상태 |
-| A4 | `[x]` | **Apple Developer Program $99 결제 완료** (2026-10-28) | 등록 ID: **5G5PA8D7B7** / ₩129,000 결제 완료(KG이니시스, 주문번호 W1543637896, 승인번호 30010555). iOS 앱 제출 가능 상태. |
-| A5 | `[x]` | **MailMind Play Store 스토어 등록정보 + 심사 제출 완료** (2026-10-27) | Build 263(v1.0.263) 공개 테스트 트랙 포함 변경사항 12개 Google 검토 제출 완료. 검토 완료 예상: 2026-11-03~07. |
-| A6 | `[x]` | **MailMind v254/255 앱 크래시 수정 완료** (2026-10-27) | 원인 2가지: (1) google-services.json 패키지명 불일치 (2) hook_service.dart QuickActions 존재하지 않는 drawable 참조 제거. PR #265 머지 완료. |
-| A7 | `[x]` | **MailMind Play Store 내부 테스트 Google 로그인 error 10 수정 완료** (2026-10-27) | Firebase에 Play 앱 서명 SHA-1 추가 후 google-services.json 재적용. PR #267 머지. 실 기기 Google 로그인 성공 확인. |
-| A8 | `[~]` | **MailMind iOS TestFlight CI/CD 파이프라인 구축** (진행중) | PR #276 오픈. **2026-10-29 Run #35**: macos-15(Xcode 16) 전환으로 Firebase Swift 6.0 빌드 성공. 그러나 xcodebuild "Running script Run Script" 단계에서 3h 무한 대기. **원인**: `ENABLE_BITCODE=YES`(기본값)로 인해 xcode_backend.sh가 Firebase 전체 프레임워크 bitcode stripping 시도. `compileBitcode: false`는 export 단계만 적용됨. **수정 완료** (commit `330bf1f`): `xcargs: "ENABLE_BITCODE=NO"` 추가 + timeout 180→90분. Run #36 자동 트리거됨. |
+| 1 | `[~]` | **quality-check Chinese/Hindi ₩ 번역 누락 버그 수정** | run #37 실패: `[Translate 17] KO→Chinese`, `KO→Hindi` — 한국어 이메일 번역 시 ₩ 표기 사라짐. run #38/#39 결과 확인 후 수정 |
+| 2 | `[ ]` | **iOS TestFlight 빌드 확인 → 실 기기 테스트** | Codemagic 빌드 성공 (MailMind.ipa 25.41MB). Post-processing "Failed to fetch team member 404" 에러. App Store Connect → TestFlight 탭에서 빌드 올라왔는지 확인 필요 |
+| 3 | `[ ]` | **Android Play Store 출시 상태 확인** | 심사 제출 2026-10-27, 예상 완료 11/03~07 → 현재 11/13으로 이미 완료됐을 가능성. Play Console 직접 확인 필요 |
 
-> D-U-N-S: 695921476 (엠비티아이(유)). Google Play 계정 등록 완료. Apple Developer Program 결제 완료. iOS TestFlight CI/CD 파이프라인 구축 진행중.
+### 🟡 출시 준비
+
+| # | 상태 | 항목 | 메모 |
+|---|---|---|---|
+| 4 | `[ ]` | **Android 프로덕션 단계 승격** | Play Console에서 공개 테스트 → 프로덕션 단계적 출시(10%→100%) |
+| 5 | `[ ]` | **iOS App Store 심사 통과 → 출시** | 현재 Apple 심사 대기 중 (빌드 261, v1.1.0). 심사 완료 시 출시 |
+| 6 | `[ ]` | **랜딩 페이지 출시 링크 반영** | mailmind.yongcha.app — App Store / Play Store 다운로드 링크 추가 |
+| 7 | `[ ]` | **출시 기념 소셜미디어 발행** | MailMind 출시 공지 소셜미디어 콘텐츠 |
+
+### 🟢 출시 후
+
+| # | 상태 | 항목 | 메모 |
+|---|---|---|---|
+| 8 | `[ ]` | **실 기기 기능 테스트** | 첨부파일 열기(PR #623), PDF 열기, 계약서 도장 위치(PR #624) — 실 기기 미확인 |
+| 9 | `[ ]` | **iOS TestFlight Codemagic post-processing 수정** | "Failed to fetch team member 404" — Codemagic 팀 멤버 설정 또는 App Store Connect API 권한 확인 |
 
 ---
 
-## 🗒️ 신규 계획 (논의 완료, 미착수)
+## 🔵 기타 미완료 작업
 
 | # | 상태 | 항목 | 담당 파일 | 메모 |
 |---|---|---|---|---|
-| 10 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | mbtico-worker.js | 루틴상태+오류현황+소셜스케줄 한눈에 |
-| 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
+| 10 | `[-]` | **팝빌 역발행 테스트 → 운영전환** | _worker.js | POPBILL_TEST_MODE=false 운영전환 완료. 실환경 역발행 실전 테스트 필요 (기사 실사업자번호로). 부가세 포함/별도 방식 확인 필요 |
+| 11 | `[ ]` | **관제센터 채팅/공지/결제 탭 실사용 테스트** | mbtico-pages/_worker.js | soungkyekim@naver.com으로 실제 로그인 후 테스트 |
+| 12 | `[ ]` | **Cloudflare filo-pages Pages 프로젝트 수동 삭제** | — | Cloudflare 대시보드에서 삭제 (PR #216 이후 미처리) |
+
+## 🗒️ 신규 계획 (미착수)
+
+| # | 상태 | 항목 | 메모 |
+|---|---|---|---|
+| 13 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | 루틴상태+오류현황+소셜스케줄 한눈에 |
+| 14 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html |
+| 15 | `[ ]` | 네이버 POS 파트너 신청 | smartplace.naver.com B2B 파트너 문의 |
 
 ---
 
-## ✅ 최근 완료 (참고용)
+## 📱 MailMind 앱 현황 (2026-11-13)
+
+| 항목 | 상태 | 메모 |
+|---|---|---|
+| Android 최신 빌드 | v1.0.277 | Play Store 내부 테스트 배포 완료. GitHub Actions 자동화 작동 중 |
+| Android Play Store 심사 | 확인 필요 | 2026-10-27 제출. 예상 완료 11/03~07 (이미 지남) |
+| iOS 최신 빌드 | v1.1.0 (빌드 261) | Codemagic IPA 빌드 성공 (25.41MB). TestFlight 업로드 여부 확인 필요 |
+| iOS App Store 심사 | 대기 중 | PrivacyInfo.xcprivacy 추가 후 제출 |
+| iOS Codemagic 파이프라인 | 빌드 성공 | ENABLE_BITCODE=NO 수정 후 2m34s 빌드. Post-processing 에러 잔존 |
+
+---
+
+## ✅ 최근 완료 (2026-11-13)
 
 | 날짜 | 항목 |
 |---|---|
-| 2026-10-28 | **MailMind iOS TestFlight CI/CD 파이프라인 완성 (PR #273)** — Fastfile `key_content`→`key_filepath` 수정으로 `OpenSSL::PKey::ECError` 해결. worker.js 서명 원문 유지 수정(답변언어 번역 제거): `JP_SIGNATURE_PROMPT`, `buildSignOffInstruction()`, `handleGenerate` 인라인 3곳 수정. INFRA_MEMO.md에 App Store Connect ID 영구 메모(H2M5GFA4BM / fb130061-a76b-42b4-87b6-ed5575dd3884). |
-| 2026-10-28 | **MailMind 언어 우선순위 3중 수정 완료 (PR #272 머지)** — (1) handleGenerateSmart: detectedBodyLangS 우선→myLanguage 우선으로 변경. (2) handleTriple: effectiveMyLanguage 로직 동일 패턴 적용. (3) 6개 핸들러 myLanguage 기본값 `'Korean'`→`'auto'` 변경(handleCompose/Refine/GenerateSmart/Triple/AiBrief/AiQuickCompose). handleAiBrief: briefLang 변수 추가로 'auto' 문자열이 Claude 프롬프트에 그대로 들어가는 문제 방지. |
-| 2026-10-28 | **Apple Developer Program 등록 완료** — 라이선스 동의 + ₩129,000 결제 완료(KG이니시스, 주문번호 W1543637896, 승인번호 30010555). 등록 ID: 5G5PA8D7B7. 이제 App Store Connect에서 iOS 앱 제출 가능. |
-| 2026-10-28 | **MailMind AI 서명 주소 할루시네이션 수정 (PR #268 머지)** — 10개 언어 서명 프롬프트 `⛔ ADDRESS OMISSION` 규칙 추가. commit `88254d99`, squash merge 완료. |
-| 2026-10-27 | **MailMind Android Google 로그인 오류 10 수정 + MailMind AI 아이콘 + 삼성 어댑티브 아이콘** — (1) google-services.json 복원: `app.yongcha.mailmind` 엔트리 + type-1 OAuth client SHA-1 포함으로 복원 → PlatformException sign_in_failed error 10 해결. (2) MailMind AI 로고(파란 그라데이션 + 지구본·봉투·별 아이콘) 모든 mipmap 크기 적용. (3) 어댑티브 아이콘 추가 → 삼성 One UI 카카오톡처럼 둥근 사각형 모양. mailmind 레포 commits `ca33950`·`58559f45`·`50e86c1`. |
-| 2026-10-27 | **MailMind Play Store Google 로그인 error 10 수정 (PR #267)** — Play App Signing SHA-1 Firebase 추가 + google-services.json 재다운로드. PR #267 squash merge(commit `b5e4be2`). v263 내부 테스트 업로드 후 실 기기 Google 로그인 정상 확인. |
-| 2026-10-27 | **MailMind v254/255 앱 크래시 수정 완료 (PR #265)** — google-services.json 패키지명 수정 + hook_service.dart drawable 참조 제거. PR #265 squash merge(commit `63b0f5d`). |
-| 2026-11-13 | **MailMind Refine 내일/tomorrow 단순 상대 날짜 보존 수정 (PR #623, commit b843df9)** — substituteRefine()에서 내일/tomorrow/明日/明天 등 단순 하루 상대 날짜 → 절대 날짜 치환 제거. 기존 프롬프트 `RELATIVE TIME RULE`이 이미 있었으나 AI가 치환된 절대 날짜를 보고 있어 규칙을 지킬 수 없었던 버그 수정. 다음주 금요일 등 복합 표현은 유지. Output Quality Check 케이스 2 수정 목적. |
-| 2026-11-13 | **MailMind Flutter AI 답변 패널 첨부파일 칩 탭 → 파일 열기 (PR #623)** — email_detail_screen.dart: AI 답변 하단 첨부파일 Chip을 GestureDetector로 감싸 _openAttachment() 연결. path 있으면 직접 열기, bytes만 있으면 임시파일 저장 후 open_filex 열기. |
-| 2026-11-13 | **MailMind Flutter PDF base64 패딩 오류 + 이메일 첨부파일 열기 (mailmind 레포)** — (1) worker/document.js: chunkSize 8192→8190(3의 배수), btoa 청크 중간 = 패딩 → Flutter FormatException 근본 수정. (2) document_generate_screen.dart: _safeBase64Decode URL-safe 정규화(-→+, _→/) 추가. (3) email_detail_screen.dart: 이메일 첨부파일 탭 → Gmail API 다운로드 → open_filex 열기 구현. commit `0e2a344`. |
-| 2026-11-13 | **MailMind Chrome Extension 버그 6종 수정 (웹세션, commit 8f29931)** — (1) PLAN_LIMITS pro_plus(500)/team(1000) iCloud/Naver/Yahoo/YahooJP 4개 동기화. (2) 톤 6→8종(apologetic/acknowledge) 4개 추가. (3) 언어 14→17종(Dutch/Polish/Hindi) 6개 파일 추가. (4) toneLabel 맵 nl/pl/hi 추가. (5) generateTripleOL `userData.plan`→`ud.plan`. (6) privacy.html 미완성 완성(섹션 3~8). terms.html Pro Plus/Team 추가. i18n 중복 선언은 기능 버그 아니라 보류. |
-| 2026-11-13 | **MailMind Chrome Extension 로딩 timeout + 취소 버튼 (mbti-logistics PR)** — background.js v1.4.1(35초 timeout+MM_ABORT_FETCH), content.js ✕ Cancel 버튼, content_outlook/icloud/naver/yahoo/yahaojp 5개 workerFetch timeout 처리 적용. |
-| 2026-11-02 | **FILO 매장운영 관련 HTML/JS 파일 13개 삭제 (PR #216)** — add.html, demo-init.html, demo-setup.html, inventory.html, kiosk.html, qrpos.html, mbetco_liquor.html, member-join.html, member-portal.html, refund.html, staff-portal.html, store.js, table-reserve.html 총 9,964라인 삭제. branchL `ccr-7672c434-99f49v`. CI: donway-pages ✅, filo-pages 🚫(예정된 삭제), donway-settle/mbtico-pages/donway-settle-app 🚫(PR 이전부터의 기존 실패). **남은 작업**: Cloudflare 대시보드에서 `filo-pages` Pages 프로젝트 수동 삭제 필요. |
-| 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** — dine.ne.kr 도메인 갱신 안 함, 서비스 종료. commit `c50dab38`. |
-| 2026-10-26 | **MailMind `_draftKoNames` 후처리 안전장치 배포** — PR #262 머지 완료, commit `66ed09b`. 2중 방어 완성. |
-| 2026-10-26 | **MailMind worker.js 포괄 품질 점검 + "엠비티아이"→MBTI 버그 3단계 수정** — PR #261 squash merge. |
-| 2026-10-26 | **MailMind 답변 언어를 이메일 본문 언어로 결정** — PR #260, commit `6df0487`. |
-| 2026-10-26 | **MailMind 발신자 문화 지식 우선순위 개선** — commit `346ee14`. |
-| 2026-10-26 | **CLAUDE.md 웹세션 ID 업데이트** — 활성 세션 `session_01NWDyoBnJzvbjC8xuwmphSp`으로 변경. |
-| 2026-10-26 | **MailMind outlook 비교/스마트 모드 3개 답변 생성 버그 수정** — PR #198. |
-| 2026-10-26 | **MailMind 17개 언어 수정보완(Refine) 품질 전면 개선** — commit `859535d`. |
-| 2026-10-25 | **MailMind Flutter 답변 언어 '자동 감지' 버그 수정** — PR #257. |
-| 2026-10-25 | **MailMind 번역 시 전화번호 하이픈 보존** — commit `223b71a`. |
-| 2026-10-16 | **MailMind Flutter 앱 버그 4종 수정 + CI 키스토어 수정** — PR #177~178. |
-| 2026-10-11 | **MailMind 영상 14개 언어 로컬라이제이션 + TTS 폴백** — PR #183 |
-| 2026-10-10 | **MailMind 랜딩 14개 언어 i18n 지원** — PR #182 |
-| 2026-10-08 | **쿠팡 송장 OCR 정상화** — PR #177 머지 완료. |
-| 2026-10-08 | **배송기사 앱 이름만 로그인** — PR #175 머지 완료. |
-| 2026-10-03 | **MailMind Pages 배포 완료** — Cloudflare Pages `mailmind.yongcha.app` |
-| 2026-10-03 | **MailMind 14개 언어 × 하루 2회 자동 업로드 시스템 완성** — PR #172 머지 완료. |
-| 2026-09-22 | 소셜미디어 영상 GitHub Actions 재실행 |
-| 2026-09-21 | DONWAY 기사 가입 Firestore 권한 오류 수정 |
-| 2026-09-20 | mbtico.kr Worker 분리 완료 |
-
----
-
-## 📝 세션별 작업 이력
-
-### 2026-11-13
-- MailMind Chrome Extension 로딩 무한 대기 + 취소 불가 버그 수정 (mbti-logistics 레포 PR)
-  - `mailmind-pages/background.js` v1.4.0→v1.4.1: `MM_WORKER_FETCH`에 35초 AbortController timeout 추가, `MM_ABORT_FETCH` 취소 핸들러 추가
-  - `mailmind-pages/content.js` (Gmail): `workerFetch(url, options, reqId)` reqId 파라미터, 로딩 중 ✕ Cancel 버튼 UI, `_mmReqCounter/_mmCurrentReqId/_mmAbortCurrent/_mmNewReqId` 추가
-  - `mailmind-pages/content_outlook/icloud/naver/yahoo/yahaojp.js` 5개: workerFetch timeout 에러 처리 적용
-  - 웹세션(`ccr-75429e45-8umn8w`) 소통 시도 → 세션 비활성으로 메시지 전달 실패. 사용자에게 직접 접속 요청
-
-### 2026-10-29
-- MailMind iOS "Running script Run Script" 3시간 무한 대기 원인 파악 및 수정
-  - 원인: `ENABLE_BITCODE=YES` 기본값 → xcode_backend.sh가 Firebase 전체 프레임워크 bitcode stripping 무한 반복
-  - `compileBitcode: false`는 export_options 단계만 적용 (archive 단계 미적용이 근본 원인)
-  - 수정: `xcargs: "ENABLE_BITCODE=NO"` 추가 (Fastfile build_ios_app)
-  - timeout 180→90분 단축 (비용 절감)
-  - commit `330bf1f` push → Run #36 자동 트리거
-  - TASKS.md A8 업데이트
-- MailMind iOS Fastfile `produce` 완전 제거
-  - run #40805607484 실패 원인: `produce`가 Developer Portal 접근 시 Apple ID 패스워드 요구
-  - mailmind main `7bd790c` push 완료
-
-### 2026-10-28
-- MailMind handleGenerateSmart / handleTriple 언어 우선순위 수정 (PR #272 머지)
-- MailMind 6개 핸들러 myLanguage 기본값 'Korean'→'auto' 제거 (Korean 언어 편향 제거)
-- MailMind iOS TestFlight CI/CD 파이프라인 구축 (PR #273)
-- MailMind Fastfile key_content→key_filepath 수정 (OpenSSL PKCS#8 오류 해결)
-- MailMind worker.js 서명 원문 유지 수정 — JP_SIGNATURE_PROMPT + buildSignOffInstruction + handleGenerate 3곳 수정 (PR #273)
-- INFRA_MEMO.md App Store Connect IDs 영구 메모 (H2M5GFA4BM / fb130061-a76b-42b4-87b6-ed5575dd3884)
-- Apple Developer Program $99 결제 완료 (등록 ID: 5G5PA8D7B7)
-- TASKS.md 업데이트
-
-### 2026-10-27
-- MailMind Android Google 로그인 오류 10 수정 (google-services.json 복원)
-- MailMind AI 로고 아이콘 모든 mipmap 적용
-- 삼성 One UI 카카오톡 모양 어댑티브 아이콘 추가
-- TASKS.md 업데이트
-
-### 2026-09-20
-- mbtico.kr Worker 분리 완료 (PR #128 수동 머지)
-- CLAUDE.md 메모 업데이트 (PR #129 수동 머지)
-- TASKS.md 신규 생성 — 앱별 배포방식·기능 정리
-- 배송앱 도메인 주석 수정 (PR #131 자동 머지)
-
----
-
-## 🔧 사용 방법
-
-**세션 시작 시:**
-1. `TASKS.md` 열어서 미완료/진행중 항목 확인
-2. 사용자 명령과 관련된 항목 `[~]` (진행중)으로 변경
-3. 작업 완료 후 `[x]` + 완료 날짜 기록, 최근 완료 섹션으로 이동
-
-**새 작업 추가 시:**
-- 해당 우선순위 테이블에 행 추가
-- 완료 후 최근 완료 섹션으로 이동
-
-**항상 기억:**
-- `TASKS.md` 업데이트 없이 세션 종료 금지
-- 외부 조건 필요한 항목은 `[-]` (보류)로 표시
+| 2026-11-13 | **도장(seal) 위치 수정 (PR #624 머지)** — _signBlock() 8번째 인자 sealHtml 추가, 을(partyB) 서명란 셀 안에 렌더링. _legalBase() 독립 seal-area div 제거. 7개 호출 사이트 전부 적용 (위임장·NDA·용역·공급·MOU·합의서·근로계약) |
+| 2026-11-13 | **Refine 내일/tomorrow 절대 날짜 치환 방지 + 첨부파일 열기 (PR #623 머지)** — substituteRefine() 단순 하루 상대 날짜 치환 제거. AI 답변 패널 첨부파일 Chip GestureDetector 연결 |
+| 2026-11-13 | **Chrome Extension 로딩 timeout + 취소 버튼** — background.js 35초 timeout, content.js ✕ Cancel 버튼, 5개 workerFetch timeout 처리 |
+| 2026-11-13 | **Chrome Extension 버그 6종 수정 (웹세션)** — PLAN_LIMITS 동기화, 톤 8종, 언어 17종, privacy/terms 완성 |
+| 2026-11-13 | **PDF base64 패딩 오류 수정** — chunkSize 8192→8190, _safeBase64Decode URL-safe 정규화 |
+| 2026-10-29 | **iOS ENABLE_BITCODE=NO 수정** — 3h 무한 대기 해결. Codemagic 빌드 2m34s 성공 |
+| 2026-10-28 | **언어 우선순위 3중 수정 (PR #272)** + **서명 원문 유지 수정 (PR #273)** |
+| 2026-10-27 | **Android Google 로그인 error 10 수정 (PR #267)** + **앱 아이콘 + 어댑티브 아이콘** |
+| 2026-10-26 | **DINE/SCAN/seolyuhana 전체 삭제** (서비스 종료) |
+| 2026-11-02 | **FILO 매장운영 HTML/JS 13개 삭제 (PR #216)** |
