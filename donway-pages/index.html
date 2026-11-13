@@ -21812,25 +21812,34 @@ window._loadMyStatements=function(){
     items.sort(function(a,b){
       return (b.data.createdAt?b.data.createdAt.seconds:0)-(a.data.createdAt?a.data.createdAt.seconds:0);
     });
-    var html='';
+    var rows='';
     items.forEach(function(item){
       var d=item.data;
       var date=d.createdAt?new Date(d.createdAt.seconds*1000).toLocaleDateString('ko-KR'):'';
       var isNew=!d.readAt;
       var typeLabel=d.type==='tax_invoice'||d.type==='tax'?'🧾 세금계산서':'📄 정산명세서';
-      html+='<div class="card" style="margin-bottom:8px;'+(isNew?'border-left:3px solid var(--primary)':'')+';display:flex;align-items:center;gap:8px" data-id="'+item.id+'">'
-        +'<div style="flex:1;cursor:pointer;min-width:0" onclick="_viewMyStatement(this.parentElement)">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<div>'+(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')
-        +'<span style="font-size:13px;font-weight:700">'+esc(d.title||d.month||'정산명세서')+'</span>'
-        +'</div><div style="font-size:11px;color:var(--text3)">'+date+'</div></div>'
-        +'<div style="font-size:12px;color:var(--text2);margin-top:4px">'+typeLabel+'</div>'
-        +'</div>'
-        +'<button onclick="window._deleteMyStmt(\''+item.id+'\');event.stopPropagation()" style="flex-shrink:0;padding:6px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>'
-        +'</div>';
+      rows+='<tr style="cursor:pointer;'+(isNew?'font-weight:700':'')+';" onclick="_viewMyStatement(this)" data-id="'+item.id+'">'
+        +'<td style="padding:10px 8px;font-size:12px;color:var(--text3)">'+date+'</td>'
+        +'<td style="padding:10px 8px;font-size:13px">'
+          +(isNew?'<span style="background:var(--primary);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;margin-right:6px">NEW</span>':'')
+          +esc(d.title||d.month||'정산명세서')+'</td>'
+        +'<td style="padding:10px 8px;font-size:12px;color:var(--text2)">'+typeLabel+'</td>'
+        +'<td style="padding:10px 8px;text-align:right">'
+          +'<button onclick="window._deleteMyStmt(\''+item.id+'\');event.stopPropagation()" style="padding:4px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button>'
+        +'</td>'
+        +'</tr>';
     });
+    var tbody=rows||'<tr><td colspan="4" style="text-align:center;padding:32px 0;color:var(--text3)"><div style="font-size:32px;margin-bottom:8px">📭</div>전달받은 내역이 없습니다</td></tr>';
     var el=document.getElementById('my-stmt-list');
-    if(el)el.innerHTML=html||'<div class="empty"><div class="empty-icon">📭</div>전달받은 내역이 없습니다</div>';
+    if(el)el.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'
+      +'<thead><tr style="border-bottom:2px solid var(--border)">'
+      +'<th style="padding:8px;text-align:left;font-size:12px;color:var(--text3);font-weight:600;white-space:nowrap">날짜</th>'
+      +'<th style="padding:8px;text-align:left;font-size:12px;color:var(--text3);font-weight:600">제목</th>'
+      +'<th style="padding:8px;text-align:left;font-size:12px;color:var(--text3);font-weight:600;white-space:nowrap">종류</th>'
+      +'<th style="padding:8px;text-align:right;font-size:12px;color:var(--text3);font-weight:600;white-space:nowrap">삭제</th>'
+      +'</tr></thead>'
+      +'<tbody>'+tbody+'</tbody>'
+      +'</table></div>';
   }).catch(function(e){
     var el=document.getElementById('my-stmt-list');
     if(el)el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>데이터를 불러올 수 없습니다</div>';
