@@ -293,9 +293,10 @@ jobs:
           bash scripts/compose/compose-video.sh "$PRODUCT"
 
       - name: YouTube Shorts 업로드
-        if: >-
-          steps.target.outputs.PRODUCT != 'skip' &&
-          contains(steps.target.outputs.PLATFORMS, 'youtube')
+        if: false  # [PAUSED 2026-11-14] 유투브 업로드 일시 중단 — 재개 시 아래 조건으로 복원
+        # if: >-
+        #   steps.target.outputs.PRODUCT != 'skip' &&
+        #   contains(steps.target.outputs.PLATFORMS, 'youtube')
         run: |
           PRODUCT="${{ steps.target.outputs.PRODUCT }}"
           DRY_FLAG="${{ steps.target.outputs.DRY_FLAG }}"
