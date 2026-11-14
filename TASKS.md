@@ -156,6 +156,7 @@ vatInc(정산금액) ÷ 1.1 = 공급가액  →  세액 = 정산금액 - 공급�
 |---|---|---|---|---|
 | 10 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | mbtico-worker.js | 루틴상태+오류현황+소셜스케줄 한눈에 |
 | 11 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html | reznikov-eng.com 레퍼런스 |
+| 12 | `[x]` | **배달대행 기사현황 관리자 입력 시스템** (2026-11-14 완료) | _worker.js, donway-pages/index.html | dw_driver_stats 신규 컬렉션. Worker SA키로 Firestore 규칙 우회. pageDeliveryDriverAdmin() 관리자 UI. 기사 화면 30초 폴링. AI정산(pageDeliverySettle) 무변경. PR #236 |
 
 ---
 
