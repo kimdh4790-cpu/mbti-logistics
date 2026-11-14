@@ -140,7 +140,7 @@ service cloud.firestore {
     match /clean_workers/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /comp_leaves/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /daily_detail/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /delivery_sessions/{docId}      { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    match /delivery_sessions/{docId}      { allow read: if canRead() || (isAuth() && docId.matches('^[^_]+_' + request.auth.uid + '_.*$')); allow create: if canWrite() || isAuth(); allow update: if canOwn() || (isAuth() && docId.matches('^[^_]+_' + request.auth.uid + '_.*$')); allow delete: if canOwn(); }
     match /devices/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driverDocs/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driver_notifications/{docId}   { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
