@@ -1633,6 +1633,7 @@ async function openOutlookComposePanel() {
           <button id="mm-ol-cp-tab-doc" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${curMode==='doc'?'background:#e91e8c;color:#fff;box-shadow:0 2px 6px rgba(233,30,140,.3)':'background:transparent;color:#666'}">${t.tab3||'\uD83D\uDCC4 \uBB38\uC11C'}</button>
         </div>
         <textarea id="mm-ol-cp-input" placeholder="${curMode==='doc' ? (t.docPlaceholder||'\uBB38\uC11C\uB85C \uB9CC\uB4E4 \uB0B4\uC6A9\uC744 \uC785\uB825\uD558\uC138\uC694') : curMode==='compose' ? t.composePlaceholder : t.refinePlaceholder}" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1.5px solid #e8e8e8;border-radius:9px;font-size:12px;resize:vertical;min-height:${curMode==='refine'?'110':'70'}px;font-family:inherit;outline:none;line-height:1.55;color:#333;background:#fafafa" onfocus="this.style.borderColor='#e91e8c';this.style.background='#fff'" onblur="this.style.borderColor='#e8e8e8';this.style.background='#fafafa'"></textarea>
+          <div id="mm-ol-cp-doc-chips" style="display:${curMode==='doc'?'flex':'none'};flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
         <div style="margin-top:11px;display:${curMode==='doc'?'none':'block'}">
           <div style="font-size:10px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">${t.toneLabel}</div>
           ${toneDropdownOL()}
@@ -1680,7 +1681,7 @@ async function openOutlookComposePanel() {
 
     panel.querySelector('#mm-ol-cp-tab-compose').addEventListener('click', () => { curMode = 'compose'; renderOLCompose(); });
     panel.querySelector('#mm-ol-cp-tab-refine').addEventListener('click', () => { curMode = 'refine'; renderOLCompose(); });
-    panel.querySelector('#mm-ol-cp-tab-doc').addEventListener('click', () => { curMode = 'doc'; renderOLCompose(); });
+    panel.querySelector('#mm-ol-cp-tab-doc').addEventListener('click', () => { curMode = 'doc'; renderOLCompose(); loadDocCatalogOL(panel); });
 
     // 톤 드롭다운
     panel.querySelector('#mm-ol-cp-tone-trigger').addEventListener('click', (e) => {
@@ -1984,6 +1985,31 @@ async function openOutlookComposePanel() {
 
 
 
+async function loadDocCatalogOL(panel) {
+  if (!panel) return;
+  const chips = panel.querySelector('#mm-ol-cp-doc-chips');
+  if (!chips || chips.dataset.loaded) return;
+  try {
+    const res = await workerFetch(`${WORKER_URL_OL}/document-catalog?country=kr`, {
+      headers: { 'X-API-Key': API_KEY_content_outlook }
+    });
+    const data = await res.json();
+    const docs = data.docs || data.items || (Array.isArray(data) ? data : []);
+    if (docs.length > 0) {
+      chips.dataset.loaded = '1';
+      chips.innerHTML = docs.map(doc => {
+        const lbl = doc.name || doc.label || doc.title || String(doc);
+        return `<button class="ol-doc-chip" style="padding:3px 10px;border:1px solid #e91e8c;border-radius:12px;background:#fff;color:#e91e8c;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;">${escapeHtmlOL(lbl)}</button>`;
+      }).join('');
+      chips.querySelectorAll('.ol-doc-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const inp = panel.querySelector('#mm-ol-cp-input');
+          if (inp) { inp.value = btn.textContent; inp.dispatchEvent(new Event('input')); }
+        });
+      });
+    }
+  } catch(e) {}
+}
 async function generateDocOL() {
   const panel = document.querySelector('#mm-ol-compose-panel');
   if (!panel) return;
@@ -2010,18 +2036,73 @@ async function generateDocOL() {
     if (!data.success) throw new Error(data.error || 'failed');
     if (resultDiv) {
       resultDiv.style.display = 'block';
-      resultDiv.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">${data.docTitle ? `<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:4px">${data.docTitle}</div>` : ''}${data.htmlBase64 ? `<button id="mm-ol-doc-open-html" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 HTML 새 탭에서 열기</button>` : ''}${data.coverNote ? `<button id="mm-ol-doc-copy-note" style="padding:9px;background:#fff;color:#e91e8c;border:1.5px solid #e91e8c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 메일 본문 복사</button>` : ''}</div>`;
-      if (data.htmlBase64) {
+      resultDiv.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">${data.docTitle ? `<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:4px">${data.docTitle}</div>` : ''}${(data.emailVariants||[]).map((v,i)=>`<button class="mm-ol-ev-btn" data-idx="${i}" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📧 ${v.format||v.type||'이메일'} 카드 열기</button>`).join('')}${data.htmlBase64&&!(data.emailVariants&&data.emailVariants.length)?'<button id="mm-ol-doc-open-html" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 HTML 새 탭에서 열기</button>':''}${data.wordBase64?'<button id="mm-ol-doc-dl-word" style="padding:9px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ Word 다운로드</button>':''}${data.excelBase64?'<button id="mm-ol-doc-dl-excel" style="padding:9px;background:#fff;color:#2e7d32;border:1.5px solid #2e7d32;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ Excel 다운로드</button>':''}${data.pdfBase64?'<button id="mm-ol-doc-dl-pdf" style="padding:9px;background:#fff;color:#b71c1c;border:1.5px solid #b71c1c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ PDF 다운로드</button>':''}${data.coverNote?'<button id="mm-ol-doc-insert-note" style="padding:9px;background:#fff;color:#e91e8c;border:1.5px solid #e91e8c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 메일 본문에 삽입</button>':''}</div>`;
+
+      if (data.emailVariants) {
+        resultDiv.querySelectorAll('.mm-ol-ev-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const v = data.emailVariants[+btn.dataset.idx];
+            if (v && v.htmlBase64) {
+              const html = atob(v.htmlBase64);
+              const blob = new Blob([html], { type: 'text/html' });
+              window.open(URL.createObjectURL(blob), '_blank');
+            }
+          });
+        });
+      }
+      if (data.htmlBase64 && !(data.emailVariants && data.emailVariants.length)) {
         resultDiv.querySelector('#mm-ol-doc-open-html')?.addEventListener('click', () => {
           const html = atob(data.htmlBase64);
           const blob = new Blob([html], { type: 'text/html' });
           window.open(URL.createObjectURL(blob), '_blank');
         });
       }
+      function mm_ol_dl(b64, mime, ext) {
+        const bytes = atob(b64);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        const blob = new Blob([arr], { type: mime });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (data.docTitle || 'document') + ext;
+        a.click();
+      }
+      if (data.wordBase64) {
+        resultDiv.querySelector('#mm-ol-doc-dl-word')?.addEventListener('click', () => {
+          mm_ol_dl(data.wordBase64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx');
+        });
+      }
+      if (data.excelBase64) {
+        resultDiv.querySelector('#mm-ol-doc-dl-excel')?.addEventListener('click', () => {
+          mm_ol_dl(data.excelBase64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx');
+        });
+      }
+      if (data.pdfBase64) {
+        resultDiv.querySelector('#mm-ol-doc-dl-pdf')?.addEventListener('click', () => {
+          mm_ol_dl(data.pdfBase64, 'application/pdf', '.pdf');
+        });
+      }
       if (data.coverNote) {
-        resultDiv.querySelector('#mm-ol-doc-copy-note')?.addEventListener('click', () => {
-          navigator.clipboard.writeText(data.coverNote).catch(() => {});
-          showToastOL('메일 본문이 복사되었습니다', 'success');
+        resultDiv.querySelector('#mm-ol-doc-insert-note')?.addEventListener('click', () => {
+          const area = document.querySelector('[contenteditable="true"][role="textbox"]') ||
+                       document.querySelector('textarea[name*="mail"], textarea[id*="mail"], textarea[id*="compose"]') ||
+                       document.querySelector('.note_editor, .mail_editor, .compose-body') ||
+                       document.querySelector('[contenteditable="true"]');
+          if (area) {
+            area.focus();
+            if (area.tagName === 'TEXTAREA') {
+              const pos = area.selectionStart || 0;
+              area.value = area.value.substring(0, pos) + data.coverNote + area.value.substring(pos);
+              area.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+              try { document.execCommand('insertText', false, data.coverNote); }
+              catch(e) { area.textContent += data.coverNote; }
+            }
+            showToastOL('메일 본문에 삽입됐습니다', 'success');
+          } else {
+            navigator.clipboard.writeText(data.coverNote).catch(() => {});
+            showToastOL('메일 본문이 복사되었습니다', 'success');
+          }
         });
       }
     }
