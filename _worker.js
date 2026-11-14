@@ -6815,6 +6815,73 @@ service cloud.firestore {
       }
     }
 
+    // ── 배달대행 기사 현황 (dw_driver_stats) — AI정산과 완전 분리 ──
+    if (path === '/api/delivery-driver-stats') {
+      const _dsH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'};
+      if (method === 'OPTIONS') return new Response(null,{status:204,headers:_dsH});
+      if (method === 'GET') {
+        const _dsUid = url.searchParams.get('uid')||'';
+        const _dsDid = url.searchParams.get('dealerId')||'';
+        const _dsPeriod = url.searchParams.get('period')||new Date().toISOString().slice(0,7);
+        if (!_dsUid||!_dsDid) return new Response(JSON.stringify({ok:false,error:'uid, dealerId 필요'}),{status:400,headers:_dsH});
+        try {
+          const tok = await getAccessToken(env);
+          const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+          const docId = `${_dsDid}_${_dsUid}_${_dsPeriod}`;
+          const res = await fetch(`${fsBase}/dw_driver_stats/${docId}`,{headers:{'Authorization':`Bearer ${tok}`}});
+          if (!res.ok) return new Response(JSON.stringify({ok:true,data:null}),{headers:_dsH});
+          const doc = await res.json();
+          if (!doc.fields) return new Response(JSON.stringify({ok:true,data:null}),{headers:_dsH});
+          const f = doc.fields;
+          const data = {
+            dealerId: f.dealerId?.stringValue||_dsDid,
+            driverUid: f.driverUid?.stringValue||_dsUid,
+            driverName: f.driverName?.stringValue||'',
+            period: f.period?.stringValue||_dsPeriod,
+            peaks: {am:parseInt(f.peakAm?.integerValue||0),pm:parseInt(f.peakPm?.integerValue||0),eve:parseInt(f.peakEve?.integerValue||0),ngt:parseInt(f.peakNgt?.integerValue||0),etc:parseInt(f.peakEtc?.integerValue||0)},
+            sla: {acceptRate:parseFloat(f.slaAcceptRate?.doubleValue||f.slaAcceptRate?.integerValue||0),weeklyDone:parseInt(f.slaWeeklyDone?.integerValue||0),weeklyTotal:parseInt(f.slaWeeklyTotal?.integerValue||0)},
+            slaDetail: {
+              delivery:{total:parseInt(f.sdDelivTotal?.integerValue||0),food:parseInt(f.sdDelivFood?.integerValue||0),store:parseInt(f.sdDelivStore?.integerValue||0),mart:parseInt(f.sdDelivMart?.integerValue||0)},
+              rejection:{total:parseInt(f.sdRejectTotal?.integerValue||0),food:parseInt(f.sdRejectFood?.integerValue||0),store:parseInt(f.sdRejectStore?.integerValue||0),mart:parseInt(f.sdRejectMart?.integerValue||0)},
+              cancel:{total:parseInt(f.sdCancelTotal?.integerValue||0),food:parseInt(f.sdCancelFood?.integerValue||0),store:parseInt(f.sdCancelStore?.integerValue||0),mart:parseInt(f.sdCancelMart?.integerValue||0)}
+            },
+            settlements:(f.settlements?.arrayValue?.values||[]).map(function(v){const sf=v.mapValue?.fields||{};return{date:sf.date?.stringValue||'',type:sf.type?.stringValue||'',completeCount:parseInt(sf.completeCount?.integerValue||0),deliveryFee:parseInt(sf.deliveryFee?.integerValue||0),insurance:parseInt(sf.insurance?.integerValue||0),netAmount:parseInt(sf.netAmount?.integerValue||0)};}),
+            totalPayout:parseInt(f.totalPayout?.integerValue||0),
+            memo:f.memo?.stringValue||'',
+            updatedAt:f.updatedAt?.timestampValue||''
+          };
+          return new Response(JSON.stringify({ok:true,data}),{headers:_dsH});
+        } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_dsH});}
+      }
+      if (method === 'POST') {
+        const _dsAdmin = await requireAdmin(request, env);
+        if (!_dsAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:_dsH});
+        try {
+          const body = await request.json();
+          const {dealerId,driverUid,driverName,period,peaks,sla,slaDetail,settlements,totalPayout,memo}=body;
+          if (!dealerId||!driverUid) return new Response(JSON.stringify({ok:false,error:'dealerId, driverUid 필요'}),{status:400,headers:_dsH});
+          const tok = await getAccessToken(env);
+          const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+          const _dsPeriod = period||new Date().toISOString().slice(0,7);
+          const docId = `${dealerId}_${driverUid}_${_dsPeriod}`;
+          const pk=peaks||{};const sl=sla||{};const sd=slaDetail||{};const setArr=settlements||[];
+          const fields={
+            dealerId:{stringValue:dealerId},driverUid:{stringValue:driverUid},driverName:{stringValue:driverName||''},period:{stringValue:_dsPeriod},
+            peakAm:{integerValue:String(pk.am||0)},peakPm:{integerValue:String(pk.pm||0)},peakEve:{integerValue:String(pk.eve||0)},peakNgt:{integerValue:String(pk.ngt||0)},peakEtc:{integerValue:String(pk.etc||0)},
+            slaAcceptRate:{doubleValue:sl.acceptRate||0},slaWeeklyDone:{integerValue:String(sl.weeklyDone||0)},slaWeeklyTotal:{integerValue:String(sl.weeklyTotal||0)},
+            sdDelivTotal:{integerValue:String((sd.delivery||{}).total||0)},sdDelivFood:{integerValue:String((sd.delivery||{}).food||0)},sdDelivStore:{integerValue:String((sd.delivery||{}).store||0)},sdDelivMart:{integerValue:String((sd.delivery||{}).mart||0)},
+            sdRejectTotal:{integerValue:String((sd.rejection||{}).total||0)},sdRejectFood:{integerValue:String((sd.rejection||{}).food||0)},sdRejectStore:{integerValue:String((sd.rejection||{}).store||0)},sdRejectMart:{integerValue:String((sd.rejection||{}).mart||0)},
+            sdCancelTotal:{integerValue:String((sd.cancel||{}).total||0)},sdCancelFood:{integerValue:String((sd.cancel||{}).food||0)},sdCancelStore:{integerValue:String((sd.cancel||{}).store||0)},sdCancelMart:{integerValue:String((sd.cancel||{}).mart||0)},
+            settlements:{arrayValue:{values:setArr.map(function(item){return{mapValue:{fields:{date:{stringValue:item.date||''},type:{stringValue:item.type||'선정산'},completeCount:{integerValue:String(item.completeCount||0)},deliveryFee:{integerValue:String(item.deliveryFee||0)},insurance:{integerValue:String(item.insurance||0)},netAmount:{integerValue:String(item.netAmount||0)}}}};})}},
+            totalPayout:{integerValue:String(totalPayout||0)},memo:{stringValue:memo||''},updatedAt:{timestampValue:new Date().toISOString()}
+          };
+          const putRes = await fetch(`${fsBase}/dw_driver_stats/${docId}`,{method:'PATCH',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
+          if (!putRes.ok){const err=await putRes.text();return new Response(JSON.stringify({ok:false,error:err}),{status:500,headers:_dsH});}
+          return new Response(JSON.stringify({ok:true,docId}),{headers:_dsH});
+        } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_dsH});}
+      }
+    }
+
     // ── 전체 고객사 공지 FCM 발송 (/api/send-notice) ──
     if (path === '/api/send-notice' && method === 'POST') {
       const _admin = await requireAdmin(request, env);

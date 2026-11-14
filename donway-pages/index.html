@@ -14702,28 +14702,27 @@ function pageDeliveryInput(){
     +'<div id="dw-driver-dash"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로드 중...</div></div>'
   +'</div>';
 
-  // 기사 세션 실시간 구독
-  if(!_db||!_CU)return;
+  // 기사: Worker API로 현황 조회 (dw_driver_stats — AI정산과 완전 분리)
+  if(!_CU)return;
   var did=(_CU.dealerId||_CU.companyId||'');
   var uid=_CU.uid||'';
   var period=_dwPeriodStr();
-  var sid=_dwSessionId(did,uid,period);
-
-  // 기존 구독 해제
-  if(window._dwDashUnsub){try{window._dwDashUnsub();}catch(e){}}
-
-  window._dwDashUnsub=_db.collection('delivery_sessions').doc(sid)
-    .onSnapshot(function(snap){
-      var s=snap.exists?snap.data():{
-        companyName:(_CU&&_CU.name)||'',
-        period:_dwPeriodStr(),
-        totalCount:0,preTax:0,entries:[],_empty:true
-      };
-      _dwRenderDriverDash(s);
-    },function(){
-      document.getElementById('dw-driver-dash').innerHTML=
-        '<div class="empty">데이터를 불러올 수 없습니다</div>';
-    });
+  if(window._dwDashInterval){clearInterval(window._dwDashInterval);window._dwDashInterval=null;}
+  function _dwFetchStats(){
+    fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(period))
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(res.ok&&res.data){
+          _dwRenderDriverDash(res.data);
+        } else {
+          _dwRenderDriverDash({companyName:(_CU&&_CU.name)||'',period:period,totalCount:0,preTax:0,entries:[],_empty:true});
+        }
+      }).catch(function(){
+        _dwRenderDriverDash({companyName:(_CU&&_CU.name)||'',period:period,totalCount:0,preTax:0,entries:[],_empty:true});
+      });
+  }
+  _dwFetchStats();
+  window._dwDashInterval=setInterval(_dwFetchStats,30000);
 }
 
 // 기사 대시보드 렌더링 — CallPassBiz 스타일
@@ -14742,33 +14741,52 @@ function _dwRenderDriverDash(s){
     {key:'ngt', label:'심야논피크',   icon:'🌙', slots:['dinner_off','midnight']}
   ];
 
-  // 피크별 건수
+  // 피크별 건수 — 관리자 직접 입력(s.peaks) 우선, 없으면 entries 기반 계산
   var pc={am:0,pm:0,eve:0,ngt:0,etc:0};
-  (s.entries||[]).forEach(function(e){
-    var matched=false;
-    PEAKS.forEach(function(p){if(p.slots.indexOf(e.slot||'')>=0){pc[p.key]++;matched=true;}});
-    if(!matched)pc.etc++;
-  });
+  if(s.peaks&&(s.peaks.am||s.peaks.pm||s.peaks.eve||s.peaks.ngt||s.peaks.etc)){
+    pc=s.peaks;
+  } else {
+    (s.entries||[]).forEach(function(e){
+      var matched=false;
+      PEAKS.forEach(function(p){if(p.slots.indexOf(e.slot||'')>=0){pc[p.key]++;matched=true;}});
+      if(!matched)pc.etc++;
+    });
+  }
 
-  // 채널·상태별 집계
+  // 채널·상태별 집계 — 관리자 입력(s.slaDetail) 우선
   var completed={total:0,food:0,store:0,mart:0};
   var rejected={total:0,food:0,store:0,mart:0};
   var cancelled={total:0,food:0,store:0,mart:0};
-  (s.entries||[]).forEach(function(e){
-    var chKey=e.channel==='store'?'store':e.channel==='mart'?'mart':'food';
-    var st=e.status||'completed';
-    var target=st==='rejected'?rejected:st==='cancelled'?cancelled:completed;
-    target.total++;target[chKey]++;
-  });
-  if(completed.total===0&&cnt>0)completed.total=cnt;
+  if(s.slaDetail){
+    if(s.slaDetail.delivery)completed=s.slaDetail.delivery;
+    if(s.slaDetail.rejection)rejected=s.slaDetail.rejection;
+    if(s.slaDetail.cancel)cancelled=s.slaDetail.cancel;
+  } else {
+    (s.entries||[]).forEach(function(e){
+      var chKey=e.channel==='store'?'store':e.channel==='mart'?'mart':'food';
+      var st=e.status||'completed';
+      var target=st==='rejected'?rejected:st==='cancelled'?cancelled:completed;
+      target.total++;target[chKey]++;
+    });
+    if(completed.total===0&&cnt>0)completed.total=cnt;
+  }
 
-  // 날짜별 집계
+  // 날짜별 집계 — 관리자 settlements 배열 우선
   var dMap={};
-  (s.entries||[]).forEach(function(e){
-    var dt=(e.at||'').slice(0,10);if(!dt)return;
-    if(!dMap[dt])dMap[dt]={count:0,preTax:0};
-    dMap[dt].count++;dMap[dt].preTax+=e.price||0;
-  });
+  if(s.settlements&&s.settlements.length>0){
+    s.settlements.forEach(function(r){
+      var dt=r.date||'';if(!dt)return;
+      if(!dMap[dt])dMap[dt]={count:0,preTax:0};
+      dMap[dt].count+=r.completeCount||0;
+      dMap[dt].preTax+=r.netAmount||0;
+    });
+  } else {
+    (s.entries||[]).forEach(function(e){
+      var dt=(e.at||'').slice(0,10);if(!dt)return;
+      if(!dMap[dt])dMap[dt]={count:0,preTax:0};
+      dMap[dt].count++;dMap[dt].preTax+=e.price||0;
+    });
+  }
   var dKeys=Object.keys(dMap).sort().reverse();
 
   if(!window._dwDashTab)window._dwDashTab='main';
@@ -14915,6 +14933,151 @@ function _dwRenderDriverDash(s){
   };
   el.innerHTML=buildUI(window._dwDashTab);
 }
+
+// ── 관리자 기사별 현황 직접 입력 (dw_driver_stats) — AI정산과 완전 분리 ──
+function pageDeliveryDriverAdmin(){
+  if(!_CU||_CU.role==='driver'||_CU.role==='member'){return;}
+  document.getElementById('page-title').textContent='🛵 기사 현황 입력';
+  var el=document.getElementById('content');
+  var did=_CU.dealerId||'';
+  var period=_dwPeriodStr();
+
+  el.innerHTML='<div style="max-width:600px;margin:0 auto;padding:8px">'
+    +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">기사 현황 직접 입력 <span style="font-size:11px;font-weight:400;color:var(--text3)">'+period+'</span></div>'
+    +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;color:var(--text3)">기사 선택</label>'
+      +'<select id="da-driver-sel" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text1);font-size:13px;margin-top:4px">'
+        +'<option value="">— 선택 —</option>'
+      +'</select>'
+    +'</div>'
+    +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px">피크타임 건수</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+        +['am:아침점심피크','pm:오후논피크','eve:저녁피크','ngt:심야논피크'].map(function(x){var p=x.split(':');return'<div><label style="font-size:11px;color:var(--text3)">'+p[1]+'</label><input id="da-pk-'+p[0]+'" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>';}).join('')
+      +'</div>'
+    +'</div>'
+    +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px">SLA</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+        +'<div><label style="font-size:11px;color:var(--text3)">수락률(%)</label><input id="da-sla-rate" type="number" min="0" max="100" value="0" step="0.1" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>'
+        +'<div><label style="font-size:11px;color:var(--text3)">주간달성</label><input id="da-sla-done" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>'
+        +'<div><label style="font-size:11px;color:var(--text3)">주간목표</label><input id="da-sla-total" type="number" min="0" value="28" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>'
+      +'</div>'
+      +'<div style="margin-top:10px;font-size:11px;font-weight:700;color:var(--text3);margin-bottom:8px">완료건수 (채널별)</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+        +['food:푸드','store:배민스토어','mart:비마트'].map(function(x){var p=x.split(':');return'<div><label style="font-size:11px;color:var(--text3)">'+p[1]+'</label><input id="da-deliv-'+p[0]+'" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>';}).join('')
+      +'</div>'
+    +'</div>'
+    +'<div id="da-settle-rows" style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        +'<span style="font-size:12px;font-weight:700;color:var(--text3)">정산 내역</span>'
+        +'<button onclick="_daAddRow()" style="font-size:11px;padding:4px 10px;background:#5b4ff5;color:#fff;border:none;border-radius:8px;cursor:pointer">+ 행 추가</button>'
+      +'</div>'
+      +'<div id="da-rows-wrap"></div>'
+    +'</div>'
+    +'<div style="margin-bottom:12px">'
+      +'<label style="font-size:12px;color:var(--text3)">메모</label>'
+      +'<textarea id="da-memo" rows="2" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text1);font-size:13px;margin-top:4px;resize:vertical"></textarea>'
+    +'</div>'
+    +'<button onclick="_daSave()" style="width:100%;padding:14px;background:#5b4ff5;color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer">저장 · 기사에게 실시간 공유</button>'
+  +'</div>';
+
+  // 기사 목록 로드
+  if(_db){
+    _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+      var sel=document.getElementById('da-driver-sel');
+      if(!sel)return;
+      snap.forEach(function(doc){
+        var d=doc.data();
+        var opt=document.createElement('option');
+        opt.value=doc.id;
+        opt.dataset.name=(d.name||d.driverName||'');
+        opt.textContent=(d.name||d.driverName||doc.id)+' ('+(d.phone||'')+ ')';
+        sel.appendChild(opt);
+      });
+    });
+    // 선택 시 기존 데이터 로드
+    document.getElementById('da-driver-sel').addEventListener('change',function(){
+      var uid=this.value;if(!uid)return;
+      fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(period))
+        .then(function(r){return r.json();}).then(function(res){
+          if(!res.ok||!res.data)return;
+          var d=res.data;
+          ['am','pm','eve','ngt'].forEach(function(k){var el=document.getElementById('da-pk-'+k);if(el)el.value=(d.peaks&&d.peaks[k])||0;});
+          var sla=d.sla||{};
+          if(document.getElementById('da-sla-rate'))document.getElementById('da-sla-rate').value=sla.acceptRate||0;
+          if(document.getElementById('da-sla-done'))document.getElementById('da-sla-done').value=sla.weeklyDone||0;
+          if(document.getElementById('da-sla-total'))document.getElementById('da-sla-total').value=sla.weeklyTotal||28;
+          var deliv=(d.slaDetail&&d.slaDetail.delivery)||{};
+          ['food','store','mart'].forEach(function(k){var el=document.getElementById('da-deliv-'+k);if(el)el.value=deliv[k]||0;});
+          if(document.getElementById('da-memo'))document.getElementById('da-memo').value=d.memo||'';
+          // 정산 행 복원
+          var wrap=document.getElementById('da-rows-wrap');if(!wrap)return;
+          wrap.innerHTML='';
+          (d.settlements||[]).forEach(function(){_daAddRow();});
+          var inputs=wrap.querySelectorAll('.da-row');
+          (d.settlements||[]).forEach(function(r,i){
+            if(!inputs[i])return;
+            var row=inputs[i];
+            var fs=row.querySelectorAll('input');
+            if(fs[0])fs[0].value=r.date||'';
+            if(fs[1])fs[1].value=r.type||'선정산';
+            if(fs[2])fs[2].value=r.completeCount||0;
+            if(fs[3])fs[3].value=r.deliveryFee||0;
+            if(fs[4])fs[4].value=r.insurance||0;
+            if(fs[5])fs[5].value=r.netAmount||0;
+          });
+        });
+    });
+  }
+
+  // 행 추가 초기값
+  _daAddRow();
+}
+
+window._daAddRow=function(){
+  var wrap=document.getElementById('da-rows-wrap');if(!wrap)return;
+  var today=new Date().toISOString().slice(0,10);
+  var row=document.createElement('div');
+  row.className='da-row';
+  row.style.cssText='display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr auto;gap:4px;align-items:center;border-bottom:1px solid var(--border);padding:8px 0;';
+  row.innerHTML=['date:날짜:'+today,'type:유형:선정산','completeCount:완료:0','deliveryFee:처리비:0','insurance:보험:0','netAmount:실지급:0'].map(function(x){
+    var p=x.split(':');
+    return '<div><input placeholder="'+p[1]+'" value="'+p[2]+'" style="width:100%;padding:5px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg1);color:var(--text1);font-size:11px"></div>';
+  }).join('')+'<div><button onclick="this.closest(\'.da-row\').remove()" style="padding:4px 8px;background:#ef4444;color:#fff;border:none;border-radius:6px;font-size:11px;cursor:pointer">×</button></div>';
+  wrap.appendChild(row);
+};
+
+window._daSave=function(){
+  var sel=document.getElementById('da-driver-sel');
+  if(!sel||!sel.value){toast('기사를 선택해주세요.');return;}
+  var driverUid=sel.value;
+  var driverName=sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].dataset.name||'';
+  var did=_CU&&(_CU.dealerId||'');
+  var period=_dwPeriodStr();
+  function gv(id){var el=document.getElementById(id);return el?el.value:'';}
+  var peaks={am:parseInt(gv('da-pk-am'))||0,pm:parseInt(gv('da-pk-pm'))||0,eve:parseInt(gv('da-pk-eve'))||0,ngt:parseInt(gv('da-pk-ngt'))||0,etc:0};
+  var sla={acceptRate:parseFloat(gv('da-sla-rate'))||0,weeklyDone:parseInt(gv('da-sla-done'))||0,weeklyTotal:parseInt(gv('da-sla-total'))||28};
+  var delivTot=parseInt(gv('da-deliv-food'))+parseInt(gv('da-deliv-store'))+parseInt(gv('da-deliv-mart'))||0;
+  var slaDetail={delivery:{total:delivTot,food:parseInt(gv('da-deliv-food'))||0,store:parseInt(gv('da-deliv-store'))||0,mart:parseInt(gv('da-deliv-mart'))||0},rejection:{total:0,food:0,store:0,mart:0},cancel:{total:0,food:0,store:0,mart:0}};
+  var rows=document.querySelectorAll('.da-row');
+  var settlements=[];var totalPayout=0;
+  rows.forEach(function(row){
+    var fs=row.querySelectorAll('input');
+    if(!fs[0]||!fs[0].value)return;
+    var net=parseInt(fs[5]&&fs[5].value)||0;
+    totalPayout+=net;
+    settlements.push({date:fs[0].value,type:fs[1]&&fs[1].value||'선정산',completeCount:parseInt(fs[2]&&fs[2].value)||0,deliveryFee:parseInt(fs[3]&&fs[3].value)||0,insurance:parseInt(fs[4]&&fs[4].value)||0,netAmount:net});
+  });
+  var memo=gv('da-memo');
+  var token=_auth&&_auth.currentUser&&_auth.currentUser.getIdToken?null:null;
+  _auth.currentUser.getIdToken().then(function(tok){
+    return fetch('/api/delivery-driver-stats',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,driverUid:driverUid,driverName:driverName,period:period,peaks:peaks,sla:sla,slaDetail:slaDetail,settlements:settlements,totalPayout:totalPayout,memo:memo})});
+  }).then(function(r){return r.json();}).then(function(res){
+    if(res.ok){toast('✅ 저장 완료. 기사 화면에 즉시 반영됩니다.');}
+    else{toast('저장 실패: '+(res.error||''));}
+  }).catch(function(e){toast('오류: '+e.message);});
+};
 
 // ── ★ Phase 2: 관리자 - 실시간 기사 현황 + 엑셀 검증
 // (delivery_platform 탭으로 추가됨)
@@ -22042,6 +22205,7 @@ var MENUS_SETTLE = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
+    {ic:'📋',l:'기사현황 입력',    p:'delivery_admin',   plan_key:'delivery'},
     {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
   ]},
@@ -24004,7 +24168,7 @@ work_settings:pageWorkSettings,
 monthly_stats:pageMonthlyStats,
 message:pageMessage,
 customer:pageCustomer,
-delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,chat:pageChat,contract:pageContract,my_settle:pageMySettle,my_statements:pageMyStatements,home:pageHome,subscription:pageSubscription,schedule:pageSchedule};
+delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,delivery_admin:pageDeliveryDriverAdmin,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,chat:pageChat,contract:pageContract,my_settle:pageMySettle,my_statements:pageMyStatements,home:pageHome,subscription:pageSubscription,schedule:pageSchedule};
   var cd=window._cachedCompanyDoc||{};
   var planGate={
     
@@ -24024,7 +24188,7 @@ delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,settlements:
     
     'attendance':'qr','leave':'qr','overtime':'qr',
     'dispatch':'premium','vehicle':'premium','expense':'premium',
-    'delivery_settle':'delivery','delivery_input':'delivery','delivery_report':'delivery','delivery_platform':'delivery',
+    'delivery_settle':'delivery','delivery_input':'delivery','delivery_admin':'delivery','delivery_report':'delivery','delivery_platform':'delivery',
     
   };
   var requiredPlan=planGate[page];
