@@ -263,8 +263,8 @@
     }
     .pricing-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px; max-width: 860px; margin: 0 auto;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px; max-width: 1200px; margin: 0 auto;
     }
     .plan-card {
       border-radius: 20px; padding: 32px;
@@ -434,7 +434,7 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">✦ Powered by Claude AI · 17 Languages · 6 Email Platforms</div>
+  <div class="hero-badge">✦ GPT-4o-mini Powered · 17 Languages · 6 Email Platforms</div>
   <h1>Every email,<br><span class="pink">perfect.</span></h1>
   <p class="hero-sub">
     Can't read the language? Don't know what to say? MailMind writes professional, natural email replies for you — one click.
@@ -485,7 +485,7 @@
 
   <!-- 플랜 선택 -->
   <div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap">
-    <button id="plan-btn-free" onclick="switchDemoPlan('free')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #dadce0;background:#f1f3f4;color:#5f6368;font-family:inherit">Starter</button>
+    <button id="plan-btn-free" onclick="switchDemoPlan('free')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #dadce0;background:#f1f3f4;color:#5f6368;font-family:inherit">Free</button>
     <button id="plan-btn-basic" onclick="switchDemoPlan('basic')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #1a73e8;background:#fff;color:#1a73e8;font-family:inherit">Basic · $15/mo</button>
     <button id="plan-btn-pro" onclick="switchDemoPlan('pro')" style="padding:7px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid #e91e8c;background:#e91e8c;color:#fff;font-family:inherit">✦ Pro · $25/mo</button>
   </div>
@@ -1177,9 +1177,9 @@
     const smartBtn  = document.getElementById('tab-btn-smart');
 
     if (plan === 'free') {
-      if (badge) badge.textContent = 'Starter · 28/35 replies left';
+      if (badge) badge.textContent = 'Free · 28/35 replies left';
       if (bar)   { bar.style.width='80%'; bar.style.background='#f29900'; }
-      if (desc)  desc.textContent = '🆓 Starter: Basic AI reply only';
+      if (desc)  desc.textContent = '🆓 Free: Basic AI reply only';
       if (lock)  lock.style.display = 'block';
       if (tripleBtn) { tripleBtn.style.opacity='0.4'; tripleBtn.style.pointerEvents='none'; }
       if (smartBtn)  { smartBtn.style.opacity='0.4';  smartBtn.style.pointerEvents='none'; }
@@ -1430,11 +1430,11 @@
   <h2 class="section-title">Simple, transparent pricing</h2>
   <div class="pricing-grid">
     <div class="plan-card">
-      <div class="plan-name">Starter</div>
-      <div class="plan-price">$0 <span>/ trial</span></div>
-      <div class="plan-limit">35 replies to try it out</div>
+      <div class="plan-name">Free</div>
+      <div class="plan-price">$0 <span>/ forever</span></div>
+      <div class="plan-limit">35 replies / month (trial period)</div>
       <ul class="plan-features">
-        <li><span class="check">✓</span> 35 AI replies total</li>
+        <li><span class="check">✓</span> 35 AI replies / month (first 30 days)</li>
         <li><span class="check">✓</span> 17 languages supported</li>
         <li><span class="check">✓</span> 8 tone options</li>
         <li><span class="check">✓</span> Culture & industry detection</li>
@@ -1456,7 +1456,6 @@
         <li><span class="check">✓</span> Reply polish (Refine)</li>
         <li><span class="check">✓</span> Quick language switch</li>
         <li><span class="check">✓</span> Signature & templates</li>
-        <li><span class="check">✓</span> Thread summary</li>
         <li><span class="check">✓</span> Style learning</li>
         <li><span class="check">✓</span> Cancel anytime</li>
       </ul>
@@ -1473,11 +1472,41 @@
         <li><span class="check">✓</span> Everything in Basic</li>
         <li><span class="check">✓</span> 3 versions to compare</li>
         <li><span class="check">✓</span> Smart Reply (summary + translate)</li>
+        <li><span class="check">✓</span> File analysis (50 / month)</li>
+        <li><span class="check">✓</span> Thread summaries (50 / month)</li>
         <li><span class="check">✓</span> Industry expertise (15 fields)</li>
         <li><span class="check">✓</span> Priority support</li>
         <li><span class="check">✓</span> Cancel anytime</li>
       </ul>
       <button class="btn-plan filled" onclick="openCheckout('pri_01m3ves79fw6t8n5gdtxy860ks')">Get Pro</button>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pro+</div>
+      <div class="plan-price">$45 <span>/ month</span></div>
+      <div class="plan-limit">500 replies / month</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> 500 AI replies / month</li>
+        <li><span class="check">✓</span> Everything in Pro</li>
+        <li><span class="check">✓</span> File & PDF analysis (150 / month)</li>
+        <li><span class="check">✓</span> Document generation (50 / month)</li>
+        <li><span class="check">✓</span> Unlimited thread summaries</li>
+        <li><span class="check">✓</span> 4-language translation</li>
+        <li><span class="check">✓</span> Cancel anytime</li>
+      </ul>
+      <button class="btn-plan outline" onclick="openCheckout('')">Get Pro+</button>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Team</div>
+      <div class="plan-price">$20 <span>/ user / month</span></div>
+      <div class="plan-limit">500 replies / user / month</div>
+      <ul class="plan-features">
+        <li><span class="check">✓</span> Everything in Pro+</li>
+        <li><span class="check">✓</span> Shared team tone setting</li>
+        <li><span class="check">✓</span> Centralized billing</li>
+        <li><span class="check">✓</span> Team invite management</li>
+        <li><span class="check">✓</span> Priority support</li>
+      </ul>
+      <a href="mailto:hello@mailmind.yongcha.app" class="btn-plan outline">Contact Us</a>
     </div>
   </div>
 </section>
@@ -1545,14 +1574,14 @@
         <td><span class="no">✗</span></td>
       </tr>
       <tr>
-        <td>Powered by Claude AI</td>
+        <td>GPT-4o-mini powered (best-in-class AI)</td>
         <td><span class="yes">✓</span></td>
         <td><span class="no">✗</span></td>
         <td><span class="no">✗</span></td>
       </tr>
       <tr>
         <td>Price</td>
-        <td style="color:var(--green);font-weight:700">$15–25/mo</td>
+        <td style="color:var(--green);font-weight:700">$15–45/mo</td>
         <td>$27–47/mo</td>
         <td>$19/mo</td>
       </tr>
@@ -1579,7 +1608,7 @@
     </div>
     <div class="faq-item">
       <div class="faq-q">What AI model does it use? <span class="faq-arrow">+</span></div>
-      <div class="faq-a">MailMind uses Claude by Anthropic — one of the most capable AI models available. This is why replies feel natural, culturally appropriate, and not "AI-generated."</div>
+      <div class="faq-a">MailMind uses GPT-4o-mini by OpenAI as its primary model, with Claude by Anthropic as a fallback for reliability. Both are among the most capable AI models available — this is why replies feel natural, culturally appropriate, and not "AI-generated."</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">Is my email data safe? <span class="faq-arrow">+</span></div>

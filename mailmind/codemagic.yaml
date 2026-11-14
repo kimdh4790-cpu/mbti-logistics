@@ -1,0 +1,163 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    max_build_duration: 60
+    environment:
+      flutter: 3.47.7
+      groups:
+        - android-signing
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter clean
+          flutter pub get
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > /tmp/release.keystore
+      - name: Build Android APK
+        script: |
+          flutter build apk --release --build-name=1.0.0 --build-number=1
+    artifacts:
+      - build/**/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - kimdh4790@gmail.com
+
+  ios-simulator-workflow:
+    name: iOS Simulator Build (Appetize.io)
+    max_build_duration: 60
+    environment:
+      flutter: 3.47.7
+      xcode: latest
+      vars:
+        APPETIZE_PUBLIC_KEY: gcsneaflavq2w24vswyvztr3nu
+      groups:
+        - appetize
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter clean
+          flutter pub get
+      - name: Build iOS Simulator
+        script: |
+          flutter build ios --simulator --no-codesign
+      - name: Zip Runner.app
+        script: |
+          cd build/ios/iphonesimulator
+          zip -r MailMind_simulator.zip Runner.app
+      - name: Upload to Appetize.io
+        script: |
+          curl -s -u "$APPETIZE_TOKEN:" \
+            -F "file=@build/ios/iphonesimulator/MailMind_simulator.zip" \
+            -F "platform=ios" \
+            -F "note=MailMind iOS Simulator build $BUILD_NUMBER" \
+            "https://api.appetize.io/v1/apps/$APPETIZE_PUBLIC_KEY" \
+            | tee /tmp/appetize_result.json
+          echo "Appetize URL: https://appetize.io/app/$APPETIZE_PUBLIC_KEY"
+    artifacts:
+      - build/ios/iphonesimulator/MailMind_simulator.zip
+    publishing:
+      email:
+        recipients:
+          - kimdh4790@gmail.com
+
+  ios-workflow:
+    name: iOS Build
+    max_build_duration: 120
+    integrations:
+      app_store_connect: MailMind
+    environment:
+      flutter: 3.47.7
+      xcode: latest
+      groups:
+        - android-signing
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter clean
+          flutter pub get
+      - name: Create iOS project structure
+        script: |
+          flutter create --platforms=ios . 2>/dev/null || true
+      - name: Inject custom app icon
+        script: |
+          # Download MailMind AI icon from GitHub
+          curl -sL "https://raw.githubusercontent.com/kimdh4790-cpu/mbti-logistics/main/assets/mailmind-icon-1024.png" \
+            -o /tmp/mailmind-icon.png
+
+          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+          mkdir -p "$ICON_DIR"
+
+          # Generate all required iOS icon sizes (sips is macOS built-in)
+          sips -z 20   20   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-20x20@1x.png"   --setProperty format png
+          sips -z 40   40   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-20x20@2x.png"   --setProperty format png
+          sips -z 60   60   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-20x20@3x.png"   --setProperty format png
+          sips -z 29   29   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-29x29@1x.png"   --setProperty format png
+          sips -z 58   58   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-29x29@2x.png"   --setProperty format png
+          sips -z 87   87   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-29x29@3x.png"   --setProperty format png
+          sips -z 40   40   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-40x40@1x.png"   --setProperty format png
+          sips -z 80   80   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-40x40@2x.png"   --setProperty format png
+          sips -z 120  120  /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-40x40@3x.png"   --setProperty format png
+          sips -z 120  120  /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-60x60@2x.png"   --setProperty format png
+          sips -z 180  180  /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-60x60@3x.png"   --setProperty format png
+          sips -z 76   76   /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-76x76@1x.png"   --setProperty format png
+          sips -z 152  152  /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-76x76@2x.png"   --setProperty format png
+          sips -z 167  167  /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-83.5x83.5@2x.png" --setProperty format png
+          sips -z 1024 1024 /tmp/mailmind-icon.png --out "$ICON_DIR/Icon-App-1024x1024@1x.png" --setProperty format png
+
+          # Write Contents.json
+          cat > "$ICON_DIR/Contents.json" << 'CONTENTS_EOF'
+          {
+            "images": [
+              {"size": "20x20",   "idiom": "iphone",        "filename": "Icon-App-20x20@2x.png",        "scale": "2x"},
+              {"size": "20x20",   "idiom": "iphone",        "filename": "Icon-App-20x20@3x.png",        "scale": "3x"},
+              {"size": "29x29",   "idiom": "iphone",        "filename": "Icon-App-29x29@1x.png",        "scale": "1x"},
+              {"size": "29x29",   "idiom": "iphone",        "filename": "Icon-App-29x29@2x.png",        "scale": "2x"},
+              {"size": "29x29",   "idiom": "iphone",        "filename": "Icon-App-29x29@3x.png",        "scale": "3x"},
+              {"size": "40x40",   "idiom": "iphone",        "filename": "Icon-App-40x40@2x.png",        "scale": "2x"},
+              {"size": "40x40",   "idiom": "iphone",        "filename": "Icon-App-40x40@3x.png",        "scale": "3x"},
+              {"size": "60x60",   "idiom": "iphone",        "filename": "Icon-App-60x60@2x.png",        "scale": "2x"},
+              {"size": "60x60",   "idiom": "iphone",        "filename": "Icon-App-60x60@3x.png",        "scale": "3x"},
+              {"size": "20x20",   "idiom": "ipad",          "filename": "Icon-App-20x20@1x.png",        "scale": "1x"},
+              {"size": "20x20",   "idiom": "ipad",          "filename": "Icon-App-20x20@2x.png",        "scale": "2x"},
+              {"size": "29x29",   "idiom": "ipad",          "filename": "Icon-App-29x29@1x.png",        "scale": "1x"},
+              {"size": "29x29",   "idiom": "ipad",          "filename": "Icon-App-29x29@2x.png",        "scale": "2x"},
+              {"size": "40x40",   "idiom": "ipad",          "filename": "Icon-App-40x40@1x.png",        "scale": "1x"},
+              {"size": "40x40",   "idiom": "ipad",          "filename": "Icon-App-40x40@2x.png",        "scale": "2x"},
+              {"size": "76x76",   "idiom": "ipad",          "filename": "Icon-App-76x76@1x.png",        "scale": "1x"},
+              {"size": "76x76",   "idiom": "ipad",          "filename": "Icon-App-76x76@2x.png",        "scale": "2x"},
+              {"size": "83.5x83.5", "idiom": "ipad",        "filename": "Icon-App-83.5x83.5@2x.png",   "scale": "2x"},
+              {"size": "1024x1024", "idiom": "ios-marketing","filename": "Icon-App-1024x1024@1x.png",   "scale": "1x"}
+            ],
+            "info": {"version": 1, "author": "xcode"}
+          }
+          CONTENTS_EOF
+
+          echo "✅ App icon injected: $(ls $ICON_DIR | wc -l | tr -d ' ') files"
+      - name: Set up keychain
+        script: keychain initialize
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "app.yongcha.mailmind" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create
+      - name: Add certificates to keychain
+        script: keychain add-certificates
+      - name: Use signing profiles
+        script: xcode-project use-profiles
+      - name: Build iOS IPA
+        script: |
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+      email:
+        recipients:
+          - kimdh4790@gmail.com
