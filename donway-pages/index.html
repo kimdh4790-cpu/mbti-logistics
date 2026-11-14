@@ -14950,10 +14950,14 @@ function pageDeliveryDriverAdmin(){
     _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
       var sel=document.getElementById('da-driver-sel');
       if(!sel)return;
+      var _daSeenUids={};
       snap.forEach(function(doc){
         var d=doc.data();
+        var driverUid=d.userId||d.uid||doc.id;
+        if(_daSeenUids[driverUid])return;
+        _daSeenUids[driverUid]=true;
         var opt=document.createElement('option');
-        opt.value=doc.id;
+        opt.value=driverUid;
         opt.dataset.name=(d.name||d.driverName||'');
         opt.textContent=(d.name||d.driverName||doc.id)+' ('+(d.phone||'')+ ')';
         sel.appendChild(opt);
