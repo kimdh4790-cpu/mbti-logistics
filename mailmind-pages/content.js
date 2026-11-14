@@ -3872,6 +3872,7 @@ async function renderFloatPanel(panel) {
             font-family:inherit;outline:none;line-height:1.55;color:#333;
             background:#fafafa;transition:border-color .15s,background .15s;
           " onfocus="this.style.borderColor='#e91e8c';this.style.background='#fff'" onblur="this.style.borderColor='#e8e8e8';this.style.background='#fafafa'"></textarea>
+          <div id="mm-fp-doc-chips" style="display:${curMode==='doc'?'flex':'none'};flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
 
           <!-- 톤 드롭다운 -->
           <div style="margin-top:11px;display:${curMode==='doc'?'none':'block'}">
@@ -3985,6 +3986,7 @@ async function renderFloatPanel(panel) {
       const saved = panel.querySelector('#mm-fp-input')?.value || '';
       curMode = 'doc'; render();
       if (saved) panel.querySelector('#mm-fp-input').value = saved;
+      loadDocCatalogGM(panel);
     });
 
     // 톤 드롭다운 토글
@@ -4495,6 +4497,31 @@ async function renderFloatPanel(panel) {
 
 
 
+async function loadDocCatalogGM(panel) {
+  if (!panel) return;
+  const chips = panel.querySelector('#mm-fp-doc-chips');
+  if (!chips || chips.dataset.loaded) return;
+  try {
+    const res = await workerFetch(`${WORKER_URL}/document-catalog?country=kr`, {
+      headers: { 'X-API-Key': API_KEY }
+    });
+    const data = await res.json();
+    const docs = data.docs || data.items || (Array.isArray(data) ? data : []);
+    if (docs.length > 0) {
+      chips.dataset.loaded = '1';
+      chips.innerHTML = docs.map(doc => {
+        const lbl = doc.name || doc.label || doc.title || String(doc);
+        return `<button class="gm-doc-chip" style="padding:3px 10px;border:1px solid #e91e8c;border-radius:12px;background:#fff;color:#e91e8c;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;">${sanitize(lbl)}</button>`;
+      }).join('');
+      chips.querySelectorAll('.gm-doc-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const inp = panel.querySelector('#mm-fp-input');
+          if (inp) { inp.value = btn.textContent; inp.dispatchEvent(new Event('input')); }
+        });
+      });
+    }
+  } catch(e) {}
+}
 async function generateDoc() {
   const panel = document.querySelector('#mm-float-panel');
   if (!panel) return;
@@ -4521,18 +4548,73 @@ async function generateDoc() {
     if (!data.success) throw new Error(data.error || 'failed');
     if (resultDiv) {
       resultDiv.style.display = 'block';
-      resultDiv.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">${data.docTitle ? `<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:4px">${data.docTitle}</div>` : ''}${data.htmlBase64 ? `<button id="mm-fp-doc-open-html" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 HTML 새 탭에서 열기</button>` : ''}${data.coverNote ? `<button id="mm-fp-doc-copy-note" style="padding:9px;background:#fff;color:#e91e8c;border:1.5px solid #e91e8c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 메일 본문 복사</button>` : ''}</div>`;
-      if (data.htmlBase64) {
+      resultDiv.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">${data.docTitle ? `<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:4px">${data.docTitle}</div>` : ''}${(data.emailVariants||[]).map((v,i)=>`<button class="mm-fp-ev-btn" data-idx="${i}" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📧 ${v.format||v.type||'이메일'} 카드 열기</button>`).join('')}${data.htmlBase64&&!(data.emailVariants&&data.emailVariants.length)?'<button id="mm-fp-doc-open-html" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 HTML 새 탭에서 열기</button>':''}${data.wordBase64?'<button id="mm-fp-doc-dl-word" style="padding:9px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ Word 다운로드</button>':''}${data.excelBase64?'<button id="mm-fp-doc-dl-excel" style="padding:9px;background:#fff;color:#2e7d32;border:1.5px solid #2e7d32;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ Excel 다운로드</button>':''}${data.pdfBase64?'<button id="mm-fp-doc-dl-pdf" style="padding:9px;background:#fff;color:#b71c1c;border:1.5px solid #b71c1c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ PDF 다운로드</button>':''}${data.coverNote?'<button id="mm-fp-doc-insert-note" style="padding:9px;background:#fff;color:#e91e8c;border:1.5px solid #e91e8c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 메일 본문에 삽입</button>':''}</div>`;
+
+      if (data.emailVariants) {
+        resultDiv.querySelectorAll('.mm-fp-ev-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const v = data.emailVariants[+btn.dataset.idx];
+            if (v && v.htmlBase64) {
+              const html = atob(v.htmlBase64);
+              const blob = new Blob([html], { type: 'text/html' });
+              window.open(URL.createObjectURL(blob), '_blank');
+            }
+          });
+        });
+      }
+      if (data.htmlBase64 && !(data.emailVariants && data.emailVariants.length)) {
         resultDiv.querySelector('#mm-fp-doc-open-html')?.addEventListener('click', () => {
           const html = atob(data.htmlBase64);
           const blob = new Blob([html], { type: 'text/html' });
           window.open(URL.createObjectURL(blob), '_blank');
         });
       }
+      function mm_fp_dl(b64, mime, ext) {
+        const bytes = atob(b64);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        const blob = new Blob([arr], { type: mime });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (data.docTitle || 'document') + ext;
+        a.click();
+      }
+      if (data.wordBase64) {
+        resultDiv.querySelector('#mm-fp-doc-dl-word')?.addEventListener('click', () => {
+          mm_fp_dl(data.wordBase64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx');
+        });
+      }
+      if (data.excelBase64) {
+        resultDiv.querySelector('#mm-fp-doc-dl-excel')?.addEventListener('click', () => {
+          mm_fp_dl(data.excelBase64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx');
+        });
+      }
+      if (data.pdfBase64) {
+        resultDiv.querySelector('#mm-fp-doc-dl-pdf')?.addEventListener('click', () => {
+          mm_fp_dl(data.pdfBase64, 'application/pdf', '.pdf');
+        });
+      }
       if (data.coverNote) {
-        resultDiv.querySelector('#mm-fp-doc-copy-note')?.addEventListener('click', () => {
-          navigator.clipboard.writeText(data.coverNote).catch(() => {});
-          showToast('메일 본문이 복사되었습니다', 'success');
+        resultDiv.querySelector('#mm-fp-doc-insert-note')?.addEventListener('click', () => {
+          const area = document.querySelector('[contenteditable="true"][role="textbox"]') ||
+                       document.querySelector('textarea[name*="mail"], textarea[id*="mail"], textarea[id*="compose"]') ||
+                       document.querySelector('.note_editor, .mail_editor, .compose-body') ||
+                       document.querySelector('[contenteditable="true"]');
+          if (area) {
+            area.focus();
+            if (area.tagName === 'TEXTAREA') {
+              const pos = area.selectionStart || 0;
+              area.value = area.value.substring(0, pos) + data.coverNote + area.value.substring(pos);
+              area.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+              try { document.execCommand('insertText', false, data.coverNote); }
+              catch(e) { area.textContent += data.coverNote; }
+            }
+            showToast('메일 본문에 삽입됐습니다', 'success');
+          } else {
+            navigator.clipboard.writeText(data.coverNote).catch(() => {});
+            showToast('메일 본문이 복사되었습니다', 'success');
+          }
         });
       }
     }
