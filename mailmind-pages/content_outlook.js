@@ -6,15 +6,19 @@ const API_KEY_content_outlook = 'mm-app-2026';
 
 function workerFetch(url, options, reqId) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options, reqId }, res => {
-      void chrome.runtime.lastError;
-      if (!res || !res.ok) {
-        const err = res?.error || 'fetch failed';
-        reject(new Error(err === 'timeout' ? 'Request timed out. Please try again.' : err));
-        return;
-      }
-      resolve({ ok: true, json: () => Promise.resolve(res.data) });
-    });
+    function attempt(left) {
+      chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options, reqId }, res => {
+        void chrome.runtime.lastError;
+        if (!res && left > 0) { setTimeout(() => attempt(left - 1), 300); return; }
+        if (!res || !res.ok) {
+          const err = res?.error || 'fetch failed';
+          reject(new Error(err === 'timeout' ? 'Request timed out. Please try again.' : err));
+          return;
+        }
+        resolve({ ok: true, json: () => Promise.resolve(res.data) });
+      });
+    }
+    attempt(2);
   });
 }
 function escapeHtmlOL(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
