@@ -40,14 +40,15 @@
 | 10 | `[-]` | **팝빌 역발행 테스트 → 운영전환** | _worker.js | POPBILL_TEST_MODE=false 운영전환 완료. 실환경 역발행 실전 테스트 필요 (기사 실사업자번호로). 부가세 포함/별도 방식 확인 필요 |
 | 11 | `[ ]` | **관제센터 채팅/공지/결제 탭 실사용 테스트** | mbtico-pages/_worker.js | soungkyekim@naver.com으로 실제 로그인 후 테스트 |
 | 12 | `[ ]` | **Cloudflare filo-pages Pages 프로젝트 수동 삭제** | — | Cloudflare 대시보드에서 삭제 (PR #216 이후 미처리) |
+| 13 | `[x]` | **배달대행 기사현황 관리자 입력 시스템** (2026-11-14 완료) | _worker.js, donway-pages/index.html | dw_driver_stats 신규 컬렉션. Worker SA키로 Firestore 규칙 우회. pageDeliveryDriverAdmin() 관리자 UI. 기사 화면 30초 폴링. AI정산(pageDeliverySettle) 무변경. PR #236 |
 
 ## 🗒️ 신규 계획 (미착수)
 
 | # | 상태 | 항목 | 메모 |
 |---|---|---|---|
-| 13 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | 루틴상태+오류현황+소셜스케줄 한눈에 |
-| 14 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html |
-| 15 | `[ ]` | 네이버 POS 파트너 신청 | smartplace.naver.com B2B 파트너 문의 |
+| 14 | `[ ]` | AIVO 대시보드 (mbtico.kr/aivo) | 루틴상태+오류현황+소셜스케줄 한눈에 |
+| 15 | `[ ]` | 사이트 리디자인 (Reznikov 스타일) | mbti_landing.html, filo-landing.html |
+| 16 | `[ ]` | 네이버 POS 파트너 신청 | smartplace.naver.com B2B 파트너 문의 |
 
 ---
 
