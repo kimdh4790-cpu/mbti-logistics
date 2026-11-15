@@ -4,13 +4,21 @@
 const WORKER_URL_OL = 'https://mailmind-api.kimdh4790.workers.dev';
 const API_KEY_content_outlook = 'mm-app-2026';
 
-function workerFetch(url, options) {
+function workerFetch(url, options, reqId) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options }, res => {
-      void chrome.runtime.lastError;
-      if (!res || !res.ok) { reject(new Error(res?.error || 'fetch failed')); return; }
-      resolve({ ok: true, json: () => Promise.resolve(res.data) });
-    });
+    function attempt(left) {
+      chrome.runtime.sendMessage({ type: 'MM_WORKER_FETCH', url, options, reqId }, res => {
+        void chrome.runtime.lastError;
+        if (!res && left > 0) { setTimeout(() => attempt(left - 1), 300); return; }
+        if (!res || !res.ok) {
+          const err = res?.error || 'fetch failed';
+          reject(new Error(err === 'timeout' ? 'Request timed out. Please try again.' : err));
+          return;
+        }
+        resolve({ ok: true, json: () => Promise.resolve(res.data) });
+      });
+    }
+    attempt(2);
   });
 }
 function escapeHtmlOL(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -1433,20 +1441,20 @@ function addOutlookFloatingBtn() {
 // ===== Outlook Compose Panel (Gmail과 동일한 구조) =====
 
 const COMPOSE_I18N_OL = {
-  Korean:     { tab1:'✨ AI 작성', tab2:'✏️ 손질', composePlaceholder:'예: 거래처에 납품 일정 확인 요청. 다음 주까지 답변 필요.', refinePlaceholder:'손질할 이메일을 입력하세요.', toneLabel:'톤', langLabel:'언어', composeBtn:'✨ AI 이메일 작성', refineBtn:'✏️ 손질', generatingText:'⏳ 작성 중...', subjectLabel:'제목', bodyLabel:'본문', insertBtn:'✉️ Outlook 삽입', copyBtn:'📋 복사', regenBtn:'🔄', translateLabel:'번역', usageText:(u,l)=>`이번 달 ${u}/${l}회`, errEmpty:'내용을 입력해주세요.', errLimit:'이번 달 한도 초과. 업그레이드해주세요.', errFail:'생성 실패. 잠시 후 다시 시도해주세요.' },
-  English:    { tab1:'✨ AI Write', tab2:'✏️ Refine', composePlaceholder:'e.g. Ask supplier to confirm delivery by next Tuesday.', refinePlaceholder:'Paste the email you want to refine.', toneLabel:'Tone', langLabel:'Language', composeBtn:'✨ Compose Email', refineBtn:'✏️ Refine Email', generatingText:'⏳ Writing...', subjectLabel:'Subject', bodyLabel:'Body', insertBtn:'✉️ Insert to Outlook', copyBtn:'📋 Copy', regenBtn:'🔄', translateLabel:'Translate', usageText:(u,l)=>`${u}/${l} this month`, errEmpty:'Please enter content.', errLimit:'Monthly limit reached. Please upgrade.', errFail:'Generation failed. Please try again.' },
-  Japanese:   { tab1:'✨ AI作成', tab2:'✏️ 修正', composePlaceholder:'例：取引先に納品日程の確認を依頼。来週火曜日までに返信が必要。', refinePlaceholder:'修正するメールを入力してください。', toneLabel:'トーン', langLabel:'言語', composeBtn:'✨ メール作成', refineBtn:'✏️ メール修正', generatingText:'⏳ 作成中...', subjectLabel:'件名', bodyLabel:'本文', insertBtn:'✉️ Outlookに挿入', copyBtn:'📋 コピー', regenBtn:'🔄', translateLabel:'翻訳', usageText:(u,l)=>`今月 ${u}/${l}回`, errEmpty:'内容を入力してください。', errLimit:'月間上限に達しました。', errFail:'生成に失敗しました。' },
-  Chinese:    { tab1:'✨ AI写信', tab2:'✏️ 润色', composePlaceholder:'例：请求供应商确认下周二前的交货时间。', refinePlaceholder:'粘贴要润色的邮件草稿。', toneLabel:'语气', langLabel:'语言', composeBtn:'✨ 撰写邮件', refineBtn:'✏️ 润色邮件', generatingText:'⏳ 撰写中...', subjectLabel:'主题', bodyLabel:'正文', insertBtn:'✉️ 插入Outlook', copyBtn:'📋 复制', regenBtn:'🔄', translateLabel:'翻译', usageText:(u,l)=>`本月 ${u}/${l}次`, errEmpty:'请输入内容。', errLimit:'本月使用次数已达上限。', errFail:'生成失败，请稍后重试。' },
-  Spanish:    { tab1:'✨ IA Redactar', tab2:'✏️ Refinar', composePlaceholder:'Ej: Solicitar confirmación de entrega al proveedor para el próximo martes.', refinePlaceholder:'Pega el borrador que quieres refinar.', toneLabel:'Tono', langLabel:'Idioma', composeBtn:'✨ Redactar correo', refineBtn:'✏️ Refinar correo', generatingText:'⏳ Redactando...', subjectLabel:'Asunto', bodyLabel:'Cuerpo', insertBtn:'✉️ Insertar en Outlook', copyBtn:'📋 Copiar', regenBtn:'🔄', translateLabel:'Traducir', usageText:(u,l)=>`${u}/${l} este mes`, errEmpty:'Por favor ingresa contenido.', errLimit:'Límite mensual alcanzado.', errFail:'Error al generar.' },
-  French:     { tab1:'✨ IA Rédiger', tab2:'✏️ Affiner', composePlaceholder:'Ex: Demander au fournisseur de confirmer la livraison avant mardi.', refinePlaceholder:'Collez le brouillon à affiner.', toneLabel:'Ton', langLabel:'Langue', composeBtn:'✨ Rédiger l\'email', refineBtn:'✏️ Affiner', generatingText:'⏳ Rédaction...', subjectLabel:'Objet', bodyLabel:'Corps', insertBtn:'✉️ Insérer dans Outlook', copyBtn:'📋 Copier', regenBtn:'🔄', translateLabel:'Traduire', usageText:(u,l)=>`${u}/${l} ce mois`, errEmpty:'Veuillez saisir du contenu.', errLimit:'Limite mensuelle atteinte.', errFail:'Échec de la génération.' },
-  German:     { tab1:'✨ KI Verfassen', tab2:'✏️ Verfeinern', composePlaceholder:'Z.B.: Lieferant um Bestätigung bis Dienstag bitten.', refinePlaceholder:'Entwurf zum Verfeinern einfügen.', toneLabel:'Ton', langLabel:'Sprache', composeBtn:'✨ E-Mail verfassen', refineBtn:'✏️ Verfeinern', generatingText:'⏳ Wird verfasst...', subjectLabel:'Betreff', bodyLabel:'Text', insertBtn:'✉️ In Outlook einfügen', copyBtn:'📋 Kopieren', regenBtn:'🔄', translateLabel:'Übersetzen', usageText:(u,l)=>`${u}/${l} diesen Monat`, errEmpty:'Bitte Inhalt eingeben.', errLimit:'Monatliches Limit erreicht.', errFail:'Generierung fehlgeschlagen.' },
-  Portuguese: { tab1:'✨ IA Redigir', tab2:'✏️ Refinar', composePlaceholder:'Ex: Solicitar confirmação de entrega ao fornecedor até terça.', refinePlaceholder:'Cole o rascunho para refinar.', toneLabel:'Tom', langLabel:'Idioma', composeBtn:'✨ Redigir e-mail', refineBtn:'✏️ Refinar', generatingText:'⏳ Redigindo...', subjectLabel:'Assunto', bodyLabel:'Corpo', insertBtn:'✉️ Inserir no Outlook', copyBtn:'📋 Copiar', regenBtn:'🔄', translateLabel:'Traduzir', usageText:(u,l)=>`${u}/${l} este mês`, errEmpty:'Por favor insira conteúdo.', errLimit:'Limite mensal atingido.', errFail:'Falha na geração.' },
-  Arabic:     { tab1:'✨ كتابة AI', tab2:'✏️ تحسين', composePlaceholder:'مثال: طلب تأكيد موعد التسليم قبل الثلاثاء.', refinePlaceholder:'الصق المسودة للتحسين.', toneLabel:'النبرة', langLabel:'اللغة', composeBtn:'✨ كتابة البريد', refineBtn:'✏️ تحسين', generatingText:'⏳ جارٍ الكتابة...', subjectLabel:'الموضوع', bodyLabel:'النص', insertBtn:'✉️ إدراج في Outlook', copyBtn:'📋 نسخ', regenBtn:'🔄', translateLabel:'ترجمة', usageText:(u,l)=>`${u}/${l} هذا الشهر`, errEmpty:'يرجى إدخال محتوى.', errLimit:'تم الوصول إلى الحد الشهري.', errFail:'فشل الإنشاء.' },
-  Vietnamese: { tab1:'✨ AI Soạn', tab2:'✏️ Tinh chỉnh', composePlaceholder:'VD: Yêu cầu nhà cung cấp xác nhận lịch giao hàng trước thứ Ba.', refinePlaceholder:'Dán bản nháp cần tinh chỉnh.', toneLabel:'Giọng điệu', langLabel:'Ngôn ngữ', composeBtn:'✨ Soạn email', refineBtn:'✏️ Tinh chỉnh', generatingText:'⏳ Đang soạn...', subjectLabel:'Chủ đề', bodyLabel:'Nội dung', insertBtn:'✉️ Chèn vào Outlook', copyBtn:'📋 Sao chép', regenBtn:'🔄', translateLabel:'Dịch', usageText:(u,l)=>`${u}/${l} tháng này`, errEmpty:'Vui lòng nhập nội dung.', errLimit:'Đã đạt giới hạn tháng.', errFail:'Tạo thất bại.' },
-  Thai:       { tab1:'✨ AI เขียน', tab2:'✏️ ปรับแต่ง', composePlaceholder:'เช่น: ขอให้ซัพพลายเออร์ยืนยันกำหนดส่งก่อนวันอังคาร', refinePlaceholder:'วางร่างอีเมลที่ต้องการปรับแต่ง', toneLabel:'โทน', langLabel:'ภาษา', composeBtn:'✨ เขียนอีเมล', refineBtn:'✏️ ปรับแต่ง', generatingText:'⏳ กำลังเขียน...', subjectLabel:'หัวข้อ', bodyLabel:'เนื้อหา', insertBtn:'✉️ แทรกใน Outlook', copyBtn:'📋 คัดลอก', regenBtn:'🔄', translateLabel:'แปลภาษา', usageText:(u,l)=>`${u}/${l} เดือนนี้`, errEmpty:'กรุณาใส่เนื้อหา', errLimit:'ถึงขีดจำกัดรายเดือนแล้ว', errFail:'การสร้างล้มเหลว' },
-  Indonesian: { tab1:'✨ AI Tulis', tab2:'✏️ Poles', composePlaceholder:'Cth: Minta konfirmasi jadwal pengiriman dari pemasok sebelum Selasa.', refinePlaceholder:'Tempel draf yang ingin dipoles.', toneLabel:'Nada', langLabel:'Bahasa', composeBtn:'✨ Tulis Email', refineBtn:'✏️ Poles', generatingText:'⏳ Sedang menulis...', subjectLabel:'Subjek', bodyLabel:'Isi', insertBtn:'✉️ Masukkan ke Outlook', copyBtn:'📋 Salin', regenBtn:'🔄', translateLabel:'Terjemahkan', usageText:(u,l)=>`${u}/${l} bulan ini`, errEmpty:'Silakan masukkan konten.', errLimit:'Batas bulanan tercapai.', errFail:'Gagal menghasilkan.' },
-  Italian:    { tab1:'✨ IA Scrivi', tab2:'✏️ Rifinisci', composePlaceholder:'Es: Chiedere al fornitore conferma della consegna entro martedì.', refinePlaceholder:'Incolla la bozza da rifinire.', toneLabel:'Tono', langLabel:'Lingua', composeBtn:'✨ Scrivi email', refineBtn:'✏️ Rifinisci', generatingText:'⏳ Scrittura...', subjectLabel:'Oggetto', bodyLabel:'Corpo', insertBtn:'✉️ Inserisci in Outlook', copyBtn:'📋 Copia', regenBtn:'🔄', translateLabel:'Traduci', usageText:(u,l)=>`${u}/${l} questo mese`, errEmpty:'Inserisci il contenuto.', errLimit:'Limite mensile raggiunto.', errFail:'Generazione fallita.' },
-  Turkish:    { tab1:'✨ AI Yaz', tab2:'✏️ İyileştir', composePlaceholder:'Örn: Tedarikçiden Salı\'ya kadar teslimat takvimine onay isteyin.', refinePlaceholder:'İyileştirmek istediğiniz taslağı yapıştırın.', toneLabel:'Ton', langLabel:'Dil', composeBtn:'✨ E-posta Yaz', refineBtn:'✏️ İyileştir', generatingText:'⏳ Yazılıyor...', subjectLabel:'Konu', bodyLabel:'İçerik', insertBtn:'✉️ Outlook\'a Ekle', copyBtn:'📋 Kopyala', regenBtn:'🔄', translateLabel:'Çevir', usageText:(u,l)=>`Bu ay ${u}/${l}`, errEmpty:'Lütfen içerik girin.', errLimit:'Aylık limit doldu.', errFail:'Oluşturma başarısız.' },
+  Korean:     { tab1:'✨ AI 작성', tab2:'✏️ 손질', composePlaceholder:'예: 거래처에 납품 일정 확인 요청. 다음 주까지 답변 필요.', refinePlaceholder:'손질할 이메일을 입력하세요.', toneLabel:'톤', langLabel:'언어', composeBtn:'✨ AI 이메일 작성', refineBtn:'✏️ 손질', generatingText:'⏳ 작성 중...', subjectLabel:'제목', bodyLabel:'본문', insertBtn:'✉️ Outlook 삽입', copyBtn:'📋 복사', regenBtn:'🔄', translateLabel:'번역', usageText:(u,l)=>`이번 달 ${u}/${l}회`, errEmpty:'내용을 입력해주세요.', errLimit:'이번 달 한도 초과. 업그레이드해주세요.', errFail:'생성 실패. 잠시 후 다시 시도해주세요.', tab3:'📄 문서', docPlaceholder:'문서로 만들 내용을 입력하세요', docGenBtn:'📄 문서 생성', docPlanMsg:'문서 생성은 Pro+ 플랜 이상에서 사용 가능합니다' },
+  English:    { tab1:'✨ AI Write', tab2:'✏️ Refine', composePlaceholder:'e.g. Ask supplier to confirm delivery by next Tuesday.', refinePlaceholder:'Paste the email you want to refine.', toneLabel:'Tone', langLabel:'Language', composeBtn:'✨ Compose Email', refineBtn:'✏️ Refine Email', generatingText:'⏳ Writing...', subjectLabel:'Subject', bodyLabel:'Body', insertBtn:'✉️ Insert to Outlook', copyBtn:'📋 Copy', regenBtn:'🔄', translateLabel:'Translate', usageText:(u,l)=>`${u}/${l} this month`, errEmpty:'Please enter content.', errLimit:'Monthly limit reached. Please upgrade.', errFail:'Generation failed. Please try again.', tab3:'📄 Doc', docPlaceholder:'Enter content to turn into a document', docGenBtn:'📄 Generate Doc', docPlanMsg:'Document generation requires Pro+ or Team plan' },
+  Japanese:   { tab1:'✨ AI作成', tab2:'✏️ 修正', composePlaceholder:'例：取引先に納品日程の確認を依頼。来週火曜日までに返信が必要。', refinePlaceholder:'修正するメールを入力してください。', toneLabel:'トーン', langLabel:'言語', composeBtn:'✨ メール作成', refineBtn:'✏️ メール修正', generatingText:'⏳ 作成中...', subjectLabel:'件名', bodyLabel:'本文', insertBtn:'✉️ Outlookに挿入', copyBtn:'📋 コピー', regenBtn:'🔄', translateLabel:'翻訳', usageText:(u,l)=>`今月 ${u}/${l}回`, errEmpty:'内容を入力してください。', errLimit:'月間上限に達しました。', errFail:'生成に失敗しました。', tab3:'📄 文書', docPlaceholder:'文書にする内容を入力してください', docGenBtn:'📄 文書生成', docPlanMsg:'文書生成はPro+プラン以上でご利用いただけます' },
+  Chinese:    { tab1:'✨ AI写信', tab2:'✏️ 润色', composePlaceholder:'例：请求供应商确认下周二前的交货时间。', refinePlaceholder:'粘贴要润色的邮件草稿。', toneLabel:'语气', langLabel:'语言', composeBtn:'✨ 撰写邮件', refineBtn:'✏️ 润色邮件', generatingText:'⏳ 撰写中...', subjectLabel:'主题', bodyLabel:'正文', insertBtn:'✉️ 插入Outlook', copyBtn:'📋 复制', regenBtn:'🔄', translateLabel:'翻译', usageText:(u,l)=>`本月 ${u}/${l}次`, errEmpty:'请输入内容。', errLimit:'本月使用次数已达上限。', errFail:'生成失败，请稍后重试。', tab3:'📄 文档', docPlaceholder:'输入要生成文档的内容', docGenBtn:'📄 生成文档', docPlanMsg:'文档生成需要Pro+或Team计划' },
+  Spanish:    { tab1:'✨ IA Redactar', tab2:'✏️ Refinar', composePlaceholder:'Ej: Solicitar confirmación de entrega al proveedor para el próximo martes.', refinePlaceholder:'Pega el borrador que quieres refinar.', toneLabel:'Tono', langLabel:'Idioma', composeBtn:'✨ Redactar correo', refineBtn:'✏️ Refinar correo', generatingText:'⏳ Redactando...', subjectLabel:'Asunto', bodyLabel:'Cuerpo', insertBtn:'✉️ Insertar en Outlook', copyBtn:'📋 Copiar', regenBtn:'🔄', translateLabel:'Traducir', usageText:(u,l)=>`${u}/${l} este mes`, errEmpty:'Por favor ingresa contenido.', errLimit:'Límite mensual alcanzado.', errFail:'Error al generar.', tab3:'📄 Doc', docPlaceholder:'Ingresa el contenido para convertir en documento', docGenBtn:'📄 Generar Doc', docPlanMsg:'La generación de documentos requiere plan Pro+ o Team' },
+  French:     { tab1:'✨ IA Rédiger', tab2:'✏️ Affiner', composePlaceholder:'Ex: Demander au fournisseur de confirmer la livraison avant mardi.', refinePlaceholder:'Collez le brouillon à affiner.', toneLabel:'Ton', langLabel:'Langue', composeBtn:'✨ Rédiger l\'email', refineBtn:'✏️ Affiner', generatingText:'⏳ Rédaction...', subjectLabel:'Objet', bodyLabel:'Corps', insertBtn:'✉️ Insérer dans Outlook', copyBtn:'📋 Copier', regenBtn:'🔄', translateLabel:'Traduire', usageText:(u,l)=>`${u}/${l} ce mois`, errEmpty:'Veuillez saisir du contenu.', errLimit:'Limite mensuelle atteinte.', errFail:'Échec de la génération.', tab3:'📄 Doc', docPlaceholder:'Saisissez le contenu à transformer en document', docGenBtn:'📄 Générer Doc', docPlanMsg:'La génération de documents nécessite le plan Pro+ ou Team' },
+  German:     { tab1:'✨ KI Verfassen', tab2:'✏️ Verfeinern', composePlaceholder:'Z.B.: Lieferant um Bestätigung bis Dienstag bitten.', refinePlaceholder:'Entwurf zum Verfeinern einfügen.', toneLabel:'Ton', langLabel:'Sprache', composeBtn:'✨ E-Mail verfassen', refineBtn:'✏️ Verfeinern', generatingText:'⏳ Wird verfasst...', subjectLabel:'Betreff', bodyLabel:'Text', insertBtn:'✉️ In Outlook einfügen', copyBtn:'📋 Kopieren', regenBtn:'🔄', translateLabel:'Übersetzen', usageText:(u,l)=>`${u}/${l} diesen Monat`, errEmpty:'Bitte Inhalt eingeben.', errLimit:'Monatliches Limit erreicht.', errFail:'Generierung fehlgeschlagen.', tab3:'📄 Dok', docPlaceholder:'Inhalt für die Dokumenterstellung eingeben', docGenBtn:'📄 Dokument erstellen', docPlanMsg:'Dokumenterstellung erfordert Pro+ oder Team Plan' },
+  Portuguese: { tab1:'✨ IA Redigir', tab2:'✏️ Refinar', composePlaceholder:'Ex: Solicitar confirmação de entrega ao fornecedor até terça.', refinePlaceholder:'Cole o rascunho para refinar.', toneLabel:'Tom', langLabel:'Idioma', composeBtn:'✨ Redigir e-mail', refineBtn:'✏️ Refinar', generatingText:'⏳ Redigindo...', subjectLabel:'Assunto', bodyLabel:'Corpo', insertBtn:'✉️ Inserir no Outlook', copyBtn:'📋 Copiar', regenBtn:'🔄', translateLabel:'Traduzir', usageText:(u,l)=>`${u}/${l} este mês`, errEmpty:'Por favor insira conteúdo.', errLimit:'Limite mensal atingido.', errFail:'Falha na geração.', tab3:'📄 Doc', docPlaceholder:'Insira o conteúdo para transformar em documento', docGenBtn:'📄 Gerar Doc', docPlanMsg:'Geração de documentos requer plano Pro+ ou Team' },
+  Arabic:     { tab1:'✨ كتابة AI', tab2:'✏️ تحسين', composePlaceholder:'مثال: طلب تأكيد موعد التسليم قبل الثلاثاء.', refinePlaceholder:'الصق المسودة للتحسين.', toneLabel:'النبرة', langLabel:'اللغة', composeBtn:'✨ كتابة البريد', refineBtn:'✏️ تحسين', generatingText:'⏳ جارٍ الكتابة...', subjectLabel:'الموضوع', bodyLabel:'النص', insertBtn:'✉️ إدراج في Outlook', copyBtn:'📋 نسخ', regenBtn:'🔄', translateLabel:'ترجمة', usageText:(u,l)=>`${u}/${l} هذا الشهر`, errEmpty:'يرجى إدخال محتوى.', errLimit:'تم الوصول إلى الحد الشهري.', errFail:'فشل الإنشاء.', tab3:'📄 مستند', docPlaceholder:'أدخل المحتوى لتحويله إلى مستند', docGenBtn:'📄 إنشاء مستند', docPlanMsg:'إنشاء المستندات يتطلب خطة Pro+ أو Team' },
+  Vietnamese: { tab1:'✨ AI Soạn', tab2:'✏️ Tinh chỉnh', composePlaceholder:'VD: Yêu cầu nhà cung cấp xác nhận lịch giao hàng trước thứ Ba.', refinePlaceholder:'Dán bản nháp cần tinh chỉnh.', toneLabel:'Giọng điệu', langLabel:'Ngôn ngữ', composeBtn:'✨ Soạn email', refineBtn:'✏️ Tinh chỉnh', generatingText:'⏳ Đang soạn...', subjectLabel:'Chủ đề', bodyLabel:'Nội dung', insertBtn:'✉️ Chèn vào Outlook', copyBtn:'📋 Sao chép', regenBtn:'🔄', translateLabel:'Dịch', usageText:(u,l)=>`${u}/${l} tháng này`, errEmpty:'Vui lòng nhập nội dung.', errLimit:'Đã đạt giới hạn tháng.', errFail:'Tạo thất bại.', tab3:'📄 Tài liệu', docPlaceholder:'Nhập nội dung để tạo tài liệu', docGenBtn:'📄 Tạo tài liệu', docPlanMsg:'Tạo tài liệu yêu cầu gói Pro+ hoặc Team' },
+  Thai:       { tab1:'✨ AI เขียน', tab2:'✏️ ปรับแต่ง', composePlaceholder:'เช่น: ขอให้ซัพพลายเออร์ยืนยันกำหนดส่งก่อนวันอังคาร', refinePlaceholder:'วางร่างอีเมลที่ต้องการปรับแต่ง', toneLabel:'โทน', langLabel:'ภาษา', composeBtn:'✨ เขียนอีเมล', refineBtn:'✏️ ปรับแต่ง', generatingText:'⏳ กำลังเขียน...', subjectLabel:'หัวข้อ', bodyLabel:'เนื้อหา', insertBtn:'✉️ แทรกใน Outlook', copyBtn:'📋 คัดลอก', regenBtn:'🔄', translateLabel:'แปลภาษา', usageText:(u,l)=>`${u}/${l} เดือนนี้`, errEmpty:'กรุณาใส่เนื้อหา', errLimit:'ถึงขีดจำกัดรายเดือนแล้ว', errFail:'การสร้างล้มเหลว', tab3:'📄 เอกสาร', docPlaceholder:'ป้อนเนื้อหาเพื่อสร้างเอกสาร', docGenBtn:'📄 สร้างเอกสาร', docPlanMsg:'การสร้างเอกสารต้องใช้แผน Pro+ หรือ Team' },
+  Indonesian: { tab1:'✨ AI Tulis', tab2:'✏️ Poles', composePlaceholder:'Cth: Minta konfirmasi jadwal pengiriman dari pemasok sebelum Selasa.', refinePlaceholder:'Tempel draf yang ingin dipoles.', toneLabel:'Nada', langLabel:'Bahasa', composeBtn:'✨ Tulis Email', refineBtn:'✏️ Poles', generatingText:'⏳ Sedang menulis...', subjectLabel:'Subjek', bodyLabel:'Isi', insertBtn:'✉️ Masukkan ke Outlook', copyBtn:'📋 Salin', regenBtn:'🔄', translateLabel:'Terjemahkan', usageText:(u,l)=>`${u}/${l} bulan ini`, errEmpty:'Silakan masukkan konten.', errLimit:'Batas bulanan tercapai.', errFail:'Gagal menghasilkan.', tab3:'📄 Dokumen', docPlaceholder:'Masukkan konten untuk dijadikan dokumen', docGenBtn:'📄 Buat Dokumen', docPlanMsg:'Pembuatan dokumen memerlukan paket Pro+ atau Team' },
+  Italian:    { tab1:'✨ IA Scrivi', tab2:'✏️ Rifinisci', composePlaceholder:'Es: Chiedere al fornitore conferma della consegna entro martedì.', refinePlaceholder:'Incolla la bozza da rifinire.', toneLabel:'Tono', langLabel:'Lingua', composeBtn:'✨ Scrivi email', refineBtn:'✏️ Rifinisci', generatingText:'⏳ Scrittura...', subjectLabel:'Oggetto', bodyLabel:'Corpo', insertBtn:'✉️ Inserisci in Outlook', copyBtn:'📋 Copia', regenBtn:'🔄', translateLabel:'Traduci', usageText:(u,l)=>`${u}/${l} questo mese`, errEmpty:'Inserisci il contenuto.', errLimit:'Limite mensile raggiunto.', errFail:'Generazione fallita.', tab3:'📄 Doc', docPlaceholder:'Inserisci il contenuto da trasformare in documento', docGenBtn:'📄 Genera Doc', docPlanMsg:'La generazione di documenti richiede piano Pro+ o Team' },
+  Turkish:    { tab1:'✨ AI Yaz', tab2:'✏️ İyileştir', composePlaceholder:'Örn: Tedarikçiden Salı\'ya kadar teslimat takvimine onay isteyin.', refinePlaceholder:'İyileştirmek istediğiniz taslağı yapıştırın.', toneLabel:'Ton', langLabel:'Dil', composeBtn:'✨ E-posta Yaz', refineBtn:'✏️ İyileştir', generatingText:'⏳ Yazılıyor...', subjectLabel:'Konu', bodyLabel:'İçerik', insertBtn:'✉️ Outlook\'a Ekle', copyBtn:'📋 Kopyala', regenBtn:'🔄', translateLabel:'Çevir', usageText:(u,l)=>`Bu ay ${u}/${l}`, errEmpty:'Lütfen içerik girin.', errLimit:'Aylık limit doldu.', errFail:'Oluşturma başarısız.', tab3:'📄 Belge', docPlaceholder:'Belgeye dönüştürülecek içeriği girin', docGenBtn:'📄 Belge Oluştur', docPlanMsg:'Belge oluşturma Pro+ veya Team planı gerektirir' },
 };
 
 const COMPOSE_TONES_OL = [
@@ -1626,19 +1634,21 @@ async function openOutlookComposePanel() {
         <div style="display:flex;gap:6px;margin-bottom:13px;background:#f3f3f3;border-radius:10px;padding:3px">
           <button id="mm-ol-cp-tab-compose" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${curMode==='compose'?'background:#e91e8c;color:#fff;box-shadow:0 2px 6px rgba(233,30,140,.3)':'background:transparent;color:#666'}">${t.tab1}</button>
           <button id="mm-ol-cp-tab-refine" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${curMode==='refine'?'background:#e91e8c;color:#fff;box-shadow:0 2px 6px rgba(233,30,140,.3)':'background:transparent;color:#666'}">${t.tab2}</button>
+          <button id="mm-ol-cp-tab-doc" style="flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${curMode==='doc'?'background:#e91e8c;color:#fff;box-shadow:0 2px 6px rgba(233,30,140,.3)':'background:transparent;color:#666'}">${t.tab3||'\uD83D\uDCC4 \uBB38\uC11C'}</button>
         </div>
-        <textarea id="mm-ol-cp-input" placeholder="${curMode==='compose' ? t.composePlaceholder : t.refinePlaceholder}" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1.5px solid #e8e8e8;border-radius:9px;font-size:12px;resize:vertical;min-height:${curMode==='refine'?'110':'70'}px;font-family:inherit;outline:none;line-height:1.55;color:#333;background:#fafafa" onfocus="this.style.borderColor='#e91e8c';this.style.background='#fff'" onblur="this.style.borderColor='#e8e8e8';this.style.background='#fafafa'"></textarea>
-        <div style="margin-top:11px">
+        <textarea id="mm-ol-cp-input" placeholder="${curMode==='doc' ? (t.docPlaceholder||'\uBB38\uC11C\uB85C \uB9CC\uB4E4 \uB0B4\uC6A9\uC744 \uC785\uB825\uD558\uC138\uC694') : curMode==='compose' ? t.composePlaceholder : t.refinePlaceholder}" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1.5px solid #e8e8e8;border-radius:9px;font-size:12px;resize:vertical;min-height:${curMode==='refine'?'110':'70'}px;font-family:inherit;outline:none;line-height:1.55;color:#333;background:#fafafa" onfocus="this.style.borderColor='#e91e8c';this.style.background='#fff'" onblur="this.style.borderColor='#e8e8e8';this.style.background='#fafafa'"></textarea>
+          <div id="mm-ol-cp-doc-chips" style="display:${curMode==='doc'?'flex':'none'};flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+        <div style="margin-top:11px;display:${curMode==='doc'?'none':'block'}">
           <div style="font-size:10px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">${t.toneLabel}</div>
           ${toneDropdownOL()}
         </div>
-        <div style="margin-top:11px;margin-bottom:13px">
+        <div style="margin-top:11px;margin-bottom:13px;display:${curMode==='doc'?'none':'block'}">
           <div style="font-size:10px;color:#aaa;font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">${t.langLabel}</div>
           ${langDropdownOL()}
         </div>
         <div style="display:flex;gap:7px">
-          <button id="mm-ol-cp-gen-btn" style="flex:1;padding:11px;background:linear-gradient(135deg,#e91e8c,#c2185b);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(233,30,140,.3)" onmouseenter="this.style.opacity='.9'" onmouseleave="this.style.opacity='1'">${curMode==='compose' ? t.composeBtn : t.refineBtn}</button>
-          <button id="mm-ol-cp-compare" style="flex:1;padding:11px;background:#fff3e0;color:#f57c00;border:1.5px solid #ffb74d;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">${COMPARE_BTN_LABELS_OL[uiLang]||'🔀 비교 3종'}</button>
+          <button id="mm-ol-cp-gen-btn" style="flex:1;padding:11px;background:linear-gradient(135deg,#e91e8c,#c2185b);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(233,30,140,.3)" onmouseenter="this.style.opacity='.9'" onmouseleave="this.style.opacity='1'">${curMode==='doc' ? (t.docGenBtn||'\uD83D\uDCC4 \uBB38\uC11C \uC0DD\uC131') : curMode==='compose' ? t.composeBtn : t.refineBtn}</button>
+          <button id="mm-ol-cp-compare" style="${curMode==='doc'?'display:none;':''} flex:1;padding:11px;background:#fff3e0;color:#f57c00;border:1.5px solid #ffb74d;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">${COMPARE_BTN_LABELS_OL[uiLang]||'🔀 비교 3종'}</button>
         </div>
         <div id="mm-ol-cp-result" style="display:none;margin-top:14px;border-top:1px solid #f0f0f0;padding-top:14px">
           <div id="mm-ol-cp-ver-tabs" style="display:none;gap:6px;margin-bottom:10px;flex-wrap:wrap"></div>
@@ -1675,6 +1685,7 @@ async function openOutlookComposePanel() {
 
     panel.querySelector('#mm-ol-cp-tab-compose').addEventListener('click', () => { curMode = 'compose'; renderOLCompose(); });
     panel.querySelector('#mm-ol-cp-tab-refine').addEventListener('click', () => { curMode = 'refine'; renderOLCompose(); });
+    panel.querySelector('#mm-ol-cp-tab-doc').addEventListener('click', () => { curMode = 'doc'; renderOLCompose(); loadDocCatalogOL(panel); });
 
     // 톤 드롭다운
     panel.querySelector('#mm-ol-cp-tone-trigger').addEventListener('click', (e) => {
@@ -1796,6 +1807,7 @@ async function openOutlookComposePanel() {
 
     // 생성 버튼
     panel.querySelector('#mm-ol-cp-gen-btn').addEventListener('click', async () => {
+      if (curMode === 'doc') { generateDocOL(); return; }
       const tone = curToneOL;
       const myLanguage = olComposeOutputLang;
       const genBtn = panel.querySelector('#mm-ol-cp-gen-btn');
@@ -1974,6 +1986,136 @@ async function openOutlookComposePanel() {
     } catch(e) { showToastOL('오류 발생', 'error'); }
     if (compareBtn) { compareBtn.disabled = false; compareBtn.textContent = COMPARE_BTN_LABELS_OL[uiLang]||'🔀 비교 3종'; }
   }
+
+
+
+async function loadDocCatalogOL(panel) {
+  if (!panel) return;
+  const chips = panel.querySelector('#mm-ol-cp-doc-chips');
+  if (!chips || chips.dataset.loaded) return;
+  try {
+    const res = await workerFetch(`${WORKER_URL_OL}/document-catalog?country=kr`, {
+      headers: { 'X-API-Key': API_KEY_content_outlook }
+    });
+    const data = await res.json();
+    const docs = data.docs || data.items || (Array.isArray(data) ? data : []);
+    if (docs.length > 0) {
+      chips.dataset.loaded = '1';
+      chips.innerHTML = docs.map(doc => {
+        const lbl = doc.name || doc.label || doc.title || String(doc);
+        return `<button class="ol-doc-chip" style="padding:3px 10px;border:1px solid #e91e8c;border-radius:12px;background:#fff;color:#e91e8c;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;">${escapeHtmlOL(lbl)}</button>`;
+      }).join('');
+      chips.querySelectorAll('.ol-doc-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const inp = panel.querySelector('#mm-ol-cp-input');
+          if (inp) { inp.value = btn.textContent; inp.dispatchEvent(new Event('input')); }
+        });
+      });
+    }
+  } catch(e) {}
+}
+async function generateDocOL() {
+  const panel = document.querySelector('#mm-ol-compose-panel');
+  if (!panel) return;
+  const t = COMPOSE_I18N_OL[uiLang] || COMPOSE_I18N_OL.Korean;
+  const input = panel.querySelector('#mm-ol-cp-input');
+  const prompt = input?.value?.trim();
+  if (!prompt) return;
+  const ud = await getUserDataOL();
+  if (ud.plan !== 'pro_plus' && ud.plan !== 'team') {
+    showToastOL(t.docPlanMsg || '문서 생성은 Pro+ 플랜 이상에서 사용 가능합니다', 'error');
+    return;
+  }
+  const genBtn = panel.querySelector('#mm-ol-cp-gen-btn');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '...'; }
+  const resultDiv = panel.querySelector('#mm-ol-cp-result');
+  if (resultDiv) { resultDiv.style.display = 'none'; resultDiv.innerHTML = ''; }
+  try {
+    const res = await workerFetch(`${WORKER_URL_OL}/generate-document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY_content_outlook },
+      body: JSON.stringify({ prompt, email: ud.userEmail, language: uiLang })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'failed');
+    if (resultDiv) {
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = `<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">${data.docTitle ? `<div style="font-size:12px;font-weight:700;color:#333;margin-bottom:4px">${data.docTitle}</div>` : ''}${(data.emailVariants||[]).map((v,i)=>`<button class="mm-ol-ev-btn" data-idx="${i}" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📧 ${v.format||v.type||'이메일'} 카드 열기</button>`).join('')}${data.htmlBase64&&!(data.emailVariants&&data.emailVariants.length)?'<button id="mm-ol-doc-open-html" style="padding:9px;background:#e91e8c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📄 HTML 새 탭에서 열기</button>':''}${data.wordBase64?'<button id="mm-ol-doc-dl-word" style="padding:9px;background:#fff;color:#1565c0;border:1.5px solid #1565c0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ Word 다운로드</button>':''}${data.excelBase64?'<button id="mm-ol-doc-dl-excel" style="padding:9px;background:#fff;color:#2e7d32;border:1.5px solid #2e7d32;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ Excel 다운로드</button>':''}${data.pdfBase64?'<button id="mm-ol-doc-dl-pdf" style="padding:9px;background:#fff;color:#b71c1c;border:1.5px solid #b71c1c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⬇️ PDF 다운로드</button>':''}${data.coverNote?'<button id="mm-ol-doc-insert-note" style="padding:9px;background:#fff;color:#e91e8c;border:1.5px solid #e91e8c;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">📋 메일 본문에 삽입</button>':''}</div>`;
+
+      if (data.emailVariants) {
+        resultDiv.querySelectorAll('.mm-ol-ev-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const v = data.emailVariants[+btn.dataset.idx];
+            if (v && v.htmlBase64) {
+              const html = atob(v.htmlBase64);
+              const blob = new Blob([html], { type: 'text/html' });
+              window.open(URL.createObjectURL(blob), '_blank');
+            }
+          });
+        });
+      }
+      if (data.htmlBase64 && !(data.emailVariants && data.emailVariants.length)) {
+        resultDiv.querySelector('#mm-ol-doc-open-html')?.addEventListener('click', () => {
+          const html = atob(data.htmlBase64);
+          const blob = new Blob([html], { type: 'text/html' });
+          window.open(URL.createObjectURL(blob), '_blank');
+        });
+      }
+      function mm_ol_dl(b64, mime, ext) {
+        const bytes = atob(b64);
+        const arr = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+        const blob = new Blob([arr], { type: mime });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = (data.docTitle || 'document') + ext;
+        a.click();
+      }
+      if (data.wordBase64) {
+        resultDiv.querySelector('#mm-ol-doc-dl-word')?.addEventListener('click', () => {
+          mm_ol_dl(data.wordBase64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx');
+        });
+      }
+      if (data.excelBase64) {
+        resultDiv.querySelector('#mm-ol-doc-dl-excel')?.addEventListener('click', () => {
+          mm_ol_dl(data.excelBase64, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx');
+        });
+      }
+      if (data.pdfBase64) {
+        resultDiv.querySelector('#mm-ol-doc-dl-pdf')?.addEventListener('click', () => {
+          mm_ol_dl(data.pdfBase64, 'application/pdf', '.pdf');
+        });
+      }
+      if (data.coverNote) {
+        resultDiv.querySelector('#mm-ol-doc-insert-note')?.addEventListener('click', () => {
+          const area = document.querySelector('[contenteditable="true"][role="textbox"]') ||
+                       document.querySelector('textarea[name*="mail"], textarea[id*="mail"], textarea[id*="compose"]') ||
+                       document.querySelector('.note_editor, .mail_editor, .compose-body') ||
+                       document.querySelector('[contenteditable="true"]');
+          if (area) {
+            area.focus();
+            if (area.tagName === 'TEXTAREA') {
+              const pos = area.selectionStart || 0;
+              area.value = area.value.substring(0, pos) + data.coverNote + area.value.substring(pos);
+              area.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+              try { document.execCommand('insertText', false, data.coverNote); }
+              catch(e) { area.textContent += data.coverNote; }
+            }
+            showToastOL('메일 본문에 삽입됐습니다', 'success');
+          } else {
+            navigator.clipboard.writeText(data.coverNote).catch(() => {});
+            showToastOL('메일 본문이 복사되었습니다', 'success');
+          }
+        });
+      }
+    }
+  } catch (e) {
+    showToastOL('문서 생성에 실패했습니다', 'error');
+  } finally {
+    if (genBtn) { genBtn.disabled = false; genBtn.textContent = t.docGenBtn || '📄 문서 생성'; }
+  }
+}
 
   renderOLCompose();
   document.body.appendChild(panel);

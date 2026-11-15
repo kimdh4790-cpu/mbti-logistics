@@ -1,11 +1,11 @@
 <!DOCTYPE html>
+<!-- 초안(2026-11-12): 코드에서 확인한 사실 기준. [확인 필요] 표시는 대표님·전문가 확인 후 문구를 확정할 것. 아직 배포하지 않음. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="canonical" href="https://mailmind.yongcha.app/privacy.html">
+  <link rel="canonical" href="https://mailmind.yongcha.app/privacy">
   <title>Privacy Policy — MailMind AI</title>
-  <link rel="canonical" href="https://mailmind.yongcha.app/privacy.html">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -20,6 +20,10 @@
     ul { padding-left: 20px; margin-bottom: 12px; }
     li { font-size: 15px; color: #3c4043; margin-bottom: 6px; }
     a { color: #1a73e8; }
+    .table-wrap { overflow-x: auto; margin-bottom: 12px; }
+    table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+    th, td { border: 1px solid #e0e0e0; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #f8f9fa; font-weight: 600; }
     footer { border-top: 1px solid #e0e0e0; padding: 24px 5%; text-align: center; font-size: 13px; color: #5f6368; }
   </style>
 </head>
@@ -27,27 +31,95 @@
 <nav><a href="https://mailmind.yongcha.app" class="logo">✦ MailMind AI</a></nav>
 <div class="container">
   <h1>Privacy Policy</h1>
-  <p class="date">Last updated: October 3, 2026</p>
-  <p>MailMind AI is a Chrome extension that generates AI-powered email replies inside Gmail. We are committed to protecting your privacy.</p>
+  <p class="date">Last updated: November 12, 2026</p>
+  <p>MailMind AI is an AI email assistant available as a mobile app (Android and iOS) and a Chrome extension. It helps you write, translate and summarize email replies. This policy explains what data we access, where it goes, how long we keep it, and your choices.</p>
 
-  <h2>1. Information We Access</h2>
-  <p>To generate reply suggestions, MailMind AI accesses:</p>
+  <h2>1. Mail accounts you can connect</h2>
   <ul>
-    <li>The content of the email you currently have open in Gmail</li>
-    <li>Email attachments (PDF files and images) when you request attachment-aware replies</li>
+    <li>Gmail (Google sign-in), Outlook (Microsoft sign-in)</li>
+    <li>iCloud Mail, Yahoo Mail, Yahoo Japan Mail and Naver Mail, using an app password you create with that provider</li>
   </ul>
-  <p>We access this data only when you actively click the "Generate Reply" button. We do not scan your inbox in the background.</p>
+  <p>Your mail account credentials (including app passwords) are stored only on your device. We do not send them to our servers. [확인 필요: 코드 검색에서 서버로 보내는 곳은 찾지 못했음. Outlook 등 로그인 토큰이 서버로 가는지는 재확인]</p>
 
-  <h2>2. How We Use Your Data</h2>
-  <p>Email content is sent to our secure API server and then forwarded to Anthropic's Claude AI to generate a reply. The data is:</p>
+  <h2>2. Information we access</h2>
   <ul>
-    <li>Processed in real-time only</li>
-    <li>Never stored on our servers</li>
-    <li>Never used for training AI models</li>
-    <li>Never shared with third parties except Anthropic (for AI processing)</li>
-    <li>Immediately discarded after the reply is generated</li>
+    <li><strong>Email content</strong> you open or ask us to reply to, translate or summarize.</li>
+    <li><strong>Inbox preview for the AI Brief.</strong> When you open the home screen of the app, the sender, subject and a text preview of your most recent messages (up to 30, across the accounts you connected) are sent to our server to produce the AI Brief (a short summary and priority list). This happens automatically when the home screen loads, not only when you tap a button. The results are cached for up to 24 hours.</li>
+    <li><strong>Attachments</strong> (for example PDF files and images) only when you ask us to analyze them.</li>
+    <li><strong>Account information</strong>: your sign-in email address, display name, plan and usage counts.</li>
+    <li><strong>Profile you enter</strong>: name, job title, company, signature, business card text and saved phrases. In the app these are stored on your device and sent with a request only when needed to write the reply. In the Chrome extension they are kept in Chrome's sync storage, which Chrome synchronizes across your signed-in browsers through your Google account.</li>
+    <li><strong>Chrome extension status check.</strong> When a supported webmail page loads, the extension asks our server for your plan and usage counters, sending only your account email address. Email content is sent only when you click a button for an AI feature, and the extension does not send your inbox list.</li>
+    <li><strong>Document profile</strong> (optional): company details and tax registration numbers you enter to generate business documents. These are stored on our server so the feature works across devices.</li>
+    <li><strong>Learned style</strong>: your role, industry and preferred tone, and for people you write to, their name, industry, tone and relationship, used to adjust future replies.</li>
+    <li><strong>Push notification tokens</strong> (Firebase Cloud Messaging) if you enable notifications.</li>
   </ul>
 
-  <h2>3. Google API Scopes &amp; Usage</h2>
-  <p>MailMind AI uses the following Gmail API scopes:</p>
+  <h2>3. Google API scopes we request</h2>
+  <p>The Chrome extension requests only <code>openid</code>, <code>email</code> and <code>profile</code> to sign you in; it reads the message you have open on the webmail page itself and does not use the Gmail API. The mobile app requests the additional Gmail scopes below.</p>
   <ul>
+    <li><code>openid</code>, <code>email</code>, <code>profile</code>: to sign you in and identify your account.</li>
+    <li><code>gmail.modify</code>: to read the messages and attachments you work with, to mark a message as read, and to move a message to Trash when you choose to delete it in the app.</li>
+    <li><code>gmail.send</code>: to send a reply or new message only after you tap send in the app.</li>
+  </ul>
+  <p>We do not permanently delete your emails and we do not use your mailbox for any purpose other than the features described here. [확인됨(앱 코드): 읽음 처리와 휴지통 이동만 사용. 확장프로그램이 같은 동작을 하는지는 웹 세션 회신 후 확정]</p>
+
+  <h2>4. How your data is processed</h2>
+  <p>When you request an AI feature, the relevant email text (and attachment text if you asked for it) is sent over HTTPS to our API server, which forwards it to an AI provider to generate the result and returns it to your device.</p>
+  <ul>
+    <li>Our API runs on Cloudflare Workers. Some requests are processed on a server we operate on Oracle Cloud, and business documents are converted to PDF there. [확인 필요: PDF 변환 서버 주소가 현재 http(암호화 없음)로 설정돼 있는지 확인하고 https로 바꾼 뒤 이 문장 확정]</li>
+    <li>AI providers: OpenAI (primary model) and Anthropic (fallback). [확인 필요: 두 업체의 API 데이터 보관·학습 사용 정책을 각사 공식 문서로 확인한 뒤 "학습에 사용하지 않음" 문구를 확정]</li>
+    <li>We do not use your email content to train AI models and we do not use it for advertising. We do not sell your data.</li>
+  </ul>
+
+  <h2>5. What we store on our servers and for how long</h2>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Data</th><th>Retention</th></tr>
+    <tr><td>Original email text and attachments</td><td>Not stored after the request is processed. [확인 필요]</td></tr>
+    <tr><td>Translation results</td><td>Up to 7 days (cache)</td></tr>
+    <tr><td>AI Brief results (summary, suggested actions)</td><td>Up to 24 hours (cache)</td></tr>
+    <tr><td>Usage counters (monthly replies, summaries, translations)</td><td>Up to about 40 days</td></tr>
+    <tr><td>Push notification tokens</td><td>30 days</td></tr>
+    <tr><td>Learned style (your own, and for contacts)</td><td>Up to 180 days</td></tr>
+    <tr><td>Document profile (company details, tax numbers)</td><td>Up to 365 days</td></tr>
+    <tr><td>Account record (email, plan) and subscription record</td><td>Until you ask us to delete your account</td></tr>
+    <tr><td>Saved phrases and team data (if you use them)</td><td>Until you ask us to delete your account</td></tr>
+  </table>
+  </div>
+
+  <h2>6. Who we share data with</h2>
+  <ul>
+    <li><strong>AI providers</strong> (OpenAI, Anthropic): email content needed to generate results, as described above.</li>
+    <li><strong>Cloudflare</strong>: hosting of our API and data storage.</li>
+    <li><strong>Oracle Cloud</strong>: a server we operate for processing and PDF conversion.</li>
+    <li><strong>Google (Firebase Cloud Messaging)</strong>: push notifications.</li>
+    <li><strong>Paddle</strong>: payment processing for paid plans on our website. Paddle receives your billing details and email; we receive the plan and subscription status.</li>
+  </ul>
+  <p>We do not share your data with advertisers or data brokers.</p>
+
+  <h2>7. Security</h2>
+  <ul>
+    <li>Data is sent over HTTPS/TLS. [확인 필요: 위 4번의 Oracle 서버 연결이 https인지 확인]</li>
+    <li>Mail account credentials stay on your device.</li>
+    <li>Access to our systems is limited to what is needed to run the service.</li>
+  </ul>
+
+  <h2>8. Google API Services User Data Policy (Limited Use)</h2>
+  <p>MailMind AI's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes" target="_blank">Google API Services User Data Policy</a>, including the Limited Use requirements. We use Gmail data only to provide and improve the user-facing email features described here. We do not use it for advertising, and we do not allow humans to read it unless you give consent for support, it is required for security or abuse investigation, or the law requires it.</p>
+
+  <h2>9. Your choices and deletion</h2>
+  <ul>
+    <li>Revoke MailMind AI's access to your Google account at any time at <a href="https://myaccount.google.com/permissions" target="_blank">myaccount.google.com/permissions</a>.</li>
+    <li>Disconnect a mail account or sign out in the app to remove its credentials from your device. Uninstalling the app or removing the extension stops all access.</li>
+    <li>To access or delete your server-side data, email <a href="mailto:hello@mailmind.yongcha.app">hello@mailmind.yongcha.app</a> with the subject "Data Deletion Request". We delete your account data within 30 days of a verified request. [확인 필요: 삭제 절차를 실제로 수행할 방법(D1·KV 항목 삭제)을 준비한 뒤 확정]</li>
+  </ul>
+
+  <h2>10. Children</h2>
+  <p>MailMind AI is not directed at children under 13, and we do not knowingly collect their personal information.</p>
+
+  <h2>11. Changes and contact</h2>
+  <p>We will update this page and its date when we change how we handle data. Questions: <a href="mailto:hello@mailmind.yongcha.app">hello@mailmind.yongcha.app</a>.</p>
+</div>
+<footer>© 2026 MailMind AI</footer>
+</body>
+</html>

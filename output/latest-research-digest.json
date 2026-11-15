@@ -1,36 +1,66 @@
 {
-  "date": "2026-11-02",
-  "total": 3,
+  "date": "2026-11-09",
+  "total": 6,
   "byCategory": {
     "AI기능업그레이드": [
       {
         "category": "AI기능업그레이드",
-        "channel": "maker39",
-        "instagram": "maker39",
-        "title": "URL에서 정보 추출하고 숏츠까지 자동 생성! 무료 AI 영상 제작 프로그램",
-        "url": "https://youtu.be/LebcD6tYv3U",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "AI가 ‘이것’까지 만든다고? 완전히 바뀐 GPT이미지 2.6 업데이트 총정리",
+        "url": "https://youtu.be/XhqSAZ6fANY",
         "reason": "키워드 기반: AI 관련",
-        "published": "2026-11-01T03:30:05+00:00",
+        "published": "2026-11-07T08:00:30+00:00",
         "source": "YouTube"
       },
       {
         "category": "AI기능업그레이드",
-        "channel": "maker39",
-        "instagram": "maker39",
-        "title": "드디어 URL 기반 영상 제작 가능! AI 숏츠 생성 프로그램 무료 업데이트",
-        "url": "https://youtu.be/M8laIEz_nRI",
-        "reason": "키워드 기반: AI 관련",
-        "published": "2026-10-26T08:30:38+00:00",
+        "channel": "다독다독",
+        "instagram": "dadokbooktalk",
+        "title": "자동으로 동영상 편집하고, 업로드하고...",
+        "url": "https://youtu.be/cJeGpBr6oAY",
+        "reason": "키워드 기반: 자동화 관련",
+        "published": "2026-11-02T07:30:29+00:00",
         "source": "YouTube"
       },
       {
         "category": "AI기능업그레이드",
-        "channel": "maker39",
-        "instagram": "maker39",
-        "title": "아직도 유료 결제하세요? 무료 ChatGPT로 숏폼 자동 생성",
-        "url": "https://youtu.be/e3ry_5jBz8Q",
+        "channel": "혼잡스",
+        "instagram": "honjobs",
+        "title": "모든 AI 가성비 구독 티어표 | 한 달 100만 원씩 구독하고 알게된 점",
+        "url": "https://youtu.be/zRwKtokyNeU",
         "reason": "키워드 기반: AI 관련",
-        "published": "2026-10-23T10:30:19+00:00",
+        "published": "2026-11-06T13:15:16+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "혼잡스",
+        "instagram": "honjobs",
+        "title": "AI 부업 1티어는 딱 3개 (직접 다 해 봄)",
+        "url": "https://youtu.be/u7JsR-iz1Fg",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-04T12:15:18+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "AI 비서 4종, 메일·영업·장보기는 누구한테 맡길까? (그록·뮤즈·닷츠·듀엣)",
+        "url": "https://youtu.be/rfbssOFDoqg",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-05T09:53:03+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "AI 영상 처음이면 이 순서대로 | 캐릭터 → 시트 → 15초 영상, 프롬프트 3개 공개",
+        "url": "https://youtu.be/DZvHoNPbas0",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-03T08:54:14+00:00",
         "source": "YouTube"
       }
     ]

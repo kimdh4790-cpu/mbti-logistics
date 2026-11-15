@@ -180,3 +180,12 @@ git push origin main
 ---
 
 *이 문서는 Claude가 자동 생성했습니다. donway.ai.kr*
+
+## 배달대행 초과분 정산 (2026-11-06 추가)
+- 적용 파일: donway-pages/index.html (KV settle.html = 배달대행 정산 화면). root settle.html은 AI정산(택배) 화면이므로 건드리지 않음.
+- `_calcExcessDriverPay(weekCount, cfg)` 추가. `cfg.tierMode === "excess"`일 때만 사용. 미지정 시 기존 전 건 방식 유지.
+- 기본 구간: 1~200건 2,500원 / 201~250건 3,600원 / 251~300건 4,000원 / 301건↑ 4,300원 (`cfg.excessBase`, `cfg.excessTiers`로 변경 가능)
+- 시스템 이용료 건당 200원은 쿠팡 자동 적용이라 이 계산에서 차감하지 않음.
+- 테스트: `tests/donway-delivery-tier.test.js` (node --test, 6/6 통과)
+- 주의: root settle.html(AI정산) 원본에 한글이 '?'로 깨진 문법 오류가 있음 — 이번 작업과 무관, 별도 확인 필요.
+- 미커밋/미푸시 상태.
