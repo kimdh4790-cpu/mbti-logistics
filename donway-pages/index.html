@@ -13600,12 +13600,36 @@ function _dwDeliveryFileLoad(file){
             var allD=[];parsed.forEach(function(p){allD=allD.concat(Object.keys(p.days||{}));});
             allD.sort();
             var wk=allD.length?_dwEatsWeekKey(allD[0]):'';
-            var pay={};
-            for(var sr=sh+1;sr<srows.length;sr++){
-              var nm=String(srows[sr][sNameCol]||'').trim(), pv=parseFloat(srows[sr][sPayCol]);
-              if(nm&&!isNaN(pv))pay[nm]=(pay[nm]||0)+pv;
+            var pay={}, det={};
+            // 상세 항목 라벨: 윗줄(병합 헤더 이어받기) + 아랫줄(②③ 같은 세부, '금액'/'오더수')
+            var top=srows[sh]||[], sub=srows[sh+1]||[], labels=[], cur='';
+            var subIsHdr=sub.some(function(v){var t=String(v||'');return t==='금액'||t.indexOf('오더')>=0||/^[②-⑩]/.test(t);});
+            for(var lc=0;lc<Math.max(top.length,sub.length);lc++){
+              var tt=String(top[lc]||'').trim(), st=subIsHdr?String(sub[lc]||'').trim():'';
+              if(tt)cur=tt;
+              var lab=null, isCnt=false;
+              if(/^[①-⑩]/.test(st))lab=st;
+              else if(st.replace(/\s/g,'')==='오더수'){lab=cur;isCnt=true;}
+              else if(st==='금액')lab=cur;
+              else if(tt)lab=tt;
+              if(lab&&!/라이선스|성함|이름|오더수/.test(isCnt?'':lab))labels[lc]={k:lab,cnt:isCnt};
             }
-            if(wk)parsed.forEach(function(p){if(pay[p.name]!==undefined){p.weekPay={};p.weekPay[wk]=Math.round(pay[p.name]);}});
+            for(var sr=sh+(subIsHdr?2:1);sr<srows.length;sr++){
+              var nm=String(srows[sr][sNameCol]||'').trim(), pv=parseFloat(srows[sr][sPayCol]);
+              if(!nm||isNaN(pv))continue;
+              pay[nm]=(pay[nm]||0)+pv;
+              var items=[], byK={};
+              labels.forEach(function(L,ci){
+                if(!L)return;var v=parseFloat(srows[sr][ci]);if(isNaN(v))return;
+                if(!byK[L.k]){byK[L.k]={k:L.k,v:0};items.push(byK[L.k]);}
+                if(L.cnt)byK[L.k].n=v;else byK[L.k].v=Math.round(v);
+              });
+              det[nm]=items.filter(function(it){return it.v!==0||it.n;});
+            }
+            if(wk)parsed.forEach(function(p){
+              if(pay[p.name]!==undefined){p.weekPay={};p.weekPay[wk]=Math.round(pay[p.name]);}
+              if(det[p.name]){p.weekDetail={};p.weekDetail[wk]=det[p.name];}
+            });
           }
         }
       }catch(e2){console.warn('종합 시트 파싱 실패',e2);}
@@ -13703,14 +13727,15 @@ window._dwDeliverySave=function(){
     Object.keys(p.days||{}).forEach(function(dt){
       var m=tm(dt)||viewYm; allDates[dt]=1;
       if(!byYm[m])byYm[m]={};
-      if(!byYm[m][p.name])byYm[m][p.name]={name:p.name,days:{},weekPay:{}};
+      if(!byYm[m][p.name])byYm[m][p.name]={name:p.name,days:{},weekPay:{},weekDetail:{}};
       byYm[m][p.name].days[dt]=p.days[dt];
     });
     Object.keys(p.weekPay||{}).forEach(function(wk){
       var m=tm(wk)||viewYm;
       if(!byYm[m])byYm[m]={};
-      if(!byYm[m][p.name])byYm[m][p.name]={name:p.name,days:{},weekPay:{}};
+      if(!byYm[m][p.name])byYm[m][p.name]={name:p.name,days:{},weekPay:{},weekDetail:{}};
       byYm[m][p.name].weekPay[wk]=p.weekPay[wk];
+      if(p.weekDetail&&p.weekDetail[wk])byYm[m][p.name].weekDetail[wk]=p.weekDetail[wk];
     });
   });
   var targets=Object.keys(byYm).sort();
@@ -13739,6 +13764,7 @@ window._dwDeliverySave=function(){
           ex.dailyRecords[dt]={orders:p.days[dt].orders||0,amount:p.days[dt].amount||0,rejected:prev.rejected||0,cancelled:prev.cancelled||0};
         });
         if(Object.keys(p.weekPay).length) ex.weekPay=Object.assign({},ex.weekPay||{},p.weekPay);
+        if(Object.keys(p.weekDetail).length) ex.weekDetail=Object.assign({},ex.weekDetail||{},p.weekDetail);
         recalc(ex);
       });
       return write(docRef,ym,exDrivers);
@@ -13782,7 +13808,7 @@ function _dwDeliveryLoad(did, ym){
     var data=snap.data();
     var drivers=data.drivers||[];
     // 배달은 주 단위 계산: 월을 걸친 주는 앞·뒤 달 문서의 날짜까지 합쳐 한 주로 계산
-    window._dwAdjDaily={};window._dwAdjPay={};
+    window._dwAdjDaily={};window._dwAdjPay={};window._dwAdjDet={};
     if(_dwEatsCfg().mode!=='eats'){_dwDeliveryRender(drivers, ym, did, data.savedAt||'');return;}
     var adj=[_dwYmShift(ym,-1),_dwYmShift(ym,1)].map(function(m){
       return _db.collection('delivery_sessions').doc(did+'_coupang_'+m).get().then(function(s2){return s2.exists?(s2.data().drivers||[]):[];}).catch(function(){return [];});
@@ -13792,7 +13818,7 @@ function _dwDeliveryLoad(did, ym){
       lists.forEach(function(list){list.forEach(function(d){
         var add={};
         Object.keys(d.dailyRecords||{}).forEach(function(dt){if(_dwEatsWeekMonth(dt, _dwEatsCfg().weekStart)===ym)add[dt]=d.dailyRecords[dt];});
-        Object.keys(d.weekPay||{}).forEach(function(wk){if(_dwEatsWeekMonth(wk, _dwEatsCfg().weekStart)===ym){window._dwAdjPay[d.name]=window._dwAdjPay[d.name]||{};window._dwAdjPay[d.name][wk]=d.weekPay[wk];}});
+        Object.keys(d.weekPay||{}).forEach(function(wk){if(_dwEatsWeekMonth(wk, _dwEatsCfg().weekStart)===ym){window._dwAdjPay[d.name]=window._dwAdjPay[d.name]||{};window._dwAdjPay[d.name][wk]=d.weekPay[wk];if(d.weekDetail&&d.weekDetail[wk]){window._dwAdjDet=window._dwAdjDet||{};window._dwAdjDet[d.name]=window._dwAdjDet[d.name]||{};window._dwAdjDet[d.name][wk]=d.weekDetail[wk];}}});
         if(!Object.keys(add).length)return;
         window._dwAdjDaily[d.name]=Object.assign(window._dwAdjDaily[d.name]||{},add);
         if(!names[d.name]){names[d.name]=1;drivers=drivers.concat([{name:d.name,orders:0,amount:0,dailyRecords:{}}]);}
@@ -13900,6 +13926,50 @@ function _dwEatsCalcDriver(days, coupang, totalOrders, cfg, coupangEx){
           coupang:cpEx,coupangIncl:Math.round(coupang||0),company:cpEx-gross,weeks:weeks,
           topRate:weeks.reduce(function(m,w){return Math.max(m,w.topRate);},0)};
 }
+// 기사 카드 '상세내역' (탭하면 펼침): 주차별 달성률·구간 계산, 세금, 회사 마진 분석(쿠팡 지급 구성)
+function _dwEatsDetailHtml(r, cfg){
+  var W=function(n){return Math.round(n||0).toLocaleString()+'원';};
+  var tiers=_dwEatsSortedTiers(cfg.tiers), topMin=tiers.length?tiers[tiers.length-1].min:0, topRate=tiers.length?tiers[tiers.length-1].rate:0;
+  var row=function(l,v,st){return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;'+(st||'')+'"><span>'+l+'</span><span style="white-space:nowrap">'+v+'</span></div>';};
+  var h='';
+  (r.weeks||[]).forEach(function(w){
+    var pct=topMin?Math.round(w.count/topMin*1000)/10:0;
+    h+='<div style="padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:6px"><span>'+(w.week?esc(w.week.slice(5))+' ~ '+esc(w.weekEnd.slice(5)):'날짜 미상')+'</span><span style="color:#6d28d9">달성률 '+pct+'%</span></div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)"><span>달성기준 '+topMin+'건 · '+topRate.toLocaleString()+'원/건</span><span style="color:#6d28d9;font-weight:700">'+w.count+'건 / '+topMin+'건</span></div>'
+      +'<div style="height:8px;background:var(--bg3);border-radius:99px;margin:6px 0 8px;overflow:hidden"><div style="height:100%;width:'+Math.min(100,pct)+'%;background:#6d28d9;border-radius:99px"></div></div>'
+      +w.breakdown.map(function(b){return row(b.start+(b.end===Infinity?'건+':'~'+b.end+'건')+' × '+b.rate.toLocaleString()+'원 ('+b.count+'건)',W(b.pay),'font-size:12px');}).join('')
+      +row('주 세전',W(w.gross),'font-size:12px;font-weight:800;border-top:1px dashed var(--border);margin-top:4px;padding-top:6px')
+    +'</div>';
+  });
+  h+='<div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px">'
+    +row('세전 합계',W(r.preTax),'font-weight:800')
+    +(r.tax33?row('소득세 (3.0%)','<span style="color:#dc2626">−'+W(r.incomeTax)+'</span>')+row('지방소득세 (0.3%)','<span style="color:#dc2626">−'+W(r.localTax)+'</span>'):'')
+    +row('고용보험 ('+_dwPct(cfg.empRate)+')','<span style="color:#d97706">−'+W(r.taxEmp)+'</span>')
+    +row('산재보험 ('+_dwPct(cfg.indRate)+')','<span style="color:#d97706">−'+W(r.taxWork)+'</span>')
+    +row('실수령액 (세후)','<span style="color:#6d28d9">'+W(r.net)+'</span>','font-size:14px;font-weight:900;border-top:1px solid var(--border);margin-top:6px;padding-top:8px')
+  +'</div>';
+  h+='<div style="padding:10px 0;font-size:12px"><div style="font-weight:900;margin-bottom:6px">회사 마진 분석</div>';
+  var hasDet=false;
+  (r.weeks||[]).forEach(function(w){
+    var items=(r.weekDetail||{})[w.week];
+    if(!items||!items.length)return;hasDet=true;
+    h+='<div style="font-size:11px;color:var(--text3);margin:4px 0">쿠팡 지급 구성 · '+esc(w.week.slice(5))+' ~ '+esc(w.weekEnd.slice(5))+'</div>';
+    items.forEach(function(it){
+      var strong=/실지급|정산 예정금액|①|^정산금액/.test(it.k);
+      h+=row('<span style="color:var(--text3)">└ </span>'+esc(it.k)+(it.n?' <span style="color:var(--text3)">('+it.n+'건)</span>':''),(it.v>0?'+':it.v<0?'−':'')+Math.abs(it.v).toLocaleString()+'원','font-size:11px;padding-left:6px;'+(strong?'font-weight:800;':'color:var(--text2);'));
+    });
+  });
+  if(!hasDet)h+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">쿠팡 지급 구성은 엑셀을 다시 올리면 표시됩니다 (종합 시트)</div>';
+  h+=row('쿠팡 총지급 (라이더별 실지급액)',W(r.coupang),'font-weight:800;border-top:1px solid var(--border);margin-top:6px;padding-top:8px')
+    +row('기사 지급 (세전)','−'+W(r.preTax),'color:var(--text3)')
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:10px 12px;border-radius:10px;background:'+((r.company||0)>=0?'rgba(201,168,76,.15)':'rgba(220,38,38,.1)')+';font-weight:900"><span>회사 마진 (쿠팡 − 기사 세전)</span><span style="color:'+((r.company||0)>=0?'#b45309':'#dc2626')+'">'+((r.company||0)>=0?'+':'−')+W(Math.abs(r.company||0))+'</span></div>'
+  +'</div>';
+  return '<div style="border-bottom:1px solid var(--border)">'
+    +'<button type="button" onclick="var b=this.nextElementSibling,o=b.style.display===\'none\';b.style.display=o?\'block\':\'none\';this.querySelector(\'.dw-chev\').style.transform=o?\'rotate(180deg)\':\'\';" style="width:100%;min-height:44px;padding:0 12px;background:none;border:none;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:12px;font-weight:800;color:#6d28d9">상세내역 보기<svg class="dw-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .2s"><path d="m6 9 6 6 6-6"/></svg></button>'
+    +'<div style="display:none;padding:0 12px 4px">'+h+'</div>'
+  +'</div>';
+}
 function _dwPct(r){return String(Math.round(r*10000)/100)+'%';}
 
 // ── 정산 방식 설정 모달 ──
@@ -14003,7 +14073,8 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
       });
       var ec=_dwEatsCalcDriver(mdays,mAmt,mOrders,ECFG,cpEx);
       return{name:d.name,orders:mOrders,preTax:ec.gross,tax33:ec.tax,taxWork:ec.ind,taxEmp:ec.emp,deduct:ec.deduct,net:ec.net,
-        coupang:ec.coupang,company:ec.company,weeks:ec.weeks,topRate:ec.topRate,days:dailyList,totalRej:totalRej,totalCan:totalCan};
+        coupang:ec.coupang,company:ec.company,weeks:ec.weeks,topRate:ec.topRate,days:dailyList,totalRej:totalRej,totalCan:totalCan,
+        incomeTax:ec.incomeTax,localTax:ec.localTax,weekPay:wp,weekDetail:Object.assign({},((window._dwAdjDet||{})[d.name])||{},d.weekDetail||{})};
     }
     return{name:d.name,orders:Math.round(d.orders||0),preTax:preTax,tax33:tax33,taxWork:taxWork,taxEmp:taxEmp,deduct:deduct,net:preTax-deduct,coupang:preTax,company:0,days:dailyList,totalRej:totalRej,totalCan:totalCan};
   }).sort(function(a,b){return b.orders-a.orders;});
@@ -14096,7 +14167,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
         // 카드 헤더
         +'<div style="background:'+color+';color:#fff;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">'
           +'<div>'
-            +'<div style="font-size:14px;font-weight:900">'+esc(r.name)+'</div>'
+            +'<div style="font-size:14px;font-weight:900;display:flex;align-items:center;gap:6px">'+esc(r.name)+(EATS&&r.topRate?'<span style="font-size:10px;font-weight:800;background:rgba(255,255,255,.22);border-radius:99px;padding:2px 8px">'+r.topRate.toLocaleString()+'원</span>':'')+'</div>'
             +'<div style="font-size:10px;opacity:.75">'+r.days.length+'일 근무</div>'
           +'</div>'
           +'<div style="text-align:right">'
@@ -14137,7 +14208,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
           }).join('')
           +'<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--border);padding-top:5px;margin-top:4px"><span style="color:var(--text3)">쿠팡지급 ₩'+(r.coupang||0).toLocaleString()+'</span>'
           +'<span style="font-weight:800;color:'+((r.company||0)>=0?'#b45309':'#dc2626')+'">회사마진 '+((r.company||0)>=0?'+':'−')+'₩'+Math.abs(r.company||0).toLocaleString()+'</span></div>'
-        +'</div>':'')
+        +'</div>'+_dwEatsDetailHtml(r,ECFG):'')
         // 일별 상세 테이블
         +'<div style="overflow-x:auto">'
           +'<table style="width:100%;border-collapse:collapse">'
