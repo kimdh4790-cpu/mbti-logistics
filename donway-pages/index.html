@@ -13540,12 +13540,16 @@ function _dwDeliveryFileLoad(file){
       // 컬럼 자동 감지 (기본값: 쿠팡이츠 일자별 정산내역 기준)
       var hdr=rows[hdrRow];
       var colDate=1,colName=3,colOrders=4,colAmount=5;
+      // 각 항목은 처음 나온 열만 사용. 쿠팡이츠 일자별 시트는 '총 정산 오더수' 뒤에 할증·프로모션별 '오더수' 열이 반복되므로
+      // 마지막 열로 덮어쓰면 '기타 프로모션4' 건수를 읽게 됨 (2026-11-16 수정). '총…오더수'를 우선, 없으면 첫 '오더수'
+      var fD=0,fN=0,fT=0,fO=0,fA=0;
       hdr.forEach(function(h,ci){
         var hs=String(h||'').trim();
-        if(hs.indexOf('날짜')>=0||hs.indexOf('일자')>=0) colDate=ci;
-        else if(hs.indexOf('성함')>=0) colName=ci;
-        else if((hs.indexOf('총')>=0&&hs.indexOf('오더수')>=0)||hs==='오더수') colOrders=ci;
-        else if((hs.indexOf('정산금액')>=0||hs.indexOf('정산예정')>=0)&&hs.indexOf('픽업')<0&&hs.indexOf('배달')<0) colAmount=ci;
+        if(hs.indexOf('날짜')>=0||hs.indexOf('일자')>=0){if(!fD){colDate=ci;fD=1;}}
+        else if(hs.indexOf('성함')>=0){if(!fN){colName=ci;fN=1;}}
+        else if(hs.indexOf('총')>=0&&hs.indexOf('오더수')>=0){if(!fT){colOrders=ci;fT=1;}}
+        else if(hs==='오더수'||hs==='오더 수'){if(!fT&&!fO){colOrders=ci;fO=1;}}
+        else if((hs.indexOf('정산금액')>=0||hs.indexOf('정산예정')>=0)&&hs.indexOf('픽업')<0&&hs.indexOf('배달')<0){if(!fA){colAmount=ci;fA=1;}}
       });
 
       function _toDateStr(v){
