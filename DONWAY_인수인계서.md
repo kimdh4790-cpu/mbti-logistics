@@ -189,3 +189,10 @@ git push origin main
 - 테스트: `tests/donway-delivery-tier.test.js` (node --test, 6/6 통과)
 - 주의: root settle.html(AI정산) 원본에 한글이 '?'로 깨진 문법 오류가 있음 — 이번 작업과 무관, 별도 확인 필요.
 - 미커밋/미푸시 상태.
+
+## 기사현황 입력 → 기사별 공유 이미지 (2026-11-16 추가)
+- 적용 파일: donway-pages/index.html (`pageDeliveryDriverAdmin`), _worker.js (`/api/delivery-driver-stats`)
+- 입력 추가: 일일 현황(완료·진행중·취소/거절), 슬롯별 목표(아침점심 9-13 / 오후논 13-17 / 저녁 17-20 / 심야논 20-24), 시간 외 배달 완료(기존 peaks.etc 사용). 수락률은 기존 SLA 칸 사용.
+- Firestore dw_driver_stats 필드 추가: tgAm/tgPm/tgEve/tgNgt, dayDone/dayProg/dayRej
+- "기사 공유 이미지 만들기" 버튼 → canvas PNG(1080px) → 공유하기(navigator.share, 카톡 등) / 이미지 저장
+- 슬롯 상태는 이미지 만드는 시각 기준: 목표 달성=달성, 해당 시간대=진행중(진행바·잔여), 지난 시간대 미달=미달성, 이전=예정

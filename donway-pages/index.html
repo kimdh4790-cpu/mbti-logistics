@@ -14935,6 +14935,174 @@ function _dwRenderDriverDash(s){
 }
 
 // ── 관리자 기사별 현황 직접 입력 (dw_driver_stats) — AI정산과 완전 분리 ──
+// ══ 기사현황 입력 → 기사별 공유 이미지 (일일 현황 · 슬롯별 달성률 · 시간 외 배달) ══
+var _DA_SLOTS=[
+  {key:'am', label:'아침점심피크', start:9,  end:13},
+  {key:'pm', label:'오후논피크',   start:13, end:17},
+  {key:'eve',label:'저녁피크',     start:17, end:20},
+  {key:'ngt',label:'심야논피크',   start:20, end:24}
+];
+
+// 슬롯 상태 판정: 달성 / 진행중 / 미달성 / 예정 (hour = 이미지 생성 시각)
+function _daSlotStatus(done, target, hour, slot){
+  done=+done||0; target=+target||0;
+  var rate=target>0?Math.floor(done/target*1000)/10:null;
+  if(target>0&&done>=target) return {st:'달성',rate:rate};
+  if(hour>=slot.start&&hour<slot.end) return {st:'진행중',rate:rate,remain:Math.max(0,target-done)};
+  if(hour>=slot.end) return {st:target>0?'미달성':'마감',rate:rate};
+  return {st:'예정',rate:rate};
+}
+
+function _daRoundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+// 입력값 → PNG canvas
+function _daDrawStatusCard(d){
+  var F='-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+  var W=1080, P=48, CW=W-P*2;
+  var hour=d.at.getHours();
+  var slotH=_DA_SLOTS.map(function(sl){var s=_daSlotStatus(d.peaks[sl.key],d.targets[sl.key],hour,sl);return s.st==='진행중'&&d.targets[sl.key]>0?300:150;});
+  var H=200+40+260+40+(110+slotH.reduce(function(a,b){return a+b+20;},0)+20)+40+250+110;
+  var cv=document.createElement('canvas');cv.width=W;cv.height=H;
+  var c=cv.getContext('2d');
+  function txt(t,x,y,size,color,weight,align){c.font=(weight||400)+' '+size+'px '+F;c.fillStyle=color;c.textAlign=align||'left';c.textBaseline='alphabetic';c.fillText(t,x,y);return c.measureText(t).width;}
+  function card(y,h,fill,stroke){_daRoundRect(c,P,y,CW,h,28);c.fillStyle=fill||'#fff';c.fill();if(stroke){c.lineWidth=3;c.strokeStyle=stroke;c.stroke();}}
+  function chip(x,y,label){
+    var col={'달성':['#d1fae5','#059669'],'진행중':['#dbeafe','#2563eb'],'미달성':['#fee2e2','#dc2626'],'예정':['#e5e7eb','#374151'],'마감':['#e5e7eb','#374151']}[label];
+    c.font='700 34px '+F;var w=c.measureText(label).width+44;
+    _daRoundRect(c,x,y-44,w,60,30);c.fillStyle=col[0];c.fill();
+    txt(label,x+22,y-2,34,col[1],700);return w;
+  }
+  var mm=String(d.at.getMonth()+1).padStart(2,'0'), dd=String(d.at.getDate()).padStart(2,'0');
+  var hh=String(d.at.getHours()).padStart(2,'0'), mi=String(d.at.getMinutes()).padStart(2,'0');
+
+  c.fillStyle='#f2f4f6';c.fillRect(0,0,W,H);
+  // 헤더
+  c.fillStyle='#08101f';c.fillRect(0,0,W,200);
+  txt(d.company||'DONWAY',P,78,34,'#c9a84c',700);
+  txt((d.name||'기사')+' 님 운영 현황',P,152,56,'#ffffff',800);
+  txt(mm+'.'+dd+' '+hh+':'+mi,W-P,152,38,'rgba(255,255,255,.7)',500,'right');
+
+  // ① 일일 현황
+  var y=240;
+  card(y,260);
+  txt('일일 현황',P+44,y+80,44,'#111827',800);
+  var cols=[
+    {l:'수락률',v:String(d.acceptRate||0),u:'%',col:'#10b981'},
+    {l:'완료',v:String(d.daily.done||0),u:'건',col:'#111827'},
+    {l:'진행중',v:String(d.daily.prog||0),u:'건',col:'#111827'},
+    {l:'취소/거절',v:String(d.daily.rej||0),u:'건',col:'#111827'}
+  ];
+  var colW=(CW-88)/4;
+  cols.forEach(function(k,i){
+    var x=P+44+colW*i;
+    txt(k.l,x,y+160,34,'#6b7280',500);
+    var vw=txt(k.v,x,y+225,62,k.col,800);
+    txt(k.u,x+vw+6,y+225,32,k.col,600);
+  });
+
+  // ② 슬롯별 달성률
+  y+=260+40;
+  var s2h=110+slotH.reduce(function(a,b){return a+b+20;},0)+20;
+  card(y,s2h);
+  txt('슬롯별 달성률',P+44,y+80,44,'#111827',800);
+  var sy=y+110;
+  _DA_SLOTS.forEach(function(sl,i){
+    var done=+d.peaks[sl.key]||0, tg=+d.targets[sl.key]||0;
+    var s=_daSlotStatus(done,tg,hour,sl);
+    var bx=P+32, bw=CW-64, bh=slotH[i];
+    var grey=(s.st==='예정'||s.st==='마감');
+    _daRoundRect(c,bx,sy,bw,bh,22);
+    c.fillStyle=grey?'#f3f4f6':'#ffffff';c.fill();
+    c.lineWidth=s.st==='진행중'?4:2;c.strokeStyle=s.st==='진행중'?'#3b82f6':'#e5e7eb';c.stroke();
+    var ly=sy+92;
+    var cw=chip(bx+36,ly,s.st);
+    var nw=txt(sl.label,bx+36+cw+20,ly,44,grey?'#6b7280':'#111827',800);
+    txt(sl.start+'-'+sl.end+'시',bx+36+cw+20+nw+14,ly,32,'#9ca3af',500);
+    var rx=bx+bw-40;
+    if(s.st==='진행중'&&tg>0){
+      var pv=txt(String(s.rate),bx+36,sy+190,66,'#111827',800);
+      txt('%',bx+36+pv+6,sy+190,38,'#111827',600);
+      txt('잔여 '+s.remain+'건',rx,sy+185,38,'#111827',600,'right');
+      var px=bx+36, pw=bw-76;
+      _daRoundRect(c,px,sy+212,pw,18,9);c.fillStyle='#eef0f3';c.fill();
+      var fw=Math.max(18,Math.min(1,done/tg)*pw);
+      _daRoundRect(c,px,sy+212,fw,18,9);c.fillStyle='#3b82f6';c.fill();
+      txt('완료 '+done+'건',px,sy+275,32,'#6b7280',500);
+      txt('목표 '+tg+'건',rx,sy+275,32,'#6b7280',500,'right');
+    } else if(s.st==='예정'){
+      txt(tg>0?'목표 '+tg+'건':'완료 '+done+'건',rx,ly,42,'#6b7280',700,'right');
+    } else if(tg>0){
+      txt(s.rate+'%',rx,ly,46,s.st==='미달성'?'#dc2626':'#111827',700,'right');
+    } else {
+      txt('완료 '+done+'건',rx,ly,42,'#111827',700,'right');
+    }
+    sy+=bh+20;
+  });
+
+  // ③ 시간 외 배달현황
+  y+=s2h+40;
+  card(y,250);
+  var tw=txt('시간 외 배달현황',P+44,y+80,44,'#111827',800);
+  txt('세트 미적용',P+44+tw+16,y+80,32,'#9ca3af',500);
+  txt('완료',P+44,y+150,34,'#6b7280',500);
+  var ow=txt(String(d.peaks.etc||0),P+44,y+215,62,'#111827',800);
+  txt('건',P+44+ow+6,y+215,32,'#111827',600);
+
+  // 푸터
+  txt('정산기간 '+(d.period||'')+'  ·  donway.ai.kr',W/2,H-45,28,'#9ca3af',500,'center');
+  return cv;
+}
+
+window._daMakeShareImage=function(){
+  var sel=document.getElementById('da-driver-sel');
+  if(!sel||!sel.value){toast('기사를 선택해주세요.');return;}
+  function gv(id){var el=document.getElementById(id);return el?(parseFloat(el.value)||0):0;}
+  var name=(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].dataset.name)||'';
+  var data={
+    name:name,
+    company:(_COMPANY_CFG&&(_COMPANY_CFG.companyName||_COMPANY_CFG.name))||'DONWAY',
+    period:_dwPeriodStr(),
+    at:new Date(),
+    acceptRate:gv('da-sla-rate'),
+    daily:{done:gv('da-day-done'),prog:gv('da-day-prog'),rej:gv('da-day-rej')},
+    peaks:{am:gv('da-pk-am'),pm:gv('da-pk-pm'),eve:gv('da-pk-eve'),ngt:gv('da-pk-ngt'),etc:gv('da-pk-etc')},
+    targets:{am:gv('da-tg-am'),pm:gv('da-tg-pm'),eve:gv('da-tg-eve'),ngt:gv('da-tg-ngt')}
+  };
+  var cv=_daDrawStatusCard(data);
+  var fname='기사현황_'+(name||'기사')+'_'+String(data.at.getMonth()+1).padStart(2,'0')+String(data.at.getDate()).padStart(2,'0')+'.png';
+  cv.toBlob(function(blob){
+    if(!blob){toast('이미지 생성 실패');return;}
+    var url=URL.createObjectURL(blob);
+    var old=document.getElementById('da-share-modal');if(old)old.remove();
+    var m=document.createElement('div');
+    m.id='da-share-modal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px';
+    m.innerHTML='<div style="max-height:72vh;overflow:auto;border-radius:12px;background:#fff;max-width:420px;width:100%"><img src="'+url+'" style="width:100%;display:block"></div>'
+      +'<div style="display:flex;gap:8px;margin-top:12px;width:100%;max-width:420px">'
+        +'<button id="da-share-go" style="flex:1;min-height:48px;background:#c9a84c;color:#08101f;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">공유하기</button>'
+        +'<button id="da-share-dl" style="flex:1;min-height:48px;background:#fff;color:#08101f;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">이미지 저장</button>'
+        +'<button id="da-share-x" style="min-height:48px;padding:0 18px;background:#374151;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">닫기</button>'
+      +'</div>';
+    document.body.appendChild(m);
+    function close(){m.remove();URL.revokeObjectURL(url);}
+    function download(){var a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();toast('이미지를 저장했어요.');}
+    document.getElementById('da-share-x').onclick=close;
+    document.getElementById('da-share-dl').onclick=download;
+    document.getElementById('da-share-go').onclick=function(){
+      var file=new File([blob],fname,{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:(name||'기사')+' 운영 현황'}).catch(function(){});
+      } else { download(); toast('이 기기는 바로 공유가 안 돼서 저장했어요. 카톡에서 사진으로 보내주세요.'); }
+    };
+  },'image/png');
+};
+
 function pageDeliveryDriverAdmin(){
   if(!_CU||_CU.role==='driver'||_CU.role==='member'){return;}
   document.getElementById('page-title').textContent='🛵 기사 현황 입력';
@@ -14951,9 +15119,22 @@ function pageDeliveryDriverAdmin(){
       +'</select>'
     +'</div>'
     +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
-      +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px">피크타임 건수</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-        +['am:아침점심피크','pm:오후논피크','eve:저녁피크','ngt:심야논피크'].map(function(x){var p=x.split(':');return'<div><label style="font-size:11px;color:var(--text3)">'+p[1]+'</label><input id="da-pk-'+p[0]+'" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>';}).join('')
+      +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px">일일 현황 <span style="font-weight:400">(공유 이미지용)</span></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+        +['done:완료','prog:진행중','rej:취소/거절'].map(function(x){var p=x.split(':');return'<div><label style="font-size:11px;color:var(--text3)">'+p[1]+'</label><input id="da-day-'+p[0]+'" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>';}).join('')
+      +'</div>'
+    +'</div>'
+    +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px">슬롯별 달성 (완료 / 목표)</div>'
+      +_DA_SLOTS.map(function(sl){return'<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;align-items:end;margin-bottom:8px">'
+        +'<div style="font-size:12px;font-weight:700;padding-bottom:9px">'+sl.label+' <span style="font-weight:400;color:var(--text3);font-size:11px">'+sl.start+'-'+sl.end+'시</span></div>'
+        +'<div><label style="font-size:11px;color:var(--text3)">완료</label><input id="da-pk-'+sl.key+'" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>'
+        +'<div><label style="font-size:11px;color:var(--text3)">목표</label><input id="da-tg-'+sl.key+'" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>'
+      +'</div>';}).join('')
+      +'<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:8px;align-items:end">'
+        +'<div style="font-size:12px;font-weight:700;padding-bottom:9px">시간 외 배달 <span style="font-weight:400;color:var(--text3);font-size:11px">세트 미적용</span></div>'
+        +'<div><label style="font-size:11px;color:var(--text3)">완료</label><input id="da-pk-etc" type="number" min="0" value="0" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:13px;margin-top:3px"></div>'
+        +'<div></div>'
       +'</div>'
     +'</div>'
     +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
@@ -14980,6 +15161,7 @@ function pageDeliveryDriverAdmin(){
       +'<textarea id="da-memo" rows="2" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text1);font-size:13px;margin-top:4px;resize:vertical"></textarea>'
     +'</div>'
     +'<button onclick="_daSave()" style="width:100%;padding:14px;background:#5b4ff5;color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer">저장 · 기사에게 실시간 공유</button>'
+    +'<button onclick="_daMakeShareImage()" style="width:100%;margin-top:10px;padding:14px;background:#08101f;color:#c9a84c;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer">기사 공유 이미지 만들기</button>'
   +'</div>';
 
   // 기사 목록 로드
@@ -15007,7 +15189,10 @@ function pageDeliveryDriverAdmin(){
         .then(function(r){return r.json();}).then(function(res){
           if(!res.ok||!res.data)return;
           var d=res.data;
-          ['am','pm','eve','ngt'].forEach(function(k){var el=document.getElementById('da-pk-'+k);if(el)el.value=(d.peaks&&d.peaks[k])||0;});
+          ['am','pm','eve','ngt','etc'].forEach(function(k){var el=document.getElementById('da-pk-'+k);if(el)el.value=(d.peaks&&d.peaks[k])||0;});
+          ['am','pm','eve','ngt'].forEach(function(k){var el=document.getElementById('da-tg-'+k);if(el)el.value=(d.peakTargets&&d.peakTargets[k])||0;});
+          var dy=d.daily||{};
+          ['done','prog','rej'].forEach(function(k){var el=document.getElementById('da-day-'+k);if(el)el.value=dy[k]||0;});
           var sla=d.sla||{};
           if(document.getElementById('da-sla-rate'))document.getElementById('da-sla-rate').value=sla.acceptRate||0;
           if(document.getElementById('da-sla-done'))document.getElementById('da-sla-done').value=sla.weeklyDone||0;
@@ -15060,7 +15245,9 @@ window._daSave=function(){
   var did=_CU&&(_CU.dealerId||'');
   var period=_dwPeriodStr();
   function gv(id){var el=document.getElementById(id);return el?el.value:'';}
-  var peaks={am:parseInt(gv('da-pk-am'))||0,pm:parseInt(gv('da-pk-pm'))||0,eve:parseInt(gv('da-pk-eve'))||0,ngt:parseInt(gv('da-pk-ngt'))||0,etc:0};
+  var peaks={am:parseInt(gv('da-pk-am'))||0,pm:parseInt(gv('da-pk-pm'))||0,eve:parseInt(gv('da-pk-eve'))||0,ngt:parseInt(gv('da-pk-ngt'))||0,etc:parseInt(gv('da-pk-etc'))||0};
+  var peakTargets={am:parseInt(gv('da-tg-am'))||0,pm:parseInt(gv('da-tg-pm'))||0,eve:parseInt(gv('da-tg-eve'))||0,ngt:parseInt(gv('da-tg-ngt'))||0};
+  var daily={done:parseInt(gv('da-day-done'))||0,prog:parseInt(gv('da-day-prog'))||0,rej:parseInt(gv('da-day-rej'))||0};
   var sla={acceptRate:parseFloat(gv('da-sla-rate'))||0,weeklyDone:parseInt(gv('da-sla-done'))||0,weeklyTotal:parseInt(gv('da-sla-total'))||28};
   var delivTot=parseInt(gv('da-deliv-food'))+parseInt(gv('da-deliv-store'))+parseInt(gv('da-deliv-mart'))||0;
   var slaDetail={delivery:{total:delivTot,food:parseInt(gv('da-deliv-food'))||0,store:parseInt(gv('da-deliv-store'))||0,mart:parseInt(gv('da-deliv-mart'))||0},rejection:{total:0,food:0,store:0,mart:0},cancel:{total:0,food:0,store:0,mart:0}};
@@ -15076,7 +15263,7 @@ window._daSave=function(){
   var memo=gv('da-memo');
   var token=_auth&&_auth.currentUser&&_auth.currentUser.getIdToken?null:null;
   _auth.currentUser.getIdToken().then(function(tok){
-    return fetch('/api/delivery-driver-stats',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,driverUid:driverUid,driverName:driverName,period:period,peaks:peaks,sla:sla,slaDetail:slaDetail,settlements:settlements,totalPayout:totalPayout,memo:memo})});
+    return fetch('/api/delivery-driver-stats',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,driverUid:driverUid,driverName:driverName,period:period,peaks:peaks,peakTargets:peakTargets,daily:daily,sla:sla,slaDetail:slaDetail,settlements:settlements,totalPayout:totalPayout,memo:memo})});
   }).then(function(r){return r.json();}).then(function(res){
     if(res.ok){toast('✅ 저장 완료. 기사 화면에 즉시 반영됩니다.');}
     else{toast('저장 실패: '+(res.error||''));}
