@@ -13726,7 +13726,7 @@ function _dwDeliveryLoad(did, ym){
       var names={};drivers.forEach(function(d){names[d.name]=1;});
       lists.forEach(function(list){list.forEach(function(d){
         var add={};
-        Object.keys(d.dailyRecords||{}).forEach(function(dt){if(_dwEatsWeekMonth(dt)===ym)add[dt]=d.dailyRecords[dt];});
+        Object.keys(d.dailyRecords||{}).forEach(function(dt){if(_dwEatsWeekMonth(dt, _dwEatsCfg().weekStart)===ym)add[dt]=d.dailyRecords[dt];});
         if(!Object.keys(add).length)return;
         window._dwAdjDaily[d.name]=Object.assign(window._dwAdjDaily[d.name]||{},add);
         if(!names[d.name]){names[d.name]=1;drivers=drivers.concat([{name:d.name,orders:0,amount:0,dailyRecords:{}}]);}
@@ -13738,7 +13738,7 @@ function _dwDeliveryLoad(did, ym){
 function _dwYmShift(ym,n){var y=+ym.slice(0,4),m=+ym.slice(5,7)-1+n;var d=new Date(Date.UTC(y,m,1));return d.toISOString().slice(0,7);}
 
 // ══ 쿠팡이츠 정산법 (배달 정산 계산기 흡수) ══
-// 기사 세전 = 주간(일~토, 쿠팡이츠 정산 주차) 건수에 누진 단가 적용
+// 기사 세전 = 주간(기본 수~화 = 쿠팡이츠 정산 주차, 시작 요일은 설정에서 변경) 건수에 누진 단가 적용
 //   예) 320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300
 // 회사 마진 = 쿠팡 지급액(엑셀 정산금액) − 기사 세전
 // 공제 = 원천세(3.3% / 없음 / 직접입력) + 고용보험 + 산재보험
@@ -13748,8 +13748,12 @@ var _DW_EATS_DEFAULT={
   mode:'eats',
   tiers:[{min:1,rate:2400},{min:200,rate:3600},{min:250,rate:4000},{min:300,rate:4300}],
   taxType:'33', taxRate:0.033,
-  empRate:0.008, indRate:0.0088
+  empRate:0.008, indRate:0.0088,
+  weekStart:3 // 주 시작 요일 0=일 … 3=수 … 6=토 (쿠팡이츠 엑셀 주차: 수~화)
 };
+var _DW_DOW=['일','월','화','수','목','금','토'];
+function _dwEatsWS(ws){if(ws==null||ws==='')ws=_dwEatsCfg().weekStart;ws=parseInt(ws,10);return (ws>=0&&ws<=6)?ws:3;}
+function _dwEatsWeekLabel(ws){ws=_dwEatsWS(ws);return _DW_DOW[ws]+'~'+_DW_DOW[(ws+6)%7];}
 function _dwEatsCfg(){
   var c=(typeof _COMPANY_CFG!=='undefined'&&_COMPANY_CFG&&_COMPANY_CFG.dwEatsCfg)||{};
   var d=_DW_EATS_DEFAULT, o={};
@@ -13780,32 +13784,33 @@ function _dwEatsTopRate(count, tiers){
   s.forEach(function(t){if(count>=t.min)r=t.rate;});
   return r;
 }
-// 'YYYY-MM-DD' → 해당 주 일요일 'YYYY-MM-DD' (쿠팡이츠 정산 주차: 일~토)
-function _dwEatsWeekKey(ds){
+// 'YYYY-MM-DD' → 그 날짜가 속한 주의 시작일 'YYYY-MM-DD' (ws=시작 요일, 기본 수)
+function _dwEatsWeekKey(ds, ws){
   var p=String(ds||'').slice(0,10).split('-');
   if(p.length<3)return '';
+  ws=_dwEatsWS(ws);
   var dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
-  dt.setUTCDate(dt.getUTCDate()-dt.getUTCDay());
+  dt.setUTCDate(dt.getUTCDate()-((dt.getUTCDay()-ws+7)%7));
   return dt.toISOString().slice(0,10);
 }
-// 주차의 귀속 월 = 그 주 토요일(마감일)이 속한 달
-function _dwEatsWeekMonth(ds){
-  var wk=_dwEatsWeekKey(ds); if(!wk)return '';
+// 주차의 귀속 월 = 그 주 마지막 날(마감일)이 속한 달
+function _dwEatsWeekMonth(ds, ws){
+  var wk=_dwEatsWeekKey(ds, ws); if(!wk)return '';
   var e=new Date(wk+'T00:00:00Z'); e.setUTCDate(e.getUTCDate()+6);
   return e.toISOString().slice(0,7);
 }
-// 이번 달 정산 대상 날짜: 토요일이 이번 달인 주의 날짜 전부 (앞 달 날짜 포함, 다음 달로 넘어가는 주는 제외)
-function _dwEatsMonthDays(curDays, adjRecords, ym){
+// 이번 달 정산 대상 날짜: 마지막 날이 이번 달인 주의 날짜 전부 (앞 달 날짜 포함, 다음 달로 넘어가는 주는 제외)
+function _dwEatsMonthDays(curDays, adjRecords, ym, ws){
   var map={};
   (curDays||[]).forEach(function(d){map[d.date]=d;});
   Object.keys(adjRecords||{}).forEach(function(dt){if(!map[dt]){var r=adjRecords[dt];map[dt]={date:dt,orders:Math.round(r.orders||0),amount:Math.round(r.amount||0)};}});
-  return Object.keys(map).sort().map(function(k){return map[k];}).filter(function(d){return _dwEatsWeekMonth(d.date)===ym;});
+  return Object.keys(map).sort().map(function(k){return map[k];}).filter(function(d){return _dwEatsWeekMonth(d.date, ws)===ym;});
 }
 // 기사 1명 계산. days=[{date,orders,amount}], coupang=엑셀 정산금액 합
 function _dwEatsCalcDriver(days, coupang, totalOrders, cfg){
   var byWeek={}, noDate=0;
   (days||[]).forEach(function(d){
-    var wk=_dwEatsWeekKey(d.date);
+    var wk=_dwEatsWeekKey(d.date, cfg.weekStart);
     if(!wk){noDate+=(+d.orders||0);return;}
     byWeek[wk]=(byWeek[wk]||0)+(+d.orders||0);
   });
@@ -13849,7 +13854,10 @@ window._dwEatsSettings=function(){
     +'<div style="font-size:12px;font-weight:700;margin:16px 0 6px">단가 구간 <span style="font-weight:400;color:var(--text3)">(시작 건수 / 원)</span></div>'
     +'<div id="dw-es-tiers">'+_dwEatsSortedTiers(cfg.tiers).map(tierRow).join('')+'</div>'
     +'<button id="dw-es-add" style="width:100%;min-height:40px;margin-bottom:6px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px">+ 구간 추가</button>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">주간(일~토) 건수에 구간별 단가를 따로 계산해 합산합니다. 예) 320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">주간 건수에 구간별 단가를 따로 계산해 합산합니다. 예) 320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300</div>'
+    +'<label style="font-size:12px;color:var(--text3)">한 주 시작 요일 <span style="color:var(--text3)">(7일 단위, 마지막 날이 속한 달로 정산)</span></label>'
+    +'<select id="dw-es-ws" '+inp+'>'+_DW_DOW.map(function(n,i){return '<option value="'+i+'"'+(_dwEatsWS(cfg.weekStart)===i?' selected':'')+'>'+n+'요일 시작 ('+_dwEatsWeekLabel(i)+')</option>';}).join('')+'</select>'
+    +'<div style="height:12px"></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
       +'<div><label style="font-size:12px;color:var(--text3)">세금 유형</label><select id="dw-es-tax" '+inp+'><option value="33"'+(cfg.taxType==='33'?' selected':'')+'>3.3% (소득세+지방세)</option><option value="0"'+(cfg.taxType==='0'?' selected':'')+'>세금 없음 (사업자)</option><option value="custom"'+(cfg.taxType==='custom'?' selected':'')+'>직접 입력</option></select></div>'
       +'<div><label style="font-size:12px;color:var(--text3)">직접 입력 세율(%)</label><input id="dw-es-taxr" type="number" step="0.1" value="'+(cfg.taxType==='custom'?Math.round(cfg.taxRate*1000)/10:'')+'" '+inp+'></div>'
@@ -13866,7 +13874,7 @@ window._dwEatsSettings=function(){
   m.querySelector('#dw-es-close').onclick=function(){m.remove();};
   m.querySelector('#dw-es-reset').onclick=function(){
     m.querySelector('#dw-es-tiers').innerHTML=_DW_EATS_DEFAULT.tiers.map(tierRow).join('');
-    m.querySelector('#dw-es-tax').value='33';m.querySelector('#dw-es-taxr').value='';
+    m.querySelector('#dw-es-tax').value='33';m.querySelector('#dw-es-taxr').value='';m.querySelector('#dw-es-ws').value=String(_DW_EATS_DEFAULT.weekStart);
     m.querySelector('#dw-es-emp').value=Math.round(_DW_EATS_DEFAULT.empRate*10000)/100;m.querySelector('#dw-es-ind').value=Math.round(_DW_EATS_DEFAULT.indRate*10000)/100;
   };
   m.querySelector('#dw-es-save').onclick=function(){
@@ -13882,7 +13890,8 @@ window._dwEatsSettings=function(){
     var nc={mode:m.querySelector('#dw-es-mode').value,tiers:tiers,taxType:tt,
       taxRate:tt==='custom'?(parseFloat(m.querySelector('#dw-es-taxr').value)||0)/100:(tt==='33'?0.033:0),
       empRate:(parseFloat(m.querySelector('#dw-es-emp').value)||0)/100,
-      indRate:(parseFloat(m.querySelector('#dw-es-ind').value)||0)/100};
+      indRate:(parseFloat(m.querySelector('#dw-es-ind').value)||0)/100,
+      weekStart:parseInt(m.querySelector('#dw-es-ws').value,10)};
     var did=_CU.dealerId||_CU.uid||'';
     _db.collection('companies').doc(did).set({dwEatsCfg:nc},{merge:true}).then(function(){
       if(typeof _COMPANY_CFG!=='undefined'){if(!_COMPANY_CFG)_COMPANY_CFG={};_COMPANY_CFG.dwEatsCfg=nc;}
@@ -13913,7 +13922,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
     var totalRej=dailyList.reduce(function(s,d){return s+d.rejected;},0);
     var totalCan=dailyList.reduce(function(s,d){return s+d.cancelled;},0);
     if(EATS){
-      var mdays=_dwEatsMonthDays(dailyList,(window._dwAdjDaily||{})[d.name],ym);
+      var mdays=_dwEatsMonthDays(dailyList,(window._dwAdjDaily||{})[d.name],ym,ECFG.weekStart);
       var mOrders=mdays.reduce(function(s,x){return s+(+x.orders||0);},0), mAmt=mdays.reduce(function(s,x){return s+(+x.amount||0);},0);
       var ec=_dwEatsCalcDriver(mdays,mAmt,mOrders,ECFG);
       return{name:d.name,orders:mOrders,preTax:ec.gross,tax33:ec.tax,taxWork:ec.ind,taxEmp:ec.emp,deduct:ec.deduct,net:ec.net,
@@ -13963,7 +13972,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
         +'<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:7px;text-align:center"><div style="font-size:9px;opacity:.7">쿠팡 총지급</div><div style="font-size:13px;font-weight:800">₩'+tCoupang.toLocaleString()+'</div></div>'
         +'<div style="background:rgba(201,168,76,.28);border-radius:8px;padding:7px;text-align:center"><div style="font-size:9px;opacity:.8">회사 마진 (쿠팡 − 기사세전)</div><div style="font-size:13px;font-weight:800;color:'+(tCompany>=0?'#fde68a':'#fca5a5')+'">'+(tCompany>=0?'+':'−')+'₩'+Math.abs(tCompany).toLocaleString()+'</div></div>'
       +'</div>'
-      +'<div style="font-size:10px;opacity:.65;margin-top:8px">쿠팡이츠 단가표 적용 · 주간(일~토) 누진 · 토요일이 이번 달인 주까지 · 공제 '+(ECFG.taxRate>0?'원천세 '+_dwPct(ECFG.taxRate)+' · ':'')+'고용 '+_dwPct(ECFG.empRate)+' · 산재 '+_dwPct(ECFG.indRate)+'</div>':'')
+      +'<div style="font-size:10px;opacity:.65;margin-top:8px">쿠팡이츠 단가표 적용 · 주간('+_dwEatsWeekLabel(ECFG.weekStart)+') 누진 · 마지막 날('+_DW_DOW[(_dwEatsWS(ECFG.weekStart)+6)%7]+')이 이번 달인 주까지 · 공제 '+(ECFG.taxRate>0?'원천세 '+_dwPct(ECFG.taxRate)+' · ':'')+'고용 '+_dwPct(ECFG.empRate)+' · 산재 '+_dwPct(ECFG.indRate)+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'
       +'<button onclick="_dwEatsSettings()" style="padding:9px 18px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산 방식·단가</button>'
