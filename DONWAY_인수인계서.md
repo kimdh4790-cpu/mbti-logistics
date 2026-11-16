@@ -196,3 +196,4 @@ git push origin main
 - Firestore dw_driver_stats 필드 추가: tgAm/tgPm/tgEve/tgNgt, dayDone/dayProg/dayRej
 - "기사 공유 이미지 만들기" 버튼 → canvas PNG(1080px) → 공유하기(navigator.share, 카톡 등) / 이미지 저장
 - 슬롯 상태는 이미지 만드는 시각 기준: 목표 달성=달성, 해당 시간대=진행중(진행바·잔여), 지난 시간대 미달=미달성, 이전=예정
+- 2026-11-16 v2: 공유 이미지 앱 스타일로 개편(수락률 링, 슬롯마다 달성률%·진행바·잔여/초과 건수, 헤더 슬롯 달성 n/m 배지). _daDrawStatusCard만 변경.
