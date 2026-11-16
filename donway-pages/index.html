@@ -14961,101 +14961,123 @@ function _daRoundRect(ctx,x,y,w,h,r){
   ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
 }
 
-// 입력값 → PNG canvas
+// 입력값 → PNG canvas (앱 스타일 카드)
 function _daDrawStatusCard(d){
-  var F='-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
-  var W=1080, P=48, CW=W-P*2;
+  var F='Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+  var W=1080, P=40, CW=W-P*2, IN=48;
   var hour=d.at.getHours();
-  var slotH=_DA_SLOTS.map(function(sl){var s=_daSlotStatus(d.peaks[sl.key],d.targets[sl.key],hour,sl);return s.st==='진행중'&&d.targets[sl.key]>0?300:150;});
-  var H=200+40+260+40+(110+slotH.reduce(function(a,b){return a+b+20;},0)+20)+40+250+110;
+  var SLOT_H=210, HEAD_H=330;
+  var H=HEAD_H-70 + 340+32 + (120+_DA_SLOTS.length*(SLOT_H+20)+24)+32 + 200 + 120;
   var cv=document.createElement('canvas');cv.width=W;cv.height=H;
   var c=cv.getContext('2d');
+  var NAVY='#08101f', GOLD='#c9a84c', INK='#0f172a', SUB='#64748b', MUTE='#94a3b8', LINE='#e2e8f0';
+  var ST={'달성':{bg:'#dcfce7',fg:'#15803d',bar:'#22c55e'},'진행중':{bg:'#dbeafe',fg:'#1d4ed8',bar:'#3b82f6'},'미달성':{bg:'#fee2e2',fg:'#b91c1c',bar:'#ef4444'},'예정':{bg:'#f1f5f9',fg:'#475569',bar:'#cbd5e1'},'마감':{bg:'#f1f5f9',fg:'#475569',bar:'#cbd5e1'}};
+  function rr(x,y,w,h,r){_daRoundRect(c,x,y,w,h,Math.min(r,h/2,w/2));}
   function txt(t,x,y,size,color,weight,align){c.font=(weight||400)+' '+size+'px '+F;c.fillStyle=color;c.textAlign=align||'left';c.textBaseline='alphabetic';c.fillText(t,x,y);return c.measureText(t).width;}
-  function card(y,h,fill,stroke){_daRoundRect(c,P,y,CW,h,28);c.fillStyle=fill||'#fff';c.fill();if(stroke){c.lineWidth=3;c.strokeStyle=stroke;c.stroke();}}
-  function chip(x,y,label){
-    var col={'달성':['#d1fae5','#059669'],'진행중':['#dbeafe','#2563eb'],'미달성':['#fee2e2','#dc2626'],'예정':['#e5e7eb','#374151'],'마감':['#e5e7eb','#374151']}[label];
-    c.font='700 34px '+F;var w=c.measureText(label).width+44;
-    _daRoundRect(c,x,y-44,w,60,30);c.fillStyle=col[0];c.fill();
-    txt(label,x+22,y-2,34,col[1],700);return w;
+  function card(y,h){
+    c.save();c.shadowColor='rgba(15,23,42,.08)';c.shadowBlur=36;c.shadowOffsetY=10;
+    rr(P,y,CW,h,36);c.fillStyle='#fff';c.fill();c.restore();
   }
+  function title(t,y,sub){var w=txt(t,P+IN,y,40,INK,800);if(sub)txt(sub,P+IN+w+16,y,30,MUTE,500);}
+  function pct(v){return v==null?'-':(+v).toFixed(1);}
   var mm=String(d.at.getMonth()+1).padStart(2,'0'), dd=String(d.at.getDate()).padStart(2,'0');
   var hh=String(d.at.getHours()).padStart(2,'0'), mi=String(d.at.getMinutes()).padStart(2,'0');
 
-  c.fillStyle='#f2f4f6';c.fillRect(0,0,W,H);
-  // 헤더
-  c.fillStyle='#08101f';c.fillRect(0,0,W,200);
-  txt(d.company||'DONWAY',P,78,34,'#c9a84c',700);
-  txt((d.name||'기사')+' 님 운영 현황',P,152,56,'#ffffff',800);
-  txt(mm+'.'+dd+' '+hh+':'+mi,W-P,152,38,'rgba(255,255,255,.7)',500,'right');
+  // 배경 + 헤더
+  c.fillStyle='#f1f4f8';c.fillRect(0,0,W,H);
+  c.fillStyle=NAVY;rr(0,-60,W,HEAD_H+60,60);c.fill();
+  // 아바타
+  c.beginPath();c.arc(P+60,118,60,0,Math.PI*2);c.fillStyle='rgba(201,168,76,.16)';c.fill();
+  c.lineWidth=3;c.strokeStyle=GOLD;c.stroke();
+  txt((d.name||'기')[0],P+60,138,52,GOLD,800,'center');
+  txt(d.company||'DONWAY',P+144,96,30,GOLD,700);
+  txt((d.name||'기사')+' 님',P+144,156,54,'#fff',800);
+  txt('오늘의 운영 현황  ·  '+mm+'.'+dd+' '+hh+':'+mi,P,236,32,'rgba(255,255,255,.62)',500);
+  // 슬롯 요약 배지
+  var achieved=_DA_SLOTS.filter(function(sl){var t=+d.targets[sl.key]||0;return t>0&&(+d.peaks[sl.key]||0)>=t;}).length;
+  var withT=_DA_SLOTS.filter(function(sl){return (+d.targets[sl.key]||0)>0;}).length;
+  var bt='슬롯 달성 '+achieved+' / '+(withT||_DA_SLOTS.length);
+  c.font='700 30px '+F;var bw=c.measureText(bt).width+48;
+  rr(W-P-bw,196,bw,60,30);c.fillStyle=GOLD;c.fill();
+  txt(bt,W-P-bw/2,237,30,NAVY,700,'center');
 
   // ① 일일 현황
-  var y=240;
-  card(y,260);
-  txt('일일 현황',P+44,y+80,44,'#111827',800);
-  var cols=[
-    {l:'수락률',v:String(d.acceptRate||0),u:'%',col:'#10b981'},
-    {l:'완료',v:String(d.daily.done||0),u:'건',col:'#111827'},
-    {l:'진행중',v:String(d.daily.prog||0),u:'건',col:'#111827'},
-    {l:'취소/거절',v:String(d.daily.rej||0),u:'건',col:'#111827'}
-  ];
-  var colW=(CW-88)/4;
-  cols.forEach(function(k,i){
-    var x=P+44+colW*i;
-    txt(k.l,x,y+160,34,'#6b7280',500);
-    var vw=txt(k.v,x,y+225,62,k.col,800);
-    txt(k.u,x+vw+6,y+225,32,k.col,600);
+  var y=HEAD_H-70;
+  card(y,340);
+  title('일일 현황',y+82);
+  // 수락률 링
+  var cx=P+IN+100, cy=y+212, R=88, ar=Math.max(0,Math.min(100,+d.acceptRate||0))/100;
+  c.lineCap='round';c.lineWidth=20;
+  c.beginPath();c.arc(cx,cy,R,0,Math.PI*2);c.strokeStyle='#e8f8ef';c.stroke();
+  if(ar>0){c.beginPath();c.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+Math.PI*2*ar);c.strokeStyle='#10b981';c.stroke();}
+  txt(pct(+d.acceptRate||0)+'%',cx,cy+10,40,INK,800,'center');
+  txt('수락률',cx,cy+50,26,SUB,500,'center');
+  // 3개 지표
+  var sx=P+IN+250, sw=(W-P-IN-sx)/3;
+  [['완료',d.daily.done,INK],['진행중',d.daily.prog,'#1d4ed8'],['취소/거절',d.daily.rej,'#dc2626']].forEach(function(k,i){
+    var x=sx+sw*i;
+    if(i>0){c.fillStyle=LINE;c.fillRect(x-1,y+150,2,120);}
+    txt(k[0],x+sw/2,y+170,30,SUB,500,'center');
+    c.font='800 64px '+F;var vw=c.measureText(String(k[1]||0)).width;c.font='600 30px '+F;var uw=c.measureText('건').width;
+    var vx=x+sw/2-(vw+6+uw)/2;
+    txt(String(k[1]||0),vx,y+250,64,k[2],800);
+    txt('건',vx+vw+6,y+250,30,k[2],600);
   });
 
   // ② 슬롯별 달성률
-  y+=260+40;
-  var s2h=110+slotH.reduce(function(a,b){return a+b+20;},0)+20;
+  y+=340+32;
+  var s2h=120+_DA_SLOTS.length*(SLOT_H+20)+24;
   card(y,s2h);
-  txt('슬롯별 달성률',P+44,y+80,44,'#111827',800);
-  var sy=y+110;
-  _DA_SLOTS.forEach(function(sl,i){
+  title('슬롯별 달성률',y+82);
+  var sy=y+120;
+  _DA_SLOTS.forEach(function(sl){
     var done=+d.peaks[sl.key]||0, tg=+d.targets[sl.key]||0;
-    var s=_daSlotStatus(done,tg,hour,sl);
-    var bx=P+32, bw=CW-64, bh=slotH[i];
-    var grey=(s.st==='예정'||s.st==='마감');
-    _daRoundRect(c,bx,sy,bw,bh,22);
-    c.fillStyle=grey?'#f3f4f6':'#ffffff';c.fill();
-    c.lineWidth=s.st==='진행중'?4:2;c.strokeStyle=s.st==='진행중'?'#3b82f6':'#e5e7eb';c.stroke();
-    var ly=sy+92;
-    var cw=chip(bx+36,ly,s.st);
-    var nw=txt(sl.label,bx+36+cw+20,ly,44,grey?'#6b7280':'#111827',800);
-    txt(sl.start+'-'+sl.end+'시',bx+36+cw+20+nw+14,ly,32,'#9ca3af',500);
-    var rx=bx+bw-40;
-    if(s.st==='진행중'&&tg>0){
-      var pv=txt(String(s.rate),bx+36,sy+190,66,'#111827',800);
-      txt('%',bx+36+pv+6,sy+190,38,'#111827',600);
-      txt('잔여 '+s.remain+'건',rx,sy+185,38,'#111827',600,'right');
-      var px=bx+36, pw=bw-76;
-      _daRoundRect(c,px,sy+212,pw,18,9);c.fillStyle='#eef0f3';c.fill();
-      var fw=Math.max(18,Math.min(1,done/tg)*pw);
-      _daRoundRect(c,px,sy+212,fw,18,9);c.fillStyle='#3b82f6';c.fill();
-      txt('완료 '+done+'건',px,sy+275,32,'#6b7280',500);
-      txt('목표 '+tg+'건',rx,sy+275,32,'#6b7280',500,'right');
-    } else if(s.st==='예정'){
-      txt(tg>0?'목표 '+tg+'건':'완료 '+done+'건',rx,ly,42,'#6b7280',700,'right');
-    } else if(tg>0){
-      txt(s.rate+'%',rx,ly,46,s.st==='미달성'?'#dc2626':'#111827',700,'right');
+    var s=_daSlotStatus(done,tg,hour,sl), col=ST[s.st];
+    var bx=P+28, bwid=CW-56;
+    rr(bx,sy,bwid,SLOT_H,28);
+    c.fillStyle=s.st==='진행중'?'#f5f9ff':'#f8fafc';c.fill();
+    if(s.st==='진행중'){c.lineWidth=3;c.strokeStyle='#93c5fd';c.stroke();}
+    var lx=bx+32, rx=bx+bwid-32, ly=sy+70;
+    // 칩
+    c.font='700 28px '+F;var cw=c.measureText(s.st).width+36;
+    rr(lx,ly-40,cw,52,26);c.fillStyle=col.bg;c.fill();
+    txt(s.st,lx+cw/2,ly-4,28,col.fg,700,'center');
+    var nw=txt(sl.label,lx+cw+18,ly,38,INK,800);
+    txt(sl.start+'-'+sl.end+'시',lx+cw+18+nw+12,ly,28,MUTE,500);
+    // 퍼센트 (항상)
+    if(tg>0){
+      c.font='800 52px '+F;var pw=c.measureText(pct(s.rate)).width;
+      txt('%',rx,ly+2,30,col.fg==='#475569'?SUB:col.fg,700,'right');
+      txt(pct(s.rate),rx-30-4,ly+2,52,s.st==='예정'?SUB:INK,800,'right');
     } else {
-      txt('완료 '+done+'건',rx,ly,42,'#111827',700,'right');
+      txt('목표 미설정',rx,ly,30,MUTE,600,'right');
     }
-    sy+=bh+20;
+    // 진행바
+    var py=sy+104, pwid=bwid-64;
+    rr(lx,py,pwid,20,10);c.fillStyle='#e2e8f0';c.fill();
+    var ratio=tg>0?Math.min(1,done/tg):0;
+    if(ratio>0){rr(lx,py,Math.max(20,pwid*ratio),20,10);c.fillStyle=col.bar;c.fill();}
+    // 하단 정보
+    txt('완료 '+done+'건  ·  목표 '+tg+'건',lx,sy+172,28,SUB,500);
+    var right='';
+    if(tg>0&&done>=tg) right=done>tg?'초과 +'+(done-tg)+'건':'목표 달성';
+    else if(tg>0) right='잔여 '+(tg-done)+'건';
+    if(right) txt(right,rx,sy+172,28,s.st==='달성'?'#15803d':(s.st==='진행중'?'#1d4ed8':SUB),700,'right');
+    sy+=SLOT_H+20;
   });
 
   // ③ 시간 외 배달현황
-  y+=s2h+40;
-  card(y,250);
-  var tw=txt('시간 외 배달현황',P+44,y+80,44,'#111827',800);
-  txt('세트 미적용',P+44+tw+16,y+80,32,'#9ca3af',500);
-  txt('완료',P+44,y+150,34,'#6b7280',500);
-  var ow=txt(String(d.peaks.etc||0),P+44,y+215,62,'#111827',800);
-  txt('건',P+44+ow+6,y+215,32,'#111827',600);
+  y+=s2h+32;
+  card(y,200);
+  title('시간 외 배달현황',y+82,'세트 미적용');
+  txt('완료',P+IN,y+150,30,SUB,500);
+  c.font='800 64px '+F;var ow=c.measureText(String(d.peaks.etc||0)).width;
+  txt(String(d.peaks.etc||0),W-P-IN-40,y+160,64,INK,800,'right');
+  txt('건',W-P-IN,y+160,30,INK,600,'right');
 
   // 푸터
-  txt('정산기간 '+(d.period||'')+'  ·  donway.ai.kr',W/2,H-45,28,'#9ca3af',500,'center');
+  txt('정산기간 '+(d.period||''),W/2,H-62,26,MUTE,500,'center');
+  txt('DONWAY  ·  donway.ai.kr',W/2,H-24,24,'#b6c0cd',600,'center');
   return cv;
 }
 
