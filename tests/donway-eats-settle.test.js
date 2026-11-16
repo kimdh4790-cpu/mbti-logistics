@@ -37,7 +37,7 @@ test('주차별로 따로 누진 적용 후 합산, 마진·공제 계산', () =
   const w2 = 120*2400;
   assert.strictEqual(r.weeks.length, 2);
   assert.strictEqual(r.gross, w1 + w2);
-  assert.strictEqual(r.company, 1480000 - (w1 + w2));
+  assert.strictEqual(r.company, Math.round(1480000/1.1) - (w1 + w2)); // 부가세 포함 금액 → 공급가 기준 마진
   assert.strictEqual(r.tax, Math.round((w1+w2)*0.033));
   assert.strictEqual(r.emp, Math.round((w1+w2)*0.008));
   assert.strictEqual(r.ind, Math.round((w1+w2)*0.0088));
@@ -72,4 +72,11 @@ test('기본 주 = 수~화 (쿠팡이츠 엑셀 2026_06-4: 6/17 수 ~ 6/23 화)'
   const r = api._dwEatsCalcDriver(days, 0, 420, api._DW_EATS_DEFAULT);
   assert.strictEqual(r.weeks.length, 1);
   assert.strictEqual(r.gross, 199*2400 + 50*3600 + 50*4000 + 121*4300);
+});
+test('부가세: 실제 엑셀 정용주 1,840,974(포함) → 공급가 1,673,613', () => {
+  const r = api._dwEatsCalcDriver([{date:'2026-06-17',orders:420}], 1840974, 420, api._DW_EATS_DEFAULT);
+  assert.strictEqual(r.coupang, 1673613);
+  assert.strictEqual(r.company, 1673613 - 1377900);
+  const r2 = api._dwEatsCalcDriver([{date:'2026-06-17',orders:420}], 1673613, 420, Object.assign({}, api._DW_EATS_DEFAULT, {vatIncl:false}));
+  assert.strictEqual(r2.coupang, 1673613);
 });
