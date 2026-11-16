@@ -80,3 +80,8 @@ test('부가세: 실제 엑셀 정용주 1,840,974(포함) → 공급가 1,673,6
   const r2 = api._dwEatsCalcDriver([{date:'2026-06-17',orders:420}], 1673613, 420, Object.assign({}, api._DW_EATS_DEFAULT, {vatIncl:false}));
   assert.strictEqual(r2.coupang, 1673613);
 });
+test('쿠팡 실지급액(종합 시트) 직접 지정 시 그 값으로 마진 계산 — 계산기와 동일', () => {
+  const r = api._dwEatsCalcDriver([{date:'2026-06-17',orders:420,amount:1840974}], 1840974, 420, api._DW_EATS_DEFAULT, 1652053);
+  assert.strictEqual(r.coupang, 1652053);
+  assert.strictEqual(r.company, 1652053 - 1377900);
+});
