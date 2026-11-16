@@ -7,7 +7,7 @@ const path = require('path');
 const src = fs.readFileSync(path.join(__dirname, '..', 'donway-pages', 'index.html'), 'utf8');
 const a = src.indexOf('var _DW_EATS_DEFAULT=');
 const b = src.indexOf('// ── 정산 방식 설정 모달 ──');
-const api = new Function(src.slice(a, b) + '\nreturn {_DW_EATS_DEFAULT,_dwEatsGross,_dwEatsBreakdown,_dwEatsWeekKey,_dwEatsCalcDriver};')();
+const api = new Function(src.slice(a, b) + '\nreturn {_DW_EATS_DEFAULT,_dwEatsGross,_dwEatsBreakdown,_dwEatsWeekKey,_dwEatsCalcDriver,_dwEatsWeekMonth,_dwEatsMonthDays};')();
 const T = api._DW_EATS_DEFAULT.tiers;
 const cfg = Object.assign({}, api._DW_EATS_DEFAULT);
 
@@ -39,11 +39,21 @@ test('주차별로 따로 누진 적용 후 합산, 마진·공제 계산', () =
   assert.strictEqual(r.gross, w1 + w2);
   assert.strictEqual(r.company, 1480000 - (w1 + w2));
   assert.strictEqual(r.tax, Math.round((w1+w2)*0.033));
-  assert.strictEqual(r.emp, Math.round((w1+w2)*0.009));
-  assert.strictEqual(r.ind, Math.round((w1+w2)*0.016));
+  assert.strictEqual(r.emp, Math.round((w1+w2)*0.008));
+  assert.strictEqual(r.ind, Math.round((w1+w2)*0.0088));
   assert.strictEqual(r.net, r.gross - r.tax - r.emp - r.ind);
 });
 test('세금 없음 설정', () => {
   const r = api._dwEatsCalcDriver([{date:'2026-11-16',orders:10,amount:50000}], 50000, 10, Object.assign({}, cfg, {taxRate:0}));
   assert.strictEqual(r.tax, 0);
+});
+test('월 걸친 주: 토요일이 속한 달로 귀속', () => {
+  assert.strictEqual(api._dwEatsWeekMonth('2026-11-29'), '2026-12'); // 11/29(일)~12/5(토)
+  assert.strictEqual(api._dwEatsWeekMonth('2026-11-28'), '2026-11');
+  assert.strictEqual(api._dwEatsWeekMonth('2026-11-01'), '2026-11'); // 11/1(일)~11/7(토)
+  const cur = [{date:'2026-11-02',orders:10,amount:1},{date:'2026-11-30',orders:20,amount:2}];
+  const adj = {'2026-10-31':{orders:5,amount:3},'2026-10-25':{orders:7,amount:4}};
+  // 10/31(토) 주는 10월 귀속이므로 제외, 11/30 주는 12월 귀속이므로 제외
+  assert.deepStrictEqual(api._dwEatsMonthDays(cur, adj, '2026-11').map(d=>d.date), ['2026-11-02']);
+  assert.deepStrictEqual(api._dwEatsMonthDays(cur, {'2026-12-03':{orders:1,amount:1}}, '2026-12').map(d=>d.date), ['2026-11-30','2026-12-03']);
 });
