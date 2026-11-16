@@ -6839,6 +6839,8 @@ service cloud.firestore {
             driverName: f.driverName?.stringValue||'',
             period: f.period?.stringValue||_dsPeriod,
             peaks: {am:parseInt(f.peakAm?.integerValue||0),pm:parseInt(f.peakPm?.integerValue||0),eve:parseInt(f.peakEve?.integerValue||0),ngt:parseInt(f.peakNgt?.integerValue||0),etc:parseInt(f.peakEtc?.integerValue||0)},
+            peakTargets: {am:parseInt(f.tgAm?.integerValue||0),pm:parseInt(f.tgPm?.integerValue||0),eve:parseInt(f.tgEve?.integerValue||0),ngt:parseInt(f.tgNgt?.integerValue||0)},
+            daily: {done:parseInt(f.dayDone?.integerValue||0),prog:parseInt(f.dayProg?.integerValue||0),rej:parseInt(f.dayRej?.integerValue||0)},
             sla: {acceptRate:parseFloat(f.slaAcceptRate?.doubleValue||f.slaAcceptRate?.integerValue||0),weeklyDone:parseInt(f.slaWeeklyDone?.integerValue||0),weeklyTotal:parseInt(f.slaWeeklyTotal?.integerValue||0)},
             slaDetail: {
               delivery:{total:parseInt(f.sdDelivTotal?.integerValue||0),food:parseInt(f.sdDelivFood?.integerValue||0),store:parseInt(f.sdDelivStore?.integerValue||0),mart:parseInt(f.sdDelivMart?.integerValue||0)},
@@ -6858,16 +6860,18 @@ service cloud.firestore {
         if (!_dsAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:_dsH});
         try {
           const body = await request.json();
-          const {dealerId,driverUid,driverName,period,peaks,sla,slaDetail,settlements,totalPayout,memo}=body;
+          const {dealerId,driverUid,driverName,period,peaks,peakTargets,daily,sla,slaDetail,settlements,totalPayout,memo}=body;
           if (!dealerId||!driverUid) return new Response(JSON.stringify({ok:false,error:'dealerId, driverUid 필요'}),{status:400,headers:_dsH});
           const tok = await getAccessToken(env);
           const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
           const _dsPeriod = period||new Date().toISOString().slice(0,7);
           const docId = `${dealerId}_${driverUid}_${_dsPeriod}`;
-          const pk=peaks||{};const sl=sla||{};const sd=slaDetail||{};const setArr=settlements||[];
+          const pk=peaks||{};const tg=peakTargets||{};const dy=daily||{};const sl=sla||{};const sd=slaDetail||{};const setArr=settlements||[];
           const fields={
             dealerId:{stringValue:dealerId},driverUid:{stringValue:driverUid},driverName:{stringValue:driverName||''},period:{stringValue:_dsPeriod},
             peakAm:{integerValue:String(pk.am||0)},peakPm:{integerValue:String(pk.pm||0)},peakEve:{integerValue:String(pk.eve||0)},peakNgt:{integerValue:String(pk.ngt||0)},peakEtc:{integerValue:String(pk.etc||0)},
+            tgAm:{integerValue:String(tg.am||0)},tgPm:{integerValue:String(tg.pm||0)},tgEve:{integerValue:String(tg.eve||0)},tgNgt:{integerValue:String(tg.ngt||0)},
+            dayDone:{integerValue:String(dy.done||0)},dayProg:{integerValue:String(dy.prog||0)},dayRej:{integerValue:String(dy.rej||0)},
             slaAcceptRate:{doubleValue:sl.acceptRate||0},slaWeeklyDone:{integerValue:String(sl.weeklyDone||0)},slaWeeklyTotal:{integerValue:String(sl.weeklyTotal||0)},
             sdDelivTotal:{integerValue:String((sd.delivery||{}).total||0)},sdDelivFood:{integerValue:String((sd.delivery||{}).food||0)},sdDelivStore:{integerValue:String((sd.delivery||{}).store||0)},sdDelivMart:{integerValue:String((sd.delivery||{}).mart||0)},
             sdRejectTotal:{integerValue:String((sd.rejection||{}).total||0)},sdRejectFood:{integerValue:String((sd.rejection||{}).food||0)},sdRejectStore:{integerValue:String((sd.rejection||{}).store||0)},sdRejectMart:{integerValue:String((sd.rejection||{}).mart||0)},
