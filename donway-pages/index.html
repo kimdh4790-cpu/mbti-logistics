@@ -13719,10 +13719,152 @@ function _dwDeliveryLoad(did, ym){
   }).catch(function(e){if(res)res.innerHTML='<div class="empty">오류: '+e.message+'</div>';});
 }
 
+// ══ 쿠팡이츠 정산법 (배달 정산 계산기 흡수) ══
+// 기사 세전 = 주간(일~토, 쿠팡이츠 정산 주차) 건수에 누진 단가 적용
+//   예) 320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300
+// 회사 마진 = 쿠팡 지급액(엑셀 정산금액) − 기사 세전
+// 공제 = 원천세(3.3% / 없음 / 직접입력) + 고용보험 + 산재보험
+var _DW_EATS_DEFAULT={
+  mode:'eats',
+  tiers:[{min:1,rate:2400},{min:200,rate:3600},{min:250,rate:4000},{min:300,rate:4300}],
+  taxType:'33', taxRate:0.033,
+  empRate:0.009, indRate:0.016
+};
+function _dwEatsCfg(){
+  var c=(typeof _COMPANY_CFG!=='undefined'&&_COMPANY_CFG&&_COMPANY_CFG.dwEatsCfg)||{};
+  var d=_DW_EATS_DEFAULT, o={};
+  Object.keys(d).forEach(function(k){o[k]=(c[k]!==undefined&&c[k]!==null)?c[k]:d[k];});
+  if(!o.tiers||!o.tiers.length) o.tiers=d.tiers.slice();
+  o.taxRate=o.taxType==='0'?0:(o.taxType==='33'?0.033:(+o.taxRate||0));
+  return o;
+}
+function _dwEatsSortedTiers(tiers){
+  return (tiers||[]).filter(function(t){return +t.min>0;}).map(function(t){return {min:+t.min,rate:+t.rate||0};}).sort(function(a,b){return a.min-b.min;});
+}
+function _dwEatsBreakdown(count, tiers){
+  count=Math.max(0,Math.floor(+count||0));
+  var s=_dwEatsSortedTiers(tiers), out=[];
+  for(var i=0;i<s.length;i++){
+    var start=s[i].min, end=i+1<s.length?s[i+1].min-1:Infinity;
+    if(count<start)break;
+    var n=Math.min(count,end)-start+1;
+    if(n>0) out.push({start:start,end:end,rate:s[i].rate,count:n,pay:n*s[i].rate});
+  }
+  return out;
+}
+function _dwEatsGross(count, tiers){
+  return _dwEatsBreakdown(count,tiers).reduce(function(a,b){return a+b.pay;},0);
+}
+function _dwEatsTopRate(count, tiers){
+  var s=_dwEatsSortedTiers(tiers), r=s.length?s[0].rate:0;
+  s.forEach(function(t){if(count>=t.min)r=t.rate;});
+  return r;
+}
+// 'YYYY-MM-DD' → 해당 주 일요일 'YYYY-MM-DD' (쿠팡이츠 정산 주차: 일~토)
+function _dwEatsWeekKey(ds){
+  var p=String(ds||'').slice(0,10).split('-');
+  if(p.length<3)return '';
+  var dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+  dt.setUTCDate(dt.getUTCDate()-dt.getUTCDay());
+  return dt.toISOString().slice(0,10);
+}
+// 기사 1명 계산. days=[{date,orders,amount}], coupang=엑셀 정산금액 합
+function _dwEatsCalcDriver(days, coupang, totalOrders, cfg){
+  var byWeek={}, noDate=0;
+  (days||[]).forEach(function(d){
+    var wk=_dwEatsWeekKey(d.date);
+    if(!wk){noDate+=(+d.orders||0);return;}
+    byWeek[wk]=(byWeek[wk]||0)+(+d.orders||0);
+  });
+  var sumDays=Object.keys(byWeek).reduce(function(s,k){return s+byWeek[k];},0)+noDate;
+  // 날짜 정보가 없는 건수는 별도 주차로 계산
+  if(totalOrders>sumDays) noDate+=totalOrders-sumDays;
+  var weeks=Object.keys(byWeek).sort().map(function(wk){
+    var e=new Date(wk+'T00:00:00Z');e.setUTCDate(e.getUTCDate()+6);
+    var bd=_dwEatsBreakdown(byWeek[wk],cfg.tiers);
+    return {week:wk,weekEnd:e.toISOString().slice(0,10),count:byWeek[wk],breakdown:bd,gross:bd.reduce(function(a,b){return a+b.pay;},0),topRate:_dwEatsTopRate(byWeek[wk],cfg.tiers)};
+  });
+  if(noDate>0){var bd0=_dwEatsBreakdown(noDate,cfg.tiers);weeks.push({week:'',weekEnd:'',count:noDate,breakdown:bd0,gross:bd0.reduce(function(a,b){return a+b.pay;},0),topRate:_dwEatsTopRate(noDate,cfg.tiers)});}
+  var gross=weeks.reduce(function(s,w){return s+w.gross;},0);
+  var tax=Math.round(gross*cfg.taxRate);
+  var incomeTax=cfg.taxRate>0?Math.round(gross*cfg.taxRate*(3/3.3)):0;
+  var emp=Math.round(gross*cfg.empRate), ind=Math.round(gross*cfg.indRate);
+  var deduct=tax+emp+ind;
+  return {gross:gross,tax:tax,incomeTax:incomeTax,localTax:tax-incomeTax,emp:emp,ind:ind,deduct:deduct,net:gross-deduct,
+          coupang:Math.round(coupang||0),company:Math.round(coupang||0)-gross,weeks:weeks,
+          topRate:weeks.reduce(function(m,w){return Math.max(m,w.topRate);},0)};
+}
+function _dwPct(r){return (Math.round(r*1000)/10).toString().replace(/\.0$/,'')+'%';}
+
+// ── 정산 방식 설정 모달 ──
+window._dwEatsSettings=function(){
+  var cfg=_dwEatsCfg();
+  var old=document.getElementById('dw-eats-set');if(old)old.remove();
+  var inp='style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"';
+  function tierRow(t){return '<div class="dw-tier-row" style="display:grid;grid-template-columns:1fr 1fr 44px;gap:6px;margin-bottom:6px">'
+    +'<input type="number" min="1" class="dw-tier-min" value="'+t.min+'" placeholder="시작 건수" '+inp+'>'
+    +'<input type="number" min="0" class="dw-tier-rate" value="'+t.rate+'" placeholder="단가" '+inp+'>'
+    +'<button onclick="this.parentNode.remove()" style="min-height:40px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;cursor:pointer">×</button></div>';}
+  var m=document.createElement('div');
+  m.id='dw-eats-set';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;overflow-y:auto;padding:16px';
+  m.innerHTML='<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:440px;margin:0 auto">'
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">배달대행 정산 방식</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">회사별로 저장됩니다.</div>'
+    +'<label style="font-size:12px;color:var(--text3)">정산 방식</label>'
+    +'<select id="dw-es-mode" '+inp+'><option value="eats"'+(cfg.mode==='eats'?' selected':'')+'>쿠팡이츠 단가표 적용 (주간 누진)</option><option value="raw"'+(cfg.mode==='raw'?' selected':'')+'>쿠팡 정산금액 그대로 (기존 방식)</option></select>'
+    +'<div style="font-size:12px;font-weight:700;margin:16px 0 6px">단가 구간 <span style="font-weight:400;color:var(--text3)">(시작 건수 / 원)</span></div>'
+    +'<div id="dw-es-tiers">'+_dwEatsSortedTiers(cfg.tiers).map(tierRow).join('')+'</div>'
+    +'<button id="dw-es-add" style="width:100%;min-height:40px;margin-bottom:6px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px">+ 구간 추가</button>'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">주간(일~토) 건수에 구간별 단가를 따로 계산해 합산합니다. 예) 320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">'
+      +'<div><label style="font-size:12px;color:var(--text3)">세금 유형</label><select id="dw-es-tax" '+inp+'><option value="33"'+(cfg.taxType==='33'?' selected':'')+'>3.3% (소득세+지방세)</option><option value="0"'+(cfg.taxType==='0'?' selected':'')+'>세금 없음 (사업자)</option><option value="custom"'+(cfg.taxType==='custom'?' selected':'')+'>직접 입력</option></select></div>'
+      +'<div><label style="font-size:12px;color:var(--text3)">직접 입력 세율(%)</label><input id="dw-es-taxr" type="number" step="0.1" value="'+(cfg.taxType==='custom'?Math.round(cfg.taxRate*1000)/10:'')+'" '+inp+'></div>'
+      +'<div><label style="font-size:12px;color:var(--text3)">고용보험(%)</label><input id="dw-es-emp" type="number" step="0.01" value="'+Math.round(cfg.empRate*10000)/100+'" '+inp+'></div>'
+      +'<div><label style="font-size:12px;color:var(--text3)">산재보험(%)</label><input id="dw-es-ind" type="number" step="0.01" value="'+Math.round(cfg.indRate*10000)/100+'" '+inp+'></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+      +'<button id="dw-es-save" style="flex:1;min-height:46px;background:#08101f;color:#c9a84c;border:none;border-radius:10px;font-weight:800;cursor:pointer">저장</button>'
+      +'<button id="dw-es-reset" style="min-height:46px;padding:0 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px">기본값</button>'
+      +'<button id="dw-es-close" style="min-height:46px;padding:0 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px">닫기</button>'
+    +'</div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#dw-es-add').onclick=function(){var w=document.createElement('div');w.innerHTML=tierRow({min:'',rate:''});m.querySelector('#dw-es-tiers').appendChild(w.firstChild);};
+  m.querySelector('#dw-es-close').onclick=function(){m.remove();};
+  m.querySelector('#dw-es-reset').onclick=function(){
+    m.querySelector('#dw-es-tiers').innerHTML=_DW_EATS_DEFAULT.tiers.map(tierRow).join('');
+    m.querySelector('#dw-es-tax').value='33';m.querySelector('#dw-es-taxr').value='';
+    m.querySelector('#dw-es-emp').value=_DW_EATS_DEFAULT.empRate*100;m.querySelector('#dw-es-ind').value=_DW_EATS_DEFAULT.indRate*100;
+  };
+  m.querySelector('#dw-es-save').onclick=function(){
+    var tiers=[];
+    m.querySelectorAll('.dw-tier-row').forEach(function(r){
+      var mn=parseInt(r.querySelector('.dw-tier-min').value),rt=parseInt(r.querySelector('.dw-tier-rate').value);
+      if(mn>0&&rt>=0)tiers.push({min:mn,rate:rt});
+    });
+    if(!tiers.length){toast('단가 구간을 1개 이상 입력하세요');return;}
+    tiers=_dwEatsSortedTiers(tiers);
+    if(tiers[0].min!==1){toast('첫 구간 시작 건수는 1이어야 합니다');return;}
+    var tt=m.querySelector('#dw-es-tax').value;
+    var nc={mode:m.querySelector('#dw-es-mode').value,tiers:tiers,taxType:tt,
+      taxRate:tt==='custom'?(parseFloat(m.querySelector('#dw-es-taxr').value)||0)/100:(tt==='33'?0.033:0),
+      empRate:(parseFloat(m.querySelector('#dw-es-emp').value)||0)/100,
+      indRate:(parseFloat(m.querySelector('#dw-es-ind').value)||0)/100};
+    var did=_CU.dealerId||_CU.uid||'';
+    _db.collection('companies').doc(did).set({dwEatsCfg:nc},{merge:true}).then(function(){
+      if(typeof _COMPANY_CFG!=='undefined'){if(!_COMPANY_CFG)_COMPANY_CFG={};_COMPANY_CFG.dwEatsCfg=nc;}
+      toast('정산 방식을 저장했습니다');m.remove();
+      _dwDeliveryLoad(did,window._dwSettleYm);
+    }).catch(function(e){toast('저장 실패: '+e.message);});
+  };
+};
+
 function _dwDeliveryRender(drivers, ym, did, savedAt){
   var res=document.getElementById('dw-settle-results');
   if(!res)return;
   var TAX_INC=0.033,TAX_WORK=0.0088,TAX_EMP=0.008;
+  var ECFG=_dwEatsCfg(), EATS=ECFG.mode==='eats';
+  window._dwDeliveryCfg=EATS?{eats:true,taxRate:ECFG.taxRate,empRate:ECFG.empRate,indRate:ECFG.indRate}:{eats:false,taxRate:TAX_INC,empRate:TAX_EMP,indRate:TAX_WORK};
   var CARD_COLORS=['#1d4ed8','#7c3aed','#059669','#d97706','#0891b2','#dc2626','#9333ea','#0d9488'];
 
   // 기사별 집계
@@ -13737,7 +13879,12 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
     });
     var totalRej=dailyList.reduce(function(s,d){return s+d.rejected;},0);
     var totalCan=dailyList.reduce(function(s,d){return s+d.cancelled;},0);
-    return{name:d.name,orders:Math.round(d.orders||0),preTax:preTax,tax33:tax33,taxWork:taxWork,taxEmp:taxEmp,deduct:deduct,net:preTax-deduct,days:dailyList,totalRej:totalRej,totalCan:totalCan};
+    if(EATS){
+      var ec=_dwEatsCalcDriver(dailyList,d.amount,Math.round(d.orders||0),ECFG);
+      return{name:d.name,orders:Math.round(d.orders||0),preTax:ec.gross,tax33:ec.tax,taxWork:ec.ind,taxEmp:ec.emp,deduct:ec.deduct,net:ec.net,
+        coupang:ec.coupang,company:ec.company,weeks:ec.weeks,topRate:ec.topRate,days:dailyList,totalRej:totalRej,totalCan:totalCan};
+    }
+    return{name:d.name,orders:Math.round(d.orders||0),preTax:preTax,tax33:tax33,taxWork:taxWork,taxEmp:taxEmp,deduct:deduct,net:preTax-deduct,coupang:preTax,company:0,days:dailyList,totalRej:totalRej,totalCan:totalCan};
   }).sort(function(a,b){return b.orders-a.orders;});
   window._dwDeliveryResults=results;
 
@@ -13746,6 +13893,8 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
   var tNet=results.reduce(function(s,r){return s+r.net;},0);
   var tRej=results.reduce(function(s,r){return s+r.totalRej;},0);
   var tCan=results.reduce(function(s,r){return s+r.totalCan;},0);
+  var tCoupang=results.reduce(function(s,r){return s+(r.coupang||0);},0);
+  var tCompany=results.reduce(function(s,r){return s+(r.company||0);},0);
   var savedStr=savedAt?('최종저장: '+new Date(savedAt).toLocaleDateString('ko-KR')):'';
 
   // ── 전체 요약 헤더
@@ -13775,8 +13924,14 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
           +'<div style="font-size:13px;font-weight:800;color:#fcd34d">'+tCan.toLocaleString()+'건</div>'
         +'</div>'
       +'</div>'
+      +(EATS?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'
+        +'<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:7px;text-align:center"><div style="font-size:9px;opacity:.7">쿠팡 총지급</div><div style="font-size:13px;font-weight:800">₩'+tCoupang.toLocaleString()+'</div></div>'
+        +'<div style="background:rgba(201,168,76,.28);border-radius:8px;padding:7px;text-align:center"><div style="font-size:9px;opacity:.8">회사 마진 (쿠팡 − 기사세전)</div><div style="font-size:13px;font-weight:800;color:'+(tCompany>=0?'#fde68a':'#fca5a5')+'">'+(tCompany>=0?'+':'−')+'₩'+Math.abs(tCompany).toLocaleString()+'</div></div>'
+      +'</div>'
+      +'<div style="font-size:10px;opacity:.65;margin-top:8px">쿠팡이츠 단가표 적용 · 주간(일~토) 누진 · 공제 '+(ECFG.taxRate>0?'원천세 '+_dwPct(ECFG.taxRate)+' · ':'')+'고용 '+_dwPct(ECFG.empRate)+' · 산재 '+_dwPct(ECFG.indRate)+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'
+      +'<button onclick="_dwEatsSettings()" style="padding:9px 18px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산 방식·단가</button>'
       +'<button onclick="_dwDeliveryExport()" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'
       +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💳 세금정산 보기</button>'
       +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
@@ -13854,6 +14009,14 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
           +'<span style="color:#f59e0b">산재 −₩'+r.taxWork.toLocaleString()+'</span>'
           +'<span style="color:#f59e0b">고용 −₩'+r.taxEmp.toLocaleString()+'</span>'
         +'</div>'
+        +(EATS?'<div style="padding:8px 12px;font-size:11px;border-bottom:1px solid var(--border);background:var(--bg3)">'
+          +(r.weeks||[]).map(function(w){
+            return '<div style="margin-bottom:4px"><div style="display:flex;justify-content:space-between;font-weight:700"><span>'+(w.week?esc(w.week.slice(5))+'~'+esc(w.weekEnd.slice(5)):'날짜 미상')+' · '+w.count+'건</span><span>₩'+w.gross.toLocaleString()+'</span></div>'
+              +'<div style="color:var(--text3);font-size:10px">'+w.breakdown.map(function(b){return b.count+'건×'+b.rate.toLocaleString();}).join(' + ')+'</div></div>';
+          }).join('')
+          +'<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--border);padding-top:5px;margin-top:4px"><span style="color:var(--text3)">쿠팡지급 ₩'+(r.coupang||0).toLocaleString()+'</span>'
+          +'<span style="font-weight:800;color:'+((r.company||0)>=0?'#b45309':'#dc2626')+'">회사마진 '+((r.company||0)>=0?'+':'−')+'₩'+Math.abs(r.company||0).toLocaleString()+'</span></div>'
+        +'</div>':'')
         // 일별 상세 테이블
         +'<div style="overflow-x:auto">'
           +'<table style="width:100%;border-collapse:collapse">'
@@ -13911,6 +14074,7 @@ window._dwDeliverySaveExtra=function(did, ym){
 
 window._dwDeliveryDriverView=function(){
   var results=window._dwDeliveryResults||[];
+  var _DC=window._dwDeliveryCfg||{taxRate:0.033,empRate:0.008,indRate:0.0088};
   if(!results.length)return;
   var tOrders=results.reduce(function(s,r){return s+r.orders;},0);
   var tPreTax=results.reduce(function(s,r){return s+r.preTax;},0);
@@ -13925,9 +14089,9 @@ window._dwDeliveryDriverView=function(){
       +'<th style="padding:8px;text-align:left">기사명</th>'
       +'<th style="padding:8px;text-align:right">건수</th>'
       +'<th style="padding:8px;text-align:right;color:#10b981">세전금액</th>'
-      +'<th style="padding:8px;text-align:right;color:#dc2626">원천세<br><span style="font-weight:400;font-size:9px">3.3%</span></th>'
-      +'<th style="padding:8px;text-align:right;color:#f59e0b">산재<br><span style="font-weight:400;font-size:9px">0.88%</span></th>'
-      +'<th style="padding:8px;text-align:right;color:#f59e0b">고용<br><span style="font-weight:400;font-size:9px">0.8%</span></th>'
+      +'<th style="padding:8px;text-align:right;color:#dc2626">원천세<br><span style="font-weight:400;font-size:9px">'+_dwPct(_DC.taxRate)+'</span></th>'
+      +'<th style="padding:8px;text-align:right;color:#f59e0b">산재<br><span style="font-weight:400;font-size:9px">'+_dwPct(_DC.indRate)+'</span></th>'
+      +'<th style="padding:8px;text-align:right;color:#f59e0b">고용<br><span style="font-weight:400;font-size:9px">'+_dwPct(_DC.empRate)+'</span></th>'
       +'<th style="padding:8px;text-align:right;color:#3b82f6">실지급</th>'
       +'<th style="padding:8px"></th>'
     +'</tr></thead><tbody>';
@@ -13972,6 +14136,7 @@ window._dwDeliveryDriverView=function(){
 window._dwDeliveryDetail=function(idx){
   var r=(window._dwDeliveryResults||[])[idx];
   if(!r)return;
+  var _DC=window._dwDeliveryCfg||{taxRate:0.033,empRate:0.008,indRate:0.0088};
   var oid='dw-det-'+idx+'-'+Date.now();
   var html='<div id="'+oid+'" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px">'
     +'<div style="background:var(--bg);border-radius:14px;padding:20px;max-width:400px;margin:0 auto">'
@@ -13992,10 +14157,11 @@ window._dwDeliveryDetail=function(idx){
   });
   html+='</tbody></table></div>'
     +'<div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:14px">'
+      +(r.weeks?r.weeks.map(function(w){return '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;color:var(--text3)"><span>'+(w.week?esc(w.week.slice(5))+'~'+esc(w.weekEnd.slice(5)):'날짜 미상')+' '+w.count+'건 ('+w.breakdown.map(function(b){return b.count+'×'+b.rate.toLocaleString();}).join('+')+')</span><span>₩'+w.gross.toLocaleString()+'</span></div>';}).join(''):'')
       +'<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px"><span style="color:var(--text3)">세전금액</span><span>₩'+r.preTax.toLocaleString()+'</span></div>'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px"><span style="color:#dc2626">원천세 3.3%</span><span style="color:#dc2626">−₩'+r.tax33.toLocaleString()+'</span></div>'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px"><span style="color:#f59e0b">산재보험 0.88%</span><span style="color:#f59e0b">−₩'+r.taxWork.toLocaleString()+'</span></div>'
-      +'<div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:12px"><span style="color:#f59e0b">고용보험 0.8%</span><span style="color:#f59e0b">−₩'+r.taxEmp.toLocaleString()+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px"><span style="color:#dc2626">원천세 '+_dwPct(_DC.taxRate)+'</span><span style="color:#dc2626">−₩'+r.tax33.toLocaleString()+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px"><span style="color:#f59e0b">산재보험 '+_dwPct(_DC.indRate)+'</span><span style="color:#f59e0b">−₩'+r.taxWork.toLocaleString()+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:12px"><span style="color:#f59e0b">고용보험 '+_dwPct(_DC.empRate)+'</span><span style="color:#f59e0b">−₩'+r.taxEmp.toLocaleString()+'</span></div>'
       +'<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:800;border-top:1px solid var(--border);padding-top:8px"><span>실지급액</span><span style="color:#3b82f6">₩'+r.net.toLocaleString()+'</span></div>'
     +'</div>'
     +'<button id="dw-det-close-'+oid+'" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px">닫기</button>'
@@ -14013,16 +14179,24 @@ window._dwDeliveryExport=function(){
   var ym=window._dwSettleYm||new Date().toISOString().slice(0,7);
   if(!results.length){toast('정산 데이터가 없습니다');return;}
   var wb=XLSX.utils.book_new();
-  var sum=[['기사명','건수','세전금액','원천세(3.3%)','산재보험(0.88%)','고용보험(0.8%)','공제합계','실지급액']];
-  results.forEach(function(r){sum.push([r.name,r.orders,r.preTax,r.tax33,r.taxWork,r.taxEmp,r.deduct,r.net]);});
-  sum.push(['합계',results.reduce(function(s,r){return s+r.orders;},0),results.reduce(function(s,r){return s+r.preTax;},0),results.reduce(function(s,r){return s+r.tax33;},0),results.reduce(function(s,r){return s+r.taxWork;},0),results.reduce(function(s,r){return s+r.taxEmp;},0),results.reduce(function(s,r){return s+r.deduct;},0),results.reduce(function(s,r){return s+r.net;},0)]);
+  var _DC=window._dwDeliveryCfg||{taxRate:0.033,empRate:0.008,indRate:0.0088};
+  function _S(k){return results.reduce(function(s,r){return s+(r[k]||0);},0);}
+  var sum=[['기사명','건수','쿠팡지급','세전금액(기사)','원천세('+_dwPct(_DC.taxRate)+')','산재보험('+_dwPct(_DC.indRate)+')','고용보험('+_dwPct(_DC.empRate)+')','공제합계','실지급액','회사마진']];
+  results.forEach(function(r){sum.push([r.name,r.orders,r.coupang||0,r.preTax,r.tax33,r.taxWork,r.taxEmp,r.deduct,r.net,r.company||0]);});
+  sum.push(['합계',_S('orders'),_S('coupang'),_S('preTax'),_S('tax33'),_S('taxWork'),_S('taxEmp'),_S('deduct'),_S('net'),_S('company')]);
   var ws1=XLSX.utils.aoa_to_sheet(sum);
-  ws1['!cols']=[{wch:16},{wch:6},{wch:12},{wch:12},{wch:14},{wch:12},{wch:10},{wch:12}];
+  ws1['!cols']=[{wch:16},{wch:6},{wch:12},{wch:12},{wch:12},{wch:14},{wch:12},{wch:10},{wch:12},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws1,'정산 요약');
   var det=[['기사명','날짜','건수','정산금액']];
   results.forEach(function(r){(r.days||[]).forEach(function(d){det.push([r.name,d.date,Math.round(d.orders),Math.round(d.amount)]);});});
   var ws2=XLSX.utils.aoa_to_sheet(det);ws2['!cols']=[{wch:16},{wch:12},{wch:8},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws2,'일자별 상세');
+  if(_DC.eats){
+    var wk=[['기사명','주차 시작','주차 끝','건수','구간 계산','기사 세전']];
+    results.forEach(function(r){(r.weeks||[]).forEach(function(w){wk.push([r.name,w.week,w.weekEnd,w.count,w.breakdown.map(function(b){return b.count+'×'+b.rate;}).join(' + '),w.gross]);});});
+    var ws4=XLSX.utils.aoa_to_sheet(wk);ws4['!cols']=[{wch:16},{wch:12},{wch:12},{wch:6},{wch:40},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws4,'주차별 단가');
+  }
   var tax=[['기사명','귀속월','세전금액','원천세','산재보험','고용보험','실지급액']];
   results.forEach(function(r){tax.push([r.name,ym,r.preTax,r.tax33,r.taxWork,r.taxEmp,r.net]);});
   var ws3=XLSX.utils.aoa_to_sheet(tax);ws3['!cols']=[{wch:16},{wch:8},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12}];
