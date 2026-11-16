@@ -39,8 +39,8 @@ test('주차별로 따로 누진 적용 후 합산, 마진·공제 계산', () =
   assert.strictEqual(r.gross, w1 + w2);
   assert.strictEqual(r.company, Math.round(1480000/1.1) - (w1 + w2)); // 부가세 포함 금액 → 공급가 기준 마진
   assert.strictEqual(r.tax, Math.round((w1+w2)*0.033));
-  assert.strictEqual(r.emp, Math.round((w1+w2)*0.008));
-  assert.strictEqual(r.ind, Math.round((w1+w2)*0.0088));
+  assert.strictEqual(r.emp, Math.round((w1+w2)*0.009));
+  assert.strictEqual(r.ind, Math.round((w1+w2)*0.016));
   assert.strictEqual(r.net, r.gross - r.tax - r.emp - r.ind);
 });
 test('세금 없음 설정', () => {
@@ -84,4 +84,8 @@ test('쿠팡 실지급액(종합 시트) 직접 지정 시 그 값으로 마진 
   const r = api._dwEatsCalcDriver([{date:'2026-06-17',orders:420,amount:1840974}], 1840974, 420, api._DW_EATS_DEFAULT, 1652053);
   assert.strictEqual(r.coupang, 1652053);
   assert.strictEqual(r.company, 1652053 - 1377900);
+});
+test('기본 보험 요율 = 계산기(고용 0.9%, 산재 1.6%)', () => {
+  assert.strictEqual(api._DW_EATS_DEFAULT.empRate, 0.009);
+  assert.strictEqual(api._DW_EATS_DEFAULT.indRate, 0.016);
 });
