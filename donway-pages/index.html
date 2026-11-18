@@ -13285,6 +13285,19 @@ function _dwCurrentPeriod(platform){
   return {start:fmt(start),end:fmt(end),payDate:null,label:fmt(start)+'~'+fmt(end)};
 }
 
+// 정산기간 표시용: 기존 저장 키가 숫자 타임스탬프('1,792,940,400,000~...')라 화면에서만 날짜로 바꿔 보여줌 (저장 키는 그대로)
+function _dwPeriodLabel(p){
+  var parts=String(p||'').split('~');
+  var ds=parts.map(function(x){
+    var n=+String(x).replace(/[,\s]/g,'');
+    if(n>1e11){var d=new Date(n+9*3600000);return {y:d.getUTCFullYear(),t:('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)};}
+    var m=String(x).match(/(\d{4})-(\d{2})-(\d{2})/);
+    return m?{y:+m[1],t:m[2]+'.'+m[3]}:{y:0,t:String(x).trim()};
+  });
+  if(ds.length!==2)return String(p||'');
+  return (ds[0].y?ds[0].y+'.':'')+ds[0].t+' ~ '+(ds[1].y&&ds[1].y!==ds[0].y?ds[1].y+'.':'')+ds[1].t;
+}
+
 // 기존 코드 호환용 (문자열 반환)
 function _dwPeriodStr(platform){
   var p=_dwCurrentPeriod(platform);
@@ -15635,17 +15648,6 @@ function _bmDaysJson(doc,sum){
     days:sum.days});
 }
 // 정산기간 표시용: 기존 저장 키가 숫자 타임스탬프('1,792,940,400,000~...')라 화면에서만 날짜로 바꿔 보여줌 (저장 키는 그대로)
-function _dwPeriodLabel(p){
-  var parts=String(p||'').split('~');
-  var ds=parts.map(function(x){
-    var n=+String(x).replace(/[,\s]/g,'');
-    if(n>1e11){var d=new Date(n+9*3600000);return {y:d.getUTCFullYear(),t:('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)};}
-    var m=String(x).match(/(\d{4})-(\d{2})-(\d{2})/);
-    return m?{y:+m[1],t:m[2]+'.'+m[3]}:{y:0,t:String(x).trim()};
-  });
-  if(ds.length!==2)return String(p||'');
-  return (ds[0].y?ds[0].y+'.':'')+ds[0].t+' ~ '+(ds[1].y&&ds[1].y!==ds[0].y?ds[1].y+'.':'')+ds[1].t;
-}
 function _dwStatsGet(uid,did){
   return fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(_dwPeriodStr())).then(function(r){return r.json();});
 }
