@@ -354,7 +354,13 @@ _checkSlugDuplicate(this.value);
         <div class="fg"><label>정산 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(직원ID)</span></label><input id="j-driverid-quick" type="text" placeholder="kim001 (영문+숫자)"></div>
         <div class="fg"><label>역할</label><select id="j-role" onchange="document.getElementById('j-store-wrap').style.display=this.value==='manager'?'block':'none'" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"><option value="driver">기사/직원</option><option value="manager">과장 (재고 담당)</option></select></div>
         <div class="fg" id="j-store-wrap" style="display:none"><label>담당 매장</label><input id="j-store" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
-        <div class="fg"><label>주민번호 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" placeholder="000000-0000000" style="font-family:monospace"></div>
+        <div id="j-dlv-wrap" style="display:none;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px">
+          <div class="fg"><label>배달 플랫폼 <span style="color:var(--red)">*</span> <span style="color:var(--text3);font-size:10px;font-weight:400">(둘 다 하면 둘 다 선택)</span></label>
+            <div style="display:flex;gap:6px" role="group" aria-label="배달 플랫폼"><button type="button" id="j-plat-bm" onclick="_jSetPlat('bm')" style="flex:1;min-height:44px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">배민</button><button type="button" id="j-plat-cpe" onclick="_jSetPlat('cpe')" style="flex:1;min-height:44px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">쿠팡이츠</button><button type="button" id="j-plat-both" onclick="_jSetPlat('both')" style="flex:1;min-height:44px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">둘 다</button></div><input id="j-plat" type="hidden" value=""></div>
+          <div class="fg" id="j-bmid-wrap" style="display:none"><label>배민 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택 · 정산 엑셀 자동 연결용)</span></label><input id="j-bmid" type="text" autocomplete="off" placeholder="배민 라이더 아이디"></div>
+          <div style="font-size:11px;color:var(--text3);line-height:1.5">같은 이름의 기사와 구분하고 원천세 신고를 하려면 주민번호가 꼭 필요해요. 주민번호는 관리자와 본인만 볼 수 있고, 화면에는 뒷자리를 가려서 보여 줘요.</div>
+        </div>
+        <div class="fg"><label>주민번호 <span id="j-ssn-req" style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000000-0000000" style="font-family:monospace"></div>
         <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
         <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
         <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
@@ -7076,13 +7082,20 @@ function _quickVerifyCode(code){
           } else {
             msg.innerHTML='<span style="color:var(--green)">✅ '+esc(data.companyName||'확인됨')+'</span>';
           }
+          _jDlvShow(!!data.hasDelivery);
         } else {
           if(el){el.dataset.companyId='';el.dataset.companyName='';}
+          _jDlvShow(false);
           msg.innerHTML='<span style="color:var(--red)">❌ 코드를 찾을 수 없습니다<br><span style="font-size:10px">관리자에게 정확한 코드 확인 요청</span></span>';
         }
       }).catch(function(e){msg.innerHTML='<span style="color:var(--red)">오류: '+e.message+'</span>';});
   },500);
 }
+// 배달대행 가입: 플랫폼(배민/쿠팡이츠/둘 다) + 주민번호 필수 (동명이인 구분)
+function _jDlvShow(on){window._joinIsDlv=!!on;var w=document.getElementById('j-dlv-wrap');if(w)w.style.display=on?'':'none';var r=document.getElementById('j-ssn-req');if(r){r.textContent=on?'*':'(선택)';r.style.color=on?'var(--red)':'var(--text3)';}}
+function _jSetPlat(k){var h=document.getElementById('j-plat');if(h)h.value=k;['bm','cpe','both'].forEach(function(x){var b=document.getElementById('j-plat-'+x);if(!b)return;var on=x===k;b.style.borderColor=on?'var(--brand)':'var(--border)';b.style.background=on?'rgba(0,200,248,.1)':'transparent';b.style.color=on?'var(--brand)':'var(--text)';b.setAttribute('aria-pressed',on?'true':'false');});var bw=document.getElementById('j-bmid-wrap');if(bw)bw.style.display=(k==='bm'||k==='both')?'':'none';}
+function _jSsnFmt(v){var d=String(v||'').replace(/[^0-9]/g,'');return d.length===13?d.slice(0,6)+'-'+d.slice(6):'';}
+function _jSsnOk(v){var d=String(v||'').replace(/[^0-9]/g,'');if(d.length!==13)return false;var mm=+d.slice(2,4),dd=+d.slice(4,6);return mm>=1&&mm<=12&&dd>=1&&dd<=31&&/[1-8]/.test(d[6]);}
 function doQuickJoin(){
   var name=((document.getElementById('j-name')||{}).value||'').trim();
   var phone=((document.getElementById('j-phone')||{}).value||'').replace(/[^0-9]/g,'');
@@ -7104,6 +7117,14 @@ function doQuickJoin(){
   var bizKind=isBiz?((document.getElementById('j-biz-kind')||{}).value||'').trim():'';
   var bizAddr=isBiz?((document.getElementById('j-biz-addr')||{}).value||'').trim():'';
   var ssn=((document.getElementById('j-ssn')||{}).value||'').trim();
+  var platform='',bmUserId='';
+  if(window._joinIsDlv){
+    platform=((document.getElementById('j-plat')||{}).value||'');
+    bmUserId=(platform==='bm'||platform==='both')?((document.getElementById('j-bmid')||{}).value||'').trim():'';
+    if(!platform){if(err){err.textContent='배민, 쿠팡이츠, 둘 다 중에서 골라 주세요';err.style.display='';}return;}
+    if(!_jSsnOk(ssn)){if(err){err.textContent='주민번호 13자리를 정확히 입력해 주세요 (같은 이름 기사 구분용)';err.style.display='';}return;}
+    ssn=_jSsnFmt(ssn);
+  }
   var joinDate=((document.getElementById('j-joindate')||{}).value||'').trim();
   var joinRoleQ=(document.getElementById('j-role')||{value:'driver'}).value||'driver';
   var joinStoreQ=(document.getElementById('j-store')||{value:''}).value||'';
@@ -7147,6 +7168,7 @@ function doQuickJoin(){
       driverId:driverId,role:joinRoleQ,isBiz:isBiz,bizNum:bizNum,bizName:bizName,
       bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,ssn:ssn,joinDate:joinDate,pw:pwHash,
       uid:authUid,email:email};
+    if(platform){payload.platform=platform;if(bmUserId)payload.bmUserId=bmUserId;}
     fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
       .then(function(r){return r.json();})
       .then(function(data){
@@ -13441,6 +13463,8 @@ function _dwCheckTierNotifications(prevCount, newCount, opts){
 // ══ 배달대행 정산 (쿠팡이츠 AI정산 스타일) ══
 function pageDeliverySettle(){
   if(!isSuperAdmin()&&!_isPlanAllowedNow('delivery')){_renderPaywall('delivery');return;}
+  if(window._dwSettleTab!=='coupang'){pageBaeminSettle();return;}
+  setTimeout(_bsCoupangBar,0);
   window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산';
   var _dsTr=document.getElementById('topbar-right');_dsTr.innerHTML='';
@@ -15101,7 +15125,7 @@ function pageDeliveryInput(){
       });
   }
   _dwFetchStats();
-  window._dwDashInterval=setInterval(_dwFetchStats,30000);
+  window._dwDashInterval=setInterval(_dwFetchStats,15000);
 }
 
 // 기사 대시보드 렌더링 — CallPassBiz 스타일
@@ -15217,6 +15241,7 @@ function _dwRenderDriverDash(s){
         +'<span style="font-size:13px;color:var(--text3)">시간 외</span>'
         +'<span style="font-size:15px;font-weight:800">'+pc.etc+'<span style="font-size:12px;font-weight:400">건</span></span>'
       +'</div>';
+      html+=_bmDriverWeekCard(s.bmDays);
       // SLA 현황
       var accept=cnt>0?Math.round(completed.total/cnt*100):0;
       html+='<div style="background:var(--bg2);border-radius:16px;overflow:hidden">'
@@ -15504,6 +15529,765 @@ window._daMakeShareImage=function(){
   },'image/png');
 };
 
+// ══ 배민 '배달 내역 상세' 엑셀 → 기사 현황 자동 반영 ══
+// 주 = 수~화. 하루치든 주간치든 올리면 delivery_sessions/{dealerId}_bmweek_{수요일} 에 날짜별로 누적.
+// 같은 날짜를 다시 올리면 그 날짜는 새 파일 값으로 교체(중복 합산 없음), 파일 안 중복 배달번호는 1건으로.
+// 슬롯은 '전달완료' 시각 기준 (9-13/13-17/17-20/20-24, 그 외 = 시간 외). 거절은 엑셀에 없어 취소만 집계.
+var _BM_DOW=['일','월','화','수','목','금','토'];
+function _bmWeekStart(ds){
+  var p=String(ds).split('-');var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+  d.setUTCDate(d.getUTCDate()-((d.getUTCDay()-3+7)%7));return d.toISOString().slice(0,10);
+}
+function _bmAddDays(ds,n){var p=String(ds).split('-');var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function _bmDow(ds){var p=String(ds).split('-');return _BM_DOW[new Date(Date.UTC(+p[0],+p[1]-1,+p[2])).getUTCDay()];}
+function _bmKey(s){return String(s||'').trim().replace(/[^0-9A-Za-z가-힣]/g,'_')||'_';}
+function _bmNormName(s){return String(s||'').replace(/\s/g,'').replace(/\d+$/,'');}
+function _bmSlotOf(h){
+  for(var i=0;i<_DA_SLOTS.length;i++){if(h>=_DA_SLOTS[i].start&&h<_DA_SLOTS[i].end)return _DA_SLOTS[i].key;}
+  return 'etc';
+}
+function _bmEmpty(){return {done:0,cancel:0,food:0,store:0,mart:0,cFood:0,cStore:0,cMart:0,am:0,pm:0,eve:0,ngt:0,etc:0,fee:0};}
+function _bmDateStr(v){
+  if(v==null||v==='')return '';
+  if(typeof v==='number'){
+    if(v>19000000&&v<30000000){var s=String(Math.round(v));return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);}
+    if(v>40000){var d=new Date(Math.round((v-25569)*86400000));return d.toISOString().slice(0,10);}
+  }
+  var t=String(v).trim();
+  if(/^\d{8}$/.test(t))return t.slice(0,4)+'-'+t.slice(4,6)+'-'+t.slice(6,8);
+  var m=t.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  return m?m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2):'';
+}
+function _bmHour(v){
+  if(v==null||v==='')return -1;
+  if(typeof v==='number')return Math.floor(((v%1)+1e-9)*24)%24;
+  var m=String(v).match(/[T\s](\d{1,2}):\d{2}/);
+  return m?+m[1]:-1;
+}
+// rows: sheet_to_json(header:1) 결과 → {byDate:{date:{riderKey:{name,userId,...counts}}}, rows, dup, skipped}
+function _bmParseRows(rows){
+  var hr=-1;
+  for(var i=0;i<Math.min(rows.length,20);i++){
+    var j=rows[i].map(function(v){return String(v||'').trim();});
+    if(j.indexOf('배달번호')>=0&&(j.indexOf('라이더명')>=0||j.indexOf('라이더ID')>=0)){hr=i;break;}
+  }
+  if(hr<0)return null;
+  var H=rows[hr].map(function(v){return String(v||'').trim();});
+  function col(){for(var a=0;a<arguments.length;a++){var k=H.indexOf(arguments[a]);if(k>=0)return k;}return -1;}
+  var cDate=col('운행일','배달일'),cNo=col('배달번호'),cSt=col('배달상태'),cSvc=col('서비스타입'),cName=col('라이더명'),cUid=col('User ID','라이더ID'),
+      cDone=col('전달완료'),cAssign=col('배차완료'),cFee=col('배달처리비');
+  // 배달처리비 항목(기본단가·할증) — 배민 정산 v2 정산서용
+  var PT=[['base','기본단가'],['wx','기상할증'],['add','추가할증'],['peak','피크할증 등'],['area','지역 할증'],['area2','지역할증2'],['bulk','대량 할증']].map(function(x){return [x[0],H.indexOf(x[1])];}).filter(function(x){return x[1]>=0;});
+  var seen={},out={},n=0,dup=0,skipped=0;
+  for(var r=hr+1;r<rows.length;r++){
+    var row=rows[r];if(!row||!row.length)continue;
+    var no=String(row[cNo]||'').trim();
+    var name=String(cName>=0?row[cName]:'').trim();
+    if(!no||!name){skipped++;continue;}
+    if(seen[no]){dup++;continue;}seen[no]=1;
+    var date=_bmDateStr(cDate>=0?row[cDate]:'')||_bmDateStr(cDone>=0?row[cDone]:'')||_bmDateStr(cAssign>=0?row[cAssign]:'');
+    if(!date){skipped++;continue;}
+    var uid=String(cUid>=0?row[cUid]:'').trim();
+    var key=_bmKey(name+'_'+uid);
+    if(!out[date])out[date]={};
+    var a=out[date][key]||(out[date][key]=Object.assign({name:name,userId:uid},_bmEmpty()));
+    var st=String(cSt>=0?row[cSt]:'전달완료');
+    var svc=String(cSvc>=0?row[cSvc]:'');
+    var ch=(svc.indexOf('B마트')>=0||svc.indexOf('비마트')>=0)?'mart':(svc.indexOf('스토어')>=0?'store':'food');
+    if(st.indexOf('취소')>=0){a.cancel++;a['c'+ch.charAt(0).toUpperCase()+ch.slice(1)]++;}
+    else if(st.indexOf('완료')>=0){
+      a.done++;a[ch]++;
+      var h=_bmHour(cDone>=0?row[cDone]:'');if(h<0)h=_bmHour(cAssign>=0?row[cAssign]:'');
+      a[h<0?'etc':_bmSlotOf(h)]++;
+      var _fv=Math.round(parseFloat(cFee>=0?row[cFee]:0)||0);a.fee+=_fv;
+      // 건별 배달처리비 분포(금액→건수): 최저단가 보장 차액·초과분 계산용
+      if(!a.fb)a.fb={};a.fb[_fv]=(a.fb[_fv]||0)+1;
+      if(!a.pt)a.pt={};PT.forEach(function(x){var pv=Math.round(parseFloat(row[x[1]])||0);if(pv){var q=a.pt[x[0]]||(a.pt[x[0]]={n:0,v:0});q.n++;q.v+=pv;}});
+    }
+    n++;
+  }
+  return {byDate:out,rows:n,dup:dup,skipped:skipped};
+}
+// 주 문서 하나에서 기사 1명 요약. basis='week' 또는 날짜
+function _bmRiderSummary(doc,key,basis,targets){
+  var rd=doc&&doc.riders&&doc.riders[key];if(!rd)return null;
+  var dates=Object.keys(rd.days||{}).sort();
+  var wk=_bmEmpty(),day=_bmEmpty();
+  dates.forEach(function(d){var x=rd.days[d];Object.keys(wk).forEach(function(k){wk[k]+=(+x[k]||0);});});
+  var latest=dates[dates.length-1]||'';
+  var b=basis||latest;
+  if(b==='week')day=wk;else if(rd.days[b])day=Object.assign(_bmEmpty(),rd.days[b]);
+  var tg=targets||{},slotHit=0;
+  dates.forEach(function(d){_DA_SLOTS.forEach(function(s){if((+tg[s.key]||0)>0&&(+rd.days[d][s.key]||0)>=(+tg[s.key]))slotHit++;});});
+  return {name:rd.name,userId:rd.userId,dates:dates,latest:latest,basis:b,day:day,week:wk,slotHit:slotHit,
+    days:dates.map(function(d){var x=rd.days[d];return {date:d,done:+x.done||0,cancel:+x.cancel||0,fee:+x.fee||0,am:+x.am||0,pm:+x.pm||0,eve:+x.eve||0,ngt:+x.ngt||0,etc:+x.etc||0};})};
+}
+// 기사(드롭다운 목록)와 엑셀 라이더 매칭: 이름(공백·뒤 숫자 제거) 기준
+function _bmMatchDriver(rd){
+  var list=window._daDrivers||[],nm=_bmNormName(rd.name);
+  var hit=list.filter(function(d){return _bmNormName(d.name)===nm;});
+  return hit.length===1?hit[0]:null;
+}
+function _bmFindRiderKey(doc,driverName){
+  if(!doc||!doc.riders)return '';
+  var nm=_bmNormName(driverName),keys=Object.keys(doc.riders).filter(function(k){return _bmNormName(doc.riders[k].name)===nm;});
+  return keys.length===1?keys[0]:'';
+}
+function _bmApplyToForm(sum,keepTargets){
+  if(!sum)return;
+  function sv(id,v){var el=document.getElementById(id);if(el)el.value=v;}
+  sv('da-day-done',sum.day.done);sv('da-day-prog',0);sv('da-day-rej',sum.day.cancel);
+  ['am','pm','eve','ngt','etc'].forEach(function(k){sv('da-pk-'+k,sum.day[k]);});
+  sv('da-deliv-food',sum.week.food);sv('da-deliv-store',sum.week.store);sv('da-deliv-mart',sum.week.mart);
+  var anyTg=_DA_SLOTS.some(function(s){var el=document.getElementById('da-tg-'+s.key);return el&&(+el.value>0);});
+  if(anyTg)sv('da-sla-done',sum.slotHit);
+}
+function _bmDaysJson(doc,sum){
+  return JSON.stringify({week:doc.week,weekEnd:doc.weekEnd,latest:sum.latest,
+    total:{done:sum.week.done,cancel:sum.week.cancel,fee:sum.week.fee,food:sum.week.food,store:sum.week.store,mart:sum.week.mart},
+    days:sum.days});
+}
+// 정산기간 표시용: 기존 저장 키가 숫자 타임스탬프('1,792,940,400,000~...')라 화면에서만 날짜로 바꿔 보여줌 (저장 키는 그대로)
+function _dwStatsGet(uid,did){
+  return fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(_dwPeriodStr())).then(function(r){return r.json();});
+}
+function _dwStatsPost(body){
+  return _auth.currentUser.getIdToken().then(function(tok){
+    return fetch('/api/delivery-driver-stats',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify(body)});
+  }).then(function(r){return r.json();});
+}
+// 업로드 → 주 문서 저장 → 매칭 기사 dw_driver_stats 자동 반영
+window._bmUpload=function(files){
+  if(!files||!files.length)return;
+  if(!_db||!_CU){toast('로그인 필요');return;}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중이에요. 잠시 후 다시 시도해주세요.');return;}
+  var did=_CU.dealerId||_CU.uid||'';
+  var st=document.getElementById('bm-status');
+  function say(t){if(st)st.innerHTML=t;}
+  say('엑셀 읽는 중...');
+  var all={},tot={rows:0,dup:0,skipped:0},names=[];
+  var reads=Array.prototype.map.call(files,function(f){
+    names.push(f.name);
+    return new Promise(function(ok,bad){
+      var rd=new FileReader();
+      rd.onload=function(ev){
+        try{
+          var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',raw:true});
+          var got=null;
+          wb.SheetNames.some(function(sn){got=_bmParseRows(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}));return !!got;});
+          if(!got)return bad(new Error(f.name+': 배달번호·라이더명 열을 찾지 못했어요'));
+          tot.rows+=got.rows;tot.dup+=got.dup;tot.skipped+=got.skipped;
+          Object.keys(got.byDate).forEach(function(d){all[d]=got.byDate[d];});
+          ok();
+        }catch(e){bad(e);}
+      };
+      rd.onerror=function(){bad(new Error(f.name+' 읽기 실패'));};
+      rd.readAsArrayBuffer(f);
+    });
+  });
+  Promise.all(reads).then(function(){
+    var dates=Object.keys(all).sort();
+    if(!dates.length)throw new Error('날짜가 있는 배달 내역이 없어요');
+    var weeks={};dates.forEach(function(d){var w=_bmWeekStart(d);(weeks[w]=weeks[w]||[]).push(d);});
+    say('저장 중... ('+dates[0]+(dates.length>1?' ~ '+dates[dates.length-1]:'')+')');
+    return Promise.all(Object.keys(weeks).map(function(w){
+      var ref=_db.collection('delivery_sessions').doc(did+'_bmweek_'+w);
+      // 없는 문서 get()은 보안규칙상 거부되므로 dealerId 조건 쿼리로 조회
+      return _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_week').where('week','==',w).get().then(function(qs){
+        var doc={};qs.forEach(function(x){if(x.id===ref.id)doc=x.data();});
+        var riders=doc.riders||{};
+        weeks[w].forEach(function(d){
+          Object.keys(riders).forEach(function(k){if(riders[k].days)delete riders[k].days[d];});
+          Object.keys(all[d]).forEach(function(k){
+            var a=all[d][k];
+            if(!riders[k])riders[k]={name:a.name,userId:a.userId,days:{}};
+            if(!riders[k].days)riders[k].days={};
+            var v=_bmEmpty();Object.keys(v).forEach(function(x){v[x]=a[x]||0;});if(a.fb)v.fb=a.fb;if(a.pt)v.pt=a.pt;
+            riders[k].days[d]=v;
+          });
+        });
+        Object.keys(riders).forEach(function(k){if(!Object.keys(riders[k].days||{}).length)delete riders[k];});
+        var nd={dealerId:did,type:'bm_week',week:w,weekEnd:_bmAddDays(w,6),riders:riders,updatedAt:new Date().toISOString(),
+          files:((doc.files||[]).concat(names)).slice(-30)};
+        return ref.set(nd).then(function(){return nd;});
+      });
+    }));
+  }).then(function(docs){
+    docs.sort(function(a,b){return a.week<b.week?-1:1;});
+    var latest=docs[docs.length-1];
+    window._bmDocs=window._bmDocs||{};docs.forEach(function(d){window._bmDocs[d.week]=d;});
+    window._bmWeekSel=latest.week;
+    _bmRenderTable();
+    // 매칭된 기사 화면에 바로 반영
+    var keys=Object.keys(latest.riders),done=0,miss=[];
+    var jobs=keys.map(function(k){
+      var drv=_bmMatchDriver(latest.riders[k]);
+      if(!drv){miss.push(latest.riders[k].name);return Promise.resolve();}
+      return _dwStatsGet(drv.uid,did).then(function(res){
+        var cur=(res&&res.data)||{};
+        var sum=_bmRiderSummary(latest,k,null,cur.peakTargets);
+        var sla=cur.sla||{acceptRate:0,weeklyDone:0,weeklyTotal:28};
+        var anyTg=_DA_SLOTS.some(function(s){return (+((cur.peakTargets||{})[s.key])||0)>0;});
+        var body={dealerId:did,driverUid:drv.uid,driverName:drv.name,period:_dwPeriodStr(),
+          peaks:{am:sum.day.am,pm:sum.day.pm,eve:sum.day.eve,ngt:sum.day.ngt,etc:sum.day.etc},
+          peakTargets:cur.peakTargets||{am:0,pm:0,eve:0,ngt:0},
+          daily:{done:sum.day.done,prog:0,rej:sum.day.cancel},
+          sla:{acceptRate:sla.acceptRate||0,weeklyDone:anyTg?sum.slotHit:(sla.weeklyDone||0),weeklyTotal:sla.weeklyTotal||28},
+          slaDetail:{delivery:{total:sum.week.done,food:sum.week.food,store:sum.week.store,mart:sum.week.mart},
+            rejection:(cur.slaDetail&&cur.slaDetail.rejection)||{total:0,food:0,store:0,mart:0},
+            cancel:{total:sum.week.cancel,food:sum.week.cFood,store:sum.week.cStore,mart:sum.week.cMart}},
+          settlements:cur.settlements||[],totalPayout:cur.totalPayout||0,memo:cur.memo||'',
+          bmDays:_bmDaysJson(latest,sum)};
+        return _dwStatsPost(body).then(function(r){if(r&&r.ok)done++;});
+      });
+    });
+    return Promise.all(jobs).then(function(){
+      say('<b>'+tot.rows.toLocaleString()+'건</b> 등록'+(tot.dup?' · 중복 '+tot.dup+'건 제외':'')
+        +' · 기사 화면 반영 <b>'+done+'명</b>'
+        +(miss.length?'<div style="margin-top:6px;color:#b45309">기사 목록에서 이름을 못 찾음: '+miss.map(esc).join(', ')+'</div>':''));
+      toast('배민 엑셀 등록 완료 · '+done+'명 반영');
+      var sel=document.getElementById('da-driver-sel');
+      if(sel&&sel.value)sel.dispatchEvent(new Event('change'));
+    });
+  }).catch(function(e){say('<span style="color:#dc2626">'+esc(e.message)+'</span>');toast('등록 실패: '+e.message);});
+};
+function _bmLoadWeeks(did){
+  if(!_db)return;
+  _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_week').get().then(function(snap){
+    window._bmDocs={};
+    snap.forEach(function(d){var x=d.data();if(x.week)window._bmDocs[x.week]=x;});
+    var ws=Object.keys(window._bmDocs).sort();
+    if(!window._bmWeekSel||!window._bmDocs[window._bmWeekSel])window._bmWeekSel=ws[ws.length-1]||'';
+    _bmRenderTable();
+  }).catch(function(e){var t=document.getElementById('bm-table');if(t)t.innerHTML='<div style="color:#dc2626;font-size:12px">불러오기 실패: '+esc(e.message)+'</div>';});
+}
+// 누적 현황 표: 기사 × 날짜(수~화) + 주간 합계
+function _bmRenderTable(){
+  var box=document.getElementById('bm-table');if(!box)return;
+  var docs=window._bmDocs||{},ws=Object.keys(docs).sort(),w=window._bmWeekSel;
+  if(!ws.length){box.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0">아직 등록된 배민 엑셀이 없어요.</div>';return;}
+  var doc=docs[w];
+  var days=[];for(var i=0;i<7;i++)days.push(_bmAddDays(w,i));
+  var rows=Object.keys(doc.riders||{}).map(function(k){
+    var rd=doc.riders[k],tot=0,c=0;
+    var cells=days.map(function(d){var x=(rd.days||{})[d];if(x){tot+=(+x.done||0);c+=(+x.cancel||0);}return x?(+x.done||0):null;});
+    return {k:k,name:rd.name,cells:cells,tot:tot,c:c,drv:_bmMatchDriver(rd)};
+  }).sort(function(a,b){return b.tot-a.tot;});
+  var colTot=days.map(function(_,i){return rows.reduce(function(s,r){return s+(r.cells[i]||0);},0);});
+  var th='padding:6px 2px;font-size:10px;color:var(--text3);font-weight:700;text-align:right;white-space:nowrap';
+  var td='padding:9px 2px;font-size:12px;text-align:right;border-top:1px solid var(--border);white-space:nowrap';
+  box.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<select id="bm-week" style="flex:1;min-height:40px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg1);color:var(--text1);font-size:12px">'
+        +ws.slice().reverse().map(function(x){return '<option value="'+x+'"'+(x===w?' selected':'')+'>'+x.slice(5)+'(수) ~ '+_bmAddDays(x,6).slice(5)+'(화)</option>';}).join('')
+      +'</select>'
+      +'<span style="font-size:11px;color:var(--text3);white-space:nowrap">'+rows.length+'명 · '+rows.reduce(function(s,r){return s+r.tot;},0).toLocaleString()+'건</span>'
+    +'</div>'
+    +'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="width:100%;border-collapse:collapse;table-layout:auto">'
+      +'<thead><tr><th style="'+th+';text-align:left">기사</th>'+days.map(function(d){return '<th style="'+th+'">'+d.slice(8)+'<br><span style="font-weight:400">'+_bmDow(d)+'</span></th>';}).join('')+'<th style="'+th+';color:#5b4ff5">합계</th></tr></thead>'
+      +'<tbody>'+rows.map(function(r){
+        return '<tr data-bm="'+esc(r.name)+'" style="cursor:pointer"><td style="'+td+';text-align:left;font-weight:700;white-space:normal;word-break:keep-all">'+esc(r.name)
+          +(r.drv?'':'<div style="font-size:9px;color:#b45309;font-weight:600">미매칭</div>')+'</td>'
+          +r.cells.map(function(v){return '<td style="'+td+(v==null?';color:var(--text3)':'')+'">'+(v==null?'-':v)+'</td>';}).join('')
+          +'<td style="'+td+';font-weight:900;color:#5b4ff5">'+r.tot+(r.c?'<div style="font-size:9px;font-weight:600;color:#dc2626">취소'+r.c+'</div>':'')+'</td></tr>';
+      }).join('')
+      +'<tr><td style="'+td+';text-align:left;font-weight:800">합계</td>'+colTot.map(function(v){return '<td style="'+td+';font-weight:800">'+(v||'-')+'</td>';}).join('')
+        +'<td style="'+td+';font-weight:900">'+colTot.reduce(function(a,b){return a+b;},0)+'</td></tr>'
+      +'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px">숫자는 전달완료 건수. 기사 이름을 누르면 아래 입력 칸에 채워져요.</div>';
+  var wsel=document.getElementById('bm-week');
+  if(wsel)wsel.onchange=function(){window._bmWeekSel=this.value;_bmRenderTable();};
+  box.querySelectorAll('tr[data-bm]').forEach(function(tr){
+    tr.onclick=function(){
+      var r=rows.filter(function(x){return x.name===tr.getAttribute('data-bm');})[0];
+      if(!r||!r.drv){toast('기사 목록에서 같은 이름을 찾지 못했어요');return;}
+      var sel=document.getElementById('da-driver-sel');if(!sel)return;
+      sel.value=r.drv.uid;sel.dispatchEvent(new Event('change'));
+      sel.scrollIntoView({behavior:'smooth',block:'start'});
+    };
+  });
+}
+// 기사 선택 시 '기준'(날짜/주간 합계) 선택지 구성
+function _bmSetupBasis(driverName){
+  var wrap=document.getElementById('da-basis-wrap'),sel=document.getElementById('da-basis');
+  if(!wrap||!sel)return;
+  var doc=(window._bmDocs||{})[window._bmWeekSel];
+  var key=_bmFindRiderKey(doc,driverName);
+  if(!key){wrap.style.display='none';window._bmCurKey='';return;}
+  window._bmCurKey=key;
+  var rd=doc.riders[key],dates=Object.keys(rd.days||{}).sort();
+  sel.innerHTML=dates.slice().reverse().map(function(d){var x=rd.days[d];return '<option value="'+d+'">'+d.slice(5)+' ('+_bmDow(d)+') · '+(+x.done||0)+'건</option>';}).join('')
+    +'<option value="week">주간 합계 '+doc.week.slice(5)+'~'+doc.weekEnd.slice(5)+'</option>';
+  wrap.style.display='block';
+  sel.onchange=function(){
+    var tg={};_DA_SLOTS.forEach(function(s){var el=document.getElementById('da-tg-'+s.key);tg[s.key]=el?+el.value||0:0;});
+    _bmApplyToForm(_bmRiderSummary(doc,key,this.value,tg));
+    toast((this.value==='week'?'주간 합계':this.value.slice(5))+' 값으로 채웠어요. 수정 후 저장하면 기사 화면에 반영돼요.');
+  };
+}
+// ═══ 배민 배달정산 v2 (계산기 기반) ═══
+// ══════════════════════════════════════════════════════════════
+// 🛵 배민 배달정산 v2 — 최저단가 보장제 (2026-11-18)
+//  · 주간(수~화) 건수 → 보장 단가 구간, 기사 세전 = 건수 × 보장 단가
+//  · SLA 수락률(완료 ÷ (완료+거절))이 기준(기본 80%) 미만이면 보장 없이 배달처리비만
+//  · 데이터: delivery_sessions/{did}_bmweek_{수요일} (엑셀 일자별 누적, sla 맵)
+//           delivery_sessions/{did}_bmcfg (단가표·기준·기사 연결)
+//  · 기사 화면: dw_driver_stats.bmDays JSON 안의 settle 로 전달 (Worker 변경 없음)
+//  ※ AI정산(택배) 코드와 무관. 기존 배달대행 정산 함수는 수정하지 않음.
+// ══════════════════════════════════════════════════════════════
+var _BS_DEF={tiers:[{min:1,rate:3200},{min:200,rate:4000},{min:300,rate:4500},{min:400,rate:5000}],acc:80,tax:3.3,emp:0.8,ind:0.88};
+function _bsW(n){return Math.round(n||0).toLocaleString('ko-KR');}
+function _bsPct(v){return v==null?'-':(Math.round(v*1000)/10).toFixed(1)+'%';}
+function _bsC(){
+  var c=window._bsCfg||{};
+  var t=(c.tiers&&c.tiers.length?c.tiers:_BS_DEF.tiers).map(function(x){return {min:+x.min||1,rate:+x.rate||0};}).sort(function(a,b){return a.min-b.min;});
+  return {tiers:t,acc:c.acc!=null?+c.acc:_BS_DEF.acc,tax:c.tax!=null?+c.tax:_BS_DEF.tax,emp:c.emp!=null?+c.emp:_BS_DEF.emp,ind:c.ind!=null?+c.ind:_BS_DEF.ind,map:c.map||{},plat:c.plat||{}};
+}
+function _bsTier(n,c){var cur=null,i=-1;c.tiers.forEach(function(t,k){if(n>=t.min){cur=t;i=k;}});return {t:cur,next:c.tiers[i+1]||null};}
+// 라이더 1명 주간 정산. rd={name,userId,days:{date:{done,cancel,fee,fb,pt,...}}}, sla={done,rej,flag}
+function _bsCalc(rd,sla,c){
+  c=c||_bsC();
+  var n=0,fee=0,can=0,fb={},pt={},days=[];
+  Object.keys(rd.days||{}).sort().forEach(function(d){
+    var x=rd.days[d];n+=+x.done||0;fee+=+x.fee||0;can+=+x.cancel||0;
+    Object.keys(x.fb||{}).forEach(function(k){fb[k]=(fb[k]||0)+(+x.fb[k]||0);});
+    Object.keys(x.pt||{}).forEach(function(k){var q=pt[k]||(pt[k]={n:0,v:0});q.n+=+x.pt[k].n||0;q.v+=+x.pt[k].v||0;});
+    days.push({date:d,done:+x.done||0,cancel:+x.cancel||0,fee:+x.fee||0,fb:x.fb||null});
+  });
+  var T=_bsTier(n,c),rate=T.t?T.t.rate:0;
+  var hasS=sla&&((+sla.done||0)+(+sla.rej||0))>0,acc=hasS?(+sla.done)/((+sla.done)+(+sla.rej)):null;
+  var flag=!!(sla&&sla.flag),off=!flag&&acc!=null&&acc<c.acc/100-1e-9;
+  var on=!!T.t&&!off,gross=on?n*rate:fee;
+  var gap=0,low=0,over=0,high=0,eq=0,hasFb=Object.keys(fb).length>0;
+  Object.keys(fb).forEach(function(k){var f=+k,m=fb[k];if(f<rate){gap+=(rate-f)*m;low+=m;}else if(f>rate){over+=(f-rate)*m;high+=m;}else eq+=m;});
+  days.forEach(function(D){D.gap=0;D.over=0;D.low=0;Object.keys(D.fb||{}).forEach(function(k){var f=+k,m=D.fb[k];if(f<rate){D.gap+=(rate-f)*m;D.low+=m;}else if(f>rate)D.over+=(f-rate)*m;});delete D.fb;});
+  var tax=Math.round(gross*c.tax/100),inc=c.tax>0?Math.round(gross*c.tax/100*(3/3.3)):0,emp=Math.round(gross*c.emp/100),ind=Math.round(gross*c.ind/100);
+  var r={name:rd.name,userId:rd.userId||'',n:n,can:can,fee:fee,rate:rate,tierMin:T.t?T.t.min:0,next:T.next,on:on,off:off,flag:flag,acc:acc,sla:hasS?{done:+sla.done,rej:+sla.rej}:null,accMin:c.acc,
+    gross:gross,extra:on?gross-fee:0,gap:on?gap:0,over:on?over:0,low:low,high:high,eq:eq,hasFb:hasFb,fb:fb,pt:pt,days:days,
+    tax:tax,inc:inc,loc:tax-inc,emp:emp,ind:ind,net:gross-tax-emp-ind,margin:fee-gross,rates:{tax:c.tax,emp:c.emp,ind:c.ind}};
+  r.cheer=_bsCheer(r,c);
+  return r;
+}
+// 응원 메시지: 다음 구간까지 남은 건수와 그때 받을 금액
+function _bsCheer(r,c){
+  if(r.off){var tt=_bsTier(r.n,c).t;return {tone:'warn',text:'수락률을 '+c.acc+'%까지 올리면 '+(tt?'건당 '+_bsW(tt.rate)+'원 보장 → 이번 주 '+_bsW(r.n*tt.rate)+'원을 받을 수 있어요':'건수 보장을 받을 수 있어요')+'. 지금은 '+_bsPct(r.acc)+'예요.'};}
+  if(r.next){var need=r.next.min-r.n,g2=r.next.min*r.next.rate;return {tone:'go',need:need,nextRate:r.next.rate,nextGross:g2,text:_bsW(need)+'건만 더 타면 보장 단가 '+_bsW(r.next.rate)+'원! 이번 주 '+_bsW(g2)+'원 이상 받을 수 있어요 (지금보다 +'+_bsW(g2-r.gross)+'원).'};}
+  if(r.on)return {tone:'top',text:'최고 구간 달성! 모든 건 '+_bsW(r.rate)+'원 보장이에요. 이대로 쭉 가요!'};
+  return {tone:'go',text:'첫 건부터 '+_bsW((c.tiers[0]||{}).rate||0)+'원이 보장돼요.'};
+}
+function _bsMatch(key,rd,c){
+  var all=window._bsDrivers||[],m=c.map[key];
+  if(m){var d0=all.filter(function(x){return x.uid===m;})[0];if(d0)return d0;}
+  var list=all.filter(function(x){return _bsPlat(x)!=='cpe';});
+  var uid=String(rd.userId||'').toLowerCase();
+  var byId=list.filter(function(x){return uid&&String(x.bmId||'').toLowerCase()===uid;});if(byId.length===1)return byId[0];
+  var nm=_bmNormName(rd.name),hit=list.filter(function(x){return _bmNormName(x.name)===nm;});
+  return hit.length===1?hit[0]:null;
+}
+
+// ── 관리자 화면 ──
+function pageBaeminSettle(){
+  window._CU_INDUSTRY='delivery';
+  document.getElementById('page-title').textContent='🛵 배달대행 정산';
+  var tr=document.getElementById('topbar-right');if(tr)tr.innerHTML='';
+  var c=document.getElementById('content');
+  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.uid||'';window._bsDid=did;
+  c.innerHTML=_bsStyle()+'<div class="bs">'
+    +'<div class="bs-tabs"><button class="on" type="button">배민 정산</button><button type="button" onclick="window._dwSettleTab=\'coupang\';pageDeliverySettle()">쿠팡이츠 정산</button></div>'
+    +'<div class="bs-up">'
+      +'<div class="bs-card"><div class="bs-h">① 배민 배달처리비 엑셀</div><div class="bs-sub">하루치 파일을 매일 올리면 주간(수~화)으로 쌓여요. 같은 날짜를 다시 올리면 그 날짜만 바뀌고, 같은 배달번호는 한 번만 셉니다.</div>'
+        +'<label class="bs-btn">엑셀 올리기<input id="bs-xl" type="file" accept=".xlsx,.xls" multiple hidden onchange="_bsUpload(this.files);this.value=\'\'"></label><div id="bs-xl-st" class="bs-st"></div></div>'
+      +'<div class="bs-card"><div class="bs-h">② SLA 수락률</div><div class="bs-sub">배민 SLA 화면 캡처를 올리면 기사별 완료·거절 건수와 수락률이 아래 칸에 채워져요. 표를 복사해 붙여넣어도 돼요.</div>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label class="bs-btn">SLA 캡처 올리기<input id="bs-img" type="file" accept="image/*" hidden onchange="_bsOcr(this.files[0]);this.value=\'\'"></label>'
+        +'<button class="bs-btn ghost" type="button" onclick="var t=document.getElementById(\'bs-paste-box\');t.hidden=!t.hidden">표 붙여넣기</button></div>'
+        +'<div id="bs-paste-box" hidden><textarea id="bs-paste" rows="5" placeholder="SLA 표를 붙여넣으세요 (이름 · 아이디 · 휴대폰 · 총 배달완료 · SLA 배달완료 푸드/비마트/배민스토어/합계 · SLA 거절 …)"></textarea><button class="bs-btn" type="button" onclick="_bsPasteApply()">적용</button></div>'
+        +'<div id="bs-sla-st" class="bs-st"></div></div>'
+    +'</div>'
+    +'<div id="bs-body"><div class="bs-empty">불러오는 중…</div></div>'
+  +'</div>';
+  // 기사 목록 + 설정 + 주 문서
+  window._bsDrivers=[];
+  Promise.all([
+    _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){var seen={};snap.forEach(function(doc){var d=doc.data(),u=d.userId||d.uid||doc.id;if(seen[u])return;seen[u]=1;window._bsDrivers.push({uid:u,name:d.name||d.driverName||'',bmId:d.bmUserId||d.baeminId||'',platform:d.platform||d.deliveryPlatform||'',sm:_bsSsnMask(d.ssn),ph4:String(d.phone||'').replace(/[^0-9]/g,'').slice(-4),docId:doc.id});});}).catch(function(){}),
+    _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_cfg').get().then(function(qs){window._bsCfg=null;qs.forEach(function(x){window._bsCfg=x.data();});}).catch(function(){}),
+    _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_week').get().then(function(snap){window._bmDocs={};snap.forEach(function(d){var x=d.data();if(x.week)window._bmDocs[x.week]=x;});})
+  ]).then(function(){
+    var ws=Object.keys(window._bmDocs||{}).sort();
+    if(!window._bmWeekSel||!window._bmDocs[window._bmWeekSel])window._bmWeekSel=ws[ws.length-1]||'';
+    _bsRender();
+  }).catch(function(e){var b=document.getElementById('bs-body');if(b)b.innerHTML='<div class="bs-empty" style="color:var(--red)">불러오기 실패: '+esc(e.message)+'</div>';});
+}
+function _bsStyle(){
+  return '<style>'
+  +'.bs{max-width:980px;margin:0 auto;display:grid;gap:14px;font-variant-numeric:tabular-nums}'
+  +'.bs-tabs{display:flex;gap:6px}.bs-tabs button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-weight:700;cursor:pointer}.bs-tabs button.on{background:#08101f;color:#e9cf8c;border-color:#08101f}'
+  +'.bs-up{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.bs-up{grid-template-columns:1fr}}'
+  +'.bs-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;display:grid;gap:10px;min-width:0}'
+  +'.bs-h{font-size:15px;font-weight:800}.bs-sub{font-size:12px;color:var(--text3);line-height:1.5}.bs-st{font-size:12px;color:var(--text2);line-height:1.5}'
+  +'.bs-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:10px;border:none;background:#08101f;color:#e9cf8c;font-weight:800;font-size:14px;cursor:pointer}.bs-btn.ghost{background:var(--bg3);color:var(--text);border:1px solid var(--border)}'
+  +'.bs textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);padding:8px;font-size:12px;font-family:ui-monospace,Menlo,monospace;margin-bottom:8px}'
+  +'.bs-tiles{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}@media(max-width:700px){.bs-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.bs-tiles .key{grid-column:1/-1}}'
+  +'.bs-tile{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;display:grid;gap:2px}.bs-tile span{font-size:11px;color:var(--text3)}.bs-tile b{font-size:16px}.bs-tile.key{border-color:#c9a84c;background:rgba(201,168,76,.12)}.bs-tile.key b{color:#a07d22}'
+  +'.bs-box{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}'
+  +'.bs table{width:100%;border-collapse:collapse;font-size:12px}.bs th,.bs td{padding:8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}.bs th{font-size:11px;color:var(--text3);background:var(--bg3);font-weight:700}.bs th:first-child,.bs td:first-child{text-align:left}'
+  +'.bs td.nm{font-weight:700}.bs tr.sum td{font-weight:800;background:var(--bg3)}.bs .neg{color:var(--red)}.bs .pos{color:var(--green)}.bs .gold{color:#a07d22;font-weight:800}'
+  +'.bs-badge{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;white-space:nowrap}.bs-badge.on{background:rgba(22,163,74,.14);color:#15803d}.bs-badge.off{background:rgba(220,38,38,.12);color:#dc2626}.bs-badge.na{background:var(--bg3);color:var(--text3)}.bs-badge.chk{background:rgba(234,179,8,.2);color:#92400e}'
+  +'.bs table.sla input{width:62px;min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);text-align:right;padding:2px 6px;font-size:13px}.bs table.sla tr.warn td{background:rgba(234,179,8,.13)}.bs .wt{font-size:10px;color:#92400e;white-space:normal;max-width:200px}'
+  +'.bs select{min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;max-width:140px}'
+  +'.bs details.st{background:var(--bg2);border:1px solid var(--border);border-radius:14px}.bs details.st[open]{border-color:#c9a84c}.bs details.st>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;min-height:52px}.bs details.st>summary::-webkit-details-marker{display:none}'
+  +'.bs-sb{border-top:1px solid var(--border);padding:12px 14px;display:grid;gap:14px}.bs-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:4px 0}.bs-row.t{border-top:1px solid var(--border);margin-top:4px;padding-top:8px;font-weight:800;font-size:15px}.bs-row.m span:last-child{color:var(--red)}.bs-row.s{font-size:12px;color:var(--text3)}'
+  +'.bs-extra{display:flex;justify-content:space-between;align-items:center;border-radius:10px;padding:9px 12px;background:rgba(201,168,76,.13);border:1px solid #c9a84c;font-weight:800}.bs-extra b{color:#a07d22;font-size:17px}'
+  +'.bs-cheer{border-radius:12px;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5}.bs-cheer.go{background:rgba(37,99,235,.1);color:#1d4ed8}.bs-cheer.top{background:rgba(22,163,74,.12);color:#15803d}.bs-cheer.warn{background:rgba(220,38,38,.1);color:#b91c1c}'
+  +'.bs-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-g4{grid-template-columns:repeat(2,minmax(0,1fr))}}.bs-g4>div{border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:grid;gap:1px}.bs-g4 span,.bs-g4 small{font-size:11px;color:var(--text3)}.bs-g4 b{font-size:16px}'
+  +'.bs h4{margin:0;font-size:12px;color:var(--text3);letter-spacing:.03em}.bs-empty{padding:28px;text-align:center;color:var(--text3);font-size:13px;background:var(--bg2);border-radius:14px}'
+  +'.bs-ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}.bs-ladder label,.bs-opts label{font-size:11px;color:var(--text3);display:grid;gap:4px}.bs-ladder input,.bs-opts input{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 8px}.bs-opts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-opts{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+  +'.bs-pl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap}.bs-seg{display:flex;gap:4px}.bs-seg button{min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text2);font-weight:700;font-size:12px;cursor:pointer}.bs-seg button.on{background:#08101f;color:#e9cf8c;border-color:#08101f}'
+  +'.bs-pg{display:flex;justify-content:center;align-items:center;gap:12px;font-size:12px;color:var(--text3)}.bs-pg button[disabled]{opacity:.4;cursor:default}.bs-plat{display:inline-block;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;background:#08101f;color:#e9cf8c;margin-left:6px;vertical-align:middle}'
+  +'</style>';
+}
+function _bsWeekCalc(){
+  var doc=(window._bmDocs||{})[window._bmWeekSel];if(!doc)return [];
+  var c=_bsC(),sla=doc.sla||{};
+  return Object.keys(doc.riders||{}).map(function(k){var r=_bsCalc(doc.riders[k],sla[k],c);r.key=k;r.drv=_bsMatch(k,doc.riders[k],c);return r;}).sort(function(a,b){return b.n-a.n;});
+}
+function _bsRender(){
+  var b=document.getElementById('bs-body');if(!b)return;
+  var docs=window._bmDocs||{},ws=Object.keys(docs).sort(),w=window._bmWeekSel;
+  if(!ws.length){b.innerHTML='<div class="bs-empty">아직 등록된 배민 엑셀이 없어요. 위 ①에서 배달처리비 엑셀을 올려 주세요.</div>'+_bsSettingsHtml();return;}
+  var doc=docs[w],list=_bsWeekCalc(),c=_bsC();window._bsList=list;
+  var S={n:0,fee:0,gross:0,extra:0,net:0,margin:0,off:0,na:0};list.forEach(function(r){S.n+=r.n;S.fee+=r.fee;S.gross+=r.gross;S.extra+=r.extra;S.net+=r.net;S.margin+=r.margin;if(r.off)S.off++;if(r.acc==null||r.flag)S.na++;});
+  var dates={};list.forEach(function(r){r.days.forEach(function(d){dates[d.date]=1;});});var dl=Object.keys(dates).sort();
+  var h='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="bs-week" onchange="window._bmWeekSel=this.value;_bsRender()">'+ws.slice().reverse().map(function(x){return '<option value="'+x+'"'+(x===w?' selected':'')+'>'+x.slice(5)+'(수) ~ '+_bmAddDays(x,6).slice(5)+'(화)</option>';}).join('')+'</select>'
+    +'<span class="bs-sub">등록된 날짜: '+(dl.map(function(d){return d.slice(5);}).join(', ')||'-')+'</span>'
+    +'<button class="bs-btn ghost" type="button" style="margin-left:auto" onclick="_bsPublish(true)">기사 화면에 다시 보내기</button></div>'
+    +'<div class="bs-tiles">'
+      +'<div class="bs-tile"><span>주간 건수 ('+list.length+'명)</span><b>'+_bsW(S.n)+'건</b></div>'
+      +'<div class="bs-tile"><span>총 배달처리비</span><b>'+_bsW(S.fee)+'원</b></div>'
+      +'<div class="bs-tile key"><span>보장 추가 지급 합계</span><b>'+(S.extra>=0?'+':'−')+_bsW(Math.abs(S.extra))+'원</b></div>'
+      +'<div class="bs-tile"><span>기사 세전 합계</span><b>'+_bsW(S.gross)+'원</b></div>'
+      +'<div class="bs-tile"><span>회사마진 (처리비 − 세전)</span><b class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'원</b></div>'
+    +'</div>'
+    +(S.na?'<div class="bs-st" style="color:#92400e">수락률이 비었거나 확인이 필요한 기사 '+S.na+'명은 보장을 일단 적용했어요. ②에서 SLA를 넣어 주세요.</div>':'');
+  // 기사별 표
+  h+='<div class="bs-box"><table><thead><tr><th>기사</th><th>연결 계정</th><th>건수</th><th>수락률</th><th>보장 단가</th><th>배달처리비</th><th>추가 지급</th><th>세전</th><th>실지급</th><th>회사마진</th></tr></thead><tbody>'
+    +list.map(function(r){return '<tr><td class="nm">'+esc(r.name)+'<div style="font-size:10px;color:var(--text3);font-weight:400">'+esc(r.userId)+'</div></td>'
+      +'<td>'+_bsDrvSelect(r)+'</td><td>'+_bsW(r.n)+'</td><td>'+_bsAccBadge(r)+'</td>'
+      +'<td>'+(r.off?'<span class="bs-badge off">미적용</span>':r.on?_bsW(r.rate):'-')+'</td><td>'+_bsW(r.fee)+'</td>'
+      +'<td class="gold">'+(r.extra>=0?'+':'−')+_bsW(Math.abs(r.extra))+'</td><td>'+_bsW(r.gross)+'</td><td><b>'+_bsW(r.net)+'</b></td>'
+      +'<td class="'+(r.margin>=0?'pos':'neg')+'">'+(r.margin>=0?'+':'−')+_bsW(Math.abs(r.margin))+'</td></tr>';}).join('')
+    +'<tr class="sum"><td>합계</td><td></td><td>'+_bsW(S.n)+'</td><td></td><td></td><td>'+_bsW(S.fee)+'</td><td class="gold">'+(S.extra>=0?'+':'−')+_bsW(Math.abs(S.extra))+'</td><td>'+_bsW(S.gross)+'</td><td>'+_bsW(S.net)+'</td><td class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'</td></tr></tbody></table></div>';
+  // SLA 수정 표
+  h+='<div class="bs-card"><div class="bs-h">SLA 완료·거절 (직접 수정 가능)</div><div class="bs-sub">수락률 = SLA 배달완료 ÷ (배달완료 + 거절). 기준 '+c.acc+'% 이상만 건수 보장. 노란 줄은 캡처를 읽은 값이 맞는지 확인이 필요해요. 숫자를 고치면 확정되고 바로 정산서와 기사 화면에 반영돼요.</div>'
+    +'<div class="bs-box"><table class="sla"><thead><tr><th>기사</th><th>SLA 완료</th><th>SLA 거절</th><th>수락률</th><th>보장</th></tr></thead><tbody>'
+    +list.map(function(r){var s=(doc.sla||{})[r.key]||{};return '<tr'+(s.flag?' class="warn"':'')+'><td class="nm">'+esc(r.name)+(s.flag&&s.warn?'<div class="wt">확인 필요: '+esc(s.warn)+'</div>':'')+'</td>'
+      +'<td><input type="number" min="0" inputmode="numeric" value="'+(s.done!=null?s.done:'')+'" onchange="_bsSlaEdit(\''+r.key+'\',\'done\',this.value)" aria-label="'+esc(r.name)+' SLA 완료"></td>'
+      +'<td><input type="number" min="0" inputmode="numeric" value="'+(s.rej!=null?s.rej:'')+'" onchange="_bsSlaEdit(\''+r.key+'\',\'rej\',this.value)" aria-label="'+esc(r.name)+' SLA 거절"></td>'
+      +'<td>'+_bsPct(r.acc)+'</td><td>'+(r.off?'<span class="bs-badge off">미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요</span>':'<span class="bs-badge on">적용</span>')+'</td></tr>';}).join('')
+    +'</tbody></table></div></div>';
+  // 기사별 정산서
+  h+='<div class="bs-h" style="margin-top:4px">기사별 정산서</div><div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b><div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc)+'</div></details>';}).join('')+'</div>';
+  b.innerHTML=h+_bsSettingsHtml();
+}
+function _bsAccBadge(r){if(r.acc==null)return '<span class="bs-badge na">미입력</span>';return (r.flag?'<span class="bs-badge chk">확인</span> ':'')+'<span class="bs-badge '+(r.off?'off':'on')+'">'+_bsPct(r.acc)+'</span>';}
+// ── 소속 플랫폼 (배민 / 쿠팡이츠 / 둘 다) — 설정 문서 plat 맵 우선, 없으면 기사 문서 platform
+var _BS_PL={bm:'배민',cpe:'쿠팡이츠',both:'배민+쿠팡이츠'};
+// 주민번호는 화면에 생년월일+성별 자리만 (900101-1******). 전체 번호는 메모리에 두지 않음
+function _bsSsnMask(v){var d=String(v||'').replace(/[^0-9]/g,'');return d.length>=7?d.slice(0,6)+'-'+d[6]+'******':'';}
+function _bsDrvLabel(d){return (d.name||d.uid)+(d.sm||d.ph4?' ('+[d.sm,d.ph4?'끝'+d.ph4:''].filter(Boolean).join(' · ')+')':'');}
+function _bsPlat(d){if(!d)return '';var p=(_bsC().plat||{})[d.uid];if(p)return p;var x=String(d.platform||'').toLowerCase();if(/both|모두|둘/.test(x))return 'both';if(/bm|baemin|배민/.test(x))return 'bm';if(/cpe|coupang|쿠팡|이츠/.test(x))return 'cpe';var mp=_bsC().map||{};for(var k in mp)if(mp[k]===d.uid)return 'bm';return '';}
+function _bsIsBm(d){var p=_bsPlat(d);return p==='bm'||p==='both';}
+function _bsDrvSelect(r){
+  var all=window._bsDrivers||[],list=all.filter(function(d){return _bsPlat(d)!=='cpe'||(r.drv&&r.drv.uid===d.uid);});
+  return '<select onchange="_bsMapSet(\''+r.key+'\',this.value)" aria-label="'+esc(r.name)+' 연결 계정"><option value="">'+(list.length?'연결 안 됨':'가입 기사 없음')+'</option>'
+    +[['배민 소속',list.filter(_bsIsBm)],['소속 미지정',list.filter(function(d){return !_bsIsBm(d);})]].filter(function(g){return g[1].length;}).map(function(g){return '<optgroup label="'+g[0]+'">'+g[1].map(function(d){return '<option value="'+esc(d.uid)+'"'+(r.drv&&r.drv.uid===d.uid?' selected':'')+'>'+esc(_bsDrvLabel(d))+'</option>';}).join('')+'</optgroup>';}).join('')+'</select>';
+}
+// 정산서 본문 (관리자·기사 공용)
+function _bsStmtHtml(r,doc,forDriver){
+  var R=function(a,b,cls){return '<div class="bs-row'+(cls?' '+cls:'')+'"><span>'+a+'</span><span>'+b+'</span></div>';};
+  var h='<div class="bs-cheer '+r.cheer.tone+'">'+esc(r.cheer.text)+'</div>';
+  h+='<div><h4>정산서'+(doc?' · '+doc.week.slice(5)+' ~ '+doc.weekEnd.slice(5):'')+'</h4>'
+    +R('총 배달처리비 '+_bsW(r.n)+'건 (할증 포함)',_bsW(r.fee)+'원')
+    +R('수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' (기준 '+r.accMin+'%)',r.off?'<span class="bs-badge off">보장 미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요 (일단 적용)</span>':'<span class="bs-badge on">보장 적용</span>','s');
+  if(r.on&&r.hasFb)h+=R(_bsW(r.rate)+'원 미만 건 부족액 ('+_bsW(r.low)+'건)',_bsW(r.gap)+'원','s')+R('초과분으로 메꿈 ('+_bsW(r.high)+'건)','−'+_bsW(r.over)+'원','s');
+  if(r.on)h+='<div class="bs-extra"><span>실제 추가 지급 (최저단가 보장)</span><b>'+(r.extra>=0?'+':'−')+_bsW(Math.abs(r.extra))+'원</b></div>';
+  if(r.off)h+=R('수락률 미달: 건수 보장 없이 배달처리비만 지급','','s');
+  h+=R('<b>세전 합계'+(r.on?' ('+_bsW(r.n)+'건 × '+_bsW(r.rate)+'원)':'')+'</b>','<b>'+_bsW(r.gross)+'원</b>')
+    +(r.rates.tax>0?R('소득세 (3.0%)','−'+_bsW(r.inc)+'원','m')+R('지방소득세 (0.3%)','−'+_bsW(r.loc)+'원','m'):'')
+    +R('고용보험 ('+r.rates.emp+'%)','−'+_bsW(r.emp)+'원','m')+R('산재보험 ('+r.rates.ind+'%)','−'+_bsW(r.ind)+'원','m')
+    +R('실지급액',_bsW(r.net)+'원','t')+'</div>';
+  h+='<div style="display:grid;gap:8px"><h4>수락률 (SLA 기준)</h4><div class="bs-g4">'
+    +'<div><span>SLA 배달완료</span><b>'+(r.sla?_bsW(r.sla.done)+'건':'-')+'</b></div>'
+    +'<div><span>SLA 거절</span><b>'+(r.sla?_bsW(r.sla.rej)+'건':'-')+'</b></div>'
+    +'<div><span>수락률</span><b>'+_bsPct(r.acc)+'</b><small>기준 '+r.accMin+'%</small></div>'
+    +'<div><span>엑셀 전달완료</span><b>'+_bsW(r.n)+'건</b><small>취소 '+r.can+'건</small></div></div>'
+    +(r.sla&&(r.sla.done<r.n*0.5||r.sla.done>r.n+r.can+3)?'<div class="bs-st" style="color:var(--red);font-weight:700">SLA 배달완료 '+_bsW(r.sla.done)+'건이 엑셀 전달완료 '+_bsW(r.n)+'건과 차이가 커요. 숫자를 확인해 주세요.</div>':'')+'</div>';
+  // 일자별
+  var cum=0;
+  h+='<div style="display:grid;gap:8px"><h4>일자별 (누적)</h4><div class="bs-box"><table><thead><tr><th>날짜</th><th>완료</th><th>누적</th><th>배달처리비</th>'+(r.on&&r.hasFb?'<th>부족액</th><th>메꿈</th>':'')+'</tr></thead><tbody>'
+    +r.days.map(function(D){cum+=D.done;return '<tr><td>'+D.date.slice(5)+' ('+_bmDow(D.date)+')</td><td>'+_bsW(D.done)+'</td><td>'+_bsW(cum)+'</td><td>'+_bsW(D.fee)+'</td>'+(r.on&&r.hasFb?'<td>'+_bsW(D.gap)+'</td><td>−'+_bsW(D.over)+'</td>':'')+'</tr>';}).join('')
+    +'<tr class="sum"><td>합계</td><td>'+_bsW(r.n)+'</td><td></td><td>'+_bsW(r.fee)+'</td>'+(r.on&&r.hasFb?'<td>'+_bsW(r.gap)+'</td><td>−'+_bsW(r.over)+'</td>':'')+'</tr></tbody></table></div></div>';
+  // 어디서 어디로 메꿨는지 (관리자만)
+  if(!forDriver&&r.on&&r.hasFb){
+    var ks=Object.keys(r.fb).map(Number).filter(function(f){return f!==r.rate;}).sort(function(a,b){return a-b;});
+    h+='<details><summary class="bs-sub" style="cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:700">어디서 어디로 메꿨는지 (금액별 '+ks.length+'줄)</summary><div class="bs-box" style="max-height:320px;overflow:auto;margin-top:6px"><table><thead><tr><th>배달처리비 → 보장 단가</th><th>건당</th><th>건수</th><th>합계</th></tr></thead><tbody>'
+      +ks.map(function(f){var m=r.fb[f],d=r.rate-f;return '<tr><td>'+_bsW(f)+'원 → '+_bsW(r.rate)+'원</td><td class="'+(d>0?'gold':'neg')+'">'+(d>0?'+':'−')+_bsW(Math.abs(d))+'</td><td>× '+_bsW(m)+'</td><td class="'+(d>0?'gold':'neg')+'">'+(d>0?'+':'−')+_bsW(Math.abs(d*m))+'</td></tr>';}).join('')
+      +'<tr class="sum"><td>실제 추가 지급</td><td></td><td></td><td class="gold">'+(r.extra>=0?'+':'−')+_bsW(Math.abs(r.extra))+'</td></tr></tbody></table></div></details>';
+  }
+  if(!forDriver&&Object.keys(r.pt).length){
+    var L={base:'기본단가',wx:'기상할증',add:'추가할증',peak:'피크할증 등',area:'지역 할증',area2:'지역할증2',bulk:'대량 할증'};
+    h+='<div><h4>배달처리비 항목별</h4>'+['base','wx','add','peak','area','area2','bulk'].filter(function(k){return r.pt[k];}).map(function(k){return R(L[k]+' <span class="bs-sub">'+_bsW(r.pt[k].n)+'건</span>',_bsW(r.pt[k].v)+'원');}).join('')+R('배달처리비 합계',_bsW(r.fee)+'원','t')+'</div>';
+  }
+  return h;
+}
+window._bsPlatPage=window._bsPlatPage||0;
+function _bsPlatHtml(){
+  var all=window._bsDrivers||[],PS=5,pages=Math.max(1,Math.ceil(all.length/PS));
+  if(window._bsPlatPage>=pages)window._bsPlatPage=pages-1;var pg=window._bsPlatPage;
+  var cnt={bm:0,cpe:0,both:0,'':0};all.forEach(function(d){cnt[_bsPlat(d)]++;});
+  var rows=all.slice(pg*PS,pg*PS+PS).map(function(d){var p=_bsPlat(d);return '<div class="bs-pl"><div><b>'+esc(d.name||d.uid)+'</b><div class="bs-sub">'+[d.sm?'주민 '+esc(d.sm):'주민번호 미입력',d.ph4?'연락처 끝 '+esc(d.ph4):'',d.bmId?'배민 아이디 '+esc(d.bmId):''].filter(Boolean).join(' · ')+'</div></div><div class="bs-seg" role="group" aria-label="'+esc(d.name||'')+' 소속">'
+    +['bm','cpe','both'].map(function(k){return '<button type="button" class="'+(p===k?'on':'')+'" onclick="_bsPlatSet(\''+esc(d.uid)+'\',\''+k+'\')">'+_BS_PL[k]+'</button>';}).join('')+'</div></div>';}).join('');
+  return '<details class="st" style="margin-top:4px"><summary><b>기사 소속 (배민 / 쿠팡이츠)</b><span class="bs-sub">배민 '+(cnt.bm+cnt.both)+'명 · 쿠팡이츠 '+(cnt.cpe+cnt.both)+'명'+(cnt['']?' · 미지정 '+cnt['']+'명':'')+'</span></summary><div class="bs-sb">'
+    +'<div class="bs-sub">가입한 기사를 소속 플랫폼별로 나눠요. 배민 소속(또는 둘 다)만 배민 정산의 연결 계정 목록에 나오고, 쿠팡이츠 소속은 쿠팡이츠 정산에서 관리해요. 배민 기사에 연결하면 자동으로 배민 소속이 돼요.</div>'
+    +(all.length?rows:'<div class="bs-empty">가입한 기사가 아직 없어요. 기사가 가입하면 여기에 나와요.</div>')
+    +(pages>1?'<div class="bs-pg"><button type="button" class="bs-btn ghost"'+(pg?'':' disabled')+' onclick="window._bsPlatPage--;_bsRender()">이전</button><span>'+(pg+1)+' / '+pages+'</span><button type="button" class="bs-btn ghost"'+(pg<pages-1?'':' disabled')+' onclick="window._bsPlatPage++;_bsRender()">다음</button></div>':'')
+    +'</div></details>';
+}
+window._bsPlatSet=function(uid,k){var pl=Object.assign({},_bsC().plat||{});pl[uid]=k;var m=Object.assign({},_bsC().map);if(k==='cpe')Object.keys(m).forEach(function(x){if(m[x]===uid)delete m[x];});
+  _bsSaveCfgObj({plat:pl,map:m}).then(function(){toast('소속을 '+_BS_PL[k]+'(으)로 바꿨어요');window._bsKeepPlat=1;_bsRender();_bsPublish();}).catch(function(e){toast('저장 실패: '+e.message);});};
+function _bsSettingsHtml(){
+  var c=_bsC();
+  return _bsPlatHtml()+'<details class="st" style="margin-top:4px"><summary><b>단가표·수락률 기준·공제율 설정</b><span class="bs-sub">보장 단가 '+c.tiers.map(function(t){return t.min+'건+ '+_bsW(t.rate);}).join(' / ')+' · 수락률 '+c.acc+'%</span></summary><div class="bs-sb">'
+    +'<div class="bs-ladder">'+c.tiers.map(function(t,i){return '<label>구간 '+(i+1)+' 시작 건수<input id="bs-tm'+i+'" type="number" min="1" value="'+t.min+'"></label>';}).join('')
+    +c.tiers.map(function(t,i){return '<label>구간 '+(i+1)+' 보장 단가 (원)<input id="bs-tr'+i+'" type="number" min="0" step="100" value="'+t.rate+'"></label>';}).join('')+'</div>'
+    +'<div class="bs-opts"><label>보장 기준 수락률 (% 이상)<input id="bs-acc" type="number" min="0" max="100" value="'+c.acc+'"></label><label>원천세 (%)<input id="bs-tax" type="number" step="0.1" value="'+c.tax+'"></label><label>고용보험 (%)<input id="bs-emp" type="number" step="0.01" value="'+c.emp+'"></label><label>산재보험 (%)<input id="bs-ind" type="number" step="0.01" value="'+c.ind+'"></label></div>'
+    +'<div><button class="bs-btn" type="button" onclick="_bsSaveCfg()">설정 저장</button></div></div></details>';
+}
+function _bsCfgRef(){return _db.collection('delivery_sessions').doc(window._bsDid+'_bmcfg');}
+function _bsSaveCfgObj(patch){
+  var cur=window._bsCfg||{},c=_bsC();
+  var nd=Object.assign({dealerId:window._bsDid,type:'bm_cfg',tiers:c.tiers,acc:c.acc,tax:c.tax,emp:c.emp,ind:c.ind,map:c.map,plat:c.plat},cur,patch,{dealerId:window._bsDid,type:'bm_cfg',updatedAt:new Date().toISOString()});
+  window._bsCfg=nd;return _bsCfgRef().set(nd);
+}
+window._bsSaveCfg=function(){
+  var c=_bsC(),t=c.tiers.map(function(x,i){return {min:Math.max(1,+document.getElementById('bs-tm'+i).value||1),rate:Math.max(0,+document.getElementById('bs-tr'+i).value||0)};}).sort(function(a,b){return a.min-b.min;});
+  var v=function(id){return parseFloat(document.getElementById(id).value);};
+  _bsSaveCfgObj({tiers:t,acc:v('bs-acc'),tax:v('bs-tax'),emp:v('bs-emp'),ind:v('bs-ind')}).then(function(){toast('설정을 저장했어요');_bsRender();_bsPublish();}).catch(function(e){toast('저장 실패: '+e.message);});
+};
+window._bsMapSet=function(key,uid){var m=Object.assign({},_bsC().map);if(uid)m[key]=uid;else delete m[key];var pl=Object.assign({},_bsC().plat||{});if(uid){var d=(window._bsDrivers||[]).filter(function(x){return x.uid===uid;})[0],cur=_bsPlat(d);if(!cur)pl[uid]='bm';else if(cur==='cpe')pl[uid]='both';}_bsSaveCfgObj({map:m,plat:pl}).then(function(){_bsRender();_bsPublish();toast(uid?'기사 계정에 연결했어요':'연결을 해제했어요');}).catch(function(e){toast('저장 실패: '+e.message);});};
+function _bsWeekRef(w){return _db.collection('delivery_sessions').doc(window._bsDid+'_bmweek_'+w);}
+function _bsSaveSla(w){var doc=window._bmDocs[w];return _bsWeekRef(w).set(doc);}
+window._bsSlaEdit=function(key,f,val){
+  var w=window._bmWeekSel,doc=window._bmDocs[w];if(!doc)return;
+  doc.sla=doc.sla||{};var s=doc.sla[key]||(doc.sla[key]={done:0,rej:0});
+  s[f]=Math.max(0,parseFloat(val)||0);s.flag=false;s.warn='';s.src='수정';
+  _bsSaveSla(w).then(function(){_bsRender();_bsPublish();}).catch(function(e){toast('저장 실패: '+e.message);});
+};
+// ── 엑셀 업로드 (하루치 여러 번 → 주 문서에 날짜별 교체 누적, 배달번호 중복 제거)
+window._bsUpload=function(files){
+  if(!files||!files.length)return;
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중이에요. 잠시 후 다시 시도해 주세요.');return;}
+  var did=window._bsDid,st=document.getElementById('bs-xl-st');function say(t){if(st)st.innerHTML=t;}
+  say('엑셀 읽는 중…');
+  var all={},tot={rows:0,dup:0},names=[];
+  Promise.all(Array.prototype.map.call(files,function(f){names.push(f.name);return new Promise(function(ok,bad){var rd=new FileReader();rd.onload=function(ev){try{var wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array',raw:true}),got=null;wb.SheetNames.some(function(sn){got=_bmParseRows(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''}));return !!got;});if(!got)return bad(new Error(f.name+': 배달번호·라이더명 열을 찾지 못했어요'));tot.rows+=got.rows;tot.dup+=got.dup;Object.keys(got.byDate).forEach(function(d){all[d]=got.byDate[d];});ok();}catch(e){bad(e);}};rd.onerror=function(){bad(new Error(f.name+' 읽기 실패'));};rd.readAsArrayBuffer(f);});}))
+  .then(function(){
+    var dates=Object.keys(all).sort();if(!dates.length)throw new Error('날짜가 있는 배달 내역이 없어요');
+    var weeks={};dates.forEach(function(d){var w=_bmWeekStart(d);(weeks[w]=weeks[w]||[]).push(d);});
+    say('저장 중… ('+dates[0]+(dates.length>1?' ~ '+dates[dates.length-1]:'')+')');
+    return Promise.all(Object.keys(weeks).map(function(w){
+      var ref=_bsWeekRef(w);
+      return _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_week').where('week','==',w).get().then(function(qs){
+        var doc={};qs.forEach(function(x){if(x.id===ref.id)doc=x.data();});
+        var riders=doc.riders||{};
+        weeks[w].forEach(function(d){
+          Object.keys(riders).forEach(function(k){if(riders[k].days)delete riders[k].days[d];});
+          Object.keys(all[d]).forEach(function(k){var a=all[d][k];if(!riders[k])riders[k]={name:a.name,userId:a.userId,days:{}};if(!riders[k].days)riders[k].days={};var v=_bmEmpty();Object.keys(v).forEach(function(x){v[x]=a[x]||0;});if(a.fb)v.fb=a.fb;if(a.pt)v.pt=a.pt;riders[k].days[d]=v;});
+        });
+        Object.keys(riders).forEach(function(k){if(!Object.keys(riders[k].days||{}).length)delete riders[k];});
+        var nd={dealerId:did,type:'bm_week',week:w,weekEnd:_bmAddDays(w,6),riders:riders,sla:doc.sla||{},updatedAt:new Date().toISOString(),files:((doc.files||[]).concat(names)).slice(-30)};
+        return ref.set(nd).then(function(){return nd;});
+      });
+    }));
+  }).then(function(docs){
+    docs.sort(function(a,b){return a.week<b.week?-1:1;});
+    docs.forEach(function(d){window._bmDocs[d.week]=d;});
+    window._bmWeekSel=docs[docs.length-1].week;
+    _bsRender();
+    say('<b>'+_bsW(tot.rows)+'건</b> 등록'+(tot.dup?' · 같은 배달번호 '+tot.dup+'건 제외':'')+' · '+names.map(esc).join(', '));
+    return _bsPublish();
+  }).catch(function(e){say('<span style="color:var(--red)">'+esc(e.message)+'</span>');toast('등록 실패: '+e.message);});
+};
+// ── 기사 화면 반영: 연결된 기사마다 dw_driver_stats 갱신 (bmDays JSON 안에 settle 포함)
+window._bsPublish=function(verbose){
+  var w=window._bmWeekSel,doc=(window._bmDocs||{})[w];if(!doc)return Promise.resolve();
+  var did=window._bsDid,list=_bsWeekCalc(),done=0,miss=[];
+  return Promise.all(list.map(function(r){
+    if(!r.drv){miss.push(r.name);return Promise.resolve();}
+    return _dwStatsGet(r.drv.uid,did).then(function(res){
+      var cur=(res&&res.data)||{};
+      var sum=_bmRiderSummary(doc,r.key,null,cur.peakTargets);
+      var bm=JSON.parse(_bmDaysJson(doc,sum));
+      bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:r.extra,gap:r.gap,over:r.over,low:r.low,high:r.high,hasFb:r.hasFb,
+        tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,days:r.days,tiers:_bsC().tiers,updatedAt:new Date().toISOString()};
+      var body={dealerId:did,driverUid:r.drv.uid,driverName:r.drv.name,period:_dwPeriodStr(),
+        peaks:{am:sum.day.am,pm:sum.day.pm,eve:sum.day.eve,ngt:sum.day.ngt,etc:sum.day.etc},peakTargets:cur.peakTargets||{am:0,pm:0,eve:0,ngt:0},
+        daily:{done:sum.day.done,prog:0,rej:sum.day.cancel},
+        sla:{acceptRate:r.acc==null?((cur.sla||{}).acceptRate||0):Math.round(r.acc*1000)/10,weeklyDone:(cur.sla||{}).weeklyDone||0,weeklyTotal:(cur.sla||{}).weeklyTotal||28},
+        slaDetail:{delivery:{total:r.sla?r.sla.done:sum.week.done,food:sum.week.food,store:sum.week.store,mart:sum.week.mart},rejection:{total:r.sla?r.sla.rej:0,food:0,store:0,mart:0},cancel:{total:sum.week.cancel,food:sum.week.cFood,store:sum.week.cStore,mart:sum.week.cMart}},
+        settlements:cur.settlements||[],totalPayout:r.net,memo:cur.memo||'',bmDays:JSON.stringify(bm)};
+      return _dwStatsPost(body).then(function(x){if(x&&x.ok)done++;});
+    }).catch(function(){miss.push(r.name);});
+  })).then(function(){
+    var t='기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 ('+miss.slice(0,5).map(esc).join(', ')+') — 표의 \'연결 계정\'에서 골라 주세요':'');
+    var st=document.getElementById('bs-xl-st');if(st&&verbose!==false){var ps=document.getElementById('bs-pub-st');if(!ps){ps=document.createElement('div');ps.id='bs-pub-st';st.appendChild(ps);}ps.innerHTML=t;}
+    if(verbose===true)toast('기사 화면 반영 '+done+'명');
+  });
+};
+// ── SLA: 표 붙여넣기 / 캡처 이미지(OCR) → 아이디로 라이더 매칭 → 주 문서 sla 저장
+function _bsRiderIdx(){var doc=(window._bmDocs||{})[window._bmWeekSel]||{},m={};Object.keys(doc.riders||{}).forEach(function(k){var rd=doc.riders[k];m[k]={key:k,uid:String(rd.userId||''),name:rd.name};});return m;}
+function _bsSlaFromRow(nums){
+  if(nums.length<6||nums[4]==null)return null;
+  var rj=nums.slice(5),rej=rj.length>=4?rj[3]:rj.reduce(function(a,x){return a+(x||0);},0);
+  return {done:nums[4],rej:rej,tot:nums[0],parts:[nums[1],nums[2],nums[3]],rjOk:rj.every(function(x){return x!=null;})};
+}
+window._bsPasteApply=function(){
+  var t=(document.getElementById('bs-paste')||{}).value||'';if(!t.trim()){toast('붙여넣은 내용이 없어요');return;}
+  var idx=_bsRiderIdx(),res=[];
+  t.split(/\r?\n/).forEach(function(l){
+    var cells=(l.indexOf('\t')>=0?l.split('\t'):l.trim().split(/\s+/)).map(function(v){return String(v).trim();}).filter(function(v){return v!=='';});
+    if(cells.length<3||/^합계$/.test(cells[0]))return;
+    var nums=cells.slice(2).filter(function(v){return v!=='-'&&!/\d+-\d+/.test(v);}).map(function(v){return /^[\d,]+$/.test(v)?parseInt(v.replace(/,/g,''),10):null;});
+    var S=_bsSlaFromRow(nums);if(!S)return;
+    var k=null;Object.keys(idx).forEach(function(x){if(idx[x].uid&&idx[x].uid.toLowerCase()===cells[1].toLowerCase())k=x;});
+    if(!k)Object.keys(idx).forEach(function(x){if(!k&&_bmNormName(idx[x].name)===_bmNormName(cells[0]))k=x;});
+    if(k)res.push({key:k,done:S.done,rej:S.rej,warn:[]});
+  });
+  _bsSlaStore(res,'붙여넣기');
+};
+function _bsSlaStore(res,src){
+  var w=window._bmWeekSel,doc=window._bmDocs[w],st=document.getElementById('bs-sla-st');
+  if(!doc){if(st)st.innerHTML='<span style="color:var(--red)">먼저 ① 엑셀을 올려 주세요. SLA 아이디를 엑셀 기사와 맞춰요.</span>';return;}
+  if(!res.length){if(st)st.innerHTML='<span style="color:var(--red)">기사 줄을 찾지 못했어요. 표가 잘리지 않게, 글자가 크게 보이게 다시 캡처해 주세요. 아래 표에 직접 입력해도 돼요.</span>';return;}
+  doc.sla=doc.sla||{};var nw=0;
+  res.forEach(function(r){doc.sla[r.key]={done:r.done==null?0:r.done,rej:r.rej||0,flag:r.warn.length>0,warn:r.warn.join(', '),src:src};if(r.warn.length)nw++;});
+  var miss=Object.keys(doc.riders||{}).filter(function(k){return !doc.sla[k];}).map(function(k){return doc.riders[k].name;});
+  _bsSaveSla(w).then(function(){
+    if(st)st.innerHTML=src+'에서 <b>'+res.length+'명</b> 넣었어요'+(nw?' · <span style="color:#92400e">노란 표시 '+nw+'명은 숫자를 확인해 주세요 (고치기 전까지 보장은 일단 적용)</span>':' · 숫자 검산 통과')+(miss.length?' · SLA 없는 기사: '+miss.slice(0,5).map(esc).join(', '):'');
+    _bsRender();_bsPublish();
+  }).catch(function(e){toast('저장 실패: '+e.message);});
+}
+// OCR: tesseract.js(영문 모델)로 아이디·숫자만 읽고, 검산(푸드+비마트+스토어=합계, 총 배달완료≈엑셀)으로 확인 필요 표시
+var _BS_TS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/';
+function _bsLev(a,b){var m=a.length,n=b.length,d=[],i,j;for(i=0;i<=m;i++)d[i]=[i];for(j=1;j<=n;j++)d[0][j]=j;for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n];}
+window._bsOcr=function(file){
+  if(!file)return;var st=document.getElementById('bs-sla-st');function say(t,bad){if(st)st.innerHTML=bad?'<span style="color:var(--red)">'+t+'</span>':t;}
+  if(!(window._bmDocs||{})[window._bmWeekSel]){say('먼저 ① 엑셀을 올려 주세요. 캡처 속 아이디를 엑셀 기사와 맞춰 읽어요.',true);return;}
+  say('캡처 준비 중…');
+  var worker=null,fin=false,to=setTimeout(function(){if(!fin)say('글자 인식이 60초 안에 끝나지 않았어요. 새로고침 후 다시 올리거나 표에 직접 입력해 주세요.',true);},60000);
+  var loadLib=window.Tesseract?Promise.resolve():new Promise(function(ok,no){var s=document.createElement('script');s.src=_BS_TS+'tesseract.min.js';s.onload=ok;s.onerror=function(){no(new Error('글자 인식 모듈을 불러오지 못했어요'));};document.head.appendChild(s);});
+  var prep=new Promise(function(ok,no){var img=new Image();img.onload=function(){var sc=Math.min(3,Math.max(1,2400/img.width)),w=Math.round(img.width*sc),h=Math.round(img.height*sc),cv=document.createElement('canvas');cv.width=w;cv.height=h;var cx=cv.getContext('2d');cx.drawImage(img,0,0,w,h);var id=cx.getImageData(0,0,w,h),p=id.data;for(var i=0;i<p.length;i+=4){var g=0.299*p[i]+0.587*p[i+1]+0.114*p[i+2];g=g<170?0:255;p[i]=p[i+1]=p[i+2]=g;}cx.putImageData(id,0,0);URL.revokeObjectURL(img.src);ok(cv);};img.onerror=function(){no(new Error('이미지를 열지 못했어요'));};img.src=URL.createObjectURL(file);});
+  Promise.all([loadLib,prep]).then(function(a){
+    say('글자 인식 모듈 불러오는 중 (처음 한 번은 10~30초)…');
+    return Tesseract.createWorker('eng',1,{workerPath:_BS_TS+'worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int',
+      logger:function(m){if(m.status==='recognizing text')say('캡처 읽는 중 '+Math.round(m.progress*100)+'%');}})
+      .then(function(w){worker=w;return w.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'});})
+      .then(function(){return worker.recognize(a[1]);});
+  }).then(function(out){
+    fin=true;clearTimeout(to);worker.terminate();
+    var idx=_bsRiderIdx(),doc=window._bmDocs[window._bmWeekSel],res=[];
+    (out.data.lines||[]).forEach(function(L){
+      var toks=L.text.trim().split(/\s+/);if(toks.length<4)return;
+      var pi=-1;toks.forEach(function(t,i){if(pi<0&&/\d{2,4}-\d{3,4}-\d{3,4}/.test(t))pi=i;});
+      var best=null,bd=99,bi=-1;
+      toks.forEach(function(t,i){if(i===pi)return;var nt=t.toLowerCase().replace(/[^a-z0-9]/g,'');if(nt.length<4)return;Object.keys(idx).forEach(function(k){var u=idx[k].uid.toLowerCase();if(!u)return;var dd=_bsLev(nt,u);if(dd<bd&&dd<=Math.max(2,Math.floor(u.length*0.3))){bd=dd;best=k;bi=i;}});});
+      if(!best)return;
+      var v=toks.slice((pi>=0?pi:bi)+1).map(function(t){t=t.replace(/[,.]/g,'');return /^\d{1,5}$/.test(t)?parseInt(t,10):null;});
+      if(v.length<6)return;
+      var warn=[],miss=[1,2,3,4].filter(function(k){return v[k]==null;});
+      if(miss.length===1&&miss[0]!==4){var k=miss[0];v[k]=v[4]-[1,2,3].filter(function(x){return x!==k;}).reduce(function(s,x){return s+v[x];},0);warn.push('흐린 숫자를 합계로 보정');}
+      if([1,2,3,4].some(function(k){return v[k]==null;}))warn.push('배달완료를 다 읽지 못함');else if(v[1]+v[2]+v[3]!==v[4])warn.push('푸드+비마트+배민스토어 ≠ 합계');
+      var S=_bsSlaFromRow(v);if(!S)return;
+      if(!S.rjOk)warn.push('거절 숫자 불확실');
+      var rd=doc.riders[best],all=0;Object.keys(rd.days||{}).forEach(function(d){all+=(+rd.days[d].done||0)+(+rd.days[d].cancel||0);});
+      if(S.tot!=null&&Math.abs(S.tot-all)>3)warn.push('총 배달완료가 엑셀('+all+'건)과 다름');
+      if(L.confidence<70)warn.push('인식 신뢰도 낮음');
+      res.push({key:best,done:S.done,rej:S.rej,warn:warn});
+    });
+    _bsSlaStore(res,'캡처');
+  }).catch(function(e){fin=true;clearTimeout(to);if(worker)worker.terminate();say((e&&e.message||'오류')+'. 표를 붙여넣거나 아래 표에 직접 입력해 주세요.',true);});
+};
+
+// ── 기사 화면 카드: 본인 정산서 + 응원 메시지 (bmDays.settle)
+function _bsDriverCard(b){
+  var s=b&&b.settle;if(!s)return '';
+  var tone={go:'background:rgba(37,99,235,.1);color:#1d4ed8',top:'background:rgba(22,163,74,.12);color:#15803d',warn:'background:rgba(220,38,38,.1);color:#b91c1c'}[(s.cheer||{}).tone]||'';
+  var R=function(a,v,st){return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;'+(st||'')+'"><span>'+a+'</span><span style="font-variant-numeric:tabular-nums">'+v+'</span></div>';};
+  var pct=s.acc==null?'-':(Math.round(s.acc*1000)/10).toFixed(1)+'%';
+  var prog='';
+  if(s.next){var base=s.tierMin||0,span=Math.max(1,s.next.min-base),p=Math.max(0,Math.min(100,Math.round((s.n-base)/span*100)));prog='<div style="height:10px;background:var(--bg3);border-radius:6px;overflow:hidden;margin:6px 0 2px"><div style="height:100%;width:'+p+'%;background:#c9a84c"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3)"><span>'+_bsW(s.n)+'건</span><span>'+_bsW(s.next.min)+'건 → 단가 '+_bsW(s.next.rate)+'원</span></div>';}
+  return '<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:14px;font-variant-numeric:tabular-nums">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span style="font-size:14px;font-weight:800"><span style="display:inline-block;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;background:#08101f;color:#e9cf8c;margin-right:6px;vertical-align:middle">배민</span>이번 주 내 정산</span><span style="font-size:11px;color:var(--text3)">'+b.week.slice(5).replace('-','.')+'(수) ~ '+b.weekEnd.slice(5).replace('-','.')+'(화)</span></div>'
+    +'<div style="border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;line-height:1.5;margin-bottom:12px;'+tone+'">'+esc((s.cheer||{}).text||'')+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:6px">'
+      +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">이번 주 건수</div><div style="font-size:20px;font-weight:900">'+_bsW(s.n)+'</div></div>'
+      +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">수락률</div><div style="font-size:20px;font-weight:900;color:'+(s.off?'#dc2626':'#15803d')+'">'+pct+'</div></div>'
+      +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">보장 단가</div><div style="font-size:20px;font-weight:900">'+(s.on?_bsW(s.rate):'-')+'</div></div>'
+    +'</div>'+prog
+    +'<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">'
+      +R('총 배달처리비 ('+_bsW(s.n)+'건)',_bsW(s.fee)+'원')
+      +(s.on?R('<b>최저단가 보장 추가 지급</b>','<b style="color:#a07d22">+'+_bsW(s.extra)+'원</b>'):R('수락률 '+s.accMin+'% 미만: 보장 미적용','','color:#dc2626'))
+      +R('<b>세전</b>'+(s.on?' ('+_bsW(s.n)+'건 × '+_bsW(s.rate)+'원)':''),'<b>'+_bsW(s.gross)+'원</b>')
+      +R('소득세·지방세 (3.3%)','−'+_bsW(s.tax)+'원','color:var(--text3)')+R('고용·산재보험','−'+_bsW(s.emp+s.ind)+'원','color:var(--text3)')
+      +R('<b>예상 실지급액</b>','<b style="font-size:17px">'+_bsW(s.net)+'원</b>','border-top:1px solid var(--border);margin-top:4px;padding-top:8px')
+    +'</div>'
+    +(s.sla?'<div style="font-size:11px;color:var(--text3);margin-top:6px">SLA 배달완료 '+_bsW(s.sla.done)+' · 거절 '+_bsW(s.sla.rej)+' · 수락률 '+pct+' (기준 '+s.accMin+'%)</div>':'<div style="font-size:11px;color:var(--text3);margin-top:6px">수락률은 관리자가 SLA를 등록하면 표시돼요.</div>')
+  +'</div>';
+}
+// 쿠팡이츠 정산(기존 화면)으로 갔을 때 배민으로 돌아오는 탭
+function _bsCoupangBar(){
+  var tr=document.getElementById('topbar-right');if(!tr||document.getElementById('bs-back-bm'))return;
+  var b=document.createElement('button');b.id='bs-back-bm';b.type='button';b.className='btn btn-sm';
+  b.style.cssText='background:#08101f;color:#e9cf8c;font-size:11px;font-weight:800;margin-right:6px';
+  b.textContent='배민 정산으로';b.onclick=function(){window._dwSettleTab='baemin';pageDeliverySettle();};
+  tr.insertBefore(b,tr.firstChild);
+}
+
+// ═══ /배민 배달정산 v2 ═══
+// 기사 화면: 이번 주(수~화) 누적 카드 — 엑셀 등록분(bmDays)
+function _bmDriverWeekCard(raw){
+  var b=null;try{b=raw?JSON.parse(raw):null;}catch(e){b=null;}
+  if(!b||!b.days||!b.days.length)return '';
+  if(b.settle)return _bsDriverCard(b)+_bmDriverWeekCardDays(b);
+  return _bmDriverWeekCardDays(b);
+}
+function _bmDriverWeekCardDays(b){
+  var byD={};b.days.forEach(function(x){byD[x.date]=x;});
+  var max=1;b.days.forEach(function(x){if(x.done>max)max=x.done;});
+  var rows='';
+  for(var i=0;i<7;i++){
+    var d=_bmAddDays(b.week,i),x=byD[d];
+    var on=d===b.latest;
+    rows+='<div style="display:grid;grid-template-columns:64px 1fr 56px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--border)">'
+      +'<span style="font-size:12px;font-weight:'+(on?800:600)+';color:'+(x?'var(--text1)':'var(--text3)')+'">'+d.slice(5).replace('-','.')+' '+_bmDow(d)+'</span>'
+      +'<div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+(x?Math.round(x.done/max*100):0)+'%;background:'+(on?'#5b4ff5':'#a5b4fc')+'"></div></div>'
+      +'<span style="font-size:13px;font-weight:800;text-align:right">'+(x?x.done+'<span style="font-size:11px;font-weight:400">건</span>':'<span style="color:var(--text3);font-weight:400">-</span>')+'</span>'
+    +'</div>';
+  }
+  var t=b.total||{};
+  return '<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:14px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">'
+      +'<span style="font-size:14px;font-weight:800">이번 주 누적</span>'
+      +'<span style="font-size:11px;color:var(--text3)">'+b.week.slice(5).replace('-','.')+'(수) ~ '+b.weekEnd.slice(5).replace('-','.')+'(화)</span>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:10px">'
+      +'<div style="flex:1;background:var(--bg1,#fff);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">완료</div><div style="font-size:22px;font-weight:900;color:#5b4ff5">'+(t.done||0).toLocaleString()+'<span style="font-size:12px;font-weight:400">건</span></div></div>'
+      +'<div style="flex:1;background:var(--bg1,#fff);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">취소</div><div style="font-size:22px;font-weight:900;color:#dc2626">'+(t.cancel||0)+'<span style="font-size:12px;font-weight:400">건</span></div></div>'
+      +'<div style="flex:1;background:var(--bg1,#fff);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">일수</div><div style="font-size:22px;font-weight:900">'+b.days.length+'<span style="font-size:12px;font-weight:400">일</span></div></div>'
+    +'</div>'
+    +rows
+  +'</div>';
+}
+
 function pageDeliveryDriverAdmin(){
   if(!_CU||_CU.role==='driver'||_CU.role==='member'){return;}
   document.getElementById('page-title').textContent='🛵 기사 현황 입력';
@@ -15513,11 +16297,27 @@ function pageDeliveryDriverAdmin(){
 
   el.innerHTML='<div style="max-width:600px;margin:0 auto;padding:8px">'
     +'<div style="font-size:14px;font-weight:800;margin-bottom:12px">기사 현황 직접 입력 <span style="font-size:11px;font-weight:400;color:var(--text3)">'+_dwPeriodLabel(period)+'</span></div>'
+    +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">'
+        +'<div style="font-size:13px;font-weight:800">배민 엑셀 등록 <span style="font-size:11px;font-weight:400;color:var(--text3)">배달 내역 상세 · 하루치씩 누적</span></div>'
+        +'<label style="display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px;background:#08101f;color:#c9a84c;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap">'
+          +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>엑셀 올리기'
+          +'<input type="file" accept=".xlsx,.xls" multiple style="display:none" onchange="_bmUpload(this.files);this.value=\'\'">'
+        +'</label>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--text3);line-height:1.5">올리면 같은 이름의 기사 칸이 바로 채워지고 기사 화면에도 반영돼요. 같은 날짜를 다시 올리면 그 날짜만 새 값으로 바뀌어요.</div>'
+      +'<div id="bm-status" style="font-size:12px;margin-top:8px"></div>'
+      +'<div id="bm-table" style="margin-top:10px"><div style="font-size:12px;color:var(--text3)">불러오는 중...</div></div>'
+    +'</div>'
     +'<div style="margin-bottom:12px">'
       +'<label style="font-size:12px;color:var(--text3)">기사 선택</label>'
       +'<select id="da-driver-sel" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text1);font-size:13px;margin-top:4px">'
         +'<option value="">— 선택 —</option>'
       +'</select>'
+      +'<div id="da-basis-wrap" style="display:none;margin-top:8px">'
+        +'<label style="font-size:12px;color:var(--text3)">엑셀 기준 날짜 <span style="font-size:11px">(일일·슬롯 칸에 채울 날짜)</span></label>'
+        +'<select id="da-basis" style="width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text1);font-size:13px;margin-top:4px"></select>'
+      +'</div>'
     +'</div>'
     +'<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:12px">'
       +'<div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px">일일 현황 <span style="font-weight:400">(공유 이미지용)</span></div>'
@@ -15571,6 +16371,7 @@ function pageDeliveryDriverAdmin(){
       var sel=document.getElementById('da-driver-sel');
       if(!sel)return;
       var _daSeenUids={};
+      window._daDrivers=[];
       snap.forEach(function(doc){
         var d=doc.data();
         var driverUid=d.userId||d.uid||doc.id;
@@ -15581,15 +16382,20 @@ function pageDeliveryDriverAdmin(){
         opt.dataset.name=(d.name||d.driverName||'');
         opt.textContent=(d.name||d.driverName||doc.id)+' ('+(d.phone||'')+ ')';
         sel.appendChild(opt);
+        window._daDrivers.push({uid:driverUid,name:(d.name||d.driverName||'')});
       });
-    });
+      _bmLoadWeeks(did);
+    }).catch(function(){_bmLoadWeeks(did);});
     // 선택 시 기존 데이터 로드
     document.getElementById('da-driver-sel').addEventListener('change',function(){
       var uid=this.value;if(!uid)return;
-      fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(period))
-        .then(function(r){return r.json();}).then(function(res){
+      var selEl=this,dname=(selEl.options[selEl.selectedIndex]&&selEl.options[selEl.selectedIndex].dataset.name)||'';
+      window._daLoaded={uid:uid,data:null};
+      _bmSetupBasis(dname);
+      _dwStatsGet(uid,did).then(function(res){
           if(!res.ok||!res.data)return;
           var d=res.data;
+          if(window._daLoaded&&window._daLoaded.uid===uid)window._daLoaded.data=d;
           ['am','pm','eve','ngt','etc'].forEach(function(k){var el=document.getElementById('da-pk-'+k);if(el)el.value=(d.peaks&&d.peaks[k])||0;});
           ['am','pm','eve','ngt'].forEach(function(k){var el=document.getElementById('da-tg-'+k);if(el)el.value=(d.peakTargets&&d.peakTargets[k])||0;});
           var dy=d.daily||{};
@@ -15652,6 +16458,9 @@ window._daSave=function(){
   var sla={acceptRate:parseFloat(gv('da-sla-rate'))||0,weeklyDone:parseInt(gv('da-sla-done'))||0,weeklyTotal:parseInt(gv('da-sla-total'))||28};
   var delivTot=parseInt(gv('da-deliv-food'))+parseInt(gv('da-deliv-store'))+parseInt(gv('da-deliv-mart'))||0;
   var slaDetail={delivery:{total:delivTot,food:parseInt(gv('da-deliv-food'))||0,store:parseInt(gv('da-deliv-store'))||0,mart:parseInt(gv('da-deliv-mart'))||0},rejection:{total:0,food:0,store:0,mart:0},cancel:{total:0,food:0,store:0,mart:0}};
+  var prev=(window._daLoaded&&window._daLoaded.uid===driverUid&&window._daLoaded.data)||{};
+  if(prev.slaDetail){if(prev.slaDetail.rejection)slaDetail.rejection=prev.slaDetail.rejection;if(prev.slaDetail.cancel)slaDetail.cancel=prev.slaDetail.cancel;}
+  var bmDays=prev.bmDays||'';
   var rows=document.querySelectorAll('.da-row');
   var settlements=[];var totalPayout=0;
   rows.forEach(function(row){
@@ -15664,7 +16473,7 @@ window._daSave=function(){
   var memo=gv('da-memo');
   var token=_auth&&_auth.currentUser&&_auth.currentUser.getIdToken?null:null;
   _auth.currentUser.getIdToken().then(function(tok){
-    return fetch('/api/delivery-driver-stats',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,driverUid:driverUid,driverName:driverName,period:period,peaks:peaks,peakTargets:peakTargets,daily:daily,sla:sla,slaDetail:slaDetail,settlements:settlements,totalPayout:totalPayout,memo:memo})});
+    return fetch('/api/delivery-driver-stats',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,driverUid:driverUid,driverName:driverName,period:period,peaks:peaks,peakTargets:peakTargets,daily:daily,sla:sla,slaDetail:slaDetail,settlements:settlements,totalPayout:totalPayout,memo:memo,bmDays:bmDays})});
   }).then(function(r){return r.json();}).then(function(res){
     if(res.ok){toast('✅ 저장 완료. 기사 화면에 즉시 반영됩니다.');}
     else{toast('저장 실패: '+(res.error||''));}

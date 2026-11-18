@@ -6673,7 +6673,7 @@ service cloud.firestore {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {
         const _djBody = await request.json();
-        const {name,phone,companyId,companyName,driverId,isBiz,bizNum,bizName,bizType,bizKind,bizAddr,ssn,joinDate,role,uid,pw,email,store,bizOwner} = _djBody;
+        const {name,phone,companyId,companyName,driverId,isBiz,bizNum,bizName,bizType,bizKind,bizAddr,ssn,joinDate,role,uid,pw,email,store,bizOwner,platform,bmUserId} = _djBody;
         if (!name||!companyId) return new Response(JSON.stringify({ok:false,error:'name,companyId 필수'}),{status:400,headers:_djH});
         // companyCode 역조회
         const _djToken = await getAccessToken(env);
@@ -6704,6 +6704,28 @@ service cloud.firestore {
         if (isBiz) { _djFields.isBiz={booleanValue:true};_djFields.bizNum={stringValue:bizNum||''};_djFields.bizName={stringValue:bizName||''};_djFields.bizType={stringValue:bizType||''};_djFields.bizKind={stringValue:bizKind||''};_djFields.bizAddr={stringValue:bizAddr||''}; }
         if (ssn) _djFields.ssn={stringValue:ssn};
         if (joinDate) _djFields.joinDate={stringValue:joinDate};
+        // 배달대행: 소속 플랫폼(bm|cpe|both) + 배민 아이디, 같은 대리점 안 주민번호 중복 가입 방지(동명이인 구분)
+        const _djPlat = ['bm','cpe','both'].includes(platform) ? platform : '';
+        if (_djPlat) _djFields.platform={stringValue:_djPlat};
+        if (_djPlat && bmUserId) _djFields.bmUserId={stringValue:String(bmUserId).trim().slice(0,64)};
+        if (_djPlat && ssn) {
+          try {
+            const _djQ = await fetch(`${_djFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:companyId}}},{fieldFilter:{field:{fieldPath:'ssn'},op:'EQUAL',value:{stringValue:ssn}}}]}},limit:1}})});
+            const _djQr = _djQ.ok ? await _djQ.json() : [];
+            const _djHit = (Array.isArray(_djQr)?_djQr:[]).find(x=>x.document);
+            if (_djHit) {
+              const _djOld = _djHit.document.fields||{};
+              const _djSamePhone = (_djOld.phone?.stringValue||'') === (phone||'').replace(/[^0-9]/g,'');
+              if (!_djSamePhone) return new Response(JSON.stringify({ok:false,error:'이미 같은 주민번호로 가입한 기사가 있어요. 관리자에게 문의해 주세요.'}),{headers:_djH});
+              // 같은 사람 재가입: 새 문서를 만들지 않고 소속·배민 아이디만 갱신
+              const _djUpd = {platform:{stringValue:_djPlat}};
+              if (bmUserId) _djUpd.bmUserId={stringValue:String(bmUserId).trim().slice(0,64)};
+              const _djMask = Object.keys(_djUpd).map(k=>'updateMask.fieldPaths='+k).join('&');
+              await fetch(`https://firestore.googleapis.com/v1/${_djHit.document.name}?${_djMask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_djUpd})});
+              return new Response(JSON.stringify({ok:true,existing:true}),{headers:_djH});
+            }
+          } catch(_djQe) {}
+        }
         const _djRes = await fetch(`${_djFsBase}/drivers`,{method:'POST',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_djFields})});
         if (!_djRes.ok) { const _djErr=await _djRes.json(); return new Response(JSON.stringify({ok:false,error:JSON.stringify(_djErr)}),{headers:_djH}); }
         return new Response(JSON.stringify({ok:true}),{headers:_djH});
@@ -6850,6 +6872,7 @@ service cloud.firestore {
             settlements:(f.settlements?.arrayValue?.values||[]).map(function(v){const sf=v.mapValue?.fields||{};return{date:sf.date?.stringValue||'',type:sf.type?.stringValue||'',completeCount:parseInt(sf.completeCount?.integerValue||0),deliveryFee:parseInt(sf.deliveryFee?.integerValue||0),insurance:parseInt(sf.insurance?.integerValue||0),netAmount:parseInt(sf.netAmount?.integerValue||0)};}),
             totalPayout:parseInt(f.totalPayout?.integerValue||0),
             memo:f.memo?.stringValue||'',
+            bmDays:f.bmDays?.stringValue||'',
             updatedAt:f.updatedAt?.timestampValue||''
           };
           return new Response(JSON.stringify({ok:true,data}),{headers:_dsH});
@@ -6860,7 +6883,7 @@ service cloud.firestore {
         if (!_dsAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:_dsH});
         try {
           const body = await request.json();
-          const {dealerId,driverUid,driverName,period,peaks,peakTargets,daily,sla,slaDetail,settlements,totalPayout,memo}=body;
+          const {dealerId,driverUid,driverName,period,peaks,peakTargets,daily,sla,slaDetail,settlements,totalPayout,memo,bmDays}=body;
           if (!dealerId||!driverUid) return new Response(JSON.stringify({ok:false,error:'dealerId, driverUid 필요'}),{status:400,headers:_dsH});
           const tok = await getAccessToken(env);
           const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
@@ -6877,7 +6900,7 @@ service cloud.firestore {
             sdRejectTotal:{integerValue:String((sd.rejection||{}).total||0)},sdRejectFood:{integerValue:String((sd.rejection||{}).food||0)},sdRejectStore:{integerValue:String((sd.rejection||{}).store||0)},sdRejectMart:{integerValue:String((sd.rejection||{}).mart||0)},
             sdCancelTotal:{integerValue:String((sd.cancel||{}).total||0)},sdCancelFood:{integerValue:String((sd.cancel||{}).food||0)},sdCancelStore:{integerValue:String((sd.cancel||{}).store||0)},sdCancelMart:{integerValue:String((sd.cancel||{}).mart||0)},
             settlements:{arrayValue:{values:setArr.map(function(item){return{mapValue:{fields:{date:{stringValue:item.date||''},type:{stringValue:item.type||'선정산'},completeCount:{integerValue:String(item.completeCount||0)},deliveryFee:{integerValue:String(item.deliveryFee||0)},insurance:{integerValue:String(item.insurance||0)},netAmount:{integerValue:String(item.netAmount||0)}}}};})}},
-            totalPayout:{integerValue:String(totalPayout||0)},memo:{stringValue:memo||''},updatedAt:{timestampValue:new Date().toISOString()}
+            totalPayout:{integerValue:String(totalPayout||0)},memo:{stringValue:memo||''},bmDays:{stringValue:String(bmDays||'').slice(0,20000)},updatedAt:{timestampValue:new Date().toISOString()}
           };
           const putRes = await fetch(`${fsBase}/dw_driver_stats/${docId}`,{method:'PATCH',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
           if (!putRes.ok){const err=await putRes.text();return new Response(JSON.stringify({ok:false,error:err}),{status:500,headers:_dsH});}
