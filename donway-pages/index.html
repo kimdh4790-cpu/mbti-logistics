@@ -15919,7 +15919,8 @@ function pageBaeminSettle(){
 }
 function _bsStyle(){
   return '<style>'
-  +'.bs{max-width:980px;margin:0 auto;display:grid;gap:14px;font-variant-numeric:tabular-nums}'
+  +'.bs{max-width:980px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;font-variant-numeric:tabular-nums;min-width:0}.bs>*,.bs-up>*,.bs-card>*{min-width:0}.bs-st,.bs-sub{overflow-wrap:anywhere}.bs-tabs{flex-wrap:wrap}.bs-btn{max-width:100%;box-sizing:border-box}'
+  +'.bs .bs-link{border:1px solid #c9a84c;background:rgba(201,168,76,.08)}.bs-lrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap}.bs .bs-lrow select{max-width:100%;min-height:44px;flex:1 1 180px}.bs-code{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}.bs-code code{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;overflow-wrap:anywhere}'
   +'.bs-tabs{display:flex;gap:6px}.bs-tabs button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-weight:700;cursor:pointer}.bs-tabs button.on{background:#08101f;color:#e9cf8c;border-color:#08101f}'
   +'.bs-up{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:700px){.bs-up{grid-template-columns:1fr}}'
   +'.bs-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;display:grid;gap:10px;min-width:0}'
@@ -15940,7 +15941,7 @@ function _bsStyle(){
   +'.bs-cheer{border-radius:12px;padding:12px 14px;font-weight:700;font-size:14px;line-height:1.5}.bs-cheer.go{background:rgba(37,99,235,.1);color:#1d4ed8}.bs-cheer.top{background:rgba(22,163,74,.12);color:#15803d}.bs-cheer.warn{background:rgba(220,38,38,.1);color:#b91c1c}'
   +'.bs-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-g4{grid-template-columns:repeat(2,minmax(0,1fr))}}.bs-g4>div{border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:grid;gap:1px}.bs-g4 span,.bs-g4 small{font-size:11px;color:var(--text3)}.bs-g4 b{font-size:16px}'
   +'.bs h4{margin:0;font-size:12px;color:var(--text3);letter-spacing:.03em}.bs-empty{padding:28px;text-align:center;color:var(--text3);font-size:13px;background:var(--bg2);border-radius:14px}'
-  +'.bs-ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}.bs-ladder label,.bs-opts label{font-size:11px;color:var(--text3);display:grid;gap:4px}.bs-ladder input,.bs-opts input{min-height:38px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 8px}.bs-opts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-opts{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+  +'.bs-ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}.bs-ladder label,.bs-opts label{min-width:0;font-size:11px;color:var(--text3);display:grid;gap:4px}.bs-ladder input,.bs-opts input{width:100%;min-width:0;box-sizing:border-box;min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 8px}.bs-opts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:560px){.bs-opts{grid-template-columns:repeat(2,minmax(0,1fr))}}'
   +'.bs-pl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap}.bs-seg{display:flex;gap:4px}.bs-seg button{min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text2);font-weight:700;font-size:12px;cursor:pointer}.bs-seg button.on{background:#08101f;color:#e9cf8c;border-color:#08101f}'
   +'.bs-pg{display:flex;justify-content:center;align-items:center;gap:12px;font-size:12px;color:var(--text3)}.bs-pg button[disabled]{opacity:.4;cursor:default}.bs-plat{display:inline-block;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;background:#08101f;color:#e9cf8c;margin-left:6px;vertical-align:middle}'
   +'</style>';
@@ -15967,6 +15968,7 @@ function _bsRender(){
       +'<div class="bs-tile"><span>기사 세전 합계</span><b>'+_bsW(S.gross)+'원</b></div>'
       +'<div class="bs-tile"><span>회사마진 (처리비 − 세전)</span><b class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'원</b></div>'
     +'</div>'
+    +_bsLinkHtml(list)
     +(S.na?'<div class="bs-st" style="color:#92400e">수락률이 비었거나 확인이 필요한 기사 '+S.na+'명은 보장을 일단 적용했어요. ②에서 SLA를 넣어 주세요.</div>':'');
   // 기사별 표
   h+='<div class="bs-box"><table><thead><tr><th>기사</th><th>연결 계정</th><th>건수</th><th>수락률</th><th>보장 단가</th><th>배달처리비</th><th>추가 지급</th><th>세전</th><th>실지급</th><th>회사마진</th></tr></thead><tbody>'
@@ -16054,6 +16056,34 @@ function _bsPlatHtml(){
 }
 window._bsPlatSet=function(uid,k){var pl=Object.assign({},_bsC().plat||{});pl[uid]=k;var m=Object.assign({},_bsC().map);if(k==='cpe')Object.keys(m).forEach(function(x){if(m[x]===uid)delete m[x];});
   _bsSaveCfgObj({plat:pl,map:m}).then(function(){toast('소속을 '+_BS_PL[k]+'(으)로 바꿨어요');window._bsKeepPlat=1;_bsRender();_bsPublish();}).catch(function(e){toast('저장 실패: '+e.message);});};
+// 엑셀 기사 ↔ 가입 계정 연결 패널 (연결 안 된 기사가 있을 때만 위쪽에 노출)
+window._bsLinkPage=window._bsLinkPage||0;
+function _bsJoinCode(){
+  if(window._bsCode!==undefined)return;window._bsCode='';
+  var did=window._bsDid;if(!did||!_db)return;
+  _db.collection('companies').doc(did).get().then(function(sn){var d=sn&&sn.exists?sn.data():{};window._bsCode=d.companyCode||d.slug||((_CU&&_CU.companyCode)||did).slice(0,8).toUpperCase();var el=document.getElementById('bs-join-code');if(el)el.innerHTML=_bsJoinInner();}).catch(function(){});
+}
+function _bsJoinInner(){var c=window._bsCode;if(!c)return '<span class="bs-sub">회사코드 불러오는 중…</span>';var u='https://donway.ai.kr/settle?code='+encodeURIComponent(c)+'&join=1';
+  return '<span>회사코드 <b>'+esc(c)+'</b></span><code>'+esc(u)+'</code><button type="button" class="bs-btn ghost" onclick="_bsCopyJoin()">가입 링크 복사</button>';}
+window._bsCopyJoin=function(){var c=window._bsCode;if(!c)return;var u='https://donway.ai.kr/settle?code='+encodeURIComponent(c)+'&join=1';
+  var done=function(){toast('가입 링크를 복사했어요. 기사에게 보내 주세요');};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u).then(done).catch(function(){toast(u);});else toast(u);};
+function _bsLinkHtml(list){
+  var un=list.filter(function(r){return !r.drv;});if(!un.length)return '';
+  var bm=(window._bsDrivers||[]).filter(function(d){return _bsPlat(d)!=='cpe';});
+  var PS=5,pages=Math.max(1,Math.ceil(un.length/PS));if(window._bsLinkPage>=pages)window._bsLinkPage=pages-1;var pg=window._bsLinkPage;
+  _bsJoinCode();
+  var h='<div class="bs-card bs-link"><div class="bs-h">기사 계정 연결 <span class="bs-sub" style="font-weight:400">엑셀 기사 '+list.length+'명 중 '+un.length+'명이 아직 연결 안 됨</span></div>'
+    +'<div class="bs-sub">연결해야 기사 본인 화면에 정산서와 응원 메시지가 보여요. 기사가 가입하면서 배민 아이디를 넣었거나 이름이 하나뿐이면 자동으로 연결되고, 나머지는 여기서 골라 주세요.</div>';
+  if(!bm.length){
+    h+='<div class="bs-sub" style="color:#92400e;font-weight:700">아직 가입한 배민 기사가 없어요. 아래 가입 링크를 기사들에게 보내 주세요. 가입할 때 배민(또는 둘 다)을 고르고 배민 아이디를 넣으면 자동으로 연결돼요.</div>';
+  }else{
+    h+=un.slice(pg*PS,pg*PS+PS).map(function(r){return '<div class="bs-lrow"><div><b>'+esc(r.name)+'</b><div class="bs-sub">배민 아이디 '+esc(r.userId||'-')+' · '+_bsW(r.n)+'건</div></div>'+_bsDrvSelect(r)+'</div>';}).join('');
+    if(pages>1)h+='<div class="bs-pg"><button type="button" class="bs-btn ghost"'+(pg?'':' disabled')+' onclick="window._bsLinkPage--;_bsRender()">이전</button><span>'+(pg+1)+' / '+pages+'</span><button type="button" class="bs-btn ghost"'+(pg<pages-1?'':' disabled')+' onclick="window._bsLinkPage++;_bsRender()">다음</button></div>';
+    h+='<div class="bs-sub">목록에 없는 기사는 아직 가입 전이에요. 가입 링크를 보내 주세요.</div>';
+  }
+  return h+'<div class="bs-code" id="bs-join-code">'+_bsJoinInner()+'</div></div>';
+}
 function _bsSettingsHtml(){
   var c=_bsC();
   return _bsPlatHtml()+'<details class="st" style="margin-top:4px"><summary><b>단가표·수락률 기준·공제율 설정</b><span class="bs-sub">보장 단가 '+c.tiers.map(function(t){return t.min+'건+ '+_bsW(t.rate);}).join(' / ')+' · 수락률 '+c.acc+'%</span></summary><div class="bs-sb">'
@@ -16138,7 +16168,7 @@ window._bsPublish=function(verbose){
       return _dwStatsPost(body).then(function(x){if(x&&x.ok)done++;});
     }).catch(function(){miss.push(r.name);});
   })).then(function(){
-    var t='기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 ('+miss.slice(0,5).map(esc).join(', ')+') — 표의 \'연결 계정\'에서 골라 주세요':'');
+    var t='기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 (아래 \'기사 계정 연결\'에서 연결해 주세요)':'');
     var st=document.getElementById('bs-xl-st');if(st&&verbose!==false){var ps=document.getElementById('bs-pub-st');if(!ps){ps=document.createElement('div');ps.id='bs-pub-st';st.appendChild(ps);}ps.innerHTML=t;}
     if(verbose===true)toast('기사 화면 반영 '+done+'명');
   });
@@ -16214,7 +16244,7 @@ window._bsOcr=function(file){
       res.push({key:best,done:S.done,rej:S.rej,warn:warn});
     });
     _bsSlaStore(res,'캡처');
-  }).catch(function(e){fin=true;clearTimeout(to);if(worker)worker.terminate();say((e&&e.message||'오류')+'. 표를 붙여넣거나 아래 표에 직접 입력해 주세요.',true);});
+  }).catch(function(e){fin=true;clearTimeout(to);if(worker)worker.terminate();say('캡처를 읽지 못했어요'+(e&&e.message?' ('+esc(String(e.message).slice(0,80))+')':'')+'. 다시 올리거나, 표를 붙여넣거나 아래 표에 직접 입력해 주세요.',true);});
 };
 
 // ── 기사 화면 카드: 본인 정산서 + 응원 메시지 (bmDays.settle)
