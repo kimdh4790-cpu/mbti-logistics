@@ -6775,7 +6775,7 @@ service cloud.firestore {
         }
         const _mdpSvc = (_mdpCo.services?.arrayValue?.values||[]).map(v=>v.stringValue||'');
         const _mdpDlv = !!_mdpPlat || _mdpCo.serviceType?.stringValue==='delivery' || _mdpSvc.indexOf('delivery')>=0 || !!_mdpCo.deliveryPaid?.booleanValue;
-        return new Response(JSON.stringify({ok:true,dealerId:_mdpDealerId,name:_mdpF.name?.stringValue||'',phone:_mdpF.phone?.stringValue||'',companyName:_mdpF.companyName?.stringValue||_mdpCo.companyName?.stringValue||_mdpCo.name?.stringValue||'',platform:_mdpPlat,delivery:_mdpDlv,role:'driver'}),{headers:_mdpH});
+        return new Response(JSON.stringify({ok:true,dealerId:_mdpDealerId,name:_mdpF.name?.stringValue||'',phone:_mdpF.phone?.stringValue||'',companyName:_mdpF.companyName?.stringValue||_mdpCo.companyName?.stringValue||_mdpCo.name?.stringValue||'',platform:_mdpPlat,delivery:_mdpDlv,termsVersion:_mdpF.termsVersion?.stringValue||'',role:'driver'}),{headers:_mdpH});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_mdpH}); }
     }
 
@@ -7065,7 +7065,7 @@ service cloud.firestore {
 
     // ── 배달대행 기사 현황 (dw_driver_stats) — AI정산과 완전 분리 ──
     // ── 배민 정산서 앱 발송 (2026-11-20): 기사 열람 기록 · 기사 푸시 토큰 등록 · 대리점→기사 푸시 ──
-    if ((path === '/api/bm-statement-read' || path === '/api/driver-fcm-token' || path === '/api/bm-notify') && method === 'POST') {
+    if ((path === '/api/bm-statement-read' || path === '/api/driver-fcm-token' || path === '/api/driver-terms' || path === '/api/bm-notify') && method === 'POST') {
       const _bnH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       const _bnBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
       try {
@@ -7078,6 +7078,23 @@ service cloud.firestore {
           const _bnTok = await getAccessToken(env);
           const _bnRes = await fetch(`${_bnBase}/dw_driver_stats/${_bnDid}_${_bnU.uid}_${_bnPer}?updateMask.fieldPaths=bmReadAt&currentDocument.exists=true`,{method:'PATCH',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{bmReadAt:{stringValue:new Date().toISOString()}}})});
           return new Response(JSON.stringify({ok:_bnRes.ok}),{headers:_bnH});
+        }
+        if (path === '/api/driver-terms') {
+          // 기사 약관 동의 저장 (기사 계정은 users 문서 쓰기 권한이 없어 서버에서 drivers 문서에 기록)
+          const _bnU = await verifyFirebaseToken(request, env);
+          if (!_bnU) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_bnH});
+          const _bnVer = String(_bnBody.version||'').slice(0,20);
+          if (!_bnVer) return new Response(JSON.stringify({ok:false,error:'version'}),{status:400,headers:_bnH});
+          const _bnTok = await getAccessToken(env);
+          const _bnQ = await fetch(`${_bnBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_bnU.uid}}},limit:5}})});
+          const _bnRows = (await _bnQ.json().catch(()=>[])) || [];
+          let _bnN = 0;
+          for (const _bnRow of (Array.isArray(_bnRows)?_bnRows:[])) {
+            if (!_bnRow.document) continue;
+            await fetch(`https://firestore.googleapis.com/v1/${_bnRow.document.name}?updateMask.fieldPaths=termsVersion&updateMask.fieldPaths=termsAgreedAt`,{method:'PATCH',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{termsVersion:{stringValue:_bnVer},termsAgreedAt:{stringValue:new Date().toISOString()}}})});
+            _bnN++;
+          }
+          return new Response(JSON.stringify({ok:_bnN>0,updated:_bnN}),{headers:_bnH});
         }
         if (path === '/api/driver-fcm-token') {
           const _bnU = await verifyFirebaseToken(request, env);

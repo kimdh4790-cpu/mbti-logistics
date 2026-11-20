@@ -5875,7 +5875,7 @@ if(window.location.hash==='#join'){
         ? user.getIdToken().then(function(tok){
             return fetch('/api/my-driver-profile',{headers:{'Authorization':'Bearer '+tok}});
           }).then(function(r){return r.json();}).then(function(j){
-            if(j.ok&&j.dealerId)return{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||'',platform:j.platform||'',dlvDriver:!!j.delivery};
+            if(j.ok&&j.dealerId)return{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||'',platform:j.platform||'',dlvDriver:!!j.delivery,termsVersion:j.termsVersion||''};
             // API 실패시에도 role:driver 강제 (companies 체크 우회를 위해)
             return{dealerId:user.uid,role:'driver'};
           }).catch(function(){return{dealerId:user.uid,role:'driver'};})
@@ -6449,7 +6449,11 @@ function showApp(){
   // 환영 팝업 (당일 첫 로그인)
   var _wday=new Date().toDateString();
   var _needNotif=typeof Notification!=='undefined'&&Notification.permission!=='granted';
-  if(localStorage.getItem('mbti_welcome')!==_wday||_needNotif){
+  if(_isDlvDriver()){
+    // 배달 기사: 환영·알림 팝업은 이 기기에서 처음 한 번만 (알림 허용 상태면 생략)
+    var _wk='dw_dlv_welcome_'+_CU.uid,_seen=false;try{_seen=!!localStorage.getItem(_wk);localStorage.setItem(_wk,'1');}catch(e){}
+    if(!_seen&&_needNotif)setTimeout(_showWelcome,300);
+  } else if(localStorage.getItem('mbti_welcome')!==_wday||_needNotif){
     localStorage.setItem('mbti_welcome',_wday);
     setTimeout(_showWelcome, _needNotif?300:700);
   }
@@ -36022,6 +36026,8 @@ function checkTermsAgreement(){
   // 슈퍼어드민은 생략
   var _fp=_isDlvDriver()?'delivery_input':(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
   if(isSuperAdmin()){goPage('home');return;}
+  // 배달 기사: 서버(drivers 문서) 또는 이 기기에 동의 기록이 있으면 다시 묻지 않음
+  if(_isDlvDriver()&&_CU.termsVersion!==TERMS_VER){try{if(localStorage.getItem('dw_terms_'+_CU.uid)===TERMS_VER)_CU.termsVersion=TERMS_VER;}catch(e){}}
   if(_CU&&_CU.termsVersion===TERMS_VER){
     goPage(_fp);
     // ★ 고객사 관리자이면 새 공지 팝업 체크
@@ -36042,6 +36048,16 @@ function agreeTerms(){
   if(!document.getElementById('ta-chk-privacy').checked){toast('개인정보 처리방침에 동의해 주세요.');return;}
   var btn=document.getElementById('ta-agree-btn');
   btn.disabled=true;btn.textContent='저장 중...';
+  if(_isDlvDriver()){
+    // 배달 기사 계정은 users 문서 쓰기 권한이 없어 서버로 저장 + 이 기기에도 기록 (실패해도 입장)
+    try{localStorage.setItem('dw_terms_'+_CU.uid,TERMS_VER);}catch(e){}
+    _CU.termsVersion=TERMS_VER;
+    _auth.currentUser.getIdToken().then(function(tk){return fetch('/api/driver-terms',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},body:JSON.stringify({version:TERMS_VER})});}).catch(function(){});
+    document.getElementById('mo-terms-agree').classList.remove('show');
+    goPage('delivery_input');
+    toast('약관 동의가 완료되었습니다.');
+    return;
+  }
   _db.collection('users').doc(_CU.uid).set({
     termsVersion:TERMS_VER,
     termsAgreedAt:firebase.firestore.FieldValue.serverTimestamp(),
