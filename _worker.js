@@ -188,6 +188,24 @@ async function requireAdmin(request, env) {
   return decoded;
 }
 
+// 대리점 본인(또는 그 대리점 관리자) 확인 — 배달정산 기사 화면 반영·알림용 (2026-11-20)
+async function requireDealerOf(request, env, dealerId) {
+  const decoded = await verifyFirebaseToken(request, env);
+  if (!decoded || !dealerId) return null;
+  if (_SUPERADMIN_EMAILS.includes(decoded.email)) return decoded;
+  if (decoded.uid === dealerId) return decoded;
+  if (decoded.email && decoded.email.endsWith('@donway.internal')) return null; // 기사 계정
+  try {
+    const tok = await getAccessToken(env);
+    const r = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/users/${decoded.uid}`, { headers: { 'Authorization': `Bearer ${tok}` } });
+    if (!r.ok) return null;
+    const f = (await r.json()).fields || {};
+    const role = f.role?.stringValue || '';
+    if ((f.dealerId?.stringValue || '') === dealerId && role !== 'driver' && role !== 'member') return decoded;
+  } catch (e) {}
+  return null;
+}
+
 // 보안 헤더 적용 헬퍼
 function addSecurityHeaders(response, allowIframe = false) {
   const newHeaders = new Headers(response.headers);
@@ -6857,6 +6875,63 @@ service cloud.firestore {
     }
 
     // ── 배달대행 기사 현황 (dw_driver_stats) — AI정산과 완전 분리 ──
+    // ── 배민 정산서 앱 발송 (2026-11-20): 기사 열람 기록 · 기사 푸시 토큰 등록 · 대리점→기사 푸시 ──
+    if ((path === '/api/bm-statement-read' || path === '/api/driver-fcm-token' || path === '/api/bm-notify') && method === 'POST') {
+      const _bnH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _bnBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+      try {
+        const _bnBody = await request.clone().json().catch(()=>({}));
+        if (path === '/api/bm-statement-read') {
+          const _bnU = await verifyFirebaseToken(request, env);
+          if (!_bnU) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_bnH});
+          const _bnDid = String(_bnBody.dealerId||''), _bnPer = String(_bnBody.period||'');
+          if (!_bnDid || !_bnPer || _bnPer.length > 80 || /[\/?#]/.test(_bnPer+_bnDid)) return new Response(JSON.stringify({ok:false,error:'dealerId, period 필요'}),{status:400,headers:_bnH});
+          const _bnTok = await getAccessToken(env);
+          const _bnRes = await fetch(`${_bnBase}/dw_driver_stats/${_bnDid}_${_bnU.uid}_${_bnPer}?updateMask.fieldPaths=bmReadAt&currentDocument.exists=true`,{method:'PATCH',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{bmReadAt:{stringValue:new Date().toISOString()}}})});
+          return new Response(JSON.stringify({ok:_bnRes.ok}),{headers:_bnH});
+        }
+        if (path === '/api/driver-fcm-token') {
+          const _bnU = await verifyFirebaseToken(request, env);
+          if (!_bnU) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_bnH});
+          const _bnFcm = String(_bnBody.token||'');
+          if (_bnFcm.length < 20) return new Response(JSON.stringify({ok:false,error:'token'}),{status:400,headers:_bnH});
+          const _bnTok = await getAccessToken(env);
+          const _bnQ = await fetch(`${_bnBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_bnU.uid}}},limit:5}})});
+          const _bnRows = (await _bnQ.json().catch(()=>[])) || [];
+          let _bnN = 0;
+          for (const _bnRow of (Array.isArray(_bnRows)?_bnRows:[])) {
+            if (!_bnRow.document) continue;
+            await fetch(`https://firestore.googleapis.com/v1/${_bnRow.document.name}?updateMask.fieldPaths=fcmToken&updateMask.fieldPaths=fcmUpdatedAt`,{method:'PATCH',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{fcmToken:{stringValue:_bnFcm},fcmUpdatedAt:{stringValue:new Date().toISOString()}}})});
+            _bnN++;
+          }
+          return new Response(JSON.stringify({ok:true,updated:_bnN}),{headers:_bnH});
+        }
+        // /api/bm-notify — 대리점이 자기 기사에게 정산서 도착 알림
+        const _bnDid = String(_bnBody.dealerId||'');
+        const _bnAdm = await requireDealerOf(request, env, _bnDid);
+        if (!_bnAdm) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_bnH});
+        const _bnUids = (Array.isArray(_bnBody.uids)?_bnBody.uids:[]).map(String).filter(Boolean).slice(0,300);
+        const _bnTitle = String(_bnBody.title||'정산서가 도착했어요').slice(0,60), _bnText = String(_bnBody.body||'').slice(0,200);
+        const _bnTok = await getAccessToken(env);
+        const _bnQ = await fetch(`${_bnBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:_bnDid}}},limit:1000}})});
+        const _bnRows = (await _bnQ.json().catch(()=>[])) || [];
+        const _bnTokens = {};
+        for (const _bnRow of (Array.isArray(_bnRows)?_bnRows:[])) {
+          const _bnF = _bnRow.document?.fields || {};
+          const _bnU = _bnF.uid?.stringValue||'', _bnI = _bnF.userId?.stringValue||'';
+          if (!_bnUids.includes(_bnU) && !_bnUids.includes(_bnI)) continue;
+          const _bnT = _bnF.fcmToken?.stringValue||'';
+          if (_bnT) _bnTokens[_bnU||_bnI] = _bnT;
+        }
+        let _bnSent = 0;
+        for (const _bnK of Object.keys(_bnTokens)) {
+          const _bnR = await fetch(`https://fcm.googleapis.com/v1/projects/mbti-logistics/messages:send`,{method:'POST',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({message:{token:_bnTokens[_bnK],notification:{title:_bnTitle,body:_bnText},android:{priority:'high'},webpush:{notification:{icon:'/donway-icon-192.png'},fcm_options:{link:'https://donway.ai.kr/settle'}}}})});
+          if (_bnR.ok) _bnSent++;
+        }
+        return new Response(JSON.stringify({ok:true,sent:_bnSent,noToken:_bnUids.length-Object.keys(_bnTokens).length}),{headers:_bnH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_bnH}); }
+    }
+
     if (path === '/api/delivery-driver-stats') {
       const _dsH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'};
       if (method === 'OPTIONS') return new Response(null,{status:204,headers:_dsH});
@@ -6892,17 +6967,20 @@ service cloud.firestore {
             totalPayout:parseInt(f.totalPayout?.integerValue||0),
             memo:f.memo?.stringValue||'',
             bmDays:f.bmDays?.stringValue||'',
+            bmReadAt:f.bmReadAt?.stringValue||'',
             updatedAt:f.updatedAt?.timestampValue||''
           };
           return new Response(JSON.stringify({ok:true,data}),{headers:_dsH});
         } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_dsH});}
       }
       if (method === 'POST') {
-        const _dsAdmin = await requireAdmin(request, env);
+        let body = {};
+        try { body = await request.clone().json(); } catch(_dsBe) {}
+        // 슈퍼어드민뿐 아니라 해당 대리점(관리자)도 자기 기사 화면에 반영 가능 (2026-11-20: 대리점 저장 시 Unauthorized 수정)
+        const _dsAdmin = await requireDealerOf(request, env, body.dealerId||'');
         if (!_dsAdmin) return new Response(JSON.stringify({error:'Unauthorized'}),{status:401,headers:_dsH});
         try {
-          const body = await request.json();
-          const {dealerId,driverUid,driverName,period,peaks,peakTargets,daily,sla,slaDetail,settlements,totalPayout,memo,bmDays}=body;
+          const {dealerId,driverUid,driverName,period,peaks,peakTargets,daily,sla,slaDetail,settlements,totalPayout,memo,bmDays,bmReadAt}=body;
           if (!dealerId||!driverUid) return new Response(JSON.stringify({ok:false,error:'dealerId, driverUid 필요'}),{status:400,headers:_dsH});
           const tok = await getAccessToken(env);
           const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
@@ -6921,6 +6999,7 @@ service cloud.firestore {
             settlements:{arrayValue:{values:setArr.map(function(item){return{mapValue:{fields:{date:{stringValue:item.date||''},type:{stringValue:item.type||'선정산'},completeCount:{integerValue:String(item.completeCount||0)},deliveryFee:{integerValue:String(item.deliveryFee||0)},insurance:{integerValue:String(item.insurance||0)},netAmount:{integerValue:String(item.netAmount||0)}}}};})}},
             totalPayout:{integerValue:String(totalPayout||0)},memo:{stringValue:memo||''},bmDays:{stringValue:String(bmDays||'').slice(0,20000)},updatedAt:{timestampValue:new Date().toISOString()}
           };
+          if (bmReadAt) fields.bmReadAt={stringValue:String(bmReadAt).slice(0,40)};
           const putRes = await fetch(`${fsBase}/dw_driver_stats/${docId}`,{method:'PATCH',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
           if (!putRes.ok){const err=await putRes.text();return new Response(JSON.stringify({ok:false,error:err}),{status:500,headers:_dsH});}
           return new Response(JSON.stringify({ok:true,docId}),{headers:_dsH});
