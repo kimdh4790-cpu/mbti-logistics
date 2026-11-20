@@ -244,26 +244,36 @@ async function _fbAdminToken(env) {
     {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
   const b64u = v => (typeof v==='string'?btoa(v):btoa(String.fromCharCode(...new Uint8Array(v)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   const h = b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
-  const c = b64u(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:now+3600,iat:now}));
+  const c = b64u(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/identitytoolkit https://www.googleapis.com/auth/firebase https://www.googleapis.com/auth/cloud-platform',aud:'https://oauth2.googleapis.com/token',exp:now+3600,iat:now}));
   const s = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pk,new TextEncoder().encode(h+'.'+c));
   const t = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${h}.${c}.${b64u(new Uint8Array(s))}`})).json();
   return t.access_token || '';
 }
-// 로그인 계정(email)의 비밀번호를 설정 — 없으면 새로 만듦. 성공 시 {uid} 반환
+// 로그인 계정(email)의 비밀번호를 설정 — 없으면 새로 만듦. 성공 시 {uid}, 실패 시 {error:'단계:구글오류코드'}
 async function _fbSetPassword(env, email, password) {
-  const at = await _fbAdminToken(env);
-  if (!at) return null;
+  const errOf = async (r, step) => { let m = String(r.status); try { const j = await r.json(); m = (j.error && (j.error.message || j.error.status)) || m; } catch(e) {} return step + ':' + m; };
+  let at = '';
+  try { at = await _fbAdminToken(env); } catch(e) { return {error:'token:'+(e.message||'fail')}; }
+  if (!at) return {error:'token:no_access_token'};
   const ah = {'Authorization':'Bearer '+at,'Content-Type':'application/json'};
-  const lu = await (await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:lookup`,{method:'POST',headers:ah,body:JSON.stringify({email:[email]})})).json();
-  const u = (lu.users||[])[0];
+  const lr = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:lookup`,{method:'POST',headers:ah,body:JSON.stringify({email:[email]})});
+  if (!lr.ok) return {error: await errOf(lr,'lookup')};
+  const u = ((await lr.json()).users||[])[0];
   if (u) {
     const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:update`,{method:'POST',headers:ah,body:JSON.stringify({localId:u.localId,password})});
-    return r.ok ? {uid:u.localId} : null;
+    return r.ok ? {uid:u.localId} : {error: await errOf(r,'update'), existingUid:u.localId};
   }
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts`,{method:'POST',headers:ah,body:JSON.stringify({email,password})});
-  if (!r.ok) return null;
+  if (!r.ok) return {error: await errOf(r,'create')};
   const d = await r.json();
   return {uid:d.localId||''};
+}
+// 관리자 API가 막혔을 때: 공개 가입 API로 새 로그인 계정 생성 (이메일이 이미 있으면 실패)
+async function _fbPublicSignUp(env, email, password) {
+  const key = env.FIREBASE_API_KEY || env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:false})});
+  let j = {}; try { j = await r.json(); } catch(e) {}
+  return r.ok ? {uid:j.localId||''} : {error:'signup:'+((j.error&&j.error.message)||r.status)};
 }
 
 // 보안 헤더 적용 헬퍼
@@ -6750,7 +6760,8 @@ service cloud.firestore {
           // email 조회 성공 시 uid 백필
           if (_mdpDoc) {
             const _mdpRef = _mdpDoc.document.name;
-            fetch(`${_mdpFsBase}/${_mdpRef.split('/documents/')[1]}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{uid:{stringValue:_mdpUser.uid}}})}).catch(()=>{});
+            // updateMask 필수: 없으면 문서 전체가 uid 한 칸으로 덮어써짐
+            fetch(`${_mdpFsBase}/${_mdpRef.split('/documents/')[1]}?updateMask.fieldPaths=uid`,{method:'PATCH',headers:{'Authorization':`Bearer ${_mdpToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{uid:{stringValue:_mdpUser.uid}}})}).catch(()=>{});
           }
         }
         if (!_mdpDoc) return new Response(JSON.stringify({ok:false,error:'driver_not_found'}),{headers:_mdpH});
@@ -6786,7 +6797,8 @@ service cloud.firestore {
           const _llR = _llQ.ok ? await _llQ.json() : [];
           (Array.isArray(_llR)?_llR:[]).forEach(x => {
             const f = (x.document&&x.document.fields)||{};
-            const em = _llPhone ? _llPhone+'@donway.internal'
+            const _llDocEm = f.email?.stringValue || '';
+            const em = _llPhone ? (_llDocEm.endsWith('@donway.internal') ? _llDocEm : _llPhone+'@donway.internal')
               : (f.email?.stringValue || (f.phone?.stringValue ? f.phone.stringValue.replace(/[^0-9]/g,'')+'@donway.internal' : ''));
             if (em && !_llEmails.includes(em)) _llEmails.push(em);
             if (em && f.pw?.stringValue) _llHashes[em] = f.pw.stringValue;
@@ -6806,26 +6818,13 @@ service cloud.firestore {
         // 2) 가입 때 저장한 비밀번호(drivers.pw, SHA-256)와 맞으면 로그인 계정을 그 비밀번호로 맞춰 줌
         //    (가입 중 로그인 계정 생성이 빠졌거나 비밀번호가 어긋난 기사 복구)
         const _llMatch = _llEmails.find(em => _llHashes[em] && _llHashes[em] === _llHex);
-        if (_llMatch && _llMatch.endsWith('@donway.internal') && env.FIREBASE_SA_KEY) {
-          const _sa = JSON.parse(env.FIREBASE_SA_KEY);
-          const _now = Math.floor(Date.now()/1000);
-          const _pk = await crypto.subtle.importKey('pkcs8',
-            Uint8Array.from(atob(_sa.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'')),c=>c.charCodeAt(0)).buffer,
-            {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
-          const _b64u = v => (typeof v==='string'?btoa(v):btoa(String.fromCharCode(...new Uint8Array(v)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-          const _jh = _b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
-          const _jc = _b64u(JSON.stringify({iss:_sa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:_now+3600,iat:_now}));
-          const _js = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_pk,new TextEncoder().encode(_jh+'.'+_jc));
-          const _at = (await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_jh}.${_jc}.${_b64u(new Uint8Array(_js))}`})).json()).access_token;
-          if (_at) {
-            const _ah = {'Authorization':'Bearer '+_at,'Content-Type':'application/json'};
-            const _lu = await (await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:lookup`,{method:'POST',headers:_ah,body:JSON.stringify({email:[_llMatch]})})).json();
-            const _u = (_lu.users||[])[0];
-            const _fx = _u
-              ? await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:update`,{method:'POST',headers:_ah,body:JSON.stringify({localId:_u.localId,password:_llPw})})
-              : await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts`,{method:'POST',headers:_ah,body:JSON.stringify({email:_llMatch,password:_llPw})});
-            if (_fx.ok) return new Response(JSON.stringify({ok:true,email:_llMatch,repaired:true}),{headers:_llH});
+        if (_llMatch) {
+          // 기사 전용 계정이면 그 비밀번호로 맞춰 보고(실패해도 무시), 로그인 이메일은 돌려줌 — 실제 로그인은 브라우저가 함
+          if (_llMatch.endsWith('@donway.internal')) {
+            const _fx = await _fbSetPassword(env, _llMatch, _llPw).catch(e => ({error:String(e)}));
+            if (_fx.error) console.log('[login-lookup] repair 실패', _fx.error);
           }
+          return new Response(JSON.stringify({ok:true,email:_llMatch}),{headers:_llH});
         }
         return new Response(JSON.stringify({ok:false,error: _llHashes && Object.keys(_llHashes).length ? 'wrong_password' : 'wrong_password_nohash'}),{headers:_llH});
       } catch(e) {
@@ -6851,13 +6850,27 @@ service cloud.firestore {
         const _rpPhone = (_rpF.phone?.stringValue||'').replace(/[^0-9]/g,'');
         const _rpEmail = _rpF.email?.stringValue || (_rpPhone.length>=10 ? _rpPhone+'@donway.internal' : '');
         if (!_rpEmail) return new Response(JSON.stringify({ok:false,error:'연락처가 없어 로그인 계정을 만들 수 없어요. 연락처를 먼저 저장해 주세요'}),{status:400,headers:_rpH});
-        const _rpSet = await _fbSetPassword(env, _rpEmail, _rpPw);
-        if (!_rpSet) return new Response(JSON.stringify({ok:false,error:'로그인 계정 설정 실패'}),{status:500,headers:_rpH});
+        let _rpLogin = _rpEmail;
+        let _rpSet = await _fbSetPassword(env, _rpEmail, _rpPw);
+        if (_rpSet.error) {
+          console.log('[driver-reset-pw] admin 실패', _rpSet.error);
+          // 관리자 API가 막힌 경우: 계정이 없으면 공개 가입으로 생성, 이미 있으면 기사 전용 새 로그인 계정을 만들어 연결
+          let _rpPub = await _fbPublicSignUp(env, _rpEmail, _rpPw);
+          if (_rpPub.error && _rpPhone.length >= 10) {
+            _rpLogin = _rpPhone + '.' + Date.now().toString(36) + '@donway.internal';
+            _rpPub = await _fbPublicSignUp(env, _rpLogin, _rpPw);
+          }
+          if (_rpPub.error) {
+            console.log('[driver-reset-pw] signup 실패', _rpPub.error);
+            return new Response(JSON.stringify({ok:false,error:'로그인 계정 설정 실패 ('+_rpSet.error+' / '+_rpPub.error+')'}),{status:500,headers:_rpH});
+          }
+          _rpSet = {uid:_rpPub.uid, fresh:true};
+        }
         // drivers 문서에 로그인 정보 맞춤 (비밀번호는 해시만 저장)
         const _rpDig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_rpPw));
         const _rpHex = Array.from(new Uint8Array(_rpDig)).map(b => b.toString(16).padStart(2,'0')).join('');
-        const _rpUpd = {pw:{stringValue:_rpHex}, email:{stringValue:_rpEmail}, pwResetAt:{stringValue:new Date().toISOString()}};
-        if (_rpSet.uid && !_rpF.uid?.stringValue) _rpUpd.uid = {stringValue:_rpSet.uid};
+        const _rpUpd = {pw:{stringValue:_rpHex}, email:{stringValue:_rpLogin}, pwResetAt:{stringValue:new Date().toISOString()}};
+        if (_rpSet.uid && (_rpSet.fresh || !_rpF.uid?.stringValue)) _rpUpd.uid = {stringValue:_rpSet.uid};
         const _rpMask = Object.keys(_rpUpd).map(k=>'updateMask.fieldPaths='+k).join('&');
         await fetch(`${_rpUrl}?${_rpMask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_rpTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_rpUpd})});
         return new Response(JSON.stringify({ok:true,phone:_rpPhone,driverId:_rpF.driverId?.stringValue||''}),{headers:_rpH});
