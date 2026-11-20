@@ -15997,12 +15997,19 @@ function _bsMergeHtml(){
   var c=_bsC(),L=window._bsMergeLines||[],doc=(window._bmDocs||{})[window._bmWeekSel]||{},rs=doc.riders||{};
   var lab=function(k){var x=rs[k]||{};return esc(x.name||k)+(x.userId?' ('+esc(x.userId)+')':'');};
   return '<div class="bs-card"><div class="bs-h">아이디 합치기 (한 사람이 아이디 2개로 탈 때)</div>'
-    +'<div class="bs-sub">한 줄에 하나씩 <b>합칠이름&gt;받을이름</b>으로 적고 저장하면, 앞 아이디의 건수·배달처리비·미만 부족액·초과 메꿈·SLA 완료·거절이 뒤 사람에게 합산돼 보장 단가와 정산서가 다시 계산돼요. 이름 대신 배민 아이디도 돼요. 저장해 두면 다음 주 엑셀에도 자동으로 적용돼요.</div>'
-    +'<textarea id="bs-merge" rows="3" placeholder="예) 김민규>김민준" style="font-size:16px;font-family:inherit">'+esc(c.merge)+'</textarea>'
+    +'<div class="bs-sub"><b>주는 기사</b>와 <b>받는 기사</b>를 골라 추가하거나, 아래 칸에 <b>합칠이름&gt;받을이름</b>을 한 줄씩 적고 저장하면 주는 기사 아이디의 건수·배달처리비·미만 부족액·초과 메꿈·SLA 완료·거절이 뒤 사람에게 합산돼 보장 단가와 정산서가 다시 계산돼요. 이름 대신 배민 아이디도 돼요. 저장해 두면 다음 주 엑셀에도 자동으로 적용돼요.</div>'
+    +(function(){var ks=Object.keys(rs).sort(function(a,b){return String(rs[a].name)<String(rs[b].name)?-1:1;}),cnt={};ks.forEach(function(k){cnt[rs[k].name]=(cnt[rs[k].name]||0)+1;});var op=ks.map(function(k){return '<option value="'+esc(cnt[rs[k].name]>1&&rs[k].userId?rs[k].userId:rs[k].name)+'">'+lab(k)+'</option>';}).join('');
+      return '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="bs-sub" style="display:grid;gap:4px">주는 기사 (합칠 아이디)<select id="bs-mg-from" style="max-width:none;min-height:44px;font-size:14px"><option value="">선택</option>'+op+'</select></label>'
+        +'<label class="bs-sub" style="display:grid;gap:4px">받는 기사<select id="bs-mg-to" style="max-width:none;min-height:44px;font-size:14px"><option value="">선택</option>'+op+'</select></label>'
+        +'<button class="bs-btn" type="button" onclick="_bsMergeAdd()">추가</button></div><div class="bs-sub">또는 직접 적기 (한 줄에 하나씩)</div>';})()
+    +'<textarea id="bs-merge" rows="3" placeholder="예) 홍길동>김철수" style="font-size:16px;font-family:inherit">'+esc(c.merge)+'</textarea>'
     +'<div><button class="bs-btn" type="button" onclick="_bsMergeSave()">합치기 저장</button></div>'
     +(L.length?'<div class="bs-st" style="display:grid;gap:4px">'+L.map(function(x){return x.err?'<div style="color:var(--red)">'+esc(x.raw)+' · '+esc(x.err)+'</div>':'<div><span class="bs-badge on">합산</span> '+lab(x.a)+' → '+lab(x.b)+'</div>';}).join('')+'</div>':'')
     +'</div>';
 }
+window._bsMergeAdd=function(){var a=(document.getElementById('bs-mg-from')||{}).value,b=(document.getElementById('bs-mg-to')||{}).value,el=document.getElementById('bs-merge');
+  if(!a||!b){toast('주는 기사와 받는 기사를 모두 골라 주세요');return;}if(a===b){toast('같은 기사예요. 다른 기사를 골라 주세요');return;}
+  el.value=(el.value.trim()?el.value.replace(/\s+$/,'')+'\n':'')+a+'>'+b;_bsMergeSave();};
 window._bsMergeSave=function(){var el=document.getElementById('bs-merge');if(!el)return;
   _bsSaveCfgObj({merge:String(el.value||'').slice(0,2000)}).then(function(){_bsRender();_bsPublish();toast('아이디 합치기를 저장했어요');}).catch(function(e){toast('저장 실패: '+e.message);});};
 function _bsRender(){
