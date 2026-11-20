@@ -6355,13 +6355,24 @@ function showApp(){
       var _menuSvcs=null;
       if(!cfg.services&&Array.isArray(_cdoc.services)&&_cdoc.services.length){
         _menuSvcs=_cdoc.services.slice();
+        // 결제로 켜진 서비스도 포함 (services엔 없어도 잠그지 않음)
+        if(_menuSvcs.indexOf('delivery')<0&&_hasDelivery(_cdoc))_menuSvcs.push('delivery');
+        if(_menuSvcs.indexOf('settle')<0&&_hasSettle(_cdoc))_menuSvcs.push('settle');
         if(_menuSvcs.indexOf('settle')>=0&&_menuSvcs.indexOf('payout')<0)_menuSvcs.push('payout');
       }
       // services 기반으로 MENUS_SETTLE 필터링
-      MENUS=_filterMenusByServices(MENUS_SETTLE,_menuSvcs);
-      // 배달대행만 고른 회사: AI정산 묶음(남는 전자계약서·달력 포함)은 통째로 숨김
-      if(_menuSvcs&&_menuSvcs.indexOf('settle')<0){
-        MENUS=MENUS.filter(function(sec){return String(sec.s).indexOf('AI 정산')<0;});
+      if(!_menuSvcs){
+        MENUS=_filterMenusByServices(MENUS_SETTLE);
+      } else {
+        // 고르지 않은 서비스 묶음(AI정산/배달대행)은 보이되 잠금(_svcLocked) — 누르면 추가 신청 안내
+        MENUS=MENUS_SETTLE.map(function(sec){
+          var title=String(sec.s||'');
+          var lockSvc=(title.indexOf('AI 정산')>=0&&_menuSvcs.indexOf('settle')<0)?'settle'
+                     :(title.indexOf('배달대행')>=0&&_menuSvcs.indexOf('delivery')<0)?'delivery':'';
+          if(lockSvc) return {s:sec.s,items:sec.items.map(function(m){return Object.assign({},m,{_svcLocked:lockSvc});})};
+          var keep=_filterMenusByServices([sec],_menuSvcs);
+          return keep.length?keep[0]:null;
+        }).filter(Boolean);
       }
     }
   }
@@ -36315,7 +36326,8 @@ function _hasSettle(d){
   if(isSuperAdmin()&&_SA_SIM.enabled) return _SA_SIM.settle;
   if(isSuperAdmin())return true;
   if(d.settlePaid)return true;
-  // ★ trial = settle 범위만 허용
+  // ★ trial = settle 범위만 허용 (단, 가입 때 settle을 고르지 않은 회사(배달대행만)는 제외)
+  if(d.plan==='trial'&&Array.isArray(d.services)&&d.services.length&&d.services.indexOf('settle')<0)return false;
   if(d.plan==='trial'&&d.trialEnd>=new Date().toISOString().slice(0,10))return true;
   return ['settle_taxi','qr_payroll','full','any_paid','trial','settle'].indexOf(d.plan||'')>=0;
 }
@@ -36335,7 +36347,10 @@ function _hasPayroll(d){
 }
 function _hasDelivery(d){  // ★ 배달대행 - 택배와 완전 별개
   if(isSuperAdmin()&&_SA_SIM.enabled) return _SA_SIM.delivery;
-  return isSuperAdmin()||(d.deliveryPaid)||(['delivery','full'].indexOf(d.plan||'')>=0);
+  if(isSuperAdmin()||d.deliveryPaid||['delivery','full'].indexOf(d.plan||'')>=0)return true;
+  // ★ 무료체험 중 가입 때 배달대행을 고른 회사는 배달대행 허용
+  return d.plan==='trial'&&!!d.trialEnd&&d.trialEnd>=new Date().toISOString().slice(0,10)
+    &&Array.isArray(d.services)&&d.services.indexOf('delivery')>=0;
 }
 function _hasPremium(d){   // ALL-IN-ONE 고급기능 (차량·배차 등)
   if(isSuperAdmin()&&_SA_SIM.enabled) return _SA_SIM.premium;
@@ -36561,6 +36576,12 @@ function _buildNavRender(nav,cur,companyDoc){
       openSections.push({s:g.s,items:g.items.filter(function(m){return m&&m.p;}),gi:gi});
       return;
     }
+    // ★ 가입 때 고르지 않은 서비스 묶음: 보이되 잠금 표시
+    var svcLockedItems=g.items.filter(function(m){return m&&m.p&&m._svcLocked;});
+    if(svcLockedItems.length){
+      openSections.push({s:g.s,items:svcLockedItems,gi:gi,svcLocked:true});
+      return;
+    }
     var allowed=g.items.filter(function(m){return m&&m.p&&_isAllowed(m.plan_key||'free');});
     var locked=g.items.filter(function(m){return m&&m.p&&!_isAllowed(m.plan_key||'free');});
     g.items.forEach(function(m){
@@ -36583,11 +36604,13 @@ function _buildNavRender(nav,cur,companyDoc){
     var id='nsec-'+g.gi;
     var hasActive=g.items.some(function(m){return m.p===cur;});
     if(hasActive)anyOpen=true;
-    html+='<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+g.gi+'" onclick="_toggleNavSection(this,this.nextElementSibling.id)">'
-      +'<span>'+g.s+'</span><span class="ns-arrow">›</span></div>'
+    html+='<div class="ns'+(hasActive?' open':'')+'" id="nshead-'+g.gi+'" onclick="_toggleNavSection(this,this.nextElementSibling.id)"'+(g.svcLocked?' style="opacity:.6"':'')+'>'
+      +'<span>'+g.s+(g.svcLocked?' <span style="font-size:10px;font-weight:700;color:var(--text3)">· 잠김</span>':'')+'</span><span class="ns-arrow">›</span></div>'
       +'<div class="ns-items'+(hasActive?' open':'')+'" id="'+id+'">';
     g.items.forEach(function(m){
-      if(m._locked){
+      if(m._svcLocked){
+        html+='<div class="ni" data-p="'+m.p+'" onclick="_showSvcLocked(\''+m._svcLocked+'\')" style="opacity:.45;cursor:not-allowed"><span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span><span style="font-size:10px;color:var(--text3);font-weight:700">잠김</span></div>';
+      } else if(m._locked){
         var u=_PLAN_UPSELL[m.plan_key||'']||{};
         var lockColor=u.color||'#888';
         html+='<div class="ni" data-p="'+m.p+'" onclick="_showPlanUpsell(\''+( m.plan_key||'')+'\')" style="opacity:.55;cursor:pointer"><span style="font-size:14px">'+m.ic+'</span><span style="flex:1">'+m.l+'</span><span style="font-size:10px;color:'+lockColor+';font-weight:700"></span></div>';
@@ -36618,6 +36641,12 @@ function _buildNavRender(nav,cur,companyDoc){
     if(h0)h0.classList.add('open');
     if(f0)f0.classList.add('open');
   }
+}
+
+// 가입 때 고르지 않은 서비스 메뉴를 눌렀을 때 안내
+function _showSvcLocked(svc){
+  var nm=svc==='delivery'?'배달대행':'AI 정산';
+  toast(nm+'은(는) 신청하지 않은 서비스예요. 이용하려면 서비스 추가 신청해 주세요 (문의 051-711-3103)');
 }
 
 // 플랜별 구매 모달
