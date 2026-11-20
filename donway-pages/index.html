@@ -41411,6 +41411,70 @@ function _pageShopDashboard(c) {
   }
 })();
 </script>
+<script>
+// ★ 비밀번호 칸 공통: 입력한 글자 보기 토글 + 한글 입력 경고 (한/영 키 확인)
+(function(){
+  var HANGUL=/[ㄱ-ㆎ가-힣]/;
+  function warnEl(inp){
+    var w=inp.__pwWarn;
+    if(!w){
+      w=document.createElement('div');
+      w.style.cssText='display:none;margin-top:4px;font-size:12px;font-weight:700;color:#dc2626';
+      w.textContent='한글이 입력됐어요. 한/영 키를 확인하세요';
+      var host=inp.parentNode&&inp.parentNode.__pwWrap?inp.parentNode:inp;
+      if(host.parentNode)host.parentNode.insertBefore(w,host.nextSibling);
+      inp.__pwWarn=w;
+    }
+    return w;
+  }
+  function check(inp){
+    var bad=HANGUL.test(inp.value||'');
+    if(bad||inp.__pwWarn)warnEl(inp).style.display=bad?'block':'none';
+  }
+  function enhance(inp){
+    if(!inp||inp.__pwEnh)return;
+    inp.__pwEnh=true;
+    var par=inp.parentNode;
+    // 이미 보기 버튼이 있는 칸(로그인 등)은 경고만 추가
+    var hasBtn=par&&par.querySelector&&par.querySelector('button[onclick*="_togglePw"]');
+    if(!hasBtn&&par){
+      var wrap=document.createElement('div');
+      wrap.__pwWrap=true;
+      wrap.style.cssText='position:relative;width:100%';
+      par.insertBefore(wrap,inp);wrap.appendChild(inp);
+      inp.style.paddingRight='56px';
+      if(!inp.style.width)inp.style.width='100%';
+      inp.style.boxSizing='border-box';
+      var b=document.createElement('button');
+      b.type='button';b.textContent='보기';
+      b.setAttribute('aria-label','비밀번호 보기');
+      b.style.cssText='position:absolute;right:4px;top:50%;transform:translateY(-50%);min-width:44px;min-height:32px;padding:0 8px;background:none;border:none;cursor:pointer;color:var(--text3,#6b7280);font-size:12px;font-weight:700';
+      b.onclick=function(){
+        var show=inp.type==='password';
+        inp.type=show?'text':'password';
+        b.textContent=show?'숨기기':'보기';
+        b.setAttribute('aria-label',show?'비밀번호 숨기기':'비밀번호 보기');
+      };
+      wrap.appendChild(b);
+    }
+    inp.addEventListener('input',function(){check(inp);});
+  }
+  function scan(root){
+    if(!root||!root.querySelectorAll)return;
+    if(root.matches&&root.matches('input[type="password"]'))enhance(root);
+    root.querySelectorAll('input[type="password"]').forEach(enhance);
+  }
+  function start(){
+    scan(document.body);
+    try{
+      new MutationObserver(function(ms){
+        ms.forEach(function(m){m.addedNodes&&m.addedNodes.forEach(function(n){if(n.nodeType===1)scan(n);});});
+      }).observe(document.body,{childList:true,subtree:true});
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
 </body>
 </html
 
