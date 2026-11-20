@@ -361,6 +361,10 @@ _checkSlugDuplicate(this.value);
           <div class="fg"><label>배달 플랫폼 <span style="color:var(--red)">*</span> <span style="color:var(--text3);font-size:10px;font-weight:400">(둘 다 하면 둘 다 선택)</span></label>
             <div style="display:flex;gap:6px" role="group" aria-label="배달 플랫폼"><button type="button" id="j-plat-bm" onclick="_jSetPlat('bm')" style="flex:1;min-height:44px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">배민</button><button type="button" id="j-plat-cpe" onclick="_jSetPlat('cpe')" style="flex:1;min-height:44px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">쿠팡이츠</button><button type="button" id="j-plat-both" onclick="_jSetPlat('both')" style="flex:1;min-height:44px;border:2px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">둘 다</button></div><input id="j-plat" type="hidden" value=""></div>
           <div class="fg" id="j-bmid-wrap" style="display:none"><label>배민 아이디 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택 · 정산 엑셀 자동 연결용)</span></label><input id="j-bmid" type="text" autocomplete="off" placeholder="배민 라이더 아이디"></div>
+          <div class="fg"><label>정산 받을 계좌 <span style="color:var(--red)">*</span></label>
+            <select id="j-bank" aria-label="은행" style="width:100%;min-height:44px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;margin-bottom:6px"><option value="">은행 선택</option><option value="KB국민">KB국민</option><option value="신한">신한</option><option value="우리">우리</option><option value="하나">하나</option><option value="NH농협">NH농협</option><option value="IBK기업">IBK기업</option><option value="카카오뱅크">카카오뱅크</option><option value="토스뱅크">토스뱅크</option><option value="케이뱅크">케이뱅크</option><option value="SC제일">SC제일</option><option value="iM뱅크(대구)">iM뱅크(대구)</option><option value="부산">부산</option><option value="경남">경남</option><option value="광주">광주</option><option value="전북">전북</option><option value="제주">제주</option><option value="우체국">우체국</option><option value="새마을금고">새마을금고</option><option value="신협">신협</option><option value="수협">수협</option><option value="KDB산업">KDB산업</option><option value="씨티">씨티</option><option value="기타">기타</option></select>
+            <input id="j-bank-acc" type="text" inputmode="numeric" autocomplete="off" maxlength="30" placeholder="계좌번호 (- 없이 숫자만)" style="margin-bottom:6px">
+            <input id="j-bank-holder" type="text" autocomplete="off" maxlength="30" placeholder="예금주 (비우면 가입자 이름)"></div>
           <div style="font-size:11px;color:var(--text3);line-height:1.5">같은 이름의 기사와 구분하고 원천세 신고를 하려면 주민번호가 꼭 필요해요. 주민번호는 관리자와 본인만 볼 수 있고, 화면에는 뒷자리를 가려서 보여 줘요.</div>
         </div>
         <div class="fg"><label>주민번호 <span id="j-ssn-req" style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000000-0000000" style="font-family:monospace"></div>
@@ -7162,13 +7166,18 @@ function doQuickJoin(){
   var bizKind=isBiz?((document.getElementById('j-biz-kind')||{}).value||'').trim():'';
   var bizAddr=isBiz?((document.getElementById('j-biz-addr')||{}).value||'').trim():'';
   var ssn=((document.getElementById('j-ssn')||{}).value||'').trim();
-  var platform='',bmUserId='';
+  var platform='',bmUserId='',bankName='',bankAccount='',accountHolder='';
   if(window._joinIsDlv){
     platform=((document.getElementById('j-plat')||{}).value||'');
     bmUserId=(platform==='bm'||platform==='both')?((document.getElementById('j-bmid')||{}).value||'').trim():'';
     if(!platform){if(err){err.textContent='배민, 쿠팡이츠, 둘 다 중에서 골라 주세요';err.style.display='';}return;}
     if(!_jSsnOk(ssn)){if(err){err.textContent='주민번호 13자리를 정확히 입력해 주세요 (같은 이름 기사 구분용)';err.style.display='';}return;}
     ssn=_jSsnFmt(ssn);
+    bankName=((document.getElementById('j-bank')||{}).value||'').trim();
+    bankAccount=((document.getElementById('j-bank-acc')||{}).value||'').replace(/[^0-9\-]/g,'');
+    accountHolder=((document.getElementById('j-bank-holder')||{}).value||'').trim()||name;
+    if(!bankName){if(err){err.textContent='정산 받을 은행을 골라 주세요';err.style.display='';}return;}
+    if(bankAccount.replace(/[^0-9]/g,'').length<8){if(err){err.textContent='계좌번호를 정확히 입력해 주세요';err.style.display='';}return;}
   }
   var joinDate=((document.getElementById('j-joindate')||{}).value||'').trim();
   var joinRoleQ=(document.getElementById('j-role')||{value:'driver'}).value||'driver';
@@ -7214,6 +7223,7 @@ function doQuickJoin(){
       bizType:bizType,bizKind:bizKind,bizAddr:bizAddr,ssn:ssn,joinDate:joinDate,pw:pwHash,
       uid:authUid,email:email};
     if(platform){payload.platform=platform;if(bmUserId)payload.bmUserId=bmUserId;}
+    if(bankName&&bankAccount){payload.bankName=bankName;payload.bankAccount=bankAccount;payload.accountHolder=accountHolder;}
     fetch('/api/driver-join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
       .then(function(r){return r.json();})
       .then(function(data){
@@ -15963,7 +15973,7 @@ function pageBaeminSettle(){
   // 기사 목록 + 설정 + 주 문서
   window._bsDrivers=[];
   Promise.all([
-    _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){var seen={};snap.forEach(function(doc){var d=doc.data(),u=d.userId||d.uid||doc.id;if(seen[u])return;seen[u]=1;window._bsDrivers.push({uid:u,name:d.name||d.driverName||'',bmId:d.bmUserId||d.baeminId||'',platform:d.platform||d.deliveryPlatform||'',sm:_bsSsnMask(d.ssn),ph4:String(d.phone||'').replace(/[^0-9]/g,'').slice(-4),docId:doc.id});});}).catch(function(){}),
+    _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){var seen={};snap.forEach(function(doc){var d=doc.data(),u=d.userId||d.uid||doc.id;if(seen[u])return;seen[u]=1;window._bsDrivers.push({uid:u,name:d.name||d.driverName||'',bmId:d.bmUserId||d.baeminId||'',platform:d.platform||d.deliveryPlatform||'',bank:[d.bankName||'',d.accountNumber||d.bankAccount||'',d.accountHolder?'('+d.accountHolder+')':''].filter(Boolean).join(' '),sm:_bsSsnMask(d.ssn),ph4:String(d.phone||'').replace(/[^0-9]/g,'').slice(-4),docId:doc.id});});}).catch(function(){}),
     _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_cfg').get().then(function(qs){window._bsCfg=null;qs.forEach(function(x){window._bsCfg=x.data();});}).catch(function(){}),
     _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_week').get().then(function(snap){window._bmDocs={};snap.forEach(function(d){var x=d.data();if(x.week)window._bmDocs[x.week]=x;});})
   ]).then(function(){
@@ -16153,7 +16163,7 @@ function _bsPlatHtml(){
   var all=window._bsDrivers||[],PS=5,pages=Math.max(1,Math.ceil(all.length/PS));
   if(window._bsPlatPage>=pages)window._bsPlatPage=pages-1;var pg=window._bsPlatPage;
   var cnt={bm:0,cpe:0,both:0,'':0};all.forEach(function(d){cnt[_bsPlat(d)]++;});
-  var rows=all.slice(pg*PS,pg*PS+PS).map(function(d){var p=_bsPlat(d);return '<div class="bs-pl"><div><b>'+esc(d.name||d.uid)+'</b><div class="bs-sub">'+[d.sm?'주민 '+esc(d.sm):'주민번호 미입력',d.ph4?'연락처 끝 '+esc(d.ph4):'',d.bmId?'배민 아이디 '+esc(d.bmId):''].filter(Boolean).join(' · ')+'</div></div><div class="bs-seg" role="group" aria-label="'+esc(d.name||'')+' 소속">'
+  var rows=all.slice(pg*PS,pg*PS+PS).map(function(d){var p=_bsPlat(d);return '<div class="bs-pl"><div><b>'+esc(d.name||d.uid)+'</b><div class="bs-sub">'+[d.sm?'주민 '+esc(d.sm):'주민번호 미입력',d.ph4?'연락처 끝 '+esc(d.ph4):'',d.bmId?'배민 아이디 '+esc(d.bmId):'',d.bank?'계좌 '+esc(d.bank):'<span style="color:#92400e">계좌 미입력</span>'].filter(Boolean).join(' · ')+'</div></div><div class="bs-seg" role="group" aria-label="'+esc(d.name||'')+' 소속">'
     +['bm','cpe','both'].map(function(k){return '<button type="button" class="'+(p===k?'on':'')+'" onclick="_bsPlatSet(\''+esc(d.uid)+'\',\''+k+'\')">'+_BS_PL[k]+'</button>';}).join('')+'</div></div>';}).join('');
   return '<details class="st" style="margin-top:4px"><summary><b>기사 소속 (배민 / 쿠팡이츠)</b><span class="bs-sub">배민 '+(cnt.bm+cnt.both)+'명 · 쿠팡이츠 '+(cnt.cpe+cnt.both)+'명'+(cnt['']?' · 미지정 '+cnt['']+'명':'')+'</span></summary><div class="bs-sb">'
     +'<div class="bs-sub">가입한 기사를 소속 플랫폼별로 나눠요. 배민 소속(또는 둘 다)만 배민 정산의 연결 계정 목록에 나오고, 쿠팡이츠 소속은 쿠팡이츠 정산에서 관리해요. 배민 기사에 연결하면 자동으로 배민 소속이 돼요.</div>'

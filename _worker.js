@@ -6721,6 +6721,11 @@ service cloud.firestore {
         const _djPlat = ['bm','cpe','both'].includes(platform) ? platform : '';
         if (_djPlat) _djFields.platform={stringValue:_djPlat};
         if (_djPlat && bmUserId) _djFields.bmUserId={stringValue:String(bmUserId).trim().slice(0,64)};
+        // 배달대행: 정산 받을 계좌 (은행명·계좌번호·예금주) — 기존 drivers 필드명(bankName/bankAccount/accountNumber) 그대로 사용
+        const _djBankName = String(_djBody.bankName||'').trim().slice(0,30);
+        const _djBankAcc = String(_djBody.bankAccount||'').replace(/[^0-9\-]/g,'').slice(0,30);
+        const _djBankHolder = String(_djBody.accountHolder||'').trim().slice(0,30);
+        if (_djBankName && _djBankAcc) { _djFields.bankName={stringValue:_djBankName};_djFields.bankAccount={stringValue:_djBankAcc};_djFields.accountNumber={stringValue:_djBankAcc};_djFields.accountHolder={stringValue:_djBankHolder||String(name)}; }
         if (_djPlat && ssn) {
           try {
             const _djQ = await fetch(`${_djFsBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{compositeFilter:{op:'AND',filters:[{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:companyId}}},{fieldFilter:{field:{fieldPath:'ssn'},op:'EQUAL',value:{stringValue:ssn}}}]}},limit:1}})});
@@ -6733,6 +6738,7 @@ service cloud.firestore {
               // 같은 사람 재가입: 새 문서를 만들지 않고 소속·배민 아이디만 갱신
               const _djUpd = {platform:{stringValue:_djPlat}};
               if (bmUserId) _djUpd.bmUserId={stringValue:String(bmUserId).trim().slice(0,64)};
+              ['bankName','bankAccount','accountNumber','accountHolder'].forEach(k=>{ if (_djFields[k]) _djUpd[k]=_djFields[k]; });
               const _djMask = Object.keys(_djUpd).map(k=>'updateMask.fieldPaths='+k).join('&');
               await fetch(`https://firestore.googleapis.com/v1/${_djHit.document.name}?${_djMask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_djUpd})});
               return new Response(JSON.stringify({ok:true,existing:true}),{headers:_djH});
