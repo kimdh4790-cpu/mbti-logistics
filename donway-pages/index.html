@@ -36841,7 +36841,7 @@ function openAdminPanel(){
       var isCurrent=(window._adminViewDealerId===item.id);
       var slugUrl = item.slug ? (window.location.origin+'/'+item.slug) : '-';
       var planLabel = {'trial':'무료체험','settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','OWNER':'관리자'}[item.plan||'trial']||item.plan||'-';
-      var svcMap={'settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리'};
+      var svcMap={'settle':'AI정산','delivery':'배달대행','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','payroll':'급여관리','universal':'범용정산'};
       var svcLabel=svcMap[item.serviceType]||'';
       if(svcLabel&&svcLabel!==planLabel) planLabel+=' · '+svcLabel;
       var planColor = item.plan==='trial'?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
