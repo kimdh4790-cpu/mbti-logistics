@@ -15442,7 +15442,14 @@ function _dwRenderDriverDash(s){
 function _dwBmSettleTab(s){
   var b=null;try{b=s&&s.bmDays?JSON.parse(s.bmDays):null;}catch(e){b=null;}
   if(!b||!b.settle)return '';
-  return b.settle.sentAt?(_bsMarkRead(b,s),_bsDriverCard(b)):_bsDriverWait(b);
+  return b.settle.sentAt?(_bsMarkRead(b,s),_bsDriverStmt(b)):_bsDriverWait(b);
+}
+// 기사 앱 정산표: 대리점 화면 '기사용 보기'와 같은 정산서 (사용자 2026-11-20 "정산표도 기사가 보이게")
+function _bsDriverStmt(b){
+  var r=Object.assign({mems:null,fb:{},pt:{},days:[],rates:{ded:5.8},cheer:{tone:'',text:''}},b.settle);
+  return _bsStyle()+'<style>.bs .bs-row>span:last-child,.bs .bs-extra b,.bs details.st>summary b{white-space:nowrap}</style><div class="bs" style="margin-bottom:14px"><details class="st" open><summary><div><b>'+esc(r.name||'')+'</b><div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary>'
+    +'<div class="bs-sb">'+_bsStmtHtml(r,{week:b.week,weekEnd:b.weekEnd},true)+'</div></details>'
+    +'<div class="bs-sub" style="padding:0 4px">'+(r.sentAt?_bsWhen(r.sentAt)+' 대리점 발송 · ':'')+'고친 내용이 있으면 자동으로 바뀌어요.</div></div>';
 }
 // ── 관리자 기사별 현황 직접 입력 (dw_driver_stats) — AI정산과 완전 분리 ──
 // ══ 기사현황 입력 → 기사별 공유 이미지 (일일 현황 · 슬롯별 달성률 · 시간 외 배달) ══
@@ -16541,7 +16548,7 @@ function _bmDriverWeekCard(raw,st){
   var b=null;try{b=raw?JSON.parse(raw):null;}catch(e){b=null;}
   if(!b||!b.days||!b.days.length)return '';
   if(b.settle&&!b.settle.sentAt)return _bsDriverWait(b)+_bmDriverWeekCardDays(b);
-  if(b.settle){_bsMarkRead(b,st);return _bsDriverCard(b)+_bsPushAsk()+_bmDriverWeekCardDays(b);}
+  if(b.settle){_bsMarkRead(b,st);return _bsDriverStmt(b)+_bsPushAsk()+_bmDriverWeekCardDays(b);}
   return _bmDriverWeekCardDays(b);
 }
 function _bmDriverWeekCardDays(b){
