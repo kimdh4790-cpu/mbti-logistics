@@ -14306,7 +14306,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
         // 세금 요약 한 줄
         +'<div style="padding:7px 12px;font-size:10px;color:var(--text3);border-bottom:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">'
           +'<span>세전 ₩'+r.preTax.toLocaleString()+'</span>'
-          +(window._dwDeliveryCfg&&window._dwDeliveryCfg.all?'<span style="color:#dc2626">원천징수·공과금 −₩'+r.tax33.toLocaleString()+'</span>':
+          +(window._dwDeliveryCfg&&window._dwDeliveryCfg.all?'<span style="color:#dc2626">원천징수·고용·산재 −₩'+r.tax33.toLocaleString()+'</span>':
            '<span style="color:#dc2626">원천세 −₩'+r.tax33.toLocaleString()+'</span>'
           +'<span style="color:#f59e0b">산재 −₩'+r.taxWork.toLocaleString()+'</span>'
           +'<span style="color:#f59e0b">고용 −₩'+r.taxEmp.toLocaleString()+'</span>')
@@ -16115,7 +16115,9 @@ function _bsRender(){
       +'<td>'+_bsPct(r.acc)+'</td><td>'+(r.off?'<span class="bs-badge off">미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요</span>':'<span class="bs-badge on">적용</span>')+'</td></tr>';}).join('')
     +'</tbody></table></div></div>';
   // 기사별 정산서
-  h+='<div class="bs-h" style="margin-top:4px">기사별 정산서</div><div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b>'+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc)+'</div></details>';}).join('')+'</div>';
+  var dv=!!window._bsDrvView;
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px"><div class="bs-h">기사별 정산서</div><div class="bs-seg" role="group" aria-label="보기"><button type="button" class="'+(dv?'':'on')+'" onclick="window._bsDrvView=false;_bsRender()">관리자 보기</button><button type="button" class="'+(dv?'on':'')+'" onclick="window._bsDrvView=true;_bsRender()">기사용 보기</button></div></div>'
+    +(dv?'<div class="bs-sub">기사 화면에 나가는 항목만 보여요 (초과분 메꿈, 어디서 어디로 메꿨는지, 날짜별 내역은 숨김).</div>':'')+'<div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b>'+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc,dv)+'</div></details>';}).join('')+'</div>';
   b.innerHTML=h+_bsSettingsHtml();
 }
 function _bsAccBadge(r){if(r.acc==null)return '<span class="bs-badge na">미입력</span>';return (r.flag?'<span class="bs-badge chk">확인</span> ':'')+'<span class="bs-badge '+(r.off?'off':'on')+'">'+_bsPct(r.acc)+'</span>';}
@@ -16139,11 +16141,11 @@ function _bsStmtHtml(r,doc,forDriver){
     +(r.mems&&!forDriver?'<div class="bs-sub" style="margin-bottom:4px">합친 아이디: '+r.mems.map(function(m){return esc(m.name)+(m.userId?' ('+esc(m.userId)+')':'')+' '+_bsW(m.n)+'건 · '+_bsW(m.fee)+'원';}).join(' + ')+'</div>':'')
     +R('총 배달처리비 '+_bsW(r.n)+'건 (할증 포함)',_bsW(r.fee)+'원')
     +R('수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' (기준 '+r.accMin+'%)',r.off?'<span class="bs-badge off">보장 미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요 (일단 적용)</span>':'<span class="bs-badge on">보장 적용</span>','s');
-  if(r.on&&r.hasFb)h+=R(_bsW(r.rate)+'원 미만 건 부족액 ('+_bsW(r.low)+'건)',_bsW(r.gap)+'원','s')+R('초과분으로 메꿈 ('+_bsW(r.high)+'건)','−'+_bsW(r.over)+'원','s');
+  if(r.on&&r.hasFb)h+=R(_bsW(r.rate)+'원 미만 건 부족액 ('+_bsW(r.low)+'건)',_bsW(r.gap)+'원','s')+(forDriver?'':R('초과분으로 메꿈 ('+_bsW(r.high)+'건) <span class="bs-badge na">관리자만</span>','−'+_bsW(r.over)+'원','s'));
   if(r.on)h+='<div class="bs-extra"><span>실제 추가 지급 (최저단가 보장)</span><b>'+(r.extra>=0?'+':'−')+_bsW(Math.abs(r.extra))+'원</b></div>';
   if(r.off)h+=R('수락률 미달: 건수 보장 없이 배달처리비만 지급','','s');
   h+=R('<b>세전 합계'+(r.on?' ('+_bsW(r.n)+'건 × '+_bsW(r.rate)+'원)':'')+'</b>','<b>'+_bsW(r.gross)+'원</b>')
-    +R('원천징수·공과금 ('+r.rates.ded+'%)','−'+_bsW(r.tax)+'원','m')
+    +R('원천징수·고용·산재 ('+r.rates.ded+'%)','−'+_bsW(r.tax)+'원','m')
     +R('실지급액',_bsW(r.net)+'원','t')+'</div>';
   h+='<div style="display:grid;gap:8px"><h4>수락률 (SLA 기준)</h4><div class="bs-g4">'
     +'<div><span>SLA 배달완료</span><b>'+(r.sla?_bsW(r.sla.done)+'건':'-')+'</b></div>'
@@ -16151,9 +16153,9 @@ function _bsStmtHtml(r,doc,forDriver){
     +'<div><span>수락률</span><b>'+_bsPct(r.acc)+'</b><small>기준 '+r.accMin+'%</small></div>'
     +'<div><span>엑셀 전달완료</span><b>'+_bsW(r.n)+'건</b><small>취소 '+r.can+'건</small></div></div>'
     +(r.sla&&(r.sla.done<r.n*0.5||r.sla.done>r.n+r.can+3)?'<div class="bs-st" style="color:var(--red);font-weight:700">SLA 배달완료 '+_bsW(r.sla.done)+'건이 엑셀 전달완료 '+_bsW(r.n)+'건과 차이가 커요. 숫자를 확인해 주세요.</div>':'')+'</div>';
-  // 일자별
+  // 일자별 (관리자만 — 기사에게는 숨김, 사용자 2026-11-20)
   var cum=0;
-  h+='<div style="display:grid;gap:8px"><h4>일자별 (누적)</h4><div class="bs-box"><table><thead><tr><th>날짜</th><th>완료</th><th>누적</th><th>배달처리비</th>'+(r.on&&r.hasFb?'<th>부족액</th><th>메꿈</th>':'')+'</tr></thead><tbody>'
+  if(!forDriver)h+='<div style="display:grid;gap:8px"><h4>일자별 (누적)</h4><div class="bs-box"><table><thead><tr><th>날짜</th><th>완료</th><th>누적</th><th>배달처리비</th>'+(r.on&&r.hasFb?'<th>부족액</th><th>메꿈</th>':'')+'</tr></thead><tbody>'
     +r.days.map(function(D){cum+=D.done;return '<tr><td>'+D.date.slice(5)+' ('+_bmDow(D.date)+')</td><td>'+_bsW(D.done)+'</td><td>'+_bsW(cum)+'</td><td>'+_bsW(D.fee)+'</td>'+(r.on&&r.hasFb?'<td>'+_bsW(D.gap)+'</td><td>−'+_bsW(D.over)+'</td>':'')+'</tr>';}).join('')
     +'<tr class="sum"><td>합계</td><td>'+_bsW(r.n)+'</td><td></td><td>'+_bsW(r.fee)+'</td>'+(r.on&&r.hasFb?'<td>'+_bsW(r.gap)+'</td><td>−'+_bsW(r.over)+'</td>':'')+'</tr></tbody></table></div></div>';
   // 어디서 어디로 메꿨는지 (관리자만)
@@ -16393,9 +16395,10 @@ function _bsDriverCard(b){
     +'</div>'+prog
     +'<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">'
       +R('총 배달처리비 ('+_bsW(s.n)+'건)',_bsW(s.fee)+'원')
+      +(s.on&&s.hasFb&&s.gap?R(_bsW(s.rate)+'원 미만 건 부족액 ('+_bsW(s.low)+'건)',_bsW(s.gap)+'원','color:var(--text3)'):'')
       +(s.on?R('<b>최저단가 보장 추가 지급</b>','<b style="color:#a07d22">+'+_bsW(s.extra)+'원</b>'):R('수락률 '+s.accMin+'% 미만: 보장 미적용','','color:#dc2626'))
       +R('<b>세전</b>'+(s.on?' ('+_bsW(s.n)+'건 × '+_bsW(s.rate)+'원)':''),'<b>'+_bsW(s.gross)+'원</b>')
-      +(s.rates&&s.rates.ded!=null?R('원천징수·공과금 ('+s.rates.ded+'%)','−'+_bsW(s.tax)+'원','color:var(--text3)'):R('소득세·지방세 (3.3%)','−'+_bsW(s.tax)+'원','color:var(--text3)')+R('고용·산재보험','−'+_bsW(s.emp+s.ind)+'원','color:var(--text3)'))
+      +(s.rates&&s.rates.ded!=null?R('원천징수·고용·산재 ('+s.rates.ded+'%)','−'+_bsW(s.tax)+'원','color:var(--text3)'):R('소득세·지방세 (3.3%)','−'+_bsW(s.tax)+'원','color:var(--text3)')+R('고용·산재보험','−'+_bsW(s.emp+s.ind)+'원','color:var(--text3)'))
       +R('<b>예상 실지급액</b>','<b style="font-size:17px">'+_bsW(s.net)+'원</b>','border-top:1px solid var(--border);margin-top:4px;padding-top:8px')
     +'</div>'
     +(s.sla?'<div style="font-size:11px;color:var(--text3);margin-top:6px">SLA 배달완료 '+_bsW(s.sla.done)+' · 거절 '+_bsW(s.sla.rej)+' · 수락률 '+pct+' (기준 '+s.accMin+'%)</div>':'<div style="font-size:11px;color:var(--text3);margin-top:6px">수락률은 관리자가 SLA를 등록하면 표시돼요.</div>')
@@ -16445,6 +16448,98 @@ function _bmDriverWeekCardDays(b){
     +rows
   +'</div>';
 }
+
+// ══════════════════════════════════════════════════════════════
+// 배달 기사 관리 (배달대행 대리점용) — 기사가 가입하면 실시간으로 여기에 나옴
+//  · drivers 컬렉션(dealerId) 중 배달대행 기사(플랫폼·배민 아이디가 있거나 배달대행만 쓰는 대리점)
+//  · 조회·검색·수정(이름·연락처·소속·배민 아이디·계좌·상태). AI정산 기사관리(pageDrivers)와 별도 화면.
+// ══════════════════════════════════════════════════════════════
+window._ddState=window._ddState||{tab:'all',q:'',page:0};
+var _DD_BANKS=['KB국민','신한','우리','하나','NH농협','IBK기업','카카오뱅크','토스뱅크','케이뱅크','SC제일','iM뱅크(대구)','부산','경남','광주','전북','제주','우체국','새마을금고','신협','수협','KDB산업','씨티','기타'];
+function _ddPlatOf(d){var p=((window._bsCfg||{}).plat||{})[d._uid];if(p)return p;var x=String(d.platform||'').toLowerCase();return ['bm','cpe','both'].indexOf(x)>=0?x:'';}
+function _ddIsDlvOnly(){var c=window._cachedCompanyDoc||{},s=Array.isArray(c.services)?c.services:[];return s.length?s.indexOf('settle')<0:(_CU&&_CU.serviceType==='delivery');}
+function pageDeliveryDrivers(){
+  window._CU_INDUSTRY='delivery';
+  document.getElementById('page-title').textContent='배달 기사 관리';
+  var tr=document.getElementById('topbar-right');if(tr)tr.innerHTML='';
+  var c=document.getElementById('content');
+  if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
+  var did=_CU.dealerId||_CU.uid||'';window._bsDid=did;
+  c.innerHTML=_bsStyle()+'<div class="bs" id="dd-root"><div class="bs-empty">불러오는 중…</div></div>';
+  _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==','bm_cfg').get().then(function(qs){window._bsCfg=null;qs.forEach(function(x){window._bsCfg=x.data();});}).catch(function(){}).then(function(){
+    if(window._ddUnsub)window._ddUnsub();
+    window._ddUnsub=_db.collection('drivers').where('dealerId','==',did).onSnapshot(function(snap){
+      var seen={};window._ddAll=[];
+      snap.forEach(function(doc){var d=Object.assign({},doc.data());d._id=doc.id;d._uid=d.userId||d.uid||doc.id;if(seen[d._uid])return;seen[d._uid]=1;window._ddAll.push(d);});
+      if(document.getElementById('dd-root')&&!window._ddEditing)_ddRender();
+    },function(e){var r=document.getElementById('dd-root');if(r)r.innerHTML='<div class="bs-empty" style="color:var(--red)">불러오기 실패: '+esc(e.message)+'</div>';});
+  });
+}
+function _ddList(){
+  var only=_ddIsDlvOnly();
+  return (window._ddAll||[]).filter(function(d){return only||_ddPlatOf(d)||d.bmUserId;})
+    .sort(function(a,b){var ta=String(a.createdAt&&a.createdAt.seconds||a.createdAt||''),tb=String(b.createdAt&&b.createdAt.seconds||b.createdAt||'');return tb<ta?-1:tb>ta?1:0;});
+}
+function _ddJoinDate(d){var t=d.createdAt;if(!t)return '';if(t.toDate)t=t.toDate();else if(t.seconds)t=new Date(t.seconds*1000);else t=new Date(t);return isNaN(t)?'':(t.getMonth()+1)+'/'+t.getDate();}
+function _ddActive(d){return d.is_active!==false&&['탈퇴','퇴직','거부'].indexOf(d.status||'')<0;}
+function _ddRender(){
+  var r=document.getElementById('dd-root');if(!r)return;window._ddEditing=null;
+  var S=window._ddState,all=_ddList(),q=S.q.trim().toLowerCase();
+  var cnt={all:0,bm:0,cpe:0,none:0,nobank:0,off:0};
+  all.forEach(function(d){var p=_ddPlatOf(d);if(!_ddActive(d)){cnt.off++;return;}cnt.all++;if(p==='bm'||p==='both')cnt.bm++;if(p==='cpe'||p==='both')cnt.cpe++;if(!p)cnt.none++;if(!(d.accountNumber||d.bankAccount))cnt.nobank++;});
+  var list=all.filter(function(d){var p=_ddPlatOf(d),act=_ddActive(d);
+    if(S.tab==='off')return !act;if(!act)return false;
+    if(S.tab==='bm'&&!(p==='bm'||p==='both'))return false;if(S.tab==='cpe'&&!(p==='cpe'||p==='both'))return false;if(S.tab==='none'&&p)return false;if(S.tab==='nobank'&&(d.accountNumber||d.bankAccount))return false;
+    if(q&&[d.name,d.phone,d.bmUserId,d.bankName].join(' ').toLowerCase().indexOf(q)<0)return false;return true;});
+  var PS=10,pages=Math.max(1,Math.ceil(list.length/PS));if(S.page>=pages)S.page=pages-1;
+  var tabs=[['all','전체',cnt.all],['bm','배민',cnt.bm],['cpe','쿠팡이츠',cnt.cpe],['none','소속 미지정',cnt.none],['nobank','계좌 미입력',cnt.nobank],['off','퇴직',cnt.off]].filter(function(t){return t[0]==='all'||t[2]>0||S.tab===t[0];});
+  var h='<div class="bs-card"><div class="bs-h">배달 기사 관리</div><div class="bs-sub">기사가 가입 링크로 가입하면 여기에 바로 나와요. 이름을 누르면 정보를 고칠 수 있어요.</div>'
+    +'<div class="bs-code" id="bs-join-code">'+_bsJoinInner()+'</div></div>'
+    +'<div class="bs-tabs" role="tablist">'+tabs.map(function(t){return '<button type="button" class="'+(S.tab===t[0]?'on':'')+'" onclick="_ddTab(\''+t[0]+'\')">'+t[1]+' '+t[2]+'</button>';}).join('')+'</div>'
+    +'<input type="search" id="dd-q" placeholder="이름·연락처·배민 아이디 검색" value="'+esc(S.q)+'" oninput="window._ddState.q=this.value;window._ddState.page=0;_ddRenderList()" style="width:100%;box-sizing:border-box;min-height:44px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);padding:0 12px;font-size:16px">'
+    +'<div id="dd-list"></div>';
+  r.innerHTML=h;_bsJoinCode();_ddRenderList(list);
+}
+function _ddRenderList(list){
+  var S=window._ddState;if(!list){var q=S.q;_ddRender();var el=document.getElementById('dd-q');if(el){el.focus();el.setSelectionRange(q.length,q.length);}return;}
+  var box=document.getElementById('dd-list');if(!box)return;
+  var PS=10,pages=Math.max(1,Math.ceil(list.length/PS)),pg=Math.min(S.page,pages-1);
+  if(!list.length){box.innerHTML='<div class="bs-empty">'+((window._ddAll||[]).length||S.q?'조건에 맞는 기사가 없어요.':'아직 가입한 배달 기사가 없어요. 위 가입 링크를 기사에게 보내 주세요.')+'</div>';return;}
+  box.innerHTML='<div style="display:grid;gap:8px">'+list.slice(pg*PS,pg*PS+PS).map(function(d){var p=_ddPlatOf(d),acc=d.accountNumber||d.bankAccount||'';
+    return '<button type="button" class="bs-card" style="text-align:left;cursor:pointer;color:var(--text);font:inherit;width:100%" onclick="_ddEdit(\''+esc(d._id)+'\')">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:15px">'+esc(d.name||'(이름 없음)')+(p?'<span class="bs-plat">'+_BS_PL[p]+'</span>':'<span class="bs-badge chk" style="margin-left:6px">소속 미지정</span>')+'</b><span class="bs-sub">'+(_ddJoinDate(d)?'가입 '+_ddJoinDate(d):'')+'</span></div>'
+      +'<div class="bs-sub">'+[d.phone?String(d.phone).replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3'):'연락처 없음',d.ssn?'주민 '+_bsSsnMask(d.ssn):'주민번호 미입력',d.bmUserId?'배민 '+esc(d.bmUserId):''].filter(Boolean).map(esc).join(' · ')+'</div>'
+      +'<div class="bs-sub">'+(acc?'계좌 '+esc([d.bankName||'',acc,d.accountHolder?'('+d.accountHolder+')':''].filter(Boolean).join(' ')):'<span style="color:#92400e;font-weight:700">계좌 미입력</span>')+'</div></button>';}).join('')+'</div>'
+    +(pages>1?'<div class="bs-pg" style="margin-top:8px"><button type="button" class="bs-btn ghost"'+(pg?'':' disabled')+' onclick="window._ddState.page--;_ddRender()">이전</button><span>'+(pg+1)+' / '+pages+'</span><button type="button" class="bs-btn ghost"'+(pg<pages-1?'':' disabled')+' onclick="window._ddState.page++;_ddRender()">다음</button></div>':'');
+}
+window._ddTab=function(t){window._ddState.tab=t;window._ddState.page=0;_ddRender();};
+window._ddEdit=function(id){
+  var d=(window._ddAll||[]).filter(function(x){return x._id===id;})[0];if(!d)return;var p=_ddPlatOf(d);
+  var r=document.getElementById('dd-root');if(!r)return;window._ddEditing=id;
+  var inp=function(idn,lab,val,extra){return '<label class="bs-sub" style="display:grid;gap:4px">'+lab+'<input id="'+idn+'" value="'+esc(val||'')+'" '+(extra||'')+' style="min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 10px;font-size:16px"></label>';};
+  r.innerHTML='<div class="bs-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div class="bs-h">기사 정보 수정</div><button type="button" class="bs-btn ghost" onclick="_ddRender()">목록으로</button></div>'
+    +inp('dd-name','이름',d.name)+inp('dd-phone','연락처',d.phone,'inputmode="tel"')
+    +'<div class="bs-sub">소속 플랫폼</div><div class="bs-seg" role="group">'+['bm','cpe','both'].map(function(k){return '<button type="button" id="dd-p-'+k+'" class="'+(p===k?'on':'')+'" onclick="[\'bm\',\'cpe\',\'both\'].forEach(function(x){document.getElementById(\'dd-p-\'+x).classList.toggle(\'on\',x===\''+k+'\')})">'+_BS_PL[k]+'</button>';}).join('')+'</div>'
+    +inp('dd-bmid','배민 아이디',d.bmUserId,'autocomplete="off"')
+    +'<label class="bs-sub" style="display:grid;gap:4px">은행<select id="dd-bank" style="max-width:none;min-height:44px;font-size:16px"><option value="">선택</option>'+_DD_BANKS.concat(d.bankName&&_DD_BANKS.indexOf(d.bankName)<0?[d.bankName]:[]).map(function(b){return '<option'+(b===d.bankName?' selected':'')+'>'+esc(b)+'</option>';}).join('')+'</select></label>'
+    +inp('dd-acc','계좌번호',d.accountNumber||d.bankAccount,'inputmode="numeric" autocomplete="off"')+inp('dd-holder','예금주',d.accountHolder||'','autocomplete="off"')
+    +'<div class="bs-sub">주민번호: '+(d.ssn?esc(_bsSsnMask(d.ssn)):'미입력')+' (기사 본인이 가입할 때 입력)</div>'
+    +'<label class="bs-sub" style="display:grid;gap:4px">상태<select id="dd-status" style="max-width:none;min-height:44px;font-size:16px">'+['재직','휴직','퇴직'].map(function(s){return '<option'+((d.status||'재직')===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></label>'
+    +'<div><button type="button" class="bs-btn" onclick="_ddSave(\''+esc(id)+'\')">저장</button></div></div>';
+  r.scrollIntoView({block:'start'});
+};
+window._ddSave=function(id){
+  var d=(window._ddAll||[]).filter(function(x){return x._id===id;})[0];if(!d)return;
+  var v=function(k){return String((document.getElementById(k)||{}).value||'').trim();};
+  var plat='';['bm','cpe','both'].forEach(function(k){var b=document.getElementById('dd-p-'+k);if(b&&b.classList.contains('on'))plat=k;});
+  var name=v('dd-name');if(!name){toast('이름을 입력해 주세요');return;}
+  var acc=v('dd-acc').replace(/[^0-9\-]/g,''),st=v('dd-status')||'재직';
+  var upd={name:name,phone:v('dd-phone').replace(/[^0-9]/g,''),bmUserId:v('dd-bmid'),bankName:v('dd-bank'),bankAccount:acc,accountNumber:acc,accountHolder:v('dd-holder'),status:st,is_active:st!=='퇴직',updatedAt:new Date().toISOString()};
+  if(plat)upd.platform=plat;
+  var jobs=[_db.collection('drivers').doc(id).update(upd)];
+  if(plat){var pl=Object.assign({},((window._bsCfg||{}).plat)||{});if(pl[d._uid]!==plat){pl[d._uid]=plat;jobs.push(_bsSaveCfgObj({plat:pl}));}}
+  Promise.all(jobs).then(function(){toast('기사 정보를 저장했어요');_ddRender();}).catch(function(e){toast('저장 실패: '+e.message);});
+};
 
 function pageDeliveryDriverAdmin(){
   if(!_CU||_CU.role==='driver'||_CU.role==='member'){return;}
@@ -23738,6 +23833,7 @@ var MENUS_DELIVERY = [
   {s:'🛵 배달대행 정산', items:[
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
+    {ic:'👤',l:'배달 기사 관리',  p:'delivery_drivers', plan_key:'delivery'},
     {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
   ]},
@@ -23765,6 +23861,7 @@ var MENUS_SETTLE = [
     {ic:'📊',l:'정산 현황',        p:'delivery_settle',  plan_key:'delivery'},
     {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
     {ic:'📋',l:'기사현황 입력',    p:'delivery_admin',   plan_key:'delivery'},
+    {ic:'👤',l:'배달 기사 관리',  p:'delivery_drivers', plan_key:'delivery'},
     {ic:'📈',l:'통계',             p:'delivery_stats',   plan_key:'delivery'},
     {ic:'📅',l:'달력',             p:'schedule',         plan_key:'free'},
   ]},
@@ -23847,7 +23944,8 @@ var MENUS_FULL = [
     
   ]},
   {s:'🛵 배달대행 정산', items:[
-    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'}
+    {ic:'🛵',l:'배달대행 정산',    p:'delivery_input',   plan_key:'delivery'},
+    {ic:'👤',l:'배달 기사 관리',  p:'delivery_drivers', plan_key:'delivery'}
   ]},
   {s:'💼 급여 관리', items:[
     {ic:'💼',l:'급여 현황',        p:'hourly_settle',    plan_key:'payroll'}
@@ -25727,7 +25825,7 @@ work_settings:pageWorkSettings,
 monthly_stats:pageMonthlyStats,
 message:pageMessage,
 customer:pageCustomer,
-delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,delivery_admin:pageDeliveryDriverAdmin,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,chat:pageChat,contract:pageContract,my_settle:pageMySettle,my_statements:pageMyStatements,home:pageHome,subscription:pageSubscription,schedule:pageSchedule};
+delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,delivery_admin:pageDeliveryDriverAdmin,delivery_drivers:pageDeliveryDrivers,settlements:pageSettlements,drivers:pageDrivers,prices:pagePrices,stats:pageStats,delivery_stats:pageDeliveryStats2,sa_events:pageSaEvents,dispatch_history:pageDispatchHistory,chat:pageChat,contract:pageContract,my_settle:pageMySettle,my_statements:pageMyStatements,home:pageHome,subscription:pageSubscription,schedule:pageSchedule};
   var cd=window._cachedCompanyDoc||{};
   var planGate={
     
@@ -25747,7 +25845,7 @@ delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,delivery_adm
     
     'attendance':'qr','leave':'qr','overtime':'qr',
     'dispatch':'premium','vehicle':'premium','expense':'premium',
-    'delivery_settle':'delivery','delivery_input':'delivery','delivery_admin':'delivery','delivery_report':'delivery','delivery_platform':'delivery',
+    'delivery_settle':'delivery','delivery_input':'delivery','delivery_admin':'delivery','delivery_drivers':'delivery','delivery_report':'delivery','delivery_platform':'delivery',
     
   };
   var requiredPlan=planGate[page];
