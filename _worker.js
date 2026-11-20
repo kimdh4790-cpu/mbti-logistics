@@ -158,7 +158,7 @@ async function verifyFirebaseToken(request, _env, _origin) {
     if (!token || token.length < 100) return null;
     const _e = _env || _env_ref;
     const apiKey = (_e && _e.FIREBASE_API_KEY) ? _e.FIREBASE_API_KEY : '';
-    if (!apiKey) return null;
+    if (!apiKey) return await _verifyIdTokenSig(token);
     const _ref = _origin || 'https://filo.ai.kr';
     try {
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
@@ -168,12 +168,36 @@ async function verifyFirebaseToken(request, _env, _origin) {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.users?.[0]) return data.users[0];
+        // 응답의 사용자 ID는 localId — 호출부에서 .uid로 쓰는 곳이 많아 함께 넣어 줌
+        if (data.users?.[0]) { const _u = data.users[0]; if (!_u.uid) _u.uid = _u.localId; return _u; }
       }
     } catch(e) {}
-    // Firebase API 장애 시 서명 미검증 폴백 제거 — 인증 거부
-    return null;
+    // 조회 API가 실패(키 미설정·리퍼러 제한 등)하면 Google 공개키로 ID 토큰 서명을 직접 검증
+    return await _verifyIdTokenSig(token);
   } catch(e) { return null; }
+}
+// Firebase ID 토큰 RS256 서명 + aud/iss/exp 검증 (서명 미검증 폴백 아님)
+async function _verifyIdTokenSig(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const dec = s => { const b = s.replace(/-/g,'+').replace(/_/g,'/'); return atob(b + '='.repeat((4-b.length%4)%4)); };
+    const hdr = JSON.parse(dec(parts[0]));
+    const pl = JSON.parse(dec(parts[1]));
+    const now = Math.floor(Date.now()/1000);
+    if (hdr.alg !== 'RS256' || !hdr.kid) return null;
+    if (pl.aud !== 'mbti-logistics' || pl.iss !== 'https://securetoken.google.com/mbti-logistics') return null;
+    if (!pl.sub || !(pl.exp > now) || (pl.iat && pl.iat > now + 300)) return null;
+    const jr = await fetch('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com');
+    if (!jr.ok) return null;
+    const jwk = ((await jr.json()).keys || []).find(k => k.kid === hdr.kid);
+    if (!jwk) return null;
+    const key = await crypto.subtle.importKey('jwk', jwk, {name:'RSASSA-PKCS1-v1_5', hash:'SHA-256'}, false, ['verify']);
+    const sig = Uint8Array.from(dec(parts[2]), c => c.charCodeAt(0));
+    const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, sig, new TextEncoder().encode(parts[0] + '.' + parts[1]));
+    if (!ok) return null;
+    return {localId: pl.sub, uid: pl.sub, email: pl.email || ''};
+  } catch (e) { return null; }
 }
 
 // 슈퍼어드민 인증 헬퍼 — Firebase ID 토큰 검증 후 SA 이메일 확인
@@ -192,12 +216,16 @@ async function requireAdmin(request, env) {
 async function requireDealerOf(request, env, dealerId) {
   const decoded = await verifyFirebaseToken(request, env);
   if (!decoded || !dealerId) return null;
+  // accounts:lookup 응답은 uid가 아니라 localId 필드 — uid만 보면 대리점 본인도 늘 거절됨
+  const uid = decoded.uid || decoded.localId || '';
+  if (!decoded.uid && uid) decoded.uid = uid;
   if (_SUPERADMIN_EMAILS.includes(decoded.email)) return decoded;
-  if (decoded.uid === dealerId) return decoded;
+  if (!uid) return null;
+  if (uid === dealerId) return decoded;
   if (decoded.email && decoded.email.endsWith('@donway.internal')) return null; // 기사 계정
   try {
     const tok = await getAccessToken(env);
-    const r = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/users/${decoded.uid}`, { headers: { 'Authorization': `Bearer ${tok}` } });
+    const r = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/users/${uid}`, { headers: { 'Authorization': `Bearer ${tok}` } });
     if (!r.ok) return null;
     const f = (await r.json()).fields || {};
     const role = f.role?.stringValue || '';
