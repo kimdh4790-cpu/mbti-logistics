@@ -15850,7 +15850,7 @@ function _bsPct(v){return v==null?'-':(Math.round(v*1000)/10).toFixed(1)+'%';}
 function _bsC(){
   var c=window._bsCfg||{};
   var t=(c.tiers&&c.tiers.length?c.tiers:_BS_DEF.tiers).map(function(x){return {min:+x.min||1,rate:+x.rate||0};}).sort(function(a,b){return a.min-b.min;});
-  return {tiers:t,acc:c.acc!=null?+c.acc:_BS_DEF.acc,ded:c.ded!=null?+c.ded:_BS_DEF.ded,map:c.map||{},plat:c.plat||{}};
+  return {tiers:t,acc:c.acc!=null?+c.acc:_BS_DEF.acc,ded:c.ded!=null?+c.ded:_BS_DEF.ded,map:c.map||{},plat:c.plat||{},merge:typeof c.merge==='string'?c.merge:''};
 }
 function _bsTier(n,c){var cur=null,i=-1;c.tiers.forEach(function(t,k){if(n>=t.min){cur=t;i=k;}});return {t:cur,next:c.tiers[i+1]||null};}
 // 라이더 1명 주간 정산. rd={name,userId,days:{date:{done,cancel,fee,fb,pt,...}}}, sla={done,rej,flag}
@@ -15956,11 +15956,55 @@ function _bsStyle(){
   +'.bs-pg{display:flex;justify-content:center;align-items:center;gap:12px;font-size:12px;color:var(--text3)}.bs-pg button[disabled]{opacity:.4;cursor:default}.bs-plat{display:inline-block;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;background:#08101f;color:#e9cf8c;margin-left:6px;vertical-align:middle}'
   +'</style>';
 }
+// ── 아이디 합치기: 설정 merge 에 '김민규>김민준' 한 줄씩 → 앞 아이디 내역을 뒤 사람에게 합산 (사용자 2026-11-20)
+function _bsMergeParse(doc,txt){
+  var rs=doc.riders||{},keys=Object.keys(rs),mg={},lines=[];
+  function find(tok){tok=String(tok||'').trim();if(!tok)return null;var lo=tok.toLowerCase(),nm=_bmNormName(tok);
+    var a=keys.filter(function(k){return String(rs[k].userId||'').toLowerCase()===lo;});if(a.length===1)return a[0];
+    a=keys.filter(function(k){return rs[k].name===tok;});if(a.length===1)return a[0];if(a.length>1)return {amb:1};
+    a=keys.filter(function(k){return _bmNormName(rs[k].name)===nm;});return a.length===1?a[0]:(a.length>1?{amb:1}:null);}
+  String(txt||'').split(/\r?\n|,/).forEach(function(l){l=l.trim();if(!l)return;var pr=l.split(/\s*(?:->|=>|>|→)\s*/);
+    if(pr.length<2||!pr[0]||!pr[pr.length-1]){lines.push({raw:l,err:'"앞이름>뒤이름" 형식으로 적어 주세요'});return;}
+    var A=find(pr[0]),B=find(pr[pr.length-1]);
+    if(typeof A!=='string'||typeof B!=='string'){lines.push({raw:l,err:[typeof A==='string'?'':pr[0]+(A&&A.amb?' 동명이인 (아이디로 적어 주세요)':' 이번 주 없음'),typeof B==='string'?'':pr[pr.length-1]+(B&&B.amb?' 동명이인 (아이디로 적어 주세요)':' 이번 주 없음')].filter(Boolean).join(' · ')});return;}
+    if(A===B){lines.push({raw:l,err:'같은 사람입니다'});return;}
+    mg[A]=B;lines.push({raw:l,a:A,b:B});});
+  return {mg:mg,lines:lines};
+}
+function _bsMergeTo(mg,k){var seen={};while(mg[k]&&!seen[k]){seen[k]=1;k=mg[k];}return k;}
+function _bsMergeRd(list){
+  var out={name:list[0].name,userId:list[0].userId||'',days:{}};
+  list.forEach(function(rd){Object.keys(rd.days||{}).forEach(function(d){var x=rd.days[d],o=out.days[d]||(out.days[d]={fb:{},pt:{}});
+    Object.keys(x).forEach(function(f){if(f==='fb'){Object.keys(x.fb||{}).forEach(function(k){o.fb[k]=(o.fb[k]||0)+(+x.fb[k]||0);});}
+      else if(f==='pt'){Object.keys(x.pt||{}).forEach(function(k){var q=o.pt[k]||(o.pt[k]={n:0,v:0});q.n+=+x.pt[k].n||0;q.v+=+x.pt[k].v||0;});}
+      else if(typeof x[f]==='number')o[f]=(o[f]||0)+x[f];});});});
+  return out;
+}
 function _bsWeekCalc(){
   var doc=(window._bmDocs||{})[window._bmWeekSel];if(!doc)return [];
-  var c=_bsC(),sla=doc.sla||{};
-  return Object.keys(doc.riders||{}).map(function(k){var r=_bsCalc(doc.riders[k],sla[k],c);r.key=k;r.drv=_bsMatch(k,doc.riders[k],c);return r;}).sort(function(a,b){return b.n-a.n;});
+  var c=_bsC(),sla=doc.sla||{},M=_bsMergeParse(doc,c.merge),grp={};
+  window._bsMergeLines=M.lines;
+  Object.keys(doc.riders||{}).forEach(function(k){var t=_bsMergeTo(M.mg,k);(grp[t]=grp[t]||[]).push(k);});
+  return Object.keys(grp).map(function(t){
+    var ks=grp[t].sort(function(a,b){return a===t?-1:b===t?1:0;}),rd,sl;
+    if(ks.length===1){rd=doc.riders[t];sl=sla[t];}
+    else{rd=_bsMergeRd(ks.map(function(k){return doc.riders[k];}));sl=null;ks.forEach(function(k){var s=sla[k];if(s&&((+s.done||0)+(+s.rej||0))>0){sl=sl||{done:0,rej:0,flag:false};sl.done+=+s.done||0;sl.rej+=+s.rej||0;if(s.flag)sl.flag=true;}});}
+    var r=_bsCalc(rd,sl,c);r.key=t;r.drv=_bsMatch(t,doc.riders[t],c);
+    if(ks.length>1)r.mems=ks.map(function(k){var x=_bsCalc(doc.riders[k],null,c);return {key:k,name:doc.riders[k].name,userId:doc.riders[k].userId||'',n:x.n,fee:x.fee};});
+    return r;}).sort(function(a,b){return b.n-a.n;});
 }
+function _bsMergeHtml(){
+  var c=_bsC(),L=window._bsMergeLines||[],doc=(window._bmDocs||{})[window._bmWeekSel]||{},rs=doc.riders||{};
+  var lab=function(k){var x=rs[k]||{};return esc(x.name||k)+(x.userId?' ('+esc(x.userId)+')':'');};
+  return '<div class="bs-card"><div class="bs-h">아이디 합치기 (한 사람이 아이디 2개로 탈 때)</div>'
+    +'<div class="bs-sub">한 줄에 하나씩 <b>합칠이름&gt;받을이름</b>으로 적고 저장하면, 앞 아이디의 건수·배달처리비·미만 부족액·초과 메꿈·SLA 완료·거절이 뒤 사람에게 합산돼 보장 단가와 정산서가 다시 계산돼요. 이름 대신 배민 아이디도 돼요. 저장해 두면 다음 주 엑셀에도 자동으로 적용돼요.</div>'
+    +'<textarea id="bs-merge" rows="3" placeholder="예) 김민규>김민준" style="font-size:16px;font-family:inherit">'+esc(c.merge)+'</textarea>'
+    +'<div><button class="bs-btn" type="button" onclick="_bsMergeSave()">합치기 저장</button></div>'
+    +(L.length?'<div class="bs-st" style="display:grid;gap:4px">'+L.map(function(x){return x.err?'<div style="color:var(--red)">'+esc(x.raw)+' · '+esc(x.err)+'</div>':'<div><span class="bs-badge on">합산</span> '+lab(x.a)+' → '+lab(x.b)+'</div>';}).join('')+'</div>':'')
+    +'</div>';
+}
+window._bsMergeSave=function(){var el=document.getElementById('bs-merge');if(!el)return;
+  _bsSaveCfgObj({merge:String(el.value||'').slice(0,2000)}).then(function(){_bsRender();_bsPublish();toast('아이디 합치기를 저장했어요');}).catch(function(e){toast('저장 실패: '+e.message);});};
 function _bsRender(){
   var b=document.getElementById('bs-body');if(!b)return;
   var docs=window._bmDocs||{},ws=Object.keys(docs).sort(),w=window._bmWeekSel;
@@ -15979,10 +16023,11 @@ function _bsRender(){
       +'<div class="bs-tile"><span>회사마진 (처리비 − 세전)</span><b class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'원</b></div>'
     +'</div>'
     +_bsLinkHtml(list)
+    +_bsMergeHtml()
     +(S.na?'<div class="bs-st" style="color:#92400e">수락률이 비었거나 확인이 필요한 기사 '+S.na+'명은 보장을 일단 적용했어요. ②에서 SLA를 넣어 주세요.</div>':'');
   // 기사별 표
   h+='<div class="bs-box"><table><thead><tr><th>기사</th><th>연결 계정</th><th>건수</th><th>수락률</th><th>보장 단가</th><th>배달처리비</th><th>추가 지급</th><th>세전</th><th>실지급</th><th>회사마진</th></tr></thead><tbody>'
-    +list.map(function(r){return '<tr><td class="nm">'+esc(r.name)+'<div style="font-size:10px;color:var(--text3);font-weight:400">'+esc(r.userId)+'</div></td>'
+    +list.map(function(r){return '<tr><td class="nm">'+esc(r.name)+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div style="font-size:10px;color:var(--text3);font-weight:400">'+(r.mems?r.mems.map(function(m){return esc(m.userId||m.name);}).join(' + '):esc(r.userId))+'</div></td>'
       +'<td>'+_bsDrvSelect(r)+'</td><td>'+_bsW(r.n)+'</td><td>'+_bsAccBadge(r)+'</td>'
       +'<td>'+(r.off?'<span class="bs-badge off">미적용</span>':r.on?_bsW(r.rate):'-')+'</td><td>'+_bsW(r.fee)+'</td>'
       +'<td class="gold">'+(r.extra>=0?'+':'−')+_bsW(Math.abs(r.extra))+'</td><td>'+_bsW(r.gross)+'</td><td><b>'+_bsW(r.net)+'</b></td>'
@@ -15991,13 +16036,13 @@ function _bsRender(){
   // SLA 수정 표
   h+='<div class="bs-card"><div class="bs-h">SLA 완료·거절 (직접 수정 가능)</div><div class="bs-sub">수락률 = SLA 배달완료 ÷ (배달완료 + 거절). 기준 '+c.acc+'% 이상만 건수 보장. 노란 줄은 캡처를 읽은 값이 맞는지 확인이 필요해요. 숫자를 고치면 확정되고 바로 정산서와 기사 화면에 반영돼요.</div>'
     +'<div class="bs-box"><table class="sla"><thead><tr><th>기사</th><th>SLA 완료</th><th>SLA 거절</th><th>수락률</th><th>보장</th></tr></thead><tbody>'
-    +list.map(function(r){var s=(doc.sla||{})[r.key]||{};return '<tr'+(s.flag?' class="warn"':'')+'><td class="nm">'+esc(r.name)+(s.flag&&s.warn?'<div class="wt">확인 필요: '+esc(s.warn)+'</div>':'')+'</td>'
+    +(function(){var out=[];list.forEach(function(r){if(!r.mems){out.push(r);return;}r.mems.forEach(function(m){var s0=(doc.sla||{})[m.key],x=_bsCalc(doc.riders[m.key],s0,c);x.key=m.key;x.mergedTo=r.name;out.push(x);});});return out;})().map(function(r){var s=(doc.sla||{})[r.key]||{};return '<tr'+(s.flag?' class="warn"':'')+'><td class="nm">'+esc(r.name)+(r.mergedTo?'<div class="wt" style="color:var(--text3)">'+esc(r.mergedTo)+'에게 합산 · '+esc(r.userId)+'</div>':'')+(s.flag&&s.warn?'<div class="wt">확인 필요: '+esc(s.warn)+'</div>':'')+'</td>'
       +'<td><input type="number" min="0" inputmode="numeric" value="'+(s.done!=null?s.done:'')+'" onchange="_bsSlaEdit(\''+r.key+'\',\'done\',this.value)" aria-label="'+esc(r.name)+' SLA 완료"></td>'
       +'<td><input type="number" min="0" inputmode="numeric" value="'+(s.rej!=null?s.rej:'')+'" onchange="_bsSlaEdit(\''+r.key+'\',\'rej\',this.value)" aria-label="'+esc(r.name)+' SLA 거절"></td>'
       +'<td>'+_bsPct(r.acc)+'</td><td>'+(r.off?'<span class="bs-badge off">미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요</span>':'<span class="bs-badge on">적용</span>')+'</td></tr>';}).join('')
     +'</tbody></table></div></div>';
   // 기사별 정산서
-  h+='<div class="bs-h" style="margin-top:4px">기사별 정산서</div><div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b><div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc)+'</div></details>';}).join('')+'</div>';
+  h+='<div class="bs-h" style="margin-top:4px">기사별 정산서</div><div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b>'+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc)+'</div></details>';}).join('')+'</div>';
   b.innerHTML=h+_bsSettingsHtml();
 }
 function _bsAccBadge(r){if(r.acc==null)return '<span class="bs-badge na">미입력</span>';return (r.flag?'<span class="bs-badge chk">확인</span> ':'')+'<span class="bs-badge '+(r.off?'off':'on')+'">'+_bsPct(r.acc)+'</span>';}
@@ -16018,6 +16063,7 @@ function _bsStmtHtml(r,doc,forDriver){
   var R=function(a,b,cls){return '<div class="bs-row'+(cls?' '+cls:'')+'"><span>'+a+'</span><span>'+b+'</span></div>';};
   var h='<div class="bs-cheer '+r.cheer.tone+'">'+esc(r.cheer.text)+'</div>';
   h+='<div><h4>정산서'+(doc?' · '+doc.week.slice(5)+' ~ '+doc.weekEnd.slice(5):'')+'</h4>'
+    +(r.mems&&!forDriver?'<div class="bs-sub" style="margin-bottom:4px">합친 아이디: '+r.mems.map(function(m){return esc(m.name)+(m.userId?' ('+esc(m.userId)+')':'')+' '+_bsW(m.n)+'건 · '+_bsW(m.fee)+'원';}).join(' + ')+'</div>':'')
     +R('총 배달처리비 '+_bsW(r.n)+'건 (할증 포함)',_bsW(r.fee)+'원')
     +R('수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' (기준 '+r.accMin+'%)',r.off?'<span class="bs-badge off">보장 미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요 (일단 적용)</span>':'<span class="bs-badge on">보장 적용</span>','s');
   if(r.on&&r.hasFb)h+=R(_bsW(r.rate)+'원 미만 건 부족액 ('+_bsW(r.low)+'건)',_bsW(r.gap)+'원','s')+R('초과분으로 메꿈 ('+_bsW(r.high)+'건)','−'+_bsW(r.over)+'원','s');
