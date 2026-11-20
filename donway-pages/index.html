@@ -6864,7 +6864,29 @@ function doRegister(){
   if(_socialAuthType==='google'&&_auth.currentUser){
     _authPromise=Promise.resolve({user:_auth.currentUser});
   }else{
-    _authPromise=_auth.createUserWithEmailAndPassword(email,pw);
+    // ★ 이메일이 이미 Firebase Auth에 있으면(가입 중단·회사 삭제 후 남은 계정 등)
+    //   같은 비밀번호로 로그인되고, 그 계정에 대리점(companies)·다른 역할(users) 문서가 없을 때만 이어서 가입
+    _authPromise=_auth.createUserWithEmailAndPassword(email,pw).catch(function(ce){
+      if(ce.code!=='auth/email-already-in-use') throw ce;
+      return _auth.signInWithEmailAndPassword(email,pw).catch(function(){
+        var x=new Error('email_used');x.code='donway/email-used';throw x;
+      }).then(function(cred){
+        var u=cred.user.uid;
+        return Promise.all([
+          _db.collection('companies').doc(u).get(),
+          _db.collection('users').doc(u).get()
+        ]).then(function(r){
+          var ud=r[1].exists?(r[1].data()||{}):null;
+          var blockCode='';
+          if(r[0].exists) blockCode='donway/already-dealer';
+          else if(ud&&ud.role&&ud.role!=='dealer') blockCode='donway/other-role';
+          if(blockCode){
+            return _auth.signOut().catch(function(){}).then(function(){var x=new Error(blockCode);x.code=blockCode;throw x;});
+          }
+          return cred;
+        });
+      });
+    });
   }
   _authPromise.then(function(cred){
     uid=cred.user.uid;
@@ -7006,7 +7028,9 @@ function doRegister(){
     },300);
     }).catch(function(e){
       err.style.color='var(--red)';
-      if(e.code==='auth/email-already-in-use') err.textContent='이미 사용 중인 이메일입니다';
+      if(e.code==='donway/email-used'||e.code==='auth/email-already-in-use') err.textContent='이미 이 이메일로 만든 계정이 있습니다. 예전에 쓴 비밀번호로 다시 가입 신청하면 이어서 가입되고, 비밀번호가 기억나지 않으면 로그인 화면의 비밀번호 찾기를 이용해 주세요';
+      else if(e.code==='donway/already-dealer') err.textContent='이미 가입된 대리점 계정입니다. 로그인해 주세요';
+      else if(e.code==='donway/other-role') err.textContent='이 이메일은 기사·직원 계정으로 쓰이고 있습니다. 다른 이메일로 가입해 주세요';
       else err.textContent='오류: '+e.message;
       err.style.display='block';
     });
