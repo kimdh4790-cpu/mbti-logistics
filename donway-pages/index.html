@@ -16495,7 +16495,7 @@ function _bsPushAsk(){
 function _bsPushReg(){
   if(window._bsPushDone)return;window._bsPushDone=true;
   try{
-    firebase.messaging().getToken({vapidKey:window._VAPID_KEY||''}).then(function(t){
+    firebase.messaging().getToken({vapidKey:(typeof VAPID_KEY!=='undefined'?VAPID_KEY:window._VAPID_KEY)||''}).then(function(t){
       if(!t||t.length<20)return;
       return _auth.currentUser.getIdToken().then(function(tok){
         return fetch('/api/driver-fcm-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({token:t})});
@@ -37877,61 +37877,64 @@ function _showWelcome(){
   // ★ 버튼 DOM 직접 생성 (onclick 안정적 바인딩)
   var notifArea=document.getElementById('welcome-notif-area');
   var enterArea=document.getElementById('welcome-enter-area');
-  if(Notification.permission!=='granted'){
+  // 알림: 권한 요청을 먼저(클릭 직후) 띄우고, 결과는 팝업 안에 글로 보여줌 (토스트는 팝업 뒤에 가려짐). 실패해도 입장은 가능 (2026-11-20)
+  var _nSup=('Notification' in window)&&('serviceWorker' in navigator);
+  var notifMsg=document.createElement('div');
+  notifMsg.style.cssText='font-size:12px;line-height:1.6;margin-top:8px;color:#fde68a;text-align:left;display:none';
+  function _nSay(t,ok){notifMsg.style.display='block';notifMsg.style.color=ok?'#86efac':'#fde68a';notifMsg.innerHTML=t;}
+  var _nBlocked='브라우저에서 알림이 꺼져 있어요.<br>주소창 왼쪽 <b>자물쇠(사이트 정보)</b> → <b>알림</b> → <b>허용</b>으로 바꾼 뒤 새로고침해 주세요.<br>휴대폰은 <b>설정 → 앱 → 크롬 → 알림</b>도 켜져 있어야 해요. 알림 없이도 정산서는 앱에서 볼 수 있어요.';
+  if(!_nSup){
+    notifArea.appendChild(notifMsg);
+    _nSay('이 브라우저는 알림을 지원하지 않아요. 아이폰은 사파리 공유 버튼 → <b>홈 화면에 추가</b>로 연 뒤 알림을 켤 수 있어요. 알림 없이도 정산서는 앱에서 볼 수 있어요.');
+  } else if(Notification.permission!=='granted'){
     var notifBtn=document.createElement('button');
-    notifBtn.textContent='🔔 알림 허용하기 (필수)';
-    notifBtn.style.cssText='background:#00e87a;color:#000;border:none;border-radius:100px;padding:12px 32px;font-size:13px;font-weight:800;cursor:pointer;width:100%;display:block;position:relative;z-index:10001';
-    notifBtn.onclick=async function(){
-      notifBtn.textContent='⏳ 허용 중...';
+    var _nLabel='🔔 정산 알림 받기';
+    notifBtn.textContent=_nLabel;
+    notifBtn.style.cssText='background:#00e87a;color:#000;border:none;border-radius:100px;padding:12px 32px;min-height:44px;font-size:13px;font-weight:800;cursor:pointer;width:100%;display:block;position:relative;z-index:10001';
+    if(Notification.permission==='denied')setTimeout(function(){_nSay(_nBlocked);},0);
+    notifBtn.onclick=function(){
+      if(Notification.permission==='denied'){_nSay(_nBlocked);return;}
+      notifBtn.textContent='⏳ 브라우저 창에서 "허용"을 눌러 주세요';
       notifBtn.disabled=true;
-      try {
-        // SW 먼저 등록
-        if('serviceWorker' in navigator){
-          await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-          await navigator.serviceWorker.ready;
-        }
-        var perm = await Notification.requestPermission();
-        if(perm==='granted'){
-          var messaging = firebase.messaging();
-          var token = await messaging.getToken({vapidKey: VAPID_KEY});
-          if(token){
-            // users + drivers 둘 다 저장
-            var uid = _CU.uid;
-            var did = _CU.dealerId;
+      _nSay('주소창 아래에 뜨는 알림 요청 창에서 <b>허용</b>을 눌러 주세요. 창이 안 보이면 주소창 오른쪽 종 모양 아이콘을 눌러 보세요.');
+      var _p;try{_p=Notification.requestPermission();}catch(e){_p=null;}
+      Promise.resolve(_p).then(function(perm){
+        perm=perm||Notification.permission;
+        if(perm==='denied'){notifBtn.disabled=false;notifBtn.textContent=_nLabel;_nSay(_nBlocked);return;}
+        if(perm!=='granted'){notifBtn.disabled=false;notifBtn.textContent=_nLabel;_nSay('알림 요청 창이 닫혔어요. 다시 눌러서 <b>허용</b>을 골라 주세요.');return;}
+        notifBtn.textContent='⏳ 알림 등록 중...';
+        var _to=new Promise(function(_,rj){setTimeout(function(){rj(new Error('timeout'));},15000);});
+        return Promise.race([_to,navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg){
+          return firebase.messaging().getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
+        })]).then(function(token){
+          if(!token)throw new Error('no token');
+          var uid=_CU&&_CU.uid;
+          if(_CU&&_CU.role==='driver'&&_auth&&_auth.currentUser){
+            // 기사 계정은 Firestore 직접 쓰기 권한이 없어 서버로 저장
+            _auth.currentUser.getIdToken().then(function(tk){return fetch('/api/driver-fcm-token',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},body:JSON.stringify({token:token})});}).catch(function(){});
+          } else if(uid){
             _db.collection('users').doc(uid).update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()}).catch(function(){});
             _db.collection('drivers').where('userId','==',uid).limit(1).get().then(function(snap){
               if(!snap.empty) snap.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
-              else _db.collection('drivers').where('userId','==',_CU.driverId||uid).limit(1).get().then(function(s2){
-                if(!s2.empty) s2.docs[0].ref.update({fcmToken:token,fcmUpdatedAt:new Date().toISOString()});
-              });
-            });
-            notifBtn.style.background='#d1fae5';
-            notifBtn.style.color='#065f46';
-            notifBtn.textContent='✅ 알림 허용됨';
-            toast('✅ 알림 설정 완료!');
-            setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},2000);
-          } else {
-            notifBtn.disabled=false;
-            notifBtn.textContent='🔔 알림 허용하기 (필수)';
-            toast('⚠️ 토큰 발급 실패, 다시 시도해주세요');
+            }).catch(function(){});
           }
-        } else {
-          notifBtn.disabled=false;
-          notifBtn.textContent='🔔 알림 허용하기 (필수)';
-          toast('⚠️ 알림을 허용해야 정산 알림을 받을 수 있어요');
-        }
-      } catch(e) {
-        notifBtn.disabled=false;
-        notifBtn.textContent='🔔 알림 허용하기 (필수)';
-        toast('⚠️ 오류: '+e.message);
-        console.warn('[FCM]', e);
-      }
+          notifBtn.style.background='#d1fae5';notifBtn.style.color='#065f46';notifBtn.textContent='✅ 알림 허용됨';
+          _nSay('정산서가 오면 알림으로 알려 드려요.',true);
+          setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},2000);
+        }).catch(function(e){
+          console.warn('[FCM]',e);
+          notifBtn.style.background='#d1fae5';notifBtn.style.color='#065f46';notifBtn.textContent='✅ 알림 허용됨';
+          _nSay('알림은 허용됐어요. 기기 등록이 늦어지고 있어요. 입장 후 다시 열면 자동으로 다시 시도해요.',true);
+        });
+      });
     };
     notifArea.appendChild(notifBtn);
+    notifArea.appendChild(notifMsg);
   } else {
     notifArea.innerHTML='<div style="font-size:11px;color:#86efac">✅ 알림 허용됨</div>';
     // 이미 허용됐으면 바로 FCM 등록
     setTimeout(_registerFCM, 500);
+    if(_CU&&_CU.role==='driver'&&typeof _bsPushReg==='function')setTimeout(_bsPushReg,800);
     setTimeout(function(){var m=document.getElementById('mo-welcome');if(m)m.remove();},4000);
   }
   var enterBtn=document.createElement('button');
