@@ -36884,13 +36884,18 @@ function openAdminPanel(){
         appBtn.textContent='✅ 승인';
         appBtn.onclick=(function(id,nm,email){return function(){
           if(!confirm(nm+' 가입을 승인하시겠습니까?'))return;
-          fetch('/api/approve?uid='+id)
-            .then(function(r){return r.text();})
+          // 1) 승인 상태는 Firestore에 직접 저장 (슈퍼어드민 권한) → 2) 서버로 알림 발송
+          _db.collection('companies').doc(id).update({status:'approved',approvedAt:new Date().toISOString()})
             .then(function(){
-              toast('✅ '+nm+' 승인 완료! 알림톡/이메일 발송됨');
-              mo.remove();
-              openAdminPanel();
-            }).catch(function(e){toast('❌ '+e.message);});
+              return _auth.currentUser.getIdToken().then(function(tk){
+                return fetch('/api/approve?uid='+encodeURIComponent(id),{method:'POST',headers:{'Authorization':'Bearer '+tk}});
+              }).then(function(r){
+                if(r.ok) toast('✅ '+nm+' 승인 완료! 알림톡/이메일 발송됨');
+                else toast('✅ '+nm+' 승인 완료 (알림 발송 실패: '+r.status+')');
+              }).catch(function(){toast('✅ '+nm+' 승인 완료 (알림 발송 실패)');});
+            })
+            .then(function(){mo.remove();openAdminPanel();})
+            .catch(function(e){toast('❌ 승인 실패: '+e.message);});
         };})(item.id, item.name||item.id, item.email||'');
         td.appendChild(appBtn);
       }

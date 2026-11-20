@@ -4566,7 +4566,15 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             }
           }
         }
-        const approveLink = `https://donway.ai.kr/api/approve?uid=${uid}&key=${env.FIREBASE_SA_KEY?'ok':''}`;
+        // 관리자 메일 승인 링크에 HMAC 서명(ts·token) 붙이기 — /api/approve 검증과 짝
+        let _apQs = '';
+        if (env.APPROVE_SECRET) {
+          const _apTs = String(Date.now());
+          const _apKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.APPROVE_SECRET), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+          const _apSig = await crypto.subtle.sign('HMAC', _apKey, new TextEncoder().encode(uid + ':' + _apTs));
+          _apQs = '&ts=' + _apTs + '&token=' + encodeURIComponent(btoa(String.fromCharCode(...new Uint8Array(_apSig))));
+        }
+        const approveLink = `https://donway.ai.kr/api/approve?uid=${uid}${_apQs}`;
         const emailKey = (env.EMAIL_API_KEY||env.RESEND_API_KEY||'').trim();
         const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
           <div style="background:linear-gradient(135deg,#0066ff,#7c3aed);padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
@@ -4579,7 +4587,7 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
             <tr><td style="padding:12px 16px;font-weight:700">서비스</td><td style="padding:12px 16px">${(services||[serviceType]).join(', ')}</td></tr>
           </table>
           <div style="text-align:center;margin-top:24px">
-            <a href="https://donway.ai.kr/api/approve?uid=${uid}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#059669,#0d9488);color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:800">✅ 승인하기</a>
+            <a href="${approveLink}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#059669,#0d9488);color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:800">✅ 승인하기</a>
           </div>
           <p style="text-align:center;color:#888;font-size:12px;margin-top:16px">승인 버튼 클릭 시 즉시 로그인 가능합니다</p>
         </body></html>`;
@@ -4630,10 +4638,13 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
     }
 
     // ── 회사 승인 처리 (/api/approve) ──
-    if (path === '/api/approve' && method === 'GET') {
+    if (path === '/api/approve' && (method === 'GET' || method === 'POST')) {
       try {
         const uid = url.searchParams.get('uid');
         if (!uid) return new Response('uid 없음', {status:400});
+        // 슈퍼어드민 로그인 토큰(어드민 패널 승인 버튼)이면 서명 검사 생략
+        const _apAdmin = await requireAdmin(request, env).catch(() => null);
+        if (!_apAdmin) {
         // HMAC-SHA256 서명 검증 (48h 유효)
         const approveSecret = env.APPROVE_SECRET || '';
         if (!approveSecret) return new Response('승인 기능 비활성화',{status:503});
@@ -4647,14 +4658,16 @@ Sitemap: https://donway.ai.kr/sitemap.xml`,
         const sigBuf = Uint8Array.from(atob(tok), c => c.charCodeAt(0));
         const valid = await crypto.subtle.verify('HMAC', cryptoKey, sigBuf, msgBuf);
         if (!valid) return new Response('서명 불일치',{status:403});
+        }
         const fsToken3 = await getAccessToken(env);
 
         // 1) Firestore status → approved
-        await fetch(
+        const _apPatch = await fetch(
           `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/companies/${uid}?updateMask.fieldPaths=status&updateMask.fieldPaths=approvedAt`,
           {method:'PATCH', headers:{'Authorization':`Bearer ${fsToken3}`,'Content-Type':'application/json'},
            body:JSON.stringify({fields:{status:{stringValue:'approved'},approvedAt:{stringValue:new Date().toISOString()}}})}
         );
+        if (!_apPatch.ok) return new Response('승인 저장 실패: ' + _apPatch.status, {status:500});
 
         // 2) 고객 정보 조회 (이메일, FCM토큰, 회사명)
         const compRes = await fetch(
