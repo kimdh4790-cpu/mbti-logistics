@@ -281,6 +281,9 @@ _checkSlugDuplicate(this.value);
               <div style="font-size:12px;font-weight:700;color:var(--text2)">배달대행</div>
               <div style="font-size:10px;color:var(--text3);margin-top:2px">배달대행 기사 정산</div>
             </div>
+            <div id="svc-card-both" onclick="_setSvcType('both')" style="grid-column:1 / -1;border:2px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;background:transparent;text-align:center">
+              <div style="font-size:12px;font-weight:700;color:var(--text2)">AI 정산 + 배달대행 둘 다</div>
+            </div>
           </div>
           <!-- AI 정산 선택 시: 택배사 선택 -->
           <div id="svc-company-area">
@@ -6341,8 +6344,21 @@ function showApp(){
         else if(sType==='payroll'||sType==='hourly') services=['payroll'];
         else services=['settle'];
       }
+      // ★ 대리점: 가입 때 고른 서비스(companies.services)대로 메뉴 표시
+      //   (_COMPANY_CFG는 대리점 로그인에선 안 채워져 늘 settle로만 걸러지던 문제 — 메뉴용으로만 회사 문서 사용)
+      //   services가 없는 기존 회사는 지금처럼 settle 기준 유지
+      var _cdoc=window._cachedCompanyDoc||{};
+      var _menuSvcs=null;
+      if(!cfg.services&&Array.isArray(_cdoc.services)&&_cdoc.services.length){
+        _menuSvcs=_cdoc.services.slice();
+        if(_menuSvcs.indexOf('settle')>=0&&_menuSvcs.indexOf('payout')<0)_menuSvcs.push('payout');
+      }
       // services 기반으로 MENUS_SETTLE 필터링
-      MENUS=_filterMenusByServices(MENUS_SETTLE);
+      MENUS=_filterMenusByServices(MENUS_SETTLE,_menuSvcs);
+      // 배달대행만 고른 회사: AI정산 묶음(남는 전자계약서·달력 포함)은 통째로 숨김
+      if(_menuSvcs&&_menuSvcs.indexOf('settle')<0){
+        MENUS=MENUS.filter(function(sec){return String(sec.s).indexOf('AI 정산')<0;});
+      }
     }
   }
   buildNav();
@@ -6733,14 +6749,19 @@ function _regNext(n){
 
 // 서비스 유형 선택 (AI정산 vs 배달대행)
 function _setSvcType(type){
-  var isCargo=type==='settle';
-  document.getElementById('r-services').value=type;
-  document.getElementById('r-service').value=type;
+  // 'both' = AI정산 + 배달대행: serviceType은 settle 그대로(AI정산 동작 동일), services에 delivery 추가
+  var isBoth=type==='both';
+  var isCargo=type==='settle'||isBoth;
+  document.getElementById('r-services').value=isBoth?'settle,delivery':type;
+  document.getElementById('r-service').value=isBoth?'settle':type;
   var sc=document.getElementById('svc-card-settle');
   var dc=document.getElementById('svc-card-delivery');
+  var bc=document.getElementById('svc-card-both');
   var ca=document.getElementById('svc-company-area');
-  if(sc){sc.style.borderColor=isCargo?'var(--brand)':'var(--border)';sc.style.background=isCargo?'rgba(0,200,248,.08)':'transparent';sc.querySelector('div:nth-child(2)').style.color=isCargo?'var(--brand)':'var(--text2)';}
-  if(dc){dc.style.borderColor=isCargo?'var(--border)':'var(--brand)';dc.style.background=isCargo?'transparent':'rgba(0,200,248,.08)';dc.querySelector('div:nth-child(2)').style.color=isCargo?'var(--text2)':'var(--brand)';}
+  function _hl(el,on,sel){if(!el)return;el.style.borderColor=on?'var(--brand)':'var(--border)';el.style.background=on?'rgba(0,200,248,.08)':'transparent';var t=el.querySelector(sel);if(t)t.style.color=on?'var(--brand)':'var(--text2)';}
+  _hl(sc,type==='settle','div:nth-child(2)');
+  _hl(dc,type==='delivery','div:nth-child(2)');
+  _hl(bc,isBoth,'div');
   if(ca)ca.style.display=isCargo?'block':'none';
   if(!isCargo)document.getElementById('r-settle-industry').value='delivery';
   else{var sel=document.getElementById('r-company-select');if(sel)document.getElementById('r-settle-industry').value=sel.value;}
@@ -23641,9 +23662,9 @@ function _viewMyStatementFallback(d){
 // 쿠팡 택배 전용
 // ══ 플랜별 기능 정의 ══
 // ── 서비스별 메뉴 필터링 ──
-function _filterMenusByServices(menus){
+function _filterMenusByServices(menus, svcOverride){
   var cfg=_COMPANY_CFG||{};
-  var services=cfg.services||[cfg.serviceType||'settle'];
+  var services=svcOverride||cfg.services||[cfg.serviceType||'settle'];
   // 슈퍼어드민은 전체 허용
   if(_getSAE().includes(_CU&&_CU.email)) return menus;
 
@@ -36843,6 +36864,8 @@ function openAdminPanel(){
       var planLabel = {'trial':'무료체험','settle':'AI정산','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','OWNER':'관리자'}[item.plan||'trial']||item.plan||'-';
       var svcMap={'settle':'AI정산','delivery':'배달대행','qr':'QR출퇴근','full':'풀패키지','hourly':'급여관리','payroll':'급여관리','universal':'범용정산'};
       var svcLabel=svcMap[item.serviceType]||'';
+      var _isvc=item.services||[];
+      if(_isvc.indexOf('delivery')>=0) svcLabel=_isvc.indexOf('settle')>=0?'AI정산+배달대행':'배달대행';
       if(svcLabel&&svcLabel!==planLabel) planLabel+=' · '+svcLabel;
       var planColor = item.plan==='trial'?'var(--amber)':item.plan==='OWNER'?'#f59e0b':'var(--green)';
       var today=new Date().toISOString().slice(0,10);
@@ -36899,6 +36922,24 @@ function openAdminPanel(){
         };})(item.id, item.name||item.id, item.email||'');
         td.appendChild(appBtn);
       }
+
+      // ★ 서비스 유형 변경 (메뉴 표시용: AI정산 / 배달대행 / 둘 다)
+      var svcSel=document.createElement('select');
+      svcSel.style.cssText='margin-left:4px;font-size:10px;padding:3px 4px;border:1px solid var(--border);border-radius:6px;background:var(--bg)';
+      var _cur=(item.services&&item.services.indexOf('delivery')>=0)?(item.services.indexOf('settle')>=0?'both':'delivery'):(item.services?'settle':'');
+      svcSel.innerHTML=(_cur?'':'<option value="">유형 미지정</option>')
+        +'<option value="settle">AI정산</option><option value="delivery">배달대행</option><option value="both">둘 다</option>';
+      svcSel.value=_cur;
+      svcSel.onchange=(function(id,nm){return function(){
+        var v=this.value;if(!v)return;
+        var upd=v==='both'?{services:['settle','delivery'],serviceType:'settle'}
+               :v==='delivery'?{services:['delivery'],serviceType:'delivery'}
+               :{services:['settle'],serviceType:'settle'};
+        _db.collection('companies').doc(id).update(upd)
+          .then(function(){toast('✅ '+nm+' 서비스 유형 변경 (업체 재로그인 시 메뉴 반영)');mo.remove();openAdminPanel();})
+          .catch(function(e){toast('❌ '+e.message);});
+      };})(item.id, item.name||item.id);
+      td.appendChild(svcSel);
 
       // ★ 삭제 버튼
       var delBtn=document.createElement('button');
@@ -36982,6 +37023,7 @@ function openAdminPanel(){
         slug:d.slug||'',
         plan:d.plan||(d.trialEnd?'trial':'unknown'),
         serviceType:d.serviceType||'settle',
+        services:Array.isArray(d.services)?d.services:null,
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
         status:d.status||'approved',
