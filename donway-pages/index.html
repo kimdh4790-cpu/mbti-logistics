@@ -7599,6 +7599,16 @@ function doPhoneLogin(){
   var btn=document.getElementById('btn-login-submit');
   if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
   _auth.signInWithEmailAndPassword(phone+'@donway.internal',pw)
+    .catch(function(e0){
+      // ★ 로그인 계정이 없거나 비밀번호가 어긋난 기사: 서버에서 가입 기록 확인 후 계정 복구 → 한 번 더 시도
+      if(['auth/user-not-found','auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials'].indexOf(e0.code)<0) throw e0;
+      return fetch('/api/login-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:phone,pw:pw})})
+        .then(function(r){return r.json();})
+        .then(function(d){
+          if(d&&d.ok&&d.email) return _auth.signInWithEmailAndPassword(d.email,pw);
+          throw e0;
+        },function(){throw e0;});
+    })
     .then(function(){if(btn){btn.disabled=false;btn.textContent='로그인';}})
     .catch(function(e){
       if(btn){btn.disabled=false;btn.textContent='로그인';}

@@ -6708,36 +6708,66 @@ service cloud.firestore {
       try {
         const _llBody = await request.json().catch(() => ({}));
         const _llId = String(_llBody.id||'').trim().slice(0,64);
+        const _llPhone = String(_llBody.phone||'').replace(/[^0-9]/g,'').slice(0,11);
         const _llPw = String(_llBody.pw||'');
-        if (!_llId || !_llPw) return new Response(JSON.stringify({ok:false,error:'missing'}),{status:400,headers:_llH});
+        if ((!_llId && _llPhone.length<10) || !_llPw) return new Response(JSON.stringify({ok:false,error:'missing'}),{status:400,headers:_llH});
         // 웹 앱 공개 API 키 (donway-pages/index.html firebaseConfig와 동일)
         const _llKey = env.FIREBASE_API_KEY || env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
         const _llTok = await getAccessToken(env);
         const _llBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
         const _llEmails = [];
         const _llHashes = {};
-        for (const _llCol of ['drivers','users']) {
+        // 아이디면 driverId로, 전화번호면 phone으로 찾음 (전화번호 로그인 = 전화번호@donway.internal 계정)
+        const _llField = _llPhone ? 'phone' : 'driverId';
+        const _llVal = _llPhone || _llId;
+        for (const _llCol of (_llPhone ? ['drivers'] : ['drivers','users'])) {
           const _llQ = await fetch(`${_llBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_llTok}`,'Content-Type':'application/json'},
-            body:JSON.stringify({structuredQuery:{from:[{collectionId:_llCol}],where:{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:_llId}}},limit:5}})});
+            body:JSON.stringify({structuredQuery:{from:[{collectionId:_llCol}],where:{fieldFilter:{field:{fieldPath:_llField},op:'EQUAL',value:{stringValue:_llVal}}},limit:5}})});
           const _llR = _llQ.ok ? await _llQ.json() : [];
           (Array.isArray(_llR)?_llR:[]).forEach(x => {
             const f = (x.document&&x.document.fields)||{};
-            const em = f.email?.stringValue || (f.phone?.stringValue ? f.phone.stringValue.replace(/[^0-9]/g,'')+'@donway.internal' : '');
+            const em = _llPhone ? _llPhone+'@donway.internal'
+              : (f.email?.stringValue || (f.phone?.stringValue ? f.phone.stringValue.replace(/[^0-9]/g,'')+'@donway.internal' : ''));
             if (em && !_llEmails.includes(em)) _llEmails.push(em);
             if (em && f.pw?.stringValue) _llHashes[em] = f.pw.stringValue;
           });
         }
         if (!_llEmails.length) return new Response(JSON.stringify({ok:false,error:'not_found'}),{headers:_llH});
-        // 1) 빠른 가입 기사: drivers.pw(SHA-256)와 비교
         const _llDig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_llPw));
         const _llHex = Array.from(new Uint8Array(_llDig)).map(b => b.toString(16).padStart(2,'0')).join('');
-        for (const em of _llEmails) { if (_llHashes[em] && _llHashes[em] === _llHex) return new Response(JSON.stringify({ok:true,email:em}),{headers:_llH}); }
-        // 2) 그 외: Firebase Auth 비밀번호 확인
+        const _llSignIn = async (em) => {
+          const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${_llKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:_llPw,returnSecureToken:false})});
+          return r.ok;
+        };
+        // 1) Firebase Auth 비밀번호 확인
         for (const em of _llEmails.slice(0,5)) {
-          const _llS = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${_llKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:_llPw,returnSecureToken:false})});
-          if (_llS.ok) return new Response(JSON.stringify({ok:true,email:em}),{headers:_llH});
+          if (await _llSignIn(em)) return new Response(JSON.stringify({ok:true,email:em}),{headers:_llH});
         }
-        return new Response(JSON.stringify({ok:false,error:'wrong_password'}),{headers:_llH});
+        // 2) 가입 때 저장한 비밀번호(drivers.pw, SHA-256)와 맞으면 로그인 계정을 그 비밀번호로 맞춰 줌
+        //    (가입 중 로그인 계정 생성이 빠졌거나 비밀번호가 어긋난 기사 복구)
+        const _llMatch = _llEmails.find(em => _llHashes[em] && _llHashes[em] === _llHex);
+        if (_llMatch && _llMatch.endsWith('@donway.internal') && env.FIREBASE_SA_KEY) {
+          const _sa = JSON.parse(env.FIREBASE_SA_KEY);
+          const _now = Math.floor(Date.now()/1000);
+          const _pk = await crypto.subtle.importKey('pkcs8',
+            Uint8Array.from(atob(_sa.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'')),c=>c.charCodeAt(0)).buffer,
+            {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+          const _b64u = v => (typeof v==='string'?btoa(v):btoa(String.fromCharCode(...new Uint8Array(v)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+          const _jh = _b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
+          const _jc = _b64u(JSON.stringify({iss:_sa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:_now+3600,iat:_now}));
+          const _js = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',_pk,new TextEncoder().encode(_jh+'.'+_jc));
+          const _at = (await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${_jh}.${_jc}.${_b64u(new Uint8Array(_js))}`})).json()).access_token;
+          if (_at) {
+            const _ah = {'Authorization':'Bearer '+_at,'Content-Type':'application/json'};
+            const _lu = await (await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:lookup`,{method:'POST',headers:_ah,body:JSON.stringify({email:[_llMatch]})})).json();
+            const _u = (_lu.users||[])[0];
+            const _fx = _u
+              ? await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:update`,{method:'POST',headers:_ah,body:JSON.stringify({localId:_u.localId,password:_llPw})})
+              : await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts`,{method:'POST',headers:_ah,body:JSON.stringify({email:_llMatch,password:_llPw})});
+            if (_fx.ok) return new Response(JSON.stringify({ok:true,email:_llMatch,repaired:true}),{headers:_llH});
+          }
+        }
+        return new Response(JSON.stringify({ok:false,error: _llHashes && Object.keys(_llHashes).length ? 'wrong_password' : 'wrong_password_nohash'}),{headers:_llH});
       } catch(e) {
         return new Response(JSON.stringify({ok:false,error:'server'}),{status:500,headers:_llH});
       }
