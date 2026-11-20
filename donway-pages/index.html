@@ -336,7 +336,10 @@ _checkSlugDuplicate(this.value);
         <button id="join-tab-full"  onclick="_switchJoinTab('full')"  style="flex:1;padding:7px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3)">📝 일반 가입</button>
       </div>
       <div id="join-quick-form">
-        <div style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 QR 스캔 또는 회사코드 → 이름·연락처·비번 → 가입 완료</div>
+        <div style="background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 회사코드를 먼저 넣어 주세요. 배달대행 회사면 배달 플랫폼·배민 아이디·정산 계좌·주민번호 칸이 이어서 나와요.</div>
+        <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
+          <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
+          <div id="j-code-msg" style="font-size:11px;margin-top:4px"></div></div>
         <div class="fg"><label>이름 <span style="color:var(--red)">*</span></label><input id="j-name" type="text" placeholder="홍길동"></div>
         <div class="fg"><label>연락처 <span style="color:var(--red)">*</span></label><input id="j-phone" type="tel" placeholder="01012345678" oninput="this.value=this.value.replace(/[^0-9-]/g,'')"></div>
         <div class="fg">
@@ -370,9 +373,6 @@ _checkSlugDuplicate(this.value);
         <div class="fg"><label>주민번호 <span id="j-ssn-req" style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000000-0000000" style="font-family:monospace"></div>
         <div class="fg"><label>입사일 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-joindate" type="date"></div>
         <div class="fg"><label>비밀번호 <span style="color:var(--red)">*</span></label><input id="j-pw" type="password" placeholder="6자 이상"></div>
-        <div class="fg"><label>회사코드 <span style="color:var(--red)">*</span></label>
-          <input id="j-code" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_quickVerifyCode(this.value)">
-          <div id="j-code-msg" style="font-size:11px;margin-top:4px"></div></div>
       </div>
       <div id="join-full-form" style="display:none">
         <div style="background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2)">🔑 관리자에게 <strong>회사코드</strong>를 받아 입력하세요</div>
@@ -387,7 +387,7 @@ _checkSlugDuplicate(this.value);
         <div class="fg" id="j-store-wrap-full" style="display:none"><label>담당 매장</label><input id="j-store-full" type="text" placeholder="예) 강남점" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:13px"></div>
         <div class="fg"><label>이메일</label><input id="j-email" type="email" placeholder="example@email.com"></div>
         <div class="fg"><label>비밀번호</label><input id="j-pw-full" type="password" placeholder="8자 이상"></div>
-        <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase"></div>
+        <div class="fg"><label>회사코드</label><input id="j-code-full" type="text" placeholder="ABCD1234" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase();_fullCodeCheck(this.value)"><div id="j-code-full-msg" style="font-size:11px;margin-top:4px"></div></div>
       </div>
       <div style="background:rgba(0,200,248,.04);border:1px solid rgba(0,200,248,.15);border-radius:8px;padding:10px 12px;margin-bottom:10px">
         <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:12px;color:var(--text2)">
@@ -7152,6 +7152,22 @@ function _quickVerifyCode(code){
   },500);
 }
 // 배달대행 가입: 플랫폼(배민/쿠팡이츠/둘 다) + 주민번호 필수 (동명이인 구분)
+// 일반 가입에서 배달대행 회사코드를 넣으면 빠른 가입(배달 기사 항목 있음)으로 옮겨 줌
+var _fullCodeTimer=null;
+function _fullCodeCheck(code){
+  var msg=document.getElementById('j-code-full-msg');if(msg)msg.innerHTML='';
+  clearTimeout(_fullCodeTimer);if(!code||code.length<4)return;
+  _fullCodeTimer=setTimeout(function(){
+    fetch('/api/check-company-code?code='+encodeURIComponent(code)).then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.ok||!d.hasDelivery)return;
+      var nm=((document.getElementById('j-name-full')||{}).value||'').trim();
+      _switchJoinTab('quick');
+      var q=document.getElementById('j-code');if(q){q.value=code;_quickVerifyCode(code);}
+      var qn=document.getElementById('j-name');if(qn&&nm&&!qn.value)qn.value=nm;
+      toast('배달대행 회사예요. 배달 기사 항목(플랫폼·계좌 등)이 있는 빠른 가입으로 옮겼어요');
+    }).catch(function(){});
+  },500);
+}
 function _jDlvShow(on){window._joinIsDlv=!!on;var w=document.getElementById('j-dlv-wrap');if(w)w.style.display=on?'':'none';var r=document.getElementById('j-ssn-req');if(r){r.textContent=on?'*':'(선택)';r.style.color=on?'var(--red)':'var(--text3)';}}
 function _jSetPlat(k){var h=document.getElementById('j-plat');if(h)h.value=k;['bm','cpe','both'].forEach(function(x){var b=document.getElementById('j-plat-'+x);if(!b)return;var on=x===k;b.style.borderColor=on?'var(--brand)':'var(--border)';b.style.background=on?'rgba(0,200,248,.1)':'transparent';b.style.color=on?'var(--brand)':'var(--text)';b.setAttribute('aria-pressed',on?'true':'false');});var bw=document.getElementById('j-bmid-wrap');if(bw)bw.style.display=(k==='bm'||k==='both')?'':'none';}
 function _jSsnFmt(v){var d=String(v||'').replace(/[^0-9]/g,'');return d.length===13?d.slice(0,6)+'-'+d.slice(6):'';}
