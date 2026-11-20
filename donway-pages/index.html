@@ -15591,6 +15591,8 @@ window._daMakeShareImage=function(){
     peaks:{am:gv('da-pk-am'),pm:gv('da-pk-pm'),eve:gv('da-pk-eve'),ngt:gv('da-pk-ngt'),etc:gv('da-pk-etc')},
     targets:{am:gv('da-tg-am'),pm:gv('da-tg-pm'),eve:gv('da-tg-eve'),ngt:gv('da-tg-ngt')}
   };
+  // 수락률 칸이 비어 있으면 일일 현황으로 계산: 완료 ÷ (완료 + 취소/거절)
+  if(!data.acceptRate&&(data.daily.done+data.daily.rej)>0)data.acceptRate=Math.round(data.daily.done/(data.daily.done+data.daily.rej)*1000)/10;
   var _sum=data.daily.done+data.daily.prog+data.daily.rej+data.peaks.am+data.peaks.pm+data.peaks.eve+data.peaks.ngt+data.peaks.etc;
   if(!_sum){toast(name+' 기사 숫자가 모두 0이에요. 배민 엑셀에 이 이름이 있는지 보거나 칸을 채운 뒤 만들어 주세요.');return;}
   var cv=_daDrawStatusCard(data);
@@ -16835,7 +16837,9 @@ window._daSave=function(){
   var peaks={am:parseInt(gv('da-pk-am'))||0,pm:parseInt(gv('da-pk-pm'))||0,eve:parseInt(gv('da-pk-eve'))||0,ngt:parseInt(gv('da-pk-ngt'))||0,etc:parseInt(gv('da-pk-etc'))||0};
   var peakTargets={am:parseInt(gv('da-tg-am'))||0,pm:parseInt(gv('da-tg-pm'))||0,eve:parseInt(gv('da-tg-eve'))||0,ngt:parseInt(gv('da-tg-ngt'))||0};
   var daily={done:parseInt(gv('da-day-done'))||0,prog:parseInt(gv('da-day-prog'))||0,rej:parseInt(gv('da-day-rej'))||0};
-  var sla={acceptRate:parseFloat(gv('da-sla-rate'))||0,weeklyDone:parseInt(gv('da-sla-done'))||0,weeklyTotal:parseInt(gv('da-sla-total'))||28};
+  var _ar=parseFloat(gv('da-sla-rate'))||0;
+  if(!_ar&&(daily.done+daily.rej)>0)_ar=Math.round(daily.done/(daily.done+daily.rej)*1000)/10; // 수락률 칸 비면 완료÷(완료+취소/거절)
+  var sla={acceptRate:_ar,weeklyDone:parseInt(gv('da-sla-done'))||0,weeklyTotal:parseInt(gv('da-sla-total'))||28};
   var delivTot=parseInt(gv('da-deliv-food'))+parseInt(gv('da-deliv-store'))+parseInt(gv('da-deliv-mart'))||0;
   var slaDetail={delivery:{total:delivTot,food:parseInt(gv('da-deliv-food'))||0,store:parseInt(gv('da-deliv-store'))||0,mart:parseInt(gv('da-deliv-mart'))||0},rejection:{total:0,food:0,store:0,mart:0},cancel:{total:0,food:0,store:0,mart:0}};
   var prev=(window._daLoaded&&window._daLoaded.uid===driverUid&&window._daLoaded.data)||{};
