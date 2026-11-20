@@ -15269,6 +15269,7 @@ function _dwRenderDriverDash(s){
   if(s.settlements&&s.settlements.length>0){
     s.settlements.forEach(function(r){
       var dt=r.date||'';if(!dt)return;
+      if(!(+r.completeCount||0)&&!(+r.deliveryFee||0)&&!(+r.netAmount||0))return; // 빈 행(0건·0원) 제외
       if(!dMap[dt])dMap[dt]={count:0,preTax:0};
       dMap[dt].count+=r.completeCount||0;
       dMap[dt].preTax+=r.netAmount||0;
@@ -15316,7 +15317,9 @@ function _dwRenderDriverDash(s){
     html+='</div>';
 
     if(tab==='main'){
-      // 2×2 피크 카드
+      // 2×2 피크 카드 — 배민 엑셀 기준이면 어느 날짜 숫자인지 표시 (배달정보 탭은 주간 합계)
+      var _lt='';try{_lt=s.bmDays?(JSON.parse(s.bmDays).latest||''):'';}catch(e){_lt='';}
+      if(_lt)html+='<div style="font-size:12px;color:var(--text3);margin:0 2px 8px">시간대별 건수 · '+_lt.slice(5).replace('-','.')+'('+_bmDow(_lt)+') 하루 기준</div>';
       html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
       PEAKS.forEach(function(p){
         html+='<div style="background:var(--bg2);border-radius:16px;padding:16px 12px;text-align:center">'
@@ -15333,7 +15336,11 @@ function _dwRenderDriverDash(s){
       +'</div>';
       html+=_bmDriverWeekCard(s.bmDays,s);
       // SLA 현황
-      var accept=cnt>0?Math.round(completed.total/cnt*100):0;
+      // 수락률: 배민 정산서(SLA 완료÷(완료+거절)) → 관리자 입력 수락률 → 없으면 '-' (2026-11-20)
+      var accept=null,_bmS=null;try{_bmS=s.bmDays?(JSON.parse(s.bmDays).settle||null):null;}catch(e){_bmS=null;}
+      if(_bmS&&_bmS.acc!=null)accept=Math.round(_bmS.acc*1000)/10;
+      else if(s.sla&&+s.sla.acceptRate>0)accept=+s.sla.acceptRate;
+      else if(cnt>0)accept=Math.round(completed.total/cnt*100);
       html+='<div style="background:var(--bg2);border-radius:16px;overflow:hidden">'
         +'<div onclick="var d=document.getElementById(\'dw-sla-body\');d.style.display=d.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'span\').textContent=d.style.display===\'none\'?\'∨\':\'∧\'" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer">'
           +'<span style="font-size:14px;font-weight:800">소속 협력사 SLA 현황</span>'
@@ -15342,7 +15349,7 @@ function _dwRenderDriverDash(s){
         +'<div id="dw-sla-body" style="padding:0 16px 14px">'
           +'<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border)">'
             +'<span style="font-size:14px">수락률</span>'
-            +'<span style="font-size:18px;font-weight:900;color:#5b4ff5">'+accept+'%</span>'
+            +'<span style="font-size:18px;font-weight:900;color:#5b4ff5">'+(accept==null?'<span style="font-size:12px;font-weight:600;color:var(--text3)">SLA 등록 전</span>':accept+'%')+'</span>'
           +'</div>'
           +'<div style="border-top:1px solid var(--border);padding-top:10px">'
           +PEAKS.map(function(p){
@@ -15374,6 +15381,8 @@ function _dwRenderDriverDash(s){
         +'</div>'
       +'</div>';
 
+    } else if(tab==='settle'&&_dwBmSettleTab(s)){
+      html+=_dwBmSettleTab(s);
     } else if(tab==='settle'){
       var _ded=_dwDedRate();
       var tax=Math.round(preTax*(_ded!=null?_ded:0.033));
@@ -15429,6 +15438,12 @@ function _dwRenderDriverDash(s){
   el.innerHTML=buildUI(window._dwDashTab);
 }
 
+// 기사 정산내역 탭: 배민 정산서가 있으면 그걸 보여줌 (발송 전엔 안내만)
+function _dwBmSettleTab(s){
+  var b=null;try{b=s&&s.bmDays?JSON.parse(s.bmDays):null;}catch(e){b=null;}
+  if(!b||!b.settle)return '';
+  return b.settle.sentAt?(_bsMarkRead(b,s),_bsDriverCard(b)):_bsDriverWait(b);
+}
 // ── 관리자 기사별 현황 직접 입력 (dw_driver_stats) — AI정산과 완전 분리 ──
 // ══ 기사현황 입력 → 기사별 공유 이미지 (일일 현황 · 슬롯별 달성률 · 시간 외 배달) ══
 var _DA_SLOTS=[
@@ -16851,6 +16866,7 @@ window._daSave=function(){
     var fs=row.querySelectorAll('input');
     if(!fs[0]||!fs[0].value)return;
     var net=parseInt(fs[5]&&fs[5].value)||0;
+    if(!net&&!(parseInt(fs[2]&&fs[2].value)||0)&&!(parseInt(fs[3]&&fs[3].value)||0))return; // 빈 행은 저장 안 함
     totalPayout+=net;
     settlements.push({date:fs[0].value,type:fs[1]&&fs[1].value||'선정산',completeCount:parseInt(fs[2]&&fs[2].value)||0,deliveryFee:parseInt(fs[3]&&fs[3].value)||0,insurance:parseInt(fs[4]&&fs[4].value)||0,netAmount:net});
   });
