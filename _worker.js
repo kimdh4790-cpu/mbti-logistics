@@ -6700,6 +6700,48 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_mdpH}); }
     }
 
+    // ── 로그인: 정산 아이디(driverId) → 로그인 이메일 찾기 ──
+    //   로그인 전엔 Firestore 규칙상 drivers/users 조회 불가 → 서버에서 조회.
+    //   이메일(전화번호)을 노출하지 않도록 비밀번호가 맞는 계정의 이메일만 돌려줌.
+    if (path === '/api/login-lookup' && method === 'POST') {
+      const _llH = {'Content-Type':'application/json'};
+      try {
+        const _llBody = await request.json().catch(() => ({}));
+        const _llId = String(_llBody.id||'').trim().slice(0,64);
+        const _llPw = String(_llBody.pw||'');
+        if (!_llId || !_llPw) return new Response(JSON.stringify({ok:false,error:'missing'}),{status:400,headers:_llH});
+        // 웹 앱 공개 API 키 (donway-pages/index.html firebaseConfig와 동일)
+        const _llKey = env.FIREBASE_API_KEY || env.FIREBASE_WEB_API_KEY || 'AIzaSyDQmEFfLczgCuPQidunbBXqaHWgs39VMg0';
+        const _llTok = await getAccessToken(env);
+        const _llBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+        const _llEmails = [];
+        const _llHashes = {};
+        for (const _llCol of ['drivers','users']) {
+          const _llQ = await fetch(`${_llBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_llTok}`,'Content-Type':'application/json'},
+            body:JSON.stringify({structuredQuery:{from:[{collectionId:_llCol}],where:{fieldFilter:{field:{fieldPath:'driverId'},op:'EQUAL',value:{stringValue:_llId}}},limit:5}})});
+          const _llR = _llQ.ok ? await _llQ.json() : [];
+          (Array.isArray(_llR)?_llR:[]).forEach(x => {
+            const f = (x.document&&x.document.fields)||{};
+            const em = f.email?.stringValue || (f.phone?.stringValue ? f.phone.stringValue.replace(/[^0-9]/g,'')+'@donway.internal' : '');
+            if (em && !_llEmails.includes(em)) _llEmails.push(em);
+            if (em && f.pw?.stringValue) _llHashes[em] = f.pw.stringValue;
+          });
+        }
+        if (!_llEmails.length) return new Response(JSON.stringify({ok:false,error:'not_found'}),{headers:_llH});
+        // 1) 빠른 가입 기사: drivers.pw(SHA-256)와 비교
+        const _llDig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_llPw));
+        const _llHex = Array.from(new Uint8Array(_llDig)).map(b => b.toString(16).padStart(2,'0')).join('');
+        for (const em of _llEmails) { if (_llHashes[em] && _llHashes[em] === _llHex) return new Response(JSON.stringify({ok:true,email:em}),{headers:_llH}); }
+        // 2) 그 외: Firebase Auth 비밀번호 확인
+        for (const em of _llEmails.slice(0,5)) {
+          const _llS = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${_llKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:_llPw,returnSecureToken:false})});
+          if (_llS.ok) return new Response(JSON.stringify({ok:true,email:em}),{headers:_llH});
+        }
+        return new Response(JSON.stringify({ok:false,error:'wrong_password'}),{headers:_llH});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:'server'}),{status:500,headers:_llH});
+      }
+    }
     if (path === '/api/driver-join' && method === 'POST') {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {

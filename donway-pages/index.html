@@ -7711,33 +7711,20 @@ function doLogin(){
     err.textContent='잠시 후 다시 시도하세요';err.style.display='block';
     return;
   }
-  // drivers 컬렉션에서 driverId로 찾기
-  _db.collection('drivers').where('driverId','==',input).limit(1).get()
-    .then(function(snap){
-      if(!snap.empty){
-        var d=snap.docs[0].data();
-        if(d.email){_tryLogin(d.email);return;}
-        // 전화번호 기반 내부 이메일 변환
-        if(d.phone){_tryLogin(d.phone+'@donway.internal');return;}
-      }
-      // users 컬렉션에서도 찾기
-      return _db.collection('users').where('driverId','==',input).limit(1).get();
-    }).then(function(snap2){
-      if(!snap2||snap2.empty){
-        if(btn){btn.disabled=false;btn.textContent='로그인';}
-        err.textContent='등록되지 않은 아이디입니다';err.style.display='block';
-        return;
-      }
-      var d=snap2.docs[0].data();
-      if(d.email){_tryLogin(d.email);}
-      else if(d.phone){_tryLogin(d.phone+'@donway.internal');}
-      else{
-        if(btn){btn.disabled=false;btn.textContent='로그인';}
-        err.textContent='계정 정보를 찾을 수 없습니다';err.style.display='block';
-      }
-    }).catch(function(e){
+  // ★ 아이디 → 로그인 이메일은 서버에서 조회 (로그인 전엔 Firestore 규칙상 직접 조회 불가)
+  fetch('/api/login-lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:input,pw:pw})})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data&&data.ok&&data.email){_tryLogin(data.email);return;}
       if(btn){btn.disabled=false;btn.textContent='로그인';}
-      err.textContent='조회 오류: '+e.message;err.style.display='block';
+      var er=data&&data.error;
+      err.textContent=er==='not_found'?'등록되지 않은 아이디입니다'
+        :er==='wrong_password'?'아이디 또는 비밀번호가 맞지 않습니다'
+        :'로그인 조회에 실패했습니다. 잠시 후 다시 시도하세요';
+      err.style.display='block';
+    }).catch(function(){
+      if(btn){btn.disabled=false;btn.textContent='로그인';}
+      err.textContent='네트워크 오류 — 인터넷 연결을 확인하세요';err.style.display='block';
     });
 }
 function doLogout(){
