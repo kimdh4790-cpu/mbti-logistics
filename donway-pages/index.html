@@ -16284,7 +16284,10 @@ window._bsSaveCfg=function(){
   var v=function(id){return parseFloat(document.getElementById(id).value);};
   _bsSaveCfgObj({tiers:t,acc:v('bs-acc'),ded:Math.max(0,Math.min(100,v('bs-ded')||0))}).then(function(){toast('설정을 저장했어요');_bsRender();_bsPublish();}).catch(function(e){toast('저장 실패: '+e.message);});
 };
-window._bsMapSet=function(key,uid){var m=Object.assign({},_bsC().map);if(uid)m[key]=uid;else delete m[key];var pl=Object.assign({},_bsC().plat||{});if(uid){var d=(window._bsDrivers||[]).filter(function(x){return x.uid===uid;})[0],cur=_bsPlat(d);if(!cur)pl[uid]='bm';else if(cur==='cpe')pl[uid]='both';}_bsSaveCfgObj({map:m,plat:pl}).then(function(){_bsRender();_bsPublish();toast(uid?'기사 계정에 연결했어요':'연결을 해제했어요');}).catch(function(e){toast('저장 실패: '+e.message);});};
+window._bsMapSet=function(key,uid){
+  if(uid){var other=_bsWeekCalc().filter(function(r){return r.key!==key&&r.drv&&r.drv.uid===uid;})[0];
+    if(other){toast('이미 '+other.name+' 라이더에 연결된 계정이에요. 같은 사람이면 아이디 합치기를 써 주세요');_bsRender();return;}}
+  var m=Object.assign({},_bsC().map);if(uid)m[key]=uid;else delete m[key];var pl=Object.assign({},_bsC().plat||{});if(uid){var d=(window._bsDrivers||[]).filter(function(x){return x.uid===uid;})[0],cur=_bsPlat(d);if(!cur)pl[uid]='bm';else if(cur==='cpe')pl[uid]='both';}_bsSaveCfgObj({map:m,plat:pl}).then(function(){_bsRender();_bsPublish();toast(uid?'기사 계정에 연결했어요':'연결을 해제했어요');}).catch(function(e){toast('저장 실패: '+e.message);});};
 function _bsWeekRef(w){return _db.collection('delivery_sessions').doc(window._bsDid+'_bmweek_'+w);}
 function _bsSaveSla(w){var doc=window._bmDocs[w];return _bsWeekRef(w).set(doc);}
 window._bsSlaEdit=function(key,f,val){
@@ -16332,9 +16335,13 @@ window._bsUpload=function(files){
 window._bsPublish=function(verbose,send){
   var w=window._bmWeekSel,doc=(window._bmDocs||{})[w];if(!doc)return Promise.resolve();
   var did=window._bsDid,list=_bsWeekCalc(),done=0,miss=[];
+  // 한 기사 계정에 라이더 여러 명이 연결되면 남의 정산서가 덮어써질 수 있어 보내지 않음 (2026-11-20)
+  var auCnt={};list.forEach(function(r){if(r.drv){var a=r.drv.au||r.drv.uid;auCnt[a]=(auCnt[a]||0)+1;}});
+  var dup=list.filter(function(r){return r.drv&&auCnt[r.drv.au||r.drv.uid]>1;});
   return Promise.all(list.map(function(r){
     if(!r.drv){miss.push(r.name);return Promise.resolve();}
     var au=r.drv.au||r.drv.uid;
+    if(auCnt[au]>1)return Promise.resolve();
     return _dwStatsGet(au,did).then(function(res){
       var cur=(res&&res.data)||{};
       var sum=_bmRiderSummary(doc,r.key,null,cur.peakTargets);
@@ -16351,9 +16358,9 @@ window._bsPublish=function(verbose,send){
       return _dwStatsPost(body).then(function(x){if(x&&x.ok)done++;});
     }).catch(function(){miss.push(r.name);});
   })).then(function(){
-    var t='기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 (아래 \'기사 계정 연결\'에서 연결해 주세요)':'');
+    var t=(dup.length?'<span style="color:var(--red);font-weight:700">한 계정에 여러 라이더가 연결돼 보내지 않음: '+dup.map(function(r){return esc(r.name)+'→'+esc(r.drv.name);}).join(', ')+'. 아래 표 \'연결 계정\'에서 하나만 남기거나, 같은 사람이면 아이디 합치기를 써 주세요.</span><br>':'')+'기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 (아래 \'기사 계정 연결\'에서 연결해 주세요)':'');
     var st=document.getElementById('bs-xl-st');if(st&&verbose!==false){var ps=document.getElementById('bs-pub-st');if(!ps){ps=document.createElement('div');ps.id='bs-pub-st';st.appendChild(ps);}ps.innerHTML=t;}
-    if(verbose===true)toast('기사 화면 반영 '+done+'명');
+    if(verbose===true||dup.length)toast(dup.length?'한 계정에 여러 라이더가 연결돼 있어요. 연결을 확인해 주세요':'기사 화면 반영 '+done+'명');
   });
 };
 // ── 정산서 보내기: 기사 앱에 정산서 공개 + 푸시 알림 (카톡 없이 앱 자체 발송)
@@ -16363,7 +16370,8 @@ function _bsWhen(iso){
 }
 window._bsSend=function(){
   var w=window._bmWeekSel,doc=(window._bmDocs||{})[w];if(!doc){toast('먼저 배민 엑셀을 올려 주세요');return;}
-  var list=_bsWeekCalc(),linked=list.filter(function(r){return r.drv;});
+  var list=_bsWeekCalc(),_ac={};list.forEach(function(r){if(r.drv){var a=r.drv.au||r.drv.uid;_ac[a]=(_ac[a]||0)+1;}});
+  var linked=list.filter(function(r){return r.drv&&_ac[r.drv.au||r.drv.uid]===1;});
   if(!linked.length){toast('계정이 연결된 기사가 없어요. 아래 \'기사 계정 연결\'에서 먼저 연결해 주세요');return;}
   var prev=doc.sent;doc.sent={at:new Date().toISOString()};
   toast('정산서 보내는 중...');
