@@ -6767,7 +6767,15 @@ service cloud.firestore {
         if (!_mdpDoc) return new Response(JSON.stringify({ok:false,error:'driver_not_found'}),{headers:_mdpH});
         const _mdpF = _mdpDoc.document.fields||{};
         const _mdpDealerId = _mdpF.dealerId?.stringValue||'';
-        return new Response(JSON.stringify({ok:true,dealerId:_mdpDealerId,name:_mdpF.name?.stringValue||'',phone:_mdpF.phone?.stringValue||'',companyName:_mdpF.companyName?.stringValue||'',role:'driver'}),{headers:_mdpH});
+        // 배달대행 기사 판별: 가입 시 플랫폼(bm/cpe/both) 선택 또는 소속 회사가 배달대행 서비스
+        const _mdpPlat = _mdpF.platform?.stringValue||'';
+        let _mdpCo = {};
+        if (_mdpDealerId) {
+          try { const _mdpCR = await fetch(`${_mdpFsBase}/companies/${_mdpDealerId}`,{headers:{'Authorization':`Bearer ${_mdpToken}`}}); if (_mdpCR.ok) _mdpCo = (await _mdpCR.json()).fields||{}; } catch(e) {}
+        }
+        const _mdpSvc = (_mdpCo.services?.arrayValue?.values||[]).map(v=>v.stringValue||'');
+        const _mdpDlv = !!_mdpPlat || _mdpCo.serviceType?.stringValue==='delivery' || _mdpSvc.indexOf('delivery')>=0 || !!_mdpCo.deliveryPaid?.booleanValue;
+        return new Response(JSON.stringify({ok:true,dealerId:_mdpDealerId,name:_mdpF.name?.stringValue||'',phone:_mdpF.phone?.stringValue||'',companyName:_mdpF.companyName?.stringValue||_mdpCo.companyName?.stringValue||_mdpCo.name?.stringValue||'',platform:_mdpPlat,delivery:_mdpDlv,role:'driver'}),{headers:_mdpH});
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_mdpH}); }
     }
 

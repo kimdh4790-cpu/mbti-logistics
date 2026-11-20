@@ -423,11 +423,11 @@ _checkSlugDuplicate(this.value);
     <div class="sb-bot">
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px" onclick="toggleDark()">🌙 다크모드</button>
       <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="openChangePw()">🔑 비밀번호 변경</button>
-      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" onclick="_openCompanyInfoModal()">🏢 회사 정보 수정</button>
+      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:var(--bg3);color:var(--text2)" id="sb-btn-coinfo" onclick="_openCompanyInfoModal()">🏢 회사 정보 수정</button>
       <button id="btn-init-admin" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#7c3aed;color:#fff;display:none" onclick="_initSuperAdminDocs()">🛠️ 슈퍼어드민 초기화</button>
 
       <button id="admin-btn" class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:#1e293b;color:#f59e0b;display:none" onclick="openAdminPanel()">👑 슈퍼 어드민</button>
-      <button class="btn" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
+      <button class="btn" id="sb-btn-sub" style="width:100%;font-size:11px;margin-bottom:4px;background:linear-gradient(135deg,#185FA5,#7C3AED);color:#fff;border:none" onclick="_showSubModal()">💳 구독 / 갱신</button>
       <button class="btn" id="my-url-btn" style="width:100%;font-size:10px;margin-bottom:4px;background:var(--brand-l);color:var(--brand);border:1px solid var(--brand);display:none" onclick="_showMyUrl()">🔗 내 전용 URL</button>
       <button class="btn btn-red" style="width:100%;font-size:11px" onclick="doLogout()">로그아웃</button>
     </div>
@@ -1621,7 +1621,7 @@ function _loadCompanyCfg(dealerId){
         if(_CU && !_CU.name && doc.data().companyName) _CU.name = doc.data().companyName;
         // driver/member는 services 로드 후 nav 재빌드 (delivery 메뉴 반영)
         if(_CU && (_CU.role==='driver'||_CU.role==='member')){
-          MENUS=_filterMenusByServices(MENUS_DRIVER);
+          MENUS=_driverMenus();
           if(typeof buildNav==='function') buildNav();
         }
       }
@@ -5875,7 +5875,7 @@ if(window.location.hash==='#join'){
         ? user.getIdToken().then(function(tok){
             return fetch('/api/my-driver-profile',{headers:{'Authorization':'Bearer '+tok}});
           }).then(function(r){return r.json();}).then(function(j){
-            if(j.ok&&j.dealerId)return{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||''};
+            if(j.ok&&j.dealerId)return{dealerId:j.dealerId,role:'driver',name:j.name||'',phone:j.phone||'',companyName:j.companyName||'',platform:j.platform||'',dlvDriver:!!j.delivery};
             // API 실패시에도 role:driver 강제 (companies 체크 우회를 위해)
             return{dealerId:user.uid,role:'driver'};
           }).catch(function(){return{dealerId:user.uid,role:'driver'};})
@@ -6327,7 +6327,9 @@ function showApp(){
   if(_CU.role==='manager'){
     MENUS=MENUS_MANAGER;
   } else if(_CU.role==='driver'||_CU.role==='member'){
-    MENUS=_filterMenusByServices(MENUS_DRIVER);
+    MENUS=_driverMenus();
+    // 배달 기사에게는 대리점용 버튼(회사 정보 수정·구독) 숨김
+    if(_isDlvDriver())['sb-btn-coinfo','sb-btn-sub','sb-company-code'].forEach(function(id){var b=document.getElementById(id);if(b)b.style.display='none';});
   } else {
     var sType = _CU.serviceType||'settle';
     // ★ sType 디버그 로그 (슈퍼어드민용)
@@ -15219,6 +15221,7 @@ function pageDeliveryInput(){
 function _dwRenderDriverDash(s){
   var el=document.getElementById('dw-driver-dash');
   if(!el||!s)return;
+  if(!Array.isArray(s.entries))s.entries=[]; // dw_driver_stats 응답엔 entries가 없어 계산이 멈추던 문제 (2026-11-20)
   _dwRecalcSession(s);
   var cnt=s.totalCount||0;
   var preTax=Math.round(s.preTax||0);
@@ -24812,6 +24815,12 @@ var MENUS_DRIVER = [
     {ic:'🛵',l:'배달대행 정산',p:'delivery_input',plan_key:'delivery'}
   ]},
 ];
+// 배달대행 기사 전용 메뉴 (2026-11-20): 본인 배달 현황·정산서만. AI정산 직원 메뉴(MENUS_DRIVER)와 별개
+var MENUS_DLV_DRIVER = [
+  {s:'내 배달 정산',items:[{ic:'🛵',l:'내 정산서',p:'delivery_input',plan_key:'free'}]}
+];
+function _isDlvDriver(){return !!(_CU&&_CU.role==='driver'&&_CU.dlvDriver);}
+function _driverMenus(){return _isDlvDriver()?MENUS_DLV_DRIVER:_filterMenusByServices(MENUS_DRIVER);}
 var MENUS = MENUS_SETTLE; // 기본값
 function _copyCompanyCode(el){
   var code=el.textContent.replace('회사코드: ','');
@@ -25973,6 +25982,7 @@ delivery_settle:pageDeliverySettle,delivery_input:pageDeliveryInput,delivery_adm
     
   };
   var requiredPlan=planGate[page];
+  if(requiredPlan&&_isDlvDriver()&&page==='delivery_input')requiredPlan=null; // 배달 기사 본인 화면은 대리점 구독으로 이용
   if(requiredPlan&&!isSuperAdmin()){
     var allowed=false;
     if(requiredPlan==='qr')        allowed=_hasQr(cd);
@@ -35983,7 +35993,7 @@ var TERMS_CONTENT = {
 
 function checkTermsAgreement(){
   // 슈퍼어드민은 생략
-  var _fp=(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
+  var _fp=_isDlvDriver()?'delivery_input':(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home';
   if(isSuperAdmin()){goPage('home');return;}
   if(_CU&&_CU.termsVersion===TERMS_VER){
     goPage(_fp);
@@ -36012,7 +36022,7 @@ function agreeTerms(){
   },{merge:true}).then(function(){
     document.getElementById('mo-terms-agree').classList.remove('show');
     _CU.termsVersion=TERMS_VER;
-    goPage((_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home');
+    goPage(_isDlvDriver()?'delivery_input':(_CU&&(_CU.role==='driver'||_CU.role==='member'))?'emp_home':'home');
   if(typeof _dwInitAutoClose==='function') _dwInitAutoClose();
     toast('약관 동의가 완료되었습니다.');
   }).catch(function(e){
