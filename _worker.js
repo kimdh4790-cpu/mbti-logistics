@@ -206,6 +206,38 @@ async function requireDealerOf(request, env, dealerId) {
   return null;
 }
 
+// Firebase Auth 관리용 토큰 (서비스 계정, firebase 범위) — 기사 로그인 계정 생성·비밀번호 설정
+async function _fbAdminToken(env) {
+  if (!env.FIREBASE_SA_KEY) return '';
+  const sa = JSON.parse(env.FIREBASE_SA_KEY);
+  const now = Math.floor(Date.now()/1000);
+  const pk = await crypto.subtle.importKey('pkcs8',
+    Uint8Array.from(atob(sa.private_key.replace(/-----.*?-----/g,'').replace(/\s/g,'')),c=>c.charCodeAt(0)).buffer,
+    {name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['sign']);
+  const b64u = v => (typeof v==='string'?btoa(v):btoa(String.fromCharCode(...new Uint8Array(v)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const h = b64u(JSON.stringify({alg:'RS256',typ:'JWT'}));
+  const c = b64u(JSON.stringify({iss:sa.client_email,scope:'https://www.googleapis.com/auth/firebase',aud:'https://oauth2.googleapis.com/token',exp:now+3600,iat:now}));
+  const s = await crypto.subtle.sign('RSASSA-PKCS1-v1_5',pk,new TextEncoder().encode(h+'.'+c));
+  const t = await (await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:`grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${h}.${c}.${b64u(new Uint8Array(s))}`})).json();
+  return t.access_token || '';
+}
+// 로그인 계정(email)의 비밀번호를 설정 — 없으면 새로 만듦. 성공 시 {uid} 반환
+async function _fbSetPassword(env, email, password) {
+  const at = await _fbAdminToken(env);
+  if (!at) return null;
+  const ah = {'Authorization':'Bearer '+at,'Content-Type':'application/json'};
+  const lu = await (await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:lookup`,{method:'POST',headers:ah,body:JSON.stringify({email:[email]})})).json();
+  const u = (lu.users||[])[0];
+  if (u) {
+    const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts:update`,{method:'POST',headers:ah,body:JSON.stringify({localId:u.localId,password})});
+    return r.ok ? {uid:u.localId} : null;
+  }
+  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/mbti-logistics/accounts`,{method:'POST',headers:ah,body:JSON.stringify({email,password})});
+  if (!r.ok) return null;
+  const d = await r.json();
+  return {uid:d.localId||''};
+}
+
 // 보안 헤더 적용 헬퍼
 function addSecurityHeaders(response, allowIframe = false) {
   const newHeaders = new Headers(response.headers);
@@ -6772,6 +6804,39 @@ service cloud.firestore {
         return new Response(JSON.stringify({ok:false,error:'server'}),{status:500,headers:_llH});
       }
     }
+    // ── 대리점이 기사 로그인 비밀번호 재설정 (로그인 계정 없으면 생성) ──
+    if (path === '/api/driver-reset-pw' && method === 'POST') {
+      const _rpH = {'Content-Type':'application/json'};
+      try {
+        const _rpBody = await request.clone().json().catch(() => ({}));
+        const _rpId = String(_rpBody.driverDocId||'');
+        const _rpPw = String(_rpBody.newPw||'');
+        if (!_rpId || /[\/?#]/.test(_rpId)) return new Response(JSON.stringify({ok:false,error:'driverDocId 필요'}),{status:400,headers:_rpH});
+        if (_rpPw.length < 6) return new Response(JSON.stringify({ok:false,error:'비밀번호는 6자 이상'}),{status:400,headers:_rpH});
+        const _rpTok = await getAccessToken(env);
+        const _rpUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/drivers/${_rpId}`;
+        const _rpDoc = await fetch(_rpUrl,{headers:{'Authorization':`Bearer ${_rpTok}`}});
+        if (!_rpDoc.ok) return new Response(JSON.stringify({ok:false,error:'기사를 찾을 수 없어요'}),{status:404,headers:_rpH});
+        const _rpF = (await _rpDoc.json()).fields || {};
+        const _rpDid = _rpF.dealerId?.stringValue || '';
+        if (!(await requireDealerOf(request, env, _rpDid))) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_rpH});
+        const _rpPhone = (_rpF.phone?.stringValue||'').replace(/[^0-9]/g,'');
+        const _rpEmail = _rpF.email?.stringValue || (_rpPhone.length>=10 ? _rpPhone+'@donway.internal' : '');
+        if (!_rpEmail) return new Response(JSON.stringify({ok:false,error:'연락처가 없어 로그인 계정을 만들 수 없어요. 연락처를 먼저 저장해 주세요'}),{status:400,headers:_rpH});
+        const _rpSet = await _fbSetPassword(env, _rpEmail, _rpPw);
+        if (!_rpSet) return new Response(JSON.stringify({ok:false,error:'로그인 계정 설정 실패'}),{status:500,headers:_rpH});
+        // drivers 문서에 로그인 정보 맞춤 (비밀번호는 해시만 저장)
+        const _rpDig = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(_rpPw));
+        const _rpHex = Array.from(new Uint8Array(_rpDig)).map(b => b.toString(16).padStart(2,'0')).join('');
+        const _rpUpd = {pw:{stringValue:_rpHex}, email:{stringValue:_rpEmail}, pwResetAt:{stringValue:new Date().toISOString()}};
+        if (_rpSet.uid && !_rpF.uid?.stringValue) _rpUpd.uid = {stringValue:_rpSet.uid};
+        const _rpMask = Object.keys(_rpUpd).map(k=>'updateMask.fieldPaths='+k).join('&');
+        await fetch(`${_rpUrl}?${_rpMask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_rpTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_rpUpd})});
+        return new Response(JSON.stringify({ok:true,phone:_rpPhone,driverId:_rpF.driverId?.stringValue||''}),{headers:_rpH});
+      } catch(e) {
+        return new Response(JSON.stringify({ok:false,error:'server'}),{status:500,headers:_rpH});
+      }
+    }
     if (path === '/api/driver-join' && method === 'POST') {
       const _djH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
       try {
@@ -6829,6 +6894,9 @@ service cloud.firestore {
               const _djUpd = {platform:{stringValue:_djPlat}};
               if (bmUserId) _djUpd.bmUserId={stringValue:String(bmUserId).trim().slice(0,64)};
               ['bankName','bankAccount','accountNumber','accountHolder'].forEach(k=>{ if (_djFields[k]) _djUpd[k]=_djFields[k]; });
+              // 재가입 때 정한 로그인 정보(아이디·비밀번호 해시·로그인 uid)도 반영 — 안 하면 새 아이디·비밀번호로 로그인 불가
+              ['pw','uid','email'].forEach(k=>{ if (_djFields[k]) _djUpd[k]=_djFields[k]; });
+              if (driverId) { _djUpd.driverId=_djFields.driverId; _djUpd.userId=_djFields.userId; }
               const _djMask = Object.keys(_djUpd).map(k=>'updateMask.fieldPaths='+k).join('&');
               await fetch(`https://firestore.googleapis.com/v1/${_djHit.document.name}?${_djMask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${_djToken}`,'Content-Type':'application/json'},body:JSON.stringify({fields:_djUpd})});
               return new Response(JSON.stringify({ok:true,existing:true}),{headers:_djH});
