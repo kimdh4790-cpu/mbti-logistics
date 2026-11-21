@@ -19,14 +19,14 @@
 .mm-logo {
   font-size: 14px;
   font-weight: 600;
-  color: #1a73e8;
+  color: #F472B6;
   letter-spacing: -0.2px;
 }
 
 .mm-badge {
   font-size: 11px;
-  background: #f1f3f4;
-  color: #5f6368;
+  background: #EAF6FF;
+  color: #6B7280;
   padding: 2px 8px;
   border-radius: 20px;
   font-weight: 500;
@@ -56,16 +56,16 @@
 }
 
 .mm-tone.active {
-  background: #e8f0fe;
-  border-color: #1a73e8;
-  color: #1a73e8;
+  background: rgba(134,239,172,0.2);
+  border-color: #22C55E;
+  color: #15803D;
   font-weight: 500;
 }
 
 .mm-generate-btn {
   width: 100%;
   padding: 9px;
-  background: #1a73e8;
+  background: #F472B6;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -76,8 +76,8 @@
   font-family: inherit;
 }
 
-.mm-generate-btn:hover { background: #1557b0; }
-.mm-generate-btn:disabled { background: #8ab4f8; cursor: not-allowed; }
+.mm-generate-btn:hover { background: #EC4899; }
+.mm-generate-btn:disabled { background: rgba(244,114,182,0.5); cursor: not-allowed; }
 
 .mm-result {
   margin-top: 12px;
@@ -85,7 +85,7 @@
 
 #mm-output {
   width: 100%;
-  border: 1px solid #dadce0;
+  border: 1px solid #BFDBFE;
   border-radius: 8px;
   padding: 10px;
   font-size: 13px;
@@ -94,7 +94,7 @@
   resize: vertical;
   font-family: inherit;
   box-sizing: border-box;
-  background: #f8f9fa;
+  background: #EAF6FF;
 }
 
 .mm-actions {
@@ -115,24 +115,25 @@
 }
 
 .mm-insert {
-  background: #1a73e8;
+  background: #F472B6;
   color: #fff;
   border: none;
 }
-.mm-insert:hover { background: #1557b0; }
+.mm-insert:hover { background: #EC4899; }
 
 .mm-copy {
   background: #fff;
-  color: #1a73e8;
-  border: 1px solid #1a73e8;
+  color: #F472B6;
+  border: 1px solid #F472B6;
 }
-.mm-copy:hover { background: #e8f0fe; }
+.mm-copy:hover { background: rgba(244,114,182,0.08); }
 
 .mm-upgrade {
   margin-top: 12px;
   text-align: center;
   padding: 12px;
-  background: #fef7e0;
+  background: rgba(251,191,36,0.1);
+  border: 1px solid rgba(251,191,36,0.3);
   border-radius: 8px;
 }
 
@@ -146,14 +147,14 @@
   display: inline-block;
   font-size: 13px;
   font-weight: 500;
-  color: #1a73e8;
+  color: #D97706;
   text-decoration: none;
   padding: 6px 16px;
-  border: 1px solid #1a73e8;
+  border: 1px solid #D97706;
   border-radius: 6px;
   transition: all 0.15s;
 }
-.mm-upgrade-btn:hover { background: #e8f0fe; }
+.mm-upgrade-btn:hover { background: rgba(251,191,36,0.1); }
 
 .mailmind-toast {
   position: fixed;
@@ -169,9 +170,9 @@
   animation: mmFadeIn 0.2s ease;
 }
 
-.mailmind-toast-info { background: #202124; color: #fff; }
-.mailmind-toast-success { background: #137333; color: #fff; }
-.mailmind-toast-error { background: #c5221f; color: #fff; }
+.mailmind-toast-info { background: #111118; color: #fff; }
+.mailmind-toast-success { background: #22C55E; color: #fff; }
+.mailmind-toast-error { background: #EF4444; color: #fff; }
 
 @keyframes mmFadeIn {
   from { opacity: 0; transform: translateY(8px); }
