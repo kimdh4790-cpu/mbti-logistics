@@ -16106,6 +16106,8 @@ function _bsWeekCalc(){
     else{rd=_bsMergeRd(ks.map(function(k){return doc.riders[k];}));sl=null;ks.forEach(function(k){var s=sla[k];if(s&&((+s.done||0)+(+s.rej||0))>0){sl=sl||{done:0,rej:0,flag:false};sl.done+=+s.done||0;sl.rej+=+s.rej||0;if(s.flag)sl.flag=true;}});}
     var r=_bsCalc(rd,sl,c);r.key=t;r.drv=_bsMatch(t,doc.riders[t],c);
     var _mi=_bsMissionOf(doc,ks);r.mission=_mi.sum;r.missions=_mi.list;
+    // 본사 미션 금액: 세전에 더한 뒤 5.8% 공제하고 실지급에 합산 (사용자 2026-11-21). 회사마진·추가 지급은 그대로
+    if(r.mission){r.grossAll=r.gross+r.mission;r.tax=Math.round(r.grossAll*c.ded/100);r.loc=r.tax-r.inc;r.net=r.grossAll-r.tax-r.emp-r.ind;}
     if(ks.length>1)r.mems=ks.map(function(k){var x=_bsCalc(doc.riders[k],null,c);return {key:k,name:doc.riders[k].name,userId:doc.riders[k].userId||'',n:x.n,fee:x.fee};});
     return r;}).sort(function(a,b){return b.n-a.n;});
 }
@@ -16144,7 +16146,7 @@ function _bsRender(){
       +'<div class="bs-tile"><span>총 배달처리비</span><b>'+_bsW(S.fee)+'원</b></div>'
       +'<div class="bs-tile key"><span>보장 추가 지급 합계</span><b>'+(S.extra>=0?'+':'−')+_bsW(Math.abs(S.extra))+'원</b></div>'
       +'<div class="bs-tile"><span>기사 세전 합계</span><b>'+_bsW(S.gross)+'원</b></div>'
-      +(S.mis?'<div class="bs-tile"><span>본사 미션 합계 (별도)</span><b>+'+_bsW(S.mis)+'원</b></div>':'')
+      +(S.mis?'<div class="bs-tile"><span>본사 미션 합계</span><b>+'+_bsW(S.mis)+'원</b></div>':'')
       +'<div class="bs-tile"><span>회사마진 (처리비 − 세전)</span><b class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'원</b></div>'
     +'</div>'
     +_bsLinkHtml(list)
@@ -16200,8 +16202,10 @@ function _bsStmtHtml(r,doc,forDriver){
   if(r.on)h+='<div class="bs-extra"><span>실제 추가 지급 (최저단가 보장)</span><b>'+(_ex>=0?'+':'−')+_bsW(Math.abs(_ex))+'원</b></div>';
   if(r.off)h+=R('수락률 미달: 건수 보장 없이 배달처리비만 지급','','s');
   h+=R('<b>세전 합계'+(r.on?' ('+_bsW(r.n)+'건 × '+_bsW(r.rate)+'원)':'')+'</b>','<b>'+_bsW(r.gross)+'원</b>')
+    +_bsMissionRows(Object.assign({mission:0,missions:[]},r),R)
+    +(r.mission?R('<b>세전 총액 (미션 포함)</b>','<b>'+_bsW(r.gross+r.mission)+'원</b>'):'')
     +R(forDriver?'공제':'원천징수·고용·산재 ('+r.rates.ded+'%)','−'+_bsW(r.tax)+'원','m')
-    +R('실지급액',_bsW(r.net)+'원','t')+_bsMissionRows(Object.assign({mission:0,missions:[]},r),R)+'</div>';
+    +R('실지급액',_bsW(r.net)+'원','t')+'</div>';
   h+='<div style="display:grid;gap:8px"><h4>수락률 (SLA 기준)</h4><div class="bs-g4">'
     +'<div><span>SLA 배달완료</span><b>'+(r.sla?_bsW(r.sla.done)+'건':'-')+'</b></div>'
     +'<div><span>SLA 거절</span><b>'+(r.sla?_bsW(r.sla.rej)+'건':'-')+'</b></div>'
@@ -16367,7 +16371,7 @@ function _bsMissionLabel(t){
 }
 function _bsMissionRows(r,R){
   if(!r.mission)return '';
-  return R('<b>본사 미션 금액</b> <span class="bs-sub">'+r.missions.length+'건 · 별도 지급</span>','<b style="color:#15803d">+'+_bsW(r.mission)+'원</b>')
+  return R('<b>본사 미션 금액</b> <span class="bs-sub">'+r.missions.length+'건</span>','<b style="color:#15803d">+'+_bsW(r.mission)+'원</b>')
     +r.missions.map(function(x){return R('<span class="bs-sub">'+(x.date?x.date.slice(5).replace('-','/')+' ':'')+esc(_bsMissionLabel(x.title))+'</span>','<span class="bs-sub">'+_bsW(x.amt)+'원</span>','s');}).join('');
 }
 // ── 기사 화면 반영: 연결된 기사마다 dw_driver_stats 갱신 (bmDays JSON 안에 settle 포함)
