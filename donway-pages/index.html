@@ -16310,7 +16310,10 @@ window._bsSaveCfg=function(){
 };
 window._bsMapSet=function(key,uid){
   if(uid){var other=_bsWeekCalc().filter(function(r){return r.key!==key&&r.drv&&r.drv.uid===uid;})[0];
-    if(other){toast('이미 '+other.name+' 라이더에 연결된 계정이에요. 같은 사람이면 아이디 합치기를 써 주세요');_bsRender();return;}}
+    if(other){toast('이미 '+other.name+' 라이더에 연결된 계정이에요. 같은 사람이면 아이디 합치기를 써 주세요');_bsRender();return;}
+    // 라이더 이름과 계정 이름이 다르면 연결 막음 (남의 정산서 노출 방지, 2026-11-21)
+    var me=_bsWeekCalc().filter(function(r){return r.key===key;})[0],dd=(window._bsDrivers||[]).filter(function(x){return x.uid===uid;})[0];
+    if(me&&dd&&_bmNormName(me.name)!==_bmNormName(dd.name)){toast(me.name+' 라이더와 '+dd.name+' 계정은 이름이 달라 연결할 수 없어요. 같은 사람이면 가입 이름을 맞춰 주세요');_bsRender();return;}}
   var m=Object.assign({},_bsC().map);if(uid)m[key]=uid;else delete m[key];var pl=Object.assign({},_bsC().plat||{});if(uid){var d=(window._bsDrivers||[]).filter(function(x){return x.uid===uid;})[0],cur=_bsPlat(d);if(!cur)pl[uid]='bm';else if(cur==='cpe')pl[uid]='both';}_bsSaveCfgObj({map:m,plat:pl}).then(function(){_bsRender();_bsPublish();toast(uid?'기사 계정에 연결했어요':'연결을 해제했어요');}).catch(function(e){toast('저장 실패: '+e.message);});};
 function _bsWeekRef(w){return _db.collection('delivery_sessions').doc(window._bsDid+'_bmweek_'+w);}
 function _bsSaveSla(w){var doc=window._bmDocs[w];return _bsWeekRef(w).set(doc);}
