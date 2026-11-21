@@ -15451,7 +15451,9 @@ function _bsIsMine(raw){
   if(!_CU||_CU.role!=='driver')return true;
   var b=null;try{b=JSON.parse(raw);}catch(e){return false;}
   var st=b&&b.settle;if(!st)return true;
-  if(st.forAu)return st.forAu===_CU.uid;
+  // 계정 주인 표시가 맞아도 이름이 다르면 숨김 (2026-11-21, 김문석 화면에 박진수 정산서)
+  if(st.forAu&&st.forAu!==_CU.uid)return false;
+  if(st.forAu&&!_CU.name)return true;
   return !!_CU.name&&_bmNormName(st.name)===_bmNormName(_CU.name);
 }
 // 기사 정산내역 탭: 배민 정산서가 있으면 그걸 보여줌 (발송 전엔 안내만)
@@ -16395,17 +16397,20 @@ function _bsOwners(list){
   // 계정 이름과 같은 라이더가 다른 기사 기록으로 잡혀 있어도 그 계정의 주인 후보로 넣음 (2026-11-21)
   (window._bsDrivers||[]).forEach(function(d){var a=d.au||d.uid;if(!by[a])return;var nm=_bmNormName(d.name);
     list.forEach(function(r){if(by[a].indexOf(r)<0&&_bmNormName(r.name)===nm&&!c.map[r.key]){var x=Object.assign(Object.create(Object.getPrototypeOf(r)),r);x.drv=d;by[a].push(x);}});});
+  // 계정 이름과 라이더 이름이 다르면 절대 보내지 않음 (직접 연결돼 있어도) — 남의 정산서 노출 방지 (2026-11-21)
+  var mis=[];
   Object.keys(by).forEach(function(a){
-    var rs=by[a];if(rs.length===1){own[a]=rs[0].key;row[a]=rs[0];return;}
-    var ex=rs.filter(function(r){return c.map[r.key]===r.drv.uid;});
+    var rs=by[a];
     var nm=rs.filter(function(r){return _bmNormName(r.name)===_bmNormName(r.drv.name);});
+    var ex=nm.filter(function(r){return c.map[r.key]===r.drv.uid;});
     var pick=ex.length===1?ex[0]:nm.length===1?nm[0]:null;
     own[a]=pick?pick.key:'';row[a]=pick;
-    rs.forEach(function(r){if(r!==pick)dup.push(r);});
+    rs.forEach(function(r){if(r===pick)return;if(nm.indexOf(r)<0)mis.push(r);else dup.push(r);});
   });
-  var got={},seen={};Object.keys(row).forEach(function(a){if(row[a])got[row[a].key]=1;});
+  var got={},seen={},seen2={};Object.keys(row).forEach(function(a){if(row[a])got[row[a].key]=1;});
   dup=dup.filter(function(r){if(got[r.key]||seen[r.key])return false;seen[r.key]=1;return true;});
-  return {own:own,dup:dup,row:row};
+  mis=mis.filter(function(r){var k=r.key+'|'+(r.drv.au||r.drv.uid);if(seen2[k])return false;seen2[k]=1;return true;});
+  return {own:own,dup:dup,row:row,mis:mis};
 }
 // ── 기사 화면 반영: 연결된 기사마다 dw_driver_stats 갱신 (bmDays JSON 안에 settle 포함)
 window._bsPublish=function(verbose,send){
@@ -16438,9 +16443,10 @@ window._bsPublish=function(verbose,send){
       return _dwStatsPost(body).then(function(x){if(x&&x.ok)done++;});
     }).catch(function(){miss.push(r.name);});
   })).then(function(){
-    var t=(dup.length?'<span style="color:var(--red);font-weight:700">한 계정에 여러 라이더가 연결돼 보내지 않음: '+dup.map(function(r){return esc(r.name)+'→'+esc(r.drv.name);}).join(', ')+'. 아래 표 \'연결 계정\'에서 하나만 남기거나, 같은 사람이면 아이디 합치기를 써 주세요.</span><br>':'')+'기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 (아래 \'기사 계정 연결\'에서 연결해 주세요)':'');
+    var mis=O.mis||[];
+    var t=(mis.length?'<span style="color:var(--red);font-weight:700">이름이 달라 보내지 않음: '+mis.map(function(r){return esc(r.name)+'→'+esc(r.drv.name)+' 계정';}).join(', ')+'. 아래 표 \'연결 계정\'에서 맞는 기사로 바꿔 주세요.</span><br>':'')+(dup.length?'<span style="color:var(--red);font-weight:700">한 계정에 여러 라이더가 연결돼 보내지 않음: '+dup.map(function(r){return esc(r.name)+'→'+esc(r.drv.name);}).join(', ')+'. 아래 표 \'연결 계정\'에서 하나만 남기거나, 같은 사람이면 아이디 합치기를 써 주세요.</span><br>':'')+'기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 (아래 \'기사 계정 연결\'에서 연결해 주세요)':'');
     var st=document.getElementById('bs-xl-st');if(st&&verbose!==false){var ps=document.getElementById('bs-pub-st');if(!ps){ps=document.createElement('div');ps.id='bs-pub-st';st.appendChild(ps);}ps.innerHTML=t;}
-    if(verbose===true||dup.length)toast(dup.length?'한 계정에 여러 라이더가 연결돼 있어요. 연결을 확인해 주세요':'기사 화면 반영 '+done+'명');
+    if(verbose===true||dup.length||mis.length)toast(mis.length?'이름이 다른 계정에 연결된 라이더 '+mis.length+'명은 보내지 않았어요':dup.length?'한 계정에 여러 라이더가 연결돼 있어요. 연결을 확인해 주세요':'기사 화면 반영 '+done+'명');
   });
 };
 // ── 정산서 보내기: 기사 앱에 정산서 공개 + 푸시 알림 (카톡 없이 앱 자체 발송)
