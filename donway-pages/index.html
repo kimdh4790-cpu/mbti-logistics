@@ -16173,7 +16173,9 @@ function _bsRender(){
   h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px"><div class="bs-h">기사별 정산서</div><div class="bs-seg" role="group" aria-label="보기"><button type="button" class="'+(dv?'':'on')+'" onclick="window._bsDrvView=false;_bsRender()">관리자 보기</button><button type="button" class="'+(dv?'on':'')+'" onclick="window._bsDrvView=true;_bsRender()">기사용 보기</button></div></div>'
     +(dv?'<div class="bs-sub">기사 화면에 나가는 항목만 보여요 (초과분 메꿈, 어디서 어디로 메꿨는지, 날짜별 내역은 숨기고 공제는 금액만).</div>':'')+'<div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b>'+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc,dv)+'</div></details>';}).join('')+'</div>';
   b.innerHTML=h+_bsSettingsHtml();
-  if(doc.sent&&doc.sent.at&&window._bsReadsWeek!==w+doc.sent.at){window._bsReadsWeek=w+doc.sent.at;_bsLoadReads();}
+  if(doc.sent&&doc.sent.at&&window._bsReadsWeek!==w+doc.sent.at){window._bsReadsWeek=w+doc.sent.at;
+    // 화면 열 때 한 번: 최신 계산(미션 등)으로 기사 화면 갱신 후 열람 상태 불러오기
+    _bsPublish(false).then(function(){_bsLoadReads();});}
 }
 function _bsAccBadge(r){if(r.acc==null)return '<span class="bs-badge na">미입력</span>';return (r.flag?'<span class="bs-badge chk">확인</span> ':'')+'<span class="bs-badge '+(r.off?'off':'on')+'">'+_bsPct(r.acc)+'</span>';}
 // ── 소속 플랫폼 (배민 / 쿠팡이츠 / 둘 다) — 설정 문서 plat 맵 우선, 없으면 기사 문서 platform
@@ -16374,17 +16376,34 @@ function _bsMissionRows(r,R){
   return R('<b>본사 미션 금액</b> <span class="bs-sub">'+r.missions.length+'건</span>','<b style="color:#15803d">+'+_bsW(r.mission)+'원</b>')
     +r.missions.map(function(x){return R('<span class="bs-sub">'+(x.date?x.date.slice(5).replace('-','/')+' ':'')+esc(_bsMissionLabel(x.title))+'</span>','<span class="bs-sub">'+_bsW(x.amt)+'원</span>','s');}).join('');
 }
+// 한 기사 계정에 라이더 여러 명이 연결됐을 때 주인 정하기: 직접 연결(map) 1명 → 이름 같은 1명 → 없음
+function _bsOwners(list){
+  var c=_bsC(),by={},own={},dup=[];
+  list.forEach(function(r){if(r.drv){var a=r.drv.au||r.drv.uid;(by[a]=by[a]||[]).push(r);}});
+  Object.keys(by).forEach(function(a){
+    var rs=by[a];if(rs.length===1){own[a]=rs[0].key;return;}
+    var ex=rs.filter(function(r){return c.map[r.key]===r.drv.uid;});
+    var nm=rs.filter(function(r){return _bmNormName(r.name)===_bmNormName(r.drv.name);});
+    var pick=ex.length===1?ex[0]:nm.length===1?nm[0]:null;
+    own[a]=pick?pick.key:'';
+    rs.forEach(function(r){if(r!==pick)dup.push(r);});
+  });
+  return {own:own,dup:dup};
+}
 // ── 기사 화면 반영: 연결된 기사마다 dw_driver_stats 갱신 (bmDays JSON 안에 settle 포함)
 window._bsPublish=function(verbose,send){
   var w=window._bmWeekSel,doc=(window._bmDocs||{})[w];if(!doc)return Promise.resolve();
   var did=window._bsDid,list=_bsWeekCalc(),done=0,miss=[];
   // 한 기사 계정에 라이더 여러 명이 연결되면 남의 정산서가 덮어써질 수 있어 보내지 않음 (2026-11-20)
-  var auCnt={};list.forEach(function(r){if(r.drv){var a=r.drv.au||r.drv.uid;auCnt[a]=(auCnt[a]||0)+1;}});
-  var dup=list.filter(function(r){return r.drv&&auCnt[r.drv.au||r.drv.uid]>1;});
+  // 주인이 정해지면 그 라이더 것만 보내고, 못 정하면 그 계정의 배민 정산서를 비움(남의 정산서가 남지 않게)
+  var O=_bsOwners(list),dup=O.dup,cleared={};
   return Promise.all(list.map(function(r){
     if(!r.drv){miss.push(r.name);return Promise.resolve();}
     var au=r.drv.au||r.drv.uid;
-    if(auCnt[au]>1)return Promise.resolve();
+    if(O.own[au]!==r.key){
+      if(O.own[au]===''&&!cleared[au]){cleared[au]=1;return _dwStatsGet(au,did).then(function(res){var cur=res&&res.data;if(!cur||!cur.bmDays)return;return _dwStatsPost(Object.assign({},cur,{dealerId:did,driverUid:au,bmDays:'',bmReadAt:''}));}).catch(function(){});}
+      return Promise.resolve();
+    }
     return _dwStatsGet(au,did).then(function(res){
       var cur=(res&&res.data)||{};
       var sum=_bmRiderSummary(doc,r.key,null,cur.peakTargets);
@@ -16413,8 +16432,8 @@ function _bsWhen(iso){
 }
 window._bsSend=function(){
   var w=window._bmWeekSel,doc=(window._bmDocs||{})[w];if(!doc){toast('먼저 배민 엑셀을 올려 주세요');return;}
-  var list=_bsWeekCalc(),_ac={};list.forEach(function(r){if(r.drv){var a=r.drv.au||r.drv.uid;_ac[a]=(_ac[a]||0)+1;}});
-  var linked=list.filter(function(r){return r.drv&&_ac[r.drv.au||r.drv.uid]===1;});
+  var list=_bsWeekCalc(),_O=_bsOwners(list);
+  var linked=list.filter(function(r){return r.drv&&_O.own[r.drv.au||r.drv.uid]===r.key;});
   if(!linked.length){toast('계정이 연결된 기사가 없어요. 아래 \'기사 계정 연결\'에서 먼저 연결해 주세요');return;}
   var prev=doc.sent;doc.sent={at:new Date().toISOString()};
   toast('정산서 보내는 중...');
