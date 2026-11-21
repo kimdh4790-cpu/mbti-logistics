@@ -16390,17 +16390,22 @@ function _bsMissionRows(r,R){
 }
 // 한 기사 계정에 라이더 여러 명이 연결됐을 때 주인 정하기: 직접 연결(map) 1명 → 이름 같은 1명 → 없음
 function _bsOwners(list){
-  var c=_bsC(),by={},own={},dup=[];
+  var c=_bsC(),by={},own={},dup=[],row={};
   list.forEach(function(r){if(r.drv){var a=r.drv.au||r.drv.uid;(by[a]=by[a]||[]).push(r);}});
+  // 계정 이름과 같은 라이더가 다른 기사 기록으로 잡혀 있어도 그 계정의 주인 후보로 넣음 (2026-11-21)
+  (window._bsDrivers||[]).forEach(function(d){var a=d.au||d.uid;if(!by[a])return;var nm=_bmNormName(d.name);
+    list.forEach(function(r){if(by[a].indexOf(r)<0&&_bmNormName(r.name)===nm&&!c.map[r.key]){var x=Object.assign(Object.create(Object.getPrototypeOf(r)),r);x.drv=d;by[a].push(x);}});});
   Object.keys(by).forEach(function(a){
-    var rs=by[a];if(rs.length===1){own[a]=rs[0].key;return;}
+    var rs=by[a];if(rs.length===1){own[a]=rs[0].key;row[a]=rs[0];return;}
     var ex=rs.filter(function(r){return c.map[r.key]===r.drv.uid;});
     var nm=rs.filter(function(r){return _bmNormName(r.name)===_bmNormName(r.drv.name);});
     var pick=ex.length===1?ex[0]:nm.length===1?nm[0]:null;
-    own[a]=pick?pick.key:'';
+    own[a]=pick?pick.key:'';row[a]=pick;
     rs.forEach(function(r){if(r!==pick)dup.push(r);});
   });
-  return {own:own,dup:dup};
+  var got={},seen={};Object.keys(row).forEach(function(a){if(row[a])got[row[a].key]=1;});
+  dup=dup.filter(function(r){if(got[r.key]||seen[r.key])return false;seen[r.key]=1;return true;});
+  return {own:own,dup:dup,row:row};
 }
 // ── 기사 화면 반영: 연결된 기사마다 dw_driver_stats 갱신 (bmDays JSON 안에 settle 포함)
 window._bsPublish=function(verbose,send){
@@ -16409,11 +16414,12 @@ window._bsPublish=function(verbose,send){
   // 한 기사 계정에 라이더 여러 명이 연결되면 남의 정산서가 덮어써질 수 있어 보내지 않음 (2026-11-20)
   // 주인이 정해지면 그 라이더 것만 보내고, 못 정하면 그 계정의 배민 정산서를 비움(남의 정산서가 남지 않게)
   var O=_bsOwners(list),dup=O.dup,cleared={};
-  return Promise.all(list.map(function(r){
-    if(!r.drv){miss.push(r.name);return Promise.resolve();}
-    var au=r.drv.au||r.drv.uid;
-    if(O.own[au]!==r.key){
-      if(O.own[au]===''&&!cleared[au]){cleared[au]=1;return _dwStatsGet(au,did).then(function(res){var cur=res&&res.data;if(!cur||!cur.bmDays)return;return _dwStatsPost(Object.assign({},cur,{dealerId:did,driverUid:au,bmDays:'',bmReadAt:''}));}).catch(function(){});}
+  list.forEach(function(r){if(!r.drv)miss.push(r.name);});
+  // 계정마다 주인 라이더 1명만 보냄 (주인 없으면 비움)
+  return Promise.all(Object.keys(O.own).map(function(au){
+    var r=O.row[au];
+    if(!r){
+      if(!cleared[au]){cleared[au]=1;return _dwStatsGet(au,did).then(function(res){var cur=res&&res.data;if(!cur||!cur.bmDays)return;return _dwStatsPost(Object.assign({},cur,{dealerId:did,driverUid:au,bmDays:'',bmReadAt:''}));}).catch(function(){});}
       return Promise.resolve();
     }
     return _dwStatsGet(au,did).then(function(res){
@@ -16445,7 +16451,7 @@ function _bsWhen(iso){
 window._bsSend=function(){
   var w=window._bmWeekSel,doc=(window._bmDocs||{})[w];if(!doc){toast('먼저 배민 엑셀을 올려 주세요');return;}
   var list=_bsWeekCalc(),_O=_bsOwners(list);
-  var linked=list.filter(function(r){return r.drv&&_O.own[r.drv.au||r.drv.uid]===r.key;});
+  var linked=Object.keys(_O.row).filter(function(a){return _O.row[a];}).map(function(a){var r=_O.row[a];return {name:r.name,key:r.key,drv:{au:a,uid:a,name:r.drv.name}};});
   if(!linked.length){toast('계정이 연결된 기사가 없어요. 아래 \'기사 계정 연결\'에서 먼저 연결해 주세요');return;}
   var prev=doc.sent;doc.sent={at:new Date().toISOString()};
   toast('정산서 보내는 중...');
