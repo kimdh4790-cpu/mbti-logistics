@@ -15226,6 +15226,8 @@ function _dwRenderDriverDash(s){
   var el=document.getElementById('dw-driver-dash');
   if(!el||!s)return;
   if(!Array.isArray(s.entries))s.entries=[]; // dw_driver_stats 응답엔 entries가 없어 계산이 멈추던 문제 (2026-11-20)
+  // 본인 확인 (2026-11-21): 배민 정산서가 이 로그인 계정 것이 아니면 배민 관련 숫자를 모두 숨김
+  if(s.bmDays&&!_bsIsMine(s.bmDays)){s.bmDays='';s.peaks={am:0,pm:0,eve:0,ngt:0,etc:0};s.daily={done:0,prog:0,rej:0};s.slaDetail=null;s.sla={};s._notMine=true;}
   _dwRecalcSession(s);
   var cnt=s.totalCount||0;
   var preTax=Math.round(s.preTax||0);
@@ -15365,6 +15367,7 @@ function _dwRenderDriverDash(s){
           +'</div>'
         +'</div>'
       +'</div>';
+      if(s._notMine)html+=_dwNotMineHtml();
       if(s._empty){
         html+='<div style="text-align:center;padding:28px 16px;color:var(--text3)">'
           +'<div style="font-size:40px;margin-bottom:10px">🔔</div>'
@@ -15385,8 +15388,8 @@ function _dwRenderDriverDash(s){
         +'</div>'
       +'</div>';
 
-    } else if(tab==='settle'&&_dwBmSettleTab(s)){
-      html+=_dwBmSettleTab(s);
+    } else if(tab==='settle'&&(s._notMine||_dwBmSettleTab(s))){
+      html+=s._notMine?_dwNotMineHtml():_dwBmSettleTab(s);
     } else if(tab==='settle'){
       var _ded=_dwDedRate();
       var tax=Math.round(preTax*(_ded!=null?_ded:0.033));
@@ -15442,6 +15445,15 @@ function _dwRenderDriverDash(s){
   el.innerHTML=buildUI(window._dwDashTab);
 }
 
+function _dwNotMineHtml(){return '<div style="background:var(--bg2);border-radius:16px;padding:16px;margin:14px 0;font-size:13px;line-height:1.6;color:var(--text3)">이번 주 정산서를 다시 확인하고 있어요. 대리점이 정산서를 다시 보내면 여기에 떠요.</div>';}
+// 이 정산서가 로그인한 기사 본인 것인지: 새 정산서는 계정(forAu)으로, 예전 정산서는 이름으로 확인
+function _bsIsMine(raw){
+  if(!_CU||_CU.role!=='driver')return true;
+  var b=null;try{b=JSON.parse(raw);}catch(e){return false;}
+  var st=b&&b.settle;if(!st)return true;
+  if(st.forAu)return st.forAu===_CU.uid;
+  return !!_CU.name&&_bmNormName(st.name)===_bmNormName(_CU.name);
+}
 // 기사 정산내역 탭: 배민 정산서가 있으면 그걸 보여줌 (발송 전엔 안내만)
 function _dwBmSettleTab(s){
   var b=null;try{b=s&&s.bmDays?JSON.parse(s.bmDays):null;}catch(e){b=null;}
@@ -16409,7 +16421,7 @@ window._bsPublish=function(verbose,send){
       var sum=_bmRiderSummary(doc,r.key,null,cur.peakTargets);
       var bm=JSON.parse(_bmDaysJson(doc,sum));
       bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:r.extra,gap:r.gap,over:r.over,low:r.low,high:r.high,hasFb:r.hasFb,
-        tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,days:r.days,tiers:_bsC().tiers,updatedAt:new Date().toISOString(),sentAt:(doc.sent&&doc.sent.at)||'',mission:r.mission||0,missions:r.missions||[]};
+        tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,days:r.days,tiers:_bsC().tiers,updatedAt:new Date().toISOString(),sentAt:(doc.sent&&doc.sent.at)||'',mission:r.mission||0,missions:r.missions||[],forAu:au,riderId:r.userId||''};
       var body={dealerId:did,driverUid:au,driverName:r.drv.name,period:_dwPeriodStr(),
         peaks:{am:sum.day.am,pm:sum.day.pm,eve:sum.day.eve,ngt:sum.day.ngt,etc:sum.day.etc},peakTargets:cur.peakTargets||{am:0,pm:0,eve:0,ngt:0},
         daily:{done:sum.day.done,prog:0,rej:sum.day.cancel},
