@@ -7063,6 +7063,72 @@ service cloud.firestore {
       }
     }
 
+    // ── 배달 기사 교통안전 교육 이수증 (2026-11-23) ──
+    //   생활물류서비스산업발전법 개정(2026-12-03 시행): 법정 교통안전 교육 이수 기사만 배달 가능.
+    //   이수증 사진은 driver_safety_edu/{drivers 문서 id}에, 상태·이수일은 drivers 문서에 기록.
+    //   GET  (기사): 내 이수 상태 + 사진
+    //   POST (기사): 내 이수증 올리기 → 상태 'submitted' (대리점 확인 대기)
+    //   POST (대리점, driverDocId+dealerId): 기사 대신 올리기 → 상태 'ok'
+    if (path === '/api/driver-safety-edu' && (method === 'GET' || method === 'POST')) {
+      const _seH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      const _seBase = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+      const _seJ = (o, st) => new Response(JSON.stringify(o), {status: st || 200, headers: _seH});
+      try {
+        const _seU = await verifyFirebaseToken(request, env);
+        if (!_seU) return _seJ({ok:false,error:'Unauthorized'}, 401);
+        const _seUid = _seU.uid || _seU.localId || '';
+        const _seTok = await getAccessToken(env);
+        const _seAH = {'Authorization':`Bearer ${_seTok}`,'Content-Type':'application/json'};
+        const _seMine = async () => {
+          const r = await fetch(`${_seBase}:runQuery`,{method:'POST',headers:_seAH,body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_seUid}}},limit:5}})});
+          const rows = await r.json().catch(()=>[]);
+          return (Array.isArray(rows)?rows:[]).filter(x=>x.document).map(x=>x.document);
+        };
+        const _seS = f => (f && f.stringValue) || '';
+        if (method === 'GET') {
+          const docs = await _seMine();
+          if (!docs.length) return _seJ({ok:false,error:'driver_not_found'});
+          const d = docs[0], f = d.fields || {}, id = d.name.split('/').pop();
+          let img = '';
+          const er = await fetch(`${_seBase}/driver_safety_edu/${id}`,{headers:_seAH});
+          if (er.ok) img = _seS(((await er.json()).fields||{}).img);
+          return _seJ({ok:true,status:_seS(f.safetyEduStatus),date:_seS(f.safetyEduDate),at:_seS(f.safetyEduAt),note:_seS(f.safetyEduNote),img});
+        }
+        const body = await request.json().catch(()=>({}));
+        const img = String(body.img||'');
+        const date = String(body.date||'');
+        if (img.length > 900000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(img)) return _seJ({ok:false,error:'사진 파일이 너무 크거나 형식이 맞지 않아요'}, 400);
+        if (!/^20\d\d-\d\d-\d\d$/.test(date)) return _seJ({ok:false,error:'이수일을 입력해 주세요'}, 400);
+        let targets = [], byDealer = false;
+        if (body.driverDocId) {
+          const did = String(body.dealerId||''), docId = String(body.driverDocId||'');
+          if (!did || /[\/?#]/.test(did + docId)) return _seJ({ok:false,error:'bad id'}, 400);
+          if (!(await requireDealerOf(request, env, did))) return _seJ({ok:false,error:'Unauthorized'}, 401);
+          const dr = await fetch(`${_seBase}/drivers/${docId}`,{headers:_seAH});
+          if (!dr.ok) return _seJ({ok:false,error:'driver_not_found'}, 404);
+          const dd = await dr.json();
+          if (_seS((dd.fields||{}).dealerId) !== did) return _seJ({ok:false,error:'Unauthorized'}, 401);
+          targets = [dd]; byDealer = true;
+        } else {
+          targets = await _seMine();
+          if (!targets.length) return _seJ({ok:false,error:'driver_not_found'}, 404);
+        }
+        const now = new Date().toISOString(), status = byDealer ? 'ok' : 'submitted';
+        for (const t of targets) {
+          const f = t.fields || {}, id = t.name.split('/').pop();
+          const w = await fetch(`${_seBase}/driver_safety_edu/${id}`,{method:'PATCH',headers:_seAH,body:JSON.stringify({fields:{
+            dealerId:{stringValue:_seS(f.dealerId)},uid:{stringValue:_seS(f.uid)},driverDocId:{stringValue:id},name:{stringValue:_seS(f.name)},
+            img:{stringValue:img},date:{stringValue:date},uploadedAt:{stringValue:now},by:{stringValue:byDealer?'dealer':'driver'}}})});
+          if (!w.ok) return _seJ({ok:false,error:'사진 저장 실패 ('+w.status+')'}, 500);
+          const flds = {safetyEduStatus:{stringValue:status},safetyEduDate:{stringValue:date},safetyEduAt:{stringValue:now},safetyEduNote:{stringValue:''}};
+          if (byDealer) flds.safetyEduCheckedAt = {stringValue:now};
+          const mask = Object.keys(flds).map(k=>'updateMask.fieldPaths='+k).join('&');
+          await fetch(`${_seBase}/drivers/${id}?${mask}`,{method:'PATCH',headers:_seAH,body:JSON.stringify({fields:flds})});
+        }
+        return _seJ({ok:true,status,updated:targets.length});
+      } catch(e) { return _seJ({ok:false,error:e.message}, 500); }
+    }
+
     // ── 배달대행 기사 현황 (dw_driver_stats) — AI정산과 완전 분리 ──
     // ── 배민 정산서 앱 발송 (2026-11-20): 기사 열람 기록 · 기사 푸시 토큰 등록 · 대리점→기사 푸시 ──
     if ((path === '/api/bm-statement-read' || path === '/api/driver-fcm-token' || path === '/api/driver-terms' || path === '/api/bm-notify') && method === 'POST') {
