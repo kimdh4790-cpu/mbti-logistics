@@ -41,11 +41,14 @@ test('주차별로 따로 누진 적용 후 합산, 마진·공제 계산', () =
   assert.strictEqual(r.tax, Math.round((w1+w2)*0.033));
   assert.strictEqual(r.emp, Math.round((w1+w2)*0.008));
   assert.strictEqual(r.ind, Math.round((w1+w2)*0.0088));
-  assert.strictEqual(r.bk, 370*200); // 세무 기장비 건당 200원 (사용자 2026-11-23)
+  assert.strictEqual(api._DW_EATS_DEFAULT.bkVal, 0); // 기본은 기장비 안 뗌
+  assert.strictEqual(r.bk, 0);
   assert.strictEqual(r.net, r.gross - r.tax - r.emp - r.ind - r.bk);
 });
 test('세무 기장비: % 방식과 0원', () => {
   const d=[{date:'2026-11-16',orders:100,amount:0}];
+  const rw = api._dwEatsCalcDriver(d, 0, 100, Object.assign({}, cfg, {bkVal:200}));
+  assert.strictEqual(rw.bk, 100*200);
   const r = api._dwEatsCalcDriver(d, 0, 100, Object.assign({}, cfg, {bkType:'pct',bkVal:2}));
   assert.strictEqual(r.bk, Math.round(r.gross*0.02));
   const r0 = api._dwEatsCalcDriver(d, 0, 100, Object.assign({}, cfg, {bkVal:0}));

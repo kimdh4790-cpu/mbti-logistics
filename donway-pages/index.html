@@ -13963,7 +13963,7 @@ var _DW_EATS_DEFAULT={
   tiers:[{min:1,rate:2400},{min:200,rate:3600},{min:250,rate:4000},{min:300,rate:4300}],
   taxType:'33', taxRate:0.033, dedRate:0.058, // 원천징수 3.3% · 고용 0.8% · 산재 0.88% 세 항목 (사용자 2026-11-23, 통합 5.8% 폐지)
   empRate:0.008, indRate:0.0088,
-  bkType:'won', bkVal:200, // 세무 기장비: 건당 200원 (또는 세전의 %). 수수료 명목 아님 (사용자 2026-11-23)
+  bkType:'won', bkVal:0, // 세무 기장비: 기본 0원(안 뗌), 설정에서 건당 금액(예: 200원) 또는 세전 %. 수수료 명목 아님 (사용자 2026-11-23)
   vatIncl:true, // 업로드 금액(일자별 '총 정산금액')이 부가세 포함 → 마진은 ÷1.1 공급가 기준 (대리점=사업자, 기사=미사업자 3.3%)
   weekStart:3 // 주 시작 요일 0=일 … 3=수 … 6=토 (쿠팡이츠 엑셀 주차: 수~화)
 };
@@ -15988,9 +15988,9 @@ function _bmSetupBasis(driverName){
 //  · 기사 화면: dw_driver_stats.bmDays JSON 안의 settle 로 전달 (Worker 변경 없음)
 //  ※ AI정산(택배) 코드와 무관. 기존 배달대행 정산 함수는 수정하지 않음.
 // ══════════════════════════════════════════════════════════════
-var _BS_DEF={tiers:[{min:1,rate:3200},{min:200,rate:4000},{min:300,rate:4500},{min:400,rate:5000}],acc:80,wh:3.3,emp:0.8,ind:0.88,bkT:'won',bkV:200};
+var _BS_DEF={tiers:[{min:1,rate:3200},{min:200,rate:4000},{min:300,rate:4500},{min:400,rate:5000}],acc:80,wh:3.3,emp:0.8,ind:0.88,bkT:'won',bkV:0};
 // 공제: 원천징수 3.3% · 고용보험 0.8% · 산재보험 0.88% 세 항목 (사용자 2026-11-23, 예전 통합 5.8% 대체)
-// 세무 기장비: 기본 건당 200원 (금액 또는 % 설정). 수수료 명목 아님 (사용자 2026-11-23)
+// 세무 기장비: 기본 0원(안 뗌), 설정에서 건당 금액(예: 200원) 또는 %로. 수수료 명목 아님 (사용자 2026-11-23)
 function _bsW(n){return Math.round(n||0).toLocaleString('ko-KR');}
 function _bsPct(v){return v==null?'-':(Math.round(v*1000)/10).toFixed(1)+'%';}
 function _bsC(){

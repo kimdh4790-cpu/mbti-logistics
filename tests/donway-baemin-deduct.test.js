@@ -12,10 +12,10 @@ const api = new Function('window', code + '\nreturn {_BS_DEF,_bsC,_bsCalc,_bsDed
 
 // 326건 3200원 미만 처리비 예시 (보장 4,500원 구간)
 const rd = { name: '테스트', userId: 't1', days: { '2026-11-18': { done: 326, cancel: 2, fee: 1202170, fb: {} } } };
-const c = api._bsC();
+const c = Object.assign(api._bsC(), { bkV: 200 }); // 기장비 건당 200원으로 켠 설정
 
-test('기본 공제율: 원천징수 3.3 · 고용 0.8 · 산재 0.88 · 세무 기장비 건당 200원', () => {
-  assert.deepStrictEqual([c.wh, c.emp, c.ind, c.bkT, c.bkV], [3.3, 0.8, 0.88, 'won', 200]);
+test('기본 공제율: 원천징수 3.3 · 고용 0.8 · 산재 0.88 · 세무 기장비 0원(설정에서 켬)', () => {
+  assert.deepStrictEqual([api._BS_DEF.wh, api._BS_DEF.emp, api._BS_DEF.ind, api._BS_DEF.bkT, api._BS_DEF.bkV], [3.3, 0.8, 0.88, 'won', 0]);
 });
 test('예전 통합 5.8% 저장값은 무시하고 세 항목으로', () => {
   const api2 = new Function('window', code + '\nreturn {_bsC};')({ _bsCfg: { ded: 5.8 } });
