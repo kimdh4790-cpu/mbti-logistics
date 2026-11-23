@@ -1,5 +1,540 @@
 {
-  "date": "2026-11-16",
-  "total": 0,
-  "byCategory": {}
+  "date": "2026-11-23",
+  "total": 53,
+  "byCategory": {
+    "AI기능업그레이드": [
+      {
+        "category": "AI기능업그레이드",
+        "channel": "연시",
+        "instagram": "yeonsidesign",
+        "title": "🆅🅻🅾🅶 AI 크리에이터의 리얼한 72시간ㅣASUS Expertbook Ultra 언박싱ㅣ왓츠인마이백ㅣ노트북 추천ㅣAI 디자인ㅣ바이브코딩",
+        "url": "https://youtu.be/nHzX9GX1LdA",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-06-24T12:22:41+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "게으른빌더",
+        "instagram": "lazy_owen",
+        "title": "이제 클로드 스킬을 찾을 필요가 없어요!  #claude #ai",
+        "url": "https://youtu.be/dm45wMNjOEQ",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T09:00:31+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "게으른빌더",
+        "instagram": "lazy_owen",
+        "title": "이제 AI 비용에 수십만원씩 쓸 필요가 없어요!",
+        "url": "https://youtu.be/wY0rMOddUcY",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-20T10:15:06+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "제이로드",
+        "instagram": "jayroad",
+        "title": "클로드 스킬로 지금 당장 월 200만 원 더 버는 방법 | 전문직 마케팅 자동화",
+        "url": "https://youtu.be/m1FmIOVciho",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-07-30T13:43:33+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "제이로드",
+        "instagram": "jayroad",
+        "title": "연봉 3억 만들어준 클로드 활용법",
+        "url": "https://youtu.be/UimonoI1Ock",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-07-24T02:18:22+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "우주보스",
+        "instagram": "woojoboss_",
+        "title": "엔트로픽 해커톤 우승자의클로드 코드 세팅 통째로 복제해 가세요 #클로드코드 #클로드스킬 #AI활용",
+        "url": "https://youtu.be/pVzyRMMuE8M",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-19T13:38:38+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "우주보스",
+        "instagram": "woojoboss_",
+        "title": "한옥 거리 반응형 모션그래픽 만드는 클로드 스킬 받아가세요 #클로드스킬 #모션그래픽 #반응형",
+        "url": "https://youtu.be/0lsrzKS_yuA",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-16T14:01:06+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "신영선",
+        "instagram": "ai.yeongson",
+        "title": "챗GPT 광고 한국 출시와 운영 꿀팁 3가지 #ai #chatgpt #openai",
+        "url": "https://youtu.be/8KniQGknA1A",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T09:08:18+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "신영선",
+        "instagram": "ai.yeongson",
+        "title": "“왕초보는 그대로 따라하세요” 클로드로 영상 편집 자동화 하는 방법",
+        "url": "https://youtu.be/NOe0m1TTA5w",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-21T10:10:35+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "신영선",
+        "instagram": "ai.yeongson",
+        "title": "클로드 영상 편집 오픈소스 TOP 5 #ai #claude #영상편집",
+        "url": "https://youtu.be/8e4kIdA58NU",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-19T09:11:48+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "클릭 5번이면 끝나는, AI 판타지 사극 만드는 법 (+자동화 스킬부터 비용까지 모두 공개)",
+        "url": "https://youtu.be/ULooID3MmrE",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T08:00:12+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "AI 툴에 500만원 넘게 쓰고 느낀 점. 처음부터 유료 결제하지 마세요",
+        "url": "https://youtu.be/IDn1SZnKbJo",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-21T08:00:20+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "조팀장의AI공략집",
+        "instagram": "조팀장의AI공략집",
+        "title": "떡상하는 AI 시니어 쇼츠 만드는 법, 이 영상 하나면 다 끝납니다 | 1시간 몰아보기  (+자동화 스킬 무료 제공)",
+        "url": "https://youtu.be/lhtsaKEhzu4",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-20T07:59:21+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "홍아린AI",
+        "instagram": "홍아린AI",
+        "title": "왕초보도 가능한 AI 숏드라마 제작 방법 총정리! 대본, 캐릭터, 영상까지 AI 막장 드라마 완성",
+        "url": "https://youtu.be/F4-6Au2SfYU",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-21T11:36:12+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "홍아린AI",
+        "instagram": "홍아린AI",
+        "title": "헤르메스 AI 에이전트 완벽 가이드, 설치부터 AI 비서 활용까지 그대로 따라 하세요 | 그록",
+        "url": "https://youtu.be/Winyvs_b5e4",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-20T11:37:04+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "홍아린AI",
+        "instagram": "홍아린AI",
+        "title": "비싼 유료 AI 쓰지 마세요! 앱스토어 1위 무료 AI 비서 피클 활용법 (예약, 주문, 전화, 구독 정리)",
+        "url": "https://youtu.be/QZYe_NdRMWs",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-19T10:14:55+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "해피AI",
+        "instagram": "HappyAI_0612",
+        "title": "퇴근시간이 달라집니다! 클로드 업무자동화, 이렇게 쓰는 겁니다 (무료프롬프트 제공)",
+        "url": "https://youtu.be/BR5ky8KFWko",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-21T08:43:53+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "해피AI",
+        "instagram": "HappyAI_0612",
+        "title": "퇴근시간 1시간 당겨주는 클로드 2.0 신기능 7가지! (무료 프롬프트 제공)",
+        "url": "https://youtu.be/JdvlqOWEcXs",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-11T10:35:40+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "해피AI",
+        "instagram": "HappyAI_0612",
+        "title": "클로드에 엑셀 10개 맡겼더니… 보고서까지 나왔습니다",
+        "url": "https://youtu.be/-l9H2FugymA",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-31T08:39:42+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "혼잡스",
+        "instagram": "honjobs",
+        "title": "AI 대기업 손절한 사람 근황",
+        "url": "https://youtu.be/vBTQwXcqjc8",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-23T00:15:03+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "혼잡스",
+        "instagram": "honjobs",
+        "title": "AI 싫다던 거장들 근황",
+        "url": "https://youtu.be/7aAfknzbvPs",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T12:15:19+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "혼잡스",
+        "instagram": "honjobs",
+        "title": "low부터 max까지, 클로드 노력 단계가 오를 때마다 바뀌는 것들",
+        "url": "https://youtu.be/SZXxfViXs7c",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T11:15:08+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "AI부업플랜",
+        "instagram": "AI부업플랜",
+        "title": "AI 수능, 리트냥이? 중요한 건 돈 버는 겁니다",
+        "url": "https://youtu.be/EIIOjR6zWUo",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-19T13:45:06+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "AI부업플랜",
+        "instagram": "AI부업플랜",
+        "title": "[선착순 모집] 내 손으로 직접 완성하는 AI 유튜브 자동화 오프라인 원데이 클래스",
+        "url": "https://youtu.be/pOpYvvdEomc",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-12T22:00:27+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "AI부업플랜",
+        "instagram": "AI부업플랜",
+        "title": "유튜브 왕초보 동생이 한 달 만에 자동화로 100만 조회수 찍은 방법",
+        "url": "https://youtu.be/q_EFcT8up6Q",
+        "reason": "키워드 기반: 자동화 관련",
+        "published": "2026-11-05T14:15:19+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "AI에게 컴퓨터 제어권을 넘겼더니 벌어진 일 (설치부터 실습까지)",
+        "url": "https://youtu.be/sjtIYFgWSFU",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T12:10:46+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "요즘 난리라는 AI 숏드라마, 대본 한 편으로 진짜 한 화 만들어 봤습니다",
+        "url": "https://youtu.be/o07EZuY-tWc",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-21T12:19:22+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "방구석컴퍼니",
+        "instagram": "방구석컴퍼니",
+        "title": "클로드·챗GPT API 크레딧 사용법｜구독 혜택 받는 법부터 실제 사용까지",
+        "url": "https://youtu.be/c1bvpnOqbRA",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-20T12:45:12+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "코딩못하는중개사",
+        "instagram": "코딩못하는중개사",
+        "title": "공인중개사가 AI를 써도 매출이 안 오르는 진짜 이유!",
+        "url": "https://youtu.be/yCBSGZs0g8k",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-23T02:00:20+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "코딩못하는중개사",
+        "instagram": "코딩못하는중개사",
+        "title": "공인중개사 AI 어떻게 쓰고 계세요? 오픈AI 창업자가 밝힌 AI 계급도",
+        "url": "https://youtu.be/WN33_azouZE",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-20T10:00:13+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "마일드코드",
+        "instagram": "마일드코드",
+        "title": "클로드 코드 핵심 개발자의 AI 시대 초격차 사고법",
+        "url": "https://youtu.be/dhwDv7qUQ90",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-12T11:07:57+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "마일드코드",
+        "instagram": "마일드코드",
+        "title": "2명이서 연 55억 버는 상위 0.1%의 클로드 코드 세팅",
+        "url": "https://youtu.be/BRDm2lLcgdk",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-07T10:58:42+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "maker39",
+        "instagram": "maker39",
+        "title": "무료 ChatGPT로 AI 쇼츠 제작 프로그램 만드는 방법",
+        "url": "https://youtu.be/kAnwDwl_6l8",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-20T08:30:02+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "maker39",
+        "instagram": "maker39",
+        "title": "[무료강의] 코딩 몰라도 됩니다! 무료 ChatGPT로 AI 쇼츠 제작 프로그램 만들기",
+        "url": "https://youtu.be/a4-qk1DkduQ",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-18T04:55:06+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "maker39",
+        "instagram": "maker39",
+        "title": "이제 AI가 썸네일 자동으로 골라줍니다!",
+        "url": "https://youtu.be/KVwpV5v0axw",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-17T11:36:39+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "AION",
+        "instagram": "Channel_AION",
+        "title": "&quot;이게 AI라고?&quot; 99%가 모르는 AI 영상, 영화처럼 만드는 11가지 (feat.씨댄스2.5 4K)",
+        "url": "https://youtu.be/kQl6mzKgIE0",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-18T14:04:35+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "AION",
+        "instagram": "Channel_AION",
+        "title": "AI 숏 드라마 만드는법 전부 공개합니다. 제작비용, 프롬프트까지! | 힉스필드",
+        "url": "https://youtu.be/r3G_irdPLmk",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-12T05:41:55+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "AION",
+        "instagram": "Channel_AION",
+        "title": "모르면 손해!! 혁명이다!! 요즘 안 쓰는 사람 없다는 AI 영상 5배 더 저렴하게 만드는 법| 클링4.0 VS 씨댄스2.5",
+        "url": "https://youtu.be/39hrWyqdYvs",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-10-30T12:47:26+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "hs_academy",
+        "instagram": "hs_academy",
+        "title": "&quot;앞으로 10년 초거대 기업은 9~10개&quot;… 차마스가 갈라 본 AI '가진 자'와 '못 가진 자'",
+        "url": "https://youtu.be/SWOUf-JsKb0",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T02:03:04+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "stevesurfing",
+        "instagram": "stevesurfing",
+        "title": "이게 됩니다.. 요즘 매출 터지는 브랜드가 몰래 쓰는 AI 숏폼 드라마 제작법",
+        "url": "https://youtu.be/y-61wLvaMy0",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-22T11:44:36+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "stevesurfing",
+        "instagram": "stevesurfing",
+        "title": "AI 자동화, 이거 하나도 안 되면 하지 마세요",
+        "url": "https://youtu.be/wD_AnjncDgw",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-19T15:04:33+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "with2511",
+        "instagram": "with2511",
+        "title": "MCP와 API의 차이 | MCP vs API 헤깔린다면 꼭 보세요",
+        "url": "https://youtu.be/PrKBMj2GjAQ",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-18T23:15:03+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "with2511",
+        "instagram": "with2511",
+        "title": "AI 안경 부정행위 막는 가장 현실적인 방법, 실제 해외 사례",
+        "url": "https://youtu.be/-76WwXXssNE",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-17T09:24:08+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "호랑웨이브",
+        "instagram": "horangwave",
+        "title": "카이스트 AI 연구원의 퇴근 후 감바스 짜파게티…그리고 소고기 with #Chatgpt #dots",
+        "url": "https://youtu.be/651mOD2p7KE",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-17T09:00:15+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "AI기능업그레이드",
+        "channel": "호랑웨이브",
+        "instagram": "horangwave",
+        "title": "이렇게 쓰라고 만든 AI 아닙니다",
+        "url": "https://youtu.be/rViGPUUkZLQ",
+        "reason": "키워드 기반: AI 관련",
+        "published": "2026-11-16T09:00:31+00:00",
+        "source": "YouTube"
+      }
+    ],
+    "수익창출": [
+      {
+        "category": "수익창출",
+        "channel": "우주보스",
+        "instagram": "woojoboss_",
+        "title": "유튜브 제휴 파트너십 부스트로 수익화 길이 하나 더 열립니다 #유튜브수익화 #제휴파트너십부스트",
+        "url": "https://youtu.be/mR3Cz12XB2w",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-14T14:35:54+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "마일드코드",
+        "instagram": "마일드코드",
+        "title": "바이브코딩으로 대학생이 2주 만에 만든 앱, 8개월만에 매출 10억",
+        "url": "https://youtu.be/FMo_z-vb7fs",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-19T12:55:33+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "MONEY TOUCH",
+        "instagram": "MONEY_TOUCH",
+        "title": "전국에서 800명만 하는 부업으로 한 달 4억 벌며 돈을 쓸어 담는 40대 아저씨",
+        "url": "https://youtu.be/VqJOZaKItxo",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-23T01:30:28+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "MONEY TOUCH",
+        "instagram": "MONEY_TOUCH",
+        "title": "&quot;전세계 가족이 이 부업 할 겁니다&quot; 은퇴 후, 69세 아빠도 시작한 꿀 빠는 부업!! 두 달에 5천 씩 버는 가족 부업 추천",
+        "url": "https://youtu.be/xCUBRmZ-uhs",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-21T02:32:26+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "MONEY TOUCH",
+        "instagram": "MONEY_TOUCH",
+        "title": "&quot;알려줘도 아무도 안 해요&quot; 하루 300만 원 벌며 인생 역전 한 98년생 대표의 미친 부업",
+        "url": "https://youtu.be/cSsOB1mUABk",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-17T01:30:06+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "배움에끝은없다",
+        "instagram": "배움에끝은없다",
+        "title": "&quot;어차피 알려줘도 아무도 안 합니다&quot; 200억 매출 내서 인생 역전한 40대 백수 아빠의 미친 꿀 부업",
+        "url": "https://youtu.be/h_qDwcuJgtM",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-20T01:30:25+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "배움에끝은없다",
+        "instagram": "배움에끝은없다",
+        "title": "&quot;전부 공개합니다&quot; 이곳은 원가 10000원 보다 95% 싸게파는 미친 35억 비밀 창고 부업 추천",
+        "url": "https://youtu.be/ZBgaBHE4B7I",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-17T01:33:04+00:00",
+        "source": "YouTube"
+      },
+      {
+        "category": "수익창출",
+        "channel": "배움에끝은없다",
+        "instagram": "배움에끝은없다",
+        "title": "&quot;1년 만에 5억 벌었어요&quot; 쇼핑몰 링크만 복사해서 월 8천 버는 역대급 꿀 부업을 찾은 20대",
+        "url": "https://youtu.be/bRbNQ3FaIDA",
+        "reason": "키워드 기반: 수익/부업 관련",
+        "published": "2026-11-15T01:30:26+00:00",
+        "source": "YouTube"
+      }
+    ]
+  }
 }
