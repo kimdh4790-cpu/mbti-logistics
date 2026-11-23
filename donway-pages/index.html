@@ -368,6 +368,10 @@ _checkSlugDuplicate(this.value);
             <select id="j-bank" aria-label="은행" style="width:100%;min-height:44px;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;margin-bottom:6px"><option value="">은행 선택</option><option value="KB국민">KB국민</option><option value="신한">신한</option><option value="우리">우리</option><option value="하나">하나</option><option value="NH농협">NH농협</option><option value="IBK기업">IBK기업</option><option value="카카오뱅크">카카오뱅크</option><option value="토스뱅크">토스뱅크</option><option value="케이뱅크">케이뱅크</option><option value="SC제일">SC제일</option><option value="iM뱅크(대구)">iM뱅크(대구)</option><option value="부산">부산</option><option value="경남">경남</option><option value="광주">광주</option><option value="전북">전북</option><option value="제주">제주</option><option value="우체국">우체국</option><option value="새마을금고">새마을금고</option><option value="신협">신협</option><option value="수협">수협</option><option value="KDB산업">KDB산업</option><option value="씨티">씨티</option><option value="기타">기타</option></select>
             <input id="j-bank-acc" type="text" inputmode="numeric" autocomplete="off" maxlength="30" placeholder="계좌번호 (- 없이 숫자만)" style="margin-bottom:6px">
             <input id="j-bank-holder" type="text" autocomplete="off" maxlength="30" placeholder="예금주 (비우면 가입자 이름)"></div>
+          <div class="fg"><label>교통안전 교육 이수증 <span style="color:var(--text3);font-size:10px;font-weight:400">(선택 · 아직 없으면 가입 후 '내 정산서'에서 올려도 돼요)</span></label>
+            <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:6px">2026년 12월 3일부터 법정 교통안전 교육을 이수한 기사만 배달할 수 있어요.</div>
+            <input id="j-se-file" type="file" accept="image/*" aria-label="이수증 사진" style="width:100%;min-height:44px;margin-bottom:6px">
+            <label style="display:grid;gap:4px;font-size:12px;color:var(--text2)">이수일<input id="j-se-date" type="date" style="min-height:44px"></label></div>
           <div style="font-size:11px;color:var(--text3);line-height:1.5">같은 이름의 기사와 구분하고 원천세 신고를 하려면 주민번호가 꼭 필요해요. 주민번호는 관리자와 본인만 볼 수 있고, 화면에는 뒷자리를 가려서 보여 줘요.</div>
         </div>
         <div class="fg"><label>주민번호 <span id="j-ssn-req" style="color:var(--text3);font-size:10px;font-weight:400">(선택)</span></label><input id="j-ssn" type="text" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000000-0000000" style="font-family:monospace"></div>
@@ -7262,6 +7266,11 @@ function doQuickJoin(){
       .then(function(data){
         if(btn){btn.disabled=false;btn.textContent='가입하기';}
         if(data.ok){
+          // 교통안전 교육 이수증 (선택) — 가입 직후 로그인된 상태에서 올림. 실패해도 가입은 완료
+          var seF=window._joinIsDlv&&document.getElementById('j-se-file'),seFile=seF&&seF.files&&seF.files[0];
+          if(seFile){var seD=((document.getElementById('j-se-date')||{}).value||'')||new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+            _seUpload(seFile,seD).then(function(){toast('교통안전 교육 이수증도 올렸어요. 대리점이 확인하면 완료돼요');})
+              .catch(function(){toast('이수증은 올리지 못했어요. 로그인 후 내 정산서에서 다시 올려 주세요');});}
           toast('✅ 가입 완료! 전화번호로 로그인하세요');
           switchTab('login');
           if(typeof _switchLoginTab==='function')_switchLoginTab('phone');
@@ -15185,6 +15194,77 @@ var _U_AMT_P    = ['실지급액','정산금액','차감지급액','실수령','
 // ══════════════════════════════════════════════════════
 // ★ 범용 다중 파일 합산 엔진
 // ══════════════════════════════════════════════════════
+// ── 교통안전 교육 이수증 (2026-11-23) ──
+// 생활물류서비스산업발전법 개정(2026-12-03 시행): 법정 교통안전 교육 이수 기사만 배달 가능.
+// 사진은 /api/driver-safety-edu로 올림 → driver_safety_edu/{drivers 문서 id}, 상태는 drivers.safetyEdu* (submitted·ok·rejected)
+var _SE_LAW_DATE='2026-12-03';
+function _seToday(){return new Date(Date.now()+9*3600e3).toISOString().slice(0,10);}
+// 사진을 줄여 JPEG data URL로 (서버 한도 900KB 안쪽)
+function _seCompress(file){
+  return new Promise(function(res,rej){
+    if(!file||!/^image\//.test(file.type||'')){rej(new Error('사진 파일을 골라 주세요'));return;}
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){
+      URL.revokeObjectURL(url);
+      var max=1600,q=0.78,out='';
+      for(var i=0;i<6;i++){
+        var sc=Math.min(1,max/Math.max(im.naturalWidth||im.width,im.naturalHeight||im.height));
+        var cv=document.createElement('canvas');cv.width=Math.max(1,Math.round((im.naturalWidth||im.width)*sc));cv.height=Math.max(1,Math.round((im.naturalHeight||im.height)*sc));
+        var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(im,0,0,cv.width,cv.height);
+        out=cv.toDataURL('image/jpeg',q);if(out.length<=850000)break;max=Math.round(max*0.8);q=Math.max(0.5,q-0.08);
+      }
+      if(out.length>850000){rej(new Error('사진이 너무 커요. 다른 사진으로 올려 주세요'));return;}
+      res(out);
+    };
+    im.onerror=function(){URL.revokeObjectURL(url);rej(new Error('사진을 읽지 못했어요'));};
+    im.src=url;
+  });
+}
+// opt: {driverDocId, dealerId} 이면 대리점이 기사 대신 올림
+function _seUpload(file,date,opt){
+  if(!_auth||!_auth.currentUser)return Promise.reject(new Error('다시 로그인해 주세요'));
+  var user=_auth.currentUser;
+  return _seCompress(file).then(function(img){
+    return user.getIdToken().then(function(tk){
+      var body={img:img,date:date};if(opt&&opt.driverDocId){body.driverDocId=opt.driverDocId;body.dealerId=opt.dealerId;}
+      return fetch('/api/driver-safety-edu',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tk},body:JSON.stringify(body)});
+    });
+  }).then(function(r){return r.json();}).then(function(d){if(!d||!d.ok)throw new Error((d&&d.error)||'올리기 실패');return d;});
+}
+function _seDriverLoad(){
+  var box=document.getElementById('dw-safety');if(!box||!_auth||!_auth.currentUser)return;
+  _auth.currentUser.getIdToken().then(function(tk){return fetch('/api/driver-safety-edu',{headers:{'Authorization':'Bearer '+tk}});})
+    .then(function(r){return r.json();}).then(function(d){if(d&&d.ok)_seDriverRender(d);})
+    .catch(function(){});
+}
+function _seDriverRender(d){
+  var box=document.getElementById('dw-safety');if(!box)return;
+  var st=d.status||'',open=window._seFormOpen||st===''||st==='rejected';
+  var tone={ok:['rgba(22,163,74,.10)','#15803d','교통안전 교육 이수 확인됨'],submitted:['rgba(234,179,8,.14)','#92400e','이수증 확인 대기 중'],rejected:['rgba(220,38,38,.10)','#dc2626','이수증을 다시 올려 주세요'],'':['rgba(220,38,38,.10)','#dc2626','교통안전 교육 이수증이 없어요']}[st]||['var(--bg3)','var(--text2)','교통안전 교육'];
+  var msg=st==='ok'?'이수일 '+esc(d.date||'-')+' · 대리점이 확인했어요.'
+    :st==='submitted'?'이수일 '+esc(d.date||'-')+' · 올린 이수증을 대리점이 확인하면 완료돼요.'
+    :st==='rejected'?'대리점 요청: '+esc(d.note||'이수증을 다시 확인해 주세요')
+    :(_seToday()<_SE_LAW_DATE?'2026년 12월 3일부터':'2026년 12월 3일부터는')+' 법정 교통안전 교육을 이수한 기사만 배달할 수 있어요. 교육을 받고 이수증 사진을 올려 주세요.';
+  box.innerHTML='<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:'+tone[0]+'">'
+    +'<div style="font-size:14px;font-weight:800;color:'+tone[1]+'">'+tone[2]+'</div>'
+    +'<div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">'+msg+'</div>'
+    +(d.img?'<img src="'+esc(d.img)+'" alt="올린 이수증" style="display:block;max-width:100%;max-height:160px;margin-top:8px;border-radius:8px;border:1px solid var(--border)">':'')
+    +(open?'<div style="display:grid;gap:6px;margin-top:10px">'
+      +'<input id="se-file" type="file" accept="image/*" aria-label="이수증 사진" style="min-height:44px">'
+      +'<label style="display:grid;gap:4px;font-size:12px;color:var(--text2)">이수일<input id="se-date" type="date" value="'+esc(d.date||_seToday())+'" style="min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 10px;font-size:16px"></label>'
+      +'<button type="button" id="se-btn" onclick="_seDriverSubmit()" style="min-height:44px;border:0;border-radius:10px;background:var(--brand);color:#fff;font-weight:800;font-size:14px;cursor:pointer">이수증 올리기</button></div>'
+      :'<button type="button" onclick="window._seFormOpen=true;_seDriverLoad()" style="margin-top:8px;min-height:44px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text2);font-size:13px;padding:0 12px;cursor:pointer">이수증 다시 올리기</button>')
+    +'</div>';
+}
+window._seDriverSubmit=function(){
+  var f=document.getElementById('se-file'),file=f&&f.files&&f.files[0],date=((document.getElementById('se-date')||{}).value||'');
+  if(!file){toast('이수증 사진을 골라 주세요');return;}
+  if(!date){toast('이수일을 입력해 주세요');return;}
+  var b=document.getElementById('se-btn');if(b){b.disabled=true;b.textContent='올리는 중…';}
+  _seUpload(file,date).then(function(){window._seFormOpen=false;toast('이수증을 올렸어요. 대리점이 확인하면 완료돼요');_seDriverLoad();})
+    .catch(function(e){if(b){b.disabled=false;b.textContent='이수증 올리기';}toast('올리기 실패: '+e.message);});
+};
+
 function pageDeliveryInput(){
   window._CU_INDUSTRY='delivery';
   // 관리자면 새 정산 페이지로 리다이렉트
@@ -15195,8 +15275,10 @@ function pageDeliveryInput(){
   document.getElementById('page-title').textContent='🛵 배달 현황';
   var el=document.getElementById('content');
   el.innerHTML='<div style="max-width:480px;margin:0 auto;padding:8px">'
+    +'<div id="dw-safety"></div>'
     +'<div id="dw-driver-dash"><div style="text-align:center;padding:40px;color:var(--text3)">⏳ 로드 중...</div></div>'
   +'</div>';
+  _seDriverLoad();
 
   // 기사: Worker API로 현황 조회 (dw_driver_stats — AI정산과 완전 분리)
   if(!_CU)return;
@@ -16716,16 +16798,17 @@ function _ddActive(d){return d.is_active!==false&&['탈퇴','퇴직','거부'].i
 function _ddRender(){
   var r=document.getElementById('dd-root');if(!r)return;window._ddEditing=null;
   var S=window._ddState,all=_ddList(),q=S.q.trim().toLowerCase();
-  var cnt={all:0,bm:0,cpe:0,none:0,nobank:0,off:0};
-  all.forEach(function(d){var p=_ddPlatOf(d);if(!_ddActive(d)){cnt.off++;return;}cnt.all++;if(p==='bm'||p==='both')cnt.bm++;if(p==='cpe'||p==='both')cnt.cpe++;if(!p)cnt.none++;if(!(d.accountNumber||d.bankAccount))cnt.nobank++;});
+  var cnt={all:0,bm:0,cpe:0,none:0,nobank:0,edu:0,eduWait:0,off:0};
+  all.forEach(function(d){var p=_ddPlatOf(d);if(!_ddActive(d)){cnt.off++;return;}cnt.all++;if(p==='bm'||p==='both')cnt.bm++;if(p==='cpe'||p==='both')cnt.cpe++;if(!p)cnt.none++;if(!(d.accountNumber||d.bankAccount))cnt.nobank++;if(d.safetyEduStatus!=='ok')cnt.edu++;if(d.safetyEduStatus==='submitted')cnt.eduWait++;});
   var list=all.filter(function(d){var p=_ddPlatOf(d),act=_ddActive(d);
     if(S.tab==='off')return !act;if(!act)return false;
-    if(S.tab==='bm'&&!(p==='bm'||p==='both'))return false;if(S.tab==='cpe'&&!(p==='cpe'||p==='both'))return false;if(S.tab==='none'&&p)return false;if(S.tab==='nobank'&&(d.accountNumber||d.bankAccount))return false;
+    if(S.tab==='bm'&&!(p==='bm'||p==='both'))return false;if(S.tab==='cpe'&&!(p==='cpe'||p==='both'))return false;if(S.tab==='none'&&p)return false;if(S.tab==='nobank'&&(d.accountNumber||d.bankAccount))return false;if(S.tab==='edu'&&d.safetyEduStatus==='ok')return false;
     if(q&&[d.name,d.phone,d.bmUserId,d.bankName].join(' ').toLowerCase().indexOf(q)<0)return false;return true;});
   var PS=10,pages=Math.max(1,Math.ceil(list.length/PS));if(S.page>=pages)S.page=pages-1;
-  var tabs=[['all','전체',cnt.all],['bm','배민',cnt.bm],['cpe','쿠팡이츠',cnt.cpe],['none','소속 미지정',cnt.none],['nobank','계좌 미입력',cnt.nobank],['off','퇴직',cnt.off]].filter(function(t){return t[0]==='all'||t[2]>0||S.tab===t[0];});
+  var tabs=[['all','전체',cnt.all],['bm','배민',cnt.bm],['cpe','쿠팡이츠',cnt.cpe],['none','소속 미지정',cnt.none],['nobank','계좌 미입력',cnt.nobank],['edu','교육 미확인',cnt.edu],['off','퇴직',cnt.off]].filter(function(t){return t[0]==='all'||t[2]>0||S.tab===t[0];});
   var h='<div class="bs-card"><div class="bs-h">배달 기사 관리</div><div class="bs-sub">기사가 가입 링크로 가입하면 여기에 바로 나와요. 이름을 누르면 정보를 고칠 수 있어요.</div>'
     +'<div class="bs-code" id="bs-join-code">'+_bsJoinInner()+'</div></div>'
+    +(cnt.edu?'<div class="bs-card" style="border-color:rgba(220,38,38,.35)"><div class="bs-h" style="font-size:14px">교통안전 교육 확인 안 된 기사 '+cnt.edu+'명'+(cnt.eduWait?' (이수증 확인 대기 '+cnt.eduWait+'명)':'')+'</div><div class="bs-sub">2026년 12월 3일부터 법정 교통안전 교육을 이수한 기사만 배달할 수 있어요. 기사가 올린 이수증을 열어 확인해 주세요. <button type="button" class="bs-btn ghost" style="margin-left:4px" onclick="_ddTab(\'edu\')">목록 보기</button></div></div>':'')
     +'<div class="bs-tabs" role="tablist">'+tabs.map(function(t){return '<button type="button" class="'+(S.tab===t[0]?'on':'')+'" onclick="_ddTab(\''+t[0]+'\')">'+t[1]+' '+t[2]+'</button>';}).join('')+'</div>'
     +'<input type="search" id="dd-q" placeholder="이름·연락처·배민 아이디 검색" value="'+esc(S.q)+'" oninput="window._ddState.q=this.value;window._ddState.page=0;_ddRenderList()" style="width:100%;box-sizing:border-box;min-height:44px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);padding:0 12px;font-size:16px">'
     +'<div id="dd-list"></div>';
@@ -16740,7 +16823,8 @@ function _ddRenderList(list){
     return '<button type="button" class="bs-card" style="text-align:left;cursor:pointer;color:var(--text);font:inherit;width:100%" onclick="_ddEdit(\''+esc(d._id)+'\')">'
       +'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:15px">'+esc(d.name||'(이름 없음)')+(p?'<span class="bs-plat">'+_BS_PL[p]+'</span>':'<span class="bs-badge chk" style="margin-left:6px">소속 미지정</span>')+'</b><span class="bs-sub">'+(_ddJoinDate(d)?'가입 '+_ddJoinDate(d):'')+'</span></div>'
       +'<div class="bs-sub">'+[d.phone?String(d.phone).replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3'):'연락처 없음',d.ssn?'주민 '+_bsSsnMask(d.ssn):'주민번호 미입력',d.bmUserId?'배민 '+esc(d.bmUserId):''].filter(Boolean).map(esc).join(' · ')+'</div>'
-      +'<div class="bs-sub">'+(acc?'계좌 '+esc([d.bankName||'',acc,d.accountHolder?'('+d.accountHolder+')':''].filter(Boolean).join(' ')):'<span style="color:#92400e;font-weight:700">계좌 미입력</span>')+'</div></button>';}).join('')+'</div>'
+      +'<div class="bs-sub">'+(acc?'계좌 '+esc([d.bankName||'',acc,d.accountHolder?'('+d.accountHolder+')':''].filter(Boolean).join(' ')):'<span style="color:#92400e;font-weight:700">계좌 미입력</span>')+'</div>'
+      +'<div class="bs-sub">'+_ddEduBadge(d)+'</div></button>';}).join('')+'</div>'
     +(pages>1?'<div class="bs-pg" style="margin-top:8px"><button type="button" class="bs-btn ghost"'+(pg?'':' disabled')+' onclick="window._ddState.page--;_ddRender()">이전</button><span>'+(pg+1)+' / '+pages+'</span><button type="button" class="bs-btn ghost"'+(pg<pages-1?'':' disabled')+' onclick="window._ddState.page++;_ddRender()">다음</button></div>':'');
 }
 window._ddTab=function(t){window._ddState.tab=t;window._ddState.page=0;_ddRender();};
@@ -16757,6 +16841,7 @@ window._ddEdit=function(id){
     +'<div class="bs-sub">주민번호: '+(d.ssn?esc(_bsSsnMask(d.ssn)):'미입력')+' (기사 본인이 가입할 때 입력)</div>'
     +'<label class="bs-sub" style="display:grid;gap:4px">상태<select id="dd-status" style="max-width:none;min-height:44px;font-size:16px">'+['재직','휴직','퇴직'].map(function(s){return '<option'+((d.status||'재직')===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></label>'
     +'<div><button type="button" class="bs-btn" onclick="_ddSave(\''+esc(id)+'\')">저장</button></div></div>'
+    +_ddEduCard(d)
     // ★ 로그인 비밀번호 재설정 (기사가 로그인 못 할 때)
     +'<div class="bs-card" style="margin-top:12px"><div class="bs-h">로그인 비밀번호 재설정</div>'
     +'<div class="bs-sub">로그인: 전화번호 '+esc(d.phone||'미입력')+(d.driverId&&d.driverId.indexOf('drv_')!==0?' · 아이디 '+esc(d.driverId):'')+'</div>'
@@ -16764,6 +16849,58 @@ window._ddEdit=function(id){
     +'<label class="bs-sub" style="display:grid;gap:4px">새 비밀번호 (6자 이상)<input id="dd-newpw" type="password" autocomplete="new-password" style="min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 10px;font-size:16px"></label>'
     +'<div><button type="button" class="bs-btn" onclick="_ddResetPw(\''+esc(id)+'\')">비밀번호 재설정</button></div></div>';
   r.scrollIntoView({block:'start'});
+  _ddEduLoadImg(id);
+};
+// ── 교통안전 교육 이수 확인 (2026-11-23) ──
+function _ddEduBadge(d){
+  var s=d.safetyEduStatus||'';
+  if(s==='ok')return '<span class="bs-badge on">교육 이수 '+esc(d.safetyEduDate||'')+'</span>';
+  if(s==='submitted')return '<span class="bs-badge chk">교육 이수증 확인 대기</span>';
+  if(s==='rejected')return '<span class="bs-badge off">이수증 재요청</span>';
+  return '<span class="bs-badge off">교육 미이수</span>';
+}
+function _ddEduCard(d){
+  var id=esc(d._id),s=d.safetyEduStatus||'';
+  return '<div class="bs-card" style="margin-top:12px"><div class="bs-h">교통안전 교육 이수</div>'
+    +'<div class="bs-sub">2026년 12월 3일부터 법정 교통안전 교육을 이수한 기사만 배달할 수 있어요. 보험사에서 이수증을 요청하면 아래 사진을 보내 주세요.</div>'
+    +'<div class="bs-sub">상태: '+_ddEduBadge(d)+(d.safetyEduDate?' · 이수일 '+esc(d.safetyEduDate):'')+(d.safetyEduAt?' · 올린 날 '+esc(String(d.safetyEduAt).slice(0,10)):'')+(s==='rejected'&&d.safetyEduNote?' · 요청 내용: '+esc(d.safetyEduNote):'')+'</div>'
+    +'<div id="dd-edu-img" class="bs-sub">'+(d.safetyEduAt?'이수증 불러오는 중…':'아직 올린 이수증이 없어요.')+'</div>'
+    +(d.safetyEduAt||s==='ok'?'<input id="dd-edu-note" maxlength="100" placeholder="다시 요청할 때 기사에게 보낼 말 (예: 사진이 흐려요)" aria-label="재요청 내용" style="min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 10px;font-size:16px">':'')
+    +(d.safetyEduAt&&s!=='ok'?'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="bs-btn" onclick="_ddEduSet(\''+id+'\',\'ok\')">이수 확인</button><button type="button" class="bs-btn ghost" onclick="_ddEduSet(\''+id+'\',\'rejected\')">다시 올려 달라고 하기</button></div>':'')
+    +(s==='ok'?'<div><button type="button" class="bs-btn ghost" onclick="_ddEduSet(\''+id+'\',\'rejected\')">확인 취소 (다시 요청)</button></div>':'')
+    +'<div class="bs-sub" style="margin-top:6px">기사 대신 올리기 (올리면 바로 이수 확인돼요)</div>'
+    +'<input id="dd-edu-file" type="file" accept="image/*" aria-label="이수증 사진" style="min-height:44px">'
+    +'<label class="bs-sub" style="display:grid;gap:4px">이수일<input id="dd-edu-date" type="date" value="'+esc(d.safetyEduDate||_seToday())+'" style="min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 10px;font-size:16px"></label>'
+    +'<div><button type="button" class="bs-btn" id="dd-edu-btn" onclick="_ddEduUpload(\''+id+'\')">이수증 올리기</button></div></div>';
+}
+function _ddEduLoadImg(id){
+  var box=document.getElementById('dd-edu-img');if(!box||!_db)return;
+  var d=(window._ddAll||[]).filter(function(x){return x._id===id;})[0];if(!d||!d.safetyEduAt)return;
+  _db.collection('driver_safety_edu').doc(id).get().then(function(x){
+    var b=document.getElementById('dd-edu-img');if(!b||window._ddEditing!==id)return;
+    var v=x.exists?x.data():null;
+    b.innerHTML=v&&v.img?'<img src="'+esc(v.img)+'" alt="교통안전 교육 이수증" style="display:block;max-width:100%;max-height:420px;border-radius:8px;border:1px solid var(--border)"><a href="'+esc(v.img)+'" download="교통안전교육_이수증_'+esc(d.name||'기사')+'.jpg" class="bs-btn ghost" style="display:inline-block;margin-top:6px;text-decoration:none">사진 저장</a>':'이수증 사진을 찾지 못했어요.';
+  }).catch(function(e){var b=document.getElementById('dd-edu-img');if(b)b.textContent='이수증을 불러오지 못했어요: '+e.message;});
+}
+window._ddEduSet=function(id,st){
+  var note='';
+  if(st==='rejected')note=((document.getElementById('dd-edu-note')||{}).value||'').trim()||'이수증 사진을 다시 올려 주세요';
+  var upd={safetyEduStatus:st,safetyEduNote:String(note||'').slice(0,100),safetyEduCheckedAt:new Date().toISOString()};
+  _db.collection('drivers').doc(id).update(upd).then(function(){
+    var d=(window._ddAll||[]).filter(function(x){return x._id===id;})[0];if(d)Object.assign(d,upd);
+    toast(st==='ok'?'교통안전 교육 이수를 확인했어요':'기사에게 이수증을 다시 요청했어요');if(d)_ddEdit(id);
+  }).catch(function(e){toast('저장 실패: '+e.message);});
+};
+window._ddEduUpload=function(id){
+  var f=document.getElementById('dd-edu-file'),file=f&&f.files&&f.files[0],date=((document.getElementById('dd-edu-date')||{}).value||'');
+  if(!file){toast('이수증 사진을 골라 주세요');return;}
+  if(!date){toast('이수일을 입력해 주세요');return;}
+  var b=document.getElementById('dd-edu-btn');if(b){b.disabled=true;b.textContent='올리는 중…';}
+  _seUpload(file,date,{driverDocId:id,dealerId:window._bsDid||(_CU&&(_CU.dealerId||_CU.uid))||''}).then(function(){
+    var d=(window._ddAll||[]).filter(function(x){return x._id===id;})[0];
+    if(d)Object.assign(d,{safetyEduStatus:'ok',safetyEduDate:date,safetyEduAt:new Date().toISOString(),safetyEduNote:''});
+    toast('이수증을 올리고 이수 확인했어요');if(d)_ddEdit(id);
+  }).catch(function(e){if(b){b.disabled=false;b.textContent='이수증 올리기';}toast('올리기 실패: '+e.message);});
 };
 window._ddResetPw=function(id){
   var el=document.getElementById('dd-newpw');var pw=el?el.value:'';
