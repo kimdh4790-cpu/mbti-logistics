@@ -15415,15 +15415,16 @@ function _dwRenderDriverDash(s){
 
     // ── 탭 네비
     html+='<div style="display:flex;border-bottom:2px solid var(--border);margin-bottom:16px">';
-    [{k:'main',l:'메인'},{k:'delivery',l:'배달정보'},{k:'settle',l:'정산내역'}].forEach(function(t){
+    [{k:'main',l:'메인'},{k:'live',l:'실시간 현황'},{k:'delivery',l:'배달정보'},{k:'settle',l:'정산내역'}].forEach(function(t){
       var a=tab===t.k;
       html+='<div onclick="window._dwRenderTab(\''+t.k+'\')" style="flex:1;text-align:center;padding:8px 0;font-size:13px;font-weight:'+(a?800:500)+';color:'+(a?'#5b4ff5':'var(--text3)')+';border-bottom:'+(a?'2px solid #5b4ff5':'2px solid transparent')+';margin-bottom:-2px;cursor:pointer">'+t.l+'</div>';
     });
     html+='</div>';
 
-    if(tab==='main'){
-      // 배민 실시간 운영현황 (대리점이 캡처를 올리고 고친 값, 2026-11-24)
-      html+='<div id="dw-bl" style="margin-bottom:14px">'+((window._blV||{})['dw-bl']?_blBoard('dw-bl'):'')+'</div>';
+    if(tab==='live'){
+      // 배민 실시간 운영현황 — 메뉴 따로 (사용자 2026-11-24). 대리점이 캡처를 올리고 고친 값만 보임
+      html+='<div id="dw-bl">'+((window._blV||{})['dw-bl']?_blBoard('dw-bl'):_blDrvEmpty())+'</div>';
+    } else if(tab==='main'){
       // 2×2 피크 카드 — 배민 엑셀 기준이면 어느 날짜 숫자인지 표시 (배달정보 탭은 주간 합계)
       var _lt='';try{_lt=s.bmDays?(JSON.parse(s.bmDays).latest||''):'';}catch(e){_lt='';}
       if(_lt)html+='<div style="font-size:12px;color:var(--text3);margin:0 2px 8px">시간대별 건수 · '+_lt.slice(5).replace('-','.')+'('+_bmDow(_lt)+') 하루 기준</div>';
@@ -16145,18 +16146,20 @@ function pageBaeminSettle(){
   var c=document.getElementById('content');
   if(!_db||!_CU){c.innerHTML='<div class="empty">로그인 후 이용하세요</div>';return;}
   var did=_CU.dealerId||_CU.uid||'';window._bsDid=did;
-  c.innerHTML=_bsStyle()+'<div class="bs">'
+  if(!window._bsSec)window._bsSec='settle';
+  c.innerHTML=_bsStyle()+'<div class="bs" id="bs-root" data-sec="'+window._bsSec+'">'
     +'<div class="bs-tabs"><button class="on" type="button">배민 정산</button><button type="button" onclick="window._dwPlatTab=\'coupang\';pageDeliverySettle()">쿠팡이츠 정산</button></div>'
+    +_bsSecNav()
     +'<div class="bs-up">'
-      +'<div class="bs-card"><div class="bs-h">① 배민 배달처리비 엑셀</div><div class="bs-sub">하루치 파일을 매일 올리면 주간(수~화)으로 쌓여요. 같은 날짜를 다시 올리면 그 날짜만 바뀌고, 같은 배달번호는 한 번만 셉니다.</div>'
+      +'<div class="bs-card" data-s="settle"><div class="bs-h">① 배민 배달처리비 엑셀</div><div class="bs-sub">하루치 파일을 매일 올리면 주간(수~화)으로 쌓여요. 같은 날짜를 다시 올리면 그 날짜만 바뀌고, 같은 배달번호는 한 번만 셉니다.</div>'
         +'<label class="bs-btn">엑셀 올리기<input id="bs-xl" type="file" accept=".xlsx,.xls" multiple hidden onchange="_bsUpload(this.files);this.value=\'\'"></label><div id="bs-xl-st" class="bs-st"></div></div>'
-      +'<div class="bs-card"><div class="bs-h">② SLA 수락률</div><div class="bs-sub">배민 SLA 화면 캡처를 올리면 기사별 완료·거절 건수와 수락률이 아래 칸에 채워져요. 표를 복사해 붙여넣어도 돼요.</div>'
+      +'<div class="bs-card" data-s="sla"><div class="bs-h">② SLA 수락률</div><div class="bs-sub">배민 SLA 화면 캡처를 올리면 기사별 완료·거절 건수와 수락률이 아래 칸에 채워져요. 표를 복사해 붙여넣어도 돼요.</div>'
         +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label class="bs-btn">SLA 캡처 올리기<input id="bs-img" type="file" accept="image/*" hidden onchange="_bsOcr(this.files[0]);this.value=\'\'"></label>'
         +'<button class="bs-btn ghost" type="button" onclick="var t=document.getElementById(\'bs-paste-box\');t.hidden=!t.hidden">표 붙여넣기</button></div>'
         +'<div id="bs-paste-box" hidden><textarea id="bs-paste" rows="5" placeholder="SLA 표를 붙여넣으세요 (이름 · 아이디 · 휴대폰 · 총 배달완료 · SLA 배달완료 푸드/비마트/배민스토어/합계 · SLA 거절 … · SLA 배차취소 …)"></textarea><button class="bs-btn" type="button" onclick="_bsPasteApply()">적용</button></div>'
         +'<div id="bs-sla-st" class="bs-st"></div></div>'
     +'</div>'
-    +'<div id="bl-admin"></div>'
+    +'<div id="bl-admin" data-s="live"></div>'
     +'<div id="bs-body"><div class="bs-empty">불러오는 중…</div></div>'
   +'</div>';
   _blAdminInit();
@@ -16172,8 +16175,16 @@ function pageBaeminSettle(){
     _bsRender();
   }).catch(function(e){var b=document.getElementById('bs-body');if(b)b.innerHTML='<div class="bs-empty" style="color:var(--red)">불러오기 실패: '+esc(e.message)+'</div>';});
 }
+// 메뉴별 페이지 (사용자 2026-11-24: 한곳에서 다 보면 복잡 → 정산 / 수락률 / 실시간 현황 / 정산서 / 기사 연결·설정 분리)
+var _BS_SECS=[['settle','정산'],['sla','수락률(SLA)'],['live','실시간 현황'],['stmt','정산서'],['setup','기사 연결·설정']];
+function _bsSecNav(){var cur=window._bsSec||'settle';return '<nav class="bs-sec" aria-label="배민 정산 메뉴">'+_BS_SECS.map(function(x){return '<button type="button" data-k="'+x[0]+'" class="'+(cur===x[0]?'on':'')+'" aria-current="'+(cur===x[0]?'page':'false')+'" onclick="_bsGoSec(\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</nav>';}
+window._bsGoSec=function(k){window._bsSec=k;var r=document.getElementById('bs-root');if(r)r.setAttribute('data-sec',k);
+  document.querySelectorAll('.bs-sec button').forEach(function(b){var on=b.getAttribute('data-k')===k;b.className=on?'on':'';b.setAttribute('aria-current',on?'page':'false');});
+  try{window.scrollTo(0,0);}catch(e){}};
 function _bsStyle(){
   return '<style>'
+  +'.bs-sec{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:6px 0}@media(max-width:700px){.bs-sec{grid-template-columns:repeat(3,minmax(0,1fr))}}.bs-sec button{min-height:44px;padding:0 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bs-sec button.on{background:#08101f;color:#e9cf8c;border-color:#08101f}'
+  +_BS_SECS.map(function(x){return '.bs[data-sec='+x[0]+'] [data-s]:not([data-s~='+x[0]+'])';}).join(',')+'{display:none!important}.bs[data-sec] .bs-up{grid-template-columns:1fr}'
   +'.bs{max-width:980px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;font-variant-numeric:tabular-nums;min-width:0}.bs>*,.bs-up>*,.bs-card>*{min-width:0}.bs-st,.bs-sub{overflow-wrap:anywhere}.bs-tabs{flex-wrap:wrap}.bs-btn{max-width:100%;box-sizing:border-box}'
   +'.bs .bs-link{border:1px solid #c9a84c;background:rgba(201,168,76,.08)}.bs-lrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap}.bs .bs-lrow select{max-width:100%;min-height:44px;flex:1 1 180px}.bs-code{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}.bs-code code{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;overflow-wrap:anywhere}'
   +'.bs-tabs{display:flex;gap:6px}.bs-tabs button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-weight:700;cursor:pointer}.bs-tabs button.on{background:#08101f;color:#e9cf8c;border-color:#08101f}'
@@ -16263,15 +16274,15 @@ window._bsMergeSave=function(){var el=document.getElementById('bs-merge');if(!el
 function _bsRender(){
   var b=document.getElementById('bs-body');if(!b)return;
   var docs=window._bmDocs||{},ws=Object.keys(docs).sort(),w=window._bmWeekSel;
-  if(!ws.length){b.innerHTML='<div class="bs-empty">아직 등록된 배민 엑셀이 없어요. 위 ①에서 배달처리비 엑셀을 올려 주세요.</div>'+_bsSettingsHtml();return;}
+  if(!ws.length){b.innerHTML='<div class="bs-empty" data-s="settle sla stmt setup">아직 등록된 배민 엑셀이 없어요. <b>정산</b> 메뉴의 ①에서 배달처리비 엑셀을 올려 주세요.</div><div data-s="setup">'+_bsSettingsHtml()+'</div>';return;}
   var doc=docs[w],list=_bsWeekCalc(),c=_bsC();window._bsList=list;
   var S={n:0,fee:0,gross:0,extra:0,net:0,margin:0,off:0,na:0,mis:0};list.forEach(function(r){S.mis+=r.mission||0;S.n+=r.n;S.fee+=r.fee;S.gross+=r.gross;S.extra+=r.extra;S.net+=r.net;S.margin+=r.margin;if(r.off)S.off++;if(r.acc==null||r.flag)S.na++;});
   var dates={};list.forEach(function(r){r.days.forEach(function(d){dates[d.date]=1;});});var dl=Object.keys(dates).sort();
-  var h='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="bs-week" onchange="window._bmWeekSel=this.value;_bsRender()">'+ws.slice().reverse().map(function(x){return '<option value="'+x+'"'+(x===w?' selected':'')+'>'+x.slice(5)+'(수) ~ '+_bmAddDays(x,6).slice(5)+'(화)</option>';}).join('')+'</select>'
+  var h='<div data-s="settle sla stmt" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="bs-week" onchange="window._bmWeekSel=this.value;_bsRender()">'+ws.slice().reverse().map(function(x){return '<option value="'+x+'"'+(x===w?' selected':'')+'>'+x.slice(5)+'(수) ~ '+_bmAddDays(x,6).slice(5)+'(화)</option>';}).join('')+'</select>'
     +'<span class="bs-sub">등록된 날짜: '+(dl.map(function(d){return d.slice(5);}).join(', ')||'-')+'</span>'
-    +'<button class="bs-btn" type="button" style="margin-left:auto" onclick="_bsSend()">'+(doc.sent&&doc.sent.at?'정산서 다시 보내기':'기사에게 정산서 보내기')+'</button></div>'
-    +'<div class="bs-st">'+(doc.sent&&doc.sent.at?'이번 주 정산서를 '+_bsWhen(doc.sent.at)+'에 기사 앱으로 보냈어요. 고친 내용은 기사 화면에 바로 반영돼요.':'아직 기사에게 보내지 않았어요. 확인이 끝나면 \'기사에게 정산서 보내기\'를 누르세요. 기사 앱에 정산서가 뜨고 알림이 가요.')+'</div>'
-    +'<div class="bs-tiles">'
+    +'<button class="bs-btn" data-s="stmt" type="button" style="margin-left:auto" onclick="_bsSend()">'+(doc.sent&&doc.sent.at?'정산서 다시 보내기':'기사에게 정산서 보내기')+'</button></div>'
+    +'<div class="bs-st" data-s="stmt">'+(doc.sent&&doc.sent.at?'이번 주 정산서를 '+_bsWhen(doc.sent.at)+'에 기사 앱으로 보냈어요. 고친 내용은 기사 화면에 바로 반영돼요.':'아직 기사에게 보내지 않았어요. 확인이 끝나면 \'기사에게 정산서 보내기\'를 누르세요. 기사 앱에 정산서가 뜨고 알림이 가요.')+'</div>'
+    +'<div class="bs-tiles" data-s="settle">'
       +'<div class="bs-tile"><span>주간 건수 ('+list.length+'명)</span><b>'+_bsW(S.n)+'건</b></div>'
       +'<div class="bs-tile"><span>총 배달처리비</span><b>'+_bsW(S.fee)+'원</b></div>'
       +'<div class="bs-tile key"><span>보장 추가 지급 합계</span><b>'+(S.extra>=0?'+':'−')+_bsW(Math.abs(S.extra))+'원</b></div>'
@@ -16279,11 +16290,10 @@ function _bsRender(){
       +(S.mis?'<div class="bs-tile"><span>본사 미션 합계</span><b>+'+_bsW(S.mis)+'원</b></div>':'')
       +'<div class="bs-tile"><span>회사마진 (처리비 − 세전)</span><b class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'원</b></div>'
     +'</div>'
-    +_bsLinkHtml(list)
-    +_bsMergeHtml()
-    +(S.na?'<div class="bs-st" style="color:#92400e">수락률이 비었거나 확인이 필요한 기사 '+S.na+'명은 보장을 일단 적용했어요. ②에서 SLA를 넣어 주세요.</div>':'');
+    +'<div data-s="setup">'+_bsLinkHtml(list)+_bsMergeHtml()+'</div>'
+    +(S.na?'<div class="bs-st" data-s="settle sla" style="color:#92400e">수락률이 비었거나 확인이 필요한 기사 '+S.na+'명은 보장을 일단 적용했어요. <b>수락률</b> 메뉴에서 SLA를 넣어 주세요.</div>':'');
   // 기사별 표
-  h+='<div class="bs-box"><table><thead><tr><th>기사</th><th>연결 계정</th><th>건수</th><th>수락률</th><th>보장 단가</th><th>배달처리비</th><th>추가 지급</th><th>세전</th><th>실지급</th><th>회사마진</th></tr></thead><tbody>'
+  h+='<div class="bs-box" data-s="settle"><table><thead><tr><th>기사</th><th>연결 계정</th><th>건수</th><th>수락률</th><th>보장 단가</th><th>배달처리비</th><th>추가 지급</th><th>세전</th><th>실지급</th><th>회사마진</th></tr></thead><tbody>'
     +list.map(function(r){return '<tr><td class="nm">'+esc(r.name)+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div style="font-size:10px;color:var(--text3);font-weight:400">'+(r.mems?r.mems.map(function(m){return esc(m.userId||m.name);}).join(' + '):esc(r.userId))+'</div></td>'
       +'<td>'+_bsDrvSelect(r)+'</td><td>'+_bsW(r.n)+'</td><td>'+_bsAccBadge(r)+'</td>'
       +'<td>'+(r.off?'<span class="bs-badge off">미적용</span>':r.on?_bsW(r.rate):'-')+'</td><td>'+_bsW(r.fee)+'</td>'
@@ -16291,7 +16301,7 @@ function _bsRender(){
       +'<td class="'+(r.margin>=0?'pos':'neg')+'">'+(r.margin>=0?'+':'−')+_bsW(Math.abs(r.margin))+'</td></tr>';}).join('')
     +'<tr class="sum"><td>합계</td><td></td><td>'+_bsW(S.n)+'</td><td></td><td></td><td>'+_bsW(S.fee)+'</td><td class="gold">'+(S.extra>=0?'+':'−')+_bsW(Math.abs(S.extra))+'</td><td>'+_bsW(S.gross)+'</td><td>'+_bsW(S.net)+'</td><td class="'+(S.margin>=0?'pos':'neg')+'">'+(S.margin>=0?'+':'−')+_bsW(Math.abs(S.margin))+'</td></tr></tbody></table></div>';
   // SLA 수정 표
-  h+='<div class="bs-card"><div class="bs-h">SLA 완료·거절 (직접 수정 가능)</div><div class="bs-sub">수락률 = SLA 배달완료 ÷ (배달완료 + 거절). 기준 '+c.acc+'% 이상만 건수 보장. 취소 칸을 비워 두면 엑셀 취소 건수(흐린 숫자)를 보여 줘요. 노란 줄은 캡처를 읽은 값이 맞는지 확인이 필요해요. 숫자를 고치면 확정되고 바로 정산서와 기사 화면에 반영돼요.</div>'
+  h+='<div class="bs-card" data-s="sla"><div class="bs-h">SLA 완료·거절 (직접 수정 가능)</div><div class="bs-sub">수락률 = SLA 배달완료 ÷ (배달완료 + 거절). 기준 '+c.acc+'% 이상만 건수 보장. 취소 칸을 비워 두면 엑셀 취소 건수(흐린 숫자)를 보여 줘요. 노란 줄은 캡처를 읽은 값이 맞는지 확인이 필요해요. 숫자를 고치면 확정되고 바로 정산서와 기사 화면에 반영돼요.</div>'
     +'<div class="bs-box"><table class="sla"><thead><tr><th>기사</th><th>SLA 완료</th><th>SLA 거절</th><th>취소</th><th>수락률</th><th>보장</th></tr></thead><tbody>'
     +(function(){var out=[];list.forEach(function(r){if(!r.mems){out.push(r);return;}r.mems.forEach(function(m){var s0=(doc.sla||{})[m.key],x=_bsCalc(doc.riders[m.key],s0,c);x.key=m.key;x.mergedTo=r.name;out.push(x);});});return out;})().map(function(r){var s=(doc.sla||{})[r.key]||{};return '<tr'+(s.flag?' class="warn"':'')+'><td class="nm">'+esc(r.name)+(r.mergedTo?'<div class="wt" style="color:var(--text3)">'+esc(r.mergedTo)+'에게 합산 · '+esc(r.userId)+'</div>':'')+(s.flag&&s.warn?'<div class="wt">확인 필요: '+esc(s.warn)+'</div>':'')+'</td>'
       +'<td><input type="number" min="0" inputmode="numeric" value="'+(s.done!=null?s.done:'')+'" onchange="_bsSlaEdit(\''+r.key+'\',\'done\',this.value)" aria-label="'+esc(r.name)+' SLA 완료"></td>'
@@ -16301,9 +16311,9 @@ function _bsRender(){
     +'</tbody></table></div></div>';
   // 기사별 정산서
   var dv=!!window._bsDrvView;
-  h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px"><div class="bs-h">기사별 정산서</div><div class="bs-seg" role="group" aria-label="보기"><button type="button" class="'+(dv?'':'on')+'" onclick="window._bsDrvView=false;_bsRender()">관리자 보기</button><button type="button" class="'+(dv?'on':'')+'" onclick="window._bsDrvView=true;_bsRender()">기사용 보기</button></div></div>'
-    +(dv?'<div class="bs-sub">기사 화면에 나가는 항목만 보여요 (초과분 메꿈, 어디서 어디로 메꿨는지, 날짜별 내역은 숨겨요. 공제는 항목·%·금액 모두 보여요).</div>':'')+'<div style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b>'+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc,dv)+'</div></details>';}).join('')+'</div>';
-  b.innerHTML=h+_bsSettingsHtml();
+  h+='<div data-s="stmt" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px"><div class="bs-h">기사별 정산서</div><div class="bs-seg" role="group" aria-label="보기"><button type="button" class="'+(dv?'':'on')+'" onclick="window._bsDrvView=false;_bsRender()">관리자 보기</button><button type="button" class="'+(dv?'on':'')+'" onclick="window._bsDrvView=true;_bsRender()">기사용 보기</button></div></div>'
+    +(dv?'<div class="bs-sub" data-s="stmt">기사 화면에 나가는 항목만 보여요 (초과분 메꿈, 어디서 어디로 메꿨는지, 날짜별 내역은 숨겨요. 공제는 항목·%·금액 모두 보여요).</div>':'')+'<div data-s="stmt" style="display:grid;gap:10px">'+list.map(function(r){return '<details class="st"><summary><div><b>'+esc(r.name)+'</b>'+(r.mems?' <span class="bs-badge on">아이디 '+r.mems.length+'개 합산</span>':'')+'<div class="bs-sub">'+_bsW(r.n)+'건 · 수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' · '+(r.off?'보장 미적용':r.on?'보장 단가 '+_bsW(r.rate)+'원':'')+'</div></div><div style="text-align:right"><div class="bs-sub">실지급액</div><b style="font-size:17px;color:#a07d22">'+_bsW(r.net)+'원</b></div></summary><div class="bs-sb">'+_bsStmtHtml(r,doc,dv)+'</div></details>';}).join('')+'</div>';
+  b.innerHTML=h+'<div data-s="setup">'+_bsSettingsHtml()+'</div>';
   if(doc.sent&&doc.sent.at&&window._bsReadsWeek!==w+doc.sent.at){window._bsReadsWeek=w+doc.sent.at;
     // 화면 열 때 한 번: 최신 계산(미션 등)으로 기사 화면 갱신 후 열람 상태 불러오기
     _bsPublish(false).then(function(){_bsLoadReads();});}
@@ -16705,14 +16715,14 @@ function _blEmpty(){return {at:'',acc:null,accTag:'',done:null,prog:null,can:nul
 function _blNum(wd,allowDot,noCut){
   var sy=(wd.symbols&&wd.symbols.length)?wd.symbols:String(wd.text||'').split('').map(function(t){return {text:t};});
   var H=function(s){return s.bbox?(s.bbox.y1-s.bbox.y0):0;},ref=0,out='',i;
-  for(i=0;i<sy.length;i++){if(/\d/.test(sy[i].text)){ref=H(sy[i]);break;}}
+  var hs=sy.filter(function(s){return /\d/.test(s.text);}).map(H);if(hs.length)ref=hs[0];if(hs.length>2&&hs[0]>hs[1]*1.3&&Math.abs(hs[2]-hs[1])<=hs[1]*0.15)ref=hs[1]; // 첫 글자 상자가 크게 잡힌 경우
   for(i=0;i<sy.length;i++){var t=sy[i].text;
     if(/\d/.test(t)){if(!noCut&&ref&&out&&H(sy[i])<ref*0.8)break;out+=t;}
     else if(allowDot&&t==='.'&&out&&out.indexOf('.')<0)out+='.';
     else if(out)break;}
   if(!out||out==='.')return null;var v=parseFloat(out);return isNaN(v)?null:v;
 }
-function _blParse(R){
+function _blParseRow(R){
   var v=_blEmpty(),lines=(R&&R.lines)||[];
   var flat=String((R&&R.text)||lines.map(function(l){return l.text;}).join('\n')).replace(/\s+/g,'');
   var m=flat.match(/(\d{1,2})\.(\d{2})(\d{1,2})시(\d{1,2})분/);if(m)v.at=(+m[1])+'.'+m[2]+' '+(+m[3])+'시 '+(+m[4])+'분';
@@ -16755,12 +16765,67 @@ function _blParse(R){
         var sw={text:t,symbols:(w.symbols||[]).filter(function(s){return !/[완료목표]/.test(s.text);})};
         var n=_blNum(sw,false);if(n!=null&&v.slots[mc][mode]==null)v.slots[mc][mode]=n;});}
   }
-  v.slots.forEach(function(s){
-    if(s.done==null&&s.pct!=null&&s.tg)s.done=Math.round(s.pct*s.tg/100);
-    if(s.pct==null&&s.done!=null&&s.tg)s.pct=Math.round(s.done/s.tg*1000)/10;
-    if(!s.st&&s.pct!=null)s.st=s.pct>=100?'달성':'진행중';
+  return v;
+}
+
+// 글자(라벨) 기준 인식: 라벨 위치를 찾고, 그 아래(또는 같은 줄 오른쪽)에서 가장 가까운 숫자를 값으로 씀 → 해상도·잘림·PC/폰 배치가 달라도 동작
+function _blParseGeo(R){
+  var v=_blEmpty(),lines=(R&&R.lines)||[],toks=[],labs=[];
+  lines.forEach(function(l,li){
+    var lt=l.text.replace(/\s/g,''),chars=[];
+    (l.words||[]).forEach(function(w){
+      var b=w.bbox,sy=w.symbols||[];toks.push({t:w.text,w:w,li:li,x0:b.x0,x1:b.x1,y0:b.y0,y1:b.y1,slotLine:/목표/.test(lt)});
+      if(sy.length)sy.forEach(function(s){String(s.text).split('').forEach(function(ch){chars.push({c:ch,b:s.bbox});});});
+      else String(w.text).split('').forEach(function(ch){chars.push({c:ch,b:b});});});
+    labs.push({li:li,s:chars.map(function(o){return o.c;}).join(''),chars:chars,lt:lt});
+  });
+  function find(re){var out=[];labs.forEach(function(L){var m,r=new RegExp(re.source,'g');while((m=r.exec(L.s))){var a=L.chars[m.index].b,z=L.chars[m.index+m[0].length-1].b;out.push({m:m[0],li:L.li,x0:a.x0,x1:z.x1,y0:Math.min(a.y0,z.y0),y1:Math.max(a.y1,z.y1),h:Math.max(8,a.y1-a.y0),slotLine:/목표/.test(L.lt)});}});return out;}
+  var used={},lab={};
+  function near(L,o){o=o||{};var best=null,bs=1e9;
+    toks.forEach(function(t,i){if(used[i]||!/\d/.test(t.t))return;if(o.pct===true&&!/%/.test(t.t))return;if(o.pct===false&&/%/.test(t.t))return;
+      if(o.noSlot&&t.slotLine)return;var h=L.h,sc;
+      var same=t.li===L.li||(Math.abs((t.y0+t.y1)/2-(L.y0+L.y1)/2)<h*0.6);
+      if(same){if(t.x0<L.x1-2||t.x0-L.x1>h*(o.right||6))return;sc=(t.x0-L.x1)/h*0.5+0.5;}
+      else{var dy=t.y0-L.y1;if(dy<-h*0.3||dy>h*(o.down||5))return;var dx=Math.abs(t.x0-L.x0);if(dx>h*(o.dx||3))return;sc=dy/h+dx/h*0.7;}
+      if(sc<bs){bs=sc;best=i;}});
+    if(best==null)return null;used[best]=1;return toks[best];}
+  function num(t,dot){if(!t)return null;var sw={text:t.t,symbols:(t.w.symbols||[]).filter(function(s){return !/[가-힣]/.test(s.text)||/\d/.test(s.text);})};return _blNum(sw,dot,dot);}
+  var flat=lines.map(function(l){return l.text;}).join('\n').replace(/\s+/g,'');
+  var m=flat.match(/(\d{1,2})\.(\d{2})(\d{1,2})시(\d{1,2})분/);if(m)v.at=(+m[1])+'.'+m[2]+' '+(+m[3])+'시 '+(+m[4])+'분';
+  var tg=flat.match(/수락률\W?(양호|보통|주의|미흡|우수|위험)/)||flat.match(/(양호|보통|주의|미흡|우수|위험)/);if(tg)v.accTag=tg[1];
+  // 시간 외 영역: '시간외' 제목 아래·오른쪽
+  var ot=find(/시간외|간외배달|외배달현황/)[0];
+  var dones=find(/완료|와료|관료|완로/).filter(function(L){return !L.slotLine;});
+  var inOt=function(L){return ot&&L.y0>ot.y0-ot.h*0.5&&L.x0>=ot.x0-ot.h*2&&L.y0<ot.y1+ot.h*8;};
+  var dDone=dones.filter(function(L){return !inOt(L);})[0],oDone=dones.filter(inOt)[0];
+  var A=find(/수락률|락률|수락/)[0]||find(/양호|보통|주의|미흡|우수|위험/)[0];if(A){var t=near(A,{pct:true,right:12})||near(A,{right:12,dx:4});v.acc=num(t,true);}
+  [['done',dDone],['prog',find(/진행중|진행/)[0]],['can',find(/취소/)[0]],['rej',find(/거절/)[0]],['otDone',oDone],['otRiders',find(/운행|라이더/)[0]]].forEach(function(p){
+    if(!p[1])return;lab[p[0]]={x0:p[1].x0,y1:p[1].y1,h:p[1].h};var t=near(p[1],{pct:false,noSlot:true});var n=num(t,false);if(n!=null)v[p[0]]=n;});
+  if(A)lab.acc={x0:A.x0,y1:A.y1,h:A.h};v._lab=lab;
+  // 슬롯: 이름 → 아래 % · 완료 · 목표
+  var NM=[/아침|점심피크/,/오후/,/저녁/,/심야/];
+  NM.forEach(function(re,i){var L=find(re).filter(function(x){return !x.slotLine;})[0];if(!L)return;var S=v.slots[i],h=L.h;
+    var cand=find(/달성|미달|예정|진행|종료/).filter(function(x){return x.li===L.li&&x.x1<=L.x0+2;}).sort(function(a,b){return b.x1-a.x1;})[0];if(cand)S.st=cand.m==='진행'?'진행중':cand.m;
+    var P=near({li:L.li,x0:L.x0-h*6,x1:L.x1,y0:L.y0,y1:L.y1,h:h},{pct:true,dx:9,down:6});
+    if(P&&P.li===L.li)P=null;S.pct=num(P,true);
+    var D=find(/완료|와료|관료|완로/).filter(function(x){return x.slotLine&&x.y0>L.y1&&x.y0<L.y1+h*10&&Math.abs(x.x0-L.x0)<h*10;}).sort(function(a,b){return ((a.y0-L.y1)+Math.abs(a.x0-L.x0))-((b.y0-L.y1)+Math.abs(b.x0-L.x0));})[0];
+    var T=D?find(/목표/).filter(function(x){return x.li===D.li&&x.x0>D.x1;}).sort(function(a,b){return a.x0-b.x0;})[0]:null;
+    if(D){var td=toks.filter(function(t){return t.li===D.li&&/\d/.test(t.t)&&t.x0>=D.x0-2&&t.x0<D.x1+h*4;}).sort(function(a,b){return a.x0-b.x0;})[0];if(td)S.done=num(td,false);}
+    if(T){var tt=toks.filter(function(t){return t.li===T.li&&/\d/.test(t.t)&&t.x0>=T.x0-2&&t.x0<T.x1+h*4;}).sort(function(a,b){return a.x0-b.x0;})[0];if(tt)S.tg=num(tt,false);}
   });
   return v;
+}
+// 두 방식으로 읽고, 라벨 기준 값이 없으면 줄 위치 기준 값으로 채움
+function _blParse(R){
+  var g=_blParseGeo(R),r=_blParseRow(R);
+  ['at','acc','accTag','done','prog','can','rej','otDone','otRiders'].forEach(function(k){if(g[k]==null||g[k]==='')g[k]=r[k];});
+  g.slots.forEach(function(s,i){var o=r.slots[i];['pct','done','tg','st'].forEach(function(k){if(s[k]==null||s[k]==='')s[k]=o[k];});
+    if(s.done!=null&&s.tg>0&&s.pct!=null&&Math.abs(s.pct-s.done/s.tg*100)>1.5)s.pct=Math.round(s.done/s.tg*1000)/10; // % 를 잘못 읽으면 완료÷목표로 바로잡음
+    if(s.done==null&&s.pct!=null&&s.tg)s.done=Math.round(s.pct*s.tg/100);
+    if(s.pct==null&&s.done!=null&&s.tg)s.pct=Math.round(s.done/s.tg*1000)/10;
+    if(!s.st&&s.pct!=null){var hm=String(g.at||'').match(/(\d{1,2})시/),hr=hm?+hm[1]:null,B=_BL_SLOTS[i].h.match(/(\d+)-(\d+)/);
+      s.st=s.pct>=100?'달성':(hr!=null&&B&&hr<+B[1])?'예정':(hr!=null&&B&&hr>=+B[2])?'미달':'진행중';}});
+  return g;
 }
 // ── 화면: 배민커넥트비즈 '실시간 운영 현황'과 같은 모양 + 항목별 페이지(전체·일일 현황·시간 외·슬롯별 달성률·슬롯 상세)
 function _blF(n,d){if(n==null||n===''||isNaN(+n))return '-';n=+n;return d?String(Math.round(n*10)/10):Math.round(n).toLocaleString();}
@@ -16887,17 +16952,29 @@ window._blUpload=function(file){
   var loadLib=window.Tesseract?Promise.resolve():new Promise(function(ok,no){var s=document.createElement('script');s.src=_BS_TS+'tesseract.min.js';s.onload=ok;s.onerror=function(){no(new Error('글자 인식 모듈을 불러오지 못했어요'));};document.head.appendChild(s);});
   var shr=_blShrink(file);
   Promise.all([loadLib,shr]).then(function(a){
-    var img=a[1].img,sc=Math.min(3,Math.max(1,2600/img.width)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);
+    var img=a[1].img,sc=Math.min(3,Math.max(1,2600/Math.max(img.width,img.height))),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);
     var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);
     window._blA.img=a[1].url;
     say('글자 인식 모듈 불러오는 중 (처음 한 번은 10~30초)…');
     // 한글 라벨 + 숫자 같이 읽음 (langPath 생략 → 언어별 jsdelivr 경로)
     return Tesseract.createWorker(['kor','eng'],1,{workerPath:_BS_TS+'worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
       logger:function(m){if(m.status==='recognizing text')say('캡처 읽는 중 '+Math.round(m.progress*100)+'%');}})
-      .then(function(w){worker=w;return w.recognize(cv);});
-  }).then(function(out){
-    fin=true;clearTimeout(to);worker.terminate();
-    var v=_blParse(out.data),miss=[];
+      .then(function(w){worker=w;return w.recognize(cv);})
+      .then(function(out){
+        // 못 읽은 칸은 라벨 바로 아래만 잘라 숫자만 다시 읽음
+        var v=_blParse(out.data),lab=v._lab||{},redo=Object.keys(lab).filter(function(k){return v[k]==null;});
+        if(!redo.length)return v;
+        say('흐린 숫자 다시 읽는 중…');
+        return worker.setParameters({tessedit_char_whitelist:'0123456789.%',tessedit_pageseg_mode:'6'}).then(function(){
+          return redo.reduce(function(pr,k){return pr.then(function(){var L=lab[k],h=L.h,lf=Math.max(0,Math.round(L.x0-h)),tp=Math.round(L.y1);
+            if(lf>=cv.width||tp>=cv.height)return;
+            return worker.recognize(cv,{rectangle:{left:lf,top:tp,width:Math.min(cv.width-lf,Math.round(h*5)),height:Math.min(cv.height-tp,Math.round(h*3))}}).then(function(o){
+              var ws=(o.data.words||[]).filter(function(w){return /\d/.test(w.text);});if(ws.length){var n=_blNum(ws[0],k==='acc',k==='acc');if(n!=null)v[k]=n;}}).catch(function(){});});},Promise.resolve());
+        }).then(function(){return v;});
+      });
+  }).then(function(v){
+    fin=true;clearTimeout(to);worker.terminate();delete v._lab;
+    var miss=[];
     [['acc','수락률'],['done','완료'],['prog','진행중'],['can','취소'],['rej','거절'],['otDone','시간 외 완료'],['otRiders','운행 라이더']].forEach(function(x){if(v[x[0]]==null)miss.push(x[1]);});
     v.slots.forEach(function(s,i){if(s.pct==null||s.done==null||s.tg==null)miss.push(_BL_SLOTS[i].n);});
     if(!v.at)miss.push('기준 시각');
@@ -16909,13 +16986,14 @@ window._blUpload=function(file){
     var s2=document.getElementById('bl-st');if(s2)s2.innerHTML='<span style="color:var(--red)">캡처를 읽지 못했어요'+(e&&e.message?' ('+esc(String(e.message).slice(0,80))+')':'')+'. 아래 칸에 직접 입력해도 돼요.</span>';});
 };
 
+function _blDrvEmpty(){return '<div style="background:var(--bg2);border-radius:16px;padding:28px 16px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6">아직 대리점이 실시간 운영현황을 올리지 않았어요.<br>올리면 여기에 바로 떠요.</div>';}
 // ── 기사 앱: 대리점이 공유한(고친) 값만 받아 메인 탭 맨 위에 표시. 1분에 한 번만 새로 받음
 function _blDrvFetch(did){
   if(!did||!window._auth||!_auth.currentUser)return;var now=Date.now();if(window._blDrvAt&&now-window._blDrvAt<60000)return;window._blDrvAt=now;
   _auth.currentUser.getIdToken().then(function(tok){return fetch('/api/bm-live?dealerId='+encodeURIComponent(did),{headers:{'Authorization':'Bearer '+tok}});})
     .then(function(r){return r.json();}).then(function(res){
       if(!res||!res.ok)return;var v=res.data;(window._blV||(window._blV={}))['dw-bl']=v&&v.slots?v:null;
-      var el=document.getElementById('dw-bl');if(el)el.innerHTML=window._blV['dw-bl']?_blBoard('dw-bl'):'';
+      var el=document.getElementById('dw-bl');if(el)el.innerHTML=window._blV['dw-bl']?_blBoard('dw-bl'):_blDrvEmpty();
     }).catch(function(){});
 }
 
