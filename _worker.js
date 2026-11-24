@@ -7204,8 +7204,35 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_bnH}); }
     }
 
+    // ── 배민 실시간 운영현황 (2026-11-24): 대리점이 캡처를 올려 고친 값(delivery_sessions/{did}_bmlive.vals)을 소속 기사가 읽음 ──
+    // 기사 계정은 delivery_sessions 를 직접 못 읽어 서버에서 소속 확인 후 값만 돌려줌 (원본 캡처 이미지는 보내지 않음)
+    if (path === '/api/bm-live' && method === 'GET') {
+      const _blH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Cache-Control':'no-store'};
+      try {
+        const _blDid = String(url.searchParams.get('dealerId')||'');
+        if (!_blDid || /[\/?#]/.test(_blDid) || _blDid.length > 80) return new Response(JSON.stringify({ok:false,error:'dealerId 필요'}),{status:400,headers:_blH});
+        const _blU = await verifyFirebaseToken(request, env);
+        if (!_blU) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_blH});
+        const _blUid = _blU.uid || _blU.localId || '';
+        const _blTok = await getAccessToken(env);
+        const _blBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        let _blOk = !!(await requireDealerOf(request, env, _blDid));
+        if (!_blOk && _blUid) {
+          const _blQ = await fetch(`${_blBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_blTok}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'drivers'}],where:{fieldFilter:{field:{fieldPath:'uid'},op:'EQUAL',value:{stringValue:_blUid}}},limit:5}})});
+          const _blRows = (await _blQ.json().catch(()=>[])) || [];
+          _blOk = (Array.isArray(_blRows)?_blRows:[]).some(r => (r.document?.fields?.dealerId?.stringValue||'') === _blDid);
+        }
+        if (!_blOk) return new Response(JSON.stringify({ok:false,error:'Forbidden'}),{status:403,headers:_blH});
+        const _blRes = await fetch(`${_blBase}/delivery_sessions/${_blDid}_bmlive?mask.fieldPaths=vals&mask.fieldPaths=sharedAt`,{headers:{'Authorization':`Bearer ${_blTok}`}});
+        if (!_blRes.ok) return new Response(JSON.stringify({ok:true,data:null}),{headers:_blH});
+        const _blF = (await _blRes.json()).fields || {};
+        let _blV = null; try { _blV = JSON.parse(_blF.vals?.stringValue||'null'); } catch(e) { _blV = null; }
+        return new Response(JSON.stringify({ok:true,data:_blV,sharedAt:_blF.sharedAt?.stringValue||''}),{headers:_blH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_blH}); }
+    }
+
     if (path === '/api/delivery-driver-stats') {
-      const _dsH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'};
+      const _dsH ={'Content-Type':'application/json','Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Content-Type,Authorization'};
       if (method === 'OPTIONS') return new Response(null,{status:204,headers:_dsH});
       if (method === 'GET') {
         const _dsUid = url.searchParams.get('uid')||'';

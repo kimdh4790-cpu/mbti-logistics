@@ -15303,6 +15303,7 @@ function pageDeliveryInput(){
   var period=_dwPeriodStr();
   if(window._dwDashInterval){clearInterval(window._dwDashInterval);window._dwDashInterval=null;}
   function _dwFetchStats(){
+    _blDrvFetch(did);
     fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(period))
       .then(function(r){return r.json();})
       .then(function(res){
@@ -15421,6 +15422,8 @@ function _dwRenderDriverDash(s){
     html+='</div>';
 
     if(tab==='main'){
+      // 배민 실시간 운영현황 (대리점이 캡처를 올리고 고친 값, 2026-11-24)
+      html+='<div id="dw-bl" style="margin-bottom:14px">'+((window._blV||{})['dw-bl']?_blBoard('dw-bl'):'')+'</div>';
       // 2×2 피크 카드 — 배민 엑셀 기준이면 어느 날짜 숫자인지 표시 (배달정보 탭은 주간 합계)
       var _lt='';try{_lt=s.bmDays?(JSON.parse(s.bmDays).latest||''):'';}catch(e){_lt='';}
       if(_lt)html+='<div style="font-size:12px;color:var(--text3);margin:0 2px 8px">시간대별 건수 · '+_lt.slice(5).replace('-','.')+'('+_bmDow(_lt)+') 하루 기준</div>';
@@ -16153,8 +16156,10 @@ function pageBaeminSettle(){
         +'<div id="bs-paste-box" hidden><textarea id="bs-paste" rows="5" placeholder="SLA 표를 붙여넣으세요 (이름 · 아이디 · 휴대폰 · 총 배달완료 · SLA 배달완료 푸드/비마트/배민스토어/합계 · SLA 거절 … · SLA 배차취소 …)"></textarea><button class="bs-btn" type="button" onclick="_bsPasteApply()">적용</button></div>'
         +'<div id="bs-sla-st" class="bs-st"></div></div>'
     +'</div>'
+    +'<div id="bl-admin"></div>'
     +'<div id="bs-body"><div class="bs-empty">불러오는 중…</div></div>'
   +'</div>';
+  _blAdminInit();
   // 기사 목록 + 설정 + 주 문서
   window._bsDrivers=[];
   Promise.all([
@@ -16692,6 +16697,227 @@ window._bsOcr=function(file){
     _bsSlaStore(res,'캡처');
   }).catch(function(e){fin=true;clearTimeout(to);if(worker)worker.terminate();say('캡처를 읽지 못했어요'+(e&&e.message?' ('+esc(String(e.message).slice(0,80))+')':'')+'. 다시 올리거나, 표를 붙여넣거나 아래 표에 직접 입력해 주세요.',true);});
 };
+
+// ── 배민커넥트비즈 '실시간 운영 현황' 캡처 → 값 (2026-11-24)
+var _BL_SLOTS=[{k:'am',n:'아침점심피크',h:'9-13시'},{k:'pm',n:'오후논피크',h:'13-17시'},{k:'eve',n:'저녁피크',h:'17-20시'},{k:'ngt',n:'심야논피크',h:'20-24시'}];
+function _blEmpty(){return {at:'',acc:null,accTag:'',done:null,prog:null,can:null,rej:null,otDone:null,otRiders:null,slots:_BL_SLOTS.map(function(s){return {pct:null,done:null,tg:null,st:''};})};}
+// 숫자 뒤 작은 단위(건·명)가 숫자로 잘못 읽혀도 글자 높이로 잘라냄
+function _blNum(wd,allowDot,noCut){
+  var sy=(wd.symbols&&wd.symbols.length)?wd.symbols:String(wd.text||'').split('').map(function(t){return {text:t};});
+  var H=function(s){return s.bbox?(s.bbox.y1-s.bbox.y0):0;},ref=0,out='',i;
+  for(i=0;i<sy.length;i++){if(/\d/.test(sy[i].text)){ref=H(sy[i]);break;}}
+  for(i=0;i<sy.length;i++){var t=sy[i].text;
+    if(/\d/.test(t)){if(!noCut&&ref&&out&&H(sy[i])<ref*0.8)break;out+=t;}
+    else if(allowDot&&t==='.'&&out&&out.indexOf('.')<0)out+='.';
+    else if(out)break;}
+  if(!out||out==='.')return null;var v=parseFloat(out);return isNaN(v)?null:v;
+}
+function _blParse(R){
+  var v=_blEmpty(),lines=(R&&R.lines)||[];
+  var flat=String((R&&R.text)||lines.map(function(l){return l.text;}).join('\n')).replace(/\s+/g,'');
+  var m=flat.match(/(\d{1,2})\.(\d{2})(\d{1,2})시(\d{1,2})분/);if(m)v.at=(+m[1])+'.'+m[2]+' '+(+m[3])+'시 '+(+m[4])+'분';
+  var ws=function(l){return (l.words||[]).slice().sort(function(a,b){return a.bbox.x0-b.bbox.x0;});};
+  // ① 일일 현황 + 시간 외: 라벨 줄 아래 값 줄을 x 위치로 짝지음
+  var li=-1;lines.forEach(function(l,i){var t=l.text.replace(/\s/g,'');if(li<0&&/진행/.test(t)&&/(거절|취소)/.test(t))li=i;});
+  var slotTop=Infinity;
+  if(li>=0){
+    var labs=[],chars=[];
+    ws(lines[li]).forEach(function(w){String(w.text).split('').forEach(function(ch){chars.push({c:ch,x:w.bbox.x0});});});
+    var s=chars.map(function(o){return o.c;}).join('');
+    var tg=s.match(/(양호|보통|주의|미흡|우수|위험)/);if(tg)v.accTag=tg[1];
+    [['acc',/수락|락률/g],['prog',/진행/g],['can',/취소/g],['rej',/거절/g],['done',/완료/g],['otRiders',/운행|라이더/g]].forEach(function(p){
+      var mm,n=0;p[1].lastIndex=0;while((mm=p[1].exec(s))){var k=p[0];if(k==='done'&&n++)k='otDone';if(!labs.some(function(x){return x.k===k;}))labs.push({k:k,x:chars[mm.index].x});}});
+    var vl=null;for(var j=li+1;j<lines.length&&j<li+4;j++){if(/\d/.test(lines[j].text)){vl=lines[j];break;}}
+    if(vl&&labs.length){
+      ws(vl).forEach(function(w){if(!/\d/.test(w.text))return;
+        var best=null,bd=1e9;labs.forEach(function(L){var d=Math.abs(L.x-w.bbox.x0);if(d<bd){bd=d;best=L;}});
+        if(!best||v[best.k]!=null)return;
+        var n=_blNum(w,best.k==='acc',best.k==='acc');if(n!=null)v[best.k]=n;});
+      slotTop=vl.bbox.y1;
+    }
+  }
+  // ② 슬롯별 달성률: 상태·이름 줄 → % 줄 → 완료·목표 줄
+  var ti=-1;lines.forEach(function(l,i){if(ti<0&&l.bbox.y0>=(slotTop===Infinity?0:slotTop)&&(l.text.match(/피크/g)||[]).length>=2)ti=i;});
+  var pi=-1;for(var k=(ti>=0?ti+1:0);k<lines.length;k++){if(lines[k].bbox.y0>=(slotTop===Infinity?0:slotTop)&&(lines[k].text.match(/%/g)||[]).length>=2){pi=k;break;}}
+  var cs=[];
+  if(ti>=0){ws(lines[ti]).forEach(function(w){if(/(달성|미달|예정|진행|종료)/.test(w.text))cs.push({x:w.bbox.x0,st:w.text.match(/(달성|미달|예정|진행|종료)/)[1]});});}
+  var pw=pi>=0?ws(lines[pi]).filter(function(w){return /\d/.test(w.text);}):[];
+  if(cs.length!==4&&pw.length===4)cs=pw.map(function(w){return {x:w.bbox.x0-30,st:''};});
+  if(cs.length===4){
+    var col=function(x){var c=0;cs.forEach(function(q,i){if(q.x<=x+40)c=i;});return c;};
+    cs.forEach(function(q,i){v.slots[i].st=q.st==='진행'?'진행중':q.st;});
+    pw.forEach(function(w){var c=col(w.bbox.x0);if(v.slots[c].pct==null)v.slots[c].pct=_blNum(w,true,true);});
+    var di=-1;for(var q=(pi>=0?pi+1:ti+1);q<lines.length&&q<(pi>=0?pi:ti)+4;q++){if(/(완료|목표)/.test(lines[q].text)){di=q;break;}}
+    if(di>=0){var mode=null,mc=0;
+      ws(lines[di]).forEach(function(w){var t=w.text,c=col(w.bbox.x0);
+        if(/완료/.test(t)){mode='done';mc=c;}else if(/목표/.test(t)){mode='tg';mc=c;}
+        if(!mode||!/\d/.test(t))return;
+        var sw={text:t,symbols:(w.symbols||[]).filter(function(s){return !/[완료목표]/.test(s.text);})};
+        var n=_blNum(sw,false);if(n!=null&&v.slots[mc][mode]==null)v.slots[mc][mode]=n;});}
+  }
+  v.slots.forEach(function(s){
+    if(s.done==null&&s.pct!=null&&s.tg)s.done=Math.round(s.pct*s.tg/100);
+    if(s.pct==null&&s.done!=null&&s.tg)s.pct=Math.round(s.done/s.tg*1000)/10;
+    if(!s.st&&s.pct!=null)s.st=s.pct>=100?'달성':'진행중';
+  });
+  return v;
+}
+// ── 화면: 배민커넥트비즈 '실시간 운영 현황'과 같은 모양 + 항목별 페이지(전체·일일 현황·시간 외·슬롯별 달성률·슬롯 상세)
+function _blF(n,d){if(n==null||n===''||isNaN(+n))return '-';n=+n;return d?String(Math.round(n*10)/10):Math.round(n).toLocaleString();}
+function _blCss(){
+  return '<style>'
+  +'.bl{background:#f2f3f5;border-radius:16px;padding:14px;color:#1f2329;font-family:Pretendard,-apple-system,sans-serif;display:grid;gap:12px;font-variant-numeric:tabular-nums;min-width:0}'
+  +'.bl *{box-sizing:border-box}.bl-top{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap}.bl-top h3{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em;color:#1f2329}.bl-at{font-size:12px;color:#6b7280;font-weight:600}'
+  +'.bl-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.bl-tabs button{min-width:0;white-space:nowrap;min-height:40px;padding:0 6px;border-radius:999px;border:1px solid #d9dce1;background:#fff;color:#4b5563;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}.bl-tabs button.on{background:#1f2329;border-color:#1f2329;color:#fff}'
+  +'.bl-row{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,1fr);gap:12px}@media(max-width:760px){.bl-row{grid-template-columns:1fr}}'
+  +'.bl-card{background:#fff;border-radius:12px;padding:16px 18px;min-width:0}.bl-h{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:15px;font-weight:800;margin-bottom:14px;color:#1f2329}.bl-h small{font-size:11px;font-weight:500;color:#6b7280;margin-left:4px}.bl-h .ch{font-size:18px;color:#1f2329;font-weight:400}'
+  +'.bl-m{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.bl-m2{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:560px){.bl-m{grid-template-columns:repeat(3,minmax(0,1fr))}.bl-m.bl-m2{grid-template-columns:repeat(2,minmax(0,1fr))}}'
+  +'.bl-m>div{display:grid;gap:4px;min-width:0}.bl-m span{font-size:13px;color:#4b5563;display:flex;align-items:center;gap:5px;white-space:nowrap}.bl-m b{font-size:26px;font-weight:800;line-height:1.1;color:#1f2329}.bl-m b i{font-style:normal;font-size:14px;font-weight:700;margin-left:2px}.bl-m b.g{color:#00a862}'
+  +'.bl-tag{display:inline-block;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:800;background:#d7f5e6;color:#0a8f55}.bl-tag.w{background:#fde8e8;color:#c0392b}.bl-tag.n{background:#e5e7eb;color:#4b5563}'
+  +'.bl-sl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:900px){.bl-sl{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:420px){.bl-sl{grid-template-columns:1fr}}'
+  +'.bl-s{border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;display:grid;gap:8px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;color:inherit;min-width:0;width:100%}.bl-s.fut{background:#f3f4f6;border-color:#e5e7eb}.bl-s.fut .p,.bl-s.fut .nm{color:#9ca3af}'
+  +'.bl-s .t{display:flex;align-items:center;gap:6px;min-width:0}.bl-s .nm{font-size:15px;font-weight:800;white-space:nowrap;color:#1f2329}.bl-s .hr{font-size:11px;color:#6b7280;white-space:nowrap}.bl-s .ch{margin-left:auto;font-size:16px;color:#1f2329}'
+  +'.bl-s .p{font-size:22px;font-weight:800;color:#1f2329}.bl-s .p i{font-style:normal;font-size:13px;margin-left:2px}.bl-bar{height:6px;border-radius:999px;background:#eef0f3;overflow:hidden}.bl-bar>div{height:100%;background:#c3efd9;border-radius:999px}.bl-bar.lo>div{background:#f9d38b}'
+  +'.bl-s .ft{display:flex;justify-content:space-between;font-size:12px;color:#4b5563}'
+  +'.bl-big{font-size:44px;font-weight:900;line-height:1}.bl-big i{font-style:normal;font-size:18px;margin-left:3px}.bl-kv{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #eef0f3;font-size:14px}.bl-kv b{font-weight:800;white-space:nowrap}'
+  +'.bl-back{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #d9dce1;background:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;color:#1f2329}'
+  +'.bl-empty{background:#fff;border-radius:12px;padding:24px;text-align:center;color:#6b7280;font-size:13px}'
+  +'</style>';
+}
+function _blTag(t){if(!t)return '';var c=/(미달|주의|미흡|위험)/.test(t)?' w':/(예정|진행)/.test(t)?' n':'';return '<span class="bl-tag'+c+'">'+esc(t)+'</span>';}
+function _blSlotSt(s){return s.st||((+s.pct||0)>=100?'달성':'진행중');}
+// id: 그릴 칸 id, v: 값
+function _blBoard(id){
+  var v=(window._blV||{})[id];if(!v)return '';
+  var S=(window._blSt||(window._blSt={}))[id]||(window._blSt[id]={tab:'all',slot:-1});
+  var go=function(tab,slot){return 'onclick="_blGo(\''+id+'\',\''+tab+'\','+(slot==null?-1:slot)+')"';};
+  var h=_blCss()+'<div class="bl">'
+    +'<div class="bl-top"><h3>실시간 운영 현황</h3><span class="bl-at">'+(v.at?esc(v.at)+' 기준':'기준 시각 없음')+'</span></div>'
+    +'<div class="bl-tabs" role="tablist">'+[['all','전체'],['day','일일 현황'],['ot','시간 외'],['slot','슬롯 달성률']].map(function(t){return '<button type="button" role="tab" aria-selected="'+(S.tab===t[0])+'" class="'+(S.tab===t[0]?'on':'')+'" '+go(t[0])+'>'+t[1]+'</button>';}).join('')+'</div>';
+  var day='<div class="bl-card"><div class="bl-h"><span>일일 현황</span>'+(S.tab==='all'?'<span class="ch" '+go('day')+' style="cursor:pointer">›</span>':'')+'</div><div class="bl-m">'
+    +'<div><span>수락률 '+_blTag(v.accTag)+'</span><b class="g">'+_blF(v.acc,1)+'<i>%</i></b></div>'
+    +[['완료','done'],['진행중','prog'],['취소','can'],['거절','rej']].map(function(x){return '<div><span>'+x[0]+'</span><b>'+_blF(v[x[1]])+'<i>건</i></b></div>';}).join('')+'</div></div>';
+  var ot='<div class="bl-card"><div class="bl-h"><span>시간 외 배달현황<small>세트 미적용</small></span>'+(S.tab==='all'?'<span class="ch" '+go('ot')+' style="cursor:pointer">›</span>':'')+'</div><div class="bl-m bl-m2">'
+    +'<div><span>완료</span><b>'+_blF(v.otDone)+'<i>건</i></b></div><div><span>운행 라이더</span><b>'+_blF(v.otRiders)+'<i>명</i></b></div></div></div>';
+  var card=function(s,i){var B=_BL_SLOTS[i],st=_blSlotSt(s),fut=st==='예정',pc=Math.max(0,Math.min(100,+s.pct||0));
+    return '<button type="button" class="bl-s'+(fut?' fut':'')+'" '+go('slot',i)+' aria-label="'+B.n+' 자세히"><div class="t">'+_blTag(st)+'<span class="nm">'+B.n+'</span><span class="hr">'+B.h+'</span><span class="ch">›</span></div>'
+      +'<div class="p">'+_blF(s.pct,1)+'<i>%</i></div>'+(fut?'':'<div class="bl-bar'+(pc<100?' lo':'')+'"><div style="width:'+pc+'%"></div></div>')
+      +'<div class="ft"><span>완료 '+_blF(s.done)+'건</span><span>목표 '+_blF(s.tg)+'건</span></div></button>';};
+  var slots='<div class="bl-card"><div class="bl-h"><span>슬롯별 달성률</span></div><div class="bl-sl">'+v.slots.map(card).join('')+'</div></div>';
+  if(S.tab==='all')h+='<div class="bl-row">'+day+ot+'</div>'+slots;
+  else if(S.tab==='day'){
+    h+=day+'<div class="bl-card"><div class="bl-h"><span>수락률</span>'+_blTag(v.accTag)+'</div><div class="bl-big" style="color:#00a862">'+_blF(v.acc,1)+'<i>%</i></div>'
+      +'<div class="bl-kv" style="margin-top:12px"><span>오늘 배차 합계 <small style="color:#6b7280">완료·진행중·취소·거절</small></span><b>'+_blF((+v.done||0)+(+v.prog||0)+(+v.can||0)+(+v.rej||0))+'건</b></div>'
+      +'<div class="bl-kv"><span>거절 + 취소</span><b>'+_blF((+v.rej||0)+(+v.can||0))+'건</b></div></div>';
+  } else if(S.tab==='ot'){
+    h+=ot+'<div class="bl-card"><div class="bl-kv" style="border-top:0"><span>라이더 1명당 평균</span><b>'+((+v.otRiders)?_blF(v.otDone/v.otRiders,1)+'건':'-')+'</b></div><div style="font-size:12px;color:#6b7280">슬롯 시간(9~24시) 밖에서 완료한 배달이에요. 세트 달성에는 들어가지 않아요.</div></div>';
+  } else if(S.slot>=0&&v.slots[S.slot]){
+    var s=v.slots[S.slot],B=_BL_SLOTS[S.slot],st=_blSlotSt(s),left=(+s.tg||0)-(+s.done||0);
+    h+='<div><button type="button" class="bl-back" '+go('slot',-1)+'>‹ 슬롯 전체</button></div>'
+      +'<div class="bl-card"><div class="bl-h"><span>'+_blTag(st)+' '+B.n+' <small>'+B.h+'</small></span></div>'
+      +'<div class="bl-big">'+_blF(s.pct,1)+'<i>%</i></div><div class="bl-bar'+((+s.pct||0)<100?' lo':'')+'" style="margin:14px 0 6px;height:10px"><div style="width:'+Math.max(0,Math.min(100,+s.pct||0))+'%"></div></div>'
+      +'<div class="bl-kv"><span>완료</span><b>'+_blF(s.done)+'건</b></div><div class="bl-kv"><span>목표</span><b>'+_blF(s.tg)+'건</b></div>'
+      +'<div class="bl-kv"><span>'+(left>0?'목표까지 남은 건수':'목표보다 더 탄 건수')+'</span><b style="color:'+(left>0?'#c2410c':'#00a862')+'">'+(left>0?_blF(left)+'건':'+'+_blF(-left)+'건')+'</b></div></div>'
+      +'<div class="bl-sl">'+v.slots.map(function(x,i){return i===S.slot?'':card(x,i);}).join('')+'</div>';
+  } else h+=slots;
+  return h+'</div>';
+}
+window._blGo=function(id,tab,slot){var S=(window._blSt||(window._blSt={}))[id]||(window._blSt[id]={});S.tab=tab;S.slot=slot==null?-1:slot;var el=document.getElementById(id);if(el)el.innerHTML=_blBoard(id);};
+
+// ── 대리점 화면: 캡처 올리기 → 인식값 수정 → 저장하고 기사에게 공유 (delivery_sessions/{did}_bmlive)
+function _blRef(){return _db.collection('delivery_sessions').doc(window._bsDid+'_bmlive');}
+function _blAdminInit(){
+  var el=document.getElementById('bl-admin');if(!el)return;
+  window._blA={doc:null,draft:null,ocr:null,img:'',dirty:false};
+  el.innerHTML='<div class="bs-card"><div class="bs-h">③ 실시간 운영현황 (협력사 전체)</div><div class="bs-sub">배민커넥트비즈 <b>실시간 운영 현황</b> 화면을 캡처해서 올리면 숫자를 읽어 같은 모양으로 보여줘요. 잘못 읽힌 칸은 고친 뒤 <b>저장하고 기사에게 공유</b>를 누르면 기사 앱에는 고친 값으로 떠요.</div><div class="bs-st">불러오는 중…</div></div>';
+  _db.collection('delivery_sessions').where('dealerId','==',window._bsDid).where('type','==','bm_live').get().then(function(qs){
+    qs.forEach(function(x){window._blA.doc=x.data();});
+    var d=window._blA.doc;
+    if(d){try{window._blA.draft=JSON.parse(d.draft||d.vals||'null');}catch(e){}try{window._blA.ocr=JSON.parse(d.ocr||'null');}catch(e){}window._blA.img=d.img||'';}
+    _blAdminRender();
+  }).catch(function(){_blAdminRender();});
+}
+function _blAdminRender(){
+  var el=document.getElementById('bl-admin');if(!el)return;var A=window._blA,v=A.draft,d=A.doc||{};
+  var shared=d.sharedAt?new Date(d.sharedAt):null;
+  var sh=shared?'기사 공유: '+(shared.getMonth()+1)+'.'+shared.getDate()+' '+String(shared.getHours()).padStart(2,'0')+':'+String(shared.getMinutes()).padStart(2,'0'):'아직 기사에게 공유하지 않았어요';
+  var h='<div class="bs-card"><div class="bs-h">③ 실시간 운영현황 (협력사 전체)</div>'
+    +'<div class="bs-sub">배민커넥트비즈 <b>실시간 운영 현황</b> 화면을 캡처해서 올리면 숫자를 읽어 같은 모양으로 보여줘요. 잘못 읽힌 칸은 고친 뒤 <b>저장하고 기사에게 공유</b>를 누르면 기사 앱에는 고친 값으로 떠요.</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap"><label class="bs-btn">운영현황 캡처 올리기<input type="file" accept="image/*" hidden onchange="_blUpload(this.files[0]);this.value=\'\'"></label>'
+    +(v?'<button class="bs-btn ghost" type="button" onclick="_blSave()">저장하고 기사에게 공유</button>':'')+'</div>'
+    +'<div id="bl-st" class="bs-st">'+(A.dirty?'<span style="color:#92400e;font-weight:700">고친 값이 아직 기사에게 공유되지 않았어요.</span> ':'')+sh+'</div>';
+  if(v){
+    var O=A.ocr||{},os=O.slots||[];
+    var inp=function(path,val,ov,attr){var ed=ov!==undefined&&String(ov==null?'':ov)!==String(val==null?'':val);
+      return '<input '+(attr||'type="number" inputmode="decimal" min="0" step="any"')+' value="'+(val==null?'':esc(String(val)))+'" onchange="_blEdit(\''+path+'\',this.value)"'+(ed?' class="ed" title="캡처에서 읽은 값: '+(ov==null?'없음':esc(String(ov)))+'"':'')+'>';};
+    var fld=function(lab,path,key,attr){return '<label>'+lab+inp(path,v[key],O[key],attr)+'</label>';};
+    h+='<div class="bl-ed"><div class="bl-eg">'
+      +fld('기준 시각','at','at','type="text" placeholder="11.24 16시 41분"')+fld('수락률(%)','acc','acc')+fld('수락률 상태','accTag','accTag','type="text" placeholder="양호"')
+      +fld('완료','done','done')+fld('진행중','prog','prog')+fld('취소','can','can')+fld('거절','rej','rej')
+      +fld('시간 외 완료','otDone','otDone')+fld('운행 라이더','otRiders','otRiders')+'</div>'
+      +'<div class="bl-es">'+v.slots.map(function(s,i){var o=os[i]||{};
+        return '<div><b>'+_BL_SLOTS[i].n+' <small>'+_BL_SLOTS[i].h+'</small></b><div class="bl-eg4">'
+          +'<label>상태<select onchange="_blEdit(\'s'+i+'.st\',this.value)">'+['달성','진행중','미달','예정'].map(function(x){return '<option'+(_blSlotSt(s)===x?' selected':'')+'>'+x+'</option>';}).join('')+'</select></label>'
+          +'<label>달성률(%)'+inp('s'+i+'.pct',s.pct,o.pct)+'</label><label>완료'+inp('s'+i+'.done',s.done,o.done)+'</label><label>목표'+inp('s'+i+'.tg',s.tg,o.tg)+'</label></div></div>';}).join('')+'</div>'
+      +'<div class="bs-sub">노란 칸 = 캡처에서 읽은 값과 다르게 고친 칸. 완료·목표를 고치면 달성률이 다시 계산돼요.</div></div>'
+      +(A.img?'<details><summary style="cursor:pointer;font-size:12px;color:var(--text3);min-height:32px;display:flex;align-items:center">올린 캡처 원본 보기</summary><img src="'+A.img+'" alt="올린 운영현황 캡처" style="max-width:100%;border-radius:8px;border:1px solid var(--border);margin-top:6px"></details>':'')
+      +'<div class="bs-sub" style="font-weight:700;color:var(--text2)">기사 앱 미리보기 (항목을 누르면 항목별 페이지로 넘어가요)</div><div id="bl-prev"></div>';
+  }
+  h+='</div><style>.bl-ed{display:grid;gap:10px}.bl-eg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.bl-eg4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:4px}@media(max-width:560px){.bl-eg{grid-template-columns:repeat(2,minmax(0,1fr))}.bl-eg4{grid-template-columns:repeat(2,minmax(0,1fr))}}.bl-es{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media(max-width:700px){.bl-es{grid-template-columns:1fr}}.bl-es>div{border:1px solid var(--border);border-radius:10px;padding:8px 10px}.bl-es small{font-weight:400;color:var(--text3)}.bl-ed label{display:grid;gap:3px;font-size:11px;color:var(--text3);min-width:0}.bl-ed input,.bl-ed select{width:100%;min-width:0;min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 8px;font-size:14px;box-sizing:border-box}.bl-ed input.ed{background:rgba(234,179,8,.16);border-color:#d4a017}</style>';
+  el.innerHTML=h;
+  if(v){(window._blV||(window._blV={}))['bl-prev']=v;var p=document.getElementById('bl-prev');if(p)p.innerHTML=_blBoard('bl-prev');}
+}
+window._blEdit=function(path,val){
+  var v=window._blA.draft;if(!v)return;var m=path.match(/^s(\d)\.(\w+)$/),o=m?v.slots[+m[1]]:v,k=m?m[2]:path;
+  var txt=(k==='at'||k==='accTag'||k==='st');o[k]=txt?String(val).trim().slice(0,30):(val===''?null:Math.max(0,+val||0));
+  if(m&&(k==='done'||k==='tg')&&(+o.tg)>0&&o.done!=null)o.pct=Math.round(o.done/o.tg*1000)/10;
+  window._blA.dirty=true;_blAdminRender();
+};
+window._blSave=function(){
+  var A=window._blA;if(!A||!A.draft)return;var now=new Date().toISOString(),js=JSON.stringify(A.draft);
+  var doc={dealerId:window._bsDid,type:'bm_live',vals:js,draft:js,ocr:JSON.stringify(A.ocr||null),img:A.img||'',updatedAt:now,sharedAt:now};
+  toast('저장하는 중...');
+  _blRef().set(doc).then(function(){A.doc=doc;A.dirty=false;_blAdminRender();toast('저장했어요. 기사 앱에 고친 값으로 떠요');})
+    .catch(function(e){toast('저장 실패: '+(e&&e.message||''));});
+};
+function _blShrink(file){return new Promise(function(ok,no){var img=new Image();img.onload=function(){var sc=Math.min(1,1400/img.width),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);var q=0.75,u=cv.toDataURL('image/jpeg',q);while(u.length>700000&&q>0.3){q-=0.15;u=cv.toDataURL('image/jpeg',q);}ok({url:u,img:img});};img.onerror=function(){no(new Error('이미지를 열지 못했어요'));};img.src=URL.createObjectURL(file);});}
+window._blUpload=function(file){
+  if(!file)return;var st=document.getElementById('bl-st');function say(t,bad){if(st)st.innerHTML=bad?'<span style="color:var(--red)">'+t+'</span>':t;}
+  say('캡처 준비 중…');var worker=null,fin=false,to=setTimeout(function(){if(!fin)say('글자 인식이 90초 안에 끝나지 않았어요. 다시 올리거나 칸에 직접 입력해 주세요.',true);},90000);
+  var loadLib=window.Tesseract?Promise.resolve():new Promise(function(ok,no){var s=document.createElement('script');s.src=_BS_TS+'tesseract.min.js';s.onload=ok;s.onerror=function(){no(new Error('글자 인식 모듈을 불러오지 못했어요'));};document.head.appendChild(s);});
+  var shr=_blShrink(file);
+  Promise.all([loadLib,shr]).then(function(a){
+    var img=a[1].img,sc=Math.min(3,Math.max(1,2600/img.width)),cv=document.createElement('canvas');cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);
+    var cx=cv.getContext('2d');cx.imageSmoothingQuality='high';cx.drawImage(img,0,0,cv.width,cv.height);URL.revokeObjectURL(img.src);
+    window._blA.img=a[1].url;
+    say('글자 인식 모듈 불러오는 중 (처음 한 번은 10~30초)…');
+    // 한글 라벨 + 숫자 같이 읽음 (langPath 생략 → 언어별 jsdelivr 경로)
+    return Tesseract.createWorker(['kor','eng'],1,{workerPath:_BS_TS+'worker.min.js',corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1',
+      logger:function(m){if(m.status==='recognizing text')say('캡처 읽는 중 '+Math.round(m.progress*100)+'%');}})
+      .then(function(w){worker=w;return w.recognize(cv);});
+  }).then(function(out){
+    fin=true;clearTimeout(to);worker.terminate();
+    var v=_blParse(out.data),miss=[];
+    [['acc','수락률'],['done','완료'],['prog','진행중'],['can','취소'],['rej','거절'],['otDone','시간 외 완료'],['otRiders','운행 라이더']].forEach(function(x){if(v[x[0]]==null)miss.push(x[1]);});
+    v.slots.forEach(function(s,i){if(s.pct==null||s.done==null||s.tg==null)miss.push(_BL_SLOTS[i].n);});
+    if(!v.at)miss.push('기준 시각');
+    window._blA.ocr=JSON.parse(JSON.stringify(v));window._blA.draft=v;window._blA.dirty=true;
+    _blAdminRender();
+    var st2=document.getElementById('bl-st');if(st2)st2.innerHTML='캡처를 읽었어요. 숫자를 확인하고 <b>저장하고 기사에게 공유</b>를 눌러 주세요.'+(miss.length?' <span style="color:#92400e;font-weight:700">못 읽은 칸: '+esc(miss.join(', '))+'</span>':'');
+  }).catch(function(e){fin=true;clearTimeout(to);if(worker)worker.terminate();
+    if(!window._blA.draft){window._blA.draft=_blEmpty();window._blA.ocr=_blEmpty();window._blA.dirty=true;_blAdminRender();}
+    var s2=document.getElementById('bl-st');if(s2)s2.innerHTML='<span style="color:var(--red)">캡처를 읽지 못했어요'+(e&&e.message?' ('+esc(String(e.message).slice(0,80))+')':'')+'. 아래 칸에 직접 입력해도 돼요.</span>';});
+};
+
+// ── 기사 앱: 대리점이 공유한(고친) 값만 받아 메인 탭 맨 위에 표시. 1분에 한 번만 새로 받음
+function _blDrvFetch(did){
+  if(!did||!window._auth||!_auth.currentUser)return;var now=Date.now();if(window._blDrvAt&&now-window._blDrvAt<60000)return;window._blDrvAt=now;
+  _auth.currentUser.getIdToken().then(function(tok){return fetch('/api/bm-live?dealerId='+encodeURIComponent(did),{headers:{'Authorization':'Bearer '+tok}});})
+    .then(function(r){return r.json();}).then(function(res){
+      if(!res||!res.ok)return;var v=res.data;(window._blV||(window._blV={}))['dw-bl']=v&&v.slots?v:null;
+      var el=document.getElementById('dw-bl');if(el)el.innerHTML=window._blV['dw-bl']?_blBoard('dw-bl'):'';
+    }).catch(function(){});
+}
 
 // ── 기사 화면 카드: 본인 정산서 + 응원 메시지 (bmDays.settle)
 function _bsDriverCard(b){
