@@ -14617,11 +14617,17 @@ window._dwTaxXlsx=function(){
 //  · 배민처럼 dw_driver_stats 에 기사용 정산서만 저장(cpeStmt) → 기사 앱 '정산내역'에 표시 + 푸시 알림
 //  · 기사용에는 쿠팡 지급액·회사 마진·날짜별 내역을 넣지 않음 (기사용/대리점용 구분 규칙)
 //  · 보낸 뒤 대리점이 고치면(업로드·거절/취소·설정) 화면을 다시 그릴 때 바뀐 기사 정산서를 자동으로 다시 반영
-function _dwCpeStmt(r,ym,DC,au){
+// 배민 기사 정산서와 같은 범위 (사용자 2026-11-25 "배민이랑 같게"): 주별 건수·도달 단가·주 세전·응원만, 단가 구간별 상세는 넣지 않음
+function _dwCpeStmt(r,ym,DC,au,tiers){
   var R=function(n){return Math.round(+n||0);},P=function(v){return Math.round((+v||0)*10000)/100;};
-  return {ym:ym,name:r.name,n:R(r.orders),rej:R(r.totalRej),can:R(r.totalCan),topRate:R(r.topRate),
-    weeks:(r.weeks||[]).map(function(w){return {week:w.week||'',weekEnd:w.weekEnd||'',count:R(w.count),gross:R(w.gross),
-      bd:(w.breakdown||[]).filter(function(b){return b.count>0;}).map(function(b){return {s:R(b.start),e:b.end===Infinity||b.end==null?0:R(b.end),rate:R(b.rate),count:R(b.count),pay:R(b.pay)};})};}),
+  var ts=(tiers||[]).slice().sort(function(a,b){return a.min-b.min;});
+  var weeks=(r.weeks||[]).map(function(w){
+    var rate=0;(w.breakdown||[]).forEach(function(b){if(b.count>0&&+b.rate>rate)rate=+b.rate;});
+    return {week:w.week||'',weekEnd:w.weekEnd||'',count:R(w.count),gross:R(w.gross),rate:R(rate)};
+  });
+  var lw=weeks[weeks.length-1],nx=null;
+  if(lw)ts.some(function(t){if(+t.min>lw.count){nx={min:R(t.min),rate:R(t.rate),left:R(t.min-lw.count)};return true;}return false;});
+  return {ym:ym,name:r.name,n:R(r.orders),rej:R(r.totalRej),can:R(r.totalCan),topRate:R(r.topRate),weeks:weeks,next:nx,
     gross:R(r.preTax),tax:R(r.tax33),emp:R(r.taxEmp),ind:R(r.taxWork),bk:R(r.bk),net:R(r.net),
     all:!!DC.all,rates:{wh:P(DC.taxRate),emp:P(DC.empRate),ind:P(DC.indRate)},bkLabel:r.bk?_dwBkLabel(DC):'',forAu:au};
 }
@@ -14637,7 +14643,7 @@ function _dwCpeTargets(results,drvs,ym){
   var list=[],dup=[];
   Object.keys(by).forEach(function(au){
     if(by[au].length>1){dup.push(by[au].map(function(x){return x.r.name;}).join('·'));return;}
-    list.push({au:au,name:by[au][0].r.name,stmt:_dwCpeStmt(by[au][0].r,ym,DC,au)});
+    list.push({au:au,name:by[au][0].r.name,stmt:_dwCpeStmt(by[au][0].r,ym,DC,au,typeof _dwEatsCfg==='function'?_dwEatsSortedTiers(_dwEatsCfg().tiers):[])});
   });
   return {list:list,miss:miss,dup:dup};
 }
@@ -15730,8 +15736,7 @@ function _dwCpeDriverCard(c){
   var q=c.rates||{},ym=String(c.ym||'');
   var wk=(c.weeks||[]).map(function(w){
     return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
-      +R('<b>'+(w.week?esc(w.week.slice(5).replace('-','.'))+' ~ '+esc(w.weekEnd.slice(5).replace('-','.')):'날짜 미상')+'</b> · '+W(w.count)+'건','<b>'+W(w.gross)+'원</b>')
-      +(w.bd||[]).map(function(b){return R(W(b.s)+(b.e?'~'+W(b.e):'')+'건 구간 × '+W(b.rate)+'원 ('+W(b.count)+'건)',W(b.pay)+'원','font-size:12px;color:var(--text3);padding:2px 0');}).join('')
+      +R('<b>'+(w.week?esc(w.week.slice(5).replace('-','.'))+' ~ '+esc(w.weekEnd.slice(5).replace('-','.')):'날짜 미상')+'</b> · '+W(w.count)+'건'+(w.rate?' · 도달 단가 '+W(w.rate)+'원':''),'<b>'+W(w.gross)+'원</b>')
     +'</div>';
   }).join('');
   var ded=c.all?R('원천징수·공과금 ('+q.wh+'%)','−'+W(c.tax)+'원','color:var(--text3)')
@@ -15743,6 +15748,7 @@ function _dwCpeDriverCard(c){
       +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">거절</div><div style="font-size:20px;font-weight:900;color:#dc2626">'+W(c.rej)+'</div></div>'
       +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">취소</div><div style="font-size:20px;font-weight:900;color:#b45309">'+W(c.can)+'</div></div>'
     +'</div>'
+    +(c.next?'<div style="border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;line-height:1.5;margin-bottom:8px;background:rgba(37,99,235,.1);color:#1d4ed8">마지막 주 '+W(c.next.left)+'건 더 타면 그 뒤 배달은 건당 '+W(c.next.rate)+'원이에요</div>':'')
     +(wk?'<div style="font-size:12px;font-weight:800;margin:10px 0 2px">주별 정산 (주 단위 누진 단가)</div>'+wk:'')
     +'<div style="margin-top:8px">'
       +R('<b>세전</b>','<b>'+W(c.gross)+'원</b>')

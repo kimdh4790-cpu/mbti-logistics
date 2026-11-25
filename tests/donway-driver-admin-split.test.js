@@ -110,15 +110,16 @@ test('배달 기사 관리: 대리점 주민번호 고치기 — 13자리 확인
 
 test('쿠팡이츠 기사 정산서: 기사용 값에 쿠팡 지급액·회사 마진·날짜별 내역 없음, 계정 연결·중복 막기', () => {
   const code = cut('function _dwTaxMatch(', 'window._dwTaxXlsx=') + cut('function _dwCpeStmt(', 'window._dwCpePublish=');
-  const f = new Function('_dwBkLabel', code + '\nreturn {_dwCpeStmt,_dwCpeTargets};')(() => '건당 200원');
+  const f = new Function('_dwBkLabel', '_dwEatsCfg', '_dwEatsSortedTiers', code + '\nreturn {_dwCpeStmt,_dwCpeTargets};')(() => '건당 200원', () => ({ tiers: [] }), t => t);
   global.window = { _dwDeliveryCfg: { taxRate: 0.033, empRate: 0.008, indRate: 0.0088, bkType: 'won', bkVal: 200 } };
   const r = { name: '홍길동', orders: 250, preTax: 700000, tax33: 23100, taxEmp: 5600, taxWork: 6160, bk: 50000, net: 615140, coupang: 900000, company: 200000,
     totalRej: 3, totalCan: 1, topRate: 4000, days: [{ date: '2026-11-01', orders: 10, amount: 1 }],
     weeks: [{ week: '2026-11-05', weekEnd: '2026-11-11', count: 250, gross: 700000, breakdown: [{ start: 1, end: 199, rate: 2400, count: 199, pay: 477600 }, { start: 300, end: Infinity, rate: 4300, count: 0, pay: 0 }] }] };
-  const s = f._dwCpeStmt(r, '2026-11', window._dwDeliveryCfg, 'U1');
+  const s = f._dwCpeStmt(r, '2026-11', window._dwDeliveryCfg, 'U1', [{ min: 1, rate: 2400 }, { min: 200, rate: 3600 }, { min: 300, rate: 4300 }]);
   const j = JSON.stringify(s);
   for (const k of ['coupang', 'company', 'days', '900000', '200000']) assert.ok(!j.includes(k), k + ' 가 기사 데이터에 들어감');
-  assert.strictEqual(s.net, 615140); assert.strictEqual(s.forAu, 'U1'); assert.strictEqual(s.weeks[0].bd.length, 1);
+  assert.strictEqual(s.net, 615140); assert.strictEqual(s.forAu, 'U1'); assert.strictEqual(s.weeks[0].rate, 2400); assert.ok(!('bd' in s.weeks[0]), '단가 구간별 상세는 기사에게 안 보냄');
+  assert.deepStrictEqual(s.next, { min: 300, rate: 4300, left: 50 });
   assert.deepStrictEqual(s.rates, { wh: 3.3, emp: 0.8, ind: 0.88 });
   const T = f._dwCpeTargets([r, { name: '김철수', orders: 1 }, { name: '이영희', orders: 1 }, { name: '이 영희', orders: 1 }],
     [{ name: '홍길동', uid: 'U1' }, { name: '김철수' }, { name: '이영희', uid: 'U3' }], '2026-11');
