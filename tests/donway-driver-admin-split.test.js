@@ -48,6 +48,8 @@ test('배달 기사 관리: 주민번호 전체 보기·복사는 대리점만 (
   assert.strictEqual(mk2({ role: 'driver' })._ddSsnCur(), '');
   assert.strictEqual(mk2({ role: 'member' })._ddSsnCur(), '');
   assert.ok(src.includes('onclick="_ddSsnToggle()">전체 보기</button>'));
+});
+
 test('기사 명단(drivers): 기사 계정은 본인 줄만, 본인 줄은 푸시 토큰만 수정, settlements 규칙은 그대로', () => {
   const m = rules.match(/match \/drivers\/\{docId\} \{[\s\S]*?\n    \}/);
   assert.ok(m, 'drivers 규칙 블록');
