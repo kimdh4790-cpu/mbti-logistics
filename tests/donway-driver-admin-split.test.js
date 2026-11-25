@@ -96,3 +96,14 @@ test('쿠팡이츠 세무사용 엑셀: 이름으로 기사 짝짓기, 동명이
   assert.strictEqual(m['박민수'].d.ssn, undefined); assert.match(m['박민수'].note, /같은 이름 2명/);
   assert.ok(src.includes('onclick="_dwTaxXlsx()"'));
 });
+
+test('배달 기사 관리: 대리점 주민번호 고치기 — 13자리 확인, 중복 막기, 안 고치면 그대로', () => {
+  const code = cut('function _ddSsnCheck(', 'window._ddSsnCopy=');
+  const f = new Function(code + '\nreturn _ddSsnCheck;')();
+  assert.strictEqual(f('', '850101-1234567', []), '');
+  assert.strictEqual(f('850101-1234567', '850101-1234567', []), '');
+  assert.deepStrictEqual(f('9001012345678', '', []), { ssn: '900101-2345678' });
+  assert.match(f('12345', '', []).err, /13자리/);
+  assert.match(f('900101-2345678', '', ['9001012345678']).err, /이미 있어요/);
+  assert.ok(src.includes("if(sc&&sc.ssn)upd.ssn=sc.ssn;"));
+});
