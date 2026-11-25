@@ -13890,7 +13890,7 @@ window._dwDeliverySave=function(){
       savedAt:new Date().toISOString(),
       totalCount:drivers.reduce(function(s,d){return s+Math.round(d.orders||0);},0),
       totalAmount:drivers.reduce(function(s,d){return s+Math.round(d.amount||0);},0)
-    },{merge:false});
+    },{merge:true}); // merge: 기사에게 보낸 표시(cpeSent)가 업로드로 지워지지 않게 — 저장 필드는 모두 새 값으로 덮어씀
   }
   var jobs=targets.map(function(ym){
     var docRef=_db.collection('delivery_sessions').doc(did+'_coupang_'+ym);
@@ -13938,7 +13938,9 @@ window._dwDeliverySave=function(){
 function _dwDeliveryLoad(did, ym){
   var res=document.getElementById('dw-settle-results');
   if(!res)return;
+  window._dwCpeSent=null;window._dwCpeReads={};
   _db.collection('delivery_sessions').doc(did+'_coupang_'+ym).get().then(function(snap){
+    window._dwCpeSent=(snap.exists&&snap.data().cpeSent)||null;
     if(!snap.exists||!(snap.data().drivers||[]).length){
       res.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text3)">'
         +'<div style="font-size:40px;margin-bottom:12px">📭</div>'
@@ -14284,10 +14286,12 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
       +'<button onclick="_dwEatsSettings()" style="padding:9px 18px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산 방식·단가</button>'
       +'<button onclick="_dwDeliveryExport()" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'
       +'<button onclick="_dwTaxXlsx()" style="padding:9px 18px;min-height:44px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">세무사용 엑셀</button>'
+      +'<button onclick="_dwCpeSend()" style="padding:9px 18px;min-height:44px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">기사에게 정산서 보내기</button>'
       +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💳 세금정산 보기</button>'
       +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
       +'<button onclick="_dwDeliveryDelete(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ 초기화</button>'
-    +'</div>';
+    +'</div>'
+    +'<div id="dw-cpe-st" style="font-size:12px;color:var(--text3);margin:-8px 0 14px;line-height:1.6">'+(window._dwCpeSent&&window._dwCpeSent.at?'기사 앱 발송 '+_bsWhen(window._dwCpeSent.at)+' · 확인 중...':'아직 기사에게 보내지 않았어요')+'</div>';
 
   if(!results.length){
     html+='<div style="text-align:center;padding:32px;color:var(--text3)">기사 데이터 없음</div>';
@@ -14388,6 +14392,8 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
   html+='</div>';
 
   res.innerHTML=html;
+  // 보낸 정산서가 있으면 고친 내용을 기사 앱에 자동 반영 (바뀐 게 없으면 열람 여부만 새로 읽음)
+  if(window._dwCpeSent&&window._dwCpeSent.at)window._dwCpePublish(false).then(function(out){if(out)_dwCpeStatus(out.T);}).catch(function(){});
 }
 
 window._dwDeliverySaveExtra=function(did, ym){
@@ -14606,6 +14612,102 @@ window._dwTaxXlsx=function(){
     toast(rows.length+'명 세무사용 엑셀을 받았어요'+(miss?' (주민번호 없는 기사 '+miss+'명)':''));
   }).catch(function(e){toast('엑셀을 만들지 못했어요: '+e.message);});
 };
+
+// ── 쿠팡이츠 기사 정산서 보내기 (사용자 2026-11-25 "쿠팡이츠도 기사 앱으로 정산서") ──
+//  · 배민처럼 dw_driver_stats 에 기사용 정산서만 저장(cpeStmt) → 기사 앱 '정산내역'에 표시 + 푸시 알림
+//  · 기사용에는 쿠팡 지급액·회사 마진·날짜별 내역을 넣지 않음 (기사용/대리점용 구분 규칙)
+//  · 보낸 뒤 대리점이 고치면(업로드·거절/취소·설정) 화면을 다시 그릴 때 바뀐 기사 정산서를 자동으로 다시 반영
+// 배민 기사 정산서와 같은 범위 (사용자 2026-11-25 "배민이랑 같게"): 주별 건수·도달 단가·주 세전·응원만, 단가 구간별 상세는 넣지 않음
+function _dwCpeStmt(r,ym,DC,au,tiers){
+  var R=function(n){return Math.round(+n||0);},P=function(v){return Math.round((+v||0)*10000)/100;};
+  var ts=(tiers||[]).slice().sort(function(a,b){return a.min-b.min;});
+  var weeks=(r.weeks||[]).map(function(w){
+    var rate=0;(w.breakdown||[]).forEach(function(b){if(b.count>0&&+b.rate>rate)rate=+b.rate;});
+    return {week:w.week||'',weekEnd:w.weekEnd||'',count:R(w.count),gross:R(w.gross),rate:R(rate)};
+  });
+  var lw=weeks[weeks.length-1],nx=null;
+  if(lw)ts.some(function(t){if(+t.min>lw.count){nx={min:R(t.min),rate:R(t.rate),left:R(t.min-lw.count)};return true;}return false;});
+  return {ym:ym,name:r.name,n:R(r.orders),rej:R(r.totalRej),can:R(r.totalCan),topRate:R(r.topRate),weeks:weeks,next:nx,
+    gross:R(r.preTax),tax:R(r.tax33),emp:R(r.taxEmp),ind:R(r.taxWork),bk:R(r.bk),net:R(r.net),
+    all:!!DC.all,rates:{wh:P(DC.taxRate),emp:P(DC.empRate),ind:P(DC.indRate)},bkLabel:r.bk?_dwBkLabel(DC):'',forAu:au};
+}
+function _dwCpeHash(s){var h=0;for(var i=0;i<s.length;i++){h=(h*31+s.charCodeAt(i))|0;}return String(h);}
+// 정산 결과 → 기사 계정 연결 (이름으로 짝지음, 동명이인·한 계정에 여러 명이면 보내지 않음)
+function _dwCpeTargets(results,drvs,ym){
+  var DC=window._dwDeliveryCfg||{taxRate:0.033,empRate:0.008,indRate:0.0088},by={},miss=[];
+  _dwTaxMatch(results,drvs).forEach(function(x){
+    var au=x.d&&(x.d.uid||x.d.userId);
+    if(!au){miss.push(x.r.name+(x.note?' ('+x.note+')':''));return;}
+    (by[au]=by[au]||[]).push(x);
+  });
+  var list=[],dup=[];
+  Object.keys(by).forEach(function(au){
+    if(by[au].length>1){dup.push(by[au].map(function(x){return x.r.name;}).join('·'));return;}
+    list.push({au:au,name:by[au][0].r.name,stmt:_dwCpeStmt(by[au][0].r,ym,DC,au,typeof _dwEatsCfg==='function'?_dwEatsSortedTiers(_dwEatsCfg().tiers):[])});
+  });
+  return {list:list,miss:miss,dup:dup};
+}
+// send=true: 보내기(읽음 초기화 + 알림). false: 이미 보낸 정산서를 고친 내용으로 다시 반영
+window._dwCpePublish=function(send){
+  if(_dwIsDriverAcct())return Promise.resolve();
+  var results=window._dwDeliveryResults||[],ym=window._dwSettleYm||new Date().toISOString().slice(0,7);
+  var did=_CU&&(_CU.dealerId||_CU.uid);if(!did||!results.length)return Promise.resolve();
+  var ref=_db.collection('delivery_sessions').doc(did+'_coupang_'+ym),at=send?new Date().toISOString():((window._dwCpeSent||{}).at||'');
+  if(!at)return Promise.resolve();
+  return _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var drvs=[];snap.forEach(function(doc){drvs.push(doc.data());});
+    var T=_dwCpeTargets(results,drvs,ym),per=_dwPeriodStr(),done=0,reads={};
+    var hash=_dwCpeHash(per+'|'+JSON.stringify(T.list));
+    if(!send&&(window._dwCpeSent||{}).h===hash){_dwCpeLoadReads(T.list);return null;}
+    return Promise.all(T.list.map(function(t){
+      return _dwStatsGet(t.au,did).then(function(res){
+        var cur=(res&&res.data)||{},old=null;try{old=cur.cpeStmt?JSON.parse(cur.cpeStmt):null;}catch(e){old=null;}
+        if(!send&&old&&old.ym&&old.ym>ym)return; // 더 최근 달 정산서를 이미 받은 기사는 덮어쓰지 않음
+        var st=Object.assign({},t.stmt,{sentAt:at,updatedAt:new Date().toISOString()});
+        var rd=send?'':(old&&old.sentAt===at?(cur.cpeReadAt||''):'');
+        return _dwStatsPost({cpeOnly:true,dealerId:did,driverUid:t.au,driverName:cur.driverName||t.name,period:per,cpeStmt:JSON.stringify(st),cpeReadAt:rd})
+          .then(function(x){if(x&&x.ok){done++;reads[t.au]=rd;}});
+      }).catch(function(){});
+    })).then(function(){
+      window._dwCpeSent={at:at,h:hash};window._dwCpeReads=reads;
+      return ref.set({cpeSent:{at:at,h:hash}},{merge:true}).catch(function(){}).then(function(){return {T:T,done:done};});
+    });
+  });
+};
+window._dwCpeSend=function(){
+  if(_dwIsDriverAcct()){toast('대리점 계정에서만 보낼 수 있어요');return;}
+  if(!(window._dwDeliveryResults||[]).length){toast('정산 데이터가 없어요');return;}
+  var ym=window._dwSettleYm||'';
+  if(!confirm(ym+' 쿠팡이츠 정산서를 기사 앱으로 보낼까요?\n기사에게는 쿠팡 지급액·회사 마진·날짜별 내역은 보이지 않아요.'))return;
+  var did=_CU.dealerId||_CU.uid,prev=window._dwCpeSent;
+  toast('정산서 보내는 중...');
+  window._dwCpePublish(true).then(function(out){
+    if(!out){window._dwCpeSent=prev;return;}
+    var T=out.T;
+    if(!T.list.length){toast('가입한 기사와 이름이 맞는 라이더가 없어요. 배달 기사 관리의 이름을 확인해 주세요');_dwCpeStatus(T);return;}
+    return _auth.currentUser.getIdToken().then(function(tok){
+      return fetch('/api/bm-notify',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+        body:JSON.stringify({dealerId:did,uids:T.list.map(function(t){return t.au;}),title:'정산서가 도착했어요',body:ym.replace('-','년 ')+'월 쿠팡이츠 정산서를 확인해 주세요'})}).then(function(r){return r.json();}).catch(function(){return {};});
+    }).then(function(res){
+      toast(out.done+'명에게 정산서를 보냈어요'+(res&&res.ok?' · 알림 '+(res.sent||0)+'명':'')+(res&&res.noToken?' · 알림 꺼진 기사 '+res.noToken+'명은 앱을 열면 보여요':''));
+      _dwCpeStatus(T);
+    });
+  }).catch(function(e){window._dwCpeSent=prev;toast('보내기 실패: '+e.message);});
+};
+// 보낸 뒤 열람 여부 (대리점 화면 버튼 옆)
+function _dwCpeLoadReads(list){
+  var did=_CU&&(_CU.dealerId||_CU.uid),reads={};
+  Promise.all((list||[]).map(function(t){return _dwStatsGet(t.au,did).then(function(res){var d=(res&&res.data)||{},o=null;try{o=d.cpeStmt?JSON.parse(d.cpeStmt):null;}catch(e){}if(o&&o.ym===window._dwSettleYm)reads[t.au]=d.cpeReadAt||'';}).catch(function(){});}))
+    .then(function(){window._dwCpeReads=reads;_dwCpeStatus({list:list,miss:window._dwCpeMiss||[],dup:[]});});
+}
+function _dwCpeStatus(T){
+  var el=document.getElementById('dw-cpe-st');if(!el)return;
+  window._dwCpeMiss=T.miss||[];
+  var s=window._dwCpeSent,R=window._dwCpeReads||{},ks=Object.keys(R),rd=ks.filter(function(k){return R[k];}).length;
+  el.innerHTML=(s&&s.at?'<span style="font-weight:800;color:#1d4ed8">기사 앱 발송 '+_bsWhen(s.at)+' · '+ks.length+'명 중 '+rd+'명 열람</span> · 고치면 자동으로 다시 반영돼요':'아직 기사에게 보내지 않았어요')
+    +((T.miss||[]).length?'<br><span style="color:#b45309">가입 기사와 이름이 안 맞아 못 보냄: '+T.miss.map(esc).join(', ')+'</span>':'')
+    +((T.dup||[]).length?'<br><span style="color:var(--red)">한 계정에 여러 라이더라 못 보냄: '+T.dup.map(esc).join(', ')+'</span>':'');
+}
 
 window._dwDeliveryDelete=function(did, ym){
   if(!confirm(ym+' 정산 데이터를 초기화하시겠습니까?\n모든 누적 데이터가 삭제됩니다.'))return;
@@ -15545,8 +15647,9 @@ function _dwRenderDriverDash(s){
         +'</div>'
       +'</div>';
 
-    } else if(tab==='settle'&&(s._notMine||_dwBmSettleTab(s))){
-      html+=s._notMine?_dwNotMineHtml():_dwBmSettleTab(s);
+    } else if(tab==='settle'&&(s._notMine||_dwBmSettleTab(s)||_dwCpeSettleTab(s))){
+      // 쿠팡이츠 정산서(대리점이 보낸 것)가 있으면 배민 정산서 위에 함께 표시 (2026-11-25)
+      html+=_dwCpeSettleTab(s)+(s._notMine?_dwNotMineHtml():_dwBmSettleTab(s));
     } else if(tab==='settle'){
       var _ded=_dwDedRate();
       var tax=Math.round(preTax*(_ded!=null?_ded:0.033));
@@ -15618,6 +15721,50 @@ function _dwBmSettleTab(s){
   var b=null;try{b=s&&s.bmDays?JSON.parse(s.bmDays):null;}catch(e){b=null;}
   if(!b||!b.settle)return '';
   return b.settle.sentAt?(_bsMarkRead(b,s),_bsDriverStmt(b)):_bsDriverWait(b);
+}
+// 기사 정산내역 탭: 쿠팡이츠 정산서 (대리점이 보낸 기사용만 — 쿠팡 지급액·회사 마진·날짜별 내역 없음)
+function _dwCpeSettleTab(s){
+  var c=null;try{c=s&&s.cpeStmt?JSON.parse(s.cpeStmt):null;}catch(e){c=null;}
+  if(!c||!c.sentAt)return '';
+  if(_CU&&_CU.role==='driver'&&c.forAu&&c.forAu!==_CU.uid)return ''; // 본인 정산서만
+  _dwCpeMarkRead(c,s);
+  return _dwCpeDriverCard(c);
+}
+function _dwCpeDriverCard(c){
+  var W=function(n){return Math.round(+n||0).toLocaleString();};
+  var R=function(a,v,st){return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;'+(st||'')+'"><span>'+a+'</span><span style="white-space:nowrap;font-variant-numeric:tabular-nums">'+v+'</span></div>';};
+  var q=c.rates||{},ym=String(c.ym||'');
+  var wk=(c.weeks||[]).map(function(w){
+    return '<div style="padding:8px 0;border-bottom:1px solid var(--border)">'
+      +R('<b>'+(w.week?esc(w.week.slice(5).replace('-','.'))+' ~ '+esc(w.weekEnd.slice(5).replace('-','.')):'날짜 미상')+'</b> · '+W(w.count)+'건'+(w.rate?' · 도달 단가 '+W(w.rate)+'원':''),'<b>'+W(w.gross)+'원</b>')
+    +'</div>';
+  }).join('');
+  var ded=c.all?R('원천징수·공과금 ('+q.wh+'%)','−'+W(c.tax)+'원','color:var(--text3)')
+    :R('원천징수 ('+q.wh+'%)','−'+W(c.tax)+'원','color:var(--text3)')+R('고용보험 ('+q.emp+'%)','−'+W(c.emp)+'원','color:var(--text3)')+R('산재보험 ('+q.ind+'%)','−'+W(c.ind)+'원','color:var(--text3)');
+  return '<div style="background:var(--bg2);border-radius:16px;padding:16px;margin-bottom:14px;font-variant-numeric:tabular-nums">'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;gap:8px"><span style="font-size:14px;font-weight:800"><span style="display:inline-block;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:800;background:#1d4ed8;color:#fff;margin-right:6px;vertical-align:middle">쿠팡이츠</span>'+esc(ym.slice(0,4))+'년 '+(+ym.slice(5,7)||'')+'월 정산서</span><span style="font-size:11px;color:var(--text3)">'+esc(c.name||'')+'</span></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px">'
+      +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">배달 건수</div><div style="font-size:20px;font-weight:900">'+W(c.n)+'</div></div>'
+      +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">거절</div><div style="font-size:20px;font-weight:900;color:#dc2626">'+W(c.rej)+'</div></div>'
+      +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">취소</div><div style="font-size:20px;font-weight:900;color:#b45309">'+W(c.can)+'</div></div>'
+    +'</div>'
+    +(c.next?'<div style="border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;line-height:1.5;margin-bottom:8px;background:rgba(37,99,235,.1);color:#1d4ed8">마지막 주 '+W(c.next.left)+'건 더 타면 그 뒤 배달은 건당 '+W(c.next.rate)+'원이에요</div>':'')
+    +(wk?'<div style="font-size:12px;font-weight:800;margin:10px 0 2px">주별 정산 (주 단위 누진 단가)</div>'+wk:'')
+    +'<div style="margin-top:8px">'
+      +R('<b>세전</b>','<b>'+W(c.gross)+'원</b>')
+      +ded
+      +(c.bk?R('세무 기장비 ('+esc(c.bkLabel||'')+')','−'+W(c.bk)+'원','color:var(--text3)'):'')
+      +R('<b>실지급액</b>','<b style="font-size:17px">'+W(c.net)+'원</b>','border-top:1px solid var(--border);margin-top:4px;padding-top:8px')
+    +'</div>'
+  +'</div>';
+}
+function _dwCpeMarkRead(c,st){
+  if(!st||st.cpeReadAt||!_auth||!_auth.currentUser||!_CU||_CU.role!=='driver')return;
+  if(window._dwCpeReadSent===c.sentAt)return;window._dwCpeReadSent=c.sentAt;
+  var did=st.dealerId||(_CU.dealerId||_CU.companyId)||'',per=st.period||_dwPeriodStr();
+  _auth.currentUser.getIdToken().then(function(tok){
+    return fetch('/api/bm-statement-read',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,period:per,kind:'cpe'})});
+  }).catch(function(){window._dwCpeReadSent='';});
 }
 // 기사 앱 정산표: 대리점 화면 '기사용 보기'와 같은 정산서 (사용자 2026-11-20 "정산표도 기사가 보이게")
 function _bsDriverStmt(b){
