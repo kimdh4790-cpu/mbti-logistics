@@ -38,6 +38,18 @@ test('Firestore: 기사 계정은 배달정산 원본(delivery_sessions)을 못 
   assert.ok(!/allow create: if canWrite\(\) \|\| isAuth\(\)/.test(line));
 });
 
+test('배달 기사 관리: 주민번호 전체 보기·복사는 대리점만 (기사 계정은 빈 값)', () => {
+  const code = cut('function _bsSsnFull(', 'function _bsDrvLabel(');
+  const mk2 = (cu) => new Function('_CU', 'isSuperAdmin', 'window', guard + code + '\nreturn {_bsSsnFull,_ddSsnCur,_bsSsnMask};')(cu, () => false, { _ddAll: [{ _id: 'a', ssn: '8501011234567' }], _ddEditing: 'a' });
+  const dealer = mk2({ role: 'dealer' });
+  assert.strictEqual(dealer._bsSsnMask('8501011234567'), '850101-1******');
+  assert.strictEqual(dealer._bsSsnFull('850101-1234567'), '850101-1234567');
+  assert.strictEqual(dealer._ddSsnCur(), '850101-1234567');
+  assert.strictEqual(mk2({ role: 'driver' })._ddSsnCur(), '');
+  assert.strictEqual(mk2({ role: 'member' })._ddSsnCur(), '');
+  assert.ok(src.includes('onclick="_ddSsnToggle()">전체 보기</button>'));
+});
+
 test('기사 명단(drivers): 기사 계정은 본인 줄만, 본인 줄은 푸시 토큰만 수정, settlements 규칙은 그대로', () => {
   const m = rules.match(/match \/drivers\/\{docId\} \{[\s\S]*?\n    \}/);
   assert.ok(m, 'drivers 규칙 블록');
