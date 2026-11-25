@@ -134,6 +134,30 @@ test('쿠팡이츠 기사 정산서: 기사 앱은 본인 것만, 화면에 쿠�
   assert.match(tab, /if\(!c\|\|!c\.sentAt\)return ''/);
   const card = cut('function _dwCpeDriverCard(', 'function _dwCpeMarkRead(');
   for (const k of ['coupang', 'company', '마진', 'days']) assert.ok(!card.includes(k), k);
-  assert.ok(src.includes("html+=_dwCpeSettleTab(s)+(s._notMine?_dwNotMineHtml():_dwBmSettleTab(s));"));
+  assert.ok(src.includes("html+=_dwCpeSettleTab(s)+(s._notMine?_dwNotMineHtml():_dwBmSettleTab(s))+_shDrvBlock(s);"));
   assert.ok(!cut('function write(ref,ym,drivers){', 'var jobs=').includes('merge:false'));
+});
+
+test('정산서 기록 보관: 기본 5년·원본 13개월, 5년 미만 설정 불가, 기간 끝 기준으로 오래된 것 판정', () => {
+  const code = cut('var _SH_DEF=', 'function _shSlim(');
+  const f = new Function(code + '\nreturn {_shCfg,_shEnd,_shOld,_shShift};')();
+  assert.deepStrictEqual(f._shCfg({}), { stmtY: 5, rawM: 13 });
+  assert.deepStrictEqual(f._shCfg({ cfg: { stmtY: 3, rawM: 1 } }), { stmtY: 5, rawM: 13 });
+  assert.deepStrictEqual(f._shCfg({ cfg: { stmtY: 7, rawM: 24 } }), { stmtY: 7, rawM: 24 });
+  assert.strictEqual(f._shEnd('cpe', '2026-02'), '2026-02-28');
+  assert.strictEqual(f._shEnd('bm', '2026-11-19'), '2026-11-25');
+  assert.strictEqual(f._shShift('2026-11-25', 5, 0), '2021-11-25');
+  assert.strictEqual(f._shShift('2026-11-25', 0, 13), '2025-10-25');
+  assert.strictEqual(f._shOld('cpe', '2025-09', '2025-10-25'), true);
+  assert.strictEqual(f._shOld('cpe', '2025-10', '2025-10-25'), false);
+  assert.strictEqual(f._shOld('bm', '2025-10-15', '2025-10-25'), true);
+});
+test('정산서 기록: 원본은 기록이 있을 때만 지우고, 보낸 정산서마다 기록을 남김, 기사는 지난 정산서를 본인 것만', () => {
+  const clean = cut('window._shAutoClean=', 'window._shOpen=');
+  assert.match(clean, /_shOld\(plat,key,rCut\)&&\(has\[plat\+'\|'\+key\]\|\|_shOld\(plat,key,sCut\)\)/);
+  assert.ok(src.includes('_shRecordBm(doc,list,O,sentS);'));
+  assert.ok(src.includes('_shRecordCpe(results,T,ym,at);'));
+  assert.ok(src.includes('sentS[au]=bm.settle;'));
+  assert.ok(cut('function _shDrvBlock(', '\n}').includes("_CU.role!=='driver'"));
+  assert.ok(cut('window._shOpen=', 'function _shDraw(').includes('_dwIsDriverAcct()'));
 });

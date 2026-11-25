@@ -7205,6 +7205,52 @@ service cloud.firestore {
       } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_bnH}); }
     }
 
+    // ── 정산서 기록 (2026-11-25): 기사는 본인 지난 정산서(delivery_sessions/{did}_drvhist_{uid})만 서버를 거쳐 읽음 ──
+    if (path === '/api/my-stmt-history' && method === 'GET') {
+      const _shH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const _shU = await verifyFirebaseToken(request, env);
+        if (!_shU) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_shH});
+        const _shUid = _shU.uid||_shU.localId||'', _shDid = String(url.searchParams.get('dealerId')||'');
+        if (!_shUid || !_shDid || /[\/?#_]/.test(_shDid) || /[\/?#]/.test(_shUid)) return new Response(JSON.stringify({ok:false,error:'dealerId 필요'}),{status:400,headers:_shH});
+        const _shTok = await getAccessToken(env);
+        const _shRes = await fetch(`https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents/delivery_sessions/${_shDid}_drvhist_${_shUid}`,{headers:{'Authorization':`Bearer ${_shTok}`}});
+        if (!_shRes.ok) return new Response(JSON.stringify({ok:true,items:[]}),{headers:_shH});
+        const _shDoc = await _shRes.json(), _shF = _shDoc.fields||{};
+        if ((_shF.au?.stringValue||'') !== _shUid || (_shF.dealerId?.stringValue||'') !== _shDid) return new Response(JSON.stringify({ok:true,items:[]}),{headers:_shH});
+        const _shItems = (_shF.items?.arrayValue?.values||[]).map(function(v){const m=v.mapValue?.fields||{};return {plat:m.plat?.stringValue||'',key:m.key?.stringValue||'',label:m.label?.stringValue||'',sentAt:m.sentAt?.stringValue||'',drv:m.drv?.stringValue||''};});
+        return new Response(JSON.stringify({ok:true,items:_shItems}),{headers:_shH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_shH}); }
+    }
+    // ── 오래된 기사 화면 자료 정리 (2026-11-25): 대리점이 자기 dw_driver_stats 중 기간 끝이 before보다 이른 것만 삭제 ──
+    if (path === '/api/driver-stats-cleanup' && method === 'POST') {
+      const _scH = {'Content-Type':'application/json','Access-Control-Allow-Origin':'*'};
+      try {
+        const _scBody = await request.clone().json().catch(()=>({}));
+        const _scDid = String(_scBody.dealerId||''), _scBefore = String(_scBody.before||'');
+        if (!_scDid || /[\/?#]/.test(_scDid) || !/^\d{4}-\d{2}-\d{2}$/.test(_scBefore)) return new Response(JSON.stringify({ok:false,error:'dealerId, before 필요'}),{status:400,headers:_scH});
+        if (!(await requireDealerOf(request, env, _scDid))) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_scH});
+        const _scTok = await getAccessToken(env);
+        const _scBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
+        const _scQ = await fetch(`${_scBase}:runQuery`,{method:'POST',headers:{'Authorization':`Bearer ${_scTok}`,'Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'dw_driver_stats'}],where:{fieldFilter:{field:{fieldPath:'dealerId'},op:'EQUAL',value:{stringValue:_scDid}}},select:{fields:[{fieldPath:'period'}]},limit:1000}})});
+        const _scRows = (await _scQ.json().catch(()=>[])) || [];
+        let _scN = 0;
+        for (const _scRow of (Array.isArray(_scRows)?_scRows:[])) {
+          const _scDoc = _scRow.document; if (!_scDoc) continue;
+          if (!String(_scDoc.name).split('/').pop().startsWith(_scDid+'_')) continue;
+          const _scPer = _scDoc.fields?.period?.stringValue||'';
+          const _scEnd = (_scPer.split('~')[1]||_scPer).slice(0,10);
+          if (!/^\d{4}-\d{2}(-\d{2})?$/.test(_scEnd)) continue;
+          const _scCmp = _scEnd.length===7 ? _scEnd+'-31' : _scEnd;
+          if (_scCmp >= _scBefore) continue;
+          const _scDel = await fetch(`https://firestore.googleapis.com/v1/${_scDoc.name}`,{method:'DELETE',headers:{'Authorization':`Bearer ${_scTok}`}});
+          if (_scDel.ok) _scN++;
+          if (_scN >= 300) break;
+        }
+        return new Response(JSON.stringify({ok:true,deleted:_scN}),{headers:_scH});
+      } catch(e) { return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_scH}); }
+    }
+
     // ── 배민 실시간 운영현황 (2026-11-24): 대리점이 캡처를 올려 고친 값(delivery_sessions/{did}_bmlive.vals)을 소속 기사가 읽음 ──
     // 기사 계정은 delivery_sessions 를 직접 못 읽어 서버에서 소속 확인 후 값만 돌려줌 (원본 캡처 이미지는 보내지 않음)
     if (path === '/api/bm-live' && method === 'GET') {

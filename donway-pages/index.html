@@ -13570,6 +13570,7 @@ function pageDeliverySettle(){
   if(!isSuperAdmin()&&!_isPlanAllowedNow('delivery')){_renderPaywall('delivery');return;}
   if(window._dwPlatTab!=='coupang'){pageBaeminSettle();return;}
   setTimeout(_bsCoupangBar,0);
+  setTimeout(function(){if(window._shAutoClean)window._shAutoClean();},3000); // 오래된 정산 자료 정리 (하루 한 번)
   window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산';
   var _dsTr=document.getElementById('topbar-right');_dsTr.innerHTML='';
@@ -14286,6 +14287,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
       +'<button onclick="_dwEatsSettings()" style="padding:9px 18px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산 방식·단가</button>'
       +'<button onclick="_dwDeliveryExport()" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'
       +'<button onclick="_dwTaxXlsx()" style="padding:9px 18px;min-height:44px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">세무사용 엑셀</button>'
+      +'<button onclick="_shOpen(\'cpe\')" style="padding:9px 18px;min-height:44px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산서 기록</button>'
       +'<button onclick="_dwCpeSend()" style="padding:9px 18px;min-height:44px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">기사에게 정산서 보내기</button>'
       +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💳 세금정산 보기</button>'
       +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
@@ -14670,6 +14672,7 @@ window._dwCpePublish=function(send){
       }).catch(function(){});
     })).then(function(){
       window._dwCpeSent={at:at,h:hash};window._dwCpeReads=reads;
+      _shRecordCpe(results,T,ym,at); // 정산서 기록 보관
       return ref.set({cpeSent:{at:at,h:hash}},{merge:true}).catch(function(){}).then(function(){return {T:T,done:done};});
     });
   });
@@ -14707,6 +14710,206 @@ function _dwCpeStatus(T){
   el.innerHTML=(s&&s.at?'<span style="font-weight:800;color:#1d4ed8">기사 앱 발송 '+_bsWhen(s.at)+' · '+ks.length+'명 중 '+rd+'명 열람</span> · 고치면 자동으로 다시 반영돼요':'아직 기사에게 보내지 않았어요')
     +((T.miss||[]).length?'<br><span style="color:#b45309">가입 기사와 이름이 안 맞아 못 보냄: '+T.miss.map(esc).join(', ')+'</span>':'')
     +((T.dup||[]).length?'<br><span style="color:var(--red)">한 계정에 여러 라이더라 못 보냄: '+T.dup.map(esc).join(', ')+'</span>':'');
+}
+
+// ══ 정산서 기록 보관 + 오래된 자료 자동 삭제 (사용자 2026-11-25 "기사랑 대리점 정산서랑 내용들 기록, 오래된 것 자동 삭제, 용량 채우지 않게") ══
+//  · 기록: 배민(주)·쿠팡이츠(월) 정산서를 보내거나 고쳐 다시 반영할 때마다 그 기간 기록을 저장
+//      delivery_sessions/{did}_hist_{bm|cpe}_{기간}  — 기사별 기사용(drv)·대리점용(adm) 정산 값
+//      delivery_sessions/{did}_hist_index            — 기록 목록 + 보관 설정(cfg) + 마지막 정리일
+//      delivery_sessions/{did}_drvhist_{기사uid}     — 기사가 볼 지난 정산서(기사용만). 기사는 /api/my-stmt-history 로만 읽음
+//  · 보관(기본): 정산서 기록 5년(세법상 장부·증빙 5년 보관), 원본 자료(배민 주간 자료·쿠팡이츠 월 자료·기사 화면 자료) 13개월
+//      원본은 그 기간 정산서 기록이 있을 때만 지움(기록이 없으면 정산서 보관 기간까지 남김)
+//  · 정리: 대리점이 배달 정산 화면을 열 때 하루 한 번, 오래된 것부터 지움
+var _SH_DEF={stmtY:5,rawM:13};
+function _shDid(){return (_CU&&(_CU.dealerId||_CU.uid))||window._bsDid||'';}
+function _shRef(id){return _db.collection('delivery_sessions').doc(_shDid()+'_'+id);}
+function _shToday(){return new Date(Date.now()+9*3600e3).toISOString().slice(0,10);}
+function _shShift(d,y,m){var t=new Date(d+'T00:00:00Z');t.setUTCMonth(t.getUTCMonth()-(y*12+m));return t.toISOString().slice(0,10);}
+function _shCfg(ix){var c=(ix&&ix.cfg)||{};return {stmtY:[5,7,10].indexOf(+c.stmtY)>=0?+c.stmtY:_SH_DEF.stmtY,rawM:[6,13,24,36].indexOf(+c.rawM)>=0?+c.rawM:_SH_DEF.rawM};}
+// 기간의 마지막 날 (배민 key=주 시작일, 쿠팡이츠 key=YYYY-MM)
+function _shEnd(plat,key){
+  if(plat==='cpe'){var y=+key.slice(0,4),m=+key.slice(5,7);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);}
+  var t=new Date(key+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+6);return t.toISOString().slice(0,10);
+}
+// 오래돼 지울 대상인지 (cut: 이 날짜보다 기간 끝이 이르면 삭제)
+function _shOld(plat,key,cut){return !!key&&_shEnd(plat,key)<cut;}
+function _shSlim(r){var o={};Object.keys(r||{}).forEach(function(k){if(k!=='drv'&&k!=='mems_raw')o[k]=r[k];});return o;}
+// 기록 저장. rows: [{au,name,drv,adm}]
+function _shSave(plat,key,label,sentAt,rows){
+  var did=_shDid();if(!did||!key||!rows.length||_dwIsDriverAcct())return Promise.resolve();
+  var now=new Date().toISOString(),T={n:0,gross:0,net:0};
+  var R=rows.map(function(x){var a=x.adm||{};T.n+=+(a.n!=null?a.n:a.orders)||0;T.gross+=+(a.gross!=null?a.gross:a.preTax)||0;T.net+=+a.net||0;
+    return {au:x.au||'',name:x.name||'',drv:x.drv?JSON.stringify(x.drv):'',adm:JSON.stringify(_shSlim(a))};});
+  // 문서 1MB 한도: 크면 일자별 내역부터 뺌
+  var sz=function(){return R.reduce(function(s,x){return s+x.drv.length+x.adm.length;},0);};
+  if(sz()>850000)R.forEach(function(x){var a=JSON.parse(x.adm);delete a.days;delete a.fb;delete a.pt;x.adm=JSON.stringify(a);});
+  if(sz()>850000)R.forEach(function(x){x.adm='';});
+  var rec={dealerId:did,type:'stmt_hist',plat:plat,key:key,label:label,sentAt:sentAt||'',updatedAt:now,rows:R,tot:T};
+  var ix;
+  return _shRef('hist_'+plat+'_'+key).set(rec).then(function(){return _shRef('hist_index').get();}).then(function(s){
+    ix=s.exists?s.data():{};var list=(ix.list||[]).filter(function(m){return !(m.plat===plat&&m.key===key);});
+    list.push({plat:plat,key:key,label:label,sentAt:sentAt||'',updatedAt:now,cnt:R.length,net:T.net});
+    list.sort(function(a,b){return a.key<b.key?1:a.key>b.key?-1:a.plat<b.plat?-1:1;});
+    return _shRef('hist_index').set({dealerId:did,type:'stmt_hist_index',list:list,cfg:_shCfg(ix),lastClean:ix.lastClean||''});
+  }).then(function(){
+    var cut=_shShift(_shToday(),_shCfg(ix).stmtY,0);
+    return Promise.all(rows.filter(function(x){return x.au&&x.drv;}).map(function(x){
+      var ref=_shRef('drvhist_'+x.au);
+      return ref.get().then(function(s){
+        var items=((s.exists&&s.data().items)||[]).filter(function(it){return !(it.plat===plat&&it.key===key)&&!_shOld(it.plat,it.key,cut);});
+        items.unshift({plat:plat,key:key,label:label,sentAt:sentAt||'',drv:JSON.stringify(x.drv)});
+        items.sort(function(a,b){return a.key<b.key?1:-1;});
+        return ref.set({dealerId:did,type:'drv_hist',au:x.au,items:items.slice(0,400),updatedAt:now});
+      }).catch(function(){});
+    }));
+  }).catch(function(e){console.warn('[정산서 기록]',e&&e.message);});
+}
+// 배민: _bsPublish 끝에서 호출. sent: {au: 기사에게 보낸 settle}
+function _shRecordBm(doc,list,O,sent){
+  if(!doc||!(doc.sent&&doc.sent.at))return Promise.resolve();
+  var auOf={};Object.keys(O.row||{}).forEach(function(a){if(O.row[a])auOf[O.row[a].key]=a;});
+  var rows=list.map(function(r){var au=auOf[r.key]||'';return {au:au,name:r.name,drv:au&&sent[au]?sent[au]:null,adm:r};});
+  return _shSave('bm',doc.week,'배민 '+doc.week.slice(5).replace('-','.')+' ~ '+doc.weekEnd.slice(5).replace('-','.'),doc.sent.at,rows);
+}
+// 쿠팡이츠: _dwCpePublish 끝에서 호출
+function _shRecordCpe(results,T,ym,at){
+  var by={};(T.list||[]).forEach(function(t){by[t.name]=t;});
+  var rows=results.map(function(r){var t=by[r.name];return {au:t?t.au:'',name:r.name,drv:t?Object.assign({},t.stmt,{sentAt:at}):null,adm:r};});
+  return _shSave('cpe',ym,'쿠팡이츠 '+ym.slice(0,4)+'년 '+(+ym.slice(5,7))+'월',at,rows);
+}
+// ── 자동 정리 (하루 한 번, 대리점 화면을 열 때)
+window._shAutoClean=function(force){
+  var did=_shDid();if(!did||!_db||_dwIsDriverAcct())return Promise.resolve();
+  var today=_shToday();if(!force&&window._shCleaned===today)return Promise.resolve();window._shCleaned=today;
+  var ix,cfg,sCut,rCut,del=0;
+  return _shRef('hist_index').get().then(function(s){
+    ix=s.exists?s.data():{list:[]};cfg=_shCfg(ix);
+    if(!force&&ix.lastClean===today)return null;
+    sCut=_shShift(today,cfg.stmtY,0);rCut=_shShift(today,0,cfg.rawM);
+    var has={};(ix.list||[]).forEach(function(m){has[m.plat+'|'+m.key]=1;});
+    // 원본은 기록이 있거나 정산서 보관 기간도 지났을 때만 삭제
+    var rawGone=function(plat,key){return _shOld(plat,key,rCut)&&(has[plat+'|'+key]||_shOld(plat,key,sCut));};
+    var oldRec=(ix.list||[]).filter(function(m){return _shOld(m.plat,m.key,sCut);});
+    var q=function(t){return _db.collection('delivery_sessions').where('dealerId','==',did).where('type','==',t).get().catch(function(){return null;});};
+    return Promise.all([q('bm_week'),q('coupang_settle'),q('drv_hist')]).then(function(res){
+      var jobs=[];
+      oldRec.forEach(function(m){jobs.push(_shRef('hist_'+m.plat+'_'+m.key).delete().then(function(){del++;}));});
+      if(res[0])res[0].forEach(function(d){var x=d.data();if(x.week&&rawGone('bm',x.week)){jobs.push(d.ref.delete().then(function(){del++;if(window._bmDocs)delete window._bmDocs[x.week];}));}});
+      if(res[1])res[1].forEach(function(d){var x=d.data(),ym=x.ym||String(d.id).split('_coupang_')[1]||'';if(/^\d{4}-\d{2}$/.test(ym)&&rawGone('cpe',ym))jobs.push(d.ref.delete().then(function(){del++;}));});
+      if(res[2])res[2].forEach(function(d){var it=d.data().items||[],k=it.filter(function(i){return !_shOld(i.plat,i.key,sCut);});
+        if(k.length===it.length)return;jobs.push((k.length?d.ref.update({items:k}):d.ref.delete()).then(function(){del++;}));});
+      // 기사 화면 자료(dw_driver_stats)는 서버에서 정리
+      jobs.push(_auth.currentUser.getIdToken().then(function(tok){return fetch('/api/driver-stats-cleanup',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({dealerId:did,before:rCut})});}).then(function(r){return r.json();}).then(function(j){del+=(j&&j.deleted)||0;}).catch(function(){}));
+      return Promise.all(jobs.map(function(p){return p.catch(function(){});}));
+    }).then(function(){
+      var keep=(ix.list||[]).filter(function(m){return !_shOld(m.plat,m.key,sCut);});
+      return _shRef('hist_index').set({dealerId:did,type:'stmt_hist_index',list:keep,cfg:cfg,lastClean:today,lastDeleted:del});
+    }).then(function(){return del;});
+  }).catch(function(e){window._shCleaned='';console.warn('[자동 정리]',e&&e.message);});
+};
+// ── 대리점: 정산서 기록 창 (목록 5개씩, 기사용/대리점용 보기, 보관 설정)
+window._shOpen=function(plat){
+  if(_dwIsDriverAcct()){toast('대리점 계정에서만 볼 수 있어요');return;}
+  window._shS={plat:plat||'',page:0,rec:null,who:0,view:'adm'};
+  var pop=document.getElementById('sh-pop');if(pop)pop.remove();
+  pop=document.createElement('div');pop.id='sh-pop';
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;overflow-y:auto;padding:16px';
+  pop.innerHTML='<div style="background:var(--bg);border-radius:14px;padding:16px;max-width:560px;margin:0 auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:16px">정산서 기록</b><button type="button" onclick="document.getElementById(\'sh-pop\').remove()" style="min-height:44px;padding:0 16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer">닫기</button></div><div id="sh-body" style="font-size:14px">불러오는 중...</div></div>';
+  pop.addEventListener('click',function(e){if(e.target===pop)pop.remove();});
+  document.body.appendChild(pop);
+  _shRef('hist_index').get().then(function(s){window._shIx=s.exists?s.data():{list:[]};_shDraw();}).catch(function(e){var b=document.getElementById('sh-body');if(b)b.textContent='불러오지 못했어요: '+e.message;});
+};
+function _shDraw(){
+  var b=document.getElementById('sh-body');if(!b)return;
+  var S=window._shS,ix=window._shIx||{},cfg=_shCfg(ix),W=function(n){return Math.round(+n||0).toLocaleString();};
+  var btn='min-height:44px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer';
+  if(S.rec){
+    var rec=S.rec,rows=rec.rows||[],x=rows[S.who]||{},v=S.view,h='';
+    var obj=function(t){try{return t?JSON.parse(t):null;}catch(e){return null;}};
+    var dv=obj(x.drv),av=obj(x.adm);
+    if(v==='drv'){
+      if(!dv)h='<div style="color:var(--text3);padding:12px 0">이 기사는 계정이 연결되지 않아 기사에게 보낸 정산서가 없어요. 대리점용으로 보세요.</div>';
+      else h=rec.plat==='bm'?_bsDriverStmt({settle:dv,week:rec.key,weekEnd:_shEnd('bm',rec.key)}):_dwCpeDriverCard(dv);
+    }else{
+      if(!av)h='<div style="color:var(--text3);padding:12px 0">대리점용 내용이 너무 커서 저장되지 않았어요.</div>';
+      else if(rec.plat==='bm'){var r=Object.assign({mems:null,fb:{},pt:{},days:[],rates:{},cheer:{tone:'',text:''}},av);h=_bsStyle()+'<div class="bs">'+_bsStmtHtml(r,{week:rec.key,weekEnd:_shEnd('bm',rec.key)},false)+'</div>';}
+      else h=_shCpeAdm(av);
+    }
+    b.innerHTML='<button type="button" style="'+btn+';margin-bottom:12px" onclick="window._shS.rec=null;_shDraw()">← 목록</button>'
+      +'<div style="font-weight:800;margin-bottom:4px">'+esc(rec.label||'')+'</div><div style="font-size:12px;color:var(--text3);margin-bottom:10px">'+(rec.sentAt?_bsWhen(rec.sentAt)+' 발송 · ':'')+'마지막 반영 '+_bsWhen(rec.updatedAt)+'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:12px"><select onchange="window._shS.who=+this.value;_shDraw()" style="min-height:44px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:var(--bg2);color:var(--text);font-size:14px">'
+      +rows.map(function(r,i){return '<option value="'+i+'"'+(i===S.who?' selected':'')+'>'+esc(r.name)+(r.au?'':' (계정 미연결)')+'</option>';}).join('')+'</select>'
+      +'<div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden">'+[['adm','대리점용'],['drv','기사용']].map(function(t){return '<button type="button" onclick="window._shS.view=\''+t[0]+'\';_shDraw()" style="min-height:44px;padding:0 12px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:'+(v===t[0]?'#08101f':'var(--bg2)')+';color:'+(v===t[0]?'#c9a84c':'var(--text3)')+'">'+t[1]+'</button>';}).join('')+'</div></div>'+h;
+    return;
+  }
+  var list=(ix.list||[]).filter(function(m){return !S.plat||m.plat===S.plat;}),per=5,pages=Math.max(1,Math.ceil(list.length/per));
+  if(S.page>=pages)S.page=pages-1;
+  var pg=list.slice(S.page*per,S.page*per+per);
+  var h='<div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">정산서를 보내거나 고칠 때마다 그 기간 정산서(기사용·대리점용)가 여기에 남아요.</div>';
+  h+=pg.length?pg.map(function(m){return '<button type="button" onclick="_shLoad(\''+m.plat+'\',\''+esc(m.key)+'\')" style="display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:56px;padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);text-align:left;cursor:pointer"><span><b style="font-size:14px">'+esc(m.label)+'</b><br><span style="font-size:12px;color:var(--text3)">'+W(m.cnt)+'명 · '+(m.sentAt?_bsWhen(m.sentAt)+' 발송':'')+'</span></span><b style="font-size:14px;white-space:nowrap">'+W(m.net)+'원</b></button>';}).join('')
+    :'<div style="padding:24px 0;text-align:center;color:var(--text3)">아직 기록이 없어요. 기사에게 정산서를 보내면 쌓여요.</div>';
+  if(pages>1)h+='<div style="display:flex;justify-content:center;align-items:center;gap:12px;margin:4px 0 12px"><button type="button" style="'+btn+'" '+(S.page?'':'disabled')+' onclick="window._shS.page--;_shDraw()">이전</button><span style="font-size:13px">'+(S.page+1)+' / '+pages+'</span><button type="button" style="'+btn+'" '+(S.page<pages-1?'':'disabled')+' onclick="window._shS.page++;_shDraw()">다음</button></div>';
+  var opt=function(id,vals,cur,unit){return '<select id="'+id+'" style="min-height:44px;border:1px solid var(--border);border-radius:8px;padding:0 8px;background:var(--bg);color:var(--text);font-size:14px">'+vals.map(function(x){return '<option value="'+x+'"'+(x===cur?' selected':'')+'>'+x+unit+'</option>';}).join('')+'</select>';};
+  h+='<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px"><b style="font-size:14px">보관 기간 (오래된 것부터 자동 삭제)</b>'
+    +'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:8px;font-size:13px"><span>정산서 기록<br><span style="font-size:12px;color:var(--text3)">세무 자료는 5년 보관이 원칙이라 5년보다 짧게는 못 해요</span></span>'+opt('sh-y',[5,7,10],cfg.stmtY,'년')
+    +'<span>원본 자료 (엑셀로 올린 주·월 자료, 기사 화면 자료)<br><span style="font-size:12px;color:var(--text3)">정산서 기록이 남아 있는 기간만 지워요</span></span>'+opt('sh-m',[6,13,24,36],cfg.rawM,'개월')+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button type="button" style="'+btn+';background:#08101f;color:#c9a84c;border:none" onclick="_shSaveCfg()">저장</button><button type="button" style="'+btn+'" onclick="_shCleanNow()">지금 정리하기</button></div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-top:8px">마지막 정리: '+(ix.lastClean?esc(ix.lastClean)+(ix.lastDeleted!=null?' · '+W(ix.lastDeleted)+'개 삭제':''):'아직 없음')+'</div></div>';
+  b.innerHTML=h;
+}
+window._shLoad=function(plat,key){
+  _shRef('hist_'+plat+'_'+key).get().then(function(s){if(!s.exists){toast('기록을 찾지 못했어요');return;}window._shS.rec=s.data();window._shS.who=0;_shDraw();}).catch(function(e){toast('불러오지 못했어요: '+e.message);});
+};
+window._shSaveCfg=function(){
+  var y=+document.getElementById('sh-y').value,m=+document.getElementById('sh-m').value,ix=window._shIx||{};
+  var cfg=_shCfg({cfg:{stmtY:y,rawM:m}});
+  _shRef('hist_index').set({dealerId:_shDid(),type:'stmt_hist_index',list:ix.list||[],cfg:cfg,lastClean:ix.lastClean||'',lastDeleted:ix.lastDeleted!=null?ix.lastDeleted:null}).then(function(){ix.cfg=cfg;window._shIx=ix;toast('보관 기간을 저장했어요');_shDraw();}).catch(function(e){toast('저장 실패: '+e.message);});
+};
+window._shCleanNow=function(){
+  toast('오래된 자료를 정리하는 중이에요');
+  window._shAutoClean(true).then(function(n){toast(n?n+'개를 정리했어요':'지울 만큼 오래된 자료가 없어요');return _shRef('hist_index').get();}).then(function(s){if(s&&s.exists){window._shIx=s.data();_shDraw();}}).catch(function(){});
+};
+// 쿠팡이츠 대리점용 기록 보기 (쿠팡 지급·회사 마진·단가 구간·일자별 포함)
+function _shCpeAdm(r){
+  var W=function(n){return Math.round(+n||0).toLocaleString();};
+  var R=function(a,v,st){return '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;'+(st||'')+'"><span>'+a+'</span><span style="white-space:nowrap">'+v+'</span></div>';};
+  return '<div style="background:var(--bg2);border-radius:14px;padding:14px">'
+    +R('<b>'+esc(r.name||'')+'</b>',W(r.orders)+'건 · 거절 '+W(r.totalRej)+' · 취소 '+W(r.totalCan))
+    +(r.weeks||[]).map(function(w){return '<div style="padding:6px 0;border-top:1px solid var(--border)">'+R('<b>'+(w.week?esc(w.week.slice(5))+' ~ '+esc(w.weekEnd.slice(5)):'날짜 미상')+'</b> · '+W(w.count)+'건','<b>'+W(w.gross)+'원</b>')
+      +(w.breakdown||[]).filter(function(b){return b.count>0;}).map(function(b){return R(b.count+'건 × '+W(b.rate)+'원',W(b.pay)+'원','font-size:12px;color:var(--text3);padding:2px 0');}).join('')+'</div>';}).join('')
+    +'<div style="border-top:1px solid var(--border);margin-top:4px;padding-top:4px">'
+    +R('세전',W(r.preTax)+'원')+R('공제 합계','−'+W(r.deduct)+'원','color:var(--text3)')+(r.bk?R('세무 기장비','−'+W(r.bk)+'원','color:var(--text3)'):'')
+    +R('<b>실지급</b>','<b>'+W(r.net)+'원</b>')
+    +R('쿠팡 지급','<span>'+W(r.coupang)+'원</span>','color:var(--text3)')+R('<b>회사 마진</b> <span style="font-size:11px;color:#b45309">대리점만</span>','<b style="color:'+((r.company||0)>=0?'#b45309':'#dc2626')+'">'+((r.company||0)>=0?'+':'−')+W(Math.abs(r.company||0))+'원</b>')
+    +'</div>'
+    +((r.days||[]).length?'<div style="margin-top:8px;font-size:12px"><b>일자별</b>'+r.days.map(function(d){return R(esc(d.date),W(d.orders)+'건 · '+W(d.amount)+'원','font-size:12px;padding:2px 0');}).join('')+'</div>':'')
+  +'</div>';
+}
+// ── 기사: 지난 정산서 (서버에서 본인 것만)
+window._shDrvOpen=function(did){
+  var el=document.getElementById('sh-drv');if(!el)return;
+  el.innerHTML='<div style="padding:12px;color:var(--text3);font-size:13px">불러오는 중...</div>';
+  _auth.currentUser.getIdToken().then(function(tok){return fetch('/api/my-stmt-history?dealerId='+encodeURIComponent(did),{headers:{'Authorization':'Bearer '+tok}});}).then(function(r){return r.json();}).then(function(j){
+    window._shDrvItems=(j&&j.items)||[];window._shDrvPage=0;_shDrvDraw();
+  }).catch(function(){el.innerHTML='<div style="padding:12px;color:var(--text3);font-size:13px">불러오지 못했어요. 잠시 후 다시 눌러 주세요.</div>';});
+};
+function _shDrvDraw(sel){
+  var el=document.getElementById('sh-drv');if(!el)return;
+  var it=window._shDrvItems||[],per=5,pages=Math.max(1,Math.ceil(it.length/per)),p=Math.min(window._shDrvPage||0,pages-1);
+  var btn='min-height:44px;padding:0 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer';
+  if(sel!=null&&it[sel]){
+    var x=it[sel],d=null;try{d=JSON.parse(x.drv);}catch(e){}
+    el.innerHTML='<button type="button" style="'+btn+';margin-bottom:10px" onclick="_shDrvDraw()">← 지난 정산서 목록</button>'+(d?(x.plat==='bm'?_bsDriverStmt({settle:d,week:x.key,weekEnd:_shEnd('bm',x.key)}):_dwCpeDriverCard(d)):'');
+    return;
+  }
+  if(!it.length){el.innerHTML='<div style="padding:12px;color:var(--text3);font-size:13px">지난 정산서가 아직 없어요.</div>';return;}
+  el.innerHTML=it.slice(p*per,p*per+per).map(function(x,i){return '<button type="button" onclick="_shDrvDraw('+(p*per+i)+')" style="display:flex;justify-content:space-between;width:100%;min-height:48px;align-items:center;padding:8px 12px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font-size:14px;cursor:pointer"><b>'+esc(x.label)+'</b><span style="font-size:12px;color:var(--text3)">'+(x.sentAt?_bsWhen(x.sentAt):'')+'</span></button>';}).join('')
+    +(pages>1?'<div style="display:flex;justify-content:center;align-items:center;gap:12px"><button type="button" style="'+btn+'" '+(p?'':'disabled')+' onclick="window._shDrvPage='+(p-1)+';_shDrvDraw()">이전</button><span style="font-size:13px">'+(p+1)+' / '+pages+'</span><button type="button" style="'+btn+'" '+(p<pages-1?'':'disabled')+' onclick="window._shDrvPage='+(p+1)+';_shDrvDraw()">다음</button></div>':'');
+}
+function _shDrvBlock(s){
+  if(!_CU||_CU.role!=='driver')return '';
+  var did=(s&&s.dealerId)||_CU.dealerId||_CU.companyId||'';if(!did)return '';
+  return '<div style="margin:4px 0 14px"><button type="button" onclick="_shDrvOpen(\''+esc(did)+'\')" style="width:100%;min-height:44px;border:1px solid var(--border);border-radius:12px;background:var(--bg2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">지난 정산서 보기</button><div id="sh-drv" style="margin-top:10px"></div></div>';
 }
 
 window._dwDeliveryDelete=function(did, ym){
@@ -15649,7 +15852,7 @@ function _dwRenderDriverDash(s){
 
     } else if(tab==='settle'&&(s._notMine||_dwBmSettleTab(s)||_dwCpeSettleTab(s))){
       // 쿠팡이츠 정산서(대리점이 보낸 것)가 있으면 배민 정산서 위에 함께 표시 (2026-11-25)
-      html+=_dwCpeSettleTab(s)+(s._notMine?_dwNotMineHtml():_dwBmSettleTab(s));
+      html+=_dwCpeSettleTab(s)+(s._notMine?_dwNotMineHtml():_dwBmSettleTab(s))+_shDrvBlock(s);
     } else if(tab==='settle'){
       var _ded=_dwDedRate();
       var tax=Math.round(preTax*(_ded!=null?_ded:0.033));
@@ -15694,6 +15897,7 @@ function _dwRenderDriverDash(s){
         });
         html+='</div>';
       }
+      html+=_shDrvBlock(s);
     }
     return html;
   }
@@ -16343,6 +16547,7 @@ function _bsMatch(key,rd,c){
 // ── 관리자 화면 ──
 function pageBaeminSettle(){
   if(_dwIsDriverAcct()){goPage('delivery_input');return;}
+  setTimeout(function(){if(window._shAutoClean)window._shAutoClean();},3000); // 오래된 정산 자료 정리 (하루 한 번)
   window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산';
   var tr=document.getElementById('topbar-right');if(tr)tr.innerHTML='';
@@ -16533,7 +16738,7 @@ function _bsRender(){
   var dates={};list.forEach(function(r){r.days.forEach(function(d){dates[d.date]=1;});});var dl=Object.keys(dates).sort();
   var h='<div data-s="settle sla stmt" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="bs-week" onchange="window._bmWeekSel=this.value;_bsRender()">'+ws.slice().reverse().map(function(x){return '<option value="'+x+'"'+(x===w?' selected':'')+'>'+x.slice(5)+'(수) ~ '+_bmAddDays(x,6).slice(5)+'(화)</option>';}).join('')+'</select>'
     +'<span class="bs-sub">등록된 날짜: '+(dl.map(function(d){return d.slice(5);}).join(', ')||'-')+'</span>'
-    +'<span data-s="settle" style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap"><button class="bs-btn ghost" type="button" style="min-height:44px" onclick="_bsTaxXlsx(\'week\')">세무사용 엑셀 (이번 주)</button><button class="bs-btn ghost" type="button" style="min-height:44px" onclick="_bsTaxXlsx(\'month\')">세무사용 엑셀 (이번 달)</button></span>'
+    +'<span data-s="settle" style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap"><button class="bs-btn ghost" type="button" style="min-height:44px" onclick="_shOpen(\'bm\')">정산서 기록</button><button class="bs-btn ghost" type="button" style="min-height:44px" onclick="_bsTaxXlsx(\'week\')">세무사용 엑셀 (이번 주)</button><button class="bs-btn ghost" type="button" style="min-height:44px" onclick="_bsTaxXlsx(\'month\')">세무사용 엑셀 (이번 달)</button></span>'
     +'<button class="bs-btn" data-s="stmt" type="button" style="margin-left:auto" onclick="_bsSend()">'+(doc.sent&&doc.sent.at?'정산서 다시 보내기':'기사에게 정산서 보내기')+'</button></div>'
     +'<div class="bs-st" data-s="stmt">'+(doc.sent&&doc.sent.at?'이번 주 정산서를 '+_bsWhen(doc.sent.at)+'에 기사 앱으로 보냈어요. 고친 내용은 기사 화면에 바로 반영돼요.':'아직 기사에게 보내지 않았어요. 확인이 끝나면 \'기사에게 정산서 보내기\'를 누르세요. 기사 앱에 정산서가 뜨고 알림이 가요.')+'</div>'
     +'<div class="bs-tiles" data-s="settle">'
@@ -16831,7 +17036,7 @@ window._bsPublish=function(verbose,send){
   var did=window._bsDid,list=_bsWeekCalc(),done=0,miss=[];
   // 한 기사 계정에 라이더 여러 명이 연결되면 남의 정산서가 덮어써질 수 있어 보내지 않음 (2026-11-20)
   // 주인이 정해지면 그 라이더 것만 보내고, 못 정하면 그 계정의 배민 정산서를 비움(남의 정산서가 남지 않게)
-  var O=_bsOwners(list),dup=O.dup,cleared={};
+  var O=_bsOwners(list),dup=O.dup,cleared={},sentS={};
   list.forEach(function(r){if(!r.drv)miss.push(r.name);});
   // 계정마다 주인 라이더 1명만 보냄 (주인 없으면 비움)
   return Promise.all(Object.keys(O.own).map(function(au){
@@ -16846,6 +17051,7 @@ window._bsPublish=function(verbose,send){
       var bm=JSON.parse(_bmDaysJson(doc,sum));
       bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:r.extra,gap:r.gap,low:r.low,hasFb:r.hasFb,
         tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,bk:r.bk||0,ded:r.ded,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,tiers:_bsC().tiers,updatedAt:new Date().toISOString(),sentAt:(doc.sent&&doc.sent.at)||'',mission:r.mission||0,missions:r.missions||[],forAu:au,riderId:r.userId||''};
+      sentS[au]=bm.settle;
       var body={dealerId:did,driverUid:au,driverName:r.drv.name,period:_dwPeriodStr(),
         peaks:{am:sum.day.am,pm:sum.day.pm,eve:sum.day.eve,ngt:sum.day.ngt,etc:sum.day.etc},peakTargets:cur.peakTargets||{am:0,pm:0,eve:0,ngt:0},
         daily:{done:sum.day.done,prog:0,rej:sum.day.cancel},
@@ -16856,6 +17062,7 @@ window._bsPublish=function(verbose,send){
       return _dwStatsPost(body).then(function(x){if(x&&x.ok)done++;});
     }).catch(function(){miss.push(r.name);});
   })).then(function(){
+    _shRecordBm(doc,list,O,sentS); // 정산서 기록 보관 (보낸 주만)
     var mis=O.mis||[];
     var t=(mis.length?'<span style="color:var(--red);font-weight:700">이름이 달라 보내지 않음: '+mis.map(function(r){return esc(r.name)+'→'+esc(r.drv.name)+' 계정';}).join(', ')+'. 아래 표 \'연결 계정\'에서 맞는 기사로 바꿔 주세요.</span><br>':'')+(dup.length?'<span style="color:var(--red);font-weight:700">한 계정에 여러 라이더가 연결돼 보내지 않음: '+dup.map(function(r){return esc(r.name)+'→'+esc(r.drv.name);}).join(', ')+'. 아래 표 \'연결 계정\'에서 하나만 남기거나, 같은 사람이면 아이디 합치기를 써 주세요.</span><br>':'')+'기사 화면 반영 '+done+'명'+(miss.length?' · 계정 연결 필요 '+miss.length+'명 (아래 \'기사 계정 연결\'에서 연결해 주세요)':'');
     var st=document.getElementById('bs-xl-st');if(st&&verbose!==false){var ps=document.getElementById('bs-pub-st');if(!ps){ps=document.createElement('div');ps.id='bs-pub-st';st.appendChild(ps);}ps.innerHTML=t;}
