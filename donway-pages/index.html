@@ -16823,7 +16823,8 @@ function _bsStmtHtml(r,doc,forDriver){
     +(r.mems&&!forDriver?'<div class="bs-sub" style="margin-bottom:4px">합친 아이디: '+r.mems.map(function(m){return esc(m.name)+(m.userId?' ('+esc(m.userId)+')':'')+' '+_bsW(m.n)+'건 · '+_bsW(m.fee)+'원';}).join(' + ')+'</div>':'')
     +R('총 배달처리비 '+_bsW(r.n)+'건 (할증 포함)',_bsW(r.fee)+'원')
     +R('수락률 '+(r.acc==null?'미입력':_bsPct(r.acc))+' (기준 '+r.accMin+'%)',r.off?'<span class="bs-badge off">보장 미적용</span>':(r.acc==null||r.flag)?'<span class="bs-badge chk">확인 필요 (일단 적용)</span>':'<span class="bs-badge on">보장 적용</span>','s');
-  if(r.on&&r.hasFb)h+=R(_bsW(r.rate)+'원 미만 건 부족액 ('+_bsW(r.low)+'건)',_bsW(r.gap)+'원','s')+(forDriver?'':R('초과분으로 메꿈 ('+_bsW(r.high)+'건) <span class="bs-badge na">관리자만</span>','−'+_bsW(r.over)+'원','s'));
+  // 미만 건 부족액·초과분 메꿈은 대리점만 (사용자 2026-11-25 대리점 요청: 기사에겐 실제 추가 지급만)
+  if(r.on&&r.hasFb&&!forDriver)h+=R(_bsW(r.rate)+'원 미만 건 부족액 ('+_bsW(r.low)+'건)',_bsW(r.gap)+'원','s')+(forDriver?'':R('초과분으로 메꿈 ('+_bsW(r.high)+'건) <span class="bs-badge na">관리자만</span>','−'+_bsW(r.over)+'원','s'));
   // 기사용 보기: 추가 지급이 마이너스면 0원으로 표시 (사용자 2026-11-20). 계산·대리점 보기는 그대로
   var _ex=forDriver?Math.max(0,r.extra):r.extra;
   if(r.on)h+='<div class="bs-extra"><span>실제 추가 지급 (최저단가 보장)</span><b>'+(_ex>=0?'+':'−')+_bsW(Math.abs(_ex))+'원</b></div>';
@@ -17049,7 +17050,7 @@ window._bsPublish=function(verbose,send){
       var cur=(res&&res.data)||{};
       var sum=_bmRiderSummary(doc,r.key,null,cur.peakTargets);
       var bm=JSON.parse(_bmDaysJson(doc,sum));
-      bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:r.extra,gap:r.gap,low:r.low,hasFb:r.hasFb,
+      bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:Math.max(0,r.extra),hasFb:r.hasFb, // 부족액(gap·low)·마이너스 추가지급은 기사에게 안 보냄 (2026-11-25)
         tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,bk:r.bk||0,ded:r.ded,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,tiers:_bsC().tiers,updatedAt:new Date().toISOString(),sentAt:(doc.sent&&doc.sent.at)||'',mission:r.mission||0,missions:r.missions||[],forAu:au,riderId:r.userId||''};
       sentS[au]=bm.settle;
       var body={dealerId:did,driverUid:au,driverName:r.drv.name,period:_dwPeriodStr(),
@@ -17493,7 +17494,6 @@ function _bsDriverCard(b){
     +'</div>'+prog
     +'<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:8px">'
       +R('총 배달처리비 ('+_bsW(s.n)+'건)',_bsW(s.fee)+'원')
-      +(s.on&&s.hasFb&&s.gap?R(_bsW(s.rate)+'원 미만 건 부족액 ('+_bsW(s.low)+'건)',_bsW(s.gap)+'원','color:var(--text3)'):'')
       +(s.on?R('<b>최저단가 보장 추가 지급</b>','<b style="color:#a07d22">+'+_bsW(Math.max(0,s.extra))+'원</b>'):R('수락률 '+s.accMin+'% 미만: 보장 미적용','','color:#dc2626'))
       +R('<b>세전</b>'+(s.on?' ('+_bsW(s.n)+'건 × '+_bsW(s.rate)+'원)':''),'<b>'+_bsW(s.gross)+'원</b>')
       +_bsDedRows(Object.assign({},s),function(a,v){return R(a,v,'color:var(--text3)');})

@@ -161,3 +161,11 @@ test('정산서 기록: 원본은 기록이 있을 때만 지우고, 보낸 정�
   assert.ok(cut('function _shDrvBlock(', '\n}').includes("_CU.role!=='driver'"));
   assert.ok(cut('window._shOpen=', 'function _shDraw(').includes('_dwIsDriverAcct()'));
 });
+
+test('배민 기사용 정산서: 미만 건 부족액·마이너스 추가지급을 기사에게 보이지도 보내지도 않음 (대리점은 그대로)', () => {
+  const pub = cut('bm.settle={', '};');
+  for (const k of ['gap:', 'low:']) assert.ok(!pub.includes(k), k + ' 가 기사 데이터에 들어감');
+  assert.ok(pub.includes('extra:Math.max(0,r.extra)'));
+  assert.match(cut('function _bsStmtHtml(', 'var _ex='), /if\(r\.on&&r\.hasFb&&!forDriver\)h\+=R\(_bsW\(r\.rate\)\+'원 미만 건 부족액/);
+  assert.ok(!cut('function _bsDriverCard(', 'function _bsDriverWait(').includes('부족액'));
+});
