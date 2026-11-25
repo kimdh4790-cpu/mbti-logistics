@@ -7142,7 +7142,8 @@ service cloud.firestore {
           const _bnDid = String(_bnBody.dealerId||''), _bnPer = String(_bnBody.period||'');
           if (!_bnDid || !_bnPer || _bnPer.length > 80 || /[\/?#]/.test(_bnPer+_bnDid)) return new Response(JSON.stringify({ok:false,error:'dealerId, period 필요'}),{status:400,headers:_bnH});
           const _bnTok = await getAccessToken(env);
-          const _bnRes = await fetch(`${_bnBase}/dw_driver_stats/${_bnDid}_${_bnU.uid}_${_bnPer}?updateMask.fieldPaths=bmReadAt&currentDocument.exists=true`,{method:'PATCH',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{bmReadAt:{stringValue:new Date().toISOString()}}})});
+          const _bnFld = _bnBody.kind === 'cpe' ? 'cpeReadAt' : 'bmReadAt'; // 쿠팡이츠 정산서 열람 (2026-11-25)
+          const _bnRes = await fetch(`${_bnBase}/dw_driver_stats/${_bnDid}_${_bnU.uid}_${_bnPer}?updateMask.fieldPaths=${_bnFld}&currentDocument.exists=true`,{method:'PATCH',headers:{'Authorization':`Bearer ${_bnTok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:{[_bnFld]:{stringValue:new Date().toISOString()}}})});
           return new Response(JSON.stringify({ok:_bnRes.ok}),{headers:_bnH});
         }
         if (path === '/api/driver-terms') {
@@ -7272,6 +7273,8 @@ service cloud.firestore {
             memo:f.memo?.stringValue||'',
             bmDays:f.bmDays?.stringValue||'',
             bmReadAt:f.bmReadAt?.stringValue||'',
+            cpeStmt:f.cpeStmt?.stringValue||'',
+            cpeReadAt:f.cpeReadAt?.stringValue||'',
             updatedAt:f.updatedAt?.timestampValue||''
           };
           return new Response(JSON.stringify({ok:true,data}),{headers:_dsH});
@@ -7290,6 +7293,16 @@ service cloud.firestore {
           const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;
           const _dsPeriod = period||new Date().toISOString().slice(0,7);
           const docId = `${dealerId}_${driverUid}_${_dsPeriod}`;
+          if (/[\/?#]/.test(dealerId+driverUid+_dsPeriod)) return new Response(JSON.stringify({ok:false,error:'bad id'}),{status:400,headers:_dsH});
+          // 쿠팡이츠 기사 정산서만 저장 (2026-11-25) — 배민 등 다른 필드는 그대로 둠
+          if (body.cpeOnly) {
+            const cf={dealerId:{stringValue:dealerId},driverUid:{stringValue:driverUid},driverName:{stringValue:driverName||''},period:{stringValue:_dsPeriod},cpeStmt:{stringValue:String(body.cpeStmt||'').slice(0,20000)},updatedAt:{timestampValue:new Date().toISOString()}};
+            if (body.cpeReadAt) cf.cpeReadAt={stringValue:String(body.cpeReadAt).slice(0,40)};
+            const cm=Object.keys(cf).concat(body.cpeReadAt?[]:['cpeReadAt']).map(k=>'updateMask.fieldPaths='+k).join('&');
+            const cRes = await fetch(`${fsBase}/dw_driver_stats/${docId}?${cm}`,{method:'PATCH',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({fields:cf})});
+            if (!cRes.ok){const err=await cRes.text();return new Response(JSON.stringify({ok:false,error:err}),{status:500,headers:_dsH});}
+            return new Response(JSON.stringify({ok:true,docId}),{headers:_dsH});
+          }
           const pk=peaks||{};const tg=peakTargets||{};const dy=daily||{};const sl=sla||{};const sd=slaDetail||{};const setArr=settlements||[];
           const fields={
             dealerId:{stringValue:dealerId},driverUid:{stringValue:driverUid},driverName:{stringValue:driverName||''},period:{stringValue:_dsPeriod},
@@ -7304,7 +7317,9 @@ service cloud.firestore {
             totalPayout:{integerValue:String(totalPayout||0)},memo:{stringValue:memo||''},bmDays:{stringValue:String(bmDays||'').slice(0,20000)},updatedAt:{timestampValue:new Date().toISOString()}
           };
           if (bmReadAt) fields.bmReadAt={stringValue:String(bmReadAt).slice(0,40)};
-          const putRes = await fetch(`${fsBase}/dw_driver_stats/${docId}`,{method:'PATCH',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
+          // updateMask: 보낸 필드만 바꿔 쿠팡이츠 정산서(cpeStmt·cpeReadAt)가 지워지지 않게 (bmReadAt은 예전처럼 없으면 지움)
+          const _dsMask = Object.keys(fields).concat(bmReadAt?[]:['bmReadAt']).map(k=>'updateMask.fieldPaths='+k).join('&');
+          const putRes = await fetch(`${fsBase}/dw_driver_stats/${docId}?${_dsMask}`,{method:'PATCH',headers:{'Authorization':`Bearer ${tok}`,'Content-Type':'application/json'},body:JSON.stringify({fields})});
           if (!putRes.ok){const err=await putRes.text();return new Response(JSON.stringify({ok:false,error:err}),{status:500,headers:_dsH});}
           return new Response(JSON.stringify({ok:true,docId}),{headers:_dsH});
         } catch(e){return new Response(JSON.stringify({ok:false,error:e.message}),{status:500,headers:_dsH});}
