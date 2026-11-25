@@ -61,3 +61,23 @@ test('기사 명단(drivers): 기사 계정은 본인 줄만, 본인 줄은 푸�
   assert.match(rules, /function isDrvAcct\(\)[\s\S]*?!isSuperAdmin\(\)[\s\S]*?members/);
   assert.match(rules, /match \/settlements\/\{docId\}\s+\{ allow read: if canRead\(\); allow create: if canWrite\(\); allow update, delete: if canOwn\(\); \}/);
 });
+
+test('배민 세무사용 엑셀: 주별 합산·기사별 묶음·소득세/지방소득세 나눔', () => {
+  const code = cut('function _bsTaxRows(', 'window._bsTaxXlsx=');
+  const W = { '2026-11-04': [{ key: 'a', name: '홍길동', drv: { uid: 'u1', name: '홍길동' }, n: 100, gross: 400000, mission: 10000, inc: 13530, emp: 3280, ind: 3608, bk: 20000, net: 369582 },
+                             { key: 'b', name: '미연결', drv: null, n: 5, gross: 16000, mission: 0, inc: 528, emp: 128, ind: 141, bk: 1000, net: 14203 }],
+              '2026-11-11': [{ key: 'a', name: '홍길동', drv: { uid: 'u1', name: '홍길동' }, n: 50, gross: 160000, mission: 0, inc: 5280, emp: 1280, ind: 1408, bk: 10000, net: 142032 }] };
+  const win = { _bmWeekSel: '2026-11-11' };
+  const f = new Function('window', '_bsWeekCalc', code + '\nreturn _bsTaxRows;')(win, () => W[win._bmWeekSel] || []);
+  const rows = f(['2026-11-04', '2026-11-11'], { u1: { ssn: '8501011234567' } });
+  assert.strictEqual(win._bmWeekSel, '2026-11-11', '선택한 주는 원래대로');
+  assert.strictEqual(rows.length, 2);
+  const h = rows.find(x => x.o.uid === 'u1');
+  assert.strictEqual(h.o.n, 150);
+  assert.strictEqual(h.o.base, 570000);
+  assert.strictEqual(h.o.weeks, 2);
+  assert.strictEqual(h.it + h.lt, 18810);
+  assert.strictEqual(h.it, Math.round(18810 * 10 / 11));
+  assert.strictEqual(h.d.ssn, '8501011234567');
+  assert.ok(src.includes("if(_dwIsDriverAcct()){toast('대리점 계정에서만 받을 수 있어요');return;}"));
+});
