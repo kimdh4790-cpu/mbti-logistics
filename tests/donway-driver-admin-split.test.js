@@ -81,3 +81,18 @@ test('배민 세무사용 엑셀: 주별 합산·기사별 묶음·소득세/지
   assert.strictEqual(h.d.ssn, '8501011234567');
   assert.ok(src.includes("if(_dwIsDriverAcct()){toast('대리점 계정에서만 받을 수 있어요');return;}"));
 });
+
+test('쿠팡이츠 세무사용 엑셀: 이름으로 기사 짝짓기, 동명이인은 쿠팡 소속 우선·아니면 비움, 소득세 나눔', () => {
+  const code = cut('function _dwTaxMatch(', 'window._dwTaxXlsx=');
+  const f = new Function(code + '\nreturn _dwTaxMatch;')();
+  const res = [{ name: '홍길동', tax33: 3300, incomeTax: 3000, localTax: 300 }, { name: '김철수', tax33: 330 }, { name: '이영희', tax33: 0 }, { name: '박민수', tax33: 33 }];
+  const drv = [{ name: '홍 길동', ssn: '1' }, { name: '김철수', ssn: '2', platform: 'bm' }, { name: '김철수', ssn: '3', platform: 'cpe' }, { name: '박민수', ssn: '4' }, { name: '박민수', ssn: '5' }];
+  const m = Object.fromEntries(f(res, drv).map(x => [x.r.name, x]));
+  assert.strictEqual(m['홍길동'].d.ssn, '1');
+  assert.strictEqual(m['홍길동'].it, 3000); assert.strictEqual(m['홍길동'].lt, 300);
+  assert.strictEqual(m['김철수'].d.ssn, '3');
+  assert.strictEqual(m['김철수'].it + m['김철수'].lt, 330); assert.strictEqual(m['김철수'].it, 300);
+  assert.strictEqual(m['이영희'].note, '가입 기사 이름 없음');
+  assert.strictEqual(m['박민수'].d.ssn, undefined); assert.match(m['박민수'].note, /같은 이름 2명/);
+  assert.ok(src.includes('onclick="_dwTaxXlsx()"'));
+});

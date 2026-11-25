@@ -14283,6 +14283,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
     +'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'
       +'<button onclick="_dwEatsSettings()" style="padding:9px 18px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산 방식·단가</button>'
       +'<button onclick="_dwDeliveryExport()" style="padding:9px 18px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 엑셀 다운로드</button>'
+      +'<button onclick="_dwTaxXlsx()" style="padding:9px 18px;min-height:44px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">세무사용 엑셀</button>'
       +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💳 세금정산 보기</button>'
       +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
       +'<button onclick="_dwDeliveryDelete(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ 초기화</button>'
@@ -14561,6 +14562,49 @@ window._dwDeliveryExport=function(){
   XLSX.utils.book_append_sheet(wb,ws3,'세무사 자료');
   XLSX.writeFile(wb,'DONWAY_배달대행정산_'+ym+'.xlsx');
   toast('📥 엑셀 다운로드 완료');
+};
+
+// ── 쿠팡이츠 세무사용 엑셀 (대리점 전용, 2026-11-25) — 배민 세무사용 엑셀(_bsTaxXlsx)과 같은 양식
+//   쿠팡 엑셀에는 이름만 있어 가입 기사와 이름으로 짝지음(쿠팡이츠·둘 다 소속 우선). 같은 이름이 여럿이면 비워 두고 비고에 표시
+function _dwTaxMatch(results,drvs){
+  var N=function(x){return String(x||'').replace(/\s/g,'').replace(/\(.*?\)/g,'').replace(/\d+$/,'');};
+  var isCpe=function(d){var x=String(d.platform||d.deliveryPlatform||'').toLowerCase();return /both|모두|둘|cpe|coupang|쿠팡|이츠/.test(x);};
+  return results.map(function(r){
+    var c=drvs.filter(function(d){return N(d.name||d.driverName)===N(r.name);}),note='';
+    if(c.length>1){var c2=c.filter(isCpe);if(c2.length)c=c2;}
+    var d=c.length===1?c[0]:{};
+    if(!c.length)note='가입 기사 이름 없음';else if(c.length>1)note='같은 이름 '+c.length+'명 — 직접 확인';
+    var tax=Math.round(r.tax33||0),it=r.incomeTax!=null&&(r.incomeTax||r.localTax)?Math.round(r.incomeTax):Math.round(tax*10/11);
+    return {r:r,d:d,note:note,it:it,lt:tax-it};
+  }).sort(function(a,b){return String(a.r.name).localeCompare(String(b.r.name),'ko');});
+}
+window._dwTaxXlsx=function(){
+  if(_dwIsDriverAcct()){toast('대리점 계정에서만 받을 수 있어요');return;}
+  if(typeof XLSX==='undefined'){toast('엑셀 라이브러리 로딩 중이에요. 잠시 후 다시 시도해 주세요.');return;}
+  var results=window._dwDeliveryResults||[],ym=window._dwSettleYm||new Date().toISOString().slice(0,7);
+  if(!results.length){toast('정산 데이터가 없어요');return;}
+  var did=_CU&&(_CU.dealerId||_CU.uid),DC=window._dwDeliveryCfg||{taxRate:0.033,empRate:0.008,indRate:0.0088};
+  toast('세무사용 엑셀을 만드는 중이에요');
+  _db.collection('drivers').where('dealerId','==',did).get().then(function(snap){
+    var drvs=[];snap.forEach(function(doc){drvs.push(doc.data());});
+    var rows=_dwTaxMatch(results,drvs),R=function(n){return Math.round(n||0);},P=function(v){return Math.round((+v||0)*10000)/100;};
+    var wh=P(DC.taxRate),itL=Math.round(wh*10/11*100)/100,ltL=Math.round((wh-wh*10/11)*100)/100;
+    var head=['구분','성명','입사일','주민번호','연락처','배달 건수','지급액(세전)','소득세('+itL+'%)','지방소득세('+ltL+'%)','고용보험('+P(DC.empRate)+'%)','산재보험('+P(DC.indRate)+'%)','세무 기장비','실지급액','은행','계좌번호','예금주','비고'];
+    var aoa=[head],T={n:0,b:0,it:0,lt:0,e:0,i:0,k:0,net:0},miss=0;
+    rows.forEach(function(x,i){var r=x.r,d=x.d,ssn=d.ssn?_bsSsnFull(d.ssn):'';if(!ssn)miss++;
+      aoa.push([i+1,r.name,d.joinDate||'',ssn,d.phone||'',R(r.orders),R(r.preTax),x.it,x.lt,R(r.taxEmp),R(r.taxWork),R(r.bk),R(r.net),d.bankName||'',d.accountNumber||d.bankAccount||'',d.accountHolder||'',x.note||(ssn?'':'주민번호 미입력')]);
+      T.n+=R(r.orders);T.b+=R(r.preTax);T.it+=x.it;T.lt+=x.lt;T.e+=R(r.taxEmp);T.i+=R(r.taxWork);T.k+=R(r.bk);T.net+=R(r.net);});
+    aoa.push(['합계','','','','',T.n,T.b,T.it,T.lt,T.e,T.i,T.k,T.net,'','','','']);
+    aoa.push([]);
+    aoa.push(['기간',ym+(DC.eats?' (주 단위 정산, 마지막 날이 이 달인 주까지 — 정산 화면과 같은 기준)':'')]);
+    aoa.push(['기준','원천징수 '+wh+'% = 소득세 + 지방소득세(소득세의 10%), 지급액은 기사 세전']);
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:5},{wch:10},{wch:12},{wch:16},{wch:14},{wch:9},{wch:13},{wch:12},{wch:12},{wch:12},{wch:12},{wch:11},{wch:13},{wch:10},{wch:18},{wch:10},{wch:22}];
+    var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'쿠팡이츠 기사(원천세)');
+    var comp=String((_CU&&_CU.companyName)||'회사').replace(/[\\\/:*?"<>|]/g,'');
+    XLSX.writeFile(wb,comp+'_'+ym+'_쿠팡이츠_세무사자료.xlsx');
+    toast(rows.length+'명 세무사용 엑셀을 받았어요'+(miss?' (주민번호 없는 기사 '+miss+'명)':''));
+  }).catch(function(e){toast('엑셀을 만들지 못했어요: '+e.message);});
 };
 
 window._dwDeliveryDelete=function(did, ym){
