@@ -7239,6 +7239,11 @@ service cloud.firestore {
         const _dsDid = url.searchParams.get('dealerId')||'';
         const _dsPeriod = url.searchParams.get('period')||new Date().toISOString().slice(0,7);
         if (!_dsUid||!_dsDid) return new Response(JSON.stringify({ok:false,error:'uid, dealerId 필요'}),{status:400,headers:_dsH});
+        if (/[\/?#]/.test(_dsUid+_dsDid+_dsPeriod)) return new Response(JSON.stringify({ok:false,error:'bad id'}),{status:400,headers:_dsH});
+        // 권한 분리 (2026-11-25): 기사 본인 또는 해당 대리점만 조회 — 예전엔 인증 없이 아무 기사 정산서나 조회 가능했음
+        const _dsMe = await verifyFirebaseToken(request, env);
+        if (!_dsMe) return new Response(JSON.stringify({ok:false,error:'Unauthorized'}),{status:401,headers:_dsH});
+        if ((_dsMe.uid||_dsMe.localId||'') !== _dsUid && !(await requireDealerOf(request, env, _dsDid))) return new Response(JSON.stringify({ok:false,error:'Forbidden'}),{status:403,headers:_dsH});
         try {
           const tok = await getAccessToken(env);
           const fsBase = `https://firestore.googleapis.com/v1/projects/mbti-logistics/databases/(default)/documents`;

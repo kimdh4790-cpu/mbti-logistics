@@ -42,6 +42,8 @@ service cloud.firestore {
       );
     }
     function canRead()  { return ownsDoc() || isSuperAdmin(); }
+    function notDrvAcct() { return !(isAuth() && request.auth.token.email is string && request.auth.token.email.matches('.*@donway[.]internal$')); }
+    function drvOwnSession(docId) { return isAuth() && docId.matches('^[^_]+_' + request.auth.uid + '_.*$'); }
     function canWrite() { return ownsNewDoc(); }
     function canOwn()   { return ownsDoc(); }
 
@@ -140,7 +142,9 @@ service cloud.firestore {
     match /clean_workers/{docId}          { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /comp_leaves/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /daily_detail/{docId}           { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /delivery_sessions/{docId}      { allow read: if canRead() || (isAuth() && docId.matches('^[^_]+_' + request.auth.uid + '_.*$')); allow create: if canWrite() || isAuth(); allow update: if canOwn() || (isAuth() && docId.matches('^[^_]+_' + request.auth.uid + '_.*$')); allow delete: if canOwn(); }
+    // 배달정산 원본(주간 엑셀·SLA·설정·운영현황)은 대리점 전용 (2026-11-25 권한 분리)
+    //  기사 계정(@donway.internal)은 푸시 등록 때 users 문서에 dealerId가 남아도 읽기·수정 불가. 기사 본인 문서({did}_{uid}_…)만 허용
+    match /delivery_sessions/{docId}      { allow read: if (canRead() && notDrvAcct()) || drvOwnSession(docId); allow create: if (canWrite() && notDrvAcct()) || drvOwnSession(docId); allow update: if (canOwn() && notDrvAcct()) || drvOwnSession(docId); allow delete: if canOwn() && notDrvAcct(); }
     match /devices/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driver_safety_edu/{docId}      { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /driverDocs/{docId}             { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
