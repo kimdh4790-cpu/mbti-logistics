@@ -16435,6 +16435,13 @@ function _ddSsnCur(){if(typeof _dwIsDriverAcct==='function'&&_dwIsDriverAcct())r
 window._ddSsnToggle=function(){var el=document.getElementById('dd-ssn'),bt=document.getElementById('dd-ssn-tg'),d=(window._ddAll||[]).filter(function(x){return x._id===window._ddEditing;})[0];if(!el||!d)return;
   var on=el.getAttribute('data-full')==='1';if(!on){var f=_ddSsnCur();if(!f)return;el.textContent=f;}else el.textContent=_bsSsnMask(d.ssn);
   el.setAttribute('data-full',on?'0':'1');if(bt)bt.textContent=on?'전체 보기':'가리기';};
+// 대리점이 주민번호 고치기 (사용자 2026-11-25) — 저장 버튼으로 함께 저장. 기사·직원 계정에서는 열지 않음
+window._ddSsnEditOpen=function(){if(typeof _dwIsDriverAcct==='function'&&_dwIsDriverAcct())return;var w=document.getElementById('dd-ssn-wrap'),i=document.getElementById('dd-ssn-in');if(!w||!i)return;w.style.display='grid';if(!i.value)i.value=_ddSsnCur();i.focus();};
+// 주민번호 입력값 확인: ''(안 고침) / {err} / {ssn:'000000-0000000'}
+function _ddSsnCheck(raw,cur,others){var t=String(raw||'').trim();if(!t||t===cur)return '';var d=t.replace(/[^0-9]/g,'');
+  if(d.length!==13)return {err:'주민번호는 숫자 13자리로 입력해 주세요'};
+  if((others||[]).some(function(o){return String(o||'').replace(/[^0-9]/g,'')===d;}))return {err:'같은 주민번호로 등록된 기사가 이미 있어요'};
+  return {ssn:d.slice(0,6)+'-'+d.slice(6)};}
 window._ddSsnCopy=function(){var f=_ddSsnCur();if(!f)return;
   var ok=function(){toast('주민번호를 복사했어요');},fb=function(){try{var t=document.createElement('textarea');t.value=f;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();ok();}catch(e){toast('복사하지 못했어요. 전체 보기로 확인해 주세요');}};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(f).then(ok,fb);else fb();};
@@ -17305,8 +17312,10 @@ window._ddEdit=function(id){
     +inp('dd-acc','계좌번호',d.accountNumber||d.bankAccount,'inputmode="numeric" autocomplete="off"')+inp('dd-holder','예금주',d.accountHolder||'','autocomplete="off"')
     +(d.ssn?'<div class="bs-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">주민번호: <b id="dd-ssn" style="font-variant-numeric:tabular-nums">'+esc(_bsSsnMask(d.ssn))+'</b>'
       +'<button type="button" class="bs-btn ghost" id="dd-ssn-tg" style="min-height:44px" onclick="_ddSsnToggle()">전체 보기</button>'
-      +'<button type="button" class="bs-btn ghost" style="min-height:44px" onclick="_ddSsnCopy()">복사</button><span>(기사 본인이 가입할 때 입력 · 세무 신고용)</span></div>'
-      :'<div class="bs-sub">주민번호: 미입력 (기사 본인이 가입할 때 입력)</div>')
+      +'<button type="button" class="bs-btn ghost" style="min-height:44px" onclick="_ddSsnCopy()">복사</button>'
+      +'<button type="button" class="bs-btn ghost" style="min-height:44px" onclick="_ddSsnEditOpen()">고치기</button><span>(세무 신고용)</span></div>'
+      :'<div class="bs-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">주민번호: 미입력 <button type="button" class="bs-btn ghost" style="min-height:44px" onclick="_ddSsnEditOpen()">입력하기</button></div>')
+    +'<label class="bs-sub" id="dd-ssn-wrap" style="display:none;gap:4px">주민번호 (13자리, 저장을 누르면 바뀌어요)<input id="dd-ssn-in" value="" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="예: 850101-1234567" style="min-height:44px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);padding:0 12px;font-size:16px"></label>'
     +'<label class="bs-sub" style="display:grid;gap:4px">상태<select id="dd-status" style="max-width:none;min-height:44px;font-size:16px">'+['재직','휴직','퇴직'].map(function(s){return '<option'+((d.status||'재직')===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></label>'
     +'<div><button type="button" class="bs-btn" onclick="_ddSave(\''+esc(id)+'\')">저장</button></div></div>'
     +_ddEduCard(d)
@@ -17390,6 +17399,9 @@ window._ddSave=function(id){
   var acc=v('dd-acc').replace(/[^0-9\-]/g,''),st=v('dd-status')||'재직';
   var upd={name:name,phone:v('dd-phone').replace(/[^0-9]/g,''),bmUserId:v('dd-bmid'),bankName:v('dd-bank'),bankAccount:acc,accountNumber:acc,accountHolder:v('dd-holder'),status:st,is_active:st!=='퇴직',updatedAt:new Date().toISOString()};
   if(plat)upd.platform=plat;
+  var sw=document.getElementById('dd-ssn-wrap');if(sw&&sw.style.display!=='none'){
+    var sc=_ddSsnCheck(v('dd-ssn-in'),d.ssn?_bsSsnFull(d.ssn):'',(window._ddAll||[]).filter(function(x){return x._id!==id;}).map(function(x){return x.ssn;}));
+    if(sc&&sc.err){toast(sc.err);return;}if(sc&&sc.ssn)upd.ssn=sc.ssn;}
   var jobs=[_db.collection('drivers').doc(id).update(upd)];
   if(plat){var pl=Object.assign({},((window._bsCfg||{}).plat)||{});if(pl[d._uid]!==plat){pl[d._uid]=plat;jobs.push(_bsSaveCfgObj({plat:pl}));}}
   Promise.all(jobs).then(function(){toast('기사 정보를 저장했어요');_ddRender();}).catch(function(e){toast('저장 실패: '+e.message);});
