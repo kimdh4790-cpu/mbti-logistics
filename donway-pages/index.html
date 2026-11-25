@@ -16334,6 +16334,15 @@ function _bsAccBadge(r){if(r.acc==null)return '<span class="bs-badge na">미입�
 // ── 소속 플랫폼 (배민 / 쿠팡이츠 / 둘 다) — 설정 문서 plat 맵 우선, 없으면 기사 문서 platform
 var _BS_PL={bm:'배민',cpe:'쿠팡이츠',both:'배민+쿠팡이츠'};
 // 주민번호는 화면에 생년월일+성별 자리만 (900101-1******). 전체 번호는 메모리에 두지 않음
+// 주민번호 전체 (대리점 세무 신고용, 2026-11-25) — 기사 계정에서는 쓰지 않음
+function _bsSsnFull(v){var d=String(v||'').replace(/[^0-9]/g,'');return d.length===13?d.slice(0,6)+'-'+d.slice(6):String(v||'');}
+function _ddSsnCur(){if(typeof _dwIsDriverAcct==='function'&&_dwIsDriverAcct())return '';var d=(window._ddAll||[]).filter(function(x){return x._id===window._ddEditing;})[0];return d&&d.ssn?_bsSsnFull(d.ssn):'';}
+window._ddSsnToggle=function(){var el=document.getElementById('dd-ssn'),bt=document.getElementById('dd-ssn-tg'),d=(window._ddAll||[]).filter(function(x){return x._id===window._ddEditing;})[0];if(!el||!d)return;
+  var on=el.getAttribute('data-full')==='1';if(!on){var f=_ddSsnCur();if(!f)return;el.textContent=f;}else el.textContent=_bsSsnMask(d.ssn);
+  el.setAttribute('data-full',on?'0':'1');if(bt)bt.textContent=on?'전체 보기':'가리기';};
+window._ddSsnCopy=function(){var f=_ddSsnCur();if(!f)return;
+  var ok=function(){toast('주민번호를 복사했어요');},fb=function(){try{var t=document.createElement('textarea');t.value=f;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();ok();}catch(e){toast('복사하지 못했어요. 전체 보기로 확인해 주세요');}};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(f).then(ok,fb);else fb();};
 function _bsSsnMask(v){var d=String(v||'').replace(/[^0-9]/g,'');return d.length>=7?d.slice(0,6)+'-'+d[6]+'******':'';}
 function _bsDrvLabel(d){return (d.name||d.uid)+(d.sm||d.ph4?' ('+[d.sm,d.ph4?'끝'+d.ph4:''].filter(Boolean).join(' · ')+')':'');}
 function _bsPlat(d){if(!d)return '';var p=(_bsC().plat||{})[d.uid];if(p)return p;var x=String(d.platform||'').toLowerCase();if(/both|모두|둘/.test(x))return 'both';if(/bm|baemin|배민/.test(x))return 'bm';if(/cpe|coupang|쿠팡|이츠/.test(x))return 'cpe';var mp=_bsC().map||{};for(var k in mp)if(mp[k]===d.uid)return 'bm';return '';}
@@ -17199,7 +17208,10 @@ window._ddEdit=function(id){
     +inp('dd-bmid','배민 아이디',d.bmUserId,'autocomplete="off"')
     +'<label class="bs-sub" style="display:grid;gap:4px">은행<select id="dd-bank" style="max-width:none;min-height:44px;font-size:16px"><option value="">선택</option>'+_DD_BANKS.concat(d.bankName&&_DD_BANKS.indexOf(d.bankName)<0?[d.bankName]:[]).map(function(b){return '<option'+(b===d.bankName?' selected':'')+'>'+esc(b)+'</option>';}).join('')+'</select></label>'
     +inp('dd-acc','계좌번호',d.accountNumber||d.bankAccount,'inputmode="numeric" autocomplete="off"')+inp('dd-holder','예금주',d.accountHolder||'','autocomplete="off"')
-    +'<div class="bs-sub">주민번호: '+(d.ssn?esc(_bsSsnMask(d.ssn)):'미입력')+' (기사 본인이 가입할 때 입력)</div>'
+    +(d.ssn?'<div class="bs-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">주민번호: <b id="dd-ssn" style="font-variant-numeric:tabular-nums">'+esc(_bsSsnMask(d.ssn))+'</b>'
+      +'<button type="button" class="bs-btn ghost" id="dd-ssn-tg" style="min-height:44px" onclick="_ddSsnToggle()">전체 보기</button>'
+      +'<button type="button" class="bs-btn ghost" style="min-height:44px" onclick="_ddSsnCopy()">복사</button><span>(기사 본인이 가입할 때 입력 · 세무 신고용)</span></div>'
+      :'<div class="bs-sub">주민번호: 미입력 (기사 본인이 가입할 때 입력)</div>')
     +'<label class="bs-sub" style="display:grid;gap:4px">상태<select id="dd-status" style="max-width:none;min-height:44px;font-size:16px">'+['재직','휴직','퇴직'].map(function(s){return '<option'+((d.status||'재직')===s?' selected':'')+'>'+s+'</option>';}).join('')+'</select></label>'
     +'<div><button type="button" class="bs-btn" onclick="_ddSave(\''+esc(id)+'\')">저장</button></div></div>'
     +_ddEduCard(d)
