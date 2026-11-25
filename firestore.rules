@@ -44,6 +44,20 @@ service cloud.firestore {
     function canRead()  { return ownsDoc() || isSuperAdmin(); }
     function notDrvAcct() { return !(isAuth() && request.auth.token.email is string && request.auth.token.email.matches('.*@donway[.]internal$')); }
     function drvOwnSession(docId) { return isAuth() && docId.matches('^[^_]+_' + request.auth.uid + '_.*$'); }
+    // 기사 계정: @donway.internal 로그인, 또는 users 문서에 role 없이 남의 dealerId만 있는 계정(푸시 등록이 만든 문서). 직원(members)·슈퍼어드민 제외
+    function isDrvAcct() {
+      return isAuth() && !isSuperAdmin() && (
+        !notDrvAcct() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == '' &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('dealerId', '') != '' &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('dealerId', '') != request.auth.uid &&
+         !exists(/databases/$(database)/documents/members/$(request.auth.uid)))
+      );
+    }
+    function drvOwnRow() {
+      return isAuth() && (resource.data.get('uid', '') == request.auth.uid || resource.data.get('userId', '') == request.auth.uid);
+    }
     function canWrite() { return ownsNewDoc(); }
     function canOwn()   { return ownsDoc(); }
 
@@ -102,7 +116,14 @@ service cloud.firestore {
     match /plan_guards/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /plan_guard_alerts/{docId}      { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
     match /settlements/{docId}            { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
-    match /drivers/{docId}                { allow read: if canRead(); allow create: if canWrite(); allow update, delete: if canOwn(); }
+    // 기사 명단(주민번호·계좌 포함): 기사 계정은 본인 줄만 읽기, 본인 줄 푸시 토큰만 수정 (2026-11-25)
+    match /drivers/{docId} {
+      allow read: if (canRead() && !isDrvAcct()) || drvOwnRow();
+      allow create: if canWrite() && !isDrvAcct();
+      allow update: if (canOwn() && !isDrvAcct())
+                    || (drvOwnRow() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken','fcmTokens','fcmUpdatedAt']));
+      allow delete: if canOwn() && !isDrvAcct();
+    }
     match /attendance/{docId}             {
       allow read: if canRead();
       allow create: if isAuth();
