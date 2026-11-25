@@ -38264,7 +38264,9 @@ function openAdminPanel(){
         dateHtml='<span style="font-size:10px;color:var(--text3)">'+(item.trialStart||'-')+'</span><br>'
           +'<span style="font-size:10px;color:'+expColor+';font-weight:700">'+(isExpired?'❌ 만료 ':'⏳ ~')+(item.trialEnd||'-')+'</span>';
       } else {dateHtml='<span style="font-size:10px;color:var(--text3)">-</span>';}
-      tr.innerHTML='<td style="padding:8px 10px"><strong>'+esc(item.name||item.id)+'</strong><br>'
+      tr.innerHTML='<td style="padding:8px 10px"><a href="javascript:void(0)" class="dl-detail-link" data-id="'+esc(item.id)+'" style="color:inherit;text-decoration:underline dotted;cursor:pointer"><strong>'+esc(item.name||item.id)+'</strong></a>'
+        +(item.nameIssue?'<br><span style="font-size:10px;color:var(--red);font-weight:700">'+esc(item.nameIssue)+'</span>':'')
+        +'<br>'
         +'<span style="font-size:10px;color:var(--text3)">'+esc(item.email||'')+'</span>'
         +(item.bizDocUrl
           ?'<br><a href="'+item.bizDocUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:3px;margin-top:4px;font-size:10px;color:var(--primary);text-decoration:none;background:rgba(0,200,248,.08);border:1px solid rgba(0,200,248,.2);border-radius:4px;padding:2px 6px">📄 사업자등록증 보기</a>'
@@ -38279,7 +38281,15 @@ function openAdminPanel(){
         +'</td>'
         +'<td style="padding:8px 6px;text-align:center">'+dateHtml+'</td>'
         +'<td style="padding:8px 10px;text-align:center">'+item.cnt+'건</td>';
+      var _dlA=tr.querySelector('.dl-detail-link');
+      if(_dlA) _dlA.onclick=(function(it){return function(){_dlShowDetail(it);};})(item);
       var td=document.createElement('td');td.style.padding='8px 10px';
+      var infoBtn=document.createElement('button');
+      infoBtn.className='btn btn-sm';
+      infoBtn.style.cssText='margin-right:4px;font-size:10px';
+      infoBtn.textContent='상세';
+      infoBtn.onclick=(function(it){return function(){_dlShowDetail(it);};})(item);
+      td.appendChild(infoBtn);
       var btn=document.createElement('button');
       btn.className='btn btn-sm '+(isCurrent?'btn-teal':'btn-blue');
       btn.textContent=isCurrent?'✅ 보는 중':'🔍 열람';
@@ -38402,9 +38412,13 @@ function openAdminPanel(){
       var d=doc.data();
       // mbtico.kr/register 전용 등록 제외 (DONWAY 패널과 분리)
       if(d.registeredFrom==='register.html') return;
+      var _nm=String(d.companyName||d.name||'').trim();
       items.push({
         id:doc.id,
-        name:d.companyName||d.name||doc.id,
+        raw:d,
+        companyCode:d.companyCode||'',
+        rawName:_nm,
+        name:_nm||'(회사명 미입력) '+(d.email||d.adminEmail||doc.id),
         email:d.email||d.adminEmail||'',
         phone:d.phone||d.settlementPhone||'',
         slug:d.slug||'',
@@ -38414,13 +38428,14 @@ function openAdminPanel(){
         trialStart:d.trialStart||'',
         trialEnd:d.trialEnd||'',
         status:d.status||'approved',
-        bizDocUrl:d.bizDocUrl||'',
+        bizDocUrl:d.bizDocUrl||d.bizLicenseUrl||'',
         createdAt:d.createdAt&&d.createdAt.seconds?d.createdAt.seconds:0,
         cnt:dealerCnt[doc.id]||0
       });
     });
     if(!items.length){body.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3)">등록된 대리점 없음</div>';return;}
     items.sort(function(a,b){return b.createdAt-a.createdAt;});// 최신 가입순
+    _dlMarkNameIssues(items);
     buildDealerRows(items);
     // 복사 버튼 이벤트 바인딩
     setTimeout(function(){
@@ -38435,6 +38450,79 @@ function openAdminPanel(){
       });
     },100);
   }).catch(function(e){body.innerHTML='<div style="color:var(--red)">❌ '+e.message+'</div>';});
+}
+
+// ══ 슈퍼어드민 대리점 상세 정보 ══
+// 회사명이 비었거나 '회사코드 DNW-XXXX'처럼 코드가 들어간 경우 표시
+function _dlMarkNameIssues(items){
+  var byCode={};
+  items.forEach(function(it){if(it.companyCode)byCode[String(it.companyCode).toUpperCase()]=it;});
+  items.forEach(function(it){
+    if(!it.rawName){it.nameIssue='회사명이 비어 있음';return;}
+    var m=it.rawName.toUpperCase().match(/DNW-?[A-Z0-9]{6}/);
+    if(m||/회사\s*코드/.test(it.rawName)){
+      var code=m?m[0].replace(/^DNW-?/,'DNW-'):'';
+      var owner=code&&byCode[code];
+      if(owner&&owner.id!==it.id) it.nameIssue='회사명에 '+code+' 입력됨: '+(owner.rawName||owner.email)+'의 회사코드 (직원·기사 가입을 대리점 가입으로 했을 수 있음)';
+      else it.nameIssue='회사명 대신 회사코드가 입력됨';
+    }
+  });
+}
+function _dlFmtTs(v){
+  if(!v)return '';
+  try{
+    if(v.seconds)return new Date(v.seconds*1000+9*3600000).toISOString().slice(0,16).replace('T',' ')+' KST';
+    return String(v);
+  }catch(e){return String(v);}
+}
+function _dlShowDetail(item){
+  var d=item.raw||{};
+  var svcName={settle:'AI정산',delivery:'배달대행',qr:'QR출퇴근',full:'풀패키지',hourly:'급여관리',payroll:'급여관리',universal:'범용정산',inventory:'재고관리',kiosk:'키오스크POS'};
+  var svcs=(Array.isArray(d.services)?d.services:[d.serviceType]).filter(Boolean).map(function(k){return svcName[k]||k;}).join(', ');
+  var bizDoc=d.bizDocUrl||d.bizLicenseUrl||'';
+  var rows=[
+    ['회사명',item.rawName||'(미입력)'],
+    ['대표자',d.repName||d.ceoName||''],
+    ['사업자번호',d.bizNumber||''],
+    ['업태 / 종목',[d.bizType,d.bizItem].filter(Boolean).join(' / ')],
+    ['사업장 주소',d.bizAddr||''],
+    ['이메일',d.email||d.adminEmail||''],
+    ['정산 담당자',d.settlementContact||''],
+    ['연락처',d.settlementPhone||d.phone||''],
+    ['본인인증 이름 / 번호',[d.certName,d.phone].filter(Boolean).join(' / ')],
+    ['회사코드',d.companyCode||''],
+    ['전용 링크',d.slug?window.location.origin+'/'+d.slug:''],
+    ['가입 서비스',svcs],
+    ['플랜',(d.plan||'')+(d.planType?' ('+(d.planType==='group'?'단체':'개인')+')':'')],
+    ['체험 기간',[d.trialStart,d.trialEnd].filter(Boolean).join(' ~ ')],
+    ['승인 상태',d.status==='pending'?'승인 대기':(d.status||'approved')],
+    ['가입 시각',_dlFmtTs(d.createdAt)],
+    ['UID',item.id]
+  ];
+  var html='<div style="font-size:15px;font-weight:800;margin-bottom:4px">'+esc(item.rawName||'(회사명 미입력)')+'</div>'
+    +(item.nameIssue?'<div style="font-size:11px;color:var(--red);font-weight:700;margin-bottom:10px">'+esc(item.nameIssue)+'</div>':'<div style="margin-bottom:10px"></div>')
+    +'<table class="tbl" style="width:100%;font-size:12px"><tbody>'
+    +rows.map(function(r){
+      var v=r[1]?esc(r[1]):'<span style="color:var(--text3)">-</span>';
+      return '<tr><th style="text-align:left;padding:6px 8px;white-space:nowrap;width:110px;color:var(--text3);font-weight:600">'+esc(r[0])+'</th><td style="padding:6px 8px;word-break:break-all">'+v+'</td></tr>';
+    }).join('')
+    +'<tr><th style="text-align:left;padding:6px 8px;color:var(--text3);font-weight:600">사업자등록증</th><td style="padding:6px 8px">'
+    +(bizDoc?'<a href="'+esc(bizDoc)+'" target="_blank" rel="noopener" style="color:var(--primary)">보기</a>':'<span style="color:var(--red)">미첨부</span>')
+    +'</td></tr></tbody></table>';
+  var mo=document.createElement('div');mo.className='mo show';mo.style.zIndex='10050';
+  var box=document.createElement('div');box.className='md';box.style.maxWidth='480px';
+  var bd=document.createElement('div');bd.className='mdb';bd.style.cssText='padding:16px;max-height:70vh;overflow:auto';bd.innerHTML=html;
+  var ft=document.createElement('div');ft.className='mdf';
+  var cp=document.createElement('button');cp.className='btn btn-sm';cp.style.marginRight='auto';cp.textContent='정보 복사';
+  cp.onclick=function(){
+    var t=rows.map(function(r){return r[0]+': '+(r[1]||'-');}).join('\n');
+    if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){toast('✅ 복사됨');}).catch(function(){});
+  };
+  var cl=document.createElement('button');cl.className='btn';cl.textContent='닫기';cl.onclick=function(){mo.remove();};
+  ft.appendChild(cp);ft.appendChild(cl);
+  box.appendChild(bd);box.appendChild(ft);mo.appendChild(box);
+  mo.onclick=function(e){if(e.target===mo)mo.remove();};
+  (document.getElementById('modals')||document.body).appendChild(mo);
 }
 
 // ══ 체험 연장 패널 ══
