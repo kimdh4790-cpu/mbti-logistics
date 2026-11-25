@@ -48,4 +48,14 @@ test('배달 기사 관리: 주민번호 전체 보기·복사는 대리점만 (
   assert.strictEqual(mk2({ role: 'driver' })._ddSsnCur(), '');
   assert.strictEqual(mk2({ role: 'member' })._ddSsnCur(), '');
   assert.ok(src.includes('onclick="_ddSsnToggle()">전체 보기</button>'));
+test('기사 명단(drivers): 기사 계정은 본인 줄만, 본인 줄은 푸시 토큰만 수정, settlements 규칙은 그대로', () => {
+  const m = rules.match(/match \/drivers\/\{docId\} \{[\s\S]*?\n    \}/);
+  assert.ok(m, 'drivers 규칙 블록');
+  const b = m[0];
+  assert.match(b, /allow read: if \(canRead\(\) && !isDrvAcct\(\)\) \|\| drvOwnRow\(\);/);
+  assert.match(b, /allow create: if canWrite\(\) && !isDrvAcct\(\);/);
+  assert.match(b, /hasOnly\(\['fcmToken','fcmTokens','fcmUpdatedAt'\]\)/);
+  assert.match(b, /allow delete: if canOwn\(\) && !isDrvAcct\(\);/);
+  assert.match(rules, /function isDrvAcct\(\)[\s\S]*?!isSuperAdmin\(\)[\s\S]*?members/);
+  assert.match(rules, /match \/settlements\/\{docId\}\s+\{ allow read: if canRead\(\); allow create: if canWrite\(\); allow update, delete: if canOwn\(\); \}/);
 });
