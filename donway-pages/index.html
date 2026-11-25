@@ -5890,6 +5890,16 @@ if(window.location.hash==='#join'){
               _db.doc('users/'+user.uid).set({dealerId:user.uid,uid:user.uid,email:user.email,role:d.role||'dealer'},{merge:true}).catch(function(){});
               d.dealerId=user.uid;
             }
+            // ★ 권한 분리 (2026-11-25): 역할이 비어 있고 다른 회사(dealerId≠본인) 소속이면 대리점으로 보지 않음.
+            //   (기사 푸시 등록이 users 문서에 dealerId만 남겨, 기사가 대리점 화면을 보던 문제) → 기사 명단에 있으면 기사, 아니면 직원
+            if(!d.role&&d.dealerId!==user.uid){
+              return user.getIdToken().then(function(tok){return fetch('/api/my-driver-profile',{headers:{'Authorization':'Bearer '+tok}});})
+                .then(function(r){return r.json();}).catch(function(){return {};})
+                .then(function(j){
+                  if(j&&j.ok&&j.dealerId)return Object.assign({},d,{dealerId:j.dealerId,role:'driver',name:j.name||d.name||'',phone:j.phone||'',companyName:j.companyName||'',platform:j.platform||'',dlvDriver:!!j.delivery,termsVersion:j.termsVersion||''});
+                  return Object.assign({},d,{role:'member'});
+                });
+            }
             return d;
           })
       ).then(function(d){
@@ -13556,6 +13566,7 @@ function _dwCheckTierNotifications(prevCount, newCount, opts){
 
 // ══ 배달대행 정산 (쿠팡이츠 AI정산 스타일) ══
 function pageDeliverySettle(){
+  if(_dwIsDriverAcct()){goPage('delivery_input');return;}
   if(!isSuperAdmin()&&!_isPlanAllowedNow('delivery')){_renderPaywall('delivery');return;}
   if(window._dwPlatTab!=='coupang'){pageBaeminSettle();return;}
   setTimeout(_bsCoupangBar,0);
@@ -15304,7 +15315,7 @@ function pageDeliveryInput(){
   if(window._dwDashInterval){clearInterval(window._dwDashInterval);window._dwDashInterval=null;}
   function _dwFetchStats(){
     _blDrvFetch(did);
-    fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(period))
+    _auth.currentUser.getIdToken().then(function(tok){return fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(period),{headers:{'Authorization':'Bearer '+tok}});})
       .then(function(r){return r.json();})
       .then(function(res){
         if(res.ok&&res.data){
@@ -15886,7 +15897,7 @@ function _bmDaysJson(doc,sum){
 }
 // 정산기간 표시용: 기존 저장 키가 숫자 타임스탬프('1,792,940,400,000~...')라 화면에서만 날짜로 바꿔 보여줌 (저장 키는 그대로)
 function _dwStatsGet(uid,did){
-  return fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(_dwPeriodStr())).then(function(r){return r.json();});
+  return _auth.currentUser.getIdToken().then(function(tok){return fetch('/api/delivery-driver-stats?uid='+encodeURIComponent(uid)+'&dealerId='+encodeURIComponent(did)+'&period='+encodeURIComponent(_dwPeriodStr()),{headers:{'Authorization':'Bearer '+tok}});}).then(function(r){return r.json();});
 }
 function _dwStatsPost(body){
   return _auth.currentUser.getIdToken().then(function(tok){
@@ -16140,6 +16151,7 @@ function _bsMatch(key,rd,c){
 
 // ── 관리자 화면 ──
 function pageBaeminSettle(){
+  if(_dwIsDriverAcct()){goPage('delivery_input');return;}
   window._CU_INDUSTRY='delivery';
   document.getElementById('page-title').textContent='🛵 배달대행 정산';
   var tr=document.getElementById('topbar-right');if(tr)tr.innerHTML='';
@@ -16341,6 +16353,7 @@ function _bsDedRows(r,R){
 }
 // 정산서 본문 (관리자·기사 공용)
 function _bsStmtHtml(r,doc,forDriver){
+  if(_dwIsDriverAcct())forDriver=true; // 기사 계정에서는 관리자 보기 불가
   var R=function(a,b,cls){return '<div class="bs-row'+(cls?' '+cls:'')+'"><span>'+a+'</span><span>'+b+'</span></div>';};
   var h='<div class="bs-cheer '+r.cheer.tone+'">'+esc(r.cheer.text)+'</div>';
   h+='<div><h4>정산서'+(doc?' · '+doc.week.slice(5)+' ~ '+doc.weekEnd.slice(5):'')+'</h4>'
@@ -16573,8 +16586,8 @@ window._bsPublish=function(verbose,send){
       var cur=(res&&res.data)||{};
       var sum=_bmRiderSummary(doc,r.key,null,cur.peakTargets);
       var bm=JSON.parse(_bmDaysJson(doc,sum));
-      bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:r.extra,gap:r.gap,over:r.over,low:r.low,high:r.high,hasFb:r.hasFb,
-        tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,bk:r.bk||0,ded:r.ded,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,days:r.days,tiers:_bsC().tiers,updatedAt:new Date().toISOString(),sentAt:(doc.sent&&doc.sent.at)||'',mission:r.mission||0,missions:r.missions||[],forAu:au,riderId:r.userId||''};
+      bm.settle={name:r.name,n:r.n,can:r.can,fee:r.fee,rate:r.rate,tierMin:r.tierMin,on:r.on,off:r.off,flag:r.flag,acc:r.acc,sla:r.sla,accMin:r.accMin,gross:r.gross,extra:r.extra,gap:r.gap,low:r.low,hasFb:r.hasFb,
+        tax:r.tax,inc:r.inc,loc:r.loc,emp:r.emp,ind:r.ind,bk:r.bk||0,ded:r.ded,net:r.net,rates:r.rates,cheer:r.cheer,next:r.next,tiers:_bsC().tiers,updatedAt:new Date().toISOString(),sentAt:(doc.sent&&doc.sent.at)||'',mission:r.mission||0,missions:r.missions||[],forAu:au,riderId:r.userId||''};
       var body={dealerId:did,driverUid:au,driverName:r.drv.name,period:_dwPeriodStr(),
         peaks:{am:sum.day.am,pm:sum.day.pm,eve:sum.day.eve,ngt:sum.day.ngt,etc:sum.day.etc},peakTargets:cur.peakTargets||{am:0,pm:0,eve:0,ngt:0},
         daily:{done:sum.day.done,prog:0,rej:sum.day.cancel},
@@ -25433,6 +25446,9 @@ var MENUS_DLV_DRIVER = [
   {s:'내 배달 정산',items:[{ic:'🛵',l:'내 정산서',p:'delivery_input',plan_key:'free'}]}
 ];
 function _isDlvDriver(){return !!(_CU&&_CU.role==='driver'&&_CU.dlvDriver);}
+// 기사·직원 계정 (대리점·슈퍼어드민 아님) — 관리자 전용 화면·줄을 아예 그리지 않음 (사용자 2026-11-25 "기사가 관리자 내용도 다 볼 수 있다")
+function _dwIsDriverAcct(){if(typeof isSuperAdmin==='function'&&isSuperAdmin())return false;return !!(_CU&&(_CU.role==='driver'||_CU.role==='member'||_CU.dlvDriver));}
+var _DW_ADMIN_PAGES=['delivery_settle','delivery_admin','delivery_drivers','delivery_report','delivery_platform'];
 function _driverMenus(){return _isDlvDriver()?MENUS_DLV_DRIVER:_filterMenusByServices(MENUS_DRIVER);}
 var MENUS = MENUS_SETTLE; // 기본값
 function _copyCompanyCode(el){
@@ -26510,6 +26526,8 @@ function _initFCMReceiver(){
 }
 
 function goPage(page, _fromPopstate){
+  // ★ 기사·직원 계정은 대리점 배달대행 화면(정산·기사관리·현황입력 등)을 열 수 없음 → 본인 정산서로 (2026-11-25)
+  if(_dwIsDriverAcct()&&_DW_ADMIN_PAGES.indexOf(page)>=0)page='delivery_input';
   // 첫 호출 시 히스토리 초기화 — 뒤로가기 앱 종료 방지
   if(!window._dwPopstateInited){
     window._dwPopstateInited=true;
