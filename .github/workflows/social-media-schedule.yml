@@ -108,7 +108,7 @@ jobs:
         run: npm install --ignore-scripts --legacy-peer-deps
 
       - name: FFmpeg 설치
-        run: sudo apt-get install -y ffmpeg fonts-noto-cjk fonts-noto-extra
+        run: sudo apt-get install -y --fix-missing ffmpeg fonts-noto-cjk fonts-noto-extra
 
       - name: Playwright Chromium 설치
         run: npx playwright install chromium --with-deps
