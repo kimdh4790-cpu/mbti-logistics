@@ -13942,6 +13942,7 @@ function _dwDeliveryLoad(did, ym){
   window._dwCpeSent=null;window._dwCpeReads={};
   _db.collection('delivery_sessions').doc(did+'_coupang_'+ym).get().then(function(snap){
     window._dwCpeSent=(snap.exists&&snap.data().cpeSent)||null;
+    window._dwEvManual=(snap.exists&&snap.data().evManual)||{};
     if(!snap.exists||!(snap.data().drivers||[]).length){
       res.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text3)">'
         +'<div style="font-size:40px;margin-bottom:12px">📭</div>'
@@ -13988,8 +13989,14 @@ var _DW_EATS_DEFAULT={
   empRate:0.008, indRate:0.0088,
   bkType:'won', bkVal:0, // 세무 기장비: 기본 0원(안 뗌), 설정에서 건당 금액(예: 200원) 또는 세전 %. 수수료 명목 아님 (사용자 2026-11-23)
   vatIncl:true, // 업로드 금액(일자별 '총 정산금액')이 부가세 포함 → 마진은 ÷1.1 공급가 기준 (대리점=사업자, 기사=미사업자 3.3%)
-  weekStart:3 // 주 시작 요일 0=일 … 3=수 … 6=토 (쿠팡이츠 엑셀 주차: 수~화)
+  weekStart:3, // 주 시작 요일 0=일 … 3=수 … 6=토 (쿠팡이츠 엑셀 주차: 수~화)
+  // 단가 적용 방식 (대리점마다 다름, 사용자 2026-11-26): prog=구간별 나눠 계산(누진), flat=도달 구간 단가를 1건부터 전체 적용(배민 방식)
+  tierMode:'prog',
+  // 이벤트(대리점이 정해서 기사에게 추가 지급, 사용자 2026-11-26): 세전에 더해 공제하고, 회사마진에서 빠짐
+  //  per: 주간 from건부터 건당 amt원 추가 / week: 주 days일 이상 출근 + min건 이상이면 amt원 / manual: 대리점이 달성 횟수 입력 × amt원 (친구 초대 등)
+  events:[], evAcc:0 // evAcc: 이벤트 적용 수락률(% 이상, 0=조건 없음). 수락률 = 건수 ÷ (건수 + 거절)
 };
+var _DW_EV_TYPES={per:'건수 초과 건당 추가',week:'출근일·건수 달성 보너스',manual:'직접 입력 (친구 초대 등)'};
 var _DW_DOW=['일','월','화','수','목','금','토'];
 function _dwEatsWS(ws){if(ws==null||ws==='')ws=_dwEatsCfg().weekStart;ws=parseInt(ws,10);return (ws>=0&&ws<=6)?ws:3;}
 function _dwEatsWeekLabel(ws){ws=_dwEatsWS(ws);return _DW_DOW[ws]+'~'+_DW_DOW[(ws+6)%7];}
@@ -14001,6 +14008,9 @@ function _dwEatsCfg(){
   // 2026-11-23: 통합 5.8%를 없애고 세 항목으로. 통합 모드(또는 그 이전 저장값)는 3.3% + 고용 0.8% + 산재 0.88%로 전환
   if(!c.dedV||o.taxType==='all'){o.taxType='33';o.empRate=d.empRate;o.indRate=d.indRate;}
   o.bkType=o.bkType==='pct'?'pct':'won';o.bkVal=Math.max(0,+o.bkVal||0);
+  o.tierMode=o.tierMode==='flat'?'flat':'prog';
+  o.events=(Array.isArray(o.events)?o.events:[]).filter(function(e){return e&&_DW_EV_TYPES[e.type];});
+  o.evAcc=Math.max(0,Math.min(100,+o.evAcc||0));
   o.taxRate=o.taxType==='0'?0:(o.taxType==='33'?0.033:(+o.taxRate||0));
   return o;
 }
@@ -14012,9 +14022,14 @@ function _dwBkLabel(cfg){cfg=cfg||{};return cfg.bkType==='pct'?(+cfg.bkVal||0)+'
 function _dwEatsSortedTiers(tiers){
   return (tiers||[]).filter(function(t){return +t.min>0;}).map(function(t){return {min:+t.min,rate:+t.rate||0};}).sort(function(a,b){return a.min-b.min;});
 }
-function _dwEatsBreakdown(count, tiers){
+function _dwEatsBreakdown(count, tiers, mode){
   count=Math.max(0,Math.floor(+count||0));
   var s=_dwEatsSortedTiers(tiers), out=[];
+  if(mode==='flat'){ // 도달 구간 단가를 1건부터 전체 적용
+    if(!count||!s.length)return out;
+    var rt=_dwEatsTopRate(count,tiers);
+    return [{start:1,end:count,rate:rt,count:count,pay:count*rt,flat:true}];
+  }
   for(var i=0;i<s.length;i++){
     var start=s[i].min, end=i+1<s.length?s[i+1].min-1:Infinity;
     if(count<start)break;
@@ -14023,8 +14038,8 @@ function _dwEatsBreakdown(count, tiers){
   }
   return out;
 }
-function _dwEatsGross(count, tiers){
-  return _dwEatsBreakdown(count,tiers).reduce(function(a,b){return a+b.pay;},0);
+function _dwEatsGross(count, tiers, mode){
+  return _dwEatsBreakdown(count,tiers,mode).reduce(function(a,b){return a+b.pay;},0);
 }
 function _dwEatsTopRate(count, tiers){
   var s=_dwEatsSortedTiers(tiers), r=s.length?s[0].rate:0;
@@ -14050,36 +14065,83 @@ function _dwEatsWeekMonth(ds, ws){
 function _dwEatsMonthDays(curDays, adjRecords, ym, ws){
   var map={};
   (curDays||[]).forEach(function(d){map[d.date]=d;});
-  Object.keys(adjRecords||{}).forEach(function(dt){if(!map[dt]){var r=adjRecords[dt];map[dt]={date:dt,orders:Math.round(r.orders||0),amount:Math.round(r.amount||0)};}});
+  Object.keys(adjRecords||{}).forEach(function(dt){if(!map[dt]){var r=adjRecords[dt];map[dt]={date:dt,orders:Math.round(r.orders||0),amount:Math.round(r.amount||0),rejected:Math.round(r.rejected||0),cancelled:Math.round(r.cancelled||0)};}});
   return Object.keys(map).sort().map(function(k){return map[k];}).filter(function(d){return _dwEatsWeekMonth(d.date, ws)===ym;});
 }
 // 기사 1명 계산. days=[{date,orders,amount}], coupang=엑셀 정산금액 합
-function _dwEatsCalcDriver(days, coupang, totalOrders, cfg, coupangEx){
-  var byWeek={}, noDate=0;
+function _dwEatsCalcDriver(days, coupang, totalOrders, cfg, coupangEx, opts){
+  var byWeek={}, wRej={}, wDays={}, noDate=0, mode=cfg.tierMode;
   (days||[]).forEach(function(d){
     var wk=_dwEatsWeekKey(d.date, cfg.weekStart);
     if(!wk){noDate+=(+d.orders||0);return;}
     byWeek[wk]=(byWeek[wk]||0)+(+d.orders||0);
+    wRej[wk]=(wRej[wk]||0)+(+d.rejected||0);
+    if((+d.orders||0)>0)wDays[wk]=(wDays[wk]||0)+1;
   });
   var sumDays=Object.keys(byWeek).reduce(function(s,k){return s+byWeek[k];},0)+noDate;
   // 날짜 정보가 없는 건수는 별도 주차로 계산
   if(totalOrders>sumDays) noDate+=totalOrders-sumDays;
   var weeks=Object.keys(byWeek).sort().map(function(wk){
     var e=new Date(wk+'T00:00:00Z');e.setUTCDate(e.getUTCDate()+6);
-    var bd=_dwEatsBreakdown(byWeek[wk],cfg.tiers);
-    return {week:wk,weekEnd:e.toISOString().slice(0,10),count:byWeek[wk],breakdown:bd,gross:bd.reduce(function(a,b){return a+b.pay;},0),topRate:_dwEatsTopRate(byWeek[wk],cfg.tiers)};
+    var bd=_dwEatsBreakdown(byWeek[wk],cfg.tiers,mode);
+    return {week:wk,weekEnd:e.toISOString().slice(0,10),count:byWeek[wk],rej:wRej[wk]||0,workDays:wDays[wk]||0,breakdown:bd,gross:bd.reduce(function(a,b){return a+b.pay;},0),topRate:_dwEatsTopRate(byWeek[wk],cfg.tiers)};
   });
-  if(noDate>0){var bd0=_dwEatsBreakdown(noDate,cfg.tiers);weeks.push({week:'',weekEnd:'',count:noDate,breakdown:bd0,gross:bd0.reduce(function(a,b){return a+b.pay;},0),topRate:_dwEatsTopRate(noDate,cfg.tiers)});}
-  var gross=weeks.reduce(function(s,w){return s+w.gross;},0);
+  if(noDate>0){var bd0=_dwEatsBreakdown(noDate,cfg.tiers,mode);weeks.push({week:'',weekEnd:'',count:noDate,breakdown:bd0,gross:bd0.reduce(function(a,b){return a+b.pay;},0),topRate:_dwEatsTopRate(noDate,cfg.tiers)});}
+  var base=weeks.reduce(function(s,w){return s+w.gross;},0);
+  var evr=_dwEatsEvents(weeks,cfg,(opts&&opts.manual)||{});
+  var gross=base+evr.total;
   var tax=Math.round(gross*cfg.taxRate);
   var incomeTax=(cfg.taxType!=='all'&&cfg.taxRate>0)?Math.round(gross*cfg.taxRate*(3/3.3)):0;
   var emp=Math.round(gross*cfg.empRate), ind=Math.round(gross*cfg.indRate);
   var deduct=tax+emp+ind, bk=_dwBk(cfg,gross,totalOrders);
   var cpEx=(coupangEx!=null)?Math.round(coupangEx):Math.round((coupang||0)/(cfg.vatIncl===false?1:1.1));
   return {gross:gross,tax:tax,incomeTax:incomeTax,localTax:tax-incomeTax,emp:emp,ind:ind,deduct:deduct,bk:bk,net:gross-deduct-bk,
-          coupang:cpEx,coupangIncl:Math.round(coupang||0),company:cpEx-gross,weeks:weeks,
+          coupang:cpEx,coupangIncl:Math.round(coupang||0),company:cpEx-gross,weeks:weeks,base:base,ev:evr.total,evItems:evr.items,
           topRate:weeks.reduce(function(m,w){return Math.max(m,w.topRate);},0)};
 }
+// 이벤트 측정: 주별(per·week)은 그 주 건수·출근일·수락률로, manual은 대리점이 넣은 달성 횟수로 계산
+//  반환 items=[{id,name,type,week,weekEnd,ok,amt,note,hint}] — ok=false여도 진행 상황(note·hint)을 보여 줌
+function _dwEatsAcc(n,rej){n=+n||0;rej=+rej||0;return n+rej>0?Math.round(n/(n+rej)*1000)/10:null;}
+function _dwEatsEvents(weeks,cfg,manual){
+  var evs=(cfg&&cfg.events)||[],need=+(cfg&&cfg.evAcc)||0,items=[],W=function(n){return Math.round(+n||0).toLocaleString();};
+  var accOk=function(a){return !need||(a!=null&&a>=need);};
+  evs.forEach(function(e,ei){
+    var id=e.id||('ev'+ei),nm=e.name||_DW_EV_TYPES[e.type],amt=Math.max(0,+e.amt||0);
+    if(e.type==='manual'){
+      var tn=0,trej=0;weeks.forEach(function(w){tn+=w.count;trej+=w.rej||0;});
+      var k=Math.max(0,Math.floor(+(manual||{})[id]||0)),a=_dwEatsAcc(tn,trej),ok=k>0&&accOk(a);
+      items.push({id:id,name:nm,type:'manual',week:'',ok:ok,amt:ok?k*amt:0,cnt:k,unit:amt,
+        note:k?(k+'회 × '+W(amt)+'원'+(accOk(a)?'':' · 수락률 '+(a==null?'-':a)+'% (기준 '+need+'% 미만, 미적용)')):'달성 없음'});
+      return;
+    }
+    weeks.forEach(function(w){
+      if(!w.week)return;
+      var a=_dwEatsAcc(w.count,w.rej),aok=accOk(a),it={id:id,name:nm,type:e.type,week:w.week,weekEnd:w.weekEnd,ok:false,amt:0,note:'',hint:''};
+      if(e.type==='per'){
+        var from=Math.max(1,+e.from||1),over=Math.max(0,w.count-from+1);
+        it.cnt=over;it.unit=amt;
+        if(over>0&&aok){it.ok=true;it.amt=over*amt;it.note=over+'건 × '+W(amt)+'원';}
+        else if(over>0){it.note=over+'건 해당 · 수락률 '+(a==null?'-':a)+'% (기준 '+need+'% 미만, 미적용)';}
+        else{it.note=w.count+'건 (기준 '+from+'건부터)';it.hint=(from-w.count)+'건 더 타면 그 뒤로 건당 '+W(amt)+'원 추가';}
+      }else{
+        var dd=Math.max(0,+e.days||0),mn=Math.max(0,+e.min||0),dOk=w.workDays>=dd,nOk=w.count>=mn;
+        it.note=w.workDays+'일 출근 · '+w.count+'건 (기준 '+dd+'일 · '+mn+'건)';
+        if(dOk&&nOk&&aok){it.ok=true;it.amt=amt;}
+        else if(dOk&&nOk){it.note+=' · 수락률 '+(a==null?'-':a)+'% (기준 '+need+'% 미만, 미적용)';}
+        else{var h=[];if(!dOk)h.push('출근 '+(dd-w.workDays)+'일');if(!nOk)h.push((mn-w.count)+'건');it.hint=h.join(' · ')+' 더 하면 '+W(amt)+'원';}
+      }
+      items.push(it);
+    });
+  });
+  return {items:items,total:items.reduce(function(s,x){return s+(x.ok?x.amt:0);},0)};
+}
+function _dwEvLabel(e){
+  var W=function(n){return Math.round(+n||0).toLocaleString();};
+  if(e.type==='per')return '주 '+(+e.from||1)+'건부터 건당 '+W(e.amt)+'원';
+  if(e.type==='week')return '주 '+(+e.days||0)+'일 출근 + '+(+e.min||0)+'건 이상 '+W(e.amt)+'원';
+  return (e.name||'직접 입력')+' 1회 '+W(e.amt)+'원';
+}
+function _dwModeLabel(m){return m==='flat'?'도달 단가 전체 적용':'구간별 누진';}
 // 기사 카드 '상세내역' (탭하면 펼침): 주차별 달성률·구간 계산, 세금, 회사 마진 분석(쿠팡 지급 구성)
 function _dwEatsDetailHtml(r, cfg){
   var W=function(n){return Math.round(n||0).toLocaleString()+'원';};
@@ -14097,6 +14159,7 @@ function _dwEatsDetailHtml(r, cfg){
     +'</div>';
   });
   h+='<div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px">'
+    +(r.ev?row('단가 지급',W(r.base))+(r.evItems||[]).filter(function(x){return x.ok;}).map(function(x){return row('이벤트 · '+esc(x.name)+(x.week?' ('+esc(x.week.slice(5))+'~)':''),'<span style="color:#059669">+'+W(x.amt)+'</span>');}).join(''):'')
     +row('세전 합계',W(r.preTax),'font-weight:800')
     +(cfg.taxType==='all'?row('원천징수·공과금 ('+_dwPct(cfg.dedRate)+')','<span style="color:#dc2626">−'+W(r.tax33)+'</span>'):
      (r.tax33?row('원천징수 ('+_dwPct(cfg.taxRate)+')','<span style="color:#dc2626">−'+W(r.tax33)+'</span>'):'')
@@ -14118,7 +14181,7 @@ function _dwEatsDetailHtml(r, cfg){
   });
   if(!hasDet)h+='<div style="font-size:11px;color:var(--text3);margin-bottom:6px">쿠팡 지급 구성은 엑셀을 다시 올리면 표시됩니다 (종합 시트)</div>';
   h+=row('쿠팡 총지급 (라이더별 실지급액)',W(r.coupang),'font-weight:800;border-top:1px solid var(--border);margin-top:6px;padding-top:8px')
-    +row('기사 지급 (세전)','−'+W(r.preTax),'color:var(--text3)')
+    +row('기사 지급 (세전'+(r.ev?', 이벤트 포함':'')+')','−'+W(r.preTax),'color:var(--text3)')
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:10px 12px;border-radius:10px;background:'+((r.company||0)>=0?'rgba(201,168,76,.15)':'rgba(220,38,38,.1)')+';font-weight:900"><span>회사 마진 (쿠팡 − 기사 세전)</span><span style="color:'+((r.company||0)>=0?'#b45309':'#dc2626')+'">'+((r.company||0)>=0?'+':'−')+W(Math.abs(r.company||0))+'</span></div>'
   +'</div>';
   return '<div style="border-bottom:1px solid var(--border)">'
@@ -14144,11 +14207,13 @@ window._dwEatsSettings=function(){
     +'<div style="font-size:16px;font-weight:800;margin-bottom:4px">배달대행 정산 방식</div>'
     +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">회사별로 저장됩니다.</div>'
     +'<label style="font-size:12px;color:var(--text3)">정산 방식</label>'
-    +'<select id="dw-es-mode" '+inp+'><option value="eats"'+(cfg.mode==='eats'?' selected':'')+'>쿠팡이츠 단가표 적용 (주간 누진)</option><option value="raw"'+(cfg.mode==='raw'?' selected':'')+'>쿠팡 정산금액 그대로 (기존 방식)</option></select>'
+    +'<select id="dw-es-mode" '+inp+'><option value="eats"'+(cfg.mode==='eats'?' selected':'')+'>쿠팡이츠 단가표 적용 (주간)</option><option value="raw"'+(cfg.mode==='raw'?' selected':'')+'>쿠팡 정산금액 그대로 (기존 방식)</option></select>'
     +'<div style="font-size:12px;font-weight:700;margin:16px 0 6px">단가 구간 <span style="font-weight:400;color:var(--text3)">(시작 건수 / 원)</span></div>'
     +'<div id="dw-es-tiers">'+_dwEatsSortedTiers(cfg.tiers).map(tierRow).join('')+'</div>'
     +'<button id="dw-es-add" style="width:100%;min-height:40px;margin-bottom:6px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px">+ 구간 추가</button>'
-    +'<div style="font-size:11px;color:var(--text3);margin-bottom:14px">주간 건수에 구간별 단가를 따로 계산해 합산합니다. 예) 320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300</div>'
+    +'<label style="font-size:12px;color:var(--text3)">단가 적용 방식</label>'
+    +'<select id="dw-es-tmode" '+inp+'><option value="prog"'+(cfg.tierMode!=='flat'?' selected':'')+'>구간별 누진 (320건 → 199×2,400 + 50×3,600 + 50×4,000 + 21×4,300)</option><option value="flat"'+(cfg.tierMode==='flat'?' selected':'')+'>도달 단가 전체 적용 (320건 → 320×4,300)</option></select>'
+    +'<div style="font-size:11px;color:var(--text3);margin:6px 0 14px">이벤트는 정산 화면의 \'단가표·이벤트 설정\'에서 넣어요.</div>'
     +'<label style="font-size:12px;color:var(--text3)">한 주 시작 요일 <span style="color:var(--text3)">(7일 단위, 마지막 날이 속한 달로 정산)</span></label>'
     +'<select id="dw-es-ws" '+inp+'>'+_DW_DOW.map(function(n,i){return '<option value="'+i+'"'+(_dwEatsWS(cfg.weekStart)===i?' selected':'')+'>'+n+'요일 시작 ('+_dwEatsWeekLabel(i)+')</option>';}).join('')+'</select>'
     +'<label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:8px 0 12px;min-height:44px"><input id="dw-es-vat" type="checkbox"'+(cfg.vatIncl!==false?' checked':'')+' style="width:20px;height:20px">쿠팡 금액이 부가세 포함 (회사마진은 공급가 = ÷1.1 기준)</label>'
@@ -14169,7 +14234,7 @@ window._dwEatsSettings=function(){
   m.querySelector('#dw-es-add').onclick=function(){var w=document.createElement('div');w.innerHTML=tierRow({min:'',rate:''});m.querySelector('#dw-es-tiers').appendChild(w.firstChild);};
   m.querySelector('#dw-es-close').onclick=function(){m.remove();};
   m.querySelector('#dw-es-reset').onclick=function(){
-    m.querySelector('#dw-es-tiers').innerHTML=_DW_EATS_DEFAULT.tiers.map(tierRow).join('');
+    m.querySelector('#dw-es-tiers').innerHTML=_DW_EATS_DEFAULT.tiers.map(tierRow).join('');m.querySelector('#dw-es-tmode').value='prog';
     m.querySelector('#dw-es-tax').value='33';m.querySelector('#dw-es-taxr').value='';m.querySelector('#dw-es-bkt').value=_DW_EATS_DEFAULT.bkType;m.querySelector('#dw-es-bkv').value=_DW_EATS_DEFAULT.bkVal;m.querySelector('#dw-es-ws').value=String(_DW_EATS_DEFAULT.weekStart);m.querySelector('#dw-es-vat').checked=true;
     m.querySelector('#dw-es-emp').value=Math.round(_DW_EATS_DEFAULT.empRate*10000)/100;m.querySelector('#dw-es-ind').value=Math.round(_DW_EATS_DEFAULT.indRate*10000)/100;
   };
@@ -14190,7 +14255,8 @@ window._dwEatsSettings=function(){
       empRate:(parseFloat(m.querySelector('#dw-es-emp').value)||0)/100,
       indRate:(parseFloat(m.querySelector('#dw-es-ind').value)||0)/100,
       weekStart:parseInt(m.querySelector('#dw-es-ws').value,10),
-      vatIncl:m.querySelector('#dw-es-vat').checked};
+      vatIncl:m.querySelector('#dw-es-vat').checked,
+      tierMode:m.querySelector('#dw-es-tmode').value==='flat'?'flat':'prog',events:cfg.events,evAcc:cfg.evAcc};
     var did=_CU.dealerId||_CU.uid||'';
     _db.collection('companies').doc(did).set({dwEatsCfg:nc},{merge:true}).then(function(){
       if(typeof _COMPANY_CFG!=='undefined'){if(!_COMPANY_CFG)_COMPANY_CFG={};_COMPANY_CFG.dwEatsCfg=nc;}
@@ -14200,12 +14266,99 @@ window._dwEatsSettings=function(){
   };
 };
 
+// ── 단가표·이벤트 설정 (배민처럼 화면에서 바로, 사용자 2026-11-26 "대리점마다 달라서 구간 사용자가 넣을 수 있게") ──
+function _dwEvRow(e){
+  e=e||{type:'per'};
+  var t=_DW_EV_TYPES[e.type]?e.type:'per',v=function(x){return x==null?'':esc(String(x));};
+  var f=function(lbl,cls,val,ph){return '<label style="display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--text3)">'+lbl+'<input type="number" min="0" class="'+cls+'" value="'+v(val)+'" placeholder="'+(ph||'')+'" style="width:100%;box-sizing:border-box;min-width:0;min-height:40px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"></label>';};
+  return '<div class="dw-ev-row" data-id="'+v(e.id||('e'+Date.now().toString(36)+Math.floor(Math.random()*1e4)))+'" style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;background:var(--bg)">'
+    +'<div style="display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:6px;margin-bottom:6px">'
+      +'<select class="dw-ev-type" onchange="var r=this.closest(\'.dw-ev-row\');r.outerHTML=_dwEvRow({id:r.dataset.id,type:this.value,amt:r.querySelector(\'.dw-ev-amt\').value})" style="width:100%;min-width:0;min-height:40px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px">'
+        +Object.keys(_DW_EV_TYPES).map(function(k){return '<option value="'+k+'"'+(k===t?' selected':'')+'>'+_DW_EV_TYPES[k]+'</option>';}).join('')+'</select>'
+      +'<button type="button" onclick="this.closest(\'.dw-ev-row\').remove()" aria-label="이벤트 삭제" style="min-height:40px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;cursor:pointer">×</button></div>'
+    +'<input class="dw-ev-name" value="'+v(e.name)+'" placeholder="이벤트 이름 (예: '+(t==='manual'?'친구 초대 200건 달성':t==='week'?'주 6일 170건 보너스':'151건부터 추가지급')+')" style="width:100%;box-sizing:border-box;min-height:40px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;margin-bottom:6px">'
+    +'<div style="display:grid;grid-template-columns:repeat('+(t==='week'?3:2)+',minmax(0,1fr));gap:6px">'
+      +(t==='per'?f('몇 건부터 (주간)','dw-ev-from',e.from,'151'):'')
+      +(t==='week'?f('주 출근일 이상','dw-ev-days',e.days,'6')+f('주 건수 이상','dw-ev-min',e.min,'170'):'')
+      +f(t==='per'?'건당 추가 (원)':t==='week'?'달성 시 (원)':'1회 금액 (원)','dw-ev-amt',e.amt,t==='per'?'1700':'50000')
+    +'</div></div>';
+}
+function _dwEatsInlineSet(c){
+  var W=function(n){return Math.round(+n||0).toLocaleString();};
+  var inp='width:100%;box-sizing:border-box;min-width:0;min-height:40px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px';
+  var tr=function(t){return '<div class="dw-tier-row" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;gap:6px;margin-bottom:6px"><input type="number" min="1" class="dw-tier-min" value="'+t.min+'" placeholder="시작 건수" style="'+inp+'"><input type="number" min="0" class="dw-tier-rate" value="'+t.rate+'" placeholder="단가 (원)" style="'+inp+'"><button type="button" onclick="this.parentNode.remove()" aria-label="구간 삭제" style="min-height:40px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;cursor:pointer">×</button></div>';};
+  window._dwTierRowHtml=tr;
+  return '<details id="dw-in-set" style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:0 14px;margin-bottom:14px">'
+    +'<summary style="min-height:44px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;padding:8px 0"><b style="font-size:13px">단가표·이벤트 설정</b>'
+      +'<span style="font-size:11px;color:var(--text3);line-height:1.5">'+_dwModeLabel(c.tierMode)+' · '+_dwEatsSortedTiers(c.tiers).map(function(t){return t.min+'건+ '+W(t.rate);}).join(' / ')
+      +(c.events.length?' · 이벤트 '+c.events.map(_dwEvLabel).join(', ')+(c.evAcc?' (수락률 '+c.evAcc+'% 이상)':''):' · 이벤트 없음')+'</span></summary>'
+    +'<div style="padding:4px 0 14px">'
+      +'<label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text3);margin-bottom:10px">단가 적용 방식<select id="dw-in-mode" style="'+inp+'">'
+        +'<option value="prog"'+(c.tierMode!=='flat'?' selected':'')+'>구간별 누진 — 250건: 199×2,400 + 50×3,600 + 1×4,000</option>'
+        +'<option value="flat"'+(c.tierMode==='flat'?' selected':'')+'>도달 단가 전체 적용 (배민 방식) — 250건: 250×4,000</option></select></label>'
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:6px">단가 구간 <span style="font-weight:400;color:var(--text3)">(시작 건수 / 원, 주 '+_dwEatsWeekLabel(c.weekStart)+' 기준)</span></div>'
+      +'<div id="dw-in-tiers">'+_dwEatsSortedTiers(c.tiers).map(tr).join('')+'</div>'
+      +'<button type="button" onclick="var w=document.createElement(\'div\');w.innerHTML=_dwTierRowHtml({min:\'\',rate:\'\'});document.getElementById(\'dw-in-tiers\').appendChild(w.firstChild)" style="width:100%;min-height:40px;margin-bottom:14px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px">+ 구간 추가</button>'
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:4px">이벤트 <span style="font-weight:400;color:var(--text3)">(대리점이 주는 추가 지급 · 세전에 더해 공제하고 회사마진에서 빠져요)</span></div>'
+      +'<div id="dw-in-evs">'+c.events.map(_dwEvRow).join('')+'</div>'
+      +'<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px">'
+        +['per','week','manual'].map(function(k){return '<button type="button" onclick="var w=document.createElement(\'div\');w.innerHTML=_dwEvRow({type:\''+k+'\'});document.getElementById(\'dw-in-evs\').appendChild(w.firstChild)" style="min-height:44px;background:var(--bg3);border:1px dashed var(--border);border-radius:8px;cursor:pointer;font-size:11px;line-height:1.3">+ '+_DW_EV_TYPES[k]+'</button>';}).join('')
+      +'</div>'
+      +'<label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text3);margin-bottom:12px">이벤트 적용 수락률 (% 이상, 0이면 조건 없음 · 수락률 = 건수 ÷ (건수 + 거절))<input id="dw-in-acc" type="number" min="0" max="100" value="'+(c.evAcc||0)+'" style="'+inp+'"></label>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" onclick="_dwEatsInlineSave()" style="flex:1;min-height:44px;background:#08101f;color:#c9a84c;border:none;border-radius:10px;font-weight:800;cursor:pointer">설정 저장</button>'
+      +'<button type="button" onclick="_dwEatsSettings()" style="min-height:44px;padding:0 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:12px">세금·주 시작일 등</button></div>'
+    +'</div></details>';
+}
+window._dwEatsInlineSave=function(){
+  var box=document.getElementById('dw-in-set');if(!box)return;
+  var tiers=[];
+  box.querySelectorAll('.dw-tier-row').forEach(function(r){var mn=parseInt(r.querySelector('.dw-tier-min').value,10),rt=parseInt(r.querySelector('.dw-tier-rate').value,10);if(mn>0&&rt>=0)tiers.push({min:mn,rate:rt});});
+  if(!tiers.length){toast('단가 구간을 1개 이상 입력하세요');return;}
+  tiers=_dwEatsSortedTiers(tiers);
+  if(tiers[0].min!==1){toast('첫 구간 시작 건수는 1이어야 합니다');return;}
+  var evs=[],bad='';
+  box.querySelectorAll('.dw-ev-row').forEach(function(r){
+    var g=function(c){var x=r.querySelector(c);return x?Math.max(0,parseFloat(x.value)||0):0;};
+    var e={id:r.dataset.id,type:r.querySelector('.dw-ev-type').value,name:String(r.querySelector('.dw-ev-name').value||'').trim().slice(0,40),amt:Math.round(g('.dw-ev-amt'))};
+    if(e.type==='per')e.from=Math.max(1,Math.round(g('.dw-ev-from')));
+    if(e.type==='week'){e.days=Math.min(7,Math.round(g('.dw-ev-days')));e.min=Math.round(g('.dw-ev-min'));}
+    if(!e.amt){bad='이벤트 금액을 입력하세요';return;}
+    evs.push(e);
+  });
+  if(bad){toast(bad);return;}
+  var nc=Object.assign({},_dwEatsCfg(),{tierMode:document.getElementById('dw-in-mode').value==='flat'?'flat':'prog',tiers:tiers,events:evs,
+    evAcc:Math.max(0,Math.min(100,parseFloat(document.getElementById('dw-in-acc').value)||0)),dedV:2});
+  var did=_CU.dealerId||_CU.uid||'';
+  _db.collection('companies').doc(did).update({dwEatsCfg:nc}).catch(function(){return _db.collection('companies').doc(did).set({dwEatsCfg:nc},{merge:true});}).then(function(){
+    if(typeof _COMPANY_CFG!=='undefined'){if(!_COMPANY_CFG)_COMPANY_CFG={};_COMPANY_CFG.dwEatsCfg=nc;}
+    toast('단가표·이벤트를 저장했어요');_dwDeliveryLoad(did,window._dwSettleYm);
+  }).catch(function(e){toast('저장 실패: '+e.message);});
+};
+// 기사 카드: 이벤트 달성 측정 (주별 달성/미달·남은 건수, 직접 입력 이벤트는 달성 횟수 칸)
+function _dwEvCardHtml(r,c){
+  if(!c.events.length)return '';
+  var W=function(n){return Math.round(+n||0).toLocaleString();},man=(window._dwEvManual||{})[r.name]||{};
+  var h=(r.evItems||[]).map(function(x){
+    var head=esc(x.name)+(x.week?' <span style="color:var(--text3);font-weight:400">'+esc(x.week.slice(5))+'~'+esc((x.weekEnd||'').slice(5))+'</span>':'');
+    var badge=x.ok?'<span style="color:#059669;font-weight:800">달성 +'+W(x.amt)+'</span>':'<span style="color:var(--text3);font-weight:700">미달</span>';
+    var inp=x.type==='manual'?'<div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="font-size:11px;color:var(--text3)">달성 횟수</span><input type="number" min="0" data-evm="1" data-name="'+esc(r.name)+'" data-ev="'+esc(x.id)+'" value="'+(+man[x.id]||0)+'" style="width:64px;min-height:36px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;text-align:center"><span style="font-size:11px;color:var(--text3)">× '+W(x.unit)+'원</span></div>':'';
+    return '<div style="padding:5px 0;border-top:1px dashed var(--border)"><div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700"><span>'+head+'</span>'+badge+'</div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+esc(x.note||'')+(x.hint?' · <span style="color:#1d4ed8;font-weight:700">'+esc(x.hint)+'</span>':'')+'</div>'+inp+'</div>';
+  }).join('');
+  return '<div style="padding:8px 12px;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-bottom:2px"><span>이벤트 달성</span><span style="color:#059669">+₩'+W(r.ev)+'</span></div>'+h+'</div>';
+}
+window._dwEvManualSave=function(did,ym){
+  var map={};
+  document.querySelectorAll('[data-evm]').forEach(function(i){var n=i.dataset.name,k=i.dataset.ev;if(!n||!k)return;map[n]=map[n]||{};map[n][k]=Math.max(0,parseInt(i.value,10)||0);});
+  if(!Object.keys(map).length){toast('직접 입력 이벤트가 없어요');return;}
+  _db.collection('delivery_sessions').doc(did+'_coupang_'+ym).update({evManual:map}).then(function(){toast('이벤트 달성 횟수를 저장했어요');_dwDeliveryLoad(did,ym);}).catch(function(e){toast('저장 실패: '+e.message);});
+};
 function _dwDeliveryRender(drivers, ym, did, savedAt){
   var res=document.getElementById('dw-settle-results');
   if(!res)return;
   var TAX_INC=0.033,TAX_WORK=0.0088,TAX_EMP=0.008;
   var ECFG=_dwEatsCfg(), EATS=ECFG.mode==='eats';
-  window._dwDeliveryCfg=EATS?{eats:true,all:ECFG.taxType==='all',taxRate:ECFG.taxRate,empRate:ECFG.empRate,indRate:ECFG.indRate,vatIncl:ECFG.vatIncl,bkType:ECFG.bkType,bkVal:ECFG.bkVal}:{eats:false,taxRate:TAX_INC,empRate:TAX_EMP,indRate:TAX_WORK,bkType:ECFG.bkType,bkVal:ECFG.bkVal};
+  window._dwDeliveryCfg=EATS?{eats:true,tierMode:ECFG.tierMode,all:ECFG.taxType==='all',taxRate:ECFG.taxRate,empRate:ECFG.empRate,indRate:ECFG.indRate,vatIncl:ECFG.vatIncl,bkType:ECFG.bkType,bkVal:ECFG.bkVal}:{eats:false,taxRate:TAX_INC,empRate:TAX_EMP,indRate:TAX_WORK,bkType:ECFG.bkType,bkVal:ECFG.bkVal};
   var CARD_COLORS=['#1d4ed8','#7c3aed','#059669','#d97706','#0891b2','#dc2626','#9333ea','#0d9488'];
 
   // 기사별 집계
@@ -14231,8 +14384,8 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
         if(wp[wk]!=null){usedWp=true;if(!wkSeen[wk]){wkSeen[wk]=1;cpEx+=+wp[wk]||0;}}
         else cpEx+=(+x.amount||0)/(ECFG.vatIncl===false?1:1.1);
       });
-      var ec=_dwEatsCalcDriver(mdays,mAmt,mOrders,ECFG,cpEx);
-      return{name:d.name,orders:mOrders,preTax:ec.gross,tax33:ec.tax,taxWork:ec.ind,taxEmp:ec.emp,deduct:ec.deduct,bk:ec.bk,net:ec.net,
+      var ec=_dwEatsCalcDriver(mdays,mAmt,mOrders,ECFG,cpEx,{manual:(window._dwEvManual||{})[d.name]||{}});
+      return{name:d.name,orders:mOrders,preTax:ec.gross,base:ec.base,ev:ec.ev,evItems:ec.evItems,tax33:ec.tax,taxWork:ec.ind,taxEmp:ec.emp,deduct:ec.deduct,bk:ec.bk,net:ec.net,
         coupang:ec.coupang,company:ec.company,weeks:ec.weeks,topRate:ec.topRate,days:dailyList,totalRej:totalRej,totalCan:totalCan,
         incomeTax:ec.incomeTax,localTax:ec.localTax,weekPay:wp,weekDetail:Object.assign({},((window._dwAdjDet||{})[d.name])||{},d.weekDetail||{})};
     }
@@ -14248,6 +14401,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
   var tCan=results.reduce(function(s,r){return s+r.totalCan;},0);
   var tCoupang=results.reduce(function(s,r){return s+(r.coupang||0);},0);
   var tCompany=results.reduce(function(s,r){return s+(r.company||0);},0);
+  var tEv=results.reduce(function(s,r){return s+(r.ev||0);},0);
   var savedStr=savedAt?('최종저장: '+new Date(savedAt).toLocaleDateString('ko-KR')):'';
 
   // ── 전체 요약 헤더
@@ -14281,7 +14435,8 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
         +'<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:7px;text-align:center"><div style="font-size:9px;opacity:.7">쿠팡 총지급'+(ECFG.vatIncl!==false?'(공급가)':'')+'</div><div style="font-size:13px;font-weight:800">₩'+tCoupang.toLocaleString()+'</div></div>'
         +'<div style="background:rgba(201,168,76,.28);border-radius:8px;padding:7px;text-align:center"><div style="font-size:9px;opacity:.8">회사 마진 (쿠팡 − 기사세전)</div><div style="font-size:13px;font-weight:800;color:'+(tCompany>=0?'#fde68a':'#fca5a5')+'">'+(tCompany>=0?'+':'−')+'₩'+Math.abs(tCompany).toLocaleString()+'</div></div>'
       +'</div>'
-      +'<div style="font-size:10px;opacity:.65;margin-top:8px">쿠팡이츠 단가표 적용 · 주간('+_dwEatsWeekLabel(ECFG.weekStart)+') 누진 · 마지막 날('+_DW_DOW[(_dwEatsWS(ECFG.weekStart)+6)%7]+')이 이번 달인 주까지 · 공제 '+(ECFG.taxRate>0?'원천세 '+_dwPct(ECFG.taxRate)+' · ':'')+'고용 '+_dwPct(ECFG.empRate)+' · 산재 '+_dwPct(ECFG.indRate)+'</div>':'')
+      +(ECFG.events.length?'<div style="background:rgba(255,255,255,.12);border-radius:8px;padding:7px;text-align:center;margin-top:8px"><div style="font-size:9px;opacity:.7">이벤트 지급 합계 (세전에 포함)</div><div style="font-size:13px;font-weight:800">₩'+tEv.toLocaleString()+'</div></div>':'')
+      +'<div style="font-size:10px;opacity:.65;margin-top:8px">쿠팡이츠 단가표 적용 · 주간('+_dwEatsWeekLabel(ECFG.weekStart)+') '+_dwModeLabel(ECFG.tierMode)+' · 마지막 날('+_DW_DOW[(_dwEatsWS(ECFG.weekStart)+6)%7]+')이 이번 달인 주까지 · 공제 '+(ECFG.taxRate>0?'원천세 '+_dwPct(ECFG.taxRate)+' · ':'')+'고용 '+_dwPct(ECFG.empRate)+' · 산재 '+_dwPct(ECFG.indRate)+'</div>':'')
     +'</div>'
     +'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">'
       +'<button onclick="_dwEatsSettings()" style="padding:9px 18px;background:#08101f;color:#c9a84c;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산 방식·단가</button>'
@@ -14290,10 +14445,12 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
       +'<button onclick="_shOpen(\'cpe\')" style="padding:9px 18px;min-height:44px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">정산서 기록</button>'
       +'<button onclick="_dwCpeSend()" style="padding:9px 18px;min-height:44px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">기사에게 정산서 보내기</button>'
       +'<button onclick="_dwDeliveryDriverView()" style="padding:9px 18px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💳 세금정산 보기</button>'
+      +(EATS&&ECFG.events.some(function(e){return e.type==='manual';})?'<button onclick="_dwEvManualSave(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;min-height:44px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">이벤트 달성 저장</button>':'')
       +'<button onclick="_dwDeliverySaveExtra(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 거절·취소 저장</button>'
       +'<button onclick="_dwDeliveryDelete(\''+did+'\',\''+ym+'\')" style="padding:9px 18px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ 초기화</button>'
     +'</div>'
-    +'<div id="dw-cpe-st" style="font-size:12px;color:var(--text3);margin:-8px 0 14px;line-height:1.6">'+(window._dwCpeSent&&window._dwCpeSent.at?'기사 앱 발송 '+_bsWhen(window._dwCpeSent.at)+' · 확인 중...':'아직 기사에게 보내지 않았어요')+'</div>';
+    +'<div id="dw-cpe-st" style="font-size:12px;color:var(--text3);margin:-8px 0 14px;line-height:1.6">'+(window._dwCpeSent&&window._dwCpeSent.at?'기사 앱 발송 '+_bsWhen(window._dwCpeSent.at)+' · 확인 중...':'아직 기사에게 보내지 않았어요')+'</div>'
+    +(EATS?_dwEatsInlineSet(ECFG):'');
 
   if(!results.length){
     html+='<div style="text-align:center;padding:32px;color:var(--text3)">기사 데이터 없음</div>';
@@ -14375,7 +14532,7 @@ function _dwDeliveryRender(drivers, ym, did, savedAt){
           }).join('')
           +'<div style="display:flex;justify-content:space-between;border-top:1px dashed var(--border);padding-top:5px;margin-top:4px"><span style="color:var(--text3)">쿠팡지급 ₩'+(r.coupang||0).toLocaleString()+'</span>'
           +'<span style="font-weight:800;color:'+((r.company||0)>=0?'#b45309':'#dc2626')+'">회사마진 '+((r.company||0)>=0?'+':'−')+'₩'+Math.abs(r.company||0).toLocaleString()+'</span></div>'
-        +'</div>'+_dwEatsDetailHtml(r,ECFG):'')
+        +'</div>'+_dwEvCardHtml(r,ECFG)+_dwEatsDetailHtml(r,ECFG):'')
         // 일별 상세 테이블
         +'<div style="overflow-x:auto">'
           +'<table style="width:100%;border-collapse:collapse">'
@@ -14629,7 +14786,8 @@ function _dwCpeStmt(r,ym,DC,au,tiers){
   });
   var lw=weeks[weeks.length-1],nx=null;
   if(lw)ts.some(function(t){if(+t.min>lw.count){nx={min:R(t.min),rate:R(t.rate),left:R(t.min-lw.count)};return true;}return false;});
-  return {ym:ym,name:r.name,n:R(r.orders),rej:R(r.totalRej),can:R(r.totalCan),topRate:R(r.topRate),weeks:weeks,next:nx,
+  var evs=(r.evItems||[]).map(function(x){return {name:String(x.name||''),week:x.week||'',weekEnd:x.weekEnd||'',ok:!!x.ok,amt:R(x.amt),note:String(x.note||''),hint:String(x.hint||'')};});
+  return {ym:ym,name:r.name,n:R(r.orders),rej:R(r.totalRej),can:R(r.totalCan),topRate:R(r.topRate),weeks:weeks,next:nx,mode:DC.tierMode==='flat'?'flat':'prog',base:R(r.base!=null?r.base:r.preTax),ev:R(r.ev),evs:evs,
     gross:R(r.preTax),tax:R(r.tax33),emp:R(r.taxEmp),ind:R(r.taxWork),bk:R(r.bk),net:R(r.net),
     all:!!DC.all,rates:{wh:P(DC.taxRate),emp:P(DC.empRate),ind:P(DC.indRate)},bkLabel:r.bk?_dwBkLabel(DC):'',forAu:au};
 }
@@ -15952,9 +16110,14 @@ function _dwCpeDriverCard(c){
       +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">거절</div><div style="font-size:20px;font-weight:900;color:#dc2626">'+W(c.rej)+'</div></div>'
       +'<div style="background:var(--bg);border-radius:12px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--text3)">취소</div><div style="font-size:20px;font-weight:900;color:#b45309">'+W(c.can)+'</div></div>'
     +'</div>'
-    +(c.next?'<div style="border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;line-height:1.5;margin-bottom:8px;background:rgba(37,99,235,.1);color:#1d4ed8">마지막 주 '+W(c.next.left)+'건 더 타면 그 뒤 배달은 건당 '+W(c.next.rate)+'원이에요</div>':'')
-    +(wk?'<div style="font-size:12px;font-weight:800;margin:10px 0 2px">주별 정산 (주 단위 누진 단가)</div>'+wk:'')
+    +(c.next?'<div style="border-radius:12px;padding:12px 14px;font-weight:800;font-size:14px;line-height:1.5;margin-bottom:8px;background:rgba(37,99,235,.1);color:#1d4ed8">마지막 주 '+W(c.next.left)+'건 더 타면 '+(c.mode==='flat'?'그 주 전체가 건당 ':'그 뒤 배달은 건당 ')+W(c.next.rate)+'원이에요</div>':'')
+    +(wk?'<div style="font-size:12px;font-weight:800;margin:10px 0 2px">주별 정산 ('+(c.mode==='flat'?'도달 단가 전체 적용':'주 단위 누진 단가')+')</div>'+wk:'')
+    +((c.evs||[]).length?'<div style="font-size:12px;font-weight:800;margin:10px 0 2px">이벤트</div>'+c.evs.map(function(x){
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'+R(esc(x.name)+(x.week?' <span style="color:var(--text3)">'+esc(x.week.slice(5).replace('-','.'))+'~</span>':''),x.ok?'<b style="color:#059669">+'+W(x.amt)+'원</b>':'<span style="color:var(--text3)">미달</span>')
+          +'<div style="font-size:11px;color:var(--text3)">'+esc(x.note)+(x.hint?' · <b style="color:#1d4ed8">'+esc(x.hint)+'</b>':'')+'</div></div>';
+      }).join(''):'')
     +'<div style="margin-top:8px">'
+      +(c.ev?R('단가 지급',W(c.base)+'원','color:var(--text3)')+R('이벤트','+'+W(c.ev)+'원','color:#059669'):'')
       +R('<b>세전</b>','<b>'+W(c.gross)+'원</b>')
       +ded
       +(c.bk?R('세무 기장비 ('+esc(c.bkLabel||'')+')','−'+W(c.bk)+'원','color:var(--text3)'):'')
