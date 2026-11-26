@@ -97,3 +97,52 @@ test('쿠팡 실지급액(종합 시트) 직접 지정 시 그 값으로 마진 
   assert.strictEqual(r.coupang, 1652053);
   assert.strictEqual(r.company, 1652053 - 1377900);
 });
+
+// ── 2026-11-26: 단가 적용 방식(대리점 선택) + 이벤트 측정 ──
+const api2 = new Function(src.slice(a, b) + '\nreturn {_dwEatsCalcDriver,_dwEatsGross,_dwEatsEvents};')();
+test('도달 단가 전체 적용(flat): 250건 = 250×4000, 누진은 그대로', () => {
+  assert.strictEqual(api2._dwEatsGross(250, T, 'flat'), 250*4000);
+  assert.strictEqual(api2._dwEatsGross(199, T, 'flat'), 199*2400);
+  assert.strictEqual(api2._dwEatsGross(320, T, 'flat'), 320*4300);
+  assert.strictEqual(api2._dwEatsGross(250, T), 199*2400 + 50*3600 + 4000);
+  assert.strictEqual(api2._dwEatsGross(0, T, 'flat'), 0);
+});
+test('이벤트: 151건부터 건당 1,700원 · 주6일+170건 5만원 · 직접 입력 · 수락률 조건', () => {
+  const days = [];
+  // 1주차(일~토): 6일 × 30건 = 180건, 거절 0
+  for (let i = 0; i < 6; i++) days.push({date:'2026-11-'+(15+i), orders:30, amount:0, rejected:0});
+  // 2주차: 5일 × 30건 = 150건, 거절 30 (수락률 83.3%)
+  for (let i = 0; i < 5; i++) days.push({date:'2026-11-'+(22+i), orders:30, amount:0, rejected:6});
+  const ev = [
+    {id:'a', type:'per', name:'151건부터', from:151, amt:1700},
+    {id:'b', type:'week', name:'주6일 170건', days:6, min:170, amt:50000},
+    {id:'c', type:'manual', name:'친구 초대', amt:50000},
+  ];
+  const c1 = Object.assign({}, cfg, {events:ev, evAcc:0});
+  const r = api2._dwEatsCalcDriver(days, 0, 330, c1, 0, {manual:{c:2}});
+  const w1 = 180, w2 = 150;
+  const g1 = api2._dwEatsGross(w1, T), g2 = api2._dwEatsGross(w2, T);
+  const evTotal = 30*1700 /*1주차 151~180*/ + 50000 /*1주차 6일 180건*/ + 2*50000;
+  assert.strictEqual(r.base, g1 + g2);
+  assert.strictEqual(r.ev, evTotal);
+  assert.strictEqual(r.gross, g1 + g2 + evTotal);
+  assert.strictEqual(r.tax, Math.round(r.gross*0.033));
+  assert.strictEqual(r.company, 0 - r.gross);
+  const wk2 = r.evItems.filter(x => x.type==='week' && x.week==='2026-11-22')[0];
+  assert.strictEqual(wk2.ok, false);
+  assert.ok(/출근 1일/.test(wk2.hint) && /20건/.test(wk2.hint));
+  const per2 = r.evItems.filter(x => x.type==='per' && x.week==='2026-11-22')[0];
+  assert.strictEqual(per2.ok, false);
+  assert.ok(/1건 더/.test(per2.hint));
+  // 수락률 90% 조건: 1주차(100%)는 그대로, 직접 입력은 월 수락률(330/(330+30)=91.7%) 통과
+  const r9 = api2._dwEatsCalcDriver(days, 0, 330, Object.assign({}, c1, {evAcc:90}), 0, {manual:{c:1}});
+  assert.strictEqual(r9.ev, 30*1700 + 50000 + 50000);
+  // 수락률 95%면 직접 입력 이벤트 미적용
+  const r95 = api2._dwEatsCalcDriver(days, 0, 330, Object.assign({}, c1, {evAcc:95}), 0, {manual:{c:1}});
+  assert.strictEqual(r95.ev, 30*1700 + 50000);
+});
+test('이벤트 없으면 예전 계산과 같음', () => {
+  const r = api2._dwEatsCalcDriver([{date:'2026-11-16',orders:250,amount:0}], 0, 250, cfg, 0);
+  assert.strictEqual(r.ev, 0);
+  assert.strictEqual(r.gross, 199*2400 + 50*3600 + 4000);
+});
